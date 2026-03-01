@@ -218,6 +218,11 @@ def delete_user(user_id):
 def pilkarze():
     return render_template("pilkarze.html")
 
+@app.route("/terminarz")
+def terminarz():
+    return render_template("terminarz.html")
+
+
 # -----------------------------
 #  START
 # -----------------------------
