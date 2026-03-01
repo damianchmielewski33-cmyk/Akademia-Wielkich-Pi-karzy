@@ -29,22 +29,24 @@ def init_db():
     """)
 
     conn.execute("""
-        CREATE TABLE IF NOT EXISTS match_signups (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
-            match_date TEXT NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY(user_id) REFERENCES users(id)
-        )
-    """)
-
-    conn.execute("""
         CREATE TABLE IF NOT EXISTS matches (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             match_date TEXT NOT NULL,
             match_time TEXT NOT NULL,
             location TEXT NOT NULL,
-            free_slots INTEGER NOT NULL
+            max_slots INTEGER NOT NULL,
+            signed_up INTEGER NOT NULL DEFAULT 0
+        )
+    """)
+
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS match_signups (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            match_id INTEGER NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(user_id) REFERENCES users(id),
+            FOREIGN KEY(match_id) REFERENCES matches(id)
         )
     """)
 
@@ -262,13 +264,64 @@ def add_match():
     date = request.form["date"]
     time = request.form["time"]
     location = request.form["location"]
-    free_slots = request.form["free_slots"]
+    max_slots = request.form["max_slots"]
 
     conn = get_db()
     conn.execute(
-        "INSERT INTO matches (match_date, match_time, location, free_slots) VALUES (?, ?, ?, ?)",
-        (date, time, location, free_slots)
+        "INSERT INTO matches (match_date, match_time, location, max_slots, signed_up) VALUES (?, ?, ?, ?, 0)",
+        (date, time, location, max_slots)
     )
+    conn.commit()
+    conn.close()
+
+    return redirect("/terminarz")
+
+# -----------------------------
+#  TERMINARZ – ZAPIS NA MECZ
+# -----------------------------
+
+@app.route("/terminarz/signup/<int:match_id>")
+def signup_match(match_id):
+    if "user_id" not in session:
+        return redirect("/login")
+
+    user_id = session["user_id"]
+
+    conn = get_db()
+
+    # sprawdzamy czy mecz istnieje
+    match = conn.execute("SELECT * FROM matches WHERE id = ?", (match_id,)).fetchone()
+    if match is None:
+        conn.close()
+        return "Mecz nie istnieje"
+
+    # sprawdzamy czy pełny
+    if match["signed_up"] >= match["max_slots"]:
+        conn.close()
+        return "Brak miejsc na ten mecz!"
+
+    # sprawdzamy czy użytkownik już zapisany
+    already = conn.execute(
+        "SELECT * FROM match_signups WHERE user_id = ? AND match_id = ?",
+        (user_id, match_id)
+    ).fetchone()
+
+    if already:
+        conn.close()
+        return "Już jesteś zapisany na ten mecz!"
+
+    # zapisujemy użytkownika
+    conn.execute(
+        "INSERT INTO match_signups (user_id, match_id) VALUES (?, ?)",
+        (user_id, match_id)
+    )
+
+    # zwiększamy licznik zapisanych
+    conn.execute(
+        "UPDATE matches SET signed_up = signed_up + 1 WHERE id = ?",
+        (match_id,)
+    )
+
     conn.commit()
     conn.close()
 
