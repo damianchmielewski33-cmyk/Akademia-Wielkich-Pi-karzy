@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <title>Panel administratora</title>
+
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: "Segoe UI", Arial, sans-serif;
+            background: linear-gradient(135deg, #0d0d0d, #1a1a1a);
+            color: #fff;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 1000px;
+            margin: 60px auto;
+            background: rgba(255,255,255,0.05);
+            padding: 30px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 0 25px rgba(0,0,0,0.6);
+            animation: fadeIn 0.8s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        h2 {
+            text-align: center;
+            margin-bottom: 25px;
+            font-weight: 300;
+            letter-spacing: 1px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: rgba(255,255,255,0.03);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: center;
+        }
+
+        th {
+            background: #1e90ff;
+            color: white;
+            font-weight: 500;
+        }
+
+        tr:nth-child(even) {
+            background: rgba(255,255,255,0.05);
+        }
+
+        button {
+            padding: 8px 14px;
+            background: #ff3b3b;
+            border: none;
+            border-radius: 6px;
+            color: white;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        button:hover {
+            background: #cc0000;
+            box-shadow: 0 0 10px #ff3b3b;
+        }
+
+        .email-input {
+            padding: 6px;
+            border-radius: 5px;
+            border: none;
+            margin-bottom: 5px;
+            width: 140px;
+        }
+
+        .action-btn {
+            background: #1e90ff;
+            margin-bottom: 6px;
+        }
+
+        .action-btn:hover {
+            background: #0d6efd;
+            box-shadow: 0 0 10px #1e90ff;
+        }
+
+        a.back {
+            display: block;
+            text-align: center;
+            margin-top: 25px;
+            color: #1e90ff;
+            text-decoration: none;
+            font-size: 16px;
+        }
+
+        a.back:hover {
+            text-decoration: underline;
+            color: #63b3ff;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+
+    <h2>Panel administratora</h2>
+
+    <table>
+        <tr>
+            <th>ID</th>
+            <th>Imię i nazwisko</th>
+            <th>Email</th>
+            <th>Numer zawodnika</th>
+            <th>Admin</th>
+            <th>Akcje</th>
+        </tr>
+
+        {% for u in users %}
+        <tr>
+            <td>{{ u.id }}</td>
+            <td>{{ u.full_name }}</td>
+            <td>{{ u.email }}</td>
+            <td>{{ u.player_number }}</td>
+            <td>{{ "TAK" if u.is_admin == 1 else "NIE" }}</td>
+
+            <td>
+
+                <!-- Zmiana e-maila -->
+                <form action="/admin/change_email" method="POST">
+                    <input type="hidden" name="user_id" value="{{ u.id }}">
+                    <input type="email" name="new_email" class="email-input" placeholder="Nowy email" required>
+                    <button type="submit" class="action-btn">Zmień email</button>
+                </form>
+
+                <!-- Reset hasła -->
+                <form action="/admin/reset_password" method="POST">
+                    <input type="hidden" name="user_id" value="{{ u.id }}">
+                    <button type="submit" class="action-btn">Reset hasła</button>
+                </form>
+
+                <!-- Usuwanie użytkownika -->
+                <form action="/delete_user/{{ u.id }}" method="POST" onsubmit="return confirm('Usunąć użytkownika?');">
+                    <button type="submit">Usuń</button>
+                </form>
+
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+
+    <a href="/" class="back">← Powrót na stronę główną</a>
+
+</div>
+
+</body>
+</html>

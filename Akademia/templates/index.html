@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <title>Akademia Wielkich Piłkarzy</title>
+
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: "Segoe UI", Arial, sans-serif;
+            color: #fff;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* 🔥 Pełnoekranowe tło stadionu */
+        .background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url('/static/stadium.jpg');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            filter: brightness(0.45);
+            z-index: -1;
+        }
+
+        /* 🔥 Banner na całą szerokość */
+        .banner {
+            width: 100%;
+            height: 260px;
+            object-fit: cover;
+            filter: drop-shadow(0 0 12px #1e90ff);
+            border-bottom: 2px solid rgba(255,255,255,0.25);
+            margin-bottom: 20px;
+        }
+
+        /* 🔥 Górne menu */
+        .top-menu {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            gap: 12px;
+            z-index: 10;
+        }
+
+        .top-btn {
+            padding: 10px 16px;
+            background: #1e90ff;
+            border-radius: 6px;
+            color: white;
+            text-decoration: none;
+            font-size: 15px;
+            transition: 0.2s;
+        }
+
+        .top-btn:hover {
+            background: #0d6efd;
+            box-shadow: 0 0 10px #1e90ff;
+        }
+
+        /* 🔥 Nagłówek */
+        .header {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        h1 {
+            font-weight: 300;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+        }
+
+        p {
+            color: #ddd;
+            margin-bottom: 40px;
+        }
+
+        /* 🔥 Przyciski */
+        .buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            width: 300px;
+            margin: auto;
+        }
+
+        .btn {
+            padding: 14px;
+            background: #1e90ff;
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-size: 17px;
+            cursor: pointer;
+            text-decoration: none;
+            transition: 0.2s;
+        }
+
+        .btn:hover {
+            background: #0d6efd;
+            box-shadow: 0 0 10px #1e90ff;
+        }
+
+        .btn-green {
+            background: #28a745;
+        }
+
+        .btn-green:hover {
+            background: #1e7e34;
+            box-shadow: 0 0 10px #28a745;
+        }
+    </style>
+</head>
+<body>
+
+<!-- 🔥 Pełnoekranowe tło -->
+<div class="background"></div>
+
+<!-- 🔥 Banner -->
+<img src="/static/banner.jpg" class="banner" alt="Banner">
+
+<!-- 🔥 Górne menu -->
+<div class="top-menu">
+    {% if session.user %}
+    <a href="/logout" class="top-btn">Wyloguj się</a>
+    {% if session.is_admin == 1 %}
+    <a href="/admin" class="top-btn">Admin</a>
+    {% endif %}
+    {% else %}
+    <a href="/login" class="top-btn">Zaloguj się</a>
+    <a href="/register" class="top-btn">Zarejestruj się</a>
+    {% endif %}
+</div>
+
+<!-- 🔥 Nagłówek -->
+<div class="header">
+    <h1>Akademia Wielkich Piłkarzy</h1>
+    <p>Witamy w naszej akademii! Wybierz jedną z opcji poniżej.</p>
+</div>
+
+<!-- 🔥 Przyciski -->
+<div class="buttons">
+    <a href="#" class="btn">Statystyki</a>
+    <a href="#" class="btn">Terminarz</a>
+    <a href="#" class="btn">Treningi</a>
+    <a href="#" class="btn">Kadra</a>
+    <a href="#" class="btn">Kontakt</a>
+
+    <!-- NOWY PRZYCISK -->
+    <a href="/pilkarze" class="btn">Lista Piłkarzy</a>
+
+    <a href="#" class="btn btn-green">ZAPISZ SIĘ NA MECZ!</a>
+</div>
+
+</body>
+</html>
