@@ -38,6 +38,16 @@ def init_db():
         )
     """)
 
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS matches (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            match_date TEXT NOT NULL,
+            match_time TEXT NOT NULL,
+            location TEXT NOT NULL,
+            free_slots INTEGER NOT NULL
+        )
+    """)
+
     conn.commit()
     conn.close()
 
@@ -65,20 +75,15 @@ def register():
 
         conn = get_db()
 
-        # ile jest kont?
         count = conn.execute("SELECT COUNT(*) AS c FROM users").fetchone()["c"]
-
-        # pierwsze konto = admin
         is_admin = 1 if count == 0 else 0
 
-        # pobieramy zajęte numery
         used_numbers = conn.execute(
             "SELECT player_number FROM users WHERE player_number IS NOT NULL"
         ).fetchall()
 
         used_numbers = {row["player_number"] for row in used_numbers}
 
-        # szukamy wolnego numeru 1–99
         free_number = None
         for n in range(1, 100):
             if n not in used_numbers:
@@ -218,10 +223,40 @@ def delete_user(user_id):
 def pilkarze():
     return render_template("pilkarze.html")
 
+# -----------------------------
+#  TERMINARZ – WYŚWIETLANIE
+# -----------------------------
+
 @app.route("/terminarz")
 def terminarz():
-    return render_template("terminarz.html")
+    conn = get_db()
+    matches = conn.execute("SELECT * FROM matches ORDER BY match_date ASC").fetchall()
+    conn.close()
+    return render_template("terminarz.html", matches=matches)
 
+# -----------------------------
+#  TERMINARZ – DODAWANIE MECZU
+# -----------------------------
+
+@app.route("/terminarz/add", methods=["POST"])
+def add_match():
+    if "user_id" not in session or session.get("is_admin") != 1:
+        return "Brak dostępu"
+
+    date = request.form["date"]
+    time = request.form["time"]
+    location = request.form["location"]
+    free_slots = request.form["free_slots"]
+
+    conn = get_db()
+    conn.execute(
+        "INSERT INTO matches (match_date, match_time, location, free_slots) VALUES (?, ?, ?, ?)",
+        (date, time, location, free_slots)
+    )
+    conn.commit()
+    conn.close()
+
+    return redirect("/terminarz")
 
 # -----------------------------
 #  START

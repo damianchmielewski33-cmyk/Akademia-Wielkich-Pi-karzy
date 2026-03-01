@@ -34,6 +34,51 @@
             margin-bottom: 20px;
         }
 
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+        }
+
+        th {
+            background: rgba(30,144,255,0.4);
+        }
+
+        .form-box {
+            margin-top: 30px;
+            padding: 20px;
+            background: rgba(255,255,255,0.08);
+            border-radius: 10px;
+        }
+
+        input {
+            padding: 8px;
+            margin: 5px;
+            border-radius: 6px;
+            border: none;
+        }
+
+        button {
+            padding: 10px 16px;
+            background: #1e90ff;
+            border: none;
+            border-radius: 6px;
+            color: white;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        button:hover {
+            background: #0d6efd;
+            box-shadow: 0 0 10px #1e90ff;
+        }
+
         a.back {
             display: block;
             text-align: center;
@@ -51,13 +96,43 @@
 <body>
 
 <div class="container">
+
     <h1>Terminarz</h1>
 
-    <p style="text-align:center; color:#ddd;">
-        Wkrótce pojawią się tu mecze, treningi i wydarzenia akademii.
-    </p>
+    <table>
+        <tr>
+            <th>Data</th>
+            <th>Godzina</th>
+            <th>Lokalizacja</th>
+            <th>Wolne miejsca</th>
+        </tr>
+
+        {% for m in matches %}
+        <tr>
+            <td>{{ m.match_date }}</td>
+            <td>{{ m.match_time }}</td>
+            <td>{{ m.location }}</td>
+            <td>{{ m.free_slots }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+
+    {% if session.is_admin == 1 %}
+    <div class="form-box">
+        <h3>Dodaj nowy mecz</h3>
+
+        <form action="/terminarz/add" method="POST">
+            <input type="date" name="date" required>
+            <input type="time" name="time" required>
+            <input type="text" name="location" placeholder="Lokalizacja" required>
+            <input type="number" name="free_slots" placeholder="Wolne miejsca" required>
+            <button type="submit">Dodaj mecz</button>
+        </form>
+    </div>
+    {% endif %}
 
     <a href="/" class="back">← Powrót na stronę główną</a>
+
 </div>
 
 </body>
