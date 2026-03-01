@@ -115,6 +115,9 @@ def register():
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
+    if "login_attempts" not in session:
+        session["login_attempts"] = 0
+
     if request.method == "POST":
         email = request.form["email"]
         password = request.form["password"]
@@ -124,7 +127,20 @@ def login():
         conn.close()
 
         if user is None or not check_password_hash(user["password"], password):
-            return "Błędne dane logowania!"
+            session["login_attempts"] += 1
+
+            if session["login_attempts"] >= 3:
+                return render_template(
+                    "login.html",
+                    error_popup="WPISUJ DOBRE DANE WARIACIE!"
+                )
+
+            return render_template(
+                "login.html",
+                error="Błędne dane logowania mordo"
+            )
+
+        session["login_attempts"] = 0
 
         session["user"] = email
         session["user_id"] = user["id"]

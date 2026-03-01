@@ -50,6 +50,21 @@
             background: rgba(30,144,255,0.4);
         }
 
+        .signup-btn {
+            padding: 8px 14px;
+            background: orange;
+            color: black;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: bold;
+            transition: 0.2s;
+        }
+
+        .signup-btn:hover {
+            background: #ffb347;
+            box-shadow: 0 0 10px orange;
+        }
+
         .form-box {
             margin-top: 30px;
             padding: 20px;
@@ -104,7 +119,8 @@
             <th>Data</th>
             <th>Godzina</th>
             <th>Lokalizacja</th>
-            <th>Wolne miejsca</th>
+            <th>Zapisani na mecz</th>
+            <th>Akcja</th>
         </tr>
 
         {% for m in matches %}
@@ -112,7 +128,10 @@
             <td>{{ m.match_date }}</td>
             <td>{{ m.match_time }}</td>
             <td>{{ m.location }}</td>
-            <td>{{ m.free_slots }}</td>
+            <td>{{ m.signed_up }}/{{ m.max_slots }}</td>
+            <td>
+                <a href="/terminarz/signup/{{ m.id }}" class="signup-btn">Zapisz się</a>
+            </td>
         </tr>
         {% endfor %}
     </table>
@@ -125,7 +144,7 @@
             <input type="date" name="date" required>
             <input type="time" name="time" required>
             <input type="text" name="location" placeholder="Lokalizacja" required>
-            <input type="number" name="free_slots" placeholder="Wolne miejsca" required>
+            <input type="number" name="max_slots" placeholder="Maks. miejsc" required>
             <button type="submit">Dodaj mecz</button>
         </form>
     </div>
