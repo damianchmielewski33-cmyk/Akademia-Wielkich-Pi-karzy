@@ -19,27 +19,98 @@
 
         .container {
             width: 90%;
-            max-width: 900px;
+            max-width: 1100px;
             margin: 40px auto;
             background: rgba(0,0,0,0.55);
             padding: 25px;
             border-radius: 16px;
             backdrop-filter: blur(8px);
             box-shadow: 0 0 25px rgba(0,0,0,0.7);
+            position: relative;
+        }
+
+        .header-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 15px;
         }
 
         h1 {
-            text-align: center;
             font-weight: 300;
-            margin-bottom: 20px;
             letter-spacing: 1px;
+            margin: 0;
         }
 
-        /* NOWOCZESNA TABELA */
+        .view-toggle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .icon-toggle {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+            background: rgba(255,255,255,0.12);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+            transition: 0.25s ease;
+        }
+
+        .icon-toggle.active {
+            background: rgba(30,144,255,0.7);
+            box-shadow: 0 0 14px rgba(30,144,255,0.9);
+        }
+
+        .icon-toggle:hover {
+            transform: translateY(-2px);
+        }
+
+        /* FILTRY + SORTOWANIE */
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 15px;
+            align-items: center;
+        }
+
+        .controls select,
+        .controls button {
+            padding: 6px 10px;
+            border-radius: 8px;
+            border: none;
+            font-size: 13px;
+            cursor: pointer;
+        }
+
+        .controls select {
+            background: rgba(255,255,255,0.12);
+            color: #fff;
+        }
+
+        .controls button {
+            background: rgba(30,144,255,0.6);
+            color: #fff;
+        }
+
+        .controls button:hover {
+            background: rgba(30,144,255,0.8);
+        }
+
+        /* LISTA – TABELA */
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 15px;
+            margin-top: 10px;
             border-radius: 14px;
             overflow: hidden;
             background: rgba(255,255,255,0.06);
@@ -62,12 +133,10 @@
             border-bottom: none;
         }
 
-        /* KOLOROWE TŁA W ZALEŻNOŚCI OD WOLNYCH MIEJSC */
         .row-green { background: rgba(0,255,0,0.08); }
         .row-yellow { background: rgba(255,255,0,0.08); }
         .row-red { background: rgba(255,0,0,0.08); }
 
-        /* TAG LOKALIZACJI */
         .location-tag {
             display: inline-block;
             padding: 6px 10px;
@@ -79,7 +148,6 @@
             backdrop-filter: blur(4px);
         }
 
-        /* NOWOCZESNE PRZYCISKI – GLASS + NEON */
         .btn-modern {
             padding: 10px 18px;
             border-radius: 10px;
@@ -108,7 +176,6 @@
         .btn-leave { background: rgba(255,0,0,0.35); }
         .btn-leave:hover { background: rgba(255,0,0,0.55); }
 
-        /* ANIMOWANY DROPDOWN */
         .details-row {
             height: 0;
             overflow: hidden;
@@ -120,7 +187,6 @@
             padding: 15px;
         }
 
-        /* KLIKALNY WIERSZ */
         .clickable-row {
             cursor: pointer;
             transition: background 0.2s ease;
@@ -130,7 +196,6 @@
             background: rgba(255,255,255,0.08);
         }
 
-        /* ANIMOWANA STRZAŁKA */
         .arrow {
             display: inline-block;
             transition: transform 0.35s ease;
@@ -141,7 +206,6 @@
             transform: rotate(180deg);
         }
 
-        /* MINI-AVATAR Z INICJAŁÓW */
         .avatar {
             width: 28px;
             height: 28px;
@@ -156,7 +220,6 @@
             text-transform: uppercase;
         }
 
-        /* TOOLTIP */
         .tooltip {
             position: relative;
             display: inline-block;
@@ -175,7 +238,6 @@
             pointer-events: none;
         }
 
-        /* PROGRESS BAR */
         .progress-container {
             width: 100%;
             background: rgba(255,255,255,0.15);
@@ -209,6 +271,109 @@
         a.back:hover {
             text-decoration: underline;
         }
+
+        /* KALENDARZ – PREMIUM GLASSMORPHISM */
+        #calendar-view {
+            display: none;
+            margin-top: 10px;
+        }
+
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .calendar-header span {
+            font-size: 18px;
+            font-weight: 500;
+        }
+
+        .calendar-nav button {
+            padding: 6px 10px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            background: rgba(255,255,255,0.12);
+            color: #fff;
+        }
+
+        .calendar-nav button:hover {
+            background: rgba(255,255,255,0.25);
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .calendar-day-name {
+            text-align: center;
+            font-size: 13px;
+            opacity: 0.8;
+        }
+
+        .calendar-cell {
+            min-height: 90px;
+            background: rgba(255,255,255,0.08);
+            border-radius: 12px;
+            padding: 6px;
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 0 12px rgba(0,0,0,0.4);
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .calendar-cell.today {
+            border: 1px solid rgba(30,144,255,0.9);
+            box-shadow: 0 0 16px rgba(30,144,255,0.9);
+        }
+
+        .calendar-date {
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+
+        .calendar-match {
+            font-size: 11px;
+            padding: 3px 5px;
+            border-radius: 8px;
+            background: rgba(30,144,255,0.4);
+            margin-bottom: 2px;
+            cursor: pointer;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .calendar-match.full {
+            background: rgba(255,0,0,0.5);
+        }
+
+        .calendar-match.free {
+            background: rgba(0,200,0,0.5);
+        }
+
+        .calendar-match:hover {
+            background: rgba(255,255,255,0.4);
+        }
+
+        .calendar-empty {
+            opacity: 0.3;
+        }
+
+        @media (max-width: 768px) {
+            .calendar-cell {
+                min-height: 70px;
+            }
+        }
     </style>
 
     <script>
@@ -224,119 +389,338 @@
                 arrow.classList.add("open");
             }
         }
+
+        document.addEventListener("DOMContentLoaded", () => {
+            const listView = document.getElementById("list-view");
+            const calendarView = document.getElementById("calendar-view");
+            const btnList = document.getElementById("btn-list");
+            const btnCal = document.getElementById("btn-calendar");
+
+            btnList.addEventListener("click", () => {
+                listView.style.display = "block";
+                calendarView.style.display = "none";
+                btnList.classList.add("active");
+                btnCal.classList.remove("active");
+            });
+
+            btnCal.addEventListener("click", () => {
+                listView.style.display = "none";
+                calendarView.style.display = "block";
+                btnCal.classList.add("active");
+                btnList.classList.remove("active");
+            });
+
+            buildCalendar();
+            applyFiltersAndSort();
+        });
+
+        function buildCalendar() {
+            const calendarGrid = document.getElementById("calendar-grid");
+            const monthLabel = document.getElementById("calendar-month");
+            const rawMatches = document.querySelectorAll(".match-data");
+
+            const now = new Date();
+            let currentYear = now.getFullYear();
+            let currentMonth = now.getMonth();
+
+            function renderCalendar(year, month) {
+                calendarGrid.innerHTML = "";
+                const firstDay = new Date(year, month, 1);
+                const lastDay = new Date(year, month + 1, 0);
+                const startDay = firstDay.getDay() === 0 ? 7 : firstDay.getDay();
+                const daysInMonth = lastDay.getDate();
+
+                const monthNames = ["Styczeń","Luty","Marzec","Kwiecień","Maj","Czerwiec","Lipiec","Lipiec","Sierpień","Wrzesień","Październik","Listopad","Grudzień"];
+                monthLabel.textContent = monthNames[month] + " " + year;
+
+                const dayNames = ["Pn","Wt","Śr","Cz","Pt","So","Nd"];
+                document.getElementById("calendar-day-names").innerHTML = "";
+                dayNames.forEach(d => {
+                    const dn = document.createElement("div");
+                    dn.className = "calendar-day-name";
+                    dn.textContent = d;
+                    document.getElementById("calendar-day-names").appendChild(dn);
+                });
+
+                for (let i = 1; i < startDay; i++) {
+                    const cell = document.createElement("div");
+                    cell.className = "calendar-cell calendar-empty";
+                    calendarGrid.appendChild(cell);
+                }
+
+                const today = new Date();
+                for (let d = 1; d <= daysInMonth; d++) {
+                    const cell = document.createElement("div");
+                    cell.className = "calendar-cell";
+
+                    if (d === today.getDate() && month === today.getMonth() && year === today.getFullYear()) {
+                        cell.classList.add("today");
+                    }
+
+                    const dateLabel = document.createElement("div");
+                    dateLabel.className = "calendar-date";
+                    dateLabel.textContent = d;
+                    cell.appendChild(dateLabel);
+
+                    const dateStr = year + "-" + String(month + 1).padStart(2, "0") + "-" + String(d).padStart(2, "0");
+
+                    rawMatches.forEach(m => {
+                        if (m.dataset.date === dateStr) {
+                            const signed = parseInt(m.dataset.signed);
+                            const max = parseInt(m.dataset.max);
+                            const free = max - signed;
+                            const matchDiv = document.createElement("div");
+                            matchDiv.className = "calendar-match";
+                            if (free <= 0) matchDiv.classList.add("full");
+                            else matchDiv.classList.add("free");
+                            matchDiv.textContent = m.dataset.time + " " + m.dataset.location;
+                            matchDiv.title = m.dataset.location + " (" + signed + "/" + max + ")";
+                            cell.appendChild(matchDiv);
+                        }
+                    });
+
+                    calendarGrid.appendChild(cell);
+                }
+            }
+
+            renderCalendar(currentYear, currentMonth);
+
+            document.getElementById("cal-prev").onclick = () => {
+                currentMonth--;
+                if (currentMonth < 0) {
+                    currentMonth = 11;
+                    currentYear--;
+                }
+                renderCalendar(currentYear, currentMonth);
+            };
+
+            document.getElementById("cal-next").onclick = () => {
+                currentMonth++;
+                if (currentMonth > 11) {
+                    currentMonth = 0;
+                    currentYear++;
+                }
+                renderCalendar(currentYear, currentMonth);
+            };
+        }
+
+        function applyFiltersAndSort() {
+            const filterSelect = document.getElementById("filter-select");
+            const sortSelect = document.getElementById("sort-select");
+            const rows = document.querySelectorAll(".match-row");
+
+            function update() {
+                const filter = filterSelect.value;
+                const sort = sortSelect.value;
+
+                const arr = Array.from(rows);
+
+                arr.forEach(r => r.style.display = "");
+
+                arr.forEach(row => {
+                    const dateStr = row.dataset.date;
+                    const signed = parseInt(row.dataset.signed);
+                    const max = parseInt(row.dataset.max);
+                    const free = max - signed;
+                    const today = new Date().toISOString().slice(0,10);
+
+                    let hide = false;
+
+                    if (filter === "free" && free <= 0) hide = true;
+                    if (filter === "full" && free > 0) hide = true;
+                    if (filter === "future" && dateStr < today) hide = true;
+                    if (filter === "past" && dateStr >= today) hide = true;
+
+                    row.style.display = hide ? "none" : "";
+                    const details = document.getElementById("details-" + row.dataset.id);
+                    if (details) details.style.display = hide ? "none" : "";
+                });
+
+                arr.sort((a, b) => {
+                    const da = a.dataset.date + " " + a.dataset.time;
+                    const db = b.dataset.date + " " + b.dataset.time;
+                    if (sort === "asc") return da.localeCompare(db);
+                    if (sort === "desc") return db.localeCompare(da);
+                    return 0;
+                });
+
+                const tbody = document.getElementById("list-tbody");
+                arr.forEach(r => tbody.appendChild(r));
+            }
+
+            filterSelect.addEventListener("change", update);
+            sortSelect.addEventListener("change", update);
+        }
     </script>
 </head>
 <body>
 
 <div class="container">
 
-    <h1>⚽ Terminarz</h1>
+    <div class="header-row">
+        <h1>⚽ Terminarz</h1>
+        <div class="view-toggle">
+            <button id="btn-list" class="icon-toggle active" title="Widok listy">📋</button>
+            <button id="btn-calendar" class="icon-toggle" title="Widok kalendarza">📅</button>
+        </div>
+    </div>
 
-    <table>
-        <tr>
-            <th>Data</th>
-            <th>Godzina</th>
-            <th>Lokalizacja</th>
-            <th>Zapisani</th>
-            <th>Akcja</th>
-            <th></th>
-        </tr>
+    <div class="controls">
+        <select id="filter-select">
+            <option value="all">Wszystkie mecze</option>
+            <option value="free">Tylko z wolnymi miejscami</option>
+            <option value="full">Tylko pełne</option>
+            <option value="future">Tylko przyszłe</option>
+            <option value="past">Tylko rozegrane</option>
+        </select>
 
-        {% for m in matches %}
+        <select id="sort-select">
+            <option value="asc">Sortuj: najbliższe najpierw</option>
+            <option value="desc">Sortuj: najdalsze najpierw</option>
+        </select>
+    </div>
 
-        {% set percent = (m.signed_up / m.max_slots) * 100 %}
-        {% if percent < 50 %}
-        {% set row_class = "row-green" %}
-        {% elif percent < 80 %}
-        {% set row_class = "row-yellow" %}
-        {% else %}
-        {% set row_class = "row-red" %}
-        {% endif %}
+    <!-- WIDOK LISTY -->
+    <div id="list-view">
+        <table>
+            <tr>
+                <th>Data</th>
+                <th>Godzina</th>
+                <th>Lokalizacja</th>
+                <th>Zapisani</th>
+                <th>Akcja</th>
+                <th></th>
+            </tr>
 
-        <tr class="clickable-row {{ row_class }}" onclick="toggleDetails({{ m.id }})">
-            <td>{{ m.match_date }}</td>
-            <td>{{ m.match_time }}</td>
+            <tbody id="list-tbody">
+            {% for m in matches %}
+            {% set percent = (m.signed_up / m.max_slots) * 100 %}
+            {% if percent < 50 %}
+            {% set row_class = "row-green" %}
+            {% elif percent < 80 %}
+            {% set row_class = "row-yellow" %}
+            {% else %}
+            {% set row_class = "row-red" %}
+            {% endif %}
 
-            <td>
-                <span class="location-tag">📍 {{ m.location }}</span><br>
-                <a href="https://www.google.com/maps/search/?api=1&query={{ m.location | urlencode }}"
-                   target="_blank"
-                   style="color:#1e90ff; text-decoration:none; font-size:13px;">
-                    Otwórz w Google Maps
-                </a>
-            </td>
+            <tr class="clickable-row {{ row_class }} match-row"
+                onclick="toggleDetails({{ m.id }})"
+                data-id="{{ m.id }}"
+                data-date="{{ m.match_date }}"
+                data-time="{{ m.match_time }}"
+                data-signed="{{ m.signed_up }}"
+                data-max="{{ m.max_slots }}">
+                <td>{{ m.match_date }}</td>
+                <td>{{ m.match_time }}</td>
 
-            <td>
-                {{ m.signed_up }}/{{ m.max_slots }}
-                <div class="progress-container">
-                    <div class="progress-bar" style="--target-width: {{ percent }}%;"></div>
-                </div>
-            </td>
+                <td>
+                    <span class="location-tag">📍 {{ m.location }}</span><br>
+                    <a href="https://www.google.com/maps/search/?api=1&query={{ m.location | urlencode }}"
+                       target="_blank"
+                       style="color:#1e90ff; text-decoration:none; font-size:13px;">
+                        Otwórz w Google Maps
+                    </a>
+                </td>
 
-            <td onclick="event.stopPropagation();">
-                {% if session.user_id %}
+                <td>
+                    {{ m.signed_up }}/{{ m.max_slots }}
+                    <div class="progress-container">
+                        <div class="progress-bar" style="--target-width: {{ percent }}%;"></div>
+                    </div>
+                </td>
 
-                {% if user_signed.get(m.id) %}
-                <a href="/terminarz/unsubscribe/{{ m.id }}" class="btn-modern btn-leave">
-                    👤 Jednak nie wpadam
-                </a>
-                {% else %}
-                {% if m.signed_up < m.max_slots %}
-                <a href="/terminarz/signup/{{ m.id }}" class="btn-modern btn-join">
-                    👤 Zapisz się
-                </a>
-                {% else %}
-                <span style="color:orange; font-weight:bold;">Brak miejsc</span>
-                {% endif %}
-                {% endif %}
+                <td onclick="event.stopPropagation();">
+                    {% if session.user_id %}
 
-                {% else %}
-                <span style="color:#ccc;">Zaloguj się</span>
-                {% endif %}
-            </td>
-
-            <td style="width: 30px;">
-                <span id="arrow-{{ m.id }}" class="arrow">▼</span>
-            </td>
-        </tr>
-
-        <tr id="details-{{ m.id }}" class="details-row">
-            <td colspan="6">
-                <div class="details-content">
-                    <strong>👥 Zapisani gracze:</strong><br>
-
-                    {% if players_by_match.get(m.id) %}
-                    <ul style="list-style:none; padding-left:0; margin-top:10px;">
-                        {% for p in players_by_match[m.id] %}
-                        {% set initials = p.first_name[0] ~ p.last_name[0] %}
-                        <li style="margin-bottom:6px;">
-                                    <span class="avatar" style="background: hsl({{ loop.index * 40 }}, 80%, 55%);">
-                                        {{ initials }}
-                                    </span>
-
-                            <span class="tooltip" data-tip="{{ p.first_name }} {{ p.last_name }}">
-                                        {{ p.first_name }} {{ p.last_name }} ({{ p.player_alias }})
-                                    </span>
-
-                            {% if session.is_admin == 1 %}
-                            {% if p.paid == 1 %}
-                            <span class="paid-dot" style="color:lime;">●</span>
-                            {% else %}
-                            <span class="paid-dot" style="color:red;">●</span>
-                            {% endif %}
-                            {% endif %}
-                        </li>
-                        {% endfor %}
-                    </ul>
+                    {% if user_signed.get(m.id) %}
+                    <a href="/terminarz/unsubscribe/{{ m.id }}" class="btn-modern btn-leave">
+                        👤 Jednak nie wpadam
+                    </a>
                     {% else %}
-                    <i>Brak zapisanych graczy</i>
+                    {% if m.signed_up < m.max_slots %}
+                    <a href="/terminarz/signup/{{ m.id }}" class="btn-modern btn-join">
+                        👤 Zapisz się
+                    </a>
+                    {% else %}
+                    <span style="color:orange; font-weight:bold;">Brak miejsc</span>
                     {% endif %}
-                </div>
-            </td>
-        </tr>
+                    {% endif %}
 
-        {% endfor %}
-    </table>
+                    {% else %}
+                    <span style="color:#ccc;">Zaloguj się</span>
+                    {% endif %}
+                </td>
+
+                <td style="width: 30px;">
+                    <span id="arrow-{{ m.id }}" class="arrow">▼</span>
+                </td>
+            </tr>
+
+            <tr id="details-{{ m.id }}" class="details-row">
+                <td colspan="6">
+                    <div class="details-content">
+                        <strong>👥 Zapisani gracze:</strong><br>
+
+                        {% if players_by_match.get(m.id) %}
+                        <ul style="list-style:none; padding-left:0; margin-top:10px;">
+                            {% for p in players_by_match[m.id] %}
+                            {% set initials = p.first_name[0] ~ p.last_name[0] %}
+                            <li style="margin-bottom:6px;">
+                                            <span class="avatar" style="background: hsl({{ loop.index * 40 }}, 80%, 55%);">
+                                                {{ initials }}
+                                            </span>
+
+                                <span class="tooltip" data-tip="{{ p.first_name }} {{ p.last_name }}">
+                                                {{ p.first_name }} {{ p.last_name }} ({{ p.player_alias }})
+                                            </span>
+
+                                {% if session.is_admin == 1 %}
+                                {% if p.paid == 1 %}
+                                <span class="paid-dot" style="color:lime;">●</span>
+                                {% else %}
+                                <span class="paid-dot" style="color:red;">●</span>
+                                {% endif %}
+                                {% endif %}
+                            </li>
+                            {% endfor %}
+                        </ul>
+                        {% else %}
+                        <i>Brak zapisanych graczy</i>
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- WIDOK KALENDARZA -->
+    <div id="calendar-view">
+        <div class="calendar-header">
+            <div class="calendar-nav">
+                <button id="cal-prev">← Poprzedni</button>
+            </div>
+            <span id="calendar-month"></span>
+            <div class="calendar-nav">
+                <button id="cal-next">Następny →</button>
+            </div>
+        </div>
+
+        <div id="calendar-day-names" class="calendar-grid"></div>
+        <div id="calendar-grid" class="calendar-grid"></div>
+    </div>
+
+    <!-- DANE MECZÓW DLA KALENDARZA -->
+    {% for m in matches %}
+    <div class="match-data"
+         data-date="{{ m.match_date }}"
+         data-time="{{ m.match_time }}"
+         data-location="{{ m.location }}"
+         data-signed="{{ m.signed_up }}"
+         data-max="{{ m.max_slots }}"
+         style="display:none;"></div>
+    {% endfor %}
 
     <a href="/" class="back">← Powrót na stronę główną</a>
 
