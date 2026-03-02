@@ -62,6 +62,11 @@
             border-bottom: none;
         }
 
+        /* KOLOROWE TŁA W ZALEŻNOŚCI OD WOLNYCH MIEJSC */
+        .row-green { background: rgba(0,255,0,0.08); }
+        .row-yellow { background: rgba(255,255,0,0.08); }
+        .row-red { background: rgba(255,0,0,0.08); }
+
         /* TAG LOKALIZACJI */
         .location-tag {
             display: inline-block;
@@ -97,21 +102,11 @@
             transform: translateY(-2px);
         }
 
-        .btn-join {
-            background: rgba(30,144,255,0.35);
-        }
-        .btn-join:hover {
-            background: rgba(30,144,255,0.55);
-            box-shadow: 0 0 12px rgba(30,144,255,0.9);
-        }
+        .btn-join { background: rgba(30,144,255,0.35); }
+        .btn-join:hover { background: rgba(30,144,255,0.55); }
 
-        .btn-leave {
-            background: rgba(255,0,0,0.35);
-        }
-        .btn-leave:hover {
-            background: rgba(255,0,0,0.55);
-            box-shadow: 0 0 12px rgba(255,0,0,0.9);
-        }
+        .btn-leave { background: rgba(255,0,0,0.35); }
+        .btn-leave:hover { background: rgba(255,0,0,0.55); }
 
         /* ANIMOWANY DROPDOWN */
         .details-row {
@@ -135,9 +130,71 @@
             background: rgba(255,255,255,0.08);
         }
 
-        .paid-dot {
-            font-size: 18px;
+        /* ANIMOWANA STRZAŁKA */
+        .arrow {
+            display: inline-block;
+            transition: transform 0.35s ease;
             margin-left: 6px;
+        }
+
+        .arrow.open {
+            transform: rotate(180deg);
+        }
+
+        /* MINI-AVATAR Z INICJAŁÓW */
+        .avatar {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            font-weight: bold;
+            color: #fff;
+            margin-right: 8px;
+            text-transform: uppercase;
+        }
+
+        /* TOOLTIP */
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+
+        .tooltip:hover::after {
+            content: attr(data-tip);
+            position: absolute;
+            left: 0;
+            top: -28px;
+            background: rgba(0,0,0,0.8);
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            white-space: nowrap;
+            pointer-events: none;
+        }
+
+        /* PROGRESS BAR */
+        .progress-container {
+            width: 100%;
+            background: rgba(255,255,255,0.15);
+            border-radius: 8px;
+            height: 10px;
+            margin-top: 6px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 10px;
+            background: linear-gradient(90deg, #1e90ff, #00eaff);
+            width: 0%;
+            animation: fillBar 1s ease forwards;
+        }
+
+        @keyframes fillBar {
+            from { width: 0%; }
+            to { width: var(--target-width); }
         }
 
         a.back {
@@ -157,11 +214,14 @@
     <script>
         function toggleDetails(id) {
             const row = document.getElementById("details-" + id);
+            const arrow = document.getElementById("arrow-" + id);
 
             if (row.style.height && row.style.height !== "0px") {
                 row.style.height = "0px";
+                arrow.classList.remove("open");
             } else {
                 row.style.height = row.scrollHeight + "px";
+                arrow.classList.add("open");
             }
         }
     </script>
@@ -179,10 +239,21 @@
             <th>Lokalizacja</th>
             <th>Zapisani</th>
             <th>Akcja</th>
+            <th></th>
         </tr>
 
         {% for m in matches %}
-        <tr class="clickable-row" onclick="toggleDetails({{ m.id }})">
+
+        {% set percent = (m.signed_up / m.max_slots) * 100 %}
+        {% if percent < 50 %}
+        {% set row_class = "row-green" %}
+        {% elif percent < 80 %}
+        {% set row_class = "row-yellow" %}
+        {% else %}
+        {% set row_class = "row-red" %}
+        {% endif %}
+
+        <tr class="clickable-row {{ row_class }}" onclick="toggleDetails({{ m.id }})">
             <td>{{ m.match_date }}</td>
             <td>{{ m.match_time }}</td>
 
@@ -195,7 +266,12 @@
                 </a>
             </td>
 
-            <td>{{ m.signed_up }}/{{ m.max_slots }}</td>
+            <td>
+                {{ m.signed_up }}/{{ m.max_slots }}
+                <div class="progress-container">
+                    <div class="progress-bar" style="--target-width: {{ percent }}%;"></div>
+                </div>
+            </td>
 
             <td onclick="event.stopPropagation();">
                 {% if session.user_id %}
@@ -218,18 +294,29 @@
                 <span style="color:#ccc;">Zaloguj się</span>
                 {% endif %}
             </td>
+
+            <td style="width: 30px;">
+                <span id="arrow-{{ m.id }}" class="arrow">▼</span>
+            </td>
         </tr>
 
         <tr id="details-{{ m.id }}" class="details-row">
-            <td colspan="5">
+            <td colspan="6">
                 <div class="details-content">
                     <strong>👥 Zapisani gracze:</strong><br>
 
                     {% if players_by_match.get(m.id) %}
                     <ul style="list-style:none; padding-left:0; margin-top:10px;">
                         {% for p in players_by_match[m.id] %}
+                        {% set initials = p.first_name[0] ~ p.last_name[0] %}
                         <li style="margin-bottom:6px;">
-                            👤 {{ p.first_name }} {{ p.last_name }} ({{ p.player_alias }})
+                                    <span class="avatar" style="background: hsl({{ loop.index * 40 }}, 80%, 55%);">
+                                        {{ initials }}
+                                    </span>
+
+                            <span class="tooltip" data-tip="{{ p.first_name }} {{ p.last_name }}">
+                                        {{ p.first_name }} {{ p.last_name }} ({{ p.player_alias }})
+                                    </span>
 
                             {% if session.is_admin == 1 %}
                             {% if p.paid == 1 %}
@@ -247,6 +334,7 @@
                 </div>
             </td>
         </tr>
+
         {% endfor %}
     </table>
 
