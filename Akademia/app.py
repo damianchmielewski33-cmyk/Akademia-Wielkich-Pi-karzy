@@ -29,7 +29,6 @@ def get_db():
 def init_db():
     conn = get_db()
 
-    # NOWA TABELA USERS – imię, nazwisko, piłkarz, admin
     conn.execute("""
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -56,6 +55,7 @@ def init_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER NOT NULL,
             match_id INTEGER NOT NULL,
+            paid INTEGER NOT NULL DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY(user_id) REFERENCES users(id),
             FOREIGN KEY(match_id) REFERENCES matches(id)
@@ -83,15 +83,12 @@ def home():
 def register():
     conn = get_db()
 
-    # ilu jest już użytkowników – pierwszy będzie adminem
     count = conn.execute("SELECT COUNT(*) AS c FROM users").fetchone()["c"]
     is_admin = 1 if count == 0 else 0
 
-    # piłkarze już zajęci
     used_aliases_rows = conn.execute("SELECT player_alias FROM users").fetchall()
     used_aliases = {row["player_alias"] for row in used_aliases_rows}
 
-    # dostępni piłkarze = ALL_PLAYERS - zajęci
     available_players = [p for p in ALL_PLAYERS if p not in used_aliases]
 
     if request.method == "POST":
@@ -156,7 +153,8 @@ def login():
         if user is None:
             return render_template(
                 "login.html",
-                error="Nieprawidłowe dane logowania mordo"
+                error="Nieprawidłowe dane logowania mordo",
+                used_players=[]
             )
 
         session["user_id"] = user["id"]
@@ -167,7 +165,6 @@ def login():
 
         return redirect("/")
 
-    # do logowania pokazujemy tylko piłkarzy, którzy są już przypisani do kont
     conn = get_db()
     used_aliases_rows = conn.execute("SELECT player_alias FROM users").fetchall()
     conn.close()
@@ -181,7 +178,7 @@ def logout():
     return redirect("/")
 
 # -----------------------------
-#  PANEL ADMINA – PROSTA WERSJA
+#  PANEL ADMINA – PROSTA LISTA
 # -----------------------------
 
 @app.route("/admin")
@@ -200,10 +197,6 @@ def admin_panel():
 
     return render_template("admin.html", users=users)
 
-# -----------------------------
-#  USUWANIE UŻYTKOWNIKA
-# -----------------------------
-
 @app.route("/delete_user/<int:user_id>", methods=["POST"])
 def delete_user(user_id):
     if "user_id" not in session or session.get("is_admin") != 1:
@@ -217,7 +210,7 @@ def delete_user(user_id):
     return redirect("/admin")
 
 # -----------------------------
-#  LISTA PIŁKARZY (STATYCZNA STRONA)
+#  LISTA PIŁKARZY – statyczna
 # -----------------------------
 
 @app.route("/pilkarze")
@@ -225,30 +218,37 @@ def pilkarze():
     return render_template("pilkarze.html")
 
 # -----------------------------
-#  TERMINARZ – WYŚWIETLANIE
+#  TERMINARZ – WYŚWIETLANIE + LISTA ZAPISANYCH
 # -----------------------------
 
 @app.route("/terminarz")
 def terminarz():
     conn = get_db()
     matches = conn.execute("SELECT * FROM matches ORDER BY match_date ASC").fetchall()
-    signups = conn.execute("SELECT * FROM match_signups").fetchall()
+
+    signups = conn.execute("""
+        SELECT ms.match_id, ms.paid, u.first_name, u.last_name, u.player_alias
+        FROM match_signups ms
+        JOIN users u ON u.id = ms.user_id
+        ORDER BY u.first_name ASC
+    """).fetchall()
+
     conn.close()
 
-    user_id = session.get("user_id")
+    players_by_match = {}
+    for s in signups:
+        players_by_match.setdefault(s["match_id"], []).append(s)
 
     user_signed = {}
-    if user_id:
-        user_signed = {
-            s["match_id"]: True
-            for s in signups
-            if s["user_id"] == user_id
-        }
+    if "player_alias" in session:
+        for s in signups:
+            if s["player_alias"] == session["player_alias"]:
+                user_signed[s["match_id"]] = True
 
     return render_template(
         "terminarz.html",
         matches=matches,
-        signups=signups,
+        players_by_match=players_by_match,
         user_signed=user_signed
     )
 
@@ -307,7 +307,7 @@ def signup_match(match_id):
         return "Już jesteś zapisany na ten mecz!"
 
     conn.execute(
-        "INSERT INTO match_signups (user_id, match_id) VALUES (?, ?)",
+        "INSERT INTO match_signups (user_id, match_id, paid) VALUES (?, ?, 0)",
         (user_id, match_id)
     )
     conn.execute(

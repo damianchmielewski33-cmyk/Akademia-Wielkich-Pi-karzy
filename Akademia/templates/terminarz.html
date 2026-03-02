@@ -80,6 +80,21 @@
             box-shadow: 0 0 10px red;
         }
 
+        .details-btn {
+            padding: 6px 10px;
+            background: #1e90ff;
+            color: white;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 13px;
+            cursor: pointer;
+            border: none;
+        }
+
+        .details-btn:hover {
+            background: #0d6efd;
+        }
+
         .form-box {
             margin-top: 30px;
             padding: 20px;
@@ -121,7 +136,28 @@
         a.back:hover {
             text-decoration: underline;
         }
+
+        .details-row {
+            display: none;
+            background: rgba(255,255,255,0.05);
+        }
+
+        .paid-dot {
+            font-size: 18px;
+            margin-left: 6px;
+        }
     </style>
+
+    <script>
+        function toggleDetails(matchId) {
+            const row = document.getElementById('details-' + matchId);
+            if (row.style.display === 'table-row') {
+                row.style.display = 'none';
+            } else {
+                row.style.display = 'table-row';
+            }
+        }
+    </script>
 </head>
 <body>
 
@@ -134,7 +170,7 @@
             <th>Data</th>
             <th>Godzina</th>
             <th>Lokalizacja</th>
-            <th>Zapisani na mecz</th>
+            <th>Zapisani</th>
             <th>Akcja</th>
         </tr>
 
@@ -152,9 +188,7 @@
                 <a href="/terminarz/unsubscribe/{{ m.id }}" class="cancel-btn">
                     Jednak nie wpadam
                 </a>
-
                 {% else %}
-
                 {% if m.signed_up < m.max_slots %}
                 <a href="/terminarz/signup/{{ m.id }}" class="signup-btn">
                     Zapisz się
@@ -162,11 +196,40 @@
                 {% else %}
                 <span style="color:orange; font-weight:bold;">Brak miejsc</span>
                 {% endif %}
-
                 {% endif %}
 
                 {% else %}
                 <span style="color:#ccc;">Zaloguj się</span>
+                {% endif %}
+
+                <button class="details-btn" onclick="toggleDetails({{ m.id }})">
+                    Szczegóły meczu
+                </button>
+            </td>
+        </tr>
+
+        <tr id="details-{{ m.id }}" class="details-row">
+            <td colspan="5" style="text-align:left; padding:15px;">
+                <strong>Zapisani gracze:</strong><br>
+
+                {% if players_by_match.get(m.id) %}
+                <ul style="list-style:none; padding-left:0; margin-top:10px;">
+                    {% for p in players_by_match[m.id] %}
+                    <li style="margin-bottom:4px;">
+                        {{ p.first_name }} {{ p.last_name }} ({{ p.player_alias }})
+
+                        {% if session.is_admin == 1 %}
+                        {% if p.paid == 1 %}
+                        <span class="paid-dot" style="color:lime;">●</span>
+                        {% else %}
+                        <span class="paid-dot" style="color:red;">●</span>
+                        {% endif %}
+                        {% endif %}
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <i>Brak zapisanych graczy</i>
                 {% endif %}
             </td>
         </tr>
