@@ -127,11 +127,13 @@
 
 <!-- 🔥 Górne menu -->
 <div class="top-menu">
-    {% if session.user %}
+    {% if session.user_id %}
     <a href="/logout" class="top-btn">Wyloguj się</a>
+
     {% if session.is_admin == 1 %}
     <a href="/admin" class="top-btn">Admin</a>
     {% endif %}
+
     {% else %}
     <a href="/login" class="top-btn">Zaloguj się</a>
     <a href="/register" class="top-btn">Zarejestruj się</a>
