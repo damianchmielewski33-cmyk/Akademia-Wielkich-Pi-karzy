@@ -151,11 +151,7 @@
     <script>
         function toggleDetails(matchId) {
             const row = document.getElementById('details-' + matchId);
-            if (row.style.display === 'table-row') {
-                row.style.display = 'none';
-            } else {
-                row.style.display = 'table-row';
-            }
+            row.style.display = row.style.display === 'table-row' ? 'none' : 'table-row';
         }
     </script>
 </head>
@@ -178,7 +174,15 @@
         <tr>
             <td>{{ m.match_date }}</td>
             <td>{{ m.match_time }}</td>
-            <td>{{ m.location }}</td>
+
+            <td>
+                <a href="https://www.google.com/maps/search/?api=1&query={{ m.location | urlencode }}"
+                   target="_blank"
+                   style="color:#1e90ff; text-decoration:none; font-weight:bold;">
+                    {{ m.location }}
+                </a>
+            </td>
+
             <td>{{ m.signed_up }}/{{ m.max_slots }}</td>
 
             <td>
