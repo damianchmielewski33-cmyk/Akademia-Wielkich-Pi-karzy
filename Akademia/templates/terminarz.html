@@ -74,7 +74,18 @@
             transform: translateY(-2px);
         }
 
-        /* FILTRY + SORTOWANIE */
+        .stats-bar {
+            background: rgba(255,255,255,0.08);
+            padding: 12px 16px;
+            border-radius: 12px;
+            backdrop-filter: blur(6px);
+            margin-bottom: 15px;
+            font-size: 15px;
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
         .controls {
             display: flex;
             flex-wrap: wrap;
@@ -106,7 +117,6 @@
             background: rgba(30,144,255,0.8);
         }
 
-        /* LISTA – TABELA */
         table {
             width: 100%;
             border-collapse: collapse;
@@ -259,20 +269,6 @@
             to { width: var(--target-width); }
         }
 
-        a.back {
-            display: block;
-            text-align: center;
-            margin-top: 25px;
-            color: #1e90ff;
-            text-decoration: none;
-            font-size: 18px;
-        }
-
-        a.back:hover {
-            text-decoration: underline;
-        }
-
-        /* KALENDARZ – PREMIUM GLASSMORPHISM */
         #calendar-view {
             display: none;
             margin-top: 10px;
@@ -365,14 +361,46 @@
             background: rgba(255,255,255,0.4);
         }
 
-        .calendar-empty {
-            opacity: 0.3;
+        .calendar-popup {
+            position: fixed;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%) scale(0.8);
+            background: rgba(0,0,0,0.55);
+            backdrop-filter: blur(12px);
+            padding: 18px;
+            border-radius: 14px;
+            box-shadow: 0 0 25px rgba(0,0,0,0.6);
+            width: 260px;
+            opacity: 0;
+            pointer-events: none;
+            transition: 0.25s ease;
+            z-index: 999;
         }
 
-        @media (max-width: 768px) {
-            .calendar-cell {
-                min-height: 70px;
-            }
+        .calendar-popup.open {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        .calendar-popup h4 {
+            margin-top: 0;
+            font-weight: 400;
+            margin-bottom: 10px;
+        }
+
+        a.back {
+            display: block;
+            text-align: center;
+            margin-top: 25px;
+            color: #1e90ff;
+            text-decoration: none;
+            font-size: 18px;
+        }
+
+        a.back:hover {
+            text-decoration: underline;
         }
     </style>
 
@@ -390,118 +418,59 @@
             }
         }
 
-        document.addEventListener("DOMContentLoaded", () => {
-            const listView = document.getElementById("list-view");
-            const calendarView = document.getElementById("calendar-view");
-            const btnList = document.getElementById("btn-list");
-            const btnCal = document.getElementById("btn-calendar");
+        let openPopup = null;
 
-            btnList.addEventListener("click", () => {
-                listView.style.display = "block";
-                calendarView.style.display = "none";
-                btnList.classList.add("active");
-                btnCal.classList.remove("active");
-            });
+        function showCalendarPopup(match) {
+            const popup = document.getElementById("calendar-popup");
 
-            btnCal.addEventListener("click", () => {
-                listView.style.display = "none";
-                calendarView.style.display = "block";
-                btnCal.classList.add("active");
-                btnList.classList.remove("active");
-            });
+            popup.innerHTML = `
+                <h4>📅 ${match.dataset.date}</h4>
+                <div><strong>Godzina:</strong> ${match.dataset.time}</div>
+                <div><strong>Lokalizacja:</strong> ${match.dataset.location}</div>
+                <div><strong>Zapisani:</strong> ${match.dataset.signed}/${match.dataset.max}</div>
+                <hr style="opacity:0.3;">
+                <div style="text-align:center;">
+                    <a href="https://www.google.com/maps/search/?api=1&query=${match.dataset.location}"
+                       target="_blank"
+                       style="color:#1e90ff;">Otwórz w Google Maps</a>
+                </div>
+            `;
 
-            buildCalendar();
-            applyFiltersAndSort();
+            popup.classList.add("open");
+            openPopup = popup;
+        }
+
+        document.addEventListener("click", (e) => {
+            if (openPopup && !openPopup.contains(e.target) && !e.target.classList.contains("calendar-match")) {
+                openPopup.classList.remove("open");
+                openPopup = null;
+            }
         });
 
-        function buildCalendar() {
-            const calendarGrid = document.getElementById("calendar-grid");
-            const monthLabel = document.getElementById("calendar-month");
-            const rawMatches = document.querySelectorAll(".match-data");
+        function updateStats() {
+            const rows = document.querySelectorAll(".match-row");
+            let total = 0, free = 0, full = 0, past = 0;
 
-            const now = new Date();
-            let currentYear = now.getFullYear();
-            let currentMonth = now.getMonth();
+            const today = new Date().toISOString().slice(0,10);
 
-            function renderCalendar(year, month) {
-                calendarGrid.innerHTML = "";
-                const firstDay = new Date(year, month, 1);
-                const lastDay = new Date(year, month + 1, 0);
-                const startDay = firstDay.getDay() === 0 ? 7 : firstDay.getDay();
-                const daysInMonth = lastDay.getDate();
+            rows.forEach(r => {
+                total++;
+                const signed = parseInt(r.dataset.signed);
+                const max = parseInt(r.dataset.max);
+                const freeSlots = max - signed;
 
-                const monthNames = ["Styczeń","Luty","Marzec","Kwiecień","Maj","Czerwiec","Lipiec","Lipiec","Sierpień","Wrzesień","Październik","Listopad","Grudzień"];
-                monthLabel.textContent = monthNames[month] + " " + year;
+                if (freeSlots > 0) free++;
+                else full++;
 
-                const dayNames = ["Pn","Wt","Śr","Cz","Pt","So","Nd"];
-                document.getElementById("calendar-day-names").innerHTML = "";
-                dayNames.forEach(d => {
-                    const dn = document.createElement("div");
-                    dn.className = "calendar-day-name";
-                    dn.textContent = d;
-                    document.getElementById("calendar-day-names").appendChild(dn);
-                });
+                if (r.dataset.date < today) past++;
+            });
 
-                for (let i = 1; i < startDay; i++) {
-                    const cell = document.createElement("div");
-                    cell.className = "calendar-cell calendar-empty";
-                    calendarGrid.appendChild(cell);
-                }
-
-                const today = new Date();
-                for (let d = 1; d <= daysInMonth; d++) {
-                    const cell = document.createElement("div");
-                    cell.className = "calendar-cell";
-
-                    if (d === today.getDate() && month === today.getMonth() && year === today.getFullYear()) {
-                        cell.classList.add("today");
-                    }
-
-                    const dateLabel = document.createElement("div");
-                    dateLabel.className = "calendar-date";
-                    dateLabel.textContent = d;
-                    cell.appendChild(dateLabel);
-
-                    const dateStr = year + "-" + String(month + 1).padStart(2, "0") + "-" + String(d).padStart(2, "0");
-
-                    rawMatches.forEach(m => {
-                        if (m.dataset.date === dateStr) {
-                            const signed = parseInt(m.dataset.signed);
-                            const max = parseInt(m.dataset.max);
-                            const free = max - signed;
-                            const matchDiv = document.createElement("div");
-                            matchDiv.className = "calendar-match";
-                            if (free <= 0) matchDiv.classList.add("full");
-                            else matchDiv.classList.add("free");
-                            matchDiv.textContent = m.dataset.time + " " + m.dataset.location;
-                            matchDiv.title = m.dataset.location + " (" + signed + "/" + max + ")";
-                            cell.appendChild(matchDiv);
-                        }
-                    });
-
-                    calendarGrid.appendChild(cell);
-                }
-            }
-
-            renderCalendar(currentYear, currentMonth);
-
-            document.getElementById("cal-prev").onclick = () => {
-                currentMonth--;
-                if (currentMonth < 0) {
-                    currentMonth = 11;
-                    currentYear--;
-                }
-                renderCalendar(currentYear, currentMonth);
-            };
-
-            document.getElementById("cal-next").onclick = () => {
-                currentMonth++;
-                if (currentMonth > 11) {
-                    currentMonth = 0;
-                    currentYear++;
-                }
-                renderCalendar(currentYear, currentMonth);
-            };
+            document.getElementById("stats-bar").innerHTML = `
+                📅 <strong>${total}</strong> meczów
+                🟢 <strong>${free}</strong> wolnych
+                🔴 <strong>${full}</strong> pełnych
+                ⚫ <strong>${past}</strong> rozegranych
+            `;
         }
 
         function applyFiltersAndSort() {
@@ -546,10 +515,138 @@
 
                 const tbody = document.getElementById("list-tbody");
                 arr.forEach(r => tbody.appendChild(r));
+
+                updateStats();
             }
 
             filterSelect.addEventListener("change", update);
             sortSelect.addEventListener("change", update);
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+            const listView = document.getElementById("list-view");
+            const calendarView = document.getElementById("calendar-view");
+            const btnList = document.getElementById("btn-list");
+            const btnCal = document.getElementById("btn-calendar");
+
+            btnList.addEventListener("click", () => {
+                listView.style.display = "block";
+                calendarView.style.display = "none";
+                btnList.classList.add("active");
+                btnCal.classList.remove("active");
+            });
+
+            btnCal.addEventListener("click", () => {
+                listView.style.display = "none";
+                calendarView.style.display = "block";
+                btnCal.classList.add("active");
+                btnList.classList.remove("active");
+            });
+
+            buildCalendar();
+            applyFiltersAndSort();
+            updateStats();
+        });
+
+        function buildCalendar() {
+            const calendarGrid = document.getElementById("calendar-grid");
+            const monthLabel = document.getElementById("calendar-month");
+            const rawMatches = document.querySelectorAll(".match-data");
+
+            const now = new Date();
+            let currentYear = now.getFullYear();
+            let currentMonth = now.getMonth();
+
+            function renderCalendar(year, month) {
+                calendarGrid.innerHTML = "";
+                const dayNamesContainer = document.getElementById("calendar-day-names");
+                dayNamesContainer.innerHTML = "";
+
+                const monthNames = ["Styczeń","Luty","Marzec","Kwiecień","Maj","Czerwiec","Lipiec","Sierpień","Wrzesień","Październik","Listopad","Grudzień"];
+                monthLabel.textContent = monthNames[month] + " " + year;
+
+                const dayNames = ["Pn","Wt","Śr","Cz","Pt","So","Nd"];
+                dayNames.forEach(d => {
+                    const dn = document.createElement("div");
+                    dn.className = "calendar-day-name";
+                    dn.textContent = d;
+                    dayNamesContainer.appendChild(dn);
+                });
+
+                const firstDay = new Date(year, month, 1);
+                const lastDay = new Date(year, month + 1, 0);
+                const daysInMonth = lastDay.getDate();
+                let startDay = firstDay.getDay();
+                if (startDay === 0) startDay = 7;
+
+                for (let i = 1; i < startDay; i++) {
+                    const cell = document.createElement("div");
+                    cell.className = "calendar-cell calendar-empty";
+                    calendarGrid.appendChild(cell);
+                }
+
+                const today = new Date();
+                for (let d = 1; d <= daysInMonth; d++) {
+                    const cell = document.createElement("div");
+                    cell.className = "calendar-cell";
+
+                    if (d === today.getDate() && month === today.getMonth() && year === today.getFullYear()) {
+                        cell.classList.add("today");
+                    }
+
+                    const dateLabel = document.createElement("div");
+                    dateLabel.className = "calendar-date";
+                    dateLabel.textContent = d;
+                    cell.appendChild(dateLabel);
+
+                    const dateStr = year + "-" + String(month + 1).padStart(2, "0") + "-" + String(d).padStart(2, "0");
+
+                    rawMatches.forEach(m => {
+                        if (m.dataset.date === dateStr) {
+                            const signed = parseInt(m.dataset.signed);
+                            const max = parseInt(m.dataset.max);
+                            const free = max - signed;
+
+                            const matchDiv = document.createElement("div");
+                            matchDiv.className = "calendar-match";
+                            if (free <= 0) matchDiv.classList.add("full");
+                            else matchDiv.classList.add("free");
+
+                            matchDiv.textContent = m.dataset.time + " " + m.dataset.location;
+                            matchDiv.title = m.dataset.location + " (" + signed + "/" + max + ")";
+
+                            matchDiv.addEventListener("click", (ev) => {
+                                ev.stopPropagation();
+                                showCalendarPopup(m);
+                            });
+
+                            cell.appendChild(matchDiv);
+                        }
+                    });
+
+                    calendarGrid.appendChild(cell);
+                }
+            }
+
+            renderCalendar(currentYear, currentMonth);
+
+            document.getElementById("cal-prev").onclick = () => {
+                currentMonth--;
+                if (currentMonth < 0) {
+                    currentMonth = 11;
+                    currentYear--;
+                }
+                renderCalendar(currentYear, currentMonth);
+            };
+
+            document.getElementById("cal-next").onclick = () => {
+                currentMonth++;
+                if (currentMonth > 11) {
+                    currentMonth = 0;
+                    currentYear++;
+                }
+                renderCalendar(currentYear, currentMonth);
+            };
         }
     </script>
 </head>
@@ -564,6 +661,8 @@
             <button id="btn-calendar" class="icon-toggle" title="Widok kalendarza">📅</button>
         </div>
     </div>
+
+    <div id="stats-bar" class="stats-bar"></div>
 
     <div class="controls">
         <select id="filter-select">
@@ -580,7 +679,6 @@
         </select>
     </div>
 
-    <!-- WIDOK LISTY -->
     <div id="list-view">
         <table>
             <tr>
@@ -695,7 +793,6 @@
         </table>
     </div>
 
-    <!-- WIDOK KALENDARZA -->
     <div id="calendar-view">
         <div class="calendar-header">
             <div class="calendar-nav">
@@ -711,7 +808,6 @@
         <div id="calendar-grid" class="calendar-grid"></div>
     </div>
 
-    <!-- DANE MECZÓW DLA KALENDARZA -->
     {% for m in matches %}
     <div class="match-data"
          data-date="{{ m.match_date }}"
@@ -721,6 +817,8 @@
          data-max="{{ m.max_slots }}"
          style="display:none;"></div>
     {% endfor %}
+
+    <div id="calendar-popup" class="calendar-popup"></div>
 
     <a href="/" class="back">← Powrót na stronę główną</a>
 
