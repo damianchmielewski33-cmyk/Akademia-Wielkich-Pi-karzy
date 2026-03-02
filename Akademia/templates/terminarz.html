@@ -65,6 +65,21 @@
             box-shadow: 0 0 10px orange;
         }
 
+        .cancel-btn {
+            padding: 8px 14px;
+            background: red;
+            color: white;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: bold;
+            transition: 0.2s;
+        }
+
+        .cancel-btn:hover {
+            background: #ff4d4d;
+            box-shadow: 0 0 10px red;
+        }
+
         .form-box {
             margin-top: 30px;
             padding: 20px;
@@ -129,8 +144,30 @@
             <td>{{ m.match_time }}</td>
             <td>{{ m.location }}</td>
             <td>{{ m.signed_up }}/{{ m.max_slots }}</td>
+
             <td>
-                <a href="/terminarz/signup/{{ m.id }}" class="signup-btn">Zapisz się</a>
+                {% if session.user_id %}
+
+                {% if user_signed.get(m.id) %}
+                <a href="/terminarz/unsubscribe/{{ m.id }}" class="cancel-btn">
+                    Jednak nie wpadam
+                </a>
+
+                {% else %}
+
+                {% if m.signed_up < m.max_slots %}
+                <a href="/terminarz/signup/{{ m.id }}" class="signup-btn">
+                    Zapisz się
+                </a>
+                {% else %}
+                <span style="color:orange; font-weight:bold;">Brak miejsc</span>
+                {% endif %}
+
+                {% endif %}
+
+                {% else %}
+                <span style="color:#ccc;">Zaloguj się</span>
+                {% endif %}
             </td>
         </tr>
         {% endfor %}

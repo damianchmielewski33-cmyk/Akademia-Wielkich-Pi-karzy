@@ -249,8 +249,25 @@ def pilkarze():
 def terminarz():
     conn = get_db()
     matches = conn.execute("SELECT * FROM matches ORDER BY match_date ASC").fetchall()
+    signups = conn.execute("SELECT * FROM match_signups").fetchall()
     conn.close()
-    return render_template("terminarz.html", matches=matches)
+
+    user_id = session.get("user_id")
+
+    user_signed = {}
+    if user_id:
+        user_signed = {
+            s["match_id"]: True
+            for s in signups
+            if s["user_id"] == user_id
+        }
+
+    return render_template(
+        "terminarz.html",
+        matches=matches,
+        signups=signups,
+        user_signed=user_signed
+    )
 
 # -----------------------------
 #  TERMINARZ – DODAWANIE MECZU
@@ -286,21 +303,17 @@ def signup_match(match_id):
         return redirect("/login")
 
     user_id = session["user_id"]
-
     conn = get_db()
 
-    # sprawdzamy czy mecz istnieje
     match = conn.execute("SELECT * FROM matches WHERE id = ?", (match_id,)).fetchone()
     if match is None:
         conn.close()
         return "Mecz nie istnieje"
 
-    # sprawdzamy czy pełny
     if match["signed_up"] >= match["max_slots"]:
         conn.close()
         return "Brak miejsc na ten mecz!"
 
-    # sprawdzamy czy użytkownik już zapisany
     already = conn.execute(
         "SELECT * FROM match_signups WHERE user_id = ? AND match_id = ?",
         (user_id, match_id)
@@ -310,13 +323,10 @@ def signup_match(match_id):
         conn.close()
         return "Już jesteś zapisany na ten mecz!"
 
-    # zapisujemy użytkownika
     conn.execute(
         "INSERT INTO match_signups (user_id, match_id) VALUES (?, ?)",
         (user_id, match_id)
     )
-
-    # zwiększamy licznik zapisanych
     conn.execute(
         "UPDATE matches SET signed_up = signed_up + 1 WHERE id = ?",
         (match_id,)
@@ -325,6 +335,34 @@ def signup_match(match_id):
     conn.commit()
     conn.close()
 
+    return redirect("/terminarz")
+
+# -----------------------------
+#  TERMINARZ – WYPISANIE Z MECZU
+# -----------------------------
+
+@app.route("/terminarz/unsubscribe/<int:match_id>")
+def unsubscribe_match(match_id):
+    if "user_id" not in session:
+        return redirect("/login")
+
+    user_id = session["user_id"]
+    conn = get_db()
+
+    signup = conn.execute(
+        "SELECT * FROM match_signups WHERE user_id = ? AND match_id = ?",
+        (user_id, match_id)
+    ).fetchone()
+
+    if signup:
+        conn.execute("DELETE FROM match_signups WHERE id = ?", (signup["id"],))
+        conn.execute(
+            "UPDATE matches SET signed_up = signed_up - 1 WHERE id = ?",
+            (match_id,)
+        )
+        conn.commit()
+
+    conn.close()
     return redirect("/terminarz")
 
 # -----------------------------
