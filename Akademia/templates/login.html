@@ -3,7 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <title>Logowanie</title>
-
     <style>
         body {
             margin: 0;
@@ -16,37 +15,21 @@
             align-items: center;
             color: #fff;
         }
-
         .container {
             background: rgba(255, 255, 255, 0.05);
             padding: 40px;
             border-radius: 15px;
-            width: 350px;
+            width: 380px;
             backdrop-filter: blur(10px);
             box-shadow: 0 0 25px rgba(0,0,0,0.6);
-            animation: fadeIn 0.8s ease-out;
         }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .logo {
-            width: 120px;
-            margin: 0 auto 20px auto;
-            display: block;
-            filter: drop-shadow(0 0 5px #1e90ff);
-        }
-
         h2 {
             text-align: center;
             margin-bottom: 25px;
             font-weight: 300;
             letter-spacing: 1px;
         }
-
-        input {
+        input, select {
             width: 100%;
             padding: 12px;
             margin: 10px 0;
@@ -56,14 +39,7 @@
             color: #fff;
             font-size: 15px;
             outline: none;
-            transition: 0.2s;
         }
-
-        input:focus {
-            background: #333;
-            box-shadow: 0 0 8px #1e90ff;
-        }
-
         button {
             width: 100%;
             padding: 12px;
@@ -74,14 +50,15 @@
             color: white;
             font-size: 16px;
             cursor: pointer;
-            transition: 0.2s;
         }
-
         button:hover {
             background: #0d6efd;
-            box-shadow: 0 0 10px #1e90ff;
         }
-
+        .error {
+            color: #ff6b6b;
+            text-align: center;
+            margin-bottom: 10px;
+        }
         a {
             display: block;
             margin-top: 12px;
@@ -89,45 +66,37 @@
             color: #1e90ff;
             text-decoration: none;
             font-size: 14px;
-            transition: 0.2s;
         }
-
         a:hover {
             text-decoration: underline;
-            color: #63b3ff;
         }
     </style>
 </head>
 <body>
 
 <div class="container">
-
-    {% if error %}
-    <div style="color: red; font-size: 20px; margin-bottom: 15px; text-align:center;">
-        {{ error }}
-    </div>
-    {% endif %}
-
-    {% if error_popup %}
-    <script>
-        alert("{{ error_popup }}");
-    </script>
-    {% endif %}
-
-    <img src="/static/logo.png" alt="Logo" class="logo">
-
     <h2>Logowanie</h2>
 
+    {% if error %}
+    <div class="error">{{ error }}</div>
+    {% endif %}
+
     <form method="POST">
-        <input type="email" name="email" placeholder="Email" required>
-        <input type="password" name="password" placeholder="Hasło" required>
+        <input type="text" name="first_name" placeholder="Imię" required>
+        <input type="text" name="last_name" placeholder="Nazwisko" required>
+
+        <select name="player_alias" required>
+            <option value="">Wybierz swojego piłkarza</option>
+            {% for p in used_players %}
+            <option value="{{ p }}">{{ p }}</option>
+            {% endfor %}
+        </select>
+
         <button type="submit">Zaloguj</button>
     </form>
 
-    <a href="/reset_password">Zapomniałeś hasła?</a>
     <a href="/register">Nie masz konta? Zarejestruj się</a>
     <a href="/">Powrót na stronę główną</a>
-
 </div>
 
 </body>

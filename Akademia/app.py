@@ -1,9 +1,21 @@
 import sqlite3
 from flask import Flask, render_template, request, redirect, session
-from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
 app.secret_key = "DianaPolak"
+
+# -----------------------------
+#  STAŁA LISTA PIŁKARZY
+# -----------------------------
+
+ALL_PLAYERS = [
+    "Lionel Messi", "Cristiano Ronaldo", "Kylian Mbappé", "Neymar", "Robert Lewandowski",
+    "Kevin De Bruyne", "Erling Haaland", "Luka Modrić", "Karim Benzema", "Mohamed Salah",
+    "Vinicius Jr", "Pedri", "Gavi", "Antoine Griezmann", "Harry Kane",
+    "Bukayo Saka", "Phil Foden", "Jude Bellingham", "Sergio Ramos", "Alisson Becker",
+    "Thibaut Courtois", "Marc ter Stegen", "Virgil van Dijk", "Antonio Rüdiger", "Joshua Kimmich",
+    "Heung-min Son", "Raheem Sterling", "Paulo Dybala", "Ángel Di María", "Martin Ødegaard"
+]
 
 # -----------------------------
 #  BAZA DANYCH
@@ -17,13 +29,13 @@ def get_db():
 def init_db():
     conn = get_db()
 
+    # NOWA TABELA USERS – imię, nazwisko, piłkarz, admin
     conn.execute("""
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            email TEXT UNIQUE NOT NULL,
-            password TEXT NOT NULL,
-            full_name TEXT,
-            player_number INTEGER,
+            first_name TEXT NOT NULL,
+            last_name TEXT NOT NULL,
+            player_alias TEXT UNIQUE NOT NULL,
             is_admin INTEGER DEFAULT 0
         )
     """)
@@ -64,93 +76,104 @@ def home():
     return render_template("index.html")
 
 # -----------------------------
-#  REJESTRACJA
+#  REJESTRACJA – IMIĘ, NAZWISKO, PIŁKARZ
 # -----------------------------
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
+    conn = get_db()
+
+    # ilu jest już użytkowników – pierwszy będzie adminem
+    count = conn.execute("SELECT COUNT(*) AS c FROM users").fetchone()["c"]
+    is_admin = 1 if count == 0 else 0
+
+    # piłkarze już zajęci
+    used_aliases_rows = conn.execute("SELECT player_alias FROM users").fetchall()
+    used_aliases = {row["player_alias"] for row in used_aliases_rows}
+
+    # dostępni piłkarze = ALL_PLAYERS - zajęci
+    available_players = [p for p in ALL_PLAYERS if p not in used_aliases]
+
     if request.method == "POST":
-        full_name = request.form["full_name"]
-        email = request.form["email"]
-        password = request.form["password"]
-        hashed = generate_password_hash(password)
+        first_name = request.form["first_name"].strip()
+        last_name = request.form["last_name"].strip()
+        player_alias = request.form["player_alias"].strip()
 
-        conn = get_db()
-
-        count = conn.execute("SELECT COUNT(*) AS c FROM users").fetchone()["c"]
-        is_admin = 1 if count == 0 else 0
-
-        used_numbers = conn.execute(
-            "SELECT player_number FROM users WHERE player_number IS NOT NULL"
-        ).fetchall()
-
-        used_numbers = {row["player_number"] for row in used_numbers}
-
-        free_number = None
-        for n in range(1, 100):
-            if n not in used_numbers:
-                free_number = n
-                break
-
-        if free_number is None:
+        if not first_name or not last_name or not player_alias:
             conn.close()
-            return "Brak wolnych numerów zawodników (1–99)."
+            return render_template(
+                "register.html",
+                available_players=available_players,
+                error="Wszystkie pola są wymagane."
+            )
+
+        if player_alias not in available_players:
+            conn.close()
+            return render_template(
+                "register.html",
+                available_players=available_players,
+                error="Ten piłkarz jest już zajęty lub nieprawidłowy."
+            )
 
         try:
             conn.execute(
-                "INSERT INTO users (email, password, full_name, player_number, is_admin) VALUES (?, ?, ?, ?, ?)",
-                (email, hashed, full_name, free_number, is_admin)
+                "INSERT INTO users (first_name, last_name, player_alias, is_admin) VALUES (?, ?, ?, ?)",
+                (first_name, last_name, player_alias, is_admin)
             )
             conn.commit()
         except sqlite3.IntegrityError:
-            return "Użytkownik o takim emailu już istnieje!"
-        finally:
             conn.close()
+            return render_template(
+                "register.html",
+                available_players=available_players,
+                error="Ten piłkarz jest już zajęty."
+            )
 
+        conn.close()
         return redirect("/login")
 
-    return render_template("register.html")
+    conn.close()
+    return render_template("register.html", available_players=available_players)
 
 # -----------------------------
-#  LOGOWANIE
+#  LOGOWANIE – IMIĘ, NAZWISKO, PIŁKARZ
 # -----------------------------
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
-    if "login_attempts" not in session:
-        session["login_attempts"] = 0
-
     if request.method == "POST":
-        email = request.form["email"]
-        password = request.form["password"]
+        first_name = request.form["first_name"].strip()
+        last_name = request.form["last_name"].strip()
+        player_alias = request.form["player_alias"].strip()
 
         conn = get_db()
-        user = conn.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
+        user = conn.execute(
+            "SELECT * FROM users WHERE first_name = ? AND last_name = ? AND player_alias = ?",
+            (first_name, last_name, player_alias)
+        ).fetchone()
         conn.close()
 
-        if user is None or not check_password_hash(user["password"], password):
-            session["login_attempts"] += 1
-
-            if session["login_attempts"] >= 3:
-                return render_template(
-                    "login.html",
-                    error_popup="WPISUJ DOBRE DANE WARIACIE!"
-                )
-
+        if user is None:
             return render_template(
                 "login.html",
-                error="Błędne dane logowania mordo"
+                error="Nieprawidłowe dane logowania mordo"
             )
 
-        session["login_attempts"] = 0
-
-        session["user"] = email
         session["user_id"] = user["id"]
+        session["first_name"] = user["first_name"]
+        session["last_name"] = user["last_name"]
+        session["player_alias"] = user["player_alias"]
         session["is_admin"] = user["is_admin"]
 
         return redirect("/")
 
-    return render_template("login.html")
+    # do logowania pokazujemy tylko piłkarzy, którzy są już przypisani do kont
+    conn = get_db()
+    used_aliases_rows = conn.execute("SELECT player_alias FROM users").fetchall()
+    conn.close()
+    used_aliases = [row["player_alias"] for row in used_aliases_rows]
+
+    return render_template("login.html", used_players=used_aliases)
 
 @app.route("/logout")
 def logout():
@@ -158,7 +181,7 @@ def logout():
     return redirect("/")
 
 # -----------------------------
-#  PANEL ADMINA
+#  PANEL ADMINA – PROSTA WERSJA
 # -----------------------------
 
 @app.route("/admin")
@@ -170,52 +193,12 @@ def admin_panel():
         return "Brak dostępu"
 
     conn = get_db()
-    users = conn.execute("SELECT id, email, full_name, player_number, is_admin FROM users").fetchall()
+    users = conn.execute(
+        "SELECT id, first_name, last_name, player_alias, is_admin FROM users"
+    ).fetchall()
     conn.close()
 
     return render_template("admin.html", users=users)
-
-# -----------------------------
-#  ZMIANA EMAILA
-# -----------------------------
-
-@app.route("/admin/change_email", methods=["POST"])
-def admin_change_email():
-    if "user_id" not in session or session.get("is_admin") != 1:
-        return "Brak dostępu"
-
-    user_id = request.form["user_id"]
-    new_email = request.form["new_email"]
-
-    conn = get_db()
-    try:
-        conn.execute("UPDATE users SET email = ? WHERE id = ?", (new_email, user_id))
-        conn.commit()
-    except sqlite3.IntegrityError:
-        return "Taki email już istnieje!"
-    finally:
-        conn.close()
-
-    return redirect("/admin")
-
-# -----------------------------
-#  RESET HASŁA
-# -----------------------------
-
-@app.route("/admin/reset_password", methods=["POST"])
-def admin_reset_password():
-    if "user_id" not in session or session.get("is_admin") != 1:
-        return "Brak dostępu"
-
-    user_id = request.form["user_id"]
-    new_password = generate_password_hash("123456")
-
-    conn = get_db()
-    conn.execute("UPDATE users SET password = ? WHERE id = ?", (new_password, user_id))
-    conn.commit()
-    conn.close()
-
-    return redirect("/admin")
 
 # -----------------------------
 #  USUWANIE UŻYTKOWNIKA
@@ -234,7 +217,7 @@ def delete_user(user_id):
     return redirect("/admin")
 
 # -----------------------------
-#  LISTA PIŁKARZY
+#  LISTA PIŁKARZY (STATYCZNA STRONA)
 # -----------------------------
 
 @app.route("/pilkarze")
