@@ -3,163 +3,473 @@
 <head>
     <meta charset="UTF-8">
     <title>Panel administratora</title>
-
     <style>
         body {
             margin: 0;
             padding: 0;
             font-family: "Segoe UI", Arial, sans-serif;
-            background: linear-gradient(135deg, #0d0d0d, #1a1a1a);
             color: #fff;
+            background-image: url('/static/stadium.jpg');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+
+        .overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.55);
+            backdrop-filter: blur(8px);
+            z-index: -1;
+        }
+
+        .layout {
+            display: flex;
             min-height: 100vh;
         }
 
-        .container {
-            width: 90%;
-            max-width: 1000px;
-            margin: 60px auto;
-            background: rgba(255,255,255,0.05);
-            padding: 30px;
-            border-radius: 15px;
-            backdrop-filter: blur(10px);
-            box-shadow: 0 0 25px rgba(0,0,0,0.6);
-            animation: fadeIn 0.8s ease-out;
+        /* SIDEBAR */
+        .sidebar {
+            width: 260px;
+            background: rgba(255,255,255,0.08);
+            backdrop-filter: blur(14px);
+            box-shadow: 0 0 20px rgba(0,0,0,0.6);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
         }
 
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        h2 {
-            text-align: center;
-            margin-bottom: 25px;
+        .sidebar h2 {
             font-weight: 300;
-            letter-spacing: 1px;
+            margin-bottom: 15px;
+        }
+
+        .nav-btn {
+            padding: 10px 12px;
+            border-radius: 8px;
+            border: none;
+            background: rgba(30,144,255,0.3);
+            color: #fff;
+            text-align: left;
+            cursor: pointer;
+            font-size: 15px;
+            transition: 0.2s;
+            width: 100%;
+        }
+
+        .nav-btn:hover,
+        .nav-btn.active {
+            background: rgba(30,144,255,0.7);
+            box-shadow: 0 0 10px rgba(30,144,255,0.8);
+        }
+
+        .sidebar a {
+            color: #fff;
+            text-decoration: none;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+
+        .sidebar a:hover {
+            text-decoration: underline;
+        }
+
+        /* MAIN CONTENT */
+        .content {
+            flex: 1;
+            padding: 25px;
+        }
+
+        h3 {
+            font-weight: 300;
+            margin-bottom: 15px;
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
-            background: rgba(255,255,255,0.03);
+            margin-top: 10px;
+            background: rgba(0,0,0,0.35);
             border-radius: 10px;
             overflow: hidden;
         }
 
         th, td {
-            padding: 12px;
-            text-align: center;
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255,255,255,0.15);
+            font-size: 14px;
         }
 
         th {
-            background: #1e90ff;
-            color: white;
-            font-weight: 500;
+            background: rgba(255,255,255,0.08);
         }
 
-        tr:nth-child(even) {
-            background: rgba(255,255,255,0.05);
+        tr:last-child td {
+            border-bottom: none;
         }
 
-        button {
-            padding: 8px 14px;
-            background: #ff3b3b;
-            border: none;
+        .badge-admin {
+            color: #0f0;
+            font-weight: bold;
+        }
+
+        .btn-small {
+            padding: 4px 8px;
+            font-size: 12px;
             border-radius: 6px;
-            color: white;
-            cursor: pointer;
-            transition: 0.2s;
-        }
-
-        button:hover {
-            background: #cc0000;
-            box-shadow: 0 0 10px #ff3b3b;
-        }
-
-        .email-input {
-            padding: 6px;
-            border-radius: 5px;
             border: none;
-            margin-bottom: 5px;
-            width: 140px;
+            cursor: pointer;
+            margin-right: 4px;
+            margin-top: 3px;
         }
 
-        .action-btn {
+        .btn-edit {
             background: #1e90ff;
-            margin-bottom: 6px;
+            color: #fff;
         }
 
-        .action-btn:hover {
-            background: #0d6efd;
-            box-shadow: 0 0 10px #1e90ff;
+        .btn-delete {
+            background: #dc3545;
+            color: #fff;
         }
 
-        a.back {
+        .btn-toggle {
+            background: #ffc107;
+            color: #000;
+        }
+
+        .btn-green {
+            background: #28a745;
+            color: #fff;
+        }
+
+        .btn-gray {
+            background: #6c757d;
+            color: #fff;
+        }
+
+        .section {
+            display: none;
+        }
+
+        .section.active {
             display: block;
-            text-align: center;
-            margin-top: 25px;
-            color: #1e90ff;
-            text-decoration: none;
-            font-size: 16px;
         }
 
-        a.back:hover {
-            text-decoration: underline;
-            color: #63b3ff;
+        .paid-dot {
+            font-size: 16px;
+            margin-left: 4px;
+        }
+
+        .form-inline {
+            margin-top: 10px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .form-inline input,
+        .form-inline select {
+            padding: 6px;
+            border-radius: 6px;
+            border: none;
+            font-size: 13px;
+        }
+
+        .form-inline button {
+            padding: 6px 10px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            background: #1e90ff;
+            color: #fff;
+            font-size: 13px;
+        }
+
+        .form-inline button:hover {
+            background: #0d6efd;
+        }
+
+        .section-block {
+            margin-bottom: 25px;
+        }
+
+        .muted {
+            color: #ccc;
+            font-size: 13px;
         }
     </style>
+
+    <script>
+        function showSection(id) {
+            const sections = document.querySelectorAll('.section');
+            sections.forEach(s => s.classList.remove('active'));
+
+            const buttons = document.querySelectorAll('.nav-btn');
+            buttons.forEach(b => b.classList.remove('active'));
+
+            document.getElementById(id).classList.add('active');
+            document.getElementById('btn-' + id).classList.add('active');
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            showSection('users');
+        });
+    </script>
 </head>
 <body>
+<div class="overlay"></div>
 
-<div class="container">
+<div class="layout">
 
-    <h2>Panel administratora</h2>
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+        <h2>Panel admina</h2>
 
-    <table>
-        <tr>
-            <th>ID</th>
-            <th>Imię i nazwisko</th>
-            <th>Email</th>
-            <th>Numer zawodnika</th>
-            <th>Admin</th>
-            <th>Akcje</th>
-        </tr>
+        <button id="btn-users" class="nav-btn" onclick="showSection('users')">👤 Użytkownicy</button>
+        <button id="btn-upcoming" class="nav-btn" onclick="showSection('upcoming')">⚽ Mecze (przyszłe)</button>
+        <button id="btn-past" class="nav-btn" onclick="showSection('past')">🕰️ Mecze rozegrane</button>
+        <button id="btn-payments" class="nav-btn" onclick="showSection('payments')">💰 Płatności</button>
+        <button id="btn-addmatch" class="nav-btn" onclick="showSection('addmatch')">➕ Dodaj mecz</button>
 
-        {% for u in users %}
-        <tr>
-            <td>{{ u.id }}</td>
-            <td>{{ u.full_name }}</td>
-            <td>{{ u.email }}</td>
-            <td>{{ u.player_number }}</td>
-            <td>{{ "TAK" if u.is_admin == 1 else "NIE" }}</td>
+        <a href="/">← Powrót na stronę główną</a>
+    </div>
 
-            <td>
+    <!-- MAIN CONTENT -->
+    <div class="content">
 
-                <!-- Zmiana e-maila -->
-                <form action="/admin/change_email" method="POST">
-                    <input type="hidden" name="user_id" value="{{ u.id }}">
-                    <input type="email" name="new_email" class="email-input" placeholder="Nowy email" required>
-                    <button type="submit" class="action-btn">Zmień email</button>
+        <!-- UŻYTKOWNICY -->
+        <div id="users" class="section">
+            <h3>Użytkownicy</h3>
+            <table>
+                <tr>
+                    <th>Imię</th>
+                    <th>Nazwisko</th>
+                    <th>Piłkarz</th>
+                    <th>Admin</th>
+                    <th>Akcje</th>
+                </tr>
+                {% for u in users %}
+                <tr>
+                    <td>{{ u.first_name }}</td>
+                    <td>{{ u.last_name }}</td>
+                    <td>{{ u.player_alias }}</td>
+                    <td>
+                        {% if u.is_admin == 1 %}
+                        <span class="badge-admin">TAK</span>
+                        {% else %}
+                        NIE
+                        {% endif %}
+                    </td>
+                    <td>
+                        <!-- Edycja imienia/nazwiska -->
+                        <form action="/admin/user/edit/{{ u.id }}" method="POST" class="form-inline">
+                            <input type="text" name="first_name" value="{{ u.first_name }}" placeholder="Imię">
+                            <input type="text" name="last_name" value="{{ u.last_name }}" placeholder="Nazwisko">
+                            <button type="submit" class="btn-small btn-edit">Zapisz</button>
+                        </form>
+
+                        <!-- Zmiana piłkarza -->
+                        <form action="/admin/user/change_player/{{ u.id }}" method="POST" class="form-inline">
+                            <select name="player_alias">
+                                <option value="{{ u.player_alias }}">{{ u.player_alias }}</option>
+                                {% for p in available_players %}
+                                {% if p != u.player_alias %}
+                                <option value="{{ p }}">{{ p }}</option>
+                                {% endif %}
+                                {% endfor %}
+                            </select>
+                            <button type="submit" class="btn-small btn-toggle">Zmień piłkarza</button>
+                        </form>
+
+                        <!-- Admin ON/OFF -->
+                        <form action="/admin/user/toggle_admin/{{ u.id }}" method="POST" style="display:inline;">
+                            <button type="submit" class="btn-small btn-green">
+                                {% if u.is_admin == 1 %}Odbierz admina{% else %}Nadaj admina{% endif %}
+                            </button>
+                        </form>
+
+                        <!-- Usuń użytkownika -->
+                        <form action="/delete_user/{{ u.id }}" method="POST" style="display:inline;">
+                            <button type="submit" class="btn-small btn-delete">Usuń</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
+
+        <!-- MECZE PRZYSZŁE -->
+        <div id="upcoming" class="section">
+            <h3>Mecze (przyszłe)</h3>
+
+            {% if upcoming_matches %}
+            {% for m in upcoming_matches %}
+            <div class="section-block">
+                <strong>{{ m.match_date }} {{ m.match_time }} – {{ m.location }}</strong><br>
+                <span class="muted">Zapisani: {{ m.signed_up }}/{{ m.max_slots }}</span>
+
+                <table>
+                    <tr>
+                        <th>Zawodnik</th>
+                        <th>Piłkarz</th>
+                        <th>Płatność</th>
+                        <th>Akcje</th>
+                    </tr>
+                    {% set has_players = false %}
+                    {% for s in signups %}
+                    {% if s.match_id == m.id %}
+                    {% set has_players = true %}
+                    <tr>
+                        <td>{{ s.first_name }} {{ s.last_name }}</td>
+                        <td>{{ s.player_alias }}</td>
+                        <td>
+                            {% if s.paid == 1 %}
+                            <span class="paid-dot" style="color:lime;">●</span> opłacone
+                            {% else %}
+                            <span class="paid-dot" style="color:red;">●</span> nieopłacone
+                            {% endif %}
+                        </td>
+                        <td>
+                            <form action="/admin/match/{{ m.id }}/toggle_paid/{{ s.user_id }}" method="POST" style="display:inline;">
+                                <button type="submit" class="btn-small btn-toggle">Zmień płatność</button>
+                            </form>
+
+                            <form action="/admin/match/{{ m.id }}/remove_player/{{ s.user_id }}" method="POST" style="display:inline;">
+                                <button type="submit" class="btn-small btn-delete">Usuń z meczu</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endif %}
+                    {% endfor %}
+
+                    {% if not has_players %}
+                    <tr>
+                        <td colspan="4"><i>Brak zapisanych zawodników</i></td>
+                    </tr>
+                    {% endif %}
+                </table>
+
+                <!-- Dodaj zawodnika do meczu -->
+                <form action="/admin/match/{{ m.id }}/add_player" method="POST" class="form-inline">
+                    <select name="user_id" required>
+                        <option value="">Wybierz zawodnika</option>
+                        {% for u in users %}
+                        <option value="{{ u.id }}">{{ u.first_name }} {{ u.last_name }} ({{ u.player_alias }})</option>
+                        {% endfor %}
+                    </select>
+                    <button type="submit">Zapisz na mecz</button>
                 </form>
+            </div>
+            {% endfor %}
+            {% else %}
+            <p>Brak zaplanowanych meczów.</p>
+            {% endif %}
+        </div>
 
-                <!-- Reset hasła -->
-                <form action="/admin/reset_password" method="POST">
-                    <input type="hidden" name="user_id" value="{{ u.id }}">
-                    <button type="submit" class="action-btn">Reset hasła</button>
-                </form>
+        <!-- MECZE ROZEGRANE -->
+        <div id="past" class="section">
+            <h3>Mecze rozegrane</h3>
 
-                <!-- Usuwanie użytkownika -->
-                <form action="/delete_user/{{ u.id }}" method="POST" onsubmit="return confirm('Usunąć użytkownika?');">
-                    <button type="submit">Usuń</button>
-                </form>
+            {% if past_matches %}
+            {% for m in past_matches %}
+            <div class="section-block">
+                <strong>{{ m.match_date }} – {{ m.location }}</strong><br>
+                <span class="muted">Zapisani: {{ m.signed_up }}/{{ m.max_slots }}</span>
 
-            </td>
-        </tr>
-        {% endfor %}
-    </table>
+                <table>
+                    <tr>
+                        <th>Zawodnik</th>
+                        <th>Piłkarz</th>
+                        <th>Płatność</th>
+                        <th>Akcje</th>
+                    </tr>
+                    {% set has_players = false %}
+                    {% for s in signups %}
+                    {% if s.match_id == m.id %}
+                    {% set has_players = true %}
+                    <tr>
+                        <td>{{ s.first_name }} {{ s.last_name }}</td>
+                        <td>{{ s.player_alias }}</td>
+                        <td>
+                            {% if s.paid == 1 %}
+                            <span class="paid-dot" style="color:lime;">●</span> opłacone
+                            {% else %}
+                            <span class="paid-dot" style="color:red;">●</span> nieopłacone
+                            {% endif %}
+                        </td>
+                        <td>
+                            <form action="/admin/match/{{ m.id }}/toggle_paid/{{ s.user_id }}" method="POST" style="display:inline;">
+                                <button type="submit" class="btn-small btn-toggle">Zmień płatność</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endif %}
+                    {% endfor %}
 
-    <a href="/" class="back">← Powrót na stronę główną</a>
+                    {% if not has_players %}
+                    <tr>
+                        <td colspan="4"><i>Brak zapisanych zawodników</i></td>
+                    </tr>
+                    {% endif %}
+                </table>
+            </div>
+            {% endfor %}
+            {% else %}
+            <p>Brak rozegranych meczów.</p>
+            {% endif %}
+        </div>
 
+        <!-- PŁATNOŚCI -->
+        <div id="payments" class="section">
+            <h3>Płatności – podsumowanie</h3>
+
+            {% if all_matches %}
+            <table>
+                <tr>
+                    <th>Data</th>
+                    <th>Lokalizacja</th>
+                    <th>Opłaconych / Zapisanych</th>
+                </tr>
+                {% for m in all_matches %}
+                {% set total = 0 %}
+                {% set paid = 0 %}
+                {% for s in signups %}
+                {% if s.match_id == m.id %}
+                {% set total = total + 1 %}
+                {% if s.paid == 1 %}
+                {% set paid = paid + 1 %}
+                {% endif %}
+                {% endif %}
+                {% endfor %}
+                <tr>
+                    <td>{{ m.match_date }}</td>
+                    <td>{{ m.location }}</td>
+                    <td>{{ paid }}/{{ total }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+            {% else %}
+            <p>Brak meczów do rozliczenia.</p>
+            {% endif %}
+        </div>
+
+        <!-- DODAJ MECZ -->
+        <div id="addmatch" class="section">
+            <h3>Dodaj nowy mecz</h3>
+            <form action="/terminarz/add" method="POST" class="form-inline">
+                <input type="date" name="date" required>
+                <input type="time" name="time" required>
+                <input type="text" name="location" placeholder="Lokalizacja" required>
+                <input type="number" name="max_slots" placeholder="Maks. miejsc" required>
+                <button type="submit">Dodaj mecz</button>
+            </form>
+        </div>
+
+    </div>
 </div>
 
 </body>

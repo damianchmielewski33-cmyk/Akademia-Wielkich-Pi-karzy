@@ -26,6 +26,7 @@ def get_db():
     conn.row_factory = sqlite3.Row
     return conn
 
+
 def init_db():
     conn = get_db()
 
@@ -64,6 +65,7 @@ def init_db():
 
     conn.commit()
     conn.close()
+
 
 init_db()
 
@@ -172,30 +174,133 @@ def login():
 
     return render_template("login.html", used_players=used_aliases)
 
+
 @app.route("/logout")
 def logout():
     session.clear()
     return redirect("/")
 
 # -----------------------------
-#  PANEL ADMINA – PROSTA LISTA
+#  PANEL ADMINA – SIDEBAR + PŁATNOŚCI + MECZE ROZEGRANE
 # -----------------------------
 
 @app.route("/admin")
 def admin_panel():
     if "user_id" not in session:
         return redirect("/login")
-
     if session.get("is_admin") != 1:
         return "Brak dostępu"
 
     conn = get_db()
+
     users = conn.execute(
-        "SELECT id, first_name, last_name, player_alias, is_admin FROM users"
+        "SELECT id, first_name, last_name, player_alias, is_admin FROM users ORDER BY first_name"
     ).fetchall()
+
+    used_aliases_rows = conn.execute("SELECT player_alias FROM users").fetchall()
+    used_aliases = {row["player_alias"] for row in used_aliases_rows}
+    available_players = [p for p in ALL_PLAYERS]
+
+    upcoming_matches = conn.execute(
+        "SELECT * FROM matches WHERE match_date >= date('now') ORDER BY match_date, match_time"
+    ).fetchall()
+
+    past_matches = conn.execute(
+        "SELECT * FROM matches WHERE match_date < date('now') ORDER BY match_date DESC, match_time DESC"
+    ).fetchall()
+
+    all_matches = conn.execute(
+        "SELECT * FROM matches ORDER BY match_date DESC, match_time DESC"
+    ).fetchall()
+
+    signups = conn.execute("""
+        SELECT ms.match_id, ms.user_id, ms.paid,
+               u.first_name, u.last_name, u.player_alias
+        FROM match_signups ms
+        JOIN users u ON u.id = ms.user_id
+        ORDER BY u.first_name
+    """).fetchall()
+
     conn.close()
 
-    return render_template("admin.html", users=users)
+    return render_template(
+        "admin.html",
+        users=users,
+        available_players=available_players,
+        upcoming_matches=upcoming_matches,
+        past_matches=past_matches,
+        all_matches=all_matches,
+        signups=signups
+    )
+
+
+@app.route("/admin/user/edit/<int:user_id>", methods=["POST"])
+def admin_edit_user(user_id):
+    if session.get("is_admin") != 1:
+        return "Brak dostępu"
+
+    first_name = request.form.get("first_name", "").strip()
+    last_name = request.form.get("last_name", "").strip()
+
+    conn = get_db()
+    conn.execute(
+        "UPDATE users SET first_name = ?, last_name = ? WHERE id = ?",
+        (first_name, last_name, user_id)
+    )
+    conn.commit()
+    conn.close()
+
+    return redirect("/admin")
+
+
+@app.route("/admin/user/change_player/<int:user_id>", methods=["POST"])
+def admin_change_player(user_id):
+    if session.get("is_admin") != 1:
+        return "Brak dostępu"
+
+    player_alias = request.form.get("player_alias", "").strip()
+
+    conn = get_db()
+    existing = conn.execute(
+        "SELECT id FROM users WHERE player_alias = ? AND id != ?",
+        (player_alias, user_id)
+    ).fetchone()
+    if existing:
+        conn.close()
+        return "Ten piłkarz jest już zajęty przez innego użytkownika."
+
+    conn.execute(
+        "UPDATE users SET player_alias = ? WHERE id = ?",
+        (player_alias, user_id)
+    )
+    conn.commit()
+    conn.close()
+
+    return redirect("/admin")
+
+
+@app.route("/admin/user/toggle_admin/<int:user_id>", methods=["POST"])
+def admin_toggle_admin(user_id):
+    if session.get("is_admin") != 1:
+        return "Brak dostępu"
+
+    conn = get_db()
+    row = conn.execute(
+        "SELECT is_admin FROM users WHERE id = ?",
+        (user_id,)
+    ).fetchone()
+
+    if row:
+        new_val = 0 if row["is_admin"] == 1 else 1
+        conn.execute(
+            "UPDATE users SET is_admin = ? WHERE id = ?",
+            (new_val, user_id)
+        )
+        conn.commit()
+
+    conn.close()
+    return redirect("/admin")
+
 
 @app.route("/delete_user/<int:user_id>", methods=["POST"])
 def delete_user(user_id):
@@ -207,6 +312,95 @@ def delete_user(user_id):
     conn.commit()
     conn.close()
 
+    return redirect("/admin")
+
+
+@app.route("/admin/match/<int:match_id>/add_player", methods=["POST"])
+def admin_add_player_to_match(match_id):
+    if session.get("is_admin") != 1:
+        return "Brak dostępu"
+
+    user_id = request.form.get("user_id")
+    if not user_id:
+        return redirect("/admin")
+
+    conn = get_db()
+
+    match = conn.execute("SELECT * FROM matches WHERE id = ?", (match_id,)).fetchone()
+    if not match:
+        conn.close()
+        return "Mecz nie istnieje"
+
+    if match["signed_up"] >= match["max_slots"]:
+        conn.close()
+        return "Brak miejsc na ten mecz!"
+
+    already = conn.execute(
+        "SELECT id FROM match_signups WHERE user_id = ? AND match_id = ?",
+        (user_id, match_id)
+    ).fetchone()
+    if already:
+        conn.close()
+        return redirect("/admin")
+
+    conn.execute(
+        "INSERT INTO match_signups (user_id, match_id, paid) VALUES (?, ?, 0)",
+        (user_id, match_id)
+    )
+    conn.execute(
+        "UPDATE matches SET signed_up = signed_up + 1 WHERE id = ?",
+        (match_id,)
+    )
+    conn.commit()
+    conn.close()
+
+    return redirect("/admin")
+
+
+@app.route("/admin/match/<int:match_id>/remove_player/<int:user_id>", methods=["POST"])
+def admin_remove_player_from_match(match_id, user_id):
+    if session.get("is_admin") != 1:
+        return "Brak dostępu"
+
+    conn = get_db()
+
+    signup = conn.execute(
+        "SELECT id FROM match_signups WHERE user_id = ? AND match_id = ?",
+        (user_id, match_id)
+    ).fetchone()
+
+    if signup:
+        conn.execute("DELETE FROM match_signups WHERE id = ?", (signup["id"],))
+        conn.execute(
+            "UPDATE matches SET signed_up = signed_up - 1 WHERE id = ?",
+            (match_id,)
+        )
+        conn.commit()
+
+    conn.close()
+    return redirect("/admin")
+
+
+@app.route("/admin/match/<int:match_id>/toggle_paid/<int:user_id>", methods=["POST"])
+def admin_toggle_paid(match_id, user_id):
+    if session.get("is_admin") != 1:
+        return "Brak dostępu"
+
+    conn = get_db()
+    row = conn.execute(
+        "SELECT id, paid FROM match_signups WHERE user_id = ? AND match_id = ?",
+        (user_id, match_id)
+    ).fetchone()
+
+    if row:
+        new_val = 0 if row["paid"] == 1 else 1
+        conn.execute(
+            "UPDATE match_signups SET paid = ? WHERE id = ?",
+            (new_val, row["id"])
+        )
+        conn.commit()
+
+    conn.close()
     return redirect("/admin")
 
 # -----------------------------
