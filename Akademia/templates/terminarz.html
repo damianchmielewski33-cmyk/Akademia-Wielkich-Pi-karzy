@@ -440,8 +440,6 @@
             text-decoration: underline;
         }
 
-        /* Popup z listą zawodników */
-
         .players-popup {
             position: fixed;
             inset: 0;
@@ -467,11 +465,6 @@
             overflow-y: auto;
             box-shadow: 0 0 25px rgba(0,0,0,0.8);
             animation: fadeIn 0.25s ease;
-        }
-
-        @keyframes fadeIn {
-            from { transform: scale(0.9); opacity: 0; }
-            to { transform: scale(1); opacity: 1; }
         }
 
         .players-popup .close-btn {
@@ -514,6 +507,71 @@
             align-items: center;
             justify-content: center;
             font-weight: bold;
+        }
+
+        .logout-popup {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.65);
+            backdrop-filter: blur(6px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 99999;
+        }
+
+        .logout-popup.open {
+            display: flex;
+            animation: fadeIn 0.25s ease;
+        }
+
+        .logout-inner {
+            background: rgba(0,0,0,0.85);
+            padding: 30px;
+            border-radius: 18px;
+            width: 320px;
+            text-align: center;
+            box-shadow: 0 0 25px rgba(0,0,0,0.8);
+            animation: scaleIn 0.25s ease;
+        }
+
+        .logout-buttons {
+            margin-top: 20px;
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .btn-logout-yes {
+            flex: 1;
+            padding: 10px;
+            background: rgba(255,50,50,0.8);
+            border: none;
+            border-radius: 10px;
+            color: #fff;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .btn-logout-yes:hover {
+            background: rgba(255,50,50,1);
+        }
+
+        .btn-logout-no {
+            flex: 1;
+            padding: 10px;
+            background: rgba(255,255,255,0.15);
+            border: none;
+            border-radius: 10px;
+            color: #fff;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .btn-logout-no:hover {
+            background: rgba(255,255,255,0.25);
         }
 
         @media (max-width: 768px) {
@@ -812,8 +870,6 @@
             }
         }
 
-        // Popup z listą zawodników
-
         function openPlayersPopup(matchId) {
             const data = window.playersData[matchId];
             const popup = document.getElementById("players-popup");
@@ -852,6 +908,16 @@
                 }
             }
         });
+
+        function openLogoutPopup() {
+            document.getElementById("logout-popup").classList.add("open");
+        }
+        function closeLogoutPopup() {
+            document.getElementById("logout-popup").classList.remove("open");
+        }
+        function confirmLogout() {
+            window.location.href = "/logout";
+        }
     </script>
 </head>
 <body>
@@ -867,6 +933,9 @@
             <button id="btn-calendar" class="icon-toggle" title="Widok kalendarza">📅</button>
             {% if session.is_admin == 1 %}
             <a href="/admin" class="btn-modern" style="margin-left:10px;">➕ Panel admina / dodaj mecz</a>
+            {% endif %}
+            {% if session.user_id %}
+            <button class="btn-modern" style="margin-left:10px;" onclick="openLogoutPopup()">🚪 Wyloguj</button>
             {% endif %}
         </div>
     </div>
@@ -1137,6 +1206,18 @@
 
     <a href="/" class="back">← Powrót na stronę główną</a>
 
+</div>
+
+<div id="logout-popup" class="logout-popup">
+    <div class="logout-inner">
+        <h3>Wylogować się?</h3>
+        <p>Czy na pewno chcesz zakończyć sesję?</p>
+
+        <div class="logout-buttons">
+            <button class="btn-logout-yes" onclick="confirmLogout()">Tak, wyloguj</button>
+            <button class="btn-logout-no" onclick="closeLogoutPopup()">Nie</button>
+        </div>
+    </div>
 </div>
 
 </body>

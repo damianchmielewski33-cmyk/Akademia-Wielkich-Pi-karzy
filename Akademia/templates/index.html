@@ -31,7 +31,6 @@
             text-align: center;
         }
 
-        /* AVATAR */
         .user-box {
             display: flex;
             align-items: center;
@@ -66,7 +65,6 @@
             margin-bottom: 40px;
         }
 
-        /* GRID KAFELKÓW */
         .grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -110,7 +108,6 @@
             opacity: 0.8;
         }
 
-        /* Najbliższy mecz */
         .next-match {
             margin-top: 50px;
             padding: 20px;
@@ -130,10 +127,79 @@
             font-size: 18px;
         }
 
-        /* Animacje */
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
+        }
+
+        .logout-popup {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.65);
+            backdrop-filter: blur(6px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 99999;
+        }
+
+        .logout-popup.open {
+            display: flex;
+            animation: fadeIn 0.25s ease;
+        }
+
+        .logout-inner {
+            background: rgba(0,0,0,0.85);
+            padding: 30px;
+            border-radius: 18px;
+            width: 320px;
+            text-align: center;
+            box-shadow: 0 0 25px rgba(0,0,0,0.8);
+            animation: scaleIn 0.25s ease;
+        }
+
+        @keyframes scaleIn {
+            from { transform: scale(0.85); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        .logout-buttons {
+            margin-top: 20px;
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .btn-logout-yes {
+            flex: 1;
+            padding: 10px;
+            background: rgba(255,50,50,0.8);
+            border: none;
+            border-radius: 10px;
+            color: #fff;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .btn-logout-yes:hover {
+            background: rgba(255,50,50,1);
+        }
+
+        .btn-logout-no {
+            flex: 1;
+            padding: 10px;
+            background: rgba(255,255,255,0.15);
+            border: none;
+            border-radius: 10px;
+            color: #fff;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .btn-logout-no:hover {
+            background: rgba(255,255,255,0.25);
         }
     </style>
 </head>
@@ -164,7 +230,6 @@
 
     <div class="grid">
 
-        <!-- WSPÓLNE -->
         <a href="/terminarz" class="tile">
             <div class="tile-icon">🗓️</div>
             <div class="tile-title">Terminarz</div>
@@ -177,7 +242,6 @@
             <div class="tile-desc">Lista zawodników i aliasów</div>
         </a>
 
-        <!-- STATYSTYKI – PRZYCISK PRZYWRÓCONY -->
         <a href="/statystyki" class="tile">
             <div class="tile-icon">📊</div>
             <div class="tile-title">Statystyki</div>
@@ -185,7 +249,6 @@
         </a>
 
         {% if not session.user_id %}
-        <!-- NIEZALOGOWANY -->
         <a href="/login" class="tile">
             <div class="tile-icon">🔐</div>
             <div class="tile-title">Logowanie</div>
@@ -200,12 +263,11 @@
         {% endif %}
 
         {% if session.user_id %}
-        <!-- ZALOGOWANY -->
-        <a href="/logout" class="tile">
+        <div class="tile" onclick="openLogoutPopup()">
             <div class="tile-icon">🚪</div>
             <div class="tile-title">Wyloguj</div>
             <div class="tile-desc">Zakończ sesję</div>
-        </a>
+        </div>
 
         {% if session.is_admin == 1 %}
         <a href="/admin" class="tile">
@@ -218,7 +280,7 @@
 
     </div>
 
-    {% if session.user_id and next_match %}
+    {% if next_match %}
     <div class="next-match">
         <h3>Najbliższy mecz</h3>
         <p><strong>{{ next_match.match_date }} – {{ next_match.match_time }}</strong></p>
@@ -229,6 +291,30 @@
     {% endif %}
 
 </div>
+
+<div id="logout-popup" class="logout-popup">
+    <div class="logout-inner">
+        <h3>Wylogować się?</h3>
+        <p>Czy na pewno chcesz zakończyć sesję?</p>
+
+        <div class="logout-buttons">
+            <button class="btn-logout-yes" onclick="confirmLogout()">Tak, wyloguj</button>
+            <button class="btn-logout-no" onclick="closeLogoutPopup()">Nie</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    function openLogoutPopup() {
+        document.getElementById("logout-popup").classList.add("open");
+    }
+    function closeLogoutPopup() {
+        document.getElementById("logout-popup").classList.remove("open");
+    }
+    function confirmLogout() {
+        window.location.href = "/logout";
+    }
+</script>
 
 </body>
 </html>
