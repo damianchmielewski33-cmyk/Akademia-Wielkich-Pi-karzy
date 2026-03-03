@@ -86,7 +86,12 @@ init_db()
 
 @app.route("/")
 def home():
-    return render_template("index.html")
+    conn = get_db()
+    next_match = conn.execute(
+        "SELECT * FROM matches WHERE match_date >= date('now') ORDER BY match_date, match_time LIMIT 1"
+    ).fetchone()
+    conn.close()
+    return render_template("index.html", next_match=next_match)
 
 # -----------------------------
 #  REJESTRACJA – IMIĘ, NAZWISKO, PIŁKARZ
@@ -212,17 +217,14 @@ def admin_panel():
     used_aliases = {row["player_alias"] for row in used_aliases_rows}
     available_players = [p for p in ALL_PLAYERS]
 
-    # nadchodzące (data >= dziś, nie rozegrane)
     upcoming_matches = conn.execute(
         "SELECT * FROM matches WHERE match_date >= date('now') AND played = 0 ORDER BY match_date, match_time"
     ).fetchall()
 
-    # po terminie, niepotwierdzone
     past_not_confirmed = conn.execute(
         "SELECT * FROM matches WHERE match_date < date('now') AND played = 0 ORDER BY match_date DESC, match_time DESC"
     ).fetchall()
 
-    # rozegrane (zatwierdzone)
     played_matches = conn.execute(
         "SELECT * FROM matches WHERE played = 1 ORDER BY match_date DESC, match_time DESC"
     ).fetchall()
@@ -456,12 +458,17 @@ def admin_unset_played(match_id):
     return redirect("/admin")
 
 # -----------------------------
-#  LISTA PIŁKARZY – statyczna
+#  LISTA PIŁKARZY – zarejestrowani + przycisk statystyk
 # -----------------------------
 
 @app.route("/pilkarze")
 def pilkarze():
-    return render_template("pilkarze.html")
+    conn = get_db()
+    players = conn.execute(
+        "SELECT id, first_name, last_name, player_alias FROM users ORDER BY first_name"
+    ).fetchall()
+    conn.close()
+    return render_template("pilkarze.html", players=players)
 
 # -----------------------------
 #  TERMINARZ – WYŚWIETLANIE + 3 SEKCJE
@@ -508,7 +515,7 @@ def terminarz():
 
     return render_template(
         "terminarz.html",
-        matches=matches,  # jeśli gdzieś jeszcze używasz
+        matches=matches,
         upcoming_matches=upcoming_matches,
         after_date_not_confirmed=after_date_not_confirmed,
         played_confirmed=played_confirmed,
@@ -626,6 +633,14 @@ def unsubscribe_match(match_id):
 
     conn.close()
     return redirect("/terminarz")
+
+# -----------------------------
+#  STATYSTYKI – placeholder (logikę dodamy później)
+# -----------------------------
+
+@app.route("/statystyki/<int:user_id>")
+def statystyki_user(user_id):
+    return f"Statystyki użytkownika {user_id} – logika w przygotowaniu."
 
 # -----------------------------
 #  START
