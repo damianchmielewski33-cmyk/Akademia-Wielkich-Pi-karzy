@@ -1,5 +1,6 @@
 import sqlite3
-from flask import Flask, render_template, request, redirect, session
+from flask import Flask, render_template, request, redirect, session, flash
+from datetime import date
 
 app = Flask(__name__)
 app.secret_key = "DianaPolak"
@@ -47,7 +48,8 @@ def init_db():
             match_time TEXT NOT NULL,
             location TEXT NOT NULL,
             max_slots INTEGER NOT NULL,
-            signed_up INTEGER NOT NULL DEFAULT 0
+            signed_up INTEGER NOT NULL DEFAULT 0,
+            played INTEGER NOT NULL DEFAULT 0
         )
     """)
 
@@ -62,6 +64,15 @@ def init_db():
             FOREIGN KEY(match_id) REFERENCES matches(id)
         )
     """)
+
+    # automatyczna migracja: dodanie kolumny played, jeśli jej nie ma
+    try:
+        cols = conn.execute("PRAGMA table_info(matches)").fetchall()
+        col_names = {c["name"] for c in cols}
+        if "played" not in col_names:
+            conn.execute("ALTER TABLE matches ADD COLUMN played INTEGER NOT NULL DEFAULT 0")
+    except Exception:
+        pass
 
     conn.commit()
     conn.close()
@@ -201,12 +212,19 @@ def admin_panel():
     used_aliases = {row["player_alias"] for row in used_aliases_rows}
     available_players = [p for p in ALL_PLAYERS]
 
+    # nadchodzące (data >= dziś, nie rozegrane)
     upcoming_matches = conn.execute(
-        "SELECT * FROM matches WHERE match_date >= date('now') ORDER BY match_date, match_time"
+        "SELECT * FROM matches WHERE match_date >= date('now') AND played = 0 ORDER BY match_date, match_time"
     ).fetchall()
 
-    past_matches = conn.execute(
-        "SELECT * FROM matches WHERE match_date < date('now') ORDER BY match_date DESC, match_time DESC"
+    # po terminie, niepotwierdzone
+    past_not_confirmed = conn.execute(
+        "SELECT * FROM matches WHERE match_date < date('now') AND played = 0 ORDER BY match_date DESC, match_time DESC"
+    ).fetchall()
+
+    # rozegrane (zatwierdzone)
+    played_matches = conn.execute(
+        "SELECT * FROM matches WHERE played = 1 ORDER BY match_date DESC, match_time DESC"
     ).fetchall()
 
     all_matches = conn.execute(
@@ -228,7 +246,8 @@ def admin_panel():
         users=users,
         available_players=available_players,
         upcoming_matches=upcoming_matches,
-        past_matches=past_matches,
+        past_matches=past_not_confirmed,
+        played_matches=played_matches,
         all_matches=all_matches,
         signups=signups
     )
@@ -404,6 +423,39 @@ def admin_toggle_paid(match_id, user_id):
     return redirect("/admin")
 
 # -----------------------------
+#  ADMIN – ROZEGRANIE MECZU
+# -----------------------------
+
+@app.route("/admin/match/<int:match_id>/set_played", methods=["POST"])
+def admin_set_played(match_id):
+    if session.get("is_admin") != 1:
+        return "Brak dostępu"
+
+    conn = get_db()
+    conn.execute(
+        "UPDATE matches SET played = 1 WHERE id = ?",
+        (match_id,)
+    )
+    conn.commit()
+    conn.close()
+    return redirect("/admin")
+
+
+@app.route("/admin/match/<int:match_id>/unset_played", methods=["POST"])
+def admin_unset_played(match_id):
+    if session.get("is_admin") != 1:
+        return "Brak dostępu"
+
+    conn = get_db()
+    conn.execute(
+        "UPDATE matches SET played = 0 WHERE id = ?",
+        (match_id,)
+    )
+    conn.commit()
+    conn.close()
+    return redirect("/admin")
+
+# -----------------------------
 #  LISTA PIŁKARZY – statyczna
 # -----------------------------
 
@@ -412,13 +464,13 @@ def pilkarze():
     return render_template("pilkarze.html")
 
 # -----------------------------
-#  TERMINARZ – WYŚWIETLANIE + LISTA ZAPISANYCH
+#  TERMINARZ – WYŚWIETLANIE + 3 SEKCJE
 # -----------------------------
 
 @app.route("/terminarz")
 def terminarz():
     conn = get_db()
-    matches = conn.execute("SELECT * FROM matches ORDER BY match_date ASC").fetchall()
+    matches = conn.execute("SELECT * FROM matches ORDER BY match_date ASC, match_time ASC").fetchall()
 
     signups = conn.execute("""
         SELECT ms.match_id, ms.paid, u.first_name, u.last_name, u.player_alias
@@ -439,9 +491,27 @@ def terminarz():
             if s["player_alias"] == session["player_alias"]:
                 user_signed[s["match_id"]] = True
 
+    today = date.today()
+    upcoming_matches = []
+    after_date_not_confirmed = []
+    played_confirmed = []
+
+    for m in matches:
+        m_date = date.fromisoformat(m["match_date"])
+        if m["played"] == 1:
+            played_confirmed.append(m)
+        else:
+            if m_date >= today:
+                upcoming_matches.append(m)
+            else:
+                after_date_not_confirmed.append(m)
+
     return render_template(
         "terminarz.html",
-        matches=matches,
+        matches=matches,  # jeśli gdzieś jeszcze używasz
+        upcoming_matches=upcoming_matches,
+        after_date_not_confirmed=after_date_not_confirmed,
+        played_confirmed=played_confirmed,
         players_by_match=players_by_match,
         user_signed=user_signed
     )
@@ -455,15 +525,15 @@ def add_match():
     if "user_id" not in session or session.get("is_admin") != 1:
         return "Brak dostępu"
 
-    date = request.form["date"]
+    date_val = request.form["date"]
     time = request.form["time"]
     location = request.form["location"]
     max_slots = request.form["max_slots"]
 
     conn = get_db()
     conn.execute(
-        "INSERT INTO matches (match_date, match_time, location, max_slots, signed_up) VALUES (?, ?, ?, ?, 0)",
-        (date, time, location, max_slots)
+        "INSERT INTO matches (match_date, match_time, location, max_slots, signed_up, played) VALUES (?, ?, ?, ?, 0, 0)",
+        (date_val, time, location, max_slots)
     )
     conn.commit()
     conn.close()
@@ -486,6 +556,11 @@ def signup_match(match_id):
     if match is None:
         conn.close()
         return "Mecz nie istnieje"
+
+    m_date = date.fromisoformat(match["match_date"])
+    if m_date < date.today() or match["played"] == 1:
+        conn.close()
+        return "Nie można zapisać się na mecz po terminie lub rozegrany."
 
     if match["signed_up"] >= match["max_slots"]:
         conn.close()
@@ -525,6 +600,16 @@ def unsubscribe_match(match_id):
 
     user_id = session["user_id"]
     conn = get_db()
+
+    match = conn.execute("SELECT * FROM matches WHERE id = ?", (match_id,)).fetchone()
+    if match is None:
+        conn.close()
+        return "Mecz nie istnieje"
+
+    m_date = date.fromisoformat(match["match_date"])
+    if m_date < date.today() or match["played"] == 1:
+        conn.close()
+        return "Nie można wypisać się z meczu po terminie lub rozegranego."
 
     signup = conn.execute(
         "SELECT * FROM match_signups WHERE user_id = ? AND match_id = ?",

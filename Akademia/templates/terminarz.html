@@ -5,6 +5,8 @@
     <title>Terminarz</title>
 
     <style>
+        * { box-sizing: border-box; }
+
         body {
             margin: 0;
             padding: 0;
@@ -14,18 +16,24 @@
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
-            filter: brightness(0.9);
+        }
+
+        .overlay {
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(circle at top, rgba(0,0,0,0.4), rgba(0,0,0,0.9));
+            z-index: -1;
         }
 
         .container {
-            width: 90%;
-            max-width: 1100px;
+            width: 95%;
+            max-width: 1200px;
             margin: 40px auto;
             background: rgba(0,0,0,0.55);
             padding: 25px;
-            border-radius: 16px;
-            backdrop-filter: blur(8px);
-            box-shadow: 0 0 25px rgba(0,0,0,0.7);
+            border-radius: 20px;
+            backdrop-filter: blur(14px);
+            box-shadow: 0 0 30px rgba(0,0,0,0.8);
             position: relative;
         }
 
@@ -41,6 +49,33 @@
             font-weight: 300;
             letter-spacing: 1px;
             margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        h1 span.badge {
+            font-size: 12px;
+            padding: 4px 8px;
+            border-radius: 999px;
+            background: rgba(30,144,255,0.4);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        h2 {
+            font-weight: 400;
+            margin-top: 30px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        h2 small {
+            font-size: 12px;
+            opacity: 0.7;
+            font-weight: 300;
         }
 
         .view-toggle {
@@ -50,8 +85,8 @@
         }
 
         .icon-toggle {
-            width: 38px;
-            height: 38px;
+            width: 40px;
+            height: 40px;
             border-radius: 50%;
             border: none;
             cursor: pointer;
@@ -66,8 +101,8 @@
         }
 
         .icon-toggle.active {
-            background: rgba(30,144,255,0.7);
-            box-shadow: 0 0 14px rgba(30,144,255,0.9);
+            background: rgba(30,144,255,0.8);
+            box-shadow: 0 0 16px rgba(30,144,255,0.9);
         }
 
         .icon-toggle:hover {
@@ -75,15 +110,26 @@
         }
 
         .stats-bar {
-            background: rgba(255,255,255,0.08);
+            background: linear-gradient(135deg, rgba(255,255,255,0.12), rgba(30,144,255,0.25));
             padding: 12px 16px;
-            border-radius: 12px;
-            backdrop-filter: blur(6px);
+            border-radius: 14px;
+            backdrop-filter: blur(10px);
             margin-bottom: 15px;
-            font-size: 15px;
+            font-size: 14px;
             display: flex;
             gap: 20px;
             flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .stats-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .stats-item span.value {
+            font-weight: 600;
         }
 
         .controls {
@@ -96,8 +142,8 @@
 
         .controls select,
         .controls button {
-            padding: 6px 10px;
-            border-radius: 8px;
+            padding: 7px 11px;
+            border-radius: 10px;
             border: none;
             font-size: 13px;
             cursor: pointer;
@@ -109,59 +155,88 @@
         }
 
         .controls button {
-            background: rgba(30,144,255,0.6);
+            background: rgba(30,144,255,0.7);
             color: #fff;
         }
 
         .controls button:hover {
-            background: rgba(30,144,255,0.8);
+            background: rgba(30,144,255,0.9);
+        }
+
+        .btn-filter {
+            background: rgba(255,255,255,0.12);
+            color: #fff;
+            border-radius: 10px;
+            border: none;
+            padding: 7px 11px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: 0.2s ease;
+        }
+
+        .btn-filter.active {
+            background: rgba(30,144,255,0.9);
+            box-shadow: 0 0 10px rgba(30,144,255,0.8);
+        }
+
+        .btn-filter:hover {
+            background: rgba(255,255,255,0.22);
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
             margin-top: 10px;
-            border-radius: 14px;
+            border-radius: 16px;
             overflow: hidden;
             background: rgba(255,255,255,0.06);
-            backdrop-filter: blur(6px);
+            backdrop-filter: blur(8px);
+        }
+
+        thead tr {
+            position: sticky;
+            top: 0;
+            z-index: 2;
         }
 
         th {
-            padding: 14px;
-            background: rgba(30,144,255,0.45);
+            padding: 12px;
+            background: linear-gradient(135deg, rgba(30,144,255,0.7), rgba(0,191,255,0.7));
             font-weight: 600;
             letter-spacing: 0.5px;
+            font-size: 13px;
+            text-align: left;
         }
 
         td {
-            padding: 14px;
-            border-bottom: 1px solid rgba(255,255,255,0.15);
+            padding: 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.12);
+            font-size: 13px;
         }
 
         tr:last-child td {
             border-bottom: none;
         }
 
-        .row-green { background: rgba(0,255,0,0.08); }
-        .row-yellow { background: rgba(255,255,0,0.08); }
-        .row-red { background: rgba(255,0,0,0.08); }
+        .row-green { background: rgba(0,255,0,0.06); }
+        .row-yellow { background: rgba(255,255,0,0.06); }
+        .row-red { background: rgba(255,0,0,0.06); }
 
         .location-tag {
             display: inline-block;
-            padding: 6px 10px;
-            background: rgba(30,144,255,0.35);
-            border-radius: 8px;
-            font-size: 13px;
+            padding: 5px 9px;
+            background: rgba(30,144,255,0.45);
+            border-radius: 999px;
+            font-size: 12px;
             font-weight: 600;
             color: #fff;
             backdrop-filter: blur(4px);
         }
 
         .btn-modern {
-            padding: 10px 18px;
+            padding: 8px 14px;
             border-radius: 10px;
-            font-size: 15px;
+            font-size: 12px;
             font-weight: 600;
             cursor: pointer;
             border: none;
@@ -172,93 +247,38 @@
             background: rgba(255,255,255,0.12);
             color: #fff;
             box-shadow: 0 0 8px rgba(0,0,0,0.4);
+            margin: 2px 0;
         }
 
         .btn-modern:hover {
             background: rgba(255,255,255,0.22);
             box-shadow: 0 0 12px rgba(30,144,255,0.8);
-            transform: translateY(-2px);
+            transform: translateY(-1px);
         }
 
-        .btn-join { background: rgba(30,144,255,0.35); }
-        .btn-join:hover { background: rgba(30,144,255,0.55); }
+        .btn-join { background: rgba(30,144,255,0.5); }
+        .btn-join:hover { background: rgba(30,144,255,0.8); }
 
-        .btn-leave { background: rgba(255,0,0,0.35); }
-        .btn-leave:hover { background: rgba(255,0,0,0.55); }
+        .btn-leave { background: rgba(255,69,0,0.6); }
+        .btn-leave:hover { background: rgba(255,69,0,0.85); }
 
-        .details-row {
-            height: 0;
-            overflow: hidden;
-            transition: height 0.35s ease;
-            background: rgba(255,255,255,0.05);
-        }
+        .btn-admin-confirm { background: rgba(0,200,0,0.6); }
+        .btn-admin-confirm:hover { background: rgba(0,200,0,0.85); }
 
-        .details-content {
-            padding: 15px;
-        }
-
-        .clickable-row {
-            cursor: pointer;
-            transition: background 0.2s ease;
-        }
-
-        .clickable-row:hover {
-            background: rgba(255,255,255,0.08);
-        }
-
-        .arrow {
-            display: inline-block;
-            transition: transform 0.35s ease;
-            margin-left: 6px;
-        }
-
-        .arrow.open {
-            transform: rotate(180deg);
-        }
-
-        .avatar {
-            width: 28px;
-            height: 28px;
-            border-radius: 50%;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 13px;
-            font-weight: bold;
-            color: #fff;
-            margin-right: 8px;
-            text-transform: uppercase;
-        }
-
-        .tooltip {
-            position: relative;
-            display: inline-block;
-        }
-
-        .tooltip:hover::after {
-            content: attr(data-tip);
-            position: absolute;
-            left: 0;
-            top: -28px;
-            background: rgba(0,0,0,0.8);
-            padding: 6px 10px;
-            border-radius: 6px;
-            font-size: 12px;
-            white-space: nowrap;
-            pointer-events: none;
-        }
+        .btn-admin-unconfirm { background: rgba(255,165,0,0.7); }
+        .btn-admin-unconfirm:hover { background: rgba(255,165,0,1); }
 
         .progress-container {
             width: 100%;
             background: rgba(255,255,255,0.15);
             border-radius: 8px;
-            height: 10px;
+            height: 8px;
             margin-top: 6px;
             overflow: hidden;
         }
 
         .progress-bar {
-            height: 10px;
+            height: 8px;
             background: linear-gradient(90deg, #1e90ff, #00eaff);
             width: 0%;
             animation: fillBar 1s ease forwards;
@@ -308,7 +328,7 @@
 
         .calendar-day-name {
             text-align: center;
-            font-size: 13px;
+            font-size: 12px;
             opacity: 0.8;
         }
 
@@ -332,7 +352,7 @@
         }
 
         .calendar-date {
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 600;
             margin-bottom: 2px;
         }
@@ -350,15 +370,19 @@
         }
 
         .calendar-match.full {
-            background: rgba(255,0,0,0.5);
+            background: rgba(255,0,0,0.6);
         }
 
         .calendar-match.free {
-            background: rgba(0,200,0,0.5);
+            background: rgba(0,200,0,0.6);
+        }
+
+        .calendar-match.past {
+            opacity: 0.6;
         }
 
         .calendar-match:hover {
-            background: rgba(255,255,255,0.4);
+            background: rgba(255,255,255,0.5);
         }
 
         .calendar-popup {
@@ -366,12 +390,12 @@
             left: 50%;
             top: 50%;
             transform: translate(-50%, -50%) scale(0.8);
-            background: rgba(0,0,0,0.55);
-            backdrop-filter: blur(12px);
+            background: rgba(0,0,0,0.75);
+            backdrop-filter: blur(16px);
             padding: 18px;
-            border-radius: 14px;
-            box-shadow: 0 0 25px rgba(0,0,0,0.6);
-            width: 260px;
+            border-radius: 16px;
+            box-shadow: 0 0 25px rgba(0,0,0,0.8);
+            width: 280px;
             opacity: 0;
             pointer-events: none;
             transition: 0.25s ease;
@@ -390,60 +414,161 @@
             margin-bottom: 10px;
         }
 
+        .calendar-popup .close-btn {
+            position: absolute;
+            right: 10px;
+            top: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            opacity: 0.7;
+        }
+
+        .calendar-popup .close-btn:hover {
+            opacity: 1;
+        }
+
         a.back {
             display: block;
             text-align: center;
             margin-top: 25px;
             color: #1e90ff;
             text-decoration: none;
-            font-size: 18px;
+            font-size: 16px;
         }
 
         a.back:hover {
             text-decoration: underline;
         }
+
+        /* Popup z listą zawodników */
+
+        .players-popup {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.65);
+            backdrop-filter: blur(6px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+
+        .players-popup.open {
+            display: flex;
+        }
+
+        .popup-inner {
+            position: relative;
+            background: rgba(0,0,0,0.9);
+            padding: 25px;
+            border-radius: 16px;
+            width: 420px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 0 25px rgba(0,0,0,0.8);
+            animation: fadeIn 0.25s ease;
+        }
+
+        @keyframes fadeIn {
+            from { transform: scale(0.9); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        .players-popup .close-btn {
+            position: absolute;
+            right: 20px;
+            top: 15px;
+            cursor: pointer;
+            font-size: 20px;
+            opacity: 0.7;
+        }
+
+        .players-popup .close-btn:hover {
+            opacity: 1;
+        }
+
+        .players-list {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .players-list li {
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 6px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .players-list li:last-child {
+            border-bottom: none;
+        }
+
+        .players-list .avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: dodgerblue;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        @media (max-width: 768px) {
+            .header-row {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            table {
+                font-size: 12px;
+            }
+            th, td {
+                padding: 8px;
+            }
+            .popup-inner {
+                width: 90%;
+            }
+        }
     </style>
 
     <script>
-        function toggleDetails(id) {
-            const row = document.getElementById("details-" + id);
-            const arrow = document.getElementById("arrow-" + id);
-
-            if (row.style.height && row.style.height !== "0px") {
-                row.style.height = "0px";
-                arrow.classList.remove("open");
-            } else {
-                row.style.height = row.scrollHeight + "px";
-                arrow.classList.add("open");
-            }
-        }
-
-        let openPopup = null;
+        let openCalendarPopupRef = null;
 
         function showCalendarPopup(match) {
             const popup = document.getElementById("calendar-popup");
+            if (!popup) return;
 
             popup.innerHTML = `
+                <div class="close-btn" onclick="closeCalendarPopup()">✕</div>
                 <h4>📅 ${match.dataset.date}</h4>
                 <div><strong>Godzina:</strong> ${match.dataset.time}</div>
                 <div><strong>Lokalizacja:</strong> ${match.dataset.location}</div>
                 <div><strong>Zapisani:</strong> ${match.dataset.signed}/${match.dataset.max}</div>
-                <hr style="opacity:0.3;">
-                <div style="text-align:center;">
-                    <a href="https://www.google.com/maps/search/?api=1&query=${match.dataset.location}"
+                <div><strong>Status:</strong> ${match.dataset.status}</div>
+                <hr style="opacity:0.3; margin:10px 0;">
+                <div style="text-align:center; margin-bottom:8px;">
+                    <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(match.dataset.location)}"
                        target="_blank"
-                       style="color:#1e90ff;">Otwórz w Google Maps</a>
+                       style="color:#1e90ff; text-decoration:none;">Otwórz w Google Maps</a>
                 </div>
             `;
 
             popup.classList.add("open");
-            openPopup = popup;
+            openCalendarPopupRef = popup;
+        }
+
+        function closeCalendarPopup() {
+            if (openCalendarPopupRef) {
+                openCalendarPopupRef.classList.remove("open");
+                openCalendarPopupRef = null;
+            }
         }
 
         document.addEventListener("click", (e) => {
-            if (openPopup && !openPopup.contains(e.target) && !e.target.classList.contains("calendar-match")) {
-                openPopup.classList.remove("open");
-                openPopup = null;
+            if (openCalendarPopupRef && !openCalendarPopupRef.contains(e.target) && !e.target.classList.contains("calendar-match")) {
+                closeCalendarPopup();
             }
         });
 
@@ -454,9 +579,10 @@
             const today = new Date().toISOString().slice(0,10);
 
             rows.forEach(r => {
+                if (r.style.display === "none") return;
                 total++;
-                const signed = parseInt(r.dataset.signed);
-                const max = parseInt(r.dataset.max);
+                const signed = parseInt(r.dataset.signed || "0");
+                const max = parseInt(r.dataset.max || "0");
                 const freeSlots = max - signed;
 
                 if (freeSlots > 0) free++;
@@ -465,20 +591,26 @@
                 if (r.dataset.date < today) past++;
             });
 
-            document.getElementById("stats-bar").innerHTML = `
-                📅 <strong>${total}</strong> meczów
-                🟢 <strong>${free}</strong> wolnych
-                🔴 <strong>${full}</strong> pełnych
-                ⚫ <strong>${past}</strong> rozegranych
-            `;
+            const totalEl = document.getElementById("stat-total");
+            const freeEl = document.getElementById("stat-free");
+            const fullEl = document.getElementById("stat-full");
+            const pastEl = document.getElementById("stat-past");
+
+            if (totalEl) totalEl.textContent = total;
+            if (freeEl) freeEl.textContent = free;
+            if (fullEl) fullEl.textContent = full;
+            if (pastEl) pastEl.textContent = past;
         }
 
-        function applyFiltersAndSort() {
+        function setupFiltersAndSort() {
             const filterSelect = document.getElementById("filter-select");
             const sortSelect = document.getElementById("sort-select");
+            const mineBtn = document.getElementById("filter-mine");
             const rows = document.querySelectorAll(".match-row");
 
-            function update() {
+            let showOnlyMine = false;
+
+            function apply() {
                 const filter = filterSelect.value;
                 const sort = sortSelect.value;
 
@@ -486,23 +618,24 @@
 
                 arr.forEach(r => r.style.display = "");
 
+                const today = new Date().toISOString().slice(0,10);
+
                 arr.forEach(row => {
                     const dateStr = row.dataset.date;
-                    const signed = parseInt(row.dataset.signed);
-                    const max = parseInt(row.dataset.max);
-                    const free = max - signed;
-                    const today = new Date().toISOString().slice(0,10);
+                    const signed = parseInt(row.dataset.signed || "0");
+                    const max = parseInt(row.dataset.max || "0");
+                    const freeSlots = max - signed;
 
                     let hide = false;
 
-                    if (filter === "free" && free <= 0) hide = true;
-                    if (filter === "full" && free > 0) hide = true;
+                    if (filter === "free" && freeSlots <= 0) hide = true;
+                    if (filter === "full" && freeSlots > 0) hide = true;
                     if (filter === "future" && dateStr < today) hide = true;
                     if (filter === "past" && dateStr >= today) hide = true;
 
+                    if (showOnlyMine && row.dataset.mine !== "1") hide = true;
+
                     row.style.display = hide ? "none" : "";
-                    const details = document.getElementById("details-" + row.dataset.id);
-                    if (details) details.style.display = hide ? "none" : "";
                 });
 
                 arr.sort((a, b) => {
@@ -514,13 +647,25 @@
                 });
 
                 const tbody = document.getElementById("list-tbody");
-                arr.forEach(r => tbody.appendChild(r));
+                if (tbody) {
+                    arr.forEach(r => tbody.appendChild(r));
+                }
 
                 updateStats();
             }
 
-            filterSelect.addEventListener("change", update);
-            sortSelect.addEventListener("change", update);
+            if (filterSelect) filterSelect.addEventListener("change", apply);
+            if (sortSelect) sortSelect.addEventListener("change", apply);
+
+            if (mineBtn) {
+                mineBtn.addEventListener("click", () => {
+                    showOnlyMine = !showOnlyMine;
+                    mineBtn.classList.toggle("active", showOnlyMine);
+                    apply();
+                });
+            }
+
+            apply();
         }
 
         document.addEventListener("DOMContentLoaded", () => {
@@ -529,22 +674,24 @@
             const btnList = document.getElementById("btn-list");
             const btnCal = document.getElementById("btn-calendar");
 
-            btnList.addEventListener("click", () => {
-                listView.style.display = "block";
-                calendarView.style.display = "none";
-                btnList.classList.add("active");
-                btnCal.classList.remove("active");
-            });
+            if (btnList && btnCal && listView && calendarView) {
+                btnList.addEventListener("click", () => {
+                    listView.style.display = "block";
+                    calendarView.style.display = "none";
+                    btnList.classList.add("active");
+                    btnCal.classList.remove("active");
+                });
 
-            btnCal.addEventListener("click", () => {
-                listView.style.display = "none";
-                calendarView.style.display = "block";
-                btnCal.classList.add("active");
-                btnList.classList.remove("active");
-            });
+                btnCal.addEventListener("click", () => {
+                    listView.style.display = "none";
+                    calendarView.style.display = "block";
+                    btnCal.classList.add("active");
+                    btnList.classList.remove("active");
+                });
+            }
 
             buildCalendar();
-            applyFiltersAndSort();
+            setupFiltersAndSort();
             updateStats();
         });
 
@@ -553,6 +700,8 @@
             const monthLabel = document.getElementById("calendar-month");
             const rawMatches = document.querySelectorAll(".match-data");
 
+            if (!calendarGrid || !monthLabel) return;
+
             const now = new Date();
             let currentYear = now.getFullYear();
             let currentMonth = now.getMonth();
@@ -560,18 +709,20 @@
             function renderCalendar(year, month) {
                 calendarGrid.innerHTML = "";
                 const dayNamesContainer = document.getElementById("calendar-day-names");
-                dayNamesContainer.innerHTML = "";
+                if (dayNamesContainer) dayNamesContainer.innerHTML = "";
 
                 const monthNames = ["Styczeń","Luty","Marzec","Kwiecień","Maj","Czerwiec","Lipiec","Sierpień","Wrzesień","Październik","Listopad","Grudzień"];
                 monthLabel.textContent = monthNames[month] + " " + year;
 
                 const dayNames = ["Pn","Wt","Śr","Cz","Pt","So","Nd"];
-                dayNames.forEach(d => {
-                    const dn = document.createElement("div");
-                    dn.className = "calendar-day-name";
-                    dn.textContent = d;
-                    dayNamesContainer.appendChild(dn);
-                });
+                if (dayNamesContainer) {
+                    dayNames.forEach(d => {
+                        const dn = document.createElement("div");
+                        dn.className = "calendar-day-name";
+                        dn.textContent = d;
+                        dayNamesContainer.appendChild(dn);
+                    });
+                }
 
                 const firstDay = new Date(year, month, 1);
                 const lastDay = new Date(year, month + 1, 0);
@@ -586,6 +737,8 @@
                 }
 
                 const today = new Date();
+                const todayStr = today.toISOString().slice(0,10);
+
                 for (let d = 1; d <= daysInMonth; d++) {
                     const cell = document.createElement("div");
                     cell.className = "calendar-cell";
@@ -603,14 +756,17 @@
 
                     rawMatches.forEach(m => {
                         if (m.dataset.date === dateStr) {
-                            const signed = parseInt(m.dataset.signed);
-                            const max = parseInt(m.dataset.max);
+                            const signed = parseInt(m.dataset.signed || "0");
+                            const max = parseInt(m.dataset.max || "0");
                             const free = max - signed;
+                            const status = m.dataset.status || "";
+                            const isPast = dateStr < todayStr;
 
                             const matchDiv = document.createElement("div");
                             matchDiv.className = "calendar-match";
                             if (free <= 0) matchDiv.classList.add("full");
                             else matchDiv.classList.add("free");
+                            if (isPast) matchDiv.classList.add("past");
 
                             matchDiv.textContent = m.dataset.time + " " + m.dataset.location;
                             matchDiv.title = m.dataset.location + " (" + signed + "/" + max + ")";
@@ -630,39 +786,97 @@
 
             renderCalendar(currentYear, currentMonth);
 
-            document.getElementById("cal-prev").onclick = () => {
-                currentMonth--;
-                if (currentMonth < 0) {
-                    currentMonth = 11;
-                    currentYear--;
-                }
-                renderCalendar(currentYear, currentMonth);
-            };
+            const prevBtn = document.getElementById("cal-prev");
+            const nextBtn = document.getElementById("cal-next");
 
-            document.getElementById("cal-next").onclick = () => {
-                currentMonth++;
-                if (currentMonth > 11) {
-                    currentMonth = 0;
-                    currentYear++;
-                }
-                renderCalendar(currentYear, currentMonth);
-            };
+            if (prevBtn) {
+                prevBtn.onclick = () => {
+                    currentMonth--;
+                    if (currentMonth < 0) {
+                        currentMonth = 11;
+                        currentYear--;
+                    }
+                    renderCalendar(currentYear, currentMonth);
+                };
+            }
+
+            if (nextBtn) {
+                nextBtn.onclick = () => {
+                    currentMonth++;
+                    if (currentMonth > 11) {
+                        currentMonth = 0;
+                        currentYear++;
+                    }
+                    renderCalendar(currentYear, currentMonth);
+                };
+            }
         }
+
+        // Popup z listą zawodników
+
+        function openPlayersPopup(matchId) {
+            const data = window.playersData[matchId];
+            const popup = document.getElementById("players-popup");
+
+            document.getElementById("popup-title").innerText =
+                `Zawodnicy – ${data.date} ${data.time}`;
+
+            document.getElementById("popup-location").innerHTML =
+                `<strong>Lokalizacja:</strong> ${data.location}`;
+
+            document.getElementById("popup-count").innerHTML =
+                `<strong>Zapisani:</strong> ${data.players.length}/${data.max}`;
+
+            const list = document.getElementById("popup-players");
+            list.innerHTML = data.players.map(p => `
+                <li>
+                    <span class="avatar">${p.initials}</span>
+                    ${p.name} (${p.alias})
+                    ${p.paid ? '<span style="color:lime;">💰 opłacone</span>' : '<span style="color:orange;">⏳ do zapłaty</span>'}
+                </li>
+            `).join("");
+
+            popup.classList.add("open");
+        }
+
+        function closePlayersPopup() {
+            document.getElementById("players-popup").classList.remove("open");
+        }
+
+        document.addEventListener("click", (e) => {
+            const popup = document.getElementById("players-popup");
+            if (popup && popup.classList.contains("open")) {
+                const inner = popup.querySelector(".popup-inner");
+                if (inner && !inner.contains(e.target) && !e.target.closest(".btn-list-players")) {
+                    closePlayersPopup();
+                }
+            }
+        });
     </script>
 </head>
 <body>
 
+<div class="overlay"></div>
+
 <div class="container">
 
     <div class="header-row">
-        <h1>⚽ Terminarz</h1>
+        <h1>⚽ Terminarz <span class="badge">PRO MAX</span></h1>
         <div class="view-toggle">
             <button id="btn-list" class="icon-toggle active" title="Widok listy">📋</button>
             <button id="btn-calendar" class="icon-toggle" title="Widok kalendarza">📅</button>
+            {% if session.is_admin == 1 %}
+            <a href="/admin" class="btn-modern" style="margin-left:10px;">➕ Panel admina / dodaj mecz</a>
+            {% endif %}
         </div>
     </div>
 
-    <div id="stats-bar" class="stats-bar"></div>
+    <div id="stats-bar" class="stats-bar">
+        <div class="stats-item">📅 Mecze: <span id="stat-total" class="value">0</span></div>
+        <div class="stats-item">🟢 Wolne: <span id="stat-free" class="value">0</span></div>
+        <div class="stats-item">🔴 Pełne: <span id="stat-full" class="value">0</span></div>
+        <div class="stats-item">⚫ Po terminie: <span id="stat-past" class="value">0</span></div>
+    </div>
 
     <div class="controls">
         <select id="filter-select">
@@ -670,127 +884,184 @@
             <option value="free">Tylko z wolnymi miejscami</option>
             <option value="full">Tylko pełne</option>
             <option value="future">Tylko przyszłe</option>
-            <option value="past">Tylko rozegrane</option>
+            <option value="past">Tylko po terminie</option>
         </select>
 
         <select id="sort-select">
             <option value="asc">Sortuj: najbliższe najpierw</option>
             <option value="desc">Sortuj: najdalsze najpierw</option>
         </select>
+
+        <button id="filter-mine" class="btn-filter">👤 Tylko moje mecze</button>
     </div>
 
     <div id="list-view">
-        <table>
-            <tr>
-                <th>Data</th>
-                <th>Godzina</th>
-                <th>Lokalizacja</th>
-                <th>Zapisani</th>
-                <th>Akcja</th>
-                <th></th>
-            </tr>
 
-            <tbody id="list-tbody">
-            {% for m in matches %}
-            {% set percent = (m.signed_up / m.max_slots) * 100 %}
-            {% if percent < 50 %}
-            {% set row_class = "row-green" %}
-            {% elif percent < 80 %}
-            {% set row_class = "row-yellow" %}
-            {% else %}
-            {% set row_class = "row-red" %}
-            {% endif %}
+        <h2>🟢 Nadchodzące mecze <small>(data ≥ dziś, niezatwierdzone)</small></h2>
 
-            <tr class="clickable-row {{ row_class }} match-row"
-                onclick="toggleDetails({{ m.id }})"
-                data-id="{{ m.id }}"
-                data-date="{{ m.match_date }}"
-                data-time="{{ m.match_time }}"
-                data-signed="{{ m.signed_up }}"
-                data-max="{{ m.max_slots }}">
-                <td>{{ m.match_date }}</td>
-                <td>{{ m.match_time }}</td>
+        <div style="max-height: 450px; overflow-y: auto; border-radius: 16px;">
+            <table>
+                <thead>
+                <tr>
+                    <th>📅 Data</th>
+                    <th>🕒 Godzina</th>
+                    <th>📍 Lokalizacja</th>
+                    <th>👥 Zapisani</th>
+                    <th>⚙️ Akcje</th>
+                </tr>
+                </thead>
+                <tbody id="list-tbody">
+                {% for m in upcoming_matches %}
+                {% set signed = m["signed_up"] %}
+                {% set max_slots = m["max_slots"] %}
+                {% set percent = (signed / max_slots) * 100 if max_slots > 0 else 0 %}
+                {% if percent < 50 %}
+                {% set row_class = "row-green" %}
+                {% elif percent < 80 %}
+                {% set row_class = "row-yellow" %}
+                {% else %}
+                {% set row_class = "row-red" %}
+                {% endif %}
 
-                <td>
-                    <span class="location-tag">📍 {{ m.location }}</span><br>
-                    <a href="https://www.google.com/maps/search/?api=1&query={{ m.location | urlencode }}"
-                       target="_blank"
-                       style="color:#1e90ff; text-decoration:none; font-size:13px;">
-                        Otwórz w Google Maps
-                    </a>
-                </td>
-
-                <td>
-                    {{ m.signed_up }}/{{ m.max_slots }}
-                    <div class="progress-container">
-                        <div class="progress-bar" style="--target-width: {{ percent }}%;"></div>
-                    </div>
-                </td>
-
-                <td onclick="event.stopPropagation();">
-                    {% if session.user_id %}
-
-                    {% if user_signed.get(m.id) %}
-                    <a href="/terminarz/unsubscribe/{{ m.id }}" class="btn-modern btn-leave">
-                        👤 Jednak nie wpadam
-                    </a>
-                    {% else %}
-                    {% if m.signed_up < m.max_slots %}
-                    <a href="/terminarz/signup/{{ m.id }}" class="btn-modern btn-join">
-                        👤 Zapisz się
-                    </a>
-                    {% else %}
-                    <span style="color:orange; font-weight:bold;">Brak miejsc</span>
-                    {% endif %}
-                    {% endif %}
-
-                    {% else %}
-                    <span style="color:#ccc;">Zaloguj się</span>
-                    {% endif %}
-                </td>
-
-                <td style="width: 30px;">
-                    <span id="arrow-{{ m.id }}" class="arrow">▼</span>
-                </td>
-            </tr>
-
-            <tr id="details-{{ m.id }}" class="details-row">
-                <td colspan="6">
-                    <div class="details-content">
-                        <strong>👥 Zapisani gracze:</strong><br>
-
-                        {% if players_by_match.get(m.id) %}
-                        <ul style="list-style:none; padding-left:0; margin-top:10px;">
-                            {% for p in players_by_match[m.id] %}
-                            {% set initials = p.first_name[0] ~ p.last_name[0] %}
-                            <li style="margin-bottom:6px;">
-                                            <span class="avatar" style="background: hsl({{ loop.index * 40 }}, 80%, 55%);">
-                                                {{ initials }}
-                                            </span>
-
-                                <span class="tooltip" data-tip="{{ p.first_name }} {{ p.last_name }}">
-                                                {{ p.first_name }} {{ p.last_name }} ({{ p.player_alias }})
-                                            </span>
-
-                                {% if session.is_admin == 1 %}
-                                {% if p.paid == 1 %}
-                                <span class="paid-dot" style="color:lime;">●</span>
-                                {% else %}
-                                <span class="paid-dot" style="color:red;">●</span>
-                                {% endif %}
-                                {% endif %}
-                            </li>
-                            {% endfor %}
-                        </ul>
+                <tr class="{{ row_class }} match-row"
+                    data-id="{{ m['id'] }}"
+                    data-date="{{ m['match_date'] }}"
+                    data-time="{{ m['match_time'] }}"
+                    data-signed="{{ signed }}"
+                    data-max="{{ max_slots }}"
+                    data-mine="{% if user_signed.get(m['id']) %}1{% else %}0{% endif %}">
+                    <td>
+                        <div style="font-weight:600;">{{ m["match_date"] }}</div>
+                        <div style="font-size:11px; opacity:0.8;">🕒 {{ m["match_time"] }}</div>
+                    </td>
+                    <td>{{ m["match_time"] }}</td>
+                    <td>
+                        <span class="location-tag">📍 {{ m["location"] }}</span><br>
+                        <a href="https://www.google.com/maps/search/?api=1&query={{ m['location'] | urlencode }}"
+                           target="_blank"
+                           style="color:#1e90ff; text-decoration:none; font-size:12px;">
+                            Otwórz w Google Maps
+                        </a>
+                    </td>
+                    <td>
+                        {{ signed }}/{{ max_slots }}
+                        <div class="progress-container">
+                            <div class="progress-bar" style="--target-width: {{ percent }}%;"></div>
+                        </div>
+                    </td>
+                    <td>
+                        {% if session.user_id %}
+                        {% if user_signed.get(m["id"]) %}
+                        <a href="/terminarz/unsubscribe/{{ m['id'] }}" class="btn-modern btn-leave">
+                            👤 Jednak nie wpadam
+                        </a>
                         {% else %}
-                        <i>Brak zapisanych graczy</i>
+                        {% if signed < max_slots %}
+                        <a href="/terminarz/signup/{{ m['id'] }}" class="btn-modern btn-join">
+                            👤 Zapisz się
+                        </a>
+                        {% else %}
+                        <span style="color:orange; font-weight:bold;">Brak miejsc</span>
                         {% endif %}
-                    </div>
+                        {% endif %}
+                        {% else %}
+                        <span style="color:#ccc;">Zaloguj się</span>
+                        {% endif %}
+
+                        {% if session.is_admin == 1 %}
+                        <br>
+                        <form action="/admin/match/{{ m['id'] }}/set_played" method="post" style="display:inline;">
+                            <button type="submit" class="btn-modern btn-admin-confirm">
+                                ✔ Potwierdź rozegranie
+                            </button>
+                        </form>
+                        {% endif %}
+
+                        <br>
+                        <button class="btn-modern btn-list-players" onclick="openPlayersPopup({{ m['id'] }})">
+                            👥 Lista zawodników
+                        </button>
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <h2>⚫ Mecze po terminie (oczekujące na potwierdzenie) <small>(data < dziś, played = 0)</small></h2>
+
+        <table>
+            <thead>
+            <tr>
+                <th>📅 Data</th>
+                <th>🕒 Godzina</th>
+                <th>📍 Lokalizacja</th>
+                <th>👥 Zapisani</th>
+                <th>⚙️ Akcje admina</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for m in after_date_not_confirmed %}
+            <tr class="row-yellow">
+                <td>{{ m["match_date"] }}</td>
+                <td>{{ m["match_time"] }}</td>
+                <td>{{ m["location"] }}</td>
+                <td>{{ m["signed_up"] }}/{{ m["max_slots"] }}</td>
+                <td>
+                    {% if session.is_admin == 1 %}
+                    <form action="/admin/match/{{ m['id'] }}/set_played" method="post" style="display:inline;">
+                        <button type="submit" class="btn-modern btn-admin-confirm">
+                            ✔ Potwierdź rozegranie
+                        </button>
+                    </form>
+                    {% else %}
+                    <span style="color:#ccc;">Oczekuje na potwierdzenie</span>
+                    {% endif %}
                 </td>
             </tr>
+            {% else %}
+            <tr><td colspan="5"><i>Brak meczów po terminie.</i></td></tr>
             {% endfor %}
             </tbody>
         </table>
+
+        <h2>🔵 Mecze rozegrane (zatwierdzone) <small>(played = 1)</small></h2>
+
+        <table>
+            <thead>
+            <tr>
+                <th>📅 Data</th>
+                <th>🕒 Godzina</th>
+                <th>📍 Lokalizacja</th>
+                <th>👥 Zapisani</th>
+                <th>⚙️ Akcje admina</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for m in played_confirmed %}
+            <tr class="row-red">
+                <td>{{ m["match_date"] }}</td>
+                <td>{{ m["match_time"] }}</td>
+                <td>{{ m["location"] }}</td>
+                <td>{{ m["signed_up"] }}/{{ m["max_slots"] }}</td>
+                <td>
+                    {% if session.is_admin == 1 %}
+                    <form action="/admin/match/{{ m['id'] }}/unset_played" method="post" style="display:inline;">
+                        <button type="submit" class="btn-modern btn-admin-unconfirm">
+                            ↩ Cofnij rozegranie
+                        </button>
+                    </form>
+                    {% else %}
+                    <span style="color:#ccc;">Rozegrany</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="5"><i>Brak rozegranych meczów.</i></td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+
     </div>
 
     <div id="calendar-view">
@@ -806,19 +1077,63 @@
 
         <div id="calendar-day-names" class="calendar-grid"></div>
         <div id="calendar-grid" class="calendar-grid"></div>
+
+        <div style="margin-top:10px; font-size:12px; opacity:0.8;">
+            🟢 wolne miejsca &nbsp;|&nbsp;
+            🔴 pełne &nbsp;|&nbsp;
+            ⚫ po terminie &nbsp;|&nbsp;
+            🔵 rozegrane
+        </div>
     </div>
 
     {% for m in matches %}
+    {% set signed = m["signed_up"] %}
+    {% set max_slots = m["max_slots"] %}
     <div class="match-data"
-         data-date="{{ m.match_date }}"
-         data-time="{{ m.match_time }}"
-         data-location="{{ m.location }}"
-         data-signed="{{ m.signed_up }}"
-         data-max="{{ m.max_slots }}"
+         data-date="{{ m['match_date'] }}"
+         data-time="{{ m['match_time'] }}"
+         data-location="{{ m['location'] }}"
+         data-signed="{{ signed }}"
+         data-max="{{ max_slots }}"
+         data-status="{% if m['played'] == 1 %}Rozegrany{% else %}Nierozegrany{% endif %}"
          style="display:none;"></div>
     {% endfor %}
 
     <div id="calendar-popup" class="calendar-popup"></div>
+
+    <div id="players-popup" class="players-popup">
+        <div class="popup-inner">
+            <div class="close-btn" onclick="closePlayersPopup()">✕</div>
+            <h3 id="popup-title"></h3>
+            <p id="popup-location" style="opacity:0.8;"></p>
+            <p id="popup-count" style="margin-bottom:10px;"></p>
+            <h4 style="margin-top:15px; margin-bottom:8px;">Lista zawodników</h4>
+            <ul id="popup-players" class="players-list"></ul>
+        </div>
+    </div>
+
+    <script>
+        window.playersData = {
+            {% for m in matches %}
+            {{ m['id'] }}: {
+                date: "{{ m['match_date'] }}",
+                time: "{{ m['match_time'] }}",
+                location: "{{ m['location'] }}",
+                max: {{ m['max_slots'] }},
+                players: [
+                    {% for p in players_by_match.get(m['id'], []) %}
+                    {
+                        name: "{{ p['first_name'] }} {{ p['last_name'] }}",
+                        alias: "{{ p['player_alias'] }}",
+                        initials: "{{ p['first_name'][0] }}{{ p['last_name'][0] }}",
+                        paid: {{ p['paid'] }}
+                    },
+                    {% endfor %}
+                ]
+            },
+            {% endfor %}
+        };
+    </script>
 
     <a href="/" class="back">← Powrót na stronę główną</a>
 
