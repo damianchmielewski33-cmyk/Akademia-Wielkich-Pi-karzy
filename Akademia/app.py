@@ -1,5 +1,5 @@
 import sqlite3
-from flask import Flask, render_template, request, redirect, session, flash
+from flask import Flask, render_template, request, redirect, session
 from datetime import date
 
 app = Flask(__name__)
@@ -94,7 +94,7 @@ def home():
     return render_template("index.html", next_match=next_match)
 
 # -----------------------------
-#  REJESTRACJA – IMIĘ, NAZWISKO, PIŁKARZ
+#  REJESTRACJA
 # -----------------------------
 
 @app.route("/register", methods=["GET", "POST"])
@@ -151,28 +151,33 @@ def register():
     return render_template("register.html", available_players=available_players)
 
 # -----------------------------
-#  LOGOWANIE – IMIĘ, NAZWISKO, PIŁKARZ
+#  LOGOWANIE
 # -----------------------------
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
+    conn = get_db()
+
+    # zawsze pobieramy aliasy, żeby select działał także przy błędzie
+    used_aliases_rows = conn.execute("SELECT player_alias FROM users").fetchall()
+    used_aliases = [row["player_alias"] for row in used_aliases_rows]
+
     if request.method == "POST":
         first_name = request.form["first_name"].strip()
         last_name = request.form["last_name"].strip()
         player_alias = request.form["player_alias"].strip()
 
-        conn = get_db()
         user = conn.execute(
             "SELECT * FROM users WHERE first_name = ? AND last_name = ? AND player_alias = ?",
             (first_name, last_name, player_alias)
         ).fetchone()
-        conn.close()
 
         if user is None:
+            conn.close()
             return render_template(
                 "login.html",
                 error="Nieprawidłowe dane logowania mordo",
-                used_players=[]
+                used_players=used_aliases
             )
 
         session["user_id"] = user["id"]
@@ -181,13 +186,10 @@ def login():
         session["player_alias"] = user["player_alias"]
         session["is_admin"] = user["is_admin"]
 
+        conn.close()
         return redirect("/")
 
-    conn = get_db()
-    used_aliases_rows = conn.execute("SELECT player_alias FROM users").fetchall()
     conn.close()
-    used_aliases = [row["player_alias"] for row in used_aliases_rows]
-
     return render_template("login.html", used_players=used_aliases)
 
 
@@ -197,7 +199,7 @@ def logout():
     return redirect("/")
 
 # -----------------------------
-#  PANEL ADMINA – SIDEBAR + PŁATNOŚCI + MECZE ROZEGRANE
+#  PANEL ADMINA
 # -----------------------------
 
 @app.route("/admin")
@@ -458,7 +460,7 @@ def admin_unset_played(match_id):
     return redirect("/admin")
 
 # -----------------------------
-#  LISTA PIŁKARZY – zarejestrowani + przycisk statystyk
+#  LISTA PIŁKARZY – zarejestrowani + statystyki
 # -----------------------------
 
 @app.route("/pilkarze")
@@ -471,7 +473,7 @@ def pilkarze():
     return render_template("pilkarze.html", players=players)
 
 # -----------------------------
-#  TERMINARZ – WYŚWIETLANIE + 3 SEKCJE
+#  TERMINARZ – WYŚWIETLANIE
 # -----------------------------
 
 @app.route("/terminarz")
@@ -635,7 +637,7 @@ def unsubscribe_match(match_id):
     return redirect("/terminarz")
 
 # -----------------------------
-#  STATYSTYKI – placeholder (logikę dodamy później)
+#  STATYSTYKI – placeholder
 # -----------------------------
 
 @app.route("/statystyki/<int:user_id>")

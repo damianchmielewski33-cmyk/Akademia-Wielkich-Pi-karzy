@@ -3,100 +3,154 @@
 <head>
     <meta charset="UTF-8">
     <title>Logowanie</title>
+
     <style>
         body {
             margin: 0;
             padding: 0;
             font-family: "Segoe UI", Arial, sans-serif;
-            background: linear-gradient(135deg, #0d0d0d, #1a1a1a);
-            height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
             color: #fff;
+            background-image: url('/static/stadium.jpg');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
         }
+
+        .overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.65);
+            backdrop-filter: blur(6px);
+            z-index: -1;
+        }
+
         .container {
-            background: rgba(255, 255, 255, 0.05);
-            padding: 40px;
-            border-radius: 15px;
-            width: 380px;
-            backdrop-filter: blur(10px);
+            max-width: 420px;
+            margin: 80px auto;
+            padding: 25px;
+            background: rgba(255,255,255,0.12);
+            border-radius: 20px;
+            backdrop-filter: blur(12px);
             box-shadow: 0 0 25px rgba(0,0,0,0.6);
+            animation: fadeIn 0.4s ease;
         }
-        h2 {
+
+        h1 {
+            font-weight: 300;
             text-align: center;
             margin-bottom: 25px;
-            font-weight: 300;
-            letter-spacing: 1px;
+            font-size: 32px;
         }
+
+        label {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
         input, select {
             width: 100%;
-            padding: 12px;
-            margin: 10px 0;
-            border-radius: 8px;
+            padding: 10px 12px;
+            margin-top: 6px;
+            margin-bottom: 18px;
+            border-radius: 12px;
             border: none;
-            background: #2a2a2a;
+            background: rgba(255,255,255,0.15);
             color: #fff;
-            font-size: 15px;
-            outline: none;
+            font-size: 14px;
+            backdrop-filter: blur(6px);
         }
-        button {
+
+        input:focus, select:focus {
+            outline: none;
+            background: rgba(255,255,255,0.22);
+        }
+
+        .btn-submit {
             width: 100%;
             padding: 12px;
-            margin-top: 15px;
-            background: #1e90ff;
+            border-radius: 12px;
             border: none;
-            border-radius: 8px;
-            color: white;
-            font-size: 16px;
+            background: rgba(30,144,255,0.8);
+            color: #fff;
+            font-size: 15px;
+            font-weight: 600;
             cursor: pointer;
+            transition: 0.25s ease;
         }
-        button:hover {
-            background: #0d6efd;
+
+        .btn-submit:hover {
+            background: rgba(30,144,255,1);
+            box-shadow: 0 0 12px rgba(30,144,255,0.8);
+            transform: translateY(-2px);
         }
-        .error {
-            color: #ff6b6b;
+
+        .error-box {
+            background: rgba(255,50,50,0.4);
+            padding: 10px;
+            border-radius: 10px;
+            margin-bottom: 15px;
             text-align: center;
-            margin-bottom: 10px;
+            font-size: 14px;
+            font-weight: 600;
         }
-        a {
-            display: block;
-            margin-top: 12px;
+
+        .bottom-links {
             text-align: center;
+            margin-top: 20px;
+        }
+
+        .bottom-links a {
             color: #1e90ff;
             text-decoration: none;
             font-size: 14px;
         }
-        a:hover {
+
+        .bottom-links a:hover {
             text-decoration: underline;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
         }
     </style>
 </head>
 <body>
 
+<div class="overlay"></div>
+
 <div class="container">
-    <h2>Logowanie</h2>
+
+    <h1>🔐 Logowanie</h1>
 
     {% if error %}
-    <div class="error">{{ error }}</div>
+    <div class="error-box">{{ error }}</div>
     {% endif %}
 
     <form method="POST">
-        <input type="text" name="first_name" placeholder="Imię" required>
-        <input type="text" name="last_name" placeholder="Nazwisko" required>
 
+        <label>Imię:</label>
+        <input type="text" name="first_name" placeholder="Wpisz imię" required>
+
+        <label>Nazwisko:</label>
+        <input type="text" name="last_name" placeholder="Wpisz nazwisko" required>
+
+        <label>Wybierz swojego piłkarza (alias):</label>
         <select name="player_alias" required>
-            <option value="">Wybierz swojego piłkarza</option>
-            {% for p in used_players %}
-            <option value="{{ p }}">{{ p }}</option>
+            <option value="">-- wybierz alias --</option>
+            {% for alias in used_players %}
+            <option value="{{ alias }}">{{ alias }}</option>
             {% endfor %}
         </select>
 
-        <button type="submit">Zaloguj</button>
+        <button type="submit" class="btn-submit">Zaloguj się</button>
     </form>
 
-    <a href="/register">Nie masz konta? Zarejestruj się</a>
-    <a href="/">Powrót na stronę główną</a>
+    <div class="bottom-links">
+        <a href="/register">Nie masz konta? Zarejestruj się</a><br><br>
+        <a href="/">← Powrót na stronę główną</a>
+    </div>
+
 </div>
 
 </body>
