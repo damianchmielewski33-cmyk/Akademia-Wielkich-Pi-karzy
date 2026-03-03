@@ -132,6 +132,7 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
+        /* POPUP (wykorzystuje style popupu wylogowania) */
         .logout-popup {
             position: fixed;
             inset: 0;
@@ -166,24 +167,8 @@
         .logout-buttons {
             margin-top: 20px;
             display: flex;
-            justify-content: space-between;
+            justify-content: center;
             gap: 10px;
-        }
-
-        .btn-logout-yes {
-            flex: 1;
-            padding: 10px;
-            background: rgba(255,50,50,0.8);
-            border: none;
-            border-radius: 10px;
-            color: #fff;
-            font-weight: 600;
-            cursor: pointer;
-            transition: 0.2s;
-        }
-
-        .btn-logout-yes:hover {
-            background: rgba(255,50,50,1);
         }
 
         .btn-logout-no {
@@ -286,31 +271,79 @@
         <p><strong>{{ next_match.match_date }} – {{ next_match.match_time }}</strong></p>
         <p>📍 {{ next_match.location }}</p>
         <p>👥 {{ next_match.signed_up }}/{{ next_match.max_slots }}</p>
-        <a href="/terminarz" class="tile" style="margin-top:10px;">Przejdź do terminarza</a>
+
+        {% if session.user_id %}
+        <div class="tile" style="margin-top:10px;"
+             onclick="signupFromHome({{ next_match.id }}, '{{ next_match.match_date }}', '{{ next_match.match_time }}', '{{ next_match.location }}')">
+            Zapisz się na mecz
+        </div>
+        {% else %}
+        <a href="/login" class="tile" style="margin-top:10px;">Zaloguj się, aby się zapisać</a>
+        {% endif %}
     </div>
     {% endif %}
 
 </div>
 
+<!-- POPUP POTWIERDZENIA ZAPISU -->
+<div id="signup-popup" class="logout-popup">
+    <div class="logout-inner">
+        <h3>Zostałeś zapisany na mecz!</h3>
+        <p id="signup-details"></p>
+
+        <div class="logout-buttons">
+            <button class="btn-logout-no" onclick="closeSignupPopup()">Zamknij</button>
+        </div>
+    </div>
+</div>
+
+<!-- POPUP WYLOGOWANIA -->
 <div id="logout-popup" class="logout-popup">
     <div class="logout-inner">
         <h3>Wylogować się?</h3>
         <p>Czy na pewno chcesz zakończyć sesję?</p>
 
         <div class="logout-buttons">
-            <button class="btn-logout-yes" onclick="confirmLogout()">Tak, wyloguj</button>
+            <button class="btn-logout-no" onclick="confirmLogout()">Tak</button>
             <button class="btn-logout-no" onclick="closeLogoutPopup()">Nie</button>
         </div>
     </div>
 </div>
 
 <script>
+    function signupFromHome(matchId, date, time, location) {
+        fetch(`/signup_home/${matchId}`)
+            .then(res => res.text())
+            .then(msg => {
+                if (msg === "NOT_LOGGED") {
+                    window.location.href = "/login";
+                    return;
+                }
+
+                document.getElementById("signup-details").innerHTML = `
+                    📅 <b>${date}</b><br>
+                    🕒 ${time}<br>
+                    📍 ${location}<br><br>
+                    <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location)}"
+                       target="_blank" style="color:#1e90ff;">Otwórz w Google Maps</a>
+                `;
+
+                document.getElementById("signup-popup").classList.add("open");
+            });
+    }
+
+    function closeSignupPopup() {
+        document.getElementById("signup-popup").classList.remove("open");
+    }
+
     function openLogoutPopup() {
         document.getElementById("logout-popup").classList.add("open");
     }
+
     function closeLogoutPopup() {
         document.getElementById("logout-popup").classList.remove("open");
     }
+
     function confirmLogout() {
         window.location.href = "/logout";
     }

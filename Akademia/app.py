@@ -5,10 +5,6 @@ from datetime import date
 app = Flask(__name__)
 app.secret_key = "DianaPolak"
 
-# -----------------------------
-#  STAŁA LISTA PIŁKARZY
-# -----------------------------
-
 ALL_PLAYERS = [
     "Lionel Messi", "Cristiano Ronaldo", "Kylian Mbappé", "Neymar", "Robert Lewandowski",
     "Kevin De Bruyne", "Erling Haaland", "Luka Modrić", "Karim Benzema", "Mohamed Salah",
@@ -18,15 +14,10 @@ ALL_PLAYERS = [
     "Heung-min Son", "Raheem Sterling", "Paulo Dybala", "Ángel Di María", "Martin Ødegaard"
 ]
 
-# -----------------------------
-#  BAZA DANYCH
-# -----------------------------
-
 def get_db():
     conn = sqlite3.connect("database.db")
     conn.row_factory = sqlite3.Row
     return conn
-
 
 def init_db():
     conn = get_db()
@@ -65,7 +56,6 @@ def init_db():
         )
     """)
 
-    # automatyczna migracja: dodanie kolumny played, jeśli jej nie ma
     try:
         cols = conn.execute("PRAGMA table_info(matches)").fetchall()
         col_names = {c["name"] for c in cols}
@@ -77,12 +67,7 @@ def init_db():
     conn.commit()
     conn.close()
 
-
 init_db()
-
-# -----------------------------
-#  STRONA GŁÓWNA
-# -----------------------------
 
 @app.route("/")
 def home():
@@ -93,10 +78,6 @@ def home():
     conn.close()
     return render_template("index.html", next_match=next_match)
 
-# -----------------------------
-#  REJESTRACJA
-# -----------------------------
-
 @app.route("/register", methods=["GET", "POST"])
 def register():
     conn = get_db()
@@ -106,7 +87,6 @@ def register():
 
     used_aliases_rows = conn.execute("SELECT player_alias FROM users").fetchall()
     used_aliases = {row["player_alias"] for row in used_aliases_rows}
-
     available_players = [p for p in ALL_PLAYERS if p not in used_aliases]
 
     if request.method == "POST":
@@ -116,19 +96,13 @@ def register():
 
         if not first_name or not last_name or not player_alias:
             conn.close()
-            return render_template(
-                "register.html",
-                available_players=available_players,
-                error="Wszystkie pola są wymagane."
-            )
+            return render_template("register.html", available_players=available_players,
+                                   error="Wszystkie pola są wymagane.")
 
         if player_alias not in available_players:
             conn.close()
-            return render_template(
-                "register.html",
-                available_players=available_players,
-                error="Ten piłkarz jest już zajęty lub nieprawidłowy."
-            )
+            return render_template("register.html", available_players=available_players,
+                                   error="Ten piłkarz jest już zajęty lub nieprawidłowy.")
 
         try:
             conn.execute(
@@ -138,11 +112,8 @@ def register():
             conn.commit()
         except sqlite3.IntegrityError:
             conn.close()
-            return render_template(
-                "register.html",
-                available_players=available_players,
-                error="Ten piłkarz jest już zajęty."
-            )
+            return render_template("register.html", available_players=available_players,
+                                   error="Ten piłkarz jest już zajęty.")
 
         conn.close()
         return redirect("/login")
@@ -150,15 +121,9 @@ def register():
     conn.close()
     return render_template("register.html", available_players=available_players)
 
-# -----------------------------
-#  LOGOWANIE
-# -----------------------------
-
 @app.route("/login", methods=["GET", "POST"])
 def login():
     conn = get_db()
-
-    # zawsze pobieramy aliasy, żeby select działał także przy błędzie
     used_aliases_rows = conn.execute("SELECT player_alias FROM users").fetchall()
     used_aliases = [row["player_alias"] for row in used_aliases_rows]
 
@@ -174,11 +139,9 @@ def login():
 
         if user is None:
             conn.close()
-            return render_template(
-                "login.html",
-                error="Nieprawidłowe dane logowania mordo",
-                used_players=used_aliases
-            )
+            return render_template("login.html",
+                                   error="Nieprawidłowe dane logowania mordo",
+                                   used_players=used_aliases)
 
         session["user_id"] = user["id"]
         session["first_name"] = user["first_name"]
@@ -192,15 +155,10 @@ def login():
     conn.close()
     return render_template("login.html", used_players=used_aliases)
 
-
 @app.route("/logout")
 def logout():
     session.clear()
     return redirect("/")
-
-# -----------------------------
-#  PANEL ADMINA
-# -----------------------------
 
 @app.route("/admin")
 def admin_panel():
@@ -256,7 +214,6 @@ def admin_panel():
         signups=signups
     )
 
-
 @app.route("/admin/user/edit/<int:user_id>", methods=["POST"])
 def admin_edit_user(user_id):
     if session.get("is_admin") != 1:
@@ -274,7 +231,6 @@ def admin_edit_user(user_id):
     conn.close()
 
     return redirect("/admin")
-
 
 @app.route("/admin/user/change_player/<int:user_id>", methods=["POST"])
 def admin_change_player(user_id):
@@ -301,7 +257,6 @@ def admin_change_player(user_id):
 
     return redirect("/admin")
 
-
 @app.route("/admin/user/toggle_admin/<int:user_id>", methods=["POST"])
 def admin_toggle_admin(user_id):
     if session.get("is_admin") != 1:
@@ -324,7 +279,6 @@ def admin_toggle_admin(user_id):
     conn.close()
     return redirect("/admin")
 
-
 @app.route("/delete_user/<int:user_id>", methods=["POST"])
 def delete_user(user_id):
     if "user_id" not in session or session.get("is_admin") != 1:
@@ -336,7 +290,6 @@ def delete_user(user_id):
     conn.close()
 
     return redirect("/admin")
-
 
 @app.route("/admin/match/<int:match_id>/add_player", methods=["POST"])
 def admin_add_player_to_match(match_id):
@@ -379,7 +332,6 @@ def admin_add_player_to_match(match_id):
 
     return redirect("/admin")
 
-
 @app.route("/admin/match/<int:match_id>/remove_player/<int:user_id>", methods=["POST"])
 def admin_remove_player_from_match(match_id, user_id):
     if session.get("is_admin") != 1:
@@ -403,7 +355,6 @@ def admin_remove_player_from_match(match_id, user_id):
     conn.close()
     return redirect("/admin")
 
-
 @app.route("/admin/match/<int:match_id>/toggle_paid/<int:user_id>", methods=["POST"])
 def admin_toggle_paid(match_id, user_id):
     if session.get("is_admin") != 1:
@@ -426,10 +377,6 @@ def admin_toggle_paid(match_id, user_id):
     conn.close()
     return redirect("/admin")
 
-# -----------------------------
-#  ADMIN – ROZEGRANIE MECZU
-# -----------------------------
-
 @app.route("/admin/match/<int:match_id>/set_played", methods=["POST"])
 def admin_set_played(match_id):
     if session.get("is_admin") != 1:
@@ -443,7 +390,6 @@ def admin_set_played(match_id):
     conn.commit()
     conn.close()
     return redirect("/admin")
-
 
 @app.route("/admin/match/<int:match_id>/unset_played", methods=["POST"])
 def admin_unset_played(match_id):
@@ -459,10 +405,6 @@ def admin_unset_played(match_id):
     conn.close()
     return redirect("/admin")
 
-# -----------------------------
-#  LISTA PIŁKARZY – zarejestrowani + statystyki
-# -----------------------------
-
 @app.route("/pilkarze")
 def pilkarze():
     conn = get_db()
@@ -471,10 +413,6 @@ def pilkarze():
     ).fetchall()
     conn.close()
     return render_template("pilkarze.html", players=players)
-
-# -----------------------------
-#  TERMINARZ – WYŚWIETLANIE
-# -----------------------------
 
 @app.route("/terminarz")
 def terminarz():
@@ -525,10 +463,6 @@ def terminarz():
         user_signed=user_signed
     )
 
-# -----------------------------
-#  TERMINARZ – DODAWANIE MECZU
-# -----------------------------
-
 @app.route("/terminarz/add", methods=["POST"])
 def add_match():
     if "user_id" not in session or session.get("is_admin") != 1:
@@ -548,10 +482,6 @@ def add_match():
     conn.close()
 
     return redirect("/terminarz")
-
-# -----------------------------
-#  TERMINARZ – ZAPIS NA MECZ
-# -----------------------------
 
 @app.route("/terminarz/signup/<int:match_id>")
 def signup_match(match_id):
@@ -598,10 +528,6 @@ def signup_match(match_id):
 
     return redirect("/terminarz")
 
-# -----------------------------
-#  TERMINARZ – WYPISANIE Z MECZU
-# -----------------------------
-
 @app.route("/terminarz/unsubscribe/<int:match_id>")
 def unsubscribe_match(match_id):
     if "user_id" not in session:
@@ -636,17 +562,57 @@ def unsubscribe_match(match_id):
     conn.close()
     return redirect("/terminarz")
 
-# -----------------------------
-#  STATYSTYKI – placeholder
-# -----------------------------
+@app.route("/signup_home/<int:match_id>")
+def signup_home(match_id):
+    if "user_id" not in session:
+        return "NOT_LOGGED"
+
+    user_id = session["user_id"]
+    conn = get_db()
+
+    match = conn.execute("SELECT * FROM matches WHERE id = ?", (match_id,)).fetchone()
+    if match is None:
+        conn.close()
+        return "NO_MATCH"
+
+    m_date = date.fromisoformat(match["match_date"])
+    if m_date < date.today() or match["played"] == 1:
+        conn.close()
+        return "TOO_LATE"
+
+    if match["signed_up"] >= match["max_slots"]:
+        conn.close()
+        return "FULL"
+
+    already = conn.execute(
+        "SELECT * FROM match_signups WHERE user_id = ? AND match_id = ?",
+        (user_id, match_id)
+    ).fetchone()
+
+    if already:
+        conn.close()
+        return "ALREADY"
+
+    conn.execute(
+        "INSERT INTO match_signups (user_id, match_id, paid) VALUES (?, ?, 0)",
+        (user_id, match_id)
+    )
+    conn.execute(
+        "UPDATE matches SET signed_up = signed_up + 1 WHERE id = ?",
+        (match_id,)
+    )
+    conn.commit()
+    conn.close()
+
+    return "OK"
+
+@app.route("/statystyki")
+def statystyki():
+    return "Statystyki – w przygotowaniu."
 
 @app.route("/statystyki/<int:user_id>")
 def statystyki_user(user_id):
-    return f"Statystyki użytkownika {user_id} – logika w przygotowaniu."
-
-# -----------------------------
-#  START
-# -----------------------------
+    return f"Statystyki użytkownika {user_id} – w przygotowaniu."
 
 if __name__ == "__main__":
     app.run(debug=True)
