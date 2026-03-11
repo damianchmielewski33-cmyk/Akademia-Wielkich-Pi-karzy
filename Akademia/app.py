@@ -1,9 +1,14 @@
-import sqlite3
 from flask import Flask, render_template, request, redirect, session, jsonify
 from datetime import date
 
+from db import get_db          # ← baza danych
+from stats import stats_bp     # ← blueprint statystyk
+
 app = Flask(__name__)
 app.secret_key = "DianaPolak"
+
+# rejestracja blueprintów
+app.register_blueprint(stats_bp)
 
 ALL_PLAYERS = [
     "Lionel Messi", "Cristiano Ronaldo", "Kylian Mbappé", "Neymar", "Robert Lewandowski",
@@ -13,11 +18,6 @@ ALL_PLAYERS = [
     "Thibaut Courtois", "Marc ter Stegen", "Virgil van Dijk", "Antonio Rüdiger", "Joshua Kimmich",
     "Heung-min Son", "Raheem Sterling", "Paulo Dybala", "Ángel Di María", "Martin Ødegaard"
 ]
-
-def get_db():
-    conn = sqlite3.connect("database.db")
-    conn.row_factory = sqlite3.Row
-    return conn
 
 def init_db():
     conn = get_db()
@@ -246,6 +246,17 @@ def admin_panel():
         all_matches=all_matches,
         signups=signups
     )
+
+@app.route("/admin/match/<int:match_id>/set_played", methods=["POST"])
+def set_played(match_id):
+    conn = get_db()
+    conn.execute(
+        "UPDATE matches SET played = 1 WHERE id = ?",
+        (match_id,)
+    )
+    conn.commit()
+    conn.close()
+    return redirect("/terminarz")
 
 # -----------------------------------------
 # LISTA PIŁKARZY
@@ -521,33 +532,6 @@ def stats_save():
     conn.close()
 
     return "OK"
-
-@app.route("/statystyki")
-def statystyki():
-    conn = get_db()
-
-    rows = conn.execute("""
-        SELECT 
-            u.first_name,
-            u.last_name,
-            u.player_alias,
-            COUNT(st.id) AS matches,
-            COALESCE(SUM(st.goals), 0) AS goals,
-            COALESCE(SUM(st.assists), 0) AS assists,
-            COALESCE(SUM(st.distance), 0) AS distance
-        FROM users u
-        LEFT JOIN match_stats st ON st.user_id = u.id
-        GROUP BY u.id
-        ORDER BY u.first_name
-    """).fetchall()
-
-    conn.close()
-
-    return render_template("statystyki.html", stats=rows)
-
-# -----------------------------------------
-# START
-# -----------------------------------------
 
 if __name__ == "__main__":
     app.run(debug=True)

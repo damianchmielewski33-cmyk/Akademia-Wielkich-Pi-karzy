@@ -1059,42 +1059,44 @@
 
         <h2>⚫ Mecze po terminie <small></small></h2>
 
-        <table>
-            <thead>
-            <tr>
-                <th>📅 Data</th>
-                <th>🕒 Godzina</th>
-                <th>📍 Lokalizacja</th>
-                <th>👥 Zapisani</th>
-                <th>⚙️ Akcje admina</th>
-            </tr>
-            </thead>
-            <tbody>
-            {% for m in after_date_not_confirmed %}
-            <tr class="row-yellow">
-                <td>{{ m["match_date"] }}</td>
-                <td>{{ m["match_time"] }}</td>
-                <td>{{ m["location"] }}</td>
-                <td>{{ m["signed_up"] }}/{{ m["max_slots"] }}</td>
-                <td>
-                    {% if session.is_admin == 1 %}
-                    <form action="/admin/match/{{ m['id'] }}/set_played" method="post" style="display:inline;">
-                        <button type="submit" class="btn-modern btn-admin-confirm">
-                            ✔ Potwierdź rozegranie
-                        </button>
-                    </form>
-                    {% else %}
-                    <span style="color:#ccc;">Oczekuje na potwierdzenie</span>
-                    {% endif %}
-                </td>
-            </tr>
-            {% else %}
-            <tr><td colspan="5"><i>Brak meczów po terminie.</i></td></tr>
-            {% endfor %}
-            </tbody>
-        </table>
+            <!-- MECZE PO TERMINIE (bez tytułu) -->
+            <table>
+                <thead>
+                <tr>
+                    <th>📅 Data</th>
+                    <th>⏰ Godzina</th>
+                    <th>📍 Lokalizacja</th>
+                    <th>🧍 Zapisani</th>
+                    <th>🛠️ Akcje admina</th>
+                </tr>
+                </thead>
 
-        <h2>🔵 Mecze rozegrane <small></small></h2>
+                <tbody>
+                {% for m in after_date_not_confirmed %}
+                <tr class="row-yellow">
+                    <td>{{ m.date }}</td>
+                    <td>{{ m.time }}</td>
+                    <td>{{ m.location }}</td>
+                    <td>{{ m.players|length }}/{{ m.max_players }}</td>
+
+                    <td>
+                        <button class="btn btn-green"
+                                onclick="location.href='/confirm/{{ m.id }}'">
+                            Potwierdź rozegranie
+                        </button>
+
+                        <button class="btn btn-blue"
+                                onclick="location.href='/players/{{ m.id }}'">
+                            Lista zawodników
+                        </button>
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+
+
+            <h2>🔵 Mecze rozegrane <small></small></h2>
 
         <table>
             <thead>
