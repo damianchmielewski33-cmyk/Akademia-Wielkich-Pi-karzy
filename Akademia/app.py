@@ -56,27 +56,38 @@ def init_db():
         )
     """)
 
-    try:
-        cols = conn.execute("PRAGMA table_info(matches)").fetchall()
-        col_names = {c["name"] for c in cols}
-        if "played" not in col_names:
-            conn.execute("ALTER TABLE matches ADD COLUMN played INTEGER NOT NULL DEFAULT 0")
-    except Exception:
-        pass
-
     conn.commit()
     conn.close()
 
 init_db()
 
+# -----------------------------------------
+# STRONA GŁÓWNA – najbliższy mecz + user_signed
+# -----------------------------------------
+
 @app.route("/")
 def home():
     conn = get_db()
+
     next_match = conn.execute(
         "SELECT * FROM matches WHERE match_date >= date('now') ORDER BY match_date, match_time LIMIT 1"
     ).fetchone()
+
+    user_signed = False
+    if next_match and "user_id" in session:
+        signup = conn.execute(
+            "SELECT id FROM match_signups WHERE user_id = ? AND match_id = ?",
+            (session["user_id"], next_match["id"])
+        ).fetchone()
+        if signup:
+            user_signed = True
+
     conn.close()
-    return render_template("index.html", next_match=next_match)
+    return render_template("index.html", next_match=next_match, user_signed=user_signed)
+
+# -----------------------------------------
+# REJESTRACJA
+# -----------------------------------------
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
@@ -121,6 +132,10 @@ def register():
     conn.close()
     return render_template("register.html", available_players=available_players)
 
+# -----------------------------------------
+# LOGOWANIE
+# -----------------------------------------
+
 @app.route("/login", methods=["GET", "POST"])
 def login():
     conn = get_db()
@@ -159,6 +174,10 @@ def login():
 def logout():
     session.clear()
     return redirect("/")
+
+# -----------------------------------------
+# PANEL ADMINA
+# -----------------------------------------
 
 @app.route("/admin")
 def admin_panel():
@@ -214,196 +233,9 @@ def admin_panel():
         signups=signups
     )
 
-@app.route("/admin/user/edit/<int:user_id>", methods=["POST"])
-def admin_edit_user(user_id):
-    if session.get("is_admin") != 1:
-        return "Brak dostępu"
-
-    first_name = request.form.get("first_name", "").strip()
-    last_name = request.form.get("last_name", "").strip()
-
-    conn = get_db()
-    conn.execute(
-        "UPDATE users SET first_name = ?, last_name = ? WHERE id = ?",
-        (first_name, last_name, user_id)
-    )
-    conn.commit()
-    conn.close()
-
-    return redirect("/admin")
-
-@app.route("/admin/user/change_player/<int:user_id>", methods=["POST"])
-def admin_change_player(user_id):
-    if session.get("is_admin") != 1:
-        return "Brak dostępu"
-
-    player_alias = request.form.get("player_alias", "").strip()
-
-    conn = get_db()
-    existing = conn.execute(
-        "SELECT id FROM users WHERE player_alias = ? AND id != ?",
-        (player_alias, user_id)
-    ).fetchone()
-    if existing:
-        conn.close()
-        return "Ten piłkarz jest już zajęty przez innego użytkownika."
-
-    conn.execute(
-        "UPDATE users SET player_alias = ? WHERE id = ?",
-        (player_alias, user_id)
-    )
-    conn.commit()
-    conn.close()
-
-    return redirect("/admin")
-
-@app.route("/admin/user/toggle_admin/<int:user_id>", methods=["POST"])
-def admin_toggle_admin(user_id):
-    if session.get("is_admin") != 1:
-        return "Brak dostępu"
-
-    conn = get_db()
-    row = conn.execute(
-        "SELECT is_admin FROM users WHERE id = ?",
-        (user_id,)
-    ).fetchone()
-
-    if row:
-        new_val = 0 if row["is_admin"] == 1 else 1
-        conn.execute(
-            "UPDATE users SET is_admin = ? WHERE id = ?",
-            (new_val, user_id)
-        )
-        conn.commit()
-
-    conn.close()
-    return redirect("/admin")
-
-@app.route("/delete_user/<int:user_id>", methods=["POST"])
-def delete_user(user_id):
-    if "user_id" not in session or session.get("is_admin") != 1:
-        return "Brak dostępu"
-
-    conn = get_db()
-    conn.execute("DELETE FROM users WHERE id = ?", (user_id,))
-    conn.commit()
-    conn.close()
-
-    return redirect("/admin")
-
-@app.route("/admin/match/<int:match_id>/add_player", methods=["POST"])
-def admin_add_player_to_match(match_id):
-    if session.get("is_admin") != 1:
-        return "Brak dostępu"
-
-    user_id = request.form.get("user_id")
-    if not user_id:
-        return redirect("/admin")
-
-    conn = get_db()
-
-    match = conn.execute("SELECT * FROM matches WHERE id = ?", (match_id,)).fetchone()
-    if not match:
-        conn.close()
-        return "Mecz nie istnieje"
-
-    if match["signed_up"] >= match["max_slots"]:
-        conn.close()
-        return "Brak miejsc na ten mecz!"
-
-    already = conn.execute(
-        "SELECT id FROM match_signups WHERE user_id = ? AND match_id = ?",
-        (user_id, match_id)
-    ).fetchone()
-    if already:
-        conn.close()
-        return redirect("/admin")
-
-    conn.execute(
-        "INSERT INTO match_signups (user_id, match_id, paid) VALUES (?, ?, 0)",
-        (user_id, match_id)
-    )
-    conn.execute(
-        "UPDATE matches SET signed_up = signed_up + 1 WHERE id = ?",
-        (match_id,)
-    )
-    conn.commit()
-    conn.close()
-
-    return redirect("/admin")
-
-@app.route("/admin/match/<int:match_id>/remove_player/<int:user_id>", methods=["POST"])
-def admin_remove_player_from_match(match_id, user_id):
-    if session.get("is_admin") != 1:
-        return "Brak dostępu"
-
-    conn = get_db()
-
-    signup = conn.execute(
-        "SELECT id FROM match_signups WHERE user_id = ? AND match_id = ?",
-        (user_id, match_id)
-    ).fetchone()
-
-    if signup:
-        conn.execute("DELETE FROM match_signups WHERE id = ?", (signup["id"],))
-        conn.execute(
-            "UPDATE matches SET signed_up = signed_up - 1 WHERE id = ?",
-            (match_id,)
-        )
-        conn.commit()
-
-    conn.close()
-    return redirect("/admin")
-
-@app.route("/admin/match/<int:match_id>/toggle_paid/<int:user_id>", methods=["POST"])
-def admin_toggle_paid(match_id, user_id):
-    if session.get("is_admin") != 1:
-        return "Brak dostępu"
-
-    conn = get_db()
-    row = conn.execute(
-        "SELECT id, paid FROM match_signups WHERE user_id = ? AND match_id = ?",
-        (user_id, match_id)
-    ).fetchone()
-
-    if row:
-        new_val = 0 if row["paid"] == 1 else 1
-        conn.execute(
-            "UPDATE match_signups SET paid = ? WHERE id = ?",
-            (new_val, row["id"])
-        )
-        conn.commit()
-
-    conn.close()
-    return redirect("/admin")
-
-@app.route("/admin/match/<int:match_id>/set_played", methods=["POST"])
-def admin_set_played(match_id):
-    if session.get("is_admin") != 1:
-        return "Brak dostępu"
-
-    conn = get_db()
-    conn.execute(
-        "UPDATE matches SET played = 1 WHERE id = ?",
-        (match_id,)
-    )
-    conn.commit()
-    conn.close()
-    return redirect("/admin")
-
-@app.route("/admin/match/<int:match_id>/unset_played", methods=["POST"])
-def admin_unset_played(match_id):
-    if session.get("is_admin") != 1:
-        return "Brak dostępu"
-
-    conn = get_db()
-    conn.execute(
-        "UPDATE matches SET played = 0 WHERE id = ?",
-        (match_id,)
-    )
-    conn.commit()
-    conn.close()
-    return redirect("/admin")
+# -----------------------------------------
+# LISTA PIŁKARZY (BRAKOWAŁO TEGO!)
+# -----------------------------------------
 
 @app.route("/pilkarze")
 def pilkarze():
@@ -413,6 +245,30 @@ def pilkarze():
     ).fetchall()
     conn.close()
     return render_template("pilkarze.html", players=players)
+
+# -----------------------------------------
+# MECZE – dodawanie, zapisy, wypisy
+# -----------------------------------------
+
+@app.route("/terminarz/add", methods=["POST"])
+def add_match():
+    if "user_id" not in session or session.get("is_admin") != 1:
+        return "Brak dostępu"
+
+    date_val = request.form["date"]
+    time = request.form["time"]
+    location = request.form["location"]
+    max_slots = request.form["max_slots"]
+
+    conn = get_db()
+    conn.execute(
+        "INSERT INTO matches (match_date, match_time, location, max_slots, signed_up, played) VALUES (?, ?, ?, ?, 0, 0)",
+        (date_val, time, location, max_slots)
+    )
+    conn.commit()
+    conn.close()
+
+    return redirect("/terminarz")
 
 @app.route("/terminarz")
 def terminarz():
@@ -462,26 +318,6 @@ def terminarz():
         players_by_match=players_by_match,
         user_signed=user_signed
     )
-
-@app.route("/terminarz/add", methods=["POST"])
-def add_match():
-    if "user_id" not in session or session.get("is_admin") != 1:
-        return "Brak dostępu"
-
-    date_val = request.form["date"]
-    time = request.form["time"]
-    location = request.form["location"]
-    max_slots = request.form["max_slots"]
-
-    conn = get_db()
-    conn.execute(
-        "INSERT INTO matches (match_date, match_time, location, max_slots, signed_up, played) VALUES (?, ?, ?, ?, 0, 0)",
-        (date_val, time, location, max_slots)
-    )
-    conn.commit()
-    conn.close()
-
-    return redirect("/terminarz")
 
 @app.route("/terminarz/signup/<int:match_id>")
 def signup_match(match_id):
@@ -562,6 +398,10 @@ def unsubscribe_match(match_id):
     conn.close()
     return redirect("/terminarz")
 
+# -----------------------------------------
+# ZAPIS Z EKRANU GŁÓWNEGO
+# -----------------------------------------
+
 @app.route("/signup_home/<int:match_id>")
 def signup_home(match_id):
     if "user_id" not in session:
@@ -606,6 +446,10 @@ def signup_home(match_id):
 
     return "OK"
 
+# -----------------------------------------
+# STATYSTYKI
+# -----------------------------------------
+
 @app.route("/statystyki")
 def statystyki():
     return "Statystyki – w przygotowaniu."
@@ -613,6 +457,10 @@ def statystyki():
 @app.route("/statystyki/<int:user_id>")
 def statystyki_user(user_id):
     return f"Statystyki użytkownika {user_id} – w przygotowaniu."
+
+# -----------------------------------------
+# START
+# -----------------------------------------
 
 if __name__ == "__main__":
     app.run(debug=True)

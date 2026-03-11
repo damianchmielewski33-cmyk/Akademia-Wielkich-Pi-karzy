@@ -31,47 +31,6 @@
             text-align: center;
         }
 
-        .user-box {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 12px;
-            margin-bottom: 25px;
-        }
-
-        .avatar {
-            width: 55px;
-            height: 55px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #1e90ff, #00eaff);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 22px;
-            font-weight: bold;
-            color: #fff;
-            box-shadow: 0 0 12px rgba(0,0,0,0.5);
-        }
-
-        h1 {
-            font-weight: 300;
-            font-size: 42px;
-            margin-bottom: 10px;
-        }
-
-        h2 {
-            font-weight: 300;
-            opacity: 0.8;
-            margin-bottom: 40px;
-        }
-
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 20px;
-            margin-top: 30px;
-        }
-
         .tile {
             background: rgba(255,255,255,0.12);
             padding: 25px;
@@ -92,22 +51,6 @@
             box-shadow: 0 0 25px rgba(30,144,255,0.8);
         }
 
-        .tile-icon {
-            font-size: 40px;
-            margin-bottom: 10px;
-        }
-
-        .tile-title {
-            font-size: 20px;
-            font-weight: 600;
-            margin-bottom: 5px;
-        }
-
-        .tile-desc {
-            font-size: 13px;
-            opacity: 0.8;
-        }
-
         .next-match {
             margin-top: 50px;
             padding: 20px;
@@ -115,24 +58,8 @@
             border-radius: 16px;
             backdrop-filter: blur(10px);
             box-shadow: 0 0 18px rgba(0,0,0,0.4);
-            animation: fadeIn 0.5s ease;
         }
 
-        .next-match h3 {
-            margin-top: 0;
-            font-weight: 300;
-        }
-
-        .next-match strong {
-            font-size: 18px;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        /* POPUP (wykorzystuje style popupu wylogowania) */
         .logout-popup {
             position: fixed;
             inset: 0;
@@ -146,7 +73,6 @@
 
         .logout-popup.open {
             display: flex;
-            animation: fadeIn 0.25s ease;
         }
 
         .logout-inner {
@@ -156,19 +82,6 @@
             width: 320px;
             text-align: center;
             box-shadow: 0 0 25px rgba(0,0,0,0.8);
-            animation: scaleIn 0.25s ease;
-        }
-
-        @keyframes scaleIn {
-            from { transform: scale(0.85); opacity: 0; }
-            to { transform: scale(1); opacity: 1; }
-        }
-
-        .logout-buttons {
-            margin-top: 20px;
-            display: flex;
-            justify-content: center;
-            gap: 10px;
         }
 
         .btn-logout-no {
@@ -185,6 +98,33 @@
 
         .btn-logout-no:hover {
             background: rgba(255,255,255,0.25);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+            margin-top: 40px;
+        }
+
+        .avatar {
+            width: 60px;
+            height: 60px;
+            background: #1e90ff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 26px;
+            font-weight: bold;
+            margin-right: 15px;
+        }
+
+        .user-box {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 25px;
         }
     </style>
 </head>
@@ -273,10 +213,18 @@
         <p>👥 {{ next_match.signed_up }}/{{ next_match.max_slots }}</p>
 
         {% if session.user_id %}
-        <div class="tile" style="margin-top:10px;"
+
+        {% if user_signed %}
+        <div class="tile" style="margin-top:10px; background:#3498db; cursor:default;">
+            Jesteś zapisany na ten mecz
+        </div>
+        {% else %}
+        <div class="tile" style="margin-top:10px; background:#2ecc71;"
              onclick="signupFromHome({{ next_match.id }}, '{{ next_match.match_date }}', '{{ next_match.match_time }}', '{{ next_match.location }}')">
             Zapisz się na mecz
         </div>
+        {% endif %}
+
         {% else %}
         <a href="/login" class="tile" style="margin-top:10px;">Zaloguj się, aby się zapisać</a>
         {% endif %}
