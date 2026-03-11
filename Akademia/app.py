@@ -1,5 +1,5 @@
 import sqlite3
-from flask import Flask, render_template, request, redirect, session
+from flask import Flask, render_template, request, redirect, session, jsonify
 from datetime import date
 
 app = Flask(__name__)
@@ -51,6 +51,20 @@ def init_db():
             match_id INTEGER NOT NULL,
             paid INTEGER NOT NULL DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(user_id) REFERENCES users(id),
+            FOREIGN KEY(match_id) REFERENCES matches(id)
+        )
+    """)
+
+    # NOWA TABELA STATYSTYK
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS match_stats (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            match_id INTEGER NOT NULL,
+            goals INTEGER DEFAULT 0,
+            assists INTEGER DEFAULT 0,
+            distance REAL DEFAULT 0,
             FOREIGN KEY(user_id) REFERENCES users(id),
             FOREIGN KEY(match_id) REFERENCES matches(id)
         )
@@ -234,7 +248,7 @@ def admin_panel():
     )
 
 # -----------------------------------------
-# LISTA PIŁKARZY (BRAKOWAŁO TEGO!)
+# LISTA PIŁKARZY
 # -----------------------------------------
 
 @app.route("/pilkarze")
@@ -447,16 +461,89 @@ def signup_home(match_id):
     return "OK"
 
 # -----------------------------------------
-# STATYSTYKI
+# STATYSTYKI — POPUP + ZAPIS + WIDOK
 # -----------------------------------------
+
+@app.route("/stats/pending")
+def stats_pending():
+    if "user_id" not in session:
+        return jsonify({"pending": False})
+
+    user_id = session["user_id"]
+    conn = get_db()
+
+    row = conn.execute("""
+        SELECT m.id, m.match_date, m.match_time, m.location
+        FROM matches m
+        JOIN match_signups s ON s.match_id = m.id
+        WHERE s.user_id = ?
+          AND m.played = 1
+          AND NOT EXISTS (
+                SELECT 1 FROM match_stats st
+                WHERE st.user_id = ? AND st.match_id = m.id
+          )
+        ORDER BY m.match_date DESC, m.match_time DESC
+        LIMIT 1
+    """, (user_id, user_id)).fetchone()
+
+    conn.close()
+
+    if row:
+        return jsonify({
+            "pending": True,
+            "match_id": row["id"],
+            "date": row["match_date"],
+            "time": row["match_time"],
+            "location": row["location"]
+        })
+
+    return jsonify({"pending": False})
+
+@app.route("/stats/save", methods=["POST"])
+def stats_save():
+    if "user_id" not in session:
+        return "NOT_LOGGED"
+
+    user_id = session["user_id"]
+    match_id = request.form.get("match_id")
+    goals = request.form.get("goals", 0)
+    assists = request.form.get("assists", 0)
+    distance = request.form.get("distance", 0)
+
+    conn = get_db()
+
+    conn.execute("""
+        INSERT INTO match_stats (user_id, match_id, goals, assists, distance)
+        VALUES (?, ?, ?, ?, ?)
+    """, (user_id, match_id, goals, assists, distance))
+
+    conn.commit()
+    conn.close()
+
+    return "OK"
 
 @app.route("/statystyki")
 def statystyki():
-    return "Statystyki – w przygotowaniu."
+    conn = get_db()
 
-@app.route("/statystyki/<int:user_id>")
-def statystyki_user(user_id):
-    return f"Statystyki użytkownika {user_id} – w przygotowaniu."
+    rows = conn.execute("""
+        SELECT 
+            u.first_name,
+            u.last_name,
+            u.player_alias,
+            COUNT(st.id) AS matches,
+            COALESCE(SUM(st.goals), 0) AS goals,
+            COALESCE(SUM(st.assists), 0) AS assists,
+            COALESCE(SUM(st.distance), 0) AS distance
+        FROM users u
+        LEFT JOIN match_stats st ON st.user_id = u.id
+        GROUP BY u.id
+        ORDER BY u.first_name
+    """).fetchall()
+
+    conn.close()
+
+    return render_template("statystyki.html", stats=rows)
 
 # -----------------------------------------
 # START
