@@ -1,0 +1,148 @@
+/* GLOBALNE TŁO — JASNA MURAWSA */
+body {
+    margin: 0;
+    padding: 0;
+    font-family: "Segoe UI", Arial, sans-serif;
+    color: #1b3d1b;
+    background-image: url('/static/murawa.jpg');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
+/* OVERLAY — BEZ BLUR, BEZ FILTRÓW */
+.overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(255,255,255,0.55);
+    z-index: -1;
+    pointer-events: none;
+}
+
+/* KAFELKI */
+.tile {
+    background: rgba(255,255,255,0.9);
+    padding: 25px;
+    border-radius: 18px;
+    box-shadow: 0 0 12px rgba(0,0,0,0.15);
+    cursor: pointer;
+    transition: 0.25s ease;
+    text-decoration: none;
+    color: #1b4d1b;
+    display: block;
+    position: relative;
+    z-index: 1;
+}
+
+.tile:hover {
+    background: rgba(255,255,255,1);
+    transform: translateY(-4px);
+    box-shadow: 0 0 18px rgba(0,0,0,0.25);
+}
+
+/* GRID */
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 20px;
+    margin-top: 40px;
+}
+
+/* SEKCJE */
+.section-box,
+.next-match {
+    background: rgba(255,255,255,0.9);
+    padding: 20px;
+    border-radius: 16px;
+    box-shadow: 0 0 12px rgba(0,0,0,0.15);
+    color: #1b3d1b;
+    position: relative;
+    z-index: 1;
+}
+
+/* POPUPY */
+.popup {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.35);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 99999;
+}
+
+.popup.open {
+    display: flex;
+}
+
+.popup-card {
+    background: rgba(255,255,255,0.95);
+    padding: 30px;
+    border-radius: 20px;
+    width: 340px;
+    text-align: center;
+    color: #1b4d1b;
+    box-shadow: 0 0 25px rgba(0,0,0,0.25);
+}
+
+/* PRZYCISKI */
+.btn {
+    padding: 12px;
+    background: #2ecc71;
+    border: none;
+    border-radius: 12px;
+    color: #fff;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.2s;
+    font-size: 16px;
+}
+
+.btn:hover {
+    background: #27ae60;
+}
+
+/* TABELKI */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    background: rgba(255,255,255,0.9);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 0 12px rgba(0,0,0,0.15);
+}
+
+th, td {
+    padding: 14px;
+    text-align: center;
+    color: #1b3d1b;
+}
+
+th {
+    background: rgba(255,255,255,1);
+    font-size: 18px;
+}
+
+tr:nth-child(even) {
+    background: rgba(255,255,255,0.8);
+}
+
+tr:hover {
+    background: rgba(255,255,255,1);
+}
+
+/* FIX: dropdowny muszą być nad wszystkim */
+select {
+    position: relative !important;
+    z-index: 99999 !important;
+    background: #ffffff !important;
+    color: #1b3d1b !important;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    padding: 6px 8px;
+}
+
+select option {
+    background: #ffffff !important;
+    color: #1b3d1b !important;
+}
