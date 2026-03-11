@@ -10,6 +10,7 @@ def statystyki():
 
     conn = get_db()
 
+    # Ogólne statystyki systemu
     total_matches = conn.execute(
         "SELECT COUNT(*) AS c FROM matches"
     ).fetchone()["c"]
@@ -26,6 +27,16 @@ def statystyki():
         "SELECT COUNT(*) AS c FROM users"
     ).fetchone()["c"]
 
+    # Statystyki użytkownika
+    user_stats = conn.execute("""
+        SELECT m.match_date, m.match_time, m.location,
+               s.goals, s.assists, s.distance
+        FROM match_stats s
+        JOIN matches m ON m.id = s.match_id
+        WHERE s.user_id = ?
+        ORDER BY m.match_date DESC, m.match_time DESC
+    """, (session["user_id"],)).fetchall()
+
     conn.close()
 
     return render_template(
@@ -33,5 +44,6 @@ def statystyki():
         total_matches=total_matches,
         played_matches=played_matches,
         upcoming_matches=upcoming_matches,
-        players_count=players_count
+        players_count=players_count,
+        user_stats=user_stats
     )
