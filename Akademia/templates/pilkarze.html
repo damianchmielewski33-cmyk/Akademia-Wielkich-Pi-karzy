@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <title>Piłkarze</title>
 
+    <!-- WYKRESY -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
     <style>
         body {
             margin: 0;
@@ -71,7 +74,6 @@
             transform: translateY(-2px);
         }
 
-        /* GRID KART PIŁKARZY */
         .players-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
@@ -133,7 +135,6 @@
             font-weight: 600;
             cursor: pointer;
             border: none;
-            text-decoration: none;
             display: inline-block;
             transition: 0.25s ease;
             background: rgba(30,144,255,0.7);
@@ -147,80 +148,104 @@
             transform: translateY(-2px);
         }
 
-        /* POPUP WYLOGOWANIA */
-        .logout-popup {
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.65);
-            backdrop-filter: blur(6px);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 99999;
+        /* POPUP STATYSTYK */
+        #statsModal {
+            display:none;
+            position:fixed;
+            inset:0;
+            background:rgba(0,0,0,0.75);
+            backdrop-filter:blur(8px);
+            justify-content:center;
+            align-items:center;
+            z-index: 9999;
         }
 
-        .logout-popup.open {
-            display: flex;
-            animation: fadeIn 0.25s ease;
+        #statsModal .inner {
+            background: rgba(20,20,20,0.92);
+            color:#fff;
+            padding:30px;
+            border-radius:18px;
+            width:600px;
+            max-height:85vh;
+            overflow-y:auto;
+            box-shadow:0 0 25px rgba(0,0,0,0.6);
+            animation: popupIn 0.25s ease;
+            position: relative;
         }
 
-        .logout-inner {
-            background: rgba(0,0,0,0.85);
-            padding: 30px;
-            border-radius: 18px;
-            width: 320px;
-            text-align: center;
-            box-shadow: 0 0 25px rgba(0,0,0,0.8);
-            animation: scaleIn 0.25s ease;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-
-        @keyframes scaleIn {
+        @keyframes popupIn {
             from { transform: scale(0.85); opacity: 0; }
             to { transform: scale(1); opacity: 1; }
         }
 
-        .logout-buttons {
-            margin-top: 20px;
-            display: flex;
-            justify-content: space-between;
-            gap: 10px;
+        .close-btn {
+            position:absolute;
+            top:12px;
+            right:12px;
+            background:none;
+            border:none;
+            color:#fff;
+            font-size:20px;
+            cursor:pointer;
         }
 
-        .btn-logout-yes {
-            flex: 1;
-            padding: 10px;
-            background: rgba(255,50,50,0.8);
-            border: none;
-            border-radius: 10px;
-            color: #fff;
-            font-weight: 600;
-            cursor: pointer;
-            transition: 0.2s;
+        .player-header-popup {
+            display:flex;
+            align-items:center;
+            gap:15px;
+            margin-bottom:20px;
         }
 
-        .btn-logout-yes:hover {
-            background: rgba(255,50,50,1);
+        .avatar-popup {
+            width:60px;
+            height:60px;
+            border-radius:50%;
+            background:linear-gradient(135deg,#1e90ff,#00eaff);
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            font-size:24px;
+            font-weight:700;
         }
 
-        .btn-logout-no {
-            flex: 1;
-            padding: 10px;
-            background: rgba(255,255,255,0.15);
-            border: none;
-            border-radius: 10px;
-            color: #fff;
-            font-weight: 600;
-            cursor: pointer;
-            transition: 0.2s;
+        .stats-summary {
+            display:flex;
+            justify-content:space-between;
+            margin-top:10px;
         }
 
-        .btn-logout-no:hover {
-            background: rgba(255,255,255,0.25);
+        .stat-box {
+            background:rgba(255,255,255,0.1);
+            padding:12px 16px;
+            border-radius:12px;
+            text-align:center;
+            width:23%;
+        }
+
+        .stat-box .label {
+            font-size:13px;
+            opacity:0.8;
+        }
+
+        .stat-box .value {
+            font-size:22px;
+            font-weight:700;
+            margin-top:5px;
+            display:block;
+        }
+
+        /* ANIMACJA LISTY MECZÓW */
+        .match-item {
+            opacity: 0;
+            transform: translateY(10px);
+            animation: matchFade 0.35s ease forwards;
+        }
+
+        @keyframes matchFade {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
     </style>
 </head>
@@ -237,9 +262,6 @@
         </div>
         <div>
             <a href="/" class="btn-modern">← Strona główna</a>
-            {% if session.user_id %}
-            <button class="btn-modern" onclick="openLogoutPopup()">🚪 Wyloguj</button>
-            {% endif %}
         </div>
     </div>
 
@@ -257,7 +279,7 @@
                 </div>
             </div>
 
-            <a href="/statystyki/{{ p.id }}" class="btn-stats">📊 Statystyki</a>
+            <button class="btn-stats" onclick="showStats({{ p.id }})">📊 Statystyki</button>
 
         </div>
         {% endfor %}
@@ -265,28 +287,110 @@
 
 </div>
 
-<!-- POPUP WYLOGOWANIA -->
-<div id="logout-popup" class="logout-popup">
-    <div class="logout-inner">
-        <h3>Wylogować się?</h3>
-        <p>Czy na pewno chcesz zakończyć sesję?</p>
+<!-- POPUP STATYSTYK -->
+<div id="statsModal">
+    <div class="inner">
+        <button class="close-btn" onclick="closeStats()">✖</button>
 
-        <div class="logout-buttons">
-            <button class="btn-logout-yes" onclick="confirmLogout()">Tak, wyloguj</button>
-            <button class="btn-logout-no" onclick="closeLogoutPopup()">Nie</button>
+        <div class="player-header-popup">
+            <div class="avatar-popup" id="avatarPopup"></div>
+            <h2 id="playerName"></h2>
         </div>
+
+        <div class="stats-summary">
+            <div class="stat-box">
+                <span class="label">Mecze</span>
+                <span class="value" id="sumMatches"></span>
+            </div>
+            <div class="stat-box">
+                <span class="label">Gole</span>
+                <span class="value" id="sumGoals"></span>
+            </div>
+            <div class="stat-box">
+                <span class="label">Asysty</span>
+                <span class="value" id="sumAssists"></span>
+            </div>
+            <div class="stat-box">
+                <span class="label">Dystans</span>
+                <span class="value" id="sumDistance"></span>
+            </div>
+        </div>
+
+        <h3 style="margin-top:25px;">Wykres statystyk</h3>
+        <canvas id="statsChart" width="400" height="220" style="margin-bottom:25px;"></canvas>
+
+        <h3>Historia meczów</h3>
+        <div id="statsContent"></div>
     </div>
 </div>
 
 <script>
-    function openLogoutPopup() {
-        document.getElementById("logout-popup").classList.add("open");
+    function showStats(id) {
+        fetch(`/player_stats/${id}`)
+            .then(r => r.json())
+            .then(data => {
+
+                document.getElementById("playerName").innerText =
+                    `${data.first_name} ${data.last_name}`;
+
+                document.getElementById("avatarPopup").innerText =
+                    data.first_name[0] + data.last_name[0];
+
+                document.getElementById("sumMatches").innerText = data.matches;
+                document.getElementById("sumGoals").innerText = data.goals;
+                document.getElementById("sumAssists").innerText = data.assists;
+                document.getElementById("sumDistance").innerText = data.distance.toFixed(1);
+
+                // --- ANIMOWANA LISTA MECZÓW ---
+                let html = "<ul style='list-style:none; padding-left:0;'>";
+                data.games.forEach((g, i) => {
+                    html += `
+                        <li class="match-item" style="animation-delay:${i * 0.08}s;">
+                            ${g.date} ${g.time} – ${g.location}
+                            | G:${g.goals} A:${g.assists} D:${g.distance}
+                        </li>
+                    `;
+                });
+                html += "</ul>";
+                document.getElementById("statsContent").innerHTML = html;
+
+                // --- WYKRES ---
+                const canvas = document.getElementById("statsChart");
+                const ctx = canvas.getContext("2d");
+
+                if (window.statsChart && typeof window.statsChart.destroy === "function") {
+    window.statsChart.destroy();
+}
+
+                window.statsChart = new Chart(ctx, {
+                    type: "bar",
+                    data: {
+                        labels: ["Gole", "Asysty", "Dystans (km)"],
+                        datasets: [{
+                            label: "Statystyki zawodnika",
+                            data: [data.goals, data.assists, data.distance],
+                            backgroundColor: [
+                                "rgba(30,144,255,0.7)",
+                                "rgba(0,200,120,0.7)",
+                                "rgba(255,180,0,0.7)"
+                            ],
+                            borderRadius: 8
+                        }]
+                    },
+                    options: {
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            y: { beginAtZero: true }
+                        }
+                    }
+                });
+
+                document.getElementById("statsModal").style.display = "flex";
+            });
     }
-    function closeLogoutPopup() {
-        document.getElementById("logout-popup").classList.remove("open");
-    }
-    function confirmLogout() {
-        window.location.href = "/logout";
+
+    function closeStats() {
+        document.getElementById("statsModal").style.display = "none";
     }
 </script>
 

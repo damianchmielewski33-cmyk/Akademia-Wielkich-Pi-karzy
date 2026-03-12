@@ -533,5 +533,50 @@ def stats_save():
 
     return "OK"
 
+@app.route("/player_stats/<int:user_id>")
+def player_stats(user_id):
+    conn = get_db()
+
+    user = conn.execute(
+        "SELECT first_name, last_name, player_alias FROM users WHERE id = ?",
+        (user_id,)
+    ).fetchone()
+
+    stats = conn.execute("""
+        SELECT m.match_date, m.match_time, m.location,
+               s.goals, s.assists, s.distance
+        FROM match_stats s
+        JOIN matches m ON m.id = s.match_id
+        WHERE s.user_id = ?
+        ORDER BY m.match_date DESC
+    """, (user_id,)).fetchall()
+
+    conn.close()
+
+    total_goals = sum(s["goals"] for s in stats)
+    total_assists = sum(s["assists"] for s in stats)
+    total_distance = sum(s["distance"] for s in stats)
+
+    return jsonify({
+        "first_name": user["first_name"],
+        "last_name": user["last_name"],
+        "player_alias": user["player_alias"],
+        "matches": len(stats),
+        "goals": total_goals,
+        "assists": total_assists,
+        "distance": total_distance,
+        "games": [
+            {
+                "date": s["match_date"],
+                "time": s["match_time"],
+                "location": s["location"],
+                "goals": s["goals"],
+                "assists": s["assists"],
+                "distance": s["distance"]
+            }
+            for s in stats
+        ]
+    })
+
 if __name__ == "__main__":
     app.run(debug=True)
