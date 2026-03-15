@@ -237,6 +237,15 @@ ALL_PLAYERS = [
     "Heung-min Son", "Raheem Sterling", "Paulo Dybala", "Ángel Di María", "Martin Ødegaard"
 ]
 
+def log_activity(user_id, action):
+    conn = get_db()
+    conn.execute(
+        "INSERT INTO activity_log (user_id, action) VALUES (?, ?)",
+        (user_id, action)
+    )
+    conn.commit()
+    conn.close()
+
 
 # ============================================================
 # INICJALIZACJA BAZY
@@ -292,12 +301,21 @@ def init_db():
         )
     """)
 
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS activity_log (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            action TEXT NOT NULL,
+            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(user_id) REFERENCES users(id)
+        )
+    """)
+
     conn.commit()
     conn.close()
 
 
 init_db()
-
 
 # ============================================================
 # STRONA GŁÓWNA
@@ -355,11 +373,15 @@ def register():
                                    error="Ten piłkarz jest już zajęty lub nieprawidłowy.")
 
         try:
-            conn.execute(
+            cursor = conn.execute(
                 "INSERT INTO users (first_name, last_name, player_alias, is_admin) VALUES (?, ?, ?, ?)",
                 (first_name, last_name, player_alias, is_admin)
             )
             conn.commit()
+
+            new_user_id = cursor.lastrowid
+            log_activity(new_user_id, "Utworzył konto")
+
         except sqlite3.IntegrityError:
             conn.close()
             return render_template("register.html", available_players=available_players,
