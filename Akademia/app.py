@@ -1,14 +1,232 @@
 from flask import Flask, render_template, request, redirect, session, jsonify
 from datetime import date
+import sqlite3
 
-from db import get_db          # ← baza danych
-from stats import stats_bp     # ← blueprint statystyk
+from db import get_db
+from stats import stats_bp
 
 app = Flask(__name__)
 app.secret_key = "DianaPolak"
 
-# rejestracja blueprintów
+# blueprinty
 app.register_blueprint(stats_bp)
+
+# ============================================================
+# PANEL ADMINA (FRONT SPA)
+# ============================================================
+
+@app.route("/panel-admina")
+def panel_admina():
+    if "user_id" not in session:
+        return redirect("/login")
+    if session.get("is_admin") != 1:
+        return "Brak dostępu"
+
+    return render_template("admin.html")
+
+@app.route("/admin")
+def admin_redirect():
+    return redirect("/panel-admina")
+# ============================================================
+# DASHBOARD API
+# ============================================================
+
+@app.route("/admin/summary")
+def admin_summary():
+    conn = get_db()
+    players = conn.execute("SELECT COUNT(*) AS c FROM users").fetchone()["c"]
+    matches = conn.execute("SELECT COUNT(*) AS c FROM matches").fetchone()["c"]
+    stats = conn.execute("SELECT COUNT(*) AS c FROM match_stats").fetchone()["c"]
+    conn.close()
+
+    return jsonify({
+        "players": players,
+        "matches": matches,
+        "stats": stats
+    })
+
+
+@app.route("/admin/activity")
+def admin_activity():
+    # Możesz tu dodać prawdziwe logi z bazy
+    return jsonify([
+        {"text": "System uruchomiony", "time": "2026-03-12 21:10"},
+        {"text": "Panel admina aktywny", "time": "2026-03-12 21:05"}
+    ])
+# ============================================================
+# USERS API
+# ============================================================
+
+@app.route("/admin/users")
+def admin_users():
+    conn = get_db()
+    rows = conn.execute("""
+        SELECT id, first_name, last_name, player_alias,
+               CASE WHEN is_admin = 1 THEN 'admin' ELSE 'player' END AS role
+        FROM users
+        ORDER BY first_name
+    """).fetchall()
+    conn.close()
+
+    return jsonify([dict(r) for r in rows])
+
+
+@app.route("/admin/user/<int:user_id>")
+def admin_user(user_id):
+    conn = get_db()
+    row = conn.execute("""
+        SELECT id, first_name, last_name, player_alias,
+               CASE WHEN is_admin = 1 THEN 'admin' ELSE 'player' END AS role
+        FROM users WHERE id = ?
+    """, (user_id,)).fetchone()
+    conn.close()
+
+    return jsonify(dict(row))
+
+
+@app.route("/admin/user/<int:user_id>", methods=["PUT"])
+def admin_user_edit(user_id):
+    data = request.json
+    conn = get_db()
+    conn.execute("""
+        UPDATE users
+        SET first_name = ?, last_name = ?, player_alias = ?, is_admin = ?
+        WHERE id = ?
+    """, (
+        data["first_name"],
+        data["last_name"],
+        data["player_alias"],
+        1 if data["role"] == "admin" else 0,
+        user_id
+    ))
+    conn.commit()
+    conn.close()
+    return jsonify({"status": "ok"})
+
+
+@app.route("/admin/user/<int:user_id>", methods=["DELETE"])
+def admin_user_delete(user_id):
+    conn = get_db()
+    conn.execute("DELETE FROM users WHERE id = ?", (user_id,))
+    conn.commit()
+    conn.close()
+    return jsonify({"status": "deleted"})
+
+
+@app.route("/admin/user/<int:user_id>/role", methods=["POST"])
+def admin_user_role(user_id):
+    data = request.json
+    conn = get_db()
+    conn.execute(
+        "UPDATE users SET is_admin = ? WHERE id = ?",
+        (1 if data["role"] == "admin" else 0, user_id)
+    )
+    conn.commit()
+    conn.close()
+    return jsonify({"status": "role_changed"})
+
+
+# ============================================================
+# MATCHES API
+# ============================================================
+
+@app.route("/admin/matches")
+def admin_matches():
+    conn = get_db()
+    rows = conn.execute("""
+        SELECT id, match_date AS date, match_time AS time,
+               location, signed_up AS players_count
+        FROM matches
+        ORDER BY match_date DESC
+    """).fetchall()
+    conn.close()
+
+    return jsonify([dict(r) for r in rows])
+
+
+@app.route("/admin/match/<int:match_id>")
+def admin_match(match_id):
+    conn = get_db()
+    row = conn.execute("""
+        SELECT id, match_date AS date, match_time AS time, location
+        FROM matches WHERE id = ?
+    """, (match_id,)).fetchone()
+    conn.close()
+
+    return jsonify(dict(row))
+
+
+@app.route("/admin/match/<int:match_id>", methods=["PUT"])
+def admin_match_edit(match_id):
+    data = request.json
+    conn = get_db()
+    conn.execute("""
+        UPDATE matches
+        SET match_date = ?, match_time = ?, location = ?
+        WHERE id = ?
+    """, (data["date"], data["time"], data["location"], match_id))
+    conn.commit()
+    conn.close()
+    return jsonify({"status": "ok"})
+
+
+@app.route("/admin/match/<int:match_id>", methods=["DELETE"])
+def admin_match_delete(match_id):
+    conn = get_db()
+    conn.execute("DELETE FROM matches WHERE id = ?", (match_id,))
+    conn.commit()
+    conn.close()
+    return jsonify({"status": "deleted"})
+
+
+# ============================================================
+# STATS API
+# ============================================================
+
+@app.route("/admin/stats")
+def admin_stats():
+    conn = get_db()
+    rows = conn.execute("""
+        SELECT s.id,
+               u.player_alias AS player_name,
+               s.match_id,
+               s.goals, s.assists, s.distance
+        FROM match_stats s
+        JOIN users u ON u.id = s.user_id
+        ORDER BY s.id DESC
+    """).fetchall()
+    conn.close()
+
+    return jsonify([dict(r) for r in rows])
+
+
+@app.route("/admin/stat/<int:stat_id>")
+def admin_stat(stat_id):
+    conn = get_db()
+    row = conn.execute("""
+        SELECT id, goals, assists, distance
+        FROM match_stats WHERE id = ?
+    """, (stat_id,)).fetchone()
+    conn.close()
+
+    return jsonify(dict(row))
+
+
+@app.route("/admin/stat/<int:stat_id>", methods=["PUT"])
+def admin_stat_edit(stat_id):
+    data = request.json
+    conn = get_db()
+    conn.execute("""
+        UPDATE match_stats
+        SET goals = ?, assists = ?, distance = ?
+        WHERE id = ?
+    """, (data["goals"], data["assists"], data["distance"], stat_id))
+    conn.commit()
+    conn.close()
+    return jsonify({"status": "ok"})
+# ============================================================
+# STARTOWE DANE
+# ============================================================
 
 ALL_PLAYERS = [
     "Lionel Messi", "Cristiano Ronaldo", "Kylian Mbappé", "Neymar", "Robert Lewandowski",
@@ -18,6 +236,11 @@ ALL_PLAYERS = [
     "Thibaut Courtois", "Marc ter Stegen", "Virgil van Dijk", "Antonio Rüdiger", "Joshua Kimmich",
     "Heung-min Son", "Raheem Sterling", "Paulo Dybala", "Ángel Di María", "Martin Ødegaard"
 ]
+
+
+# ============================================================
+# INICJALIZACJA BAZY
+# ============================================================
 
 def init_db():
     conn = get_db()
@@ -56,7 +279,6 @@ def init_db():
         )
     """)
 
-    # NOWA TABELA STATYSTYK
     conn.execute("""
         CREATE TABLE IF NOT EXISTS match_stats (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -73,11 +295,13 @@ def init_db():
     conn.commit()
     conn.close()
 
+
 init_db()
 
-# -----------------------------------------
-# STRONA GŁÓWNA – najbliższy mecz + user_signed
-# -----------------------------------------
+
+# ============================================================
+# STRONA GŁÓWNA
+# ============================================================
 
 @app.route("/")
 def home():
@@ -99,9 +323,10 @@ def home():
     conn.close()
     return render_template("index.html", next_match=next_match, user_signed=user_signed)
 
-# -----------------------------------------
+
+# ============================================================
 # REJESTRACJA
-# -----------------------------------------
+# ============================================================
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
@@ -146,9 +371,10 @@ def register():
     conn.close()
     return render_template("register.html", available_players=available_players)
 
-# -----------------------------------------
+
+# ============================================================
 # LOGOWANIE
-# -----------------------------------------
+# ============================================================
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
@@ -184,83 +410,16 @@ def login():
     conn.close()
     return render_template("login.html", used_players=used_aliases)
 
+
 @app.route("/logout")
 def logout():
     session.clear()
     return redirect("/")
 
-# -----------------------------------------
-# PANEL ADMINA
-# -----------------------------------------
 
-@app.route("/admin")
-def admin_panel():
-    if "user_id" not in session:
-        return redirect("/login")
-    if session.get("is_admin") != 1:
-        return "Brak dostępu"
-
-    conn = get_db()
-
-    users = conn.execute(
-        "SELECT id, first_name, last_name, player_alias, is_admin FROM users ORDER BY first_name"
-    ).fetchall()
-
-    used_aliases_rows = conn.execute("SELECT player_alias FROM users").fetchall()
-    used_aliases = {row["player_alias"] for row in used_aliases_rows}
-    available_players = [p for p in ALL_PLAYERS]
-
-    upcoming_matches = conn.execute(
-        "SELECT * FROM matches WHERE match_date >= date('now') AND played = 0 ORDER BY match_date, match_time"
-    ).fetchall()
-
-    past_not_confirmed = conn.execute(
-        "SELECT * FROM matches WHERE match_date < date('now') AND played = 0 ORDER BY match_date DESC, match_time DESC"
-    ).fetchall()
-
-    played_matches = conn.execute(
-        "SELECT * FROM matches WHERE played = 1 ORDER BY match_date DESC, match_time DESC"
-    ).fetchall()
-
-    all_matches = conn.execute(
-        "SELECT * FROM matches ORDER BY match_date DESC, match_time DESC"
-    ).fetchall()
-
-    signups = conn.execute("""
-        SELECT ms.match_id, ms.user_id, ms.paid,
-               u.first_name, u.last_name, u.player_alias
-        FROM match_signups ms
-        JOIN users u ON u.id = ms.user_id
-        ORDER BY u.first_name
-    """).fetchall()
-
-    conn.close()
-
-    return render_template(
-        "admin.html",
-        users=users,
-        available_players=available_players,
-        upcoming_matches=upcoming_matches,
-        past_matches=past_not_confirmed,
-        played_matches=played_matches,
-        all_matches=all_matches,
-        signups=signups
-    )
-
-@app.route("/admin/match/<int:match_id>/set_played", methods=["POST"])
-def set_played(match_id):
-    conn = get_db()
-    conn.execute(
-        "UPDATE matches SET played = 1 WHERE id = ?",
-        (match_id,)
-    )
-    conn.commit()
-    conn.close()
-    return redirect("/terminarz")
-
-# -----------------------------------------
+# ============================================================
 # LISTA PIŁKARZY
-# -----------------------------------------
+# ============================================================
 
 @app.route("/pilkarze")
 def pilkarze():
@@ -271,29 +430,10 @@ def pilkarze():
     conn.close()
     return render_template("pilkarze.html", players=players)
 
-# -----------------------------------------
-# MECZE – dodawanie, zapisy, wypisy
-# -----------------------------------------
 
-@app.route("/terminarz/add", methods=["POST"])
-def add_match():
-    if "user_id" not in session or session.get("is_admin") != 1:
-        return "Brak dostępu"
-
-    date_val = request.form["date"]
-    time = request.form["time"]
-    location = request.form["location"]
-    max_slots = request.form["max_slots"]
-
-    conn = get_db()
-    conn.execute(
-        "INSERT INTO matches (match_date, match_time, location, max_slots, signed_up, played) VALUES (?, ?, ?, ?, 0, 0)",
-        (date_val, time, location, max_slots)
-    )
-    conn.commit()
-    conn.close()
-
-    return redirect("/terminarz")
+# ============================================================
+# TERMINARZ — MECZE
+# ============================================================
 
 @app.route("/terminarz")
 def terminarz():
@@ -312,12 +452,6 @@ def terminarz():
     players_by_match = {}
     for s in signups:
         players_by_match.setdefault(s["match_id"], []).append(s)
-
-    user_signed = {}
-    if "player_alias" in session:
-        for s in signups:
-            if s["player_alias"] == session["player_alias"]:
-                user_signed[s["match_id"]] = True
 
     today = date.today()
     upcoming_matches = []
@@ -340,9 +474,13 @@ def terminarz():
         upcoming_matches=upcoming_matches,
         after_date_not_confirmed=after_date_not_confirmed,
         played_confirmed=played_confirmed,
-        players_by_match=players_by_match,
-        user_signed=user_signed
+        players_by_match=players_by_match
     )
+
+
+# ============================================================
+# ZAPISY NA MECZE
+# ============================================================
 
 @app.route("/terminarz/signup/<int:match_id>")
 def signup_match(match_id):
@@ -389,6 +527,7 @@ def signup_match(match_id):
 
     return redirect("/terminarz")
 
+
 @app.route("/terminarz/unsubscribe/<int:match_id>")
 def unsubscribe_match(match_id):
     if "user_id" not in session:
@@ -423,57 +562,10 @@ def unsubscribe_match(match_id):
     conn.close()
     return redirect("/terminarz")
 
-# -----------------------------------------
-# ZAPIS Z EKRANU GŁÓWNEGO
-# -----------------------------------------
 
-@app.route("/signup_home/<int:match_id>")
-def signup_home(match_id):
-    if "user_id" not in session:
-        return "NOT_LOGGED"
-
-    user_id = session["user_id"]
-    conn = get_db()
-
-    match = conn.execute("SELECT * FROM matches WHERE id = ?", (match_id,)).fetchone()
-    if match is None:
-        conn.close()
-        return "NO_MATCH"
-
-    m_date = date.fromisoformat(match["match_date"])
-    if m_date < date.today() or match["played"] == 1:
-        conn.close()
-        return "TOO_LATE"
-
-    if match["signed_up"] >= match["max_slots"]:
-        conn.close()
-        return "FULL"
-
-    already = conn.execute(
-        "SELECT * FROM match_signups WHERE user_id = ? AND match_id = ?",
-        (user_id, match_id)
-    ).fetchone()
-
-    if already:
-        conn.close()
-        return "ALREADY"
-
-    conn.execute(
-        "INSERT INTO match_signups (user_id, match_id, paid) VALUES (?, ?, 0)",
-        (user_id, match_id)
-    )
-    conn.execute(
-        "UPDATE matches SET signed_up = signed_up + 1 WHERE id = ?",
-        (match_id,)
-    )
-    conn.commit()
-    conn.close()
-
-    return "OK"
-
-# -----------------------------------------
-# STATYSTYKI — POPUP + ZAPIS + WIDOK
-# -----------------------------------------
+# ============================================================
+# STATYSTYKI — POPUP + ZAPIS
+# ============================================================
 
 @app.route("/stats/pending")
 def stats_pending():
@@ -510,6 +602,7 @@ def stats_pending():
 
     return jsonify({"pending": False})
 
+
 @app.route("/stats/save", methods=["POST"])
 def stats_save():
     if "user_id" not in session:
@@ -532,6 +625,11 @@ def stats_save():
     conn.close()
 
     return "OK"
+
+
+# ============================================================
+# STATYSTYKI GRACZA
+# ============================================================
 
 @app.route("/player_stats/<int:user_id>")
 def player_stats(user_id):
@@ -577,6 +675,11 @@ def player_stats(user_id):
             for s in stats
         ]
     })
+
+
+# ============================================================
+# START APLIKACJI
+# ============================================================
 
 if __name__ == "__main__":
     app.run(debug=True)
