@@ -357,4 +357,21 @@ tr:last-child td {
     .cards-row {
         flex-direction: column;
     }
+
+    .back-btn {
+        margin-top: 20px;
+        width: 100%;
+        padding: 10px;
+        background-color: #444;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 15px;
+        transition: 0.2s;
+    }
+
+    .back-btn:hover {
+        background-color: #666;
+    }
 }

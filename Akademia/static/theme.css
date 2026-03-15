@@ -145,4 +145,27 @@ select {
 select option {
     background: #ffffff !important;
     color: #1b3d1b !important;
+
+    .back-link {
+        display: block;
+        width: 100%;
+        padding: 12px 15px;
+        background: #1f1f1f;
+        color: #fff;
+        text-decoration: none;
+        border-radius: 6px;
+        font-size: 15px;
+        text-align: center;
+        margin-bottom: 10px;
+        transition: 0.2s ease;
+    }
+
+    .back-link:hover {
+        background: #2c2c2c;
+        transform: translateY(-2px);
+    }
+
+    .back-link:active {
+        transform: translateY(0);
+    }
 }
