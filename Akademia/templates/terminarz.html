@@ -932,7 +932,7 @@
             <button id="btn-list" class="icon-toggle active" title="Widok listy">📋</button>
             <button id="btn-calendar" class="icon-toggle" title="Widok kalendarza">📅</button>
             {% if session.is_admin == 1 %}
-            <a href="/admin" class="btn-modern" style="margin-left:10px;">➕ Panel admina / dodaj mecz</a>
+            <button id="addMatchBtn" class="btn-modern" style="...">➕ Dodaj mecz</button>
             {% endif %}
             {% if session.user_id %}
             <button class="btn-modern" style="margin-left:10px;" onclick="openLogoutPopup()">🚪 Wyloguj</button>
@@ -1219,8 +1219,104 @@
             <button class="btn-logout-yes" onclick="confirmLogout()">Tak, wyloguj</button>
             <button class="btn-logout-no" onclick="closeLogoutPopup()">Nie</button>
         </div>
+
+        <script>
+            document.addEventListener("DOMContentLoaded", () => {
+                const addBtn = document.getElementById("addMatchBtn");
+                const modal = document.getElementById("addMatchModal");
+                const cancelBtn = document.getElementById("cancelAddMatch");
+                const form = document.getElementById("addMatchForm");
+
+                if (addBtn) {
+                    addBtn.addEventListener("click", () => {
+                        modal.classList.remove("hidden");
+                    });
+                }
+
+                cancelBtn.addEventListener("click", () => {
+                    modal.classList.add("hidden");
+                });
+
+                form.addEventListener("submit", async (e) => {
+                    e.preventDefault();
+
+                    const formData = new FormData(form);
+                    const payload = {
+                        location: formData.get("location"),
+                        date: formData.get("date"),
+                        time: formData.get("time"),
+                        max_slots: formData.get("max_slots")
+                    };
+
+                    const res = await fetch("/admin/match/add", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (res.ok) {
+                        window.location.reload();
+                    } else {
+                        alert("Nie udało się dodać meczu.");
+                    }
+                });
+            });
+        </script>
+
+
     </div>
 </div>
+<div id="addMatchModal" class="modal hidden">
+    <div class="modal-content">
+        <h2>Dodaj mecz</h2>
+
+        <form id="addMatchForm">
+            <label>
+                Lokalizacja:
+                <input type="text" name="location" required>
+            </label>
+
+            <label>
+                Data:
+                <input type="date" name="date" required>
+            </label>
+
+            <label>
+                Godzina:
+                <input type="time" name="time" required>
+            </label>
+
+            <label>
+                Ilość miejsc:
+                <input type="number" name="max_slots" min="1" required>
+            </label>
+
+            <div class="modal-actions">
+                <button type="button" id="cancelAddMatch">Anuluj</button>
+                <button type="submit" class="btn-primary">Zapisz</button>
+            </div>
+        </form>
+    </div>
+</div>
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        const addBtn = document.getElementById("addMatchBtn");
+        const modal = document.getElementById("addMatchModal");
+        const cancelBtn = document.getElementById("cancelAddMatch");
+
+        if (addBtn) {
+            addBtn.addEventListener("click", () => {
+                modal.classList.remove("hidden");
+            });
+        }
+
+        cancelBtn.addEventListener("click", () => {
+            modal.classList.add("hidden");
+        });
+    });
+</script>
 
 </body>
 </html>
