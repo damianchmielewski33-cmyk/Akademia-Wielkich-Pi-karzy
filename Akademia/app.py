@@ -442,17 +442,6 @@ def logout():
 # ============================================================
 # LISTA PIŁKARZY
 # ============================================================
-
-@app.route("/pilkarze")
-def pilkarze():
-    conn = get_db()
-    players = conn.execute(
-        "SELECT id, first_name, last_name, player_alias FROM users ORDER BY first_name"
-    ).fetchall()
-    conn.close()
-    return render_template("pilkarze.html", players=players)
-
-
 # ============================================================
 # TERMINARZ — MECZE
 # ============================================================
@@ -499,6 +488,66 @@ def terminarz():
         players_by_match=players_by_match
     )
 
+# ============================================================
+# TERMINARZ — DODAWANIE MECZU (ADMIN)
+# ============================================================
+
+@app.route("/terminarz/add", methods=["POST"])
+def terminarz_add():
+    if "user_id" not in session or session.get("is_admin") != 1:
+        return "FORBIDDEN", 403
+
+    data = request.get_json()
+
+    conn = get_db()
+    conn.execute("""
+        INSERT INTO matches (match_date, match_time, location, max_slots, signed_up, played)
+        VALUES (?, ?, ?, ?, 0, 0)
+    """, (data["date"], data["time"], data["location"], data["max_slots"]))
+    conn.commit()
+    conn.close()
+
+    return jsonify({"status": "ok"})
+
+
+# ============================================================
+# TERMINARZ — POBIERANIE MECZU DO EDYCJI
+# ============================================================
+
+@app.route("/terminarz/get/<int:match_id>")
+def terminarz_get(match_id):
+    conn = get_db()
+    row = conn.execute("""
+        SELECT id, match_date, match_time, location, max_slots
+        FROM matches
+        WHERE id = ?
+    """, (match_id,)).fetchone()
+    conn.close()
+
+    return jsonify(dict(row))
+
+
+# ============================================================
+# TERMINARZ — EDYCJA MECZU (ADMIN)
+# ============================================================
+
+@app.route("/terminarz/edit", methods=["POST"])
+def terminarz_edit():
+    if "user_id" not in session or session.get("is_admin") != 1:
+        return "FORBIDDEN", 403
+
+    data = request.get_json()
+
+    conn = get_db()
+    conn.execute("""
+        UPDATE matches
+        SET match_date = ?, match_time = ?, location = ?, max_slots = ?
+        WHERE id = ?
+    """, (data["date"], data["time"], data["location"], data["max_slots"], data["match_id"]))
+    conn.commit()
+    conn.close()
+
+    return jsonify({"status": "ok"})
 
 # ============================================================
 # ZAPISY NA MECZE

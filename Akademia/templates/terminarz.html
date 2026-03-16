@@ -1221,102 +1221,144 @@
         </div>
 
         <script>
-            document.addEventListener("DOMContentLoaded", () => {
-                const addBtn = document.getElementById("addMatchBtn");
-                const modal = document.getElementById("addMatchModal");
-                const cancelBtn = document.getElementById("cancelAddMatch");
-                const form = document.getElementById("addMatchForm");
 
-                if (addBtn) {
-                    addBtn.addEventListener("click", () => {
-                        modal.classList.remove("hidden");
-                    });
-                }
-
-                cancelBtn.addEventListener("click", () => {
-                    modal.classList.add("hidden");
-                });
-
-                form.addEventListener("submit", async (e) => {
-                    e.preventDefault();
-
-                    const formData = new FormData(form);
-                    const payload = {
-                        location: formData.get("location"),
-                        date: formData.get("date"),
-                        time: formData.get("time"),
-                        max_slots: formData.get("max_slots")
-                    };
-
-                    const res = await fetch("/admin/match/add", {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json"
-                        },
-                        body: JSON.stringify(payload)
-                    });
-
-                    if (res.ok) {
-                        window.location.reload();
-                    } else {
-                        alert("Nie udało się dodać meczu.");
-                    }
-                });
-            });
         </script>
-
-
     </div>
-</div>
-<div id="addMatchModal" class="modal hidden">
-    <div class="modal-content">
-        <h2>Dodaj mecz</h2>
+    <!-- POPUP: DODAJ MECZ -->
+    <div id="addMatchModal" class="modal hidden">
+        <div class="modal-content">
+            <h2>Dodaj mecz</h2>
 
-        <form id="addMatchForm">
-            <label>
-                Lokalizacja:
-                <input type="text" name="location" required>
-            </label>
+            <form id="addMatchForm">
+                <label>Lokalizacja:
+                    <input type="text" name="location" required>
+                </label>
 
-            <label>
-                Data:
-                <input type="date" name="date" required>
-            </label>
+                <label>Data:
+                    <input type="date" name="date" required>
+                </label>
 
-            <label>
-                Godzina:
-                <input type="time" name="time" required>
-            </label>
+                <label>Godzina:
+                    <input type="time" name="time" required>
+                </label>
 
-            <label>
-                Ilość miejsc:
-                <input type="number" name="max_slots" min="1" required>
-            </label>
+                <label>Ilość miejsc:
+                    <input type="number" name="max_slots" min="1" required>
+                </label>
 
-            <div class="modal-actions">
-                <button type="button" id="cancelAddMatch">Anuluj</button>
-                <button type="submit" class="btn-primary">Zapisz</button>
-            </div>
-        </form>
+                <div class="modal-actions">
+                    <button type="button" id="cancelAddMatch">Anuluj</button>
+                    <button type="submit" class="btn-primary">Zapisz</button>
+                </div>
+            </form>
+        </div>
     </div>
-</div>
-<script>
-    document.addEventListener("DOMContentLoaded", () => {
-        const addBtn = document.getElementById("addMatchBtn");
-        const modal = document.getElementById("addMatchModal");
-        const cancelBtn = document.getElementById("cancelAddMatch");
 
-        if (addBtn) {
-            addBtn.addEventListener("click", () => {
-                modal.classList.remove("hidden");
+    <!-- POPUP: EDYTUJ MECZ -->
+    <div id="editMatchModal" class="modal hidden">
+        <div class="modal-content">
+            <h2>Edytuj mecz</h2>
+
+            <form id="editMatchForm">
+                <input type="hidden" name="match_id" id="edit_match_id">
+
+                <label>Lokalizacja:
+                    <input type="text" name="location" id="edit_location" required>
+                </label>
+
+                <label>Data:
+                    <input type="date" name="date" id="edit_date" required>
+                </label>
+
+                <label>Godzina:
+                    <input type="time" name="time" id="edit_time" required>
+                </label>
+
+                <label>Ilość miejsc:
+                    <input type="number" name="max_slots" id="edit_max_slots" min="1" required>
+                </label>
+
+                <div class="modal-actions">
+                    <button type="button" id="cancelEditMatch">Anuluj</button>
+                    <button type="submit" class="btn-primary">Zapisz</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+
+            /* POPUP DODAWANIA */
+            const addModal = document.getElementById("addMatchModal");
+            const openAddBtn = document.getElementById("openAddMatchModal");
+            const cancelAddBtn = document.getElementById("cancelAddMatch");
+            const addForm = document.getElementById("addMatchForm");
+
+            if (openAddBtn) {
+                openAddBtn.addEventListener("click", () => {
+                    addForm.reset();
+                    addModal.classList.remove("hidden");
+                });
+            }
+
+            cancelAddBtn.addEventListener("click", () => {
+                addModal.classList.add("hidden");
             });
-        }
 
-        cancelBtn.addEventListener("click", () => {
-            modal.classList.add("hidden");
+            addForm.addEventListener("submit", async (e) => {
+                e.preventDefault();
+                const data = Object.fromEntries(new FormData(addForm));
+
+                const res = await fetch("/terminarz/add", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(data)
+                });
+
+                if (res.ok) location.reload();
+            });
+
+            /* POPUP EDYCJI */
+            const editModal = document.getElementById("editMatchModal");
+            const cancelEditBtn = document.getElementById("cancelEditMatch");
+            const editForm = document.getElementById("editMatchForm");
+
+            document.querySelectorAll(".btn-edit").forEach(btn => {
+                btn.addEventListener("click", async () => {
+                    const id = btn.dataset.id;
+
+                    const res = await fetch(`/terminarz/get/${id}`);
+                    const m = await res.json();
+
+                    document.getElementById("edit_match_id").value = m.id;
+                    document.getElementById("edit_location").value = m.location;
+                    document.getElementById("edit_date").value = m.match_date;
+                    document.getElementById("edit_time").value = m.match_time;
+                    document.getElementById("edit_max_slots").value = m.max_slots;
+
+                    editModal.classList.remove("hidden");
+                });
+            });
+
+            cancelEditBtn.addEventListener("click", () => {
+                editModal.classList.add("hidden");
+            });
+
+            editForm.addEventListener("submit", async (e) => {
+                e.preventDefault();
+                const data = Object.fromEntries(new FormData(editForm));
+
+                const res = await fetch("/terminarz/edit", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(data)
+                });
+
+                if (res.ok) location.reload();
+            });
+
         });
-    });
-</script>
+    </script>
 
 </body>
 </html>
