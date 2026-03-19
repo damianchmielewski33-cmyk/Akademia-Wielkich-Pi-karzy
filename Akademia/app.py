@@ -548,6 +548,18 @@ def terminarz_edit():
     conn.close()
 
     return jsonify({"status": "ok"})
+@app.route("/pilkarze")
+def pilkarze():
+    conn = get_db()
+    players = conn.execute("""
+        SELECT id, first_name, last_name, player_alias
+        FROM users
+        WHERE role = 'player'
+        ORDER BY first_name ASC
+    """).fetchall()
+    conn.close()
+
+    return render_template("pilkarze.html", players=players)
 
 # ============================================================
 # ZAPISY NA MECZE
