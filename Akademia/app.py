@@ -551,15 +551,15 @@ def terminarz_edit():
 @app.route("/pilkarze")
 def pilkarze():
     conn = get_db()
-    players = conn.execute("""
+    gracze = conn.execute("""
         SELECT id, first_name, last_name, player_alias
         FROM users
-        WHERE role = 'player'
         ORDER BY first_name ASC
     """).fetchall()
     conn.close()
 
-    return render_template("pilkarze.html", players=players)
+    return render_template("pilkarze.html", players=gracze)
+
 
 # ============================================================
 # ZAPISY NA MECZE
