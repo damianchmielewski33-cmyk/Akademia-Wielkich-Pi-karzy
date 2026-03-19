@@ -589,7 +589,39 @@
                 width: 90%;
             }
         }
+        <head>
+    <!-- Twoje inne style, skrypty itd. -->
+
+    <style>
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.6);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+
+        .modal.hidden {
+            display: none;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            width: 350px;
+            max-width: 90%;
+        }
     </style>
+</head>
+
+
+</style>
 
     <script>
         let openCalendarPopupRef = null;
@@ -966,6 +998,8 @@
 
     <div id="list-view">
 
+        <button id="openAddMatchModal" class="btn-primary">Dodaj mecz</button>
+
         <h2>🟢 Nadchodzące mecze <h2>
 
         <div style="max-height: 450px; overflow-y: auto; border-radius: 16px;">
@@ -1249,112 +1283,72 @@
             </form>
         </div>
     </div>
+<!-- POPUP: DODAJ MECZ -->
+<div id="addMatchModal" class="modal hidden">
+    <div class="modal-content">
+        <h2>Dodaj mecz</h2>
 
-    <!-- POPUP: EDYTUJ MECZ -->
-    <div id="editMatchModal" class="modal hidden">
-        <div class="modal-content">
-            <h2>Edytuj mecz</h2>
+        <form id="addMatchForm">
+            <label>Lokalizacja:
+                <input type="text" name="location" required>
+            </label>
 
-            <form id="editMatchForm">
-                <input type="hidden" name="match_id" id="edit_match_id">
+            <label>Data:
+                <input type="date" name="date" required>
+            </label>
 
-                <label>Lokalizacja:
-                    <input type="text" name="location" id="edit_location" required>
-                </label>
+            <label>Godzina:
+                <input type="time" name="time" required>
+            </label>
 
-                <label>Data:
-                    <input type="date" name="date" id="edit_date" required>
-                </label>
+            <label>Ilość miejsc:
+                <input type="number" name="max_slots" min="1" required>
+            </label>
 
-                <label>Godzina:
-                    <input type="time" name="time" id="edit_time" required>
-                </label>
-
-                <label>Ilość miejsc:
-                    <input type="number" name="max_slots" id="edit_max_slots" min="1" required>
-                </label>
-
-                <div class="modal-actions">
-                    <button type="button" id="cancelEditMatch">Anuluj</button>
-                    <button type="submit" class="btn-primary">Zapisz</button>
-                </div>
-            </form>
-        </div>
+            <div class="modal-actions">
+                <button type="button" id="cancelAddMatch">Anuluj</button>
+                <button type="submit" class="btn-primary">Zapisz</button>
+            </div>
+        </form>
     </div>
-    <script>
-        document.addEventListener("DOMContentLoaded", () => {
+</div>
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
 
-            /* POPUP DODAWANIA */
-            const addModal = document.getElementById("addMatchModal");
-            const openAddBtn = document.getElementById("openAddMatchModal");
-            const cancelAddBtn = document.getElementById("cancelAddMatch");
-            const addForm = document.getElementById("addMatchForm");
+        // --- POPUP DODAWANIA MECZU ---
+        const addModal = document.getElementById("addMatchModal");
+        const openAddBtn = document.getElementById("openAddMatchModal");
+        const cancelAddBtn = document.getElementById("cancelAddMatch");
+        const addForm = document.getElementById("addMatchForm");
 
-            if (openAddBtn) {
-                openAddBtn.addEventListener("click", () => {
-                    addForm.reset();
-                    addModal.classList.remove("hidden");
-                });
-            }
-
-            cancelAddBtn.addEventListener("click", () => {
-                addModal.classList.add("hidden");
+        if (openAddBtn) {
+            openAddBtn.addEventListener("click", () => {
+                addForm.reset();
+                addModal.classList.remove("hidden");
             });
+        }
 
-            addForm.addEventListener("submit", async (e) => {
-                e.preventDefault();
-                const data = Object.fromEntries(new FormData(addForm));
-
-                const res = await fetch("/terminarz/add", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(data)
-                });
-
-                if (res.ok) location.reload();
-            });
-
-            /* POPUP EDYCJI */
-            const editModal = document.getElementById("editMatchModal");
-            const cancelEditBtn = document.getElementById("cancelEditMatch");
-            const editForm = document.getElementById("editMatchForm");
-
-            document.querySelectorAll(".btn-edit").forEach(btn => {
-                btn.addEventListener("click", async () => {
-                    const id = btn.dataset.id;
-
-                    const res = await fetch(`/terminarz/get/${id}`);
-                    const m = await res.json();
-
-                    document.getElementById("edit_match_id").value = m.id;
-                    document.getElementById("edit_location").value = m.location;
-                    document.getElementById("edit_date").value = m.match_date;
-                    document.getElementById("edit_time").value = m.match_time;
-                    document.getElementById("edit_max_slots").value = m.max_slots;
-
-                    editModal.classList.remove("hidden");
-                });
-            });
-
-            cancelEditBtn.addEventListener("click", () => {
-                editModal.classList.add("hidden");
-            });
-
-            editForm.addEventListener("submit", async (e) => {
-                e.preventDefault();
-                const data = Object.fromEntries(new FormData(editForm));
-
-                const res = await fetch("/terminarz/edit", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(data)
-                });
-
-                if (res.ok) location.reload();
-            });
-
+        cancelAddBtn.addEventListener("click", () => {
+            addModal.classList.add("hidden");
         });
-    </script>
+
+        addForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const data = Object.fromEntries(new FormData(addForm));
+
+            const res = await fetch("/terminarz/add", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(data)
+            });
+
+            if (res.ok) {
+                location.reload();
+            }
+        });
+
+    });
+</script>
 
 </body>
 </html>
