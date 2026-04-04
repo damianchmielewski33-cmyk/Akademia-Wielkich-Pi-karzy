@@ -464,6 +464,40 @@ def terminarz():
     for s in signups:
         players_by_match.setdefault(s["match_id"], []).append(s)
 
+    user_signed = {}
+    if "user_id" in session:
+        for s in signups:
+            if s["player_alias"] == session["player_alias"]:
+                user_signed[s["match_id"]] = True
+
+    players_data = {}
+    for m in matches:
+        mid = m["id"]
+        plist = []
+        for p in players_by_match.get(mid, []):
+            fn = (p["first_name"] or "").strip()
+            ln = (p["last_name"] or "").strip()
+            initials = ""
+            if fn:
+                initials += fn[0]
+            if ln:
+                initials += ln[0]
+            plist.append(
+                {
+                    "name": f"{fn} {ln}".strip(),
+                    "alias": p["player_alias"] or "",
+                    "initials": initials,
+                    "paid": p["paid"],
+                }
+            )
+        players_data[mid] = {
+            "date": m["match_date"],
+            "time": m["match_time"],
+            "location": m["location"],
+            "max": m["max_slots"],
+            "players": plist,
+        }
+
     today = date.today()
     upcoming_matches = []
     after_date_not_confirmed = []
@@ -485,7 +519,9 @@ def terminarz():
         upcoming_matches=upcoming_matches,
         after_date_not_confirmed=after_date_not_confirmed,
         played_confirmed=played_confirmed,
-        players_by_match=players_by_match
+        players_by_match=players_by_match,
+        players_data=players_data,
+        user_signed=user_signed,
     )
 
 # ============================================================

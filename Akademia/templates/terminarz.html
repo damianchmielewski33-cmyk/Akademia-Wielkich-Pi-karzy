@@ -589,10 +589,7 @@
                 width: 90%;
             }
         }
-        <head>
-    <!-- Twoje inne style, skrypty itd. -->
 
-    <style>
         .modal {
             position: fixed;
             top: 0;
@@ -611,17 +608,62 @@
         }
 
         .modal-content {
-            background: white;
+            background: #fff;
+            color: #222;
             padding: 20px;
             border-radius: 10px;
             width: 350px;
             max-width: 90%;
         }
+
+        .modal-content label {
+            display: block;
+            margin-bottom: 12px;
+            font-size: 14px;
+        }
+
+        .modal-content input {
+            width: 100%;
+            margin-top: 4px;
+            padding: 8px;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            box-sizing: border-box;
+        }
+
+        .modal-content h2 {
+            color: #222;
+            margin-top: 0;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 16px;
+        }
+
+        .modal-actions button {
+            padding: 8px 14px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+        }
+
+        .btn-primary {
+            padding: 8px 14px;
+            border-radius: 10px;
+            border: none;
+            font-size: 13px;
+            cursor: pointer;
+            background: rgba(30,144,255,0.85);
+            color: #fff;
+        }
+
+        .btn-primary:hover {
+            background: rgba(30,144,255,1);
+        }
     </style>
-</head>
-
-
-</style>
 
     <script>
         let openCalendarPopupRef = null;
@@ -959,12 +1001,12 @@
 <div class="container">
 
     <div class="header-row">
-        <h1>⚽ Terminarz <span class="null"></span></h1>
+        <h1>⚽ Terminarz</h1>
         <div class="view-toggle">
             <button id="btn-list" class="icon-toggle active" title="Widok listy">📋</button>
             <button id="btn-calendar" class="icon-toggle" title="Widok kalendarza">📅</button>
             {% if session.is_admin == 1 %}
-            <button id="addMatchBtn" class="btn-modern" style="...">➕ Dodaj mecz</button>
+            <button id="openAddMatchModal" type="button" class="btn-modern" style="margin-left:10px;">➕ Dodaj mecz</button>
             {% endif %}
             {% if session.user_id %}
             <button class="btn-modern" style="margin-left:10px;" onclick="openLogoutPopup()">🚪 Wyloguj</button>
@@ -998,9 +1040,7 @@
 
     <div id="list-view">
 
-        <button id="openAddMatchModal" class="btn-primary">Dodaj mecz</button>
-
-        <h2>🟢 Nadchodzące mecze <h2>
+        <h2>🟢 Nadchodzące mecze</h2>
 
         <div style="max-height: 450px; overflow-y: auto; border-radius: 16px;">
             <table>
@@ -1093,44 +1133,44 @@
 
         <h2>⚫ Mecze po terminie <small></small></h2>
 
-            <!-- MECZE PO TERMINIE (bez tytułu) -->
-            <table>
-                <thead>
-                <tr>
-                    <th>📅 Data</th>
-                    <th>⏰ Godzina</th>
-                    <th>📍 Lokalizacja</th>
-                    <th>🧍 Zapisani</th>
-                    <th>🛠️ Akcje admina</th>
-                </tr>
-                </thead>
+        <!-- MECZE PO TERMINIE (bez tytułu) -->
+        <table>
+            <thead>
+            <tr>
+                <th>📅 Data</th>
+                <th>⏰ Godzina</th>
+                <th>📍 Lokalizacja</th>
+                <th>🧍 Zapisani</th>
+                <th>🛠️ Akcje admina</th>
+            </tr>
+            </thead>
 
-                <tbody>
-                {% for m in after_date_not_confirmed %}
-                <tr class="row-yellow">
-                    <td>{{ m.date }}</td>
-                    <td>{{ m.time }}</td>
-                    <td>{{ m.location }}</td>
-                    <td>{{ m.players|length }}/{{ m.max_players }}</td>
+            <tbody>
+            {% for m in after_date_not_confirmed %}
+            <tr class="row-yellow">
+                <td>{{ m.date }}</td>
+                <td>{{ m.time }}</td>
+                <td>{{ m.location }}</td>
+                <td>{{ m.players|length }}/{{ m.max_players }}</td>
 
-                    <td>
-                        <button class="btn btn-green"
-                                onclick="location.href='/confirm/{{ m.id }}'">
-                            Potwierdź rozegranie
-                        </button>
+                <td>
+                    <button class="btn btn-green"
+                            onclick="location.href='/confirm/{{ m.id }}'">
+                        Potwierdź rozegranie
+                    </button>
 
-                        <button class="btn btn-blue"
-                                onclick="location.href='/players/{{ m.id }}'">
-                            Lista zawodników
-                        </button>
-                    </td>
-                </tr>
-                {% endfor %}
-                </tbody>
-            </table>
+                    <button class="btn btn-blue"
+                            onclick="location.href='/players/{{ m.id }}'">
+                        Lista zawodników
+                    </button>
+                </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
 
 
-            <h2>🔵 Mecze rozegrane <small></small></h2>
+        <h2>🔵 Mecze rozegrane <small></small></h2>
 
         <table>
             <thead>
@@ -1218,26 +1258,7 @@
     </div>
 
     <script>
-        window.playersData = {
-            {% for m in matches %}
-            {{ m['id'] }}: {
-                date: "{{ m['match_date'] }}",
-                time: "{{ m['match_time'] }}",
-                location: "{{ m['location'] }}",
-                max: {{ m['max_slots'] }},
-                players: [
-                    {% for p in players_by_match.get(m['id'], []) %}
-                    {
-                        name: "{{ p['first_name'] }} {{ p['last_name'] }}",
-                        alias: "{{ p['player_alias'] }}",
-                        initials: "{{ p['first_name'][0] }}{{ p['last_name'][0] }}",
-                        paid: {{ p['paid'] }}
-                    },
-                    {% endfor %}
-                ]
-            },
-            {% endfor %}
-        };
+        window.playersData = {{ players_data | tojson }};
     </script>
 
     <a href="/" class="back">← Powrót na stronę główną</a>
@@ -1253,36 +1274,8 @@
             <button class="btn-logout-yes" onclick="confirmLogout()">Tak, wyloguj</button>
             <button class="btn-logout-no" onclick="closeLogoutPopup()">Nie</button>
         </div>
-
-        <script>
-
-        </script>
     </div>
-    <!-- POPUP: DODAJ MECZ -->
-            <form id="addMatchForm">
-                <label>Lokalizacja:
-                    <input type="text" name="location" required>
-                </label>
-
-                <label>Data:
-                    <input type="date" name="date" required>
-                </label>
-
-                <label>Godzina:
-                    <input type="time" name="time" required>
-                </label>
-
-                <label>Ilość miejsc:
-                    <input type="number" name="max_slots" min="1" required>
-                </label>
-
-                <div class="modal-actions">
-                    <button type="button" id="cancelAddMatch">Anuluj</button>
-                    <button type="submit" class="btn-primary">Zapisz</button>
-                </div>
-            </form>
-        </div>
-    </div>
+</div>
 <!-- POPUP: DODAJ MECZ -->
 <div id="addMatchModal" class="modal hidden">
     <div class="modal-content">
