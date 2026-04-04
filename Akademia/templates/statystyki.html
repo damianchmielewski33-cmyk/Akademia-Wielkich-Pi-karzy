@@ -9,8 +9,8 @@
             margin: 0;
             padding: 0;
             font-family: "Segoe UI", Arial, sans-serif;
-            color: #fff;
-            background-image: url('/static/stadium.jpg');
+            color: #1b3d1b;
+            background-image: url('/static/murawa.jpg');
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
@@ -19,8 +19,7 @@
         .overlay {
             position: fixed;
             inset: 0;
-            background: rgba(0,0,0,0.65);
-            backdrop-filter: blur(6px);
+            background: linear-gradient(180deg, rgba(240, 250, 245, 0.75), rgba(215, 235, 220, 0.82));
             z-index: -1;
         }
 
@@ -36,11 +35,16 @@
         }
 
         a.back {
-            color: #1e90ff;
+            color: #1d6b3d;
             text-decoration: none;
             font-size: 18px;
             display: inline-block;
             margin-bottom: 20px;
+            font-weight: 500;
+        }
+
+        a.back:hover {
+            text-decoration: underline;
         }
 
         .stats-box {
@@ -53,11 +57,11 @@
         .stat-card {
             flex: 1;
             padding: 20px;
-            background: rgba(255,255,255,0.12);
-            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.92);
+            border-radius: 14px;
             text-align: center;
-            backdrop-filter: blur(10px);
-            box-shadow: 0 0 18px rgba(0,0,0,0.4);
+            border: 1px solid rgba(46, 204, 113, 0.2);
+            box-shadow: 0 8px 28px rgba(27, 61, 43, 0.1);
         }
 
         .stat-card h3 {
@@ -69,16 +73,17 @@
             font-size: 28px;
             margin-top: 10px;
             font-weight: bold;
+            color: #14532d;
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
-            background: rgba(255,255,255,0.12);
-            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.92);
             border-radius: 12px;
             overflow: hidden;
-            box-shadow: 0 0 18px rgba(0,0,0,0.4);
+            box-shadow: 0 8px 28px rgba(27, 61, 43, 0.1);
+            border: 1px solid rgba(46, 204, 113, 0.18);
         }
 
         th, td {
@@ -87,16 +92,17 @@
         }
 
         th {
-            background: rgba(255,255,255,0.18);
+            background: linear-gradient(135deg, rgba(46, 204, 113, 0.4), rgba(39, 174, 96, 0.5));
             font-size: 18px;
+            color: #fff;
         }
 
         tr:nth-child(even) {
-            background: rgba(255,255,255,0.08);
+            background: rgba(240, 250, 245, 0.65);
         }
 
         tr:hover {
-            background: rgba(255,255,255,0.18);
+            background: rgba(230, 245, 235, 0.95);
         }
 
         .user-summary {

@@ -9,8 +9,8 @@
             margin: 0;
             padding: 0;
             font-family: "Segoe UI", Arial, sans-serif;
-            color: #fff;
-            background-image: url('/static/stadium.jpg');
+            color: #1b3d1b;
+            background-image: url('/static/murawa.jpg');
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
@@ -19,7 +19,7 @@
         .overlay {
             position: fixed;
             inset: 0;
-            background: rgba(0,0,0,0.65);
+            background: linear-gradient(180deg, rgba(240, 250, 245, 0.75), rgba(215, 235, 220, 0.82));
             z-index: -1;
         }
 
@@ -27,9 +27,10 @@
             max-width: 420px;
             margin: 80px auto;
             padding: 25px;
-            background: rgba(0,0,0,0.55);
+            background: rgba(255, 255, 255, 0.92);
             border-radius: 20px;
-            box-shadow: 0 0 25px rgba(0,0,0,0.6);
+            border: 1px solid rgba(46, 204, 113, 0.22);
+            box-shadow: 0 12px 40px rgba(27, 61, 43, 0.12);
         }
 
         h1 {
@@ -44,14 +45,13 @@
             opacity: 0.9;
         }
 
-        /* FIX: inputy i selecty bez blur i bez przezroczystości */
         input, select {
             width: 100%;
             padding: 10px 12px;
             margin-top: 6px;
             margin-bottom: 18px;
             border-radius: 12px;
-            border: none;
+            border: 1px solid rgba(39, 174, 96, 0.25);
             background: #ffffff;
             color: #1b3d1b;
             font-size: 14px;
@@ -59,10 +59,10 @@
 
         input:focus, select:focus {
             outline: none;
-            background: #f0f0f0;
+            border-color: rgba(39, 174, 96, 0.55);
+            background: #f8fcf9;
         }
 
-        /* FIX: opcje dropdowna */
         select option {
             background: #ffffff;
             color: #1b3d1b;
@@ -73,22 +73,24 @@
             padding: 12px;
             border-radius: 12px;
             border: none;
-            background: rgba(30,144,255,0.8);
+            background: #27ae60;
             color: #fff;
             font-size: 15px;
             font-weight: 600;
             cursor: pointer;
             transition: 0.25s ease;
+            box-shadow: 0 4px 14px rgba(39, 174, 96, 0.35);
         }
 
         .btn-submit:hover {
-            background: rgba(30,144,255,1);
-            box-shadow: 0 0 12px rgba(30,144,255,0.8);
+            background: #219a52;
+            box-shadow: 0 6px 18px rgba(39, 174, 96, 0.45);
             transform: translateY(-2px);
         }
 
         .error-box {
-            background: rgba(255,50,50,0.4);
+            background: rgba(255, 99, 99, 0.2);
+            color: #8b1c1c;
             padding: 10px;
             border-radius: 10px;
             margin-bottom: 15px;
@@ -103,9 +105,10 @@
         }
 
         .bottom-links a {
-            color: #1e90ff;
+            color: #1d6b3d;
             text-decoration: none;
             font-size: 14px;
+            font-weight: 500;
         }
 
         .bottom-links a:hover {
