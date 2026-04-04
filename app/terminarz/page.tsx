@@ -29,7 +29,7 @@ export default async function TerminarzPage() {
   const { upcoming, afterDate, playedConfirmed } = categorizeMatches(matches);
 
   return (
-    <div className="container mx-auto max-w-6xl flex-1 px-4 py-8">
+    <div className="container mx-auto max-w-6xl flex-1 px-4 py-8 sm:py-10">
       <TerminarzClient
         upcoming={upcoming}
         afterDate={afterDate}

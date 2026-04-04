@@ -1,12 +1,12 @@
 "use client";
 
+import Image from "next/image";
 import { useMemo, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import type { MatchRow } from "@/lib/db";
 import type { PlayersDataEntry } from "@/lib/terminarz-shared";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -37,6 +37,26 @@ function rowClass(signed: number, max: number) {
   if (p < 50) return "bg-emerald-50/90 border-l-4 border-l-emerald-500";
   if (p < 80) return "bg-amber-50/90 border-l-4 border-l-amber-500";
   return "bg-red-50/80 border-l-4 border-l-red-500";
+}
+
+function PitchTableFrame({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="relative overflow-hidden rounded-2xl border-2 border-white/35 shadow-lg shadow-emerald-950/15 ring-1 ring-emerald-950/15">
+      <div className="home-pitch-tile absolute inset-0 opacity-[0.22]" aria-hidden />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-white/45" aria-hidden />
+      <div
+        className="pointer-events-none absolute bottom-0 left-0 h-9 w-9 rounded-tr-full border-t-2 border-r-2 border-white/40"
+        aria-hidden
+      />
+      <div
+        className="pointer-events-none absolute bottom-0 right-0 h-9 w-9 rounded-tl-full border-t-2 border-l-2 border-white/40"
+        aria-hidden
+      />
+      <div className="relative rounded-[0.85rem] bg-white/98 p-0.5 backdrop-blur-[2px]">
+        <div className="overflow-hidden rounded-[0.8rem] border border-emerald-900/10 bg-white">{children}</div>
+      </div>
+    </div>
+  );
 }
 
 export function TerminarzClient({
@@ -105,7 +125,7 @@ export function TerminarzClient({
       return;
     }
     if (!res.ok) {
-      toast.error(typeof data.error === "string" ? data.error : "Blad");
+      toast.error(typeof data.error === "string" ? data.error : "Błąd");
       return;
     }
     toast.success("Zapisano");
@@ -119,7 +139,7 @@ export function TerminarzClient({
       return;
     }
     if (!res.ok) {
-      toast.error("Nie udalo sie wypisac");
+      toast.error("Nie udało się wypisać");
       return;
     }
     toast.success("Wypisano");
@@ -130,7 +150,7 @@ export function TerminarzClient({
     const path = played ? "set-played" : "unset-played";
     const res = await fetch(`/api/admin/match/${id}/${path}`, { method: "POST" });
     if (!res.ok) {
-      toast.error("Brak uprawnien lub blad");
+      toast.error("Brak uprawnień lub błąd");
       return;
     }
     toast.success("Zaktualizowano");
@@ -146,91 +166,123 @@ export function TerminarzClient({
 
   return (
     <>
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <div className="pitch-rule mb-3 w-28" />
-          <h1 className="text-2xl font-bold tracking-tight text-zinc-900 sm:text-3xl">Terminarz</h1>
-          <p className="mt-1 text-sm text-zinc-600">Zapisy na mecze i kalendarz sezonu</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            type="button"
-            variant={view === "list" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setView("list")}
-          >
-            Lista
-          </Button>
-          <Button
-            type="button"
-            variant={view === "cal" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setView("cal")}
-          >
-            Kalendarz
-          </Button>
-          {isAdmin && (
-            <Button type="button" size="sm" variant="secondary" onClick={() => setAddOpen(true)}>
-              Dodaj mecz
-            </Button>
-          )}
+      <div className="text-center">
+        <div className="relative mx-auto max-w-2xl">
+          <div className="pitch-rule mx-auto mb-5 w-40 sm:w-48" />
+          <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-5">
+            <Image
+              src="/soccer-ball.svg"
+              alt=""
+              width={56}
+              height={56}
+              className="h-12 w-12 drop-shadow-sm sm:h-14 sm:w-14"
+              unoptimized
+            />
+            <h1 className="text-3xl font-bold tracking-tight text-emerald-950 sm:text-4xl">Terminarz</h1>
+            <Image
+              src="/soccer-ball.svg"
+              alt=""
+              width={56}
+              height={56}
+              className="h-12 w-12 scale-x-[-1] drop-shadow-sm sm:h-14 sm:w-14"
+              unoptimized
+            />
+          </div>
+          <p className="mt-4 text-base text-zinc-600 sm:text-lg">Zapisy na mecze i kalendarz sezonu</p>
         </div>
       </div>
 
-      <Card className="mt-4 border-zinc-200/80 bg-emerald-50/40 p-4 text-sm text-zinc-800">
-        <div className="flex flex-wrap gap-4">
-          <span>
-            Mecze: <strong>{stats.total}</strong>
-          </span>
-          <span>
-            Wolne: <strong>{stats.free}</strong>
-          </span>
-          <span>
-            Pelne: <strong>{stats.full}</strong>
-          </span>
-          <span>
-            Po terminie (w filtrze): <strong>{stats.past}</strong>
-          </span>
-        </div>
-      </Card>
-
-      <div className="mt-4 flex flex-wrap gap-2 rounded-xl border border-zinc-200/80 bg-white p-3 shadow-sm">
-        <select
-          className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900"
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-        >
-          <option value="all">Wszystkie mecze</option>
-          <option value="free">Wolne miejsca</option>
-          <option value="full">Pelne</option>
-          <option value="future">Przyszle</option>
-          <option value="past">Po terminie</option>
-        </select>
-        <select
-          className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900"
-          value={sortDir}
-          onChange={(e) => setSortDir(e.target.value as "asc" | "desc")}
-        >
-          <option value="asc">Najblizsze najpierw</option>
-          <option value="desc">Najdalsze najpierw</option>
-        </select>
+      <div className="mt-8 flex flex-wrap items-center justify-center gap-2 sm:justify-end">
         <Button
           type="button"
-          variant={onlyMine ? "default" : "outline"}
+          variant={view === "list" ? "default" : "outline"}
           size="sm"
-          onClick={() => setOnlyMine((v) => !v)}
+          onClick={() => setView("list")}
+          className={view === "list" ? "border-0 bg-emerald-800 font-semibold hover:bg-emerald-900" : ""}
         >
-          Tylko moje
+          Lista
         </Button>
+        <Button
+          type="button"
+          variant={view === "cal" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setView("cal")}
+          className={view === "cal" ? "border-0 bg-emerald-800 font-semibold hover:bg-emerald-900" : ""}
+        >
+          Kalendarz
+        </Button>
+        {isAdmin && (
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            className="border-emerald-200 bg-white font-semibold text-emerald-900 hover:bg-emerald-50"
+            onClick={() => setAddOpen(true)}
+          >
+            Dodaj mecz
+          </Button>
+        )}
+      </div>
+
+      <div className="relative mt-6 overflow-hidden rounded-2xl border-2 border-white/30 shadow-lg shadow-emerald-950/15 ring-1 ring-emerald-950/15">
+        <div className="home-pitch-tile absolute inset-0" aria-hidden />
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-white/40" aria-hidden />
+        <div className="relative flex flex-wrap justify-center gap-x-6 gap-y-2 px-5 py-4 text-sm sm:justify-start">
+          <span className="text-emerald-50">
+            Mecze: <strong className="text-white">{stats.total}</strong>
+          </span>
+          <span className="text-emerald-50">
+            Wolne: <strong className="text-white">{stats.free}</strong>
+          </span>
+          <span className="text-emerald-50">
+            Pełne: <strong className="text-white">{stats.full}</strong>
+          </span>
+          <span className="text-emerald-50">
+            Po terminie (w filtrze): <strong className="text-white">{stats.past}</strong>
+          </span>
+        </div>
+      </div>
+
+      <div className="relative mt-4 overflow-hidden rounded-2xl border-2 border-white/30 bg-white/95 p-3 shadow-md ring-1 ring-emerald-950/10">
+        <div className="flex flex-wrap items-center gap-2">
+          <select
+            className="rounded-xl border border-emerald-200/80 bg-white px-3 py-2 text-sm text-emerald-950 shadow-sm"
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+          >
+            <option value="all">Wszystkie mecze</option>
+            <option value="free">Wolne miejsca</option>
+            <option value="full">Pełne</option>
+            <option value="future">Przyszłe</option>
+            <option value="past">Po terminie</option>
+          </select>
+          <select
+            className="rounded-xl border border-emerald-200/80 bg-white px-3 py-2 text-sm text-emerald-950 shadow-sm"
+            value={sortDir}
+            onChange={(e) => setSortDir(e.target.value as "asc" | "desc")}
+          >
+            <option value="asc">Najbliższe najpierw</option>
+            <option value="desc">Najdalsze najpierw</option>
+          </select>
+          <Button
+            type="button"
+            variant={onlyMine ? "default" : "outline"}
+            size="sm"
+            className={onlyMine ? "border-0 bg-emerald-800 font-semibold hover:bg-emerald-900" : "border-emerald-200"}
+            onClick={() => setOnlyMine((v) => !v)}
+          >
+            Tylko moje
+          </Button>
+        </div>
       </div>
 
       {view === "list" ? (
         <div className="mt-6 space-y-10">
           <section>
-            <h2 className="mb-3 border-b border-zinc-200 pb-2 text-lg font-semibold text-zinc-900">
-              Nadchodzace mecze
-            </h2>
-            <div className="overflow-x-auto rounded-xl border border-zinc-200/80 bg-white shadow-sm">
+            <h2 className="text-lg font-bold tracking-tight text-emerald-950">Nadchodzące mecze</h2>
+            <div className="pitch-rule mb-4 mt-2 w-36 max-w-full" />
+            <PitchTableFrame>
+              <div className="overflow-x-auto">
               <table className="w-full min-w-[640px] text-sm">
                 <thead className="bg-gradient-to-r from-emerald-950 to-emerald-900 text-white">
                   <tr>
@@ -277,14 +329,18 @@ export function TerminarzClient({
                                 Wypisz
                               </Button>
                             ) : m.signed_up < m.max_slots ? (
-                              <Button size="sm" onClick={() => signup(m.id)}>
-                                Zapisz sie
+                              <Button
+                                size="sm"
+                                className="border-0 bg-white font-semibold text-emerald-900 shadow hover:bg-emerald-50"
+                                onClick={() => signup(m.id)}
+                              >
+                                Zapisz się
                               </Button>
                             ) : (
                               <span className="text-amber-700">Brak miejsc</span>
                             )
                           ) : (
-                            <span className="text-emerald-800/50">Zaloguj sie</span>
+                            <span className="text-emerald-800/50">Zaloguj się</span>
                           )}
                           {isAdmin && (
                             <Button
@@ -293,11 +349,11 @@ export function TerminarzClient({
                               className="ml-0 block sm:ml-2 sm:inline-block"
                               onClick={() => setPlayed(m.id, true)}
                             >
-                              Potwierdz rozegranie
+                              Potwierdź rozegranie
                             </Button>
                           )}
                           <Button size="sm" variant="outline" onClick={() => openPlayers(m.id)}>
-                            Lista zawodnikow
+                            Lista zawodników
                           </Button>
                         </td>
                       </tr>
@@ -306,20 +362,21 @@ export function TerminarzClient({
                   {filteredUpcoming.length === 0 && (
                     <tr>
                       <td colSpan={5} className="p-6 text-center text-emerald-800/60">
-                        Brak meczow w tym widoku.
+                        Brak meczów w tym widoku.
                       </td>
                     </tr>
                   )}
                 </tbody>
               </table>
-            </div>
+              </div>
+            </PitchTableFrame>
           </section>
 
           <section>
-            <h2 className="mb-3 border-b border-zinc-200 pb-2 text-lg font-semibold text-zinc-900">
-              Mecze po terminie (nierozegrane)
-            </h2>
-            <div className="overflow-x-auto rounded-xl border border-zinc-200/80 bg-white shadow-sm">
+            <h2 className="text-lg font-bold tracking-tight text-emerald-950">Mecze po terminie (nierozegrane)</h2>
+            <div className="pitch-rule mb-4 mt-2 w-56 max-w-full" />
+            <PitchTableFrame>
+              <div className="overflow-x-auto">
               <table className="w-full min-w-[600px] text-sm">
                 <thead className="bg-gradient-to-r from-emerald-950 to-emerald-900 text-white">
                   <tr>
@@ -345,7 +402,7 @@ export function TerminarzClient({
                         <td className="space-x-2 p-3">
                           {isAdmin && (
                             <Button size="sm" onClick={() => setPlayed(m.id, true)}>
-                              Potwierdz rozegranie
+                              Potwierdź rozegranie
                             </Button>
                           )}
                           <Button size="sm" variant="outline" onClick={() => openPlayers(m.id)}>
@@ -364,14 +421,15 @@ export function TerminarzClient({
                   )}
                 </tbody>
               </table>
-            </div>
+              </div>
+            </PitchTableFrame>
           </section>
 
           <section>
-            <h2 className="mb-3 border-b border-zinc-200 pb-2 text-lg font-semibold text-zinc-900">
-              Rozegrane
-            </h2>
-            <div className="overflow-x-auto rounded-xl border border-zinc-200/80 bg-white shadow-sm">
+            <h2 className="text-lg font-bold tracking-tight text-emerald-950">Rozegrane</h2>
+            <div className="pitch-rule mb-4 mt-2 w-28 max-w-full" />
+            <PitchTableFrame>
+              <div className="overflow-x-auto">
               <table className="w-full min-w-[560px] text-sm">
                 <thead className="bg-gradient-to-r from-emerald-950 to-emerald-900 text-white">
                   <tr>
@@ -404,14 +462,15 @@ export function TerminarzClient({
                   ))}
                   {playedConfirmed.length === 0 && (
                     <tr>
-                      <td colSpan={5} className="p-4 text-center">
-                        Brak rozegranych meczow.
+                      <td colSpan={5} className="p-4 text-center text-emerald-800/70">
+                        Brak rozegranych meczów.
                       </td>
                     </tr>
                   )}
                 </tbody>
               </table>
-            </div>
+              </div>
+            </PitchTableFrame>
           </section>
         </div>
       ) : (
@@ -436,7 +495,7 @@ export function TerminarzClient({
       )}
 
       <Dialog open={Boolean(calPopup)} onOpenChange={(o) => !o && setCalPopup(null)}>
-        <DialogContent>
+        <DialogContent className="border-emerald-900/15">
           {calPopup && (
             <>
               <DialogHeader>
@@ -462,7 +521,7 @@ export function TerminarzClient({
       </Dialog>
 
       <Dialog open={playersOpen} onOpenChange={setPlayersOpen}>
-        <DialogContent className="max-h-[85vh] overflow-y-auto">
+        <DialogContent className="max-h-[85vh] overflow-y-auto border-emerald-900/15">
           <DialogHeader>
             <DialogTitle>
               {selectedData
@@ -472,23 +531,29 @@ export function TerminarzClient({
           </DialogHeader>
           {selectedData && (
             <>
-              <p className="text-sm text-emerald-800/80">{selectedData.location}</p>
-              <p className="text-sm">
+              <div className="pitch-rule mb-3 w-32 opacity-70" />
+              <p className="text-sm font-medium text-emerald-900">{selectedData.location}</p>
+              <p className="text-sm text-emerald-800">
                 Zapisani: {selectedData.players.length}/{selectedData.max}
               </p>
-              <ul className="mt-3 space-y-2">
+              <ul className="mt-3 max-h-64 space-y-0 overflow-y-auto rounded-xl border border-emerald-900/10 bg-emerald-50/30">
                 {selectedData.players.map((p, i) => (
-                  <li key={i} className="flex items-center gap-2 border-b border-zinc-100 pb-2 text-sm">
-                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-600 text-xs font-bold text-white">
+                  <li
+                    key={i}
+                    className={`flex flex-wrap items-center gap-2 border-b border-emerald-100/90 px-3 py-2.5 text-sm last:border-b-0 ${
+                      i % 2 === 0 ? "bg-white/60" : "bg-emerald-50/40"
+                    }`}
+                  >
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-800 text-xs font-bold text-white ring-2 ring-white/40">
                       {p.initials}
                     </span>
-                    <span>
+                    <span className="min-w-0 flex-1 font-medium text-emerald-950">
                       {p.name} ({p.zawodnik})
                     </span>
                     {p.paid ? (
-                      <Badge>oplacone</Badge>
+                      <Badge className="border-emerald-200 bg-emerald-100 text-emerald-900">Opłacone</Badge>
                     ) : (
-                      <Badge variant="secondary">do zaplaty</Badge>
+                      <Badge variant="secondary">Do zapłaty</Badge>
                     )}
                   </li>
                 ))}
@@ -519,18 +584,18 @@ function CalendarView({
   onPick: (m: MatchRow) => void;
 }) {
   const names = [
-    "Styczen",
+    "Styczeń",
     "Luty",
     "Marzec",
-    "Kwiecien",
+    "Kwiecień",
     "Maj",
     "Czerwiec",
     "Lipiec",
-    "Sierpien",
-    "Wrzesien",
-    "Pazdziernik",
+    "Sierpień",
+    "Wrzesień",
+    "Październik",
     "Listopad",
-    "Grudzien",
+    "Grudzień",
   ];
   const dayNames = ["Pn", "Wt", "Sr", "Cz", "Pt", "So", "Nd"];
   const first = new Date(year, month, 1);
@@ -586,24 +651,28 @@ function CalendarView({
   }
 
   return (
-    <div className="mt-6 rounded-2xl border border-zinc-200/80 bg-emerald-50/35 p-4 shadow-sm">
-      <div className="mb-3 flex items-center justify-between">
-        <Button type="button" size="sm" variant="outline" onClick={onPrev}>
-          Poprzedni
-        </Button>
-        <span className="font-bold text-emerald-950">
-          {names[month]} {year}
-        </span>
-        <Button type="button" size="sm" variant="outline" onClick={onNext}>
-          Nastepny
-        </Button>
+    <div className="relative mt-6 overflow-hidden rounded-2xl border-2 border-white/35 shadow-lg shadow-emerald-950/15 ring-1 ring-emerald-950/15">
+      <div className="home-pitch-tile absolute inset-0 opacity-[0.18]" aria-hidden />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-white/45" aria-hidden />
+      <div className="relative rounded-[0.85rem] bg-white/96 p-4 backdrop-blur-[2px] sm:p-5">
+        <div className="mb-4 flex items-center justify-between gap-2">
+          <Button type="button" size="sm" variant="outline" className="border-emerald-200" onClick={onPrev}>
+            Poprzedni
+          </Button>
+          <span className="text-center text-sm font-bold text-emerald-950 sm:text-base">
+            {names[month]} {year}
+          </span>
+          <Button type="button" size="sm" variant="outline" className="border-emerald-200" onClick={onNext}>
+            Następny
+          </Button>
+        </div>
+        <div className="mb-2 grid grid-cols-7 gap-2 text-center text-[0.65rem] font-bold uppercase tracking-wide text-emerald-800/80 sm:text-xs">
+          {dayNames.map((d) => (
+            <div key={d}>{d}</div>
+          ))}
+        </div>
+        <div className="grid grid-cols-7 gap-2">{cells}</div>
       </div>
-      <div className="mb-2 grid grid-cols-7 gap-2 text-center text-xs font-bold uppercase text-emerald-800/70">
-        {dayNames.map((d) => (
-          <div key={d}>{d}</div>
-        ))}
-      </div>
-      <div className="grid grid-cols-7 gap-2">{cells}</div>
     </div>
   );
 }
@@ -642,9 +711,9 @@ function AddMatchDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="border-emerald-900/15">
         <DialogHeader>
-          <DialogTitle>Dodaj mecz</DialogTitle>
+          <DialogTitle className="text-emerald-950">Dodaj mecz</DialogTitle>
         </DialogHeader>
         <form onSubmit={onSubmit} className="space-y-3">
           <div>
@@ -660,7 +729,7 @@ function AddMatchDialog({
             <Input name="time" type="time" required className="mt-1" />
           </div>
           <div>
-            <Label>Ilosc miejsc</Label>
+            <Label>Ilość miejsc</Label>
             <Input name="max_slots" type="number" min={1} required className="mt-1" defaultValue={10} />
           </div>
           <DialogFooter>

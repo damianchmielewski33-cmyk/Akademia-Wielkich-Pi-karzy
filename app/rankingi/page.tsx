@@ -1,4 +1,7 @@
+import Image from "next/image";
 import { redirect } from "next/navigation";
+import type { ComponentType } from "react";
+import { Route, Share2, Shield, Target, Trophy } from "lucide-react";
 import { getDb } from "@/lib/db";
 import { getServerSession } from "@/lib/auth";
 import {
@@ -10,7 +13,6 @@ import {
   type RankablePlayer,
 } from "@/lib/rankings";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default async function RankingiPage() {
   const session = await getServerSession();
@@ -63,32 +65,67 @@ export default async function RankingiPage() {
   const rankingOgolny = rankPlayers(players, "punkty");
 
   return (
-    <div className="container mx-auto max-w-6xl flex-1 px-4 py-10">
-      <div className="pitch-rule mx-auto mb-6 w-40" />
-      <h1 className="text-center text-3xl font-bold tracking-tight text-zinc-900">Rankingi</h1>
-      <p className="mt-2 text-center text-sm text-zinc-600">🏆 Tabele goli, asyst i punktów łącznie</p>
+    <div className="container mx-auto max-w-6xl flex-1 px-4 py-8 text-center sm:py-10">
+      <div className="relative mx-auto max-w-2xl">
+        <div className="pitch-rule mx-auto mb-5 w-40 sm:w-48" />
+        <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-5">
+          <Image
+            src="/soccer-ball.svg"
+            alt=""
+            width={56}
+            height={56}
+            className="h-12 w-12 drop-shadow-sm sm:h-14 sm:w-14"
+            unoptimized
+          />
+          <h1 className="text-3xl font-bold tracking-tight text-emerald-950 sm:text-4xl">Rankingi</h1>
+          <Image
+            src="/soccer-ball.svg"
+            alt=""
+            width={56}
+            height={56}
+            className="h-12 w-12 scale-x-[-1] drop-shadow-sm sm:h-14 sm:w-14"
+            unoptimized
+          />
+        </div>
+        <p className="mt-4 text-base text-zinc-600 sm:text-lg">
+          Tabele goli, asyst, dystansu, obron i punktów łącznie
+        </p>
+      </div>
 
-      <Card className="mt-8">
-        <CardHeader>
-          <CardTitle className="text-lg text-zinc-900">Punktacja ogólna</CardTitle>
-        </CardHeader>
-        <CardContent className="text-sm leading-relaxed text-zinc-700">
-          <ul className="list-disc space-y-1 pl-5">
-            <li>Gol: {PT_GOAL} pkt</li>
-            <li>Asysta: {PT_ASSIST} pkt</li>
-            <li>Kilometr: {PT_KM} pkt</li>
-            <li>Obrona: {PT_SAVE} pkt</li>
-          </ul>
-        </CardContent>
-      </Card>
+      <div className="mt-10 text-left">
+        <div className="relative mx-auto max-w-2xl overflow-hidden rounded-2xl border-2 border-white/30 shadow-lg shadow-emerald-950/15 ring-1 ring-emerald-950/15 lg:max-w-none">
+          <div className="home-pitch-tile absolute inset-0" aria-hidden />
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-white/40" aria-hidden />
+          <div className="relative px-5 py-4 sm:px-6 sm:py-5">
+            <div className="flex items-center gap-2">
+              <Trophy className="h-6 w-6 shrink-0 text-white drop-shadow-sm" strokeWidth={2.25} aria-hidden />
+              <h2 className="text-lg font-bold tracking-tight text-white drop-shadow-sm sm:text-xl">Punktacja ogólna</h2>
+            </div>
+            <ul className="mt-3 space-y-1.5 text-sm text-emerald-50/95 sm:text-base">
+              <li>
+                Gol: <strong className="text-white">{PT_GOAL}</strong> pkt
+              </li>
+              <li>
+                Asysta: <strong className="text-white">{PT_ASSIST}</strong> pkt
+              </li>
+              <li>
+                Kilometr: <strong className="text-white">{PT_KM}</strong> pkt
+              </li>
+              <li>
+                Obrona: <strong className="text-white">{PT_SAVE}</strong> pkt
+              </li>
+            </ul>
+          </div>
+        </div>
 
-      <div className="mt-10 grid gap-8 lg:grid-cols-2">
-        <RankBlock title="⚽ Gole" rows={rankingGole} col="goals" />
-        <RankBlock title="🎯 Asysty" rows={rankingAsysty} col="assists" />
-        <RankBlock title="🏃 Dystans (km)" rows={rankingDystans} col="distance" format="1f" />
-        <RankBlock title="🧤 Obrony" rows={rankingObrony} col="saves" />
-        <div className="lg:col-span-2">
-          <RankBlock title="🏆 Punkty łącznie" rows={rankingOgolny} col="punkty" format="2f" />
+        <div className="mt-10 grid gap-6 lg:grid-cols-2">
+          <RankBlock title="Gole" icon={Target} rows={rankingGole} col="goals" />
+          <RankBlock title="Asysty" icon={Share2} rows={rankingAsysty} col="assists" />
+          <RankBlock title="Dystans (km)" icon={Route} rows={rankingDystans} col="distance" format="1f" />
+          <RankBlock title="Obrony" icon={Shield} rows={rankingObrony} col="saves" />
+          <div className="lg:col-span-2">
+            <RankBlock title="Punkty łącznie" icon={Trophy} rows={rankingOgolny} col="punkty" format="2f" accent="gold" />
+          </div>
         </div>
       </div>
     </div>
@@ -97,38 +134,77 @@ export default async function RankingiPage() {
 
 function RankBlock({
   title,
+  icon: Icon,
   rows,
   col,
   format,
+  accent = "emerald",
 }: {
   title: string;
-  rows: { rank: number; zawodnik: string; goals: number; assists: number; distance: number; saves: number; punkty: number }[];
+  icon: ComponentType<{ className?: string; strokeWidth?: number }>;
+  rows: {
+    rank: number;
+    zawodnik: string;
+    goals: number;
+    assists: number;
+    distance: number;
+    saves: number;
+    punkty: number;
+  }[];
   col: keyof Pick<RankablePlayer, "goals" | "assists" | "distance" | "saves" | "punkty">;
   format?: "1f" | "2f";
+  accent?: "emerald" | "gold";
 }) {
+  const headerBar =
+    accent === "gold"
+      ? "bg-gradient-to-r from-amber-900 via-amber-800 to-amber-900"
+      : "bg-gradient-to-r from-emerald-950 via-emerald-900 to-emerald-950";
+
   return (
-    <div className="rounded-xl border border-zinc-200/80 bg-white p-4 shadow-sm">
-      <h2 className="mb-3 text-center text-lg font-semibold text-zinc-900">{title}</h2>
-      <Table>
-        <TableHeader className="border-b-0 bg-gradient-to-r from-emerald-950 to-emerald-900 text-white [&_th]:text-white">
-          <TableRow className="border-zinc-600/20 hover:bg-transparent">
-            <TableHead className="w-12">#</TableHead>
-            <TableHead>Zawodnik</TableHead>
-            <TableHead className="text-right">Wartość</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {rows.map((r) => (
-            <TableRow key={`${r.zawodnik}-${r.rank}`}>
-              <TableCell className="font-bold text-emerald-800/90">{r.rank}</TableCell>
-              <TableCell>{r.zawodnik}</TableCell>
-              <TableCell className="text-right font-medium">
-                {format === "1f" ? Number(r[col]).toFixed(1) : format === "2f" ? Number(r[col]).toFixed(2) : r[col]}
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+    <div className="relative overflow-hidden rounded-2xl border-2 border-white/35 shadow-lg shadow-emerald-950/15 ring-1 ring-emerald-950/15">
+      <div className="home-pitch-tile absolute inset-0 opacity-[0.2]" aria-hidden />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-white/45" aria-hidden />
+      <div className="pointer-events-none absolute bottom-0 left-0 h-9 w-9 rounded-tr-full border-t-2 border-r-2 border-white/40" aria-hidden />
+      <div className="pointer-events-none absolute bottom-0 right-0 h-9 w-9 rounded-tl-full border-t-2 border-l-2 border-white/40" aria-hidden />
+      <div className="relative rounded-[0.85rem] bg-white/98 p-0.5 backdrop-blur-[2px]">
+        <div className="overflow-hidden rounded-[0.8rem] border border-emerald-900/10 bg-white">
+          <div className={`flex items-center justify-center gap-2 px-4 py-3 ${headerBar}`}>
+            <Icon className="h-5 w-5 shrink-0 text-white" strokeWidth={2.25} aria-hidden />
+            <h2 className="text-center text-base font-bold tracking-tight text-white sm:text-lg">{title}</h2>
+          </div>
+          <Table>
+            <TableHeader className="border-b border-emerald-200/80 bg-emerald-50/90 text-emerald-950 [&_th]:text-emerald-900">
+              <TableRow className="border-0 hover:bg-transparent">
+                <TableHead className="w-12">#</TableHead>
+                <TableHead>Zawodnik</TableHead>
+                <TableHead className="text-right">Wartość</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {rows.map((r, i) => (
+                <TableRow
+                  key={`${r.zawodnik}-${r.rank}`}
+                  className={
+                    i % 2 === 0
+                      ? "border-emerald-100/80 bg-emerald-50/35 hover:bg-emerald-50/55"
+                      : "border-emerald-100/80 hover:bg-emerald-50/40"
+                  }
+                >
+                  <TableCell className="font-bold tabular-nums text-emerald-800">{r.rank}</TableCell>
+                  <TableCell className="font-medium text-emerald-950">{r.zawodnik}</TableCell>
+                  <TableCell className="text-right font-semibold tabular-nums text-emerald-900">
+                    {format === "1f"
+                      ? Number(r[col]).toFixed(1)
+                      : format === "2f"
+                        ? Number(r[col]).toFixed(2)
+                        : r[col]}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
     </div>
   );
 }
