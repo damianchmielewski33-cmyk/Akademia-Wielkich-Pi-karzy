@@ -22,11 +22,5 @@ export async function GET() {
     time: r.timestamp,
   }));
 
-  if (list.length === 0) {
-    return NextResponse.json([
-      { text: "System uruchomiony", time: new Date().toISOString().slice(0, 16).replace("T", " ") },
-    ]);
-  }
-
   return NextResponse.json(list);
 }

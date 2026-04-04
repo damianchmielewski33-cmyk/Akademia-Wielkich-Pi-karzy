@@ -1,10 +1,24 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import {
+  Activity,
+  ArrowLeft,
+  Calendar,
+  LayoutDashboard,
+  Loader2,
+  LogOut,
+  RefreshCw,
+  Search,
+  Shield,
+  Table2,
+  Users,
+} from "lucide-react";
 import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -14,14 +28,21 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { cn } from "@/lib/utils";
 
 const API = {
   summary: "/api/admin/summary",
   activity: "/api/admin/activity",
   users: "/api/admin/users",
   user: (id: number) => `/api/admin/user/${id}`,
-  userRole: (id: number) => `/api/admin/user/${id}/role`,
   matches: "/api/admin/matches",
   match: (id: number) => `/api/admin/match/${id}`,
   stats: "/api/admin/stats",
@@ -42,6 +63,7 @@ type MatchRow = {
   time: string;
   location: string;
   players_count: number;
+  played: number;
 };
 
 type StatRow = {
@@ -54,203 +76,460 @@ type StatRow = {
   saves: number;
 };
 
+type Summary = {
+  players: number;
+  admins: number;
+  matches: number;
+  stats: number;
+  upcoming_matches: number;
+};
+
+const tabs = [
+  { id: "dashboard", label: "Przegląd", icon: LayoutDashboard },
+  { id: "users", label: "Użytkownicy", icon: Users },
+  { id: "matches", label: "Mecze", icon: Calendar },
+  { id: "stats", label: "Statystyki", icon: Table2 },
+] as const;
+
+type TabId = (typeof tabs)[number]["id"];
+
 export function AdminPanel() {
-  const [tab, setTab] = useState("dashboard");
-  const [summary, setSummary] = useState<{ players: number; matches: number; stats: number } | null>(
-    null
-  );
+  const [tab, setTab] = useState<TabId>("dashboard");
+  const [loading, setLoading] = useState(true);
+  const [summary, setSummary] = useState<Summary | null>(null);
   const [activity, setActivity] = useState<{ text: string; time: string }[]>([]);
   const [users, setUsers] = useState<UserRow[]>([]);
   const [matches, setMatches] = useState<MatchRow[]>([]);
   const [stats, setStats] = useState<StatRow[]>([]);
 
   const loadDashboard = useCallback(async () => {
+    setLoading(true);
     try {
       const [s, a] = await Promise.all([fetch(API.summary), fetch(API.activity)]);
       if (!s.ok || !a.ok) throw new Error();
       setSummary(await s.json());
       setActivity(await a.json());
     } catch {
-      toast.error("Blad dashboardu");
+      toast.error("Nie udało się wczytać przeglądu");
+    } finally {
+      setLoading(false);
     }
   }, []);
 
   const loadUsers = useCallback(async () => {
-    const res = await fetch(API.users);
-    if (!res.ok) return toast.error("Blad uzytkownikow");
-    setUsers(await res.json());
+    setLoading(true);
+    try {
+      const res = await fetch(API.users);
+      if (!res.ok) throw new Error();
+      setUsers(await res.json());
+    } catch {
+      toast.error("Nie udało się wczytać użytkowników");
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   const loadMatches = useCallback(async () => {
-    const res = await fetch(API.matches);
-    if (!res.ok) return toast.error("Blad meczow");
-    setMatches(await res.json());
+    setLoading(true);
+    try {
+      const res = await fetch(API.matches);
+      if (!res.ok) throw new Error();
+      const rows = await res.json();
+      setMatches(
+        rows.map((m: MatchRow & { played?: number }) => ({
+          ...m,
+          played: m.played ?? 0,
+        }))
+      );
+    } catch {
+      toast.error("Nie udało się wczytać meczów");
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   const loadStats = useCallback(async () => {
-    const res = await fetch(API.stats);
-    if (!res.ok) return toast.error("Blad statystyk");
-    setStats(await res.json());
+    setLoading(true);
+    try {
+      const res = await fetch(API.stats);
+      if (!res.ok) throw new Error();
+      setStats(await res.json());
+    } catch {
+      toast.error("Nie udało się wczytać statystyk");
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
-    if (tab === "dashboard") loadDashboard();
-    if (tab === "users") loadUsers();
-    if (tab === "matches") loadMatches();
-    if (tab === "stats") loadStats();
+    if (tab === "dashboard") void loadDashboard();
+    if (tab === "users") void loadUsers();
+    if (tab === "matches") void loadMatches();
+    if (tab === "stats") void loadStats();
   }, [tab, loadDashboard, loadUsers, loadMatches, loadStats]);
 
   return (
-    <div className="flex min-h-screen flex-col md:flex-row">
-      <aside className="border-b border-emerald-100 bg-emerald-950 p-4 text-white md:w-56 md:border-b-0 md:border-r">
-        <div className="mb-6 flex items-center gap-2 font-bold">
-          <span>⚽</span> Panel admina
-        </div>
-        <nav className="flex flex-col gap-1">
-          <TabBtn active={tab === "dashboard"} onClick={() => setTab("dashboard")}>
-            Dashboard
-          </TabBtn>
-          <TabBtn active={tab === "users"} onClick={() => setTab("users")}>
-            Uzytkownicy
-          </TabBtn>
-          <TabBtn active={tab === "matches"} onClick={() => setTab("matches")}>
-            Mecze
-          </TabBtn>
-          <TabBtn active={tab === "stats"} onClick={() => setTab("stats")}>
-            Statystyki
-          </TabBtn>
-        </nav>
-        <div className="mt-8 space-y-2 border-t border-emerald-800 pt-4">
-          <Link href="/" className="block text-sm text-emerald-200 hover:text-white">
-            Powrot
-          </Link>
-          <a href="/api/auth/logout" className="block text-sm text-emerald-200 hover:text-white">
-            Wyloguj
-          </a>
-        </div>
-      </aside>
-      <main className="flex-1 bg-emerald-50/30 p-6">
-        {tab === "dashboard" && (
-          <DashboardView summary={summary} activity={activity} onReload={loadDashboard} />
-        )}
-        {tab === "users" && <UsersView users={users} onReload={loadUsers} />}
-        {tab === "matches" && <MatchesView matches={matches} onReload={loadMatches} />}
-        {tab === "stats" && <StatsView stats={stats} onReload={loadStats} />}
-      </main>
+    <div className="min-h-screen bg-zinc-50 text-zinc-900">
+      <div className="flex min-h-screen flex-col lg:flex-row">
+        <aside
+          className={cn(
+            "border-zinc-200/80 bg-gradient-to-br from-emerald-950 via-emerald-900 to-emerald-950 text-white",
+            "lg:w-60 lg:shrink-0 lg:border-r"
+          )}
+        >
+          <div className="flex flex-col gap-6 p-4 lg:sticky lg:top-0 lg:max-h-screen lg:overflow-y-auto">
+            <div className="flex items-center gap-3 border-b border-white/10 pb-4">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 text-lg shadow-inner">
+                ⚽
+              </div>
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wider text-emerald-300/90">
+                  Akademia
+                </p>
+                <p className="font-semibold leading-tight">Panel administratora</p>
+              </div>
+            </div>
+
+            <nav className="flex flex-wrap gap-2 lg:flex-col lg:gap-1">
+              {tabs.map((t) => {
+                const Icon = t.icon;
+                const active = tab === t.id;
+                return (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => setTab(t.id)}
+                    className={cn(
+                      "flex items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors",
+                      active
+                        ? "bg-white/15 text-white shadow-sm"
+                        : "text-emerald-100/80 hover:bg-white/10 hover:text-white"
+                    )}
+                  >
+                    <Icon className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
+                    {t.label}
+                  </button>
+                );
+              })}
+            </nav>
+
+            <div className="mt-auto flex flex-col gap-2 border-t border-white/10 pt-4">
+              <Link
+                href="/terminarz"
+                className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-emerald-100/90 transition-colors hover:bg-white/10 hover:text-white"
+              >
+                <Calendar className="h-4 w-4" aria-hidden />
+                Terminarz (edycja)
+              </Link>
+              <Link
+                href="/"
+                className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-emerald-100/90 transition-colors hover:bg-white/10 hover:text-white"
+              >
+                <ArrowLeft className="h-4 w-4" aria-hidden />
+                Strona główna
+              </Link>
+              <a
+                href="/api/auth/logout"
+                className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-emerald-100/90 transition-colors hover:bg-white/10 hover:text-white"
+              >
+                <LogOut className="h-4 w-4" aria-hidden />
+                Wyloguj
+              </a>
+            </div>
+          </div>
+        </aside>
+
+        <main className="relative flex-1 overflow-x-hidden p-4 sm:p-6 lg:p-8">
+          {loading && (
+            <div
+              className="pointer-events-none absolute right-6 top-6 flex items-center gap-2 text-sm text-zinc-500"
+              aria-live="polite"
+            >
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+              Wczytywanie…
+            </div>
+          )}
+
+          <div className="mx-auto max-w-6xl">
+            {tab === "dashboard" && (
+              <DashboardView
+                summary={summary}
+                activity={activity}
+                loading={loading}
+                onReload={loadDashboard}
+                onGoToTab={setTab}
+              />
+            )}
+            {tab === "users" && <UsersView users={users} loading={loading} onReload={loadUsers} />}
+            {tab === "matches" && <MatchesView matches={matches} loading={loading} onReload={loadMatches} />}
+            {tab === "stats" && <StatsView stats={stats} loading={loading} onReload={loadStats} />}
+          </div>
+        </main>
+      </div>
     </div>
   );
 }
 
-function TabBtn({
+function Toolbar({
+  title,
+  description,
+  onReload,
+  loading,
   children,
-  active,
-  onClick,
 }: {
-  children: React.ReactNode;
-  active: boolean;
-  onClick: () => void;
+  title: string;
+  description?: string;
+  onReload: () => void;
+  loading: boolean;
+  children?: React.ReactNode;
 }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`rounded-lg px-3 py-2 text-left text-sm ${active ? "bg-emerald-700" : "hover:bg-emerald-900"}`}
-    >
-      {children}
-    </button>
+    <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight text-zinc-900">{title}</h1>
+        {description ? <p className="mt-1 text-sm text-zinc-600">{description}</p> : null}
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        {children}
+        <Button type="button" variant="outline" size="sm" onClick={onReload} disabled={loading}>
+          <RefreshCw className={cn("mr-2 h-4 w-4", loading && "animate-spin")} aria-hidden />
+          Odśwież
+        </Button>
+      </div>
+    </div>
   );
 }
 
 function DashboardView({
   summary,
   activity,
+  loading,
   onReload,
+  onGoToTab,
 }: {
-  summary: { players: number; matches: number; stats: number } | null;
+  summary: Summary | null;
   activity: { text: string; time: string }[];
+  loading: boolean;
   onReload: () => void;
+  onGoToTab: (t: TabId) => void;
 }) {
+  const metrics = [
+    {
+      key: "players",
+      label: "Zarejestrowani",
+      value: summary?.players,
+      hint: "wszyscy użytkownicy",
+      tab: "users" as const,
+      icon: Users,
+    },
+    {
+      key: "admins",
+      label: "Administratorzy",
+      value: summary?.admins,
+      hint: "konta z uprawnieniami",
+      tab: "users" as const,
+      icon: Shield,
+    },
+    {
+      key: "matches",
+      label: "Mecze w bazie",
+      value: summary?.matches,
+      hint: "łącznie terminów",
+      tab: "matches" as const,
+      icon: Calendar,
+    },
+    {
+      key: "upcoming",
+      label: "Nadchodzące",
+      value: summary?.upcoming_matches,
+      hint: "nie rozegrane, od dziś",
+      tab: "matches" as const,
+      icon: Activity,
+    },
+    {
+      key: "stats",
+      label: "Wpisy statystyk",
+      value: summary?.stats,
+      hint: "wiersze w tabeli",
+      tab: "stats" as const,
+      icon: Table2,
+    },
+  ];
+
   return (
     <div>
-      <h1 className="text-2xl font-bold text-emerald-950">Dashboard</h1>
-      <Button className="mt-2" size="sm" variant="outline" onClick={onReload}>
-        Odswiez
-      </Button>
-      <div className="mt-6 grid gap-4 sm:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Gracze</CardTitle>
-          </CardHeader>
-          <CardContent className="text-3xl font-bold">{summary?.players ?? "–"}</CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Mecze</CardTitle>
-          </CardHeader>
-          <CardContent className="text-3xl font-bold">{summary?.matches ?? "–"}</CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Statystyki</CardTitle>
-          </CardHeader>
-          <CardContent className="text-3xl font-bold">{summary?.stats ?? "–"}</CardContent>
-        </Card>
+      <Toolbar
+        title="Przegląd"
+        description="Skrót organizacji — kliknij kafelek, aby przejść do szczegółów."
+        onReload={onReload}
+        loading={loading}
+      />
+
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        {metrics.map((m) => {
+          const Icon = m.icon;
+          return (
+            <button
+              key={m.key}
+              type="button"
+              onClick={() => onGoToTab(m.tab)}
+              className="group text-left transition-transform hover:scale-[1.01] focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2"
+            >
+              <Card className="h-full border-zinc-200/80 bg-white shadow-sm transition-shadow group-hover:shadow-md">
+                <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
+                  <div>
+                    <CardTitle className="text-base font-semibold text-zinc-800">{m.label}</CardTitle>
+                    <CardDescription className="text-xs">{m.hint}</CardDescription>
+                  </div>
+                  <div className="rounded-lg bg-emerald-50 p-2 text-emerald-700">
+                    <Icon className="h-5 w-5" aria-hidden />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-3xl font-bold tabular-nums tracking-tight text-emerald-950">
+                    {m.value ?? "–"}
+                  </p>
+                </CardContent>
+              </Card>
+            </button>
+          );
+        })}
       </div>
-      <h2 className="mt-10 text-lg font-semibold">Ostatnie aktywnosci</h2>
-      <ul className="mt-2 list-inside list-disc text-sm text-emerald-900">
-        {activity.map((item, i) => (
-          <li key={i}>
-            {item.text} — {item.time}
-          </li>
-        ))}
-      </ul>
+
+      <Card className="mt-8 border-zinc-200/80 bg-white shadow-sm">
+        <CardHeader>
+          <CardTitle className="text-lg">Ostatnia aktywność</CardTitle>
+          <CardDescription>Do 25 ostatnich wpisów z dziennika systemu</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {activity.length === 0 ? (
+            <p className="rounded-lg border border-dashed border-zinc-200 bg-zinc-50/80 px-4 py-8 text-center text-sm text-zinc-600">
+              Brak zapisów w dzienniku — pojawią się po logowaniu i innych operacjach w aplikacji.
+            </p>
+          ) : (
+            <ul className="space-y-3">
+              {activity.map((item, i) => (
+                <li
+                  key={`${item.time}-${i}`}
+                  className="flex flex-col gap-1 border-l-2 border-emerald-200 pl-4 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4"
+                >
+                  <span className="text-sm text-zinc-800">{item.text}</span>
+                  <time
+                    className="shrink-0 text-xs tabular-nums text-zinc-500"
+                    dateTime={item.time}
+                  >
+                    {item.time}
+                  </time>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
 
-function UsersView({ users, onReload }: { users: UserRow[]; onReload: () => void }) {
+function UsersView({
+  users,
+  loading,
+  onReload,
+}: {
+  users: UserRow[];
+  loading: boolean;
+  onReload: () => void;
+}) {
   const [edit, setEdit] = useState<UserRow | null>(null);
-  const [roleUser, setRoleUser] = useState<UserRow | null>(null);
-  const [del, setDel] = useState<number | null>(null);
+  const [delUser, setDelUser] = useState<UserRow | null>(null);
+  const [q, setQ] = useState("");
+
+  const filtered = useMemo(() => {
+    const s = q.trim().toLowerCase();
+    if (!s) return users;
+    return users.filter(
+      (u) =>
+        u.first_name.toLowerCase().includes(s) ||
+        u.last_name.toLowerCase().includes(s) ||
+        u.zawodnik.toLowerCase().includes(s) ||
+        String(u.id).includes(s)
+    );
+  }, [users, q]);
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-emerald-950">Uzytkownicy</h1>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Imie</TableHead>
-            <TableHead>Nazwisko</TableHead>
-            <TableHead>Zawodnik</TableHead>
-            <TableHead>Rola</TableHead>
-            <TableHead>Akcje</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {users.map((u) => (
-            <TableRow key={u.id}>
-              <TableCell>{u.first_name}</TableCell>
-              <TableCell>{u.last_name}</TableCell>
-              <TableCell>{u.zawodnik}</TableCell>
-              <TableCell>{u.role}</TableCell>
-              <TableCell className="space-x-2">
-                <Button size="sm" variant="secondary" onClick={() => setEdit(u)}>
-                  Edytuj
-                </Button>
-                <Button size="sm" variant="destructive" onClick={() => setDel(u.id)}>
-                  Usun
-                </Button>
-                <Button size="sm" variant="outline" onClick={() => setRoleUser(u)}>
-                  Rola
-                </Button>
-              </TableCell>
+      <Toolbar
+        title="Użytkownicy"
+        description="Edycja danych, rola administratora oraz usuwanie kont."
+        onReload={onReload}
+        loading={loading}
+      >
+        <div className="relative w-full min-w-[200px] sm:w-64">
+          <Search
+            className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400"
+            aria-hidden
+          />
+          <Input
+            className="border-zinc-200 bg-white pl-9"
+            placeholder="Szukaj…"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            aria-label="Filtruj użytkowników"
+          />
+        </div>
+      </Toolbar>
+
+      <div className="overflow-hidden rounded-xl border border-zinc-200/80 bg-white shadow-sm">
+        <Table>
+          <TableHeader>
+            <TableRow className="border-zinc-200 hover:bg-transparent">
+              <TableHead className="text-zinc-700">Imię</TableHead>
+              <TableHead className="text-zinc-700">Nazwisko</TableHead>
+              <TableHead className="text-zinc-700">Pseudonim</TableHead>
+              <TableHead className="text-zinc-700">Rola</TableHead>
+              <TableHead className="text-right text-zinc-700">Akcje</TableHead>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+          </TableHeader>
+          <TableBody>
+            {filtered.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={5} className="h-24 text-center text-sm text-zinc-500">
+                  {users.length === 0
+                    ? "Brak użytkowników w bazie."
+                    : "Brak wyników dla podanego filtra."}
+                </TableCell>
+              </TableRow>
+            ) : (
+              filtered.map((u) => (
+                <TableRow key={u.id} className="border-zinc-100">
+                  <TableCell className="font-medium">{u.first_name}</TableCell>
+                  <TableCell>{u.last_name}</TableCell>
+                  <TableCell>{u.zawodnik}</TableCell>
+                  <TableCell>
+                    {u.role === "admin" ? (
+                      <Badge>Administrator</Badge>
+                    ) : (
+                      <Badge variant="secondary">Gracz</Badge>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-2">
+                      <Button size="sm" variant="secondary" onClick={() => setEdit(u)}>
+                        Edytuj
+                      </Button>
+                      <Button size="sm" variant="destructive" onClick={() => setDelUser(u)}>
+                        Usuń
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
 
       <Dialog open={Boolean(edit)} onOpenChange={(o) => !o && setEdit(null)}>
-        <DialogContent>
+        <DialogContent className="border-zinc-200 sm:max-w-md">
           {edit && (
             <UserEditForm
               user={edit}
@@ -264,70 +543,39 @@ function UsersView({ users, onReload }: { users: UserRow[]; onReload: () => void
         </DialogContent>
       </Dialog>
 
-      <Dialog open={roleUser != null} onOpenChange={(o) => !o && setRoleUser(null)}>
-        <DialogContent>
+      <Dialog open={delUser != null} onOpenChange={(o) => !o && setDelUser(null)}>
+        <DialogContent className="border-zinc-200 sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Zmiana roli</DialogTitle>
+            <DialogTitle>Usunąć użytkownika?</DialogTitle>
           </DialogHeader>
-          {roleUser && (
-            <p className="text-sm">
-              Aktualna: <strong>{roleUser.role}</strong>
+          {delUser && (
+            <p className="text-sm text-zinc-600">
+              Konto{" "}
+              <strong>
+                {delUser.first_name} {delUser.last_name}
+              </strong>{" "}
+              ({delUser.zawodnik}, id {delUser.id}) zostanie trwale usunięte.
             </p>
           )}
-          <DialogFooter className="gap-2">
-            <Button
-              onClick={async () => {
-                if (!roleUser) return;
-                await fetch(API.userRole(roleUser.id), {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ role: "player" }),
-                });
-                setRoleUser(null);
-                onReload();
-              }}
-            >
-              Gracz
-            </Button>
-            <Button
-              variant="secondary"
-              onClick={async () => {
-                if (!roleUser) return;
-                await fetch(API.userRole(roleUser.id), {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ role: "admin" }),
-                });
-                setRoleUser(null);
-                onReload();
-              }}
-            >
-              Admin
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={del != null} onOpenChange={(o) => !o && setDel(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Usun uzytkownika</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm">Na pewno #{del}?</p>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDel(null)}>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setDelUser(null)}>
               Anuluj
             </Button>
             <Button
               variant="destructive"
               onClick={async () => {
-                if (del == null) return;
-                await fetch(API.user(del), { method: "DELETE" });
-                setDel(null);
+                if (delUser == null) return;
+                const res = await fetch(API.user(delUser.id), { method: "DELETE" });
+                if (!res.ok) {
+                  toast.error("Nie udało się usunąć użytkownika");
+                  return;
+                }
+                toast.success("Użytkownik został usunięty");
+                setDelUser(null);
                 onReload();
               }}
             >
-              Usun
+              Usuń
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -349,51 +597,80 @@ function UserEditForm({
   const [last_name, setLn] = useState(user.last_name);
   const [zawodnik, setZ] = useState(user.zawodnik);
   const [role, setRole] = useState(user.role);
+  const [saving, setSaving] = useState(false);
 
   return (
     <>
       <DialogHeader>
-        <DialogTitle>Edytuj uzytkownika</DialogTitle>
+        <DialogTitle>Edytuj użytkownika</DialogTitle>
       </DialogHeader>
       <div className="space-y-3 py-2">
         <div>
-          <Label>Imie</Label>
-          <Input className="mt-1" value={first_name} onChange={(e) => setFn(e.target.value)} />
+          <Label htmlFor="adm-fn">Imię</Label>
+          <Input
+            id="adm-fn"
+            className="mt-1 border-zinc-200"
+            value={first_name}
+            onChange={(e) => setFn(e.target.value)}
+          />
         </div>
         <div>
-          <Label>Nazwisko</Label>
-          <Input className="mt-1" value={last_name} onChange={(e) => setLn(e.target.value)} />
+          <Label htmlFor="adm-ln">Nazwisko</Label>
+          <Input
+            id="adm-ln"
+            className="mt-1 border-zinc-200"
+            value={last_name}
+            onChange={(e) => setLn(e.target.value)}
+          />
         </div>
         <div>
-          <Label>Zawodnik</Label>
-          <Input className="mt-1" value={zawodnik} onChange={(e) => setZ(e.target.value)} />
+          <Label htmlFor="adm-alias">Pseudonim zawodnika</Label>
+          <Input
+            id="adm-alias"
+            className="mt-1 border-zinc-200"
+            value={zawodnik}
+            onChange={(e) => setZ(e.target.value)}
+          />
         </div>
         <div>
           <Label>Rola</Label>
-          <select
-            className="mt-1 w-full rounded-md border border-emerald-200 p-2 text-sm"
-            value={role}
-            onChange={(e) => setRole(e.target.value)}
-          >
-            <option value="admin">admin</option>
-            <option value="player">gracz</option>
-          </select>
+          <Select value={role} onValueChange={setRole}>
+            <SelectTrigger className="mt-1 border-zinc-200">
+              <SelectValue placeholder="Wybierz rolę" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="admin">Administrator</SelectItem>
+              <SelectItem value="player">Gracz</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
-      <DialogFooter>
-        <Button variant="outline" onClick={onClose}>
+      <DialogFooter className="gap-2 sm:gap-0">
+        <Button variant="outline" onClick={onClose} disabled={saving}>
           Anuluj
         </Button>
         <Button
+          disabled={saving}
           onClick={async () => {
-            await fetch(API.user(user.id), {
-              method: "PUT",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ first_name, last_name, zawodnik, role }),
-            });
-            onSaved();
+            setSaving(true);
+            try {
+              const res = await fetch(API.user(user.id), {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ first_name, last_name, zawodnik, role }),
+              });
+              if (!res.ok) {
+                toast.error("Nie udało się zapisać zmian");
+                return;
+              }
+              toast.success("Zapisano dane użytkownika");
+              onSaved();
+            } finally {
+              setSaving(false);
+            }
           }}
         >
+          {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
           Zapisz
         </Button>
       </DialogFooter>
@@ -401,14 +678,38 @@ function UserEditForm({
   );
 }
 
-function MatchesView({ matches, onReload }: { matches: MatchRow[]; onReload: () => void }) {
+function MatchesView({
+  matches,
+  loading,
+  onReload,
+}: {
+  matches: MatchRow[];
+  loading: boolean;
+  onReload: () => void;
+}) {
   const [editId, setEditId] = useState<number | null>(null);
   const [editRow, setEditRow] = useState<MatchRow | null>(null);
-  const [delId, setDelId] = useState<number | null>(null);
+  const [delMatch, setDelMatch] = useState<MatchRow | null>(null);
+  const [q, setQ] = useState("");
+
+  const filtered = useMemo(() => {
+    const s = q.trim().toLowerCase();
+    if (!s) return matches;
+    return matches.filter(
+      (m) =>
+        m.location.toLowerCase().includes(s) ||
+        m.date.includes(s) ||
+        m.time.includes(s) ||
+        String(m.id).includes(s)
+    );
+  }, [matches, q]);
 
   async function openEdit(id: number) {
     const res = await fetch(API.match(id));
-    if (!res.ok) return;
+    if (!res.ok) {
+      toast.error("Nie udało się wczytać meczu");
+      return;
+    }
     const m = await res.json();
     setEditRow({
       id,
@@ -416,44 +717,87 @@ function MatchesView({ matches, onReload }: { matches: MatchRow[]; onReload: () 
       time: m.time,
       location: m.location,
       players_count: 0,
+      played: m.played ?? 0,
     });
     setEditId(id);
   }
 
   return (
     <div>
-      <h1 className="text-2xl font-bold">Mecze</h1>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>ID</TableHead>
-            <TableHead>Data</TableHead>
-            <TableHead>Godzina</TableHead>
-            <TableHead>Miejsce</TableHead>
-            <TableHead>Zapisani</TableHead>
-            <TableHead>Akcje</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {matches.map((m) => (
-            <TableRow key={m.id}>
-              <TableCell>{m.id}</TableCell>
-              <TableCell>{m.date}</TableCell>
-              <TableCell>{m.time}</TableCell>
-              <TableCell>{m.location}</TableCell>
-              <TableCell>{m.players_count}</TableCell>
-              <TableCell className="space-x-2">
-                <Button size="sm" variant="secondary" onClick={() => openEdit(m.id)}>
-                  Edytuj
-                </Button>
-                <Button size="sm" variant="destructive" onClick={() => setDelId(m.id)}>
-                  Usun
-                </Button>
-              </TableCell>
+      <Toolbar
+        title="Mecze"
+        description="Lista terminów — edycja daty, godziny i miejsca. Szczegóły zapisów w terminarzu."
+        onReload={onReload}
+        loading={loading}
+      >
+        <div className="relative w-full min-w-[200px] sm:w-64">
+          <Search
+            className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400"
+            aria-hidden
+          />
+          <Input
+            className="border-zinc-200 bg-white pl-9"
+            placeholder="Data, miejsce, id…"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            aria-label="Filtruj mecze"
+          />
+        </div>
+      </Toolbar>
+
+      <div className="overflow-hidden rounded-xl border border-zinc-200/80 bg-white shadow-sm">
+        <Table>
+          <TableHeader>
+            <TableRow className="border-zinc-200 hover:bg-transparent">
+              <TableHead className="w-14 text-zinc-600">ID</TableHead>
+              <TableHead className="text-zinc-700">Data</TableHead>
+              <TableHead className="text-zinc-700">Godzina</TableHead>
+              <TableHead className="text-zinc-700">Miejsce</TableHead>
+              <TableHead className="text-zinc-700">Zapisani</TableHead>
+              <TableHead className="text-zinc-700">Status</TableHead>
+              <TableHead className="text-right text-zinc-700">Akcje</TableHead>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+          </TableHeader>
+          <TableBody>
+            {filtered.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={7} className="h-24 text-center text-sm text-zinc-500">
+                  {matches.length === 0 ? "Brak meczów w bazie." : "Brak wyników dla podanego filtra."}
+                </TableCell>
+              </TableRow>
+            ) : (
+              filtered.map((m) => (
+                <TableRow key={m.id} className="border-zinc-100">
+                  <TableCell className="font-mono text-xs text-zinc-500">{m.id}</TableCell>
+                  <TableCell className="tabular-nums">{m.date}</TableCell>
+                  <TableCell className="tabular-nums">{m.time}</TableCell>
+                  <TableCell>{m.location}</TableCell>
+                  <TableCell>{m.players_count}</TableCell>
+                  <TableCell>
+                    {m.played ? (
+                      <Badge variant="outline" className="border-zinc-300 font-normal text-zinc-700">
+                        Rozegrany
+                      </Badge>
+                    ) : (
+                      <Badge variant="secondary">Zaplanowany</Badge>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-2">
+                      <Button size="sm" variant="secondary" onClick={() => openEdit(m.id)}>
+                        Edytuj
+                      </Button>
+                      <Button size="sm" variant="destructive" onClick={() => setDelMatch(m)}>
+                        Usuń
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
 
       <Dialog
         open={editId != null}
@@ -464,7 +808,7 @@ function MatchesView({ matches, onReload }: { matches: MatchRow[]; onReload: () 
           }
         }}
       >
-        <DialogContent>
+        <DialogContent className="border-zinc-200 sm:max-w-md">
           {editRow && (
             <MatchEditForm
               m={editRow}
@@ -482,25 +826,36 @@ function MatchesView({ matches, onReload }: { matches: MatchRow[]; onReload: () 
         </DialogContent>
       </Dialog>
 
-      <Dialog open={delId != null} onOpenChange={(o) => !o && setDelId(null)}>
-        <DialogContent>
+      <Dialog open={delMatch != null} onOpenChange={(o) => !o && setDelMatch(null)}>
+        <DialogContent className="border-zinc-200 sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Usun mecz</DialogTitle>
+            <DialogTitle>Usunąć mecz?</DialogTitle>
           </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDelId(null)}>
+          {delMatch && (
+            <p className="text-sm text-zinc-600">
+              Mecz <strong>{delMatch.date}</strong> o <strong>{delMatch.time}</strong>,{" "}
+              <strong>{delMatch.location}</strong> (id {delMatch.id}).
+            </p>
+          )}
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setDelMatch(null)}>
               Anuluj
             </Button>
             <Button
               variant="destructive"
               onClick={async () => {
-                if (delId == null) return;
-                await fetch(API.match(delId), { method: "DELETE" });
-                setDelId(null);
+                if (delMatch == null) return;
+                const res = await fetch(API.match(delMatch.id), { method: "DELETE" });
+                if (!res.ok) {
+                  toast.error("Nie udało się usunąć meczu");
+                  return;
+                }
+                toast.success("Mecz został usunięty");
+                setDelMatch(null);
                 onReload();
               }}
             >
-              Usun
+              Usuń
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -521,6 +876,8 @@ function MatchEditForm({
   const [date, setDate] = useState(m.date);
   const [time, setTime] = useState(m.time);
   const [location, setLoc] = useState(m.location);
+  const [saving, setSaving] = useState(false);
+
   return (
     <>
       <DialogHeader>
@@ -528,32 +885,61 @@ function MatchEditForm({
       </DialogHeader>
       <div className="space-y-3">
         <div>
-          <Label>Data</Label>
-          <Input type="date" className="mt-1" value={date} onChange={(e) => setDate(e.target.value)} />
+          <Label htmlFor="adm-md">Data</Label>
+          <Input
+            id="adm-md"
+            type="date"
+            className="mt-1 border-zinc-200"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+          />
         </div>
         <div>
-          <Label>Godzina</Label>
-          <Input type="time" className="mt-1" value={time} onChange={(e) => setTime(e.target.value)} />
+          <Label htmlFor="adm-mt">Godzina</Label>
+          <Input
+            id="adm-mt"
+            type="time"
+            className="mt-1 border-zinc-200"
+            value={time}
+            onChange={(e) => setTime(e.target.value)}
+          />
         </div>
         <div>
-          <Label>Lokalizacja</Label>
-          <Input className="mt-1" value={location} onChange={(e) => setLoc(e.target.value)} />
+          <Label htmlFor="adm-ml">Lokalizacja</Label>
+          <Input
+            id="adm-ml"
+            className="mt-1 border-zinc-200"
+            value={location}
+            onChange={(e) => setLoc(e.target.value)}
+          />
         </div>
       </div>
-      <DialogFooter>
-        <Button variant="outline" onClick={onClose}>
+      <DialogFooter className="gap-2 sm:gap-0">
+        <Button variant="outline" onClick={onClose} disabled={saving}>
           Anuluj
         </Button>
         <Button
+          disabled={saving}
           onClick={async () => {
-            await fetch(API.match(m.id), {
-              method: "PUT",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ date, time, location }),
-            });
-            onSaved();
+            setSaving(true);
+            try {
+              const res = await fetch(API.match(m.id), {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ date, time, location }),
+              });
+              if (!res.ok) {
+                toast.error("Nie udało się zapisać meczu");
+                return;
+              }
+              toast.success("Zapisano mecz");
+              onSaved();
+            } finally {
+              setSaving(false);
+            }
           }}
         >
+          {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
           Zapisz
         </Button>
       </DialogFooter>
@@ -561,44 +947,94 @@ function MatchEditForm({
   );
 }
 
-function StatsView({ stats, onReload }: { stats: StatRow[]; onReload: () => void }) {
+function StatsView({
+  stats,
+  loading,
+  onReload,
+}: {
+  stats: StatRow[];
+  loading: boolean;
+  onReload: () => void;
+}) {
   const [editId, setEditId] = useState<number | null>(null);
+  const [q, setQ] = useState("");
+
+  const filtered = useMemo(() => {
+    const s = q.trim().toLowerCase();
+    if (!s) return stats;
+    return stats.filter(
+      (st) =>
+        st.zawodnik.toLowerCase().includes(s) ||
+        String(st.match_id).includes(s) ||
+        String(st.id).includes(s)
+    );
+  }, [stats, q]);
 
   return (
     <div>
-      <h1 className="text-2xl font-bold">Statystyki (wpisy)</h1>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>ID</TableHead>
-            <TableHead>Zawodnik</TableHead>
-            <TableHead>Mecz</TableHead>
-            <TableHead>G</TableHead>
-            <TableHead>A</TableHead>
-            <TableHead>D</TableHead>
-            <TableHead>O</TableHead>
-            <TableHead></TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {stats.map((s) => (
-            <TableRow key={s.id}>
-              <TableCell>{s.id}</TableCell>
-              <TableCell>{s.zawodnik}</TableCell>
-              <TableCell>{s.match_id}</TableCell>
-              <TableCell>{s.goals}</TableCell>
-              <TableCell>{s.assists}</TableCell>
-              <TableCell>{s.distance}</TableCell>
-              <TableCell>{s.saves ?? 0}</TableCell>
-              <TableCell>
-                <Button size="sm" onClick={() => setEditId(s.id)}>
-                  Edytuj
-                </Button>
-              </TableCell>
+      <Toolbar
+        title="Statystyki"
+        description="Pojedyncze wpisy powiązane z meczem i zawodnikiem — edycja liczb."
+        onReload={onReload}
+        loading={loading}
+      >
+        <div className="relative w-full min-w-[200px] sm:w-64">
+          <Search
+            className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400"
+            aria-hidden
+          />
+          <Input
+            className="border-zinc-200 bg-white pl-9"
+            placeholder="Zawodnik, mecz, id…"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            aria-label="Filtruj statystyki"
+          />
+        </div>
+      </Toolbar>
+
+      <div className="overflow-x-auto overflow-y-hidden rounded-xl border border-zinc-200/80 bg-white shadow-sm">
+        <Table>
+          <TableHeader>
+            <TableRow className="border-zinc-200 hover:bg-transparent">
+              <TableHead className="w-14 text-zinc-600">ID</TableHead>
+              <TableHead className="text-zinc-700">Zawodnik</TableHead>
+              <TableHead className="text-zinc-700">Mecz</TableHead>
+              <TableHead className="text-zinc-700">Gole</TableHead>
+              <TableHead className="text-zinc-700">Asysty</TableHead>
+              <TableHead className="text-zinc-700">Dystans</TableHead>
+              <TableHead className="text-zinc-700">Obrony</TableHead>
+              <TableHead className="text-right text-zinc-700">Akcje</TableHead>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+          </TableHeader>
+          <TableBody>
+            {filtered.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={8} className="h-24 text-center text-sm text-zinc-500">
+                  {stats.length === 0 ? "Brak wpisów statystyk." : "Brak wyników dla podanego filtra."}
+                </TableCell>
+              </TableRow>
+            ) : (
+              filtered.map((s) => (
+                <TableRow key={s.id} className="border-zinc-100">
+                  <TableCell className="font-mono text-xs text-zinc-500">{s.id}</TableCell>
+                  <TableCell className="font-medium">{s.zawodnik}</TableCell>
+                  <TableCell className="tabular-nums">{s.match_id}</TableCell>
+                  <TableCell>{s.goals}</TableCell>
+                  <TableCell>{s.assists}</TableCell>
+                  <TableCell>{s.distance}</TableCell>
+                  <TableCell>{s.saves ?? 0}</TableCell>
+                  <TableCell className="text-right">
+                    <Button size="sm" variant="secondary" onClick={() => setEditId(s.id)}>
+                      Edytuj
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
 
       <StatEditDialog id={editId} onClose={() => setEditId(null)} onSaved={onReload} />
     </div>
@@ -618,12 +1054,16 @@ function StatEditDialog({
   const [assists, setA] = useState("0");
   const [distance, setD] = useState("0");
   const [saves, setS] = useState("0");
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (id == null) return;
-    (async () => {
+    void (async () => {
       const res = await fetch(API.stat(id));
-      if (!res.ok) return;
+      if (!res.ok) {
+        toast.error("Nie udało się wczytać statystyk");
+        return;
+      }
       const s = await res.json();
       setG(String(s.goals));
       setA(String(s.assists));
@@ -634,49 +1074,86 @@ function StatEditDialog({
 
   return (
     <Dialog open={id != null} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent>
+      <DialogContent className="border-zinc-200 sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Edytuj statystyki</DialogTitle>
         </DialogHeader>
-        <div className="grid gap-2">
+        <div className="grid gap-3">
           <div>
-            <Label>Gole</Label>
-            <Input type="number" className="mt-1" value={goals} onChange={(e) => setG(e.target.value)} />
+            <Label htmlFor="adm-sg">Gole</Label>
+            <Input
+              id="adm-sg"
+              type="number"
+              className="mt-1 border-zinc-200"
+              value={goals}
+              onChange={(e) => setG(e.target.value)}
+            />
           </div>
           <div>
-            <Label>Asysty</Label>
-            <Input type="number" className="mt-1" value={assists} onChange={(e) => setA(e.target.value)} />
+            <Label htmlFor="adm-sa">Asysty</Label>
+            <Input
+              id="adm-sa"
+              type="number"
+              className="mt-1 border-zinc-200"
+              value={assists}
+              onChange={(e) => setA(e.target.value)}
+            />
           </div>
           <div>
-            <Label>Dystans</Label>
-            <Input type="number" step={0.1} className="mt-1" value={distance} onChange={(e) => setD(e.target.value)} />
+            <Label htmlFor="adm-sd">Dystans</Label>
+            <Input
+              id="adm-sd"
+              type="number"
+              step={0.1}
+              className="mt-1 border-zinc-200"
+              value={distance}
+              onChange={(e) => setD(e.target.value)}
+            />
           </div>
           <div>
-            <Label>Obrony</Label>
-            <Input type="number" className="mt-1" value={saves} onChange={(e) => setS(e.target.value)} />
+            <Label htmlFor="adm-ss">Obrony</Label>
+            <Input
+              id="adm-ss"
+              type="number"
+              className="mt-1 border-zinc-200"
+              value={saves}
+              onChange={(e) => setS(e.target.value)}
+            />
           </div>
         </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
+        <DialogFooter className="gap-2 sm:gap-0">
+          <Button variant="outline" onClick={onClose} disabled={saving}>
             Anuluj
           </Button>
           <Button
+            disabled={saving}
             onClick={async () => {
               if (id == null) return;
-              await fetch(API.stat(id), {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  goals: Number(goals),
-                  assists: Number(assists),
-                  distance: Number(distance),
-                  saves: Number(saves),
-                }),
-              });
-              onClose();
-              onSaved();
+              setSaving(true);
+              try {
+                const res = await fetch(API.stat(id), {
+                  method: "PUT",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    goals: Number(goals),
+                    assists: Number(assists),
+                    distance: Number(distance),
+                    saves: Number(saves),
+                  }),
+                });
+                if (!res.ok) {
+                  toast.error("Nie udało się zapisać statystyk");
+                  return;
+                }
+                toast.success("Zapisano statystyki");
+                onClose();
+                onSaved();
+              } finally {
+                setSaving(false);
+              }
             }}
           >
+            {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
             Zapisz
           </Button>
         </DialogFooter>
