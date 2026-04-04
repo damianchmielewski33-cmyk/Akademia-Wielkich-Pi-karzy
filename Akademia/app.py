@@ -190,7 +190,7 @@ def admin_stats():
         SELECT s.id,
                u.player_alias AS zawodnik,
                s.match_id,
-               s.goals, s.assists, s.distance
+               s.goals, s.assists, s.distance, s.saves
         FROM match_stats s
         JOIN users u ON u.id = s.user_id
         ORDER BY s.id DESC
@@ -204,7 +204,7 @@ def admin_stats():
 def admin_stat(stat_id):
     conn = get_db()
     row = conn.execute("""
-        SELECT id, goals, assists, distance
+        SELECT id, goals, assists, distance, saves
         FROM match_stats WHERE id = ?
     """, (stat_id,)).fetchone()
     conn.close()
@@ -218,9 +218,15 @@ def admin_stat_edit(stat_id):
     conn = get_db()
     conn.execute("""
         UPDATE match_stats
-        SET goals = ?, assists = ?, distance = ?
+        SET goals = ?, assists = ?, distance = ?, saves = ?
         WHERE id = ?
-    """, (data["goals"], data["assists"], data["distance"], stat_id))
+    """, (
+        data["goals"],
+        data["assists"],
+        data["distance"],
+        int(data.get("saves", 0) or 0),
+        stat_id,
+    ))
     conn.commit()
     conn.close()
     return jsonify({"status": "ok"})
@@ -296,10 +302,17 @@ def init_db():
             goals INTEGER DEFAULT 0,
             assists INTEGER DEFAULT 0,
             distance REAL DEFAULT 0,
+            saves INTEGER NOT NULL DEFAULT 0,
             FOREIGN KEY(user_id) REFERENCES users(id),
             FOREIGN KEY(match_id) REFERENCES matches(id)
         )
     """)
+
+    cols = {row["name"] for row in conn.execute("PRAGMA table_info(match_stats)").fetchall()}
+    if "saves" not in cols:
+        conn.execute(
+            "ALTER TABLE match_stats ADD COLUMN saves INTEGER NOT NULL DEFAULT 0"
+        )
 
     conn.execute("""
         CREATE TABLE IF NOT EXISTS activity_log (
@@ -734,13 +747,14 @@ def stats_save():
     goals = request.form.get("goals", 0)
     assists = request.form.get("assists", 0)
     distance = request.form.get("distance", 0)
+    saves = request.form.get("saves", 0)
 
     conn = get_db()
 
     conn.execute("""
-        INSERT INTO match_stats (user_id, match_id, goals, assists, distance)
-        VALUES (?, ?, ?, ?, ?)
-    """, (user_id, match_id, goals, assists, distance))
+        INSERT INTO match_stats (user_id, match_id, goals, assists, distance, saves)
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, (user_id, match_id, goals, assists, distance, saves))
 
     conn.commit()
     conn.close()
@@ -763,7 +777,7 @@ def player_stats(user_id):
 
     stats = conn.execute("""
         SELECT m.match_date, m.match_time, m.location,
-               s.goals, s.assists, s.distance
+               s.goals, s.assists, s.distance, s.saves
         FROM match_stats s
         JOIN matches m ON m.id = s.match_id
         WHERE s.user_id = ?
@@ -775,6 +789,7 @@ def player_stats(user_id):
     total_goals = sum(s["goals"] for s in stats)
     total_assists = sum(s["assists"] for s in stats)
     total_distance = sum(s["distance"] for s in stats)
+    total_saves = sum(s["saves"] for s in stats)
 
     return jsonify({
         "first_name": user["first_name"],
@@ -784,6 +799,7 @@ def player_stats(user_id):
         "goals": total_goals,
         "assists": total_assists,
         "distance": total_distance,
+        "saves": total_saves,
         "games": [
             {
                 "date": s["match_date"],
@@ -791,7 +807,8 @@ def player_stats(user_id):
                 "location": s["location"],
                 "goals": s["goals"],
                 "assists": s["assists"],
-                "distance": s["distance"]
+                "distance": s["distance"],
+                "saves": s["saves"]
             }
             for s in stats
         ]

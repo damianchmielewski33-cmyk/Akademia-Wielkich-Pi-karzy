@@ -393,6 +393,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     <td>${s.goals}</td>
                     <td>${s.assists}</td>
                     <td>${s.distance}</td>
+                    <td>${s.saves ?? 0}</td>
                     <td>
                         <button class="btn btn-edit" data-action="edit-stat" data-id="${s.id}">Edytuj</button>
                     </td>
@@ -426,6 +427,9 @@ document.addEventListener("DOMContentLoaded", () => {
                     </label>
                     <label>Dystans
                         <input type="number" step="0.1" name="distance" value="${s.distance ?? 0}">
+                    </label>
+                    <label>Obronione strzały
+                        <input type="number" name="saves" value="${s.saves ?? 0}">
                     </label>
                     <div class="modal-actions">
                         <button type="button" class="btn" id="cancelEditStat">Anuluj</button>

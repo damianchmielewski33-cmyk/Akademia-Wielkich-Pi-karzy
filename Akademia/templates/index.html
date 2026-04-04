@@ -120,6 +120,12 @@
             <div class="tile-desc">Sprawdź Swoje Statystyki</div>
         </a>
 
+        <a href="/rankingi" class="tile">
+            <div class="tile-icon">🏆</div>
+            <div class="tile-title">Rankingi</div>
+            <div class="tile-desc">Gole, dystans, asysty, obrony i punkty</div>
+        </a>
+
         {% if not session.user_id %}
         <a href="/login" class="tile">
             <div class="tile-icon">🔐</div>
@@ -217,6 +223,9 @@
 
             <label class="stats-label">🏃 Dystans (km)</label>
             <input class="stats-input" type="number" step="0.1" name="distance" min="0">
+
+            <label class="stats-label">🧤 Obronione strzały</label>
+            <input class="stats-input" type="number" name="saves" min="0" value="0">
 
             <button type="button" onclick="saveStats()" class="stats-btn">
                 💾 Zapisz statystyki

@@ -107,9 +107,15 @@
 
         .user-summary {
             display: flex;
-            justify-content: space-between;
+            flex-wrap: wrap;
+            justify-content: center;
             gap: 20px;
             margin-bottom: 40px;
+        }
+
+        .user-summary .stat-card {
+            flex: 1 1 140px;
+            min-width: 120px;
         }
     </style>
 </head>
@@ -169,6 +175,11 @@
             <p>{{ "%.1f"|format(user_stats | sum(attribute='distance')) }}</p>
         </div>
 
+        <div class="stat-card">
+            <h3>Obronione strzały</h3>
+            <p>{{ user_stats | sum(attribute='saves') }}</p>
+        </div>
+
     </div>
 
     <h2>📅 Twoje mecze</h2>
@@ -182,6 +193,7 @@
             <th>Gole</th>
             <th>Asysty</th>
             <th>Dystans (km)</th>
+            <th>Obrony</th>
         </tr>
 
         {% for s in user_stats %}
@@ -192,6 +204,7 @@
             <td>{{ s.goals }}</td>
             <td>{{ s.assists }}</td>
             <td>{{ "%.1f"|format(s.distance) }}</td>
+            <td>{{ s.saves }}</td>
         </tr>
         {% endfor %}
     </table>
