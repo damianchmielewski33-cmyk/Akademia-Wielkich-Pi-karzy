@@ -7,6 +7,7 @@ import {
   ArrowLeft,
   Calendar,
   LayoutDashboard,
+  LayoutGrid,
   Loader2,
   LogOut,
   RefreshCw,
@@ -36,6 +37,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { MatchLineupAdmin } from "@/components/match-lineup-admin";
 import { cn } from "@/lib/utils";
 
 const API = {
@@ -88,6 +90,7 @@ const tabs = [
   { id: "dashboard", label: "Przegląd", icon: LayoutDashboard },
   { id: "users", label: "Użytkownicy", icon: Users },
   { id: "matches", label: "Mecze", icon: Calendar },
+  { id: "lineups", label: "Składy na mecz", icon: LayoutGrid },
   { id: "stats", label: "Statystyki", icon: Table2 },
 ] as const;
 
@@ -166,6 +169,7 @@ export function AdminPanel() {
     if (tab === "users") void loadUsers();
     if (tab === "matches") void loadMatches();
     if (tab === "stats") void loadStats();
+    if (tab === "lineups") setLoading(false);
   }, [tab, loadDashboard, loadUsers, loadMatches, loadStats]);
 
   return (
@@ -262,6 +266,7 @@ export function AdminPanel() {
             )}
             {tab === "users" && <UsersView users={users} loading={loading} onReload={loadUsers} />}
             {tab === "matches" && <MatchesView matches={matches} loading={loading} onReload={loadMatches} />}
+            {tab === "lineups" && <MatchLineupAdmin />}
             {tab === "stats" && <StatsView stats={stats} loading={loading} onReload={loadStats} />}
           </div>
         </main>

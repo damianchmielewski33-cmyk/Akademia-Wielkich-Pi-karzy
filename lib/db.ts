@@ -61,6 +61,16 @@ function initSchema(db: Database.Database) {
       timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY(user_id) REFERENCES users(id)
     );
+
+    CREATE TABLE IF NOT EXISTS match_lineup_slots (
+      match_id INTEGER NOT NULL,
+      team TEXT NOT NULL CHECK (team IN ('home', 'away')),
+      slot_index INTEGER NOT NULL CHECK (slot_index >= 0 AND slot_index <= 6),
+      user_id INTEGER NOT NULL,
+      PRIMARY KEY (match_id, team, slot_index),
+      FOREIGN KEY (match_id) REFERENCES matches(id) ON DELETE CASCADE,
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    );
   `);
 
   const cols = db.prepare("PRAGMA table_info(match_stats)").all() as { name: string }[];
