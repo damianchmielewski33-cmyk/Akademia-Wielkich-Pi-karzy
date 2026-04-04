@@ -20,9 +20,12 @@ export default async function HomePage() {
     userSigned = Boolean(signup);
   }
 
+  const lineupPublicNextMatch = Boolean(nextMatch && nextMatch.lineup_public === 1);
+
   return (
     <HomeClient
       nextMatch={nextMatch ?? null}
+      lineupPublicNextMatch={lineupPublicNextMatch}
       userSigned={userSigned}
       isLoggedIn={Boolean(session)}
       isAdmin={session?.isAdmin ?? false}

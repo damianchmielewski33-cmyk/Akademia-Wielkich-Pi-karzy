@@ -9,6 +9,7 @@ import {
   Activity,
   CalendarDays,
   ChevronRight,
+  LayoutGrid,
   LogIn,
   LogOut,
   Shield,
@@ -31,6 +32,7 @@ import type { MatchRow } from "@/lib/db";
 
 type Props = {
   nextMatch: MatchRow | null;
+  lineupPublicNextMatch: boolean;
   userSigned: boolean;
   isLoggedIn: boolean;
   isAdmin: boolean;
@@ -40,6 +42,7 @@ type Props = {
 
 export function HomeClient({
   nextMatch,
+  lineupPublicNextMatch,
   userSigned,
   isLoggedIn,
   isAdmin,
@@ -214,6 +217,36 @@ export function HomeClient({
                   <Link href="/login">Zaloguj się, aby się zapisać</Link>
                 </Button>
               )}
+              <div className="mt-4 border-t border-white/20 pt-4">
+                {lineupPublicNextMatch ? (
+                  <Button
+                    className="w-full border-0 bg-emerald-100 font-semibold text-emerald-950 shadow-md hover:bg-white"
+                    asChild
+                  >
+                    <Link href="/sklady" className="inline-flex items-center justify-center gap-2">
+                      <LayoutGrid className="h-4 w-4 shrink-0" aria-hidden />
+                      Zobacz składy na mecz
+                    </Link>
+                  </Button>
+                ) : (
+                  <div className="space-y-2">
+                    <Button
+                      type="button"
+                      disabled
+                      className="w-full cursor-not-allowed border border-white/25 bg-white/10 font-semibold text-white/70 opacity-80"
+                      title="Administrator musi najpierw udostępnić składy w panelu admina."
+                    >
+                      <span className="inline-flex items-center justify-center gap-2">
+                        <LayoutGrid className="h-4 w-4 shrink-0 opacity-70" aria-hidden />
+                        Składy na mecz
+                      </span>
+                    </Button>
+                    <p className="text-center text-xs text-emerald-100/85">
+                      Przycisk będzie aktywny, gdy administrator udostępni składy.
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}

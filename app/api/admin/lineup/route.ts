@@ -22,6 +22,7 @@ type MatchListRow = {
   match_date: string;
   match_time: string;
   location: string;
+  lineup_public: number;
 };
 
 export async function GET(req: Request) {
@@ -37,7 +38,7 @@ export async function GET(req: Request) {
 
   const matchList = db
     .prepare(
-      `SELECT id, match_date, match_time, location
+      `SELECT id, match_date, match_time, location, lineup_public
        FROM matches
        WHERE played = 0 AND match_date >= ?
        ORDER BY match_date ASC, match_time ASC`
@@ -56,6 +57,7 @@ export async function GET(req: Request) {
         date: m.match_date,
         time: m.match_time,
         location: m.location,
+        lineupPublic: m.lineup_public === 1,
       })),
       selectedMatchId: null,
       match: null,
@@ -114,6 +116,7 @@ export async function GET(req: Request) {
       date: m.match_date,
       time: m.match_time,
       location: m.location,
+      lineupPublic: m.lineup_public === 1,
     })),
     selectedMatchId: selected.id,
     match: {
@@ -121,6 +124,7 @@ export async function GET(req: Request) {
       date: selected.match_date,
       time: selected.match_time,
       location: selected.location,
+      lineupPublic: selected.lineup_public === 1,
     },
     players,
     home,

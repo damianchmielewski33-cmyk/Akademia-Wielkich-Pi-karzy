@@ -77,6 +77,11 @@ function initSchema(db: Database.Database) {
   if (!cols.some((c) => c.name === "saves")) {
     db.exec("ALTER TABLE match_stats ADD COLUMN saves INTEGER NOT NULL DEFAULT 0");
   }
+
+  const matchCols = db.prepare("PRAGMA table_info(matches)").all() as { name: string }[];
+  if (!matchCols.some((c) => c.name === "lineup_public")) {
+    db.exec("ALTER TABLE matches ADD COLUMN lineup_public INTEGER NOT NULL DEFAULT 0");
+  }
 }
 
 export function getDb(): Database.Database {
@@ -110,4 +115,5 @@ export type MatchRow = {
   max_slots: number;
   signed_up: number;
   played: number;
+  lineup_public: number;
 };

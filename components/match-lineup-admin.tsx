@@ -13,34 +13,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { SLOT_STYLE_AWAY, SLOT_STYLE_HOME } from "@/lib/match-lineup-layout";
 
-type MatchOpt = { id: number; date: string; time: string; location: string };
+type MatchOpt = { id: number; date: string; time: string; location: string; lineupPublic: boolean };
 type Player = { userId: number; displayName: string; zawodnik: string; initials: string };
 
 type LineupState = { home: (number | null)[]; away: (number | null)[] };
 
 const MIME = "application/x-awp-user";
-
-/** Pozycje 7 pól w obrębie połowy boiska (procenty względem kontenera drużyny). */
-const SLOT_STYLE_AWAY: { top: string; left: string }[] = [
-  { top: "76%", left: "50%" },
-  { top: "58%", left: "18%" },
-  { top: "58%", left: "50%" },
-  { top: "58%", left: "82%" },
-  { top: "36%", left: "28%" },
-  { top: "36%", left: "72%" },
-  { top: "14%", left: "50%" },
-];
-
-const SLOT_STYLE_HOME: { top: string; left: string }[] = [
-  { top: "24%", left: "50%" },
-  { top: "42%", left: "18%" },
-  { top: "42%", left: "50%" },
-  { top: "42%", left: "82%" },
-  { top: "64%", left: "28%" },
-  { top: "64%", left: "72%" },
-  { top: "86%", left: "50%" },
-];
 
 function Toolbar({
   title,
@@ -82,6 +62,8 @@ export function MatchLineupAdmin() {
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [lineupPublic, setLineupPublic] = useState(false);
+  const [publishSaving, setPublishSaving] = useState(false);
   const everLoaded = useRef(false);
 
   const playerById = useMemo(() => {
@@ -108,6 +90,7 @@ export function MatchLineupAdmin() {
       setMatches(data.matches);
       setSelectedId(data.selectedMatchId);
       setMatchInfo(data.match);
+      setLineupPublic(data.match?.lineupPublic ?? false);
       setPlayers(data.players);
       setLineup({
         home: [...data.home],
@@ -124,6 +107,37 @@ export function MatchLineupAdmin() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  const togglePublish = useCallback(
+    async (published: boolean) => {
+      if (selectedId == null) return;
+      setPublishSaving(true);
+      try {
+        const res = await fetch("/api/admin/lineup/publish", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ match_id: selectedId, published }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          toast.error(typeof data.error === "string" ? data.error : "Nie zapisano widoczności");
+          return;
+        }
+        setLineupPublic(published);
+        setMatches((prev) =>
+          prev.map((m) => (m.id === selectedId ? { ...m, lineupPublic: published } : m))
+        );
+        toast.success(
+          published ? "Składy widoczne na stronie głównej" : "Składy ukryte na stronie głównej"
+        );
+      } catch {
+        toast.error("Nie zapisano widoczności");
+      } finally {
+        setPublishSaving(false);
+      }
+    },
+    [selectedId]
+  );
 
   const assignToSlot = useCallback((team: "home" | "away", slotIndex: number, userId: number) => {
     setLineup((prev) => {
@@ -227,6 +241,25 @@ export function MatchLineupAdmin() {
         </Card>
       ) : (
         <div className="space-y-6">
+          <div className="flex flex-col gap-3 rounded-xl border border-zinc-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-semibold text-zinc-900">Widoczność na stronie głównej</p>
+              <p className="mt-0.5 text-xs text-zinc-600">
+                Przycisk „Zobacz składy na mecz” jest aktywny dopiero po udostępnieniu.
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant={lineupPublic ? "outline" : "default"}
+              className="shrink-0"
+              disabled={publishSaving || selectedId == null}
+              onClick={() => void togglePublish(!lineupPublic)}
+            >
+              {publishSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
+              {lineupPublic ? "Ukryj przed zawodnikami" : "Udostępnij na stronie głównej"}
+            </Button>
+          </div>
+
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div className="space-y-2">
               <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">Mecz</p>
@@ -238,6 +271,7 @@ export function MatchLineupAdmin() {
                   {matches.map((m) => (
                     <SelectItem key={m.id} value={String(m.id)}>
                       {m.date} · {m.time} — {m.location}
+                      {m.lineupPublic ? " · widoczne" : ""}
                     </SelectItem>
                   ))}
                 </SelectContent>
