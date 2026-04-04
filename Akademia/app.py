@@ -61,7 +61,7 @@ def admin_activity():
 def admin_users():
     conn = get_db()
     rows = conn.execute("""
-        SELECT id, first_name, last_name, player_alias,
+        SELECT id, first_name, last_name, player_alias AS zawodnik,
                CASE WHEN is_admin = 1 THEN 'admin' ELSE 'player' END AS role
         FROM users
         ORDER BY first_name
@@ -75,7 +75,7 @@ def admin_users():
 def admin_user(user_id):
     conn = get_db()
     row = conn.execute("""
-        SELECT id, first_name, last_name, player_alias,
+        SELECT id, first_name, last_name, player_alias AS zawodnik,
                CASE WHEN is_admin = 1 THEN 'admin' ELSE 'player' END AS role
         FROM users WHERE id = ?
     """, (user_id,)).fetchone()
@@ -95,7 +95,7 @@ def admin_user_edit(user_id):
     """, (
         data["first_name"],
         data["last_name"],
-        data["player_alias"],
+        data["zawodnik"],
         1 if data["role"] == "admin" else 0,
         user_id
     ))
@@ -188,7 +188,7 @@ def admin_stats():
     conn = get_db()
     rows = conn.execute("""
         SELECT s.id,
-               u.player_alias AS player_name,
+               u.player_alias AS zawodnik,
                s.match_id,
                s.goals, s.assists, s.distance
         FROM match_stats s
@@ -353,21 +353,21 @@ def register():
     count = conn.execute("SELECT COUNT(*) AS c FROM users").fetchone()["c"]
     is_admin = 1 if count == 0 else 0
 
-    used_aliases_rows = conn.execute("SELECT player_alias FROM users").fetchall()
-    used_aliases = {row["player_alias"] for row in used_aliases_rows}
-    available_players = [p for p in ALL_PLAYERS if p not in used_aliases]
+    zajeci_zawodnicy_rows = conn.execute("SELECT player_alias FROM users").fetchall()
+    zajeci_zawodnicy = {row["player_alias"] for row in zajeci_zawodnicy_rows}
+    available_players = [p for p in ALL_PLAYERS if p not in zajeci_zawodnicy]
 
     if request.method == "POST":
         first_name = request.form["first_name"].strip()
         last_name = request.form["last_name"].strip()
-        player_alias = request.form["player_alias"].strip()
+        wybrany_zawodnik = request.form["zawodnik"].strip()
 
-        if not first_name or not last_name or not player_alias:
+        if not first_name or not last_name or not wybrany_zawodnik:
             conn.close()
             return render_template("register.html", available_players=available_players,
                                    error="Wszystkie pola są wymagane.")
 
-        if player_alias not in available_players:
+        if wybrany_zawodnik not in available_players:
             conn.close()
             return render_template("register.html", available_players=available_players,
                                    error="Ten piłkarz jest już zajęty lub nieprawidłowy.")
@@ -375,7 +375,7 @@ def register():
         try:
             cursor = conn.execute(
                 "INSERT INTO users (first_name, last_name, player_alias, is_admin) VALUES (?, ?, ?, ?)",
-                (first_name, last_name, player_alias, is_admin)
+                (first_name, last_name, wybrany_zawodnik, is_admin)
             )
             conn.commit()
 
@@ -401,36 +401,37 @@ def register():
 @app.route("/login", methods=["GET", "POST"])
 def login():
     conn = get_db()
-    used_aliases_rows = conn.execute("SELECT player_alias FROM users").fetchall()
-    used_aliases = [row["player_alias"] for row in used_aliases_rows]
+    zajeci_zawodnicy_rows = conn.execute("SELECT player_alias FROM users").fetchall()
+    zajeci_zawodnicy = [row["player_alias"] for row in zajeci_zawodnicy_rows]
 
     if request.method == "POST":
         first_name = request.form["first_name"].strip()
         last_name = request.form["last_name"].strip()
-        player_alias = request.form["player_alias"].strip()
+        wybrany_zawodnik = request.form["zawodnik"].strip()
 
         user = conn.execute(
             "SELECT * FROM users WHERE first_name = ? AND last_name = ? AND player_alias = ?",
-            (first_name, last_name, player_alias)
+            (first_name, last_name, wybrany_zawodnik)
         ).fetchone()
 
         if user is None:
             conn.close()
             return render_template("login.html",
                                    error="Nieprawidłowe dane logowania mordo",
-                                   used_players=used_aliases)
+                                   zarejestrowani_zawodnicy=zajeci_zawodnicy)
 
         session["user_id"] = user["id"]
         session["first_name"] = user["first_name"]
         session["last_name"] = user["last_name"]
-        session["player_alias"] = user["player_alias"]
+        session["zawodnik"] = user["player_alias"]
+        session.pop("player_alias", None)
         session["is_admin"] = user["is_admin"]
 
         conn.close()
         return redirect("/")
 
     conn.close()
-    return render_template("login.html", used_players=used_aliases)
+    return render_template("login.html", zarejestrowani_zawodnicy=zajeci_zawodnicy)
 
 
 @app.route("/logout")
@@ -452,7 +453,7 @@ def terminarz():
     matches = conn.execute("SELECT * FROM matches ORDER BY match_date ASC, match_time ASC").fetchall()
 
     signups = conn.execute("""
-        SELECT ms.match_id, ms.paid, u.first_name, u.last_name, u.player_alias
+        SELECT ms.match_id, ms.paid, u.first_name, u.last_name, u.player_alias AS zawodnik
         FROM match_signups ms
         JOIN users u ON u.id = ms.user_id
         ORDER BY u.first_name ASC
@@ -466,8 +467,9 @@ def terminarz():
 
     user_signed = {}
     if "user_id" in session:
+        moj_zawodnik = session.get("zawodnik") or session.get("player_alias")
         for s in signups:
-            if s["player_alias"] == session["player_alias"]:
+            if s["zawodnik"] == moj_zawodnik:
                 user_signed[s["match_id"]] = True
 
     players_data = {}
@@ -485,7 +487,7 @@ def terminarz():
             plist.append(
                 {
                     "name": f"{fn} {ln}".strip(),
-                    "alias": p["player_alias"] or "",
+                    "zawodnik": p["zawodnik"] or "",
                     "initials": initials,
                     "paid": p["paid"],
                 }
@@ -588,7 +590,7 @@ def terminarz_edit():
 def pilkarze():
     conn = get_db()
     gracze = conn.execute("""
-        SELECT id, first_name, last_name, player_alias
+        SELECT id, first_name, last_name, player_alias AS zawodnik
         FROM users
         ORDER BY first_name ASC
     """).fetchall()
@@ -777,7 +779,7 @@ def player_stats(user_id):
     return jsonify({
         "first_name": user["first_name"],
         "last_name": user["last_name"],
-        "player_alias": user["player_alias"],
+        "zawodnik": user["player_alias"],
         "matches": len(stats),
         "goals": total_goals,
         "assists": total_assists,

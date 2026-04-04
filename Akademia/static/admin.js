@@ -135,7 +135,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 tr.innerHTML = `
                     <td>${u.first_name}</td>
                     <td>${u.last_name}</td>
-                    <td>${u.player_alias ?? ""}</td>
+                    <td>${u.zawodnik ?? ""}</td>
                     <td>${u.role ?? ""}</td>
                     <td>
                         <button class="btn btn-edit" data-action="edit-user" data-id="${u.id}">Edytuj</button>
@@ -172,8 +172,8 @@ document.addEventListener("DOMContentLoaded", () => {
                     <label>Nazwisko
                         <input type="text" name="last_name" value="${u.last_name ?? ""}">
                     </label>
-                    <label>Alias
-                        <input type="text" name="player_alias" value="${u.player_alias ?? ""}">
+                    <label>Zawodnik
+                        <input type="text" name="zawodnik" value="${u.zawodnik ?? ""}">
                     </label>
                     <label>Rola
                         <select name="role">
@@ -388,7 +388,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 const tr = document.createElement("tr");
                 tr.innerHTML = `
                     <td>${s.id}</td>
-                    <td>${s.player_name ?? ""}</td>
+                    <td>${s.zawodnik ?? ""}</td>
                     <td>${s.match_id ?? ""}</td>
                     <td>${s.goals}</td>
                     <td>${s.assists}</td>

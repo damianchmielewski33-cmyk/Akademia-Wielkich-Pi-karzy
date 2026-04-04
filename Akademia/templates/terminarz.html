@@ -1005,7 +1005,7 @@
             list.innerHTML = data.players.map(p => `
                 <li>
                     <span class="avatar">${p.initials}</span>
-                    ${p.name} (${p.alias})
+                    ${p.name} (${p.zawodnik})
                     ${p.paid ? '<span style="color:lime;">💰 opłacone</span>' : '<span style="color:orange;">⏳ do zapłaty</span>'}
                 </li>
             `).join("");

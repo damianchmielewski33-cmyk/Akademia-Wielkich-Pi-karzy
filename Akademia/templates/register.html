@@ -24,6 +24,7 @@
             inset: 0;
             background: linear-gradient(180deg, rgba(240, 250, 245, 0.75), rgba(215, 235, 220, 0.82));
             z-index: -1;
+            pointer-events: none;
         }
         .container {
             background: rgba(255, 255, 255, 0.94);
@@ -103,7 +104,7 @@
         <input type="text" name="first_name" placeholder="Imię" required>
         <input type="text" name="last_name" placeholder="Nazwisko" required>
 
-        <select name="player_alias" required>
+        <select name="zawodnik" required>
             <option value="">Wybierz swojego piłkarza</option>
             {% for p in available_players %}
             <option value="{{ p }}">{{ p }}</option>
