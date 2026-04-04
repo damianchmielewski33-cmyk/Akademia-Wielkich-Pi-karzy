@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getDb, logActivity } from "@/lib/db";
 import { ALL_PLAYERS } from "@/lib/constants";
+import { createSessionToken, setSessionCookie } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
@@ -9,6 +10,7 @@ const bodySchema = z.object({
   first_name: z.string().min(1).trim(),
   last_name: z.string().min(1).trim(),
   zawodnik: z.string().min(1).trim(),
+  auto_login: z.boolean().optional(),
 });
 
 export async function POST(req: Request) {
@@ -22,7 +24,7 @@ export async function POST(req: Request) {
   if (!parsed.success) {
     return NextResponse.json({ error: "Wszystkie pola są wymagane." }, { status: 400 });
   }
-  const { first_name, last_name, zawodnik } = parsed.data;
+  const { first_name, last_name, zawodnik, auto_login } = parsed.data;
 
   const db = getDb();
   const count = (db.prepare("SELECT COUNT(*) AS c FROM users").get() as { c: number }).c;
@@ -45,10 +47,36 @@ export async function POST(req: Request) {
         "INSERT INTO users (first_name, last_name, player_alias, is_admin) VALUES (?, ?, ?, ?)"
       )
       .run(first_name, last_name, zawodnik, isAdmin);
-    logActivity(Number(r.lastInsertRowid), "Utworzył konto");
+    const userId = Number(r.lastInsertRowid);
+    logActivity(userId, "Utworzył konto");
+
+    if (auto_login) {
+      const token = await createSessionToken({
+        userId,
+        isAdmin: isAdmin === 1,
+        firstName: first_name,
+        lastName: last_name,
+        zawodnik,
+      });
+      await setSessionCookie(token);
+      return NextResponse.json(
+        {
+          ok: true,
+          logged_in: true,
+          user: {
+            id: userId,
+            first_name,
+            last_name,
+            zawodnik,
+            is_admin: isAdmin,
+          },
+        },
+        { status: 201 }
+      );
+    }
   } catch {
     return NextResponse.json({ error: "Ten piłkarz jest już zajęty." }, { status: 409 });
   }
 
-  return NextResponse.json({ ok: true }, { status: 201 });
+  return NextResponse.json({ ok: true, logged_in: false }, { status: 201 });
 }

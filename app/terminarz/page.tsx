@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { getDb, type MatchRow } from "@/lib/db";
 import { getServerSession } from "@/lib/auth";
 import {
@@ -30,7 +29,7 @@ export default async function TerminarzPage() {
   const { upcoming, afterDate, playedConfirmed } = categorizeMatches(matches);
 
   return (
-    <div className="container mx-auto max-w-6xl px-4 py-8">
+    <div className="container mx-auto max-w-6xl flex-1 px-4 py-8">
       <TerminarzClient
         upcoming={upcoming}
         afterDate={afterDate}
@@ -41,12 +40,6 @@ export default async function TerminarzPage() {
         isLoggedIn={Boolean(session)}
         isAdmin={session?.isAdmin ?? false}
       />
-      <Link
-        href="/"
-        className="mt-10 block text-center text-emerald-700 hover:underline"
-      >
-        Powrot na strone glowna
-      </Link>
     </div>
   );
 }

@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { getDb } from "@/lib/db";
 import { PilkarzeClient } from "@/components/pilkarze-client";
 
@@ -11,18 +10,11 @@ export default async function PilkarzePage() {
     .all() as { id: number; first_name: string; last_name: string; zawodnik: string }[];
 
   return (
-    <div className="container mx-auto max-w-5xl px-4 py-10">
-      <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-4xl font-light text-emerald-950">Pilkarze</h1>
-          <p className="mt-1 text-emerald-800/70">Wszyscy zarejestrowani zawodnicy</p>
-        </div>
-        <Link
-          href="/"
-          className="rounded-xl border border-emerald-200 bg-white px-4 py-2 text-sm font-semibold text-emerald-800 shadow-sm hover:bg-emerald-50"
-        >
-          Strona glowna
-        </Link>
+    <div className="container mx-auto max-w-5xl flex-1 px-4 py-10">
+      <div className="mb-8">
+        <div className="pitch-rule mb-4 w-32" />
+        <h1 className="text-3xl font-bold tracking-tight text-zinc-900 sm:text-4xl">Piłkarze</h1>
+        <p className="mt-2 text-zinc-600">Wszyscy zarejestrowani zawodnicy akademii</p>
       </div>
       <PilkarzeClient players={gracze} />
     </div>

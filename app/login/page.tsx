@@ -13,9 +13,10 @@ export default async function LoginPage({ searchParams }: Props) {
   const aliases = rows.map((r) => r.player_alias);
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-4">
-      <div className="w-full max-w-md rounded-2xl border border-emerald-100 bg-white/95 p-8 shadow-lg backdrop-blur">
-        <h1 className="text-center text-3xl font-light text-emerald-950">🔐 Logowanie</h1>
+    <div className="flex flex-1 flex-col items-center justify-center p-4 py-12">
+      <div className="w-full max-w-md rounded-2xl border border-zinc-200/80 bg-white p-8 shadow-sm">
+        <h1 className="text-center text-2xl font-bold tracking-tight text-zinc-900">Logowanie</h1>
+        <p className="mt-2 text-center text-sm text-zinc-600">Wpisz dane i wybierz swojego zawodnika</p>
         <LoginForm aliases={aliases} nextPath={nextPath && nextPath.startsWith("/") ? nextPath : "/"} />
         <div className="mt-6 space-y-2 text-center text-sm">
           <Link href="/register" className="block font-medium text-emerald-700 hover:underline">

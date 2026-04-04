@@ -30,7 +30,7 @@ export function ConfirmPlayedClient({ matchId }: { matchId: string }) {
   }, [matchId, router]);
 
   return (
-    <div className="flex min-h-[40vh] items-center justify-center p-6">
+    <div className="flex flex-1 min-h-[50vh] items-center justify-center p-6">
       <Card className="max-w-md">
         <CardHeader>
           <CardTitle>Potwierdzanie rozegrania</CardTitle>

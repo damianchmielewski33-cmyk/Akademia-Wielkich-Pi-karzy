@@ -19,6 +19,7 @@ export function RegisterForm({ availablePlayers }: { availablePlayers: string[] 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [zawodnik, setZawodnik] = useState("");
+  const [autoLogin, setAutoLogin] = useState(true);
   const [loading, setLoading] = useState(false);
 
   async function onSubmit(e: React.FormEvent) {
@@ -32,6 +33,7 @@ export function RegisterForm({ availablePlayers }: { availablePlayers: string[] 
           first_name: firstName,
           last_name: lastName,
           zawodnik,
+          auto_login: autoLogin,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -39,8 +41,14 @@ export function RegisterForm({ availablePlayers }: { availablePlayers: string[] 
         toast.error(typeof data.error === "string" ? data.error : "Błąd rejestracji");
         return;
       }
-      toast.success("Konto utworzone — zaloguj się");
-      router.push("/login");
+      if (data.logged_in) {
+        toast.success("Konto utworzone — jesteś zalogowany");
+        router.push("/");
+        router.refresh();
+      } else {
+        toast.success("Konto utworzone — zaloguj się");
+        router.push("/login");
+      }
     } finally {
       setLoading(false);
     }
@@ -84,6 +92,18 @@ export function RegisterForm({ availablePlayers }: { availablePlayers: string[] 
             ))}
           </SelectContent>
         </Select>
+      </div>
+      <div className="flex items-start gap-3 pt-1">
+        <input
+          id="reg_auto_login"
+          type="checkbox"
+          checked={autoLogin}
+          onChange={(e) => setAutoLogin(e.target.checked)}
+          className="mt-1 h-4 w-4 rounded border border-zinc-300 text-emerald-600 focus:ring-2 focus:ring-emerald-500/30"
+        />
+        <Label htmlFor="reg_auto_login" className="cursor-pointer font-normal leading-snug text-zinc-700">
+          Zaloguj mnie automatycznie po rejestracji
+        </Label>
       </div>
       <Button type="submit" className="w-full" disabled={loading || availablePlayers.length === 0}>
         {loading ? "Tworzenie…" : "Załóż konto"}

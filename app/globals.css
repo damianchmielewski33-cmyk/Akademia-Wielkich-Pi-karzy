@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f0faf4;
-  --foreground: #0f2918;
+  --background: #f4faf7;
+  --foreground: #0f172a;
 }
 
 @theme inline {
@@ -18,12 +18,60 @@ body {
   min-height: 100vh;
 }
 
+/* Tło w stylu murawy: pasy boiska + delikatny blask */
 .murawa-bg {
-  background-image: linear-gradient(
-      180deg,
-      rgba(248, 252, 249, 0.94),
-      rgba(228, 240, 232, 0.96)
+  background-color: #f4faf7;
+  background-image:
+    linear-gradient(180deg, rgba(248, 252, 249, 0.97) 0%, rgba(232, 244, 236, 0.98) 100%),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 52px,
+      rgba(5, 105, 67, 0.045) 52px,
+      rgba(5, 105, 67, 0.045) 104px
     ),
-    radial-gradient(ellipse 120% 80% at 50% 0%, rgba(39, 174, 96, 0.12), transparent 55%);
+    radial-gradient(ellipse 130% 70% at 50% -10%, rgba(16, 185, 129, 0.16), transparent 52%);
   background-attachment: fixed;
+}
+
+/* Akcent „linii środkowej” pod nagłówkami sekcji */
+.pitch-rule {
+  height: 3px;
+  border-radius: 9999px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(5, 150, 105, 0.55) 20%,
+    rgba(5, 150, 105, 0.85) 50%,
+    rgba(5, 150, 105, 0.55) 80%,
+    transparent
+  );
+}
+
+/* Kafelek strony głównej: pasy murawy + „linie kredowe” */
+.home-pitch-tile {
+  background-color: #0d5c45;
+  background-image:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.07) 0%, transparent 42%),
+    repeating-linear-gradient(
+      105deg,
+      transparent,
+      transparent 11px,
+      rgba(255, 255, 255, 0.045) 11px,
+      rgba(255, 255, 255, 0.045) 22px
+    ),
+    linear-gradient(145deg, rgba(16, 185, 129, 0.35) 0%, transparent 55%);
+}
+
+.home-pitch-tile-gold {
+  background-color: #6d4c1b;
+  background-image:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, transparent 40%),
+    repeating-linear-gradient(
+      90deg,
+      rgba(180, 140, 50, 0.22) 0px,
+      rgba(180, 140, 50, 0.22) 12px,
+      rgba(120, 85, 25, 0.35) 12px,
+      rgba(120, 85, 25, 0.35) 24px
+    );
 }

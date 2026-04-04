@@ -13,9 +13,10 @@ export default async function RegisterPage() {
   const available = ALL_PLAYERS.filter((p) => !taken.has(p));
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-4">
-      <div className="w-full max-w-md rounded-2xl border border-emerald-100 bg-white/95 p-8 shadow-lg">
-        <h1 className="text-center text-2xl font-normal text-emerald-950">Rejestracja</h1>
+    <div className="flex flex-1 flex-col items-center justify-center p-4 py-12">
+      <div className="w-full max-w-md rounded-2xl border border-zinc-200/80 bg-white p-8 shadow-sm">
+        <h1 className="text-center text-2xl font-bold tracking-tight text-zinc-900">Rejestracja</h1>
+        <p className="mt-2 text-center text-sm text-zinc-600">Dołącz do akademii — wybierz awatar piłkarza</p>
         <RegisterForm availablePlayers={available} />
         <div className="mt-6 space-y-2 text-center text-sm">
           <Link href="/login" className="block font-medium text-emerald-700 hover:underline">

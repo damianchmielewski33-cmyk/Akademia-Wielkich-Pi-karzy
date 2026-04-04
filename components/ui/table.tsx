@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 
 const Table = React.forwardRef<HTMLTableElement, React.HTMLAttributes<HTMLTableElement>>(
   ({ className, ...props }, ref) => (
-    <div className="relative w-full overflow-auto rounded-lg border border-emerald-100">
+    <div className="relative w-full overflow-auto">
       <table ref={ref} className={cn("w-full caption-bottom text-sm", className)} {...props} />
     </div>
   )
@@ -14,7 +14,11 @@ const TableHeader = React.forwardRef<
   HTMLTableSectionElement,
   React.HTMLAttributes<HTMLTableSectionElement>
 >(({ className, ...props }, ref) => (
-  <thead ref={ref} className={cn("bg-emerald-800 text-white", className)} {...props} />
+  <thead
+    ref={ref}
+    className={cn("border-b border-zinc-200 bg-zinc-50 text-zinc-800", className)}
+    {...props}
+  />
 ));
 TableHeader.displayName = "TableHeader";
 
@@ -30,7 +34,7 @@ const TableRow = React.forwardRef<HTMLTableRowElement, React.HTMLAttributes<HTML
   ({ className, ...props }, ref) => (
     <tr
       ref={ref}
-      className={cn("border-b border-emerald-100 transition-colors hover:bg-emerald-50/80", className)}
+      className={cn("border-b border-zinc-100 transition-colors hover:bg-zinc-50/90", className)}
       {...props}
     />
   )
@@ -43,7 +47,7 @@ const TableHead = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <th
     ref={ref}
-    className={cn("h-12 px-4 text-left align-middle font-semibold text-white", className)}
+    className={cn("h-12 px-4 text-left align-middle font-semibold text-zinc-700", className)}
     {...props}
   />
 ));
@@ -53,7 +57,7 @@ const TableCell = React.forwardRef<
   HTMLTableCellElement,
   React.TdHTMLAttributes<HTMLTableCellElement>
 >(({ className, ...props }, ref) => (
-  <td ref={ref} className={cn("p-4 align-middle text-emerald-950", className)} {...props} />
+  <td ref={ref} className={cn("p-4 align-middle text-zinc-900", className)} {...props} />
 ));
 TableCell.displayName = "TableCell";
 

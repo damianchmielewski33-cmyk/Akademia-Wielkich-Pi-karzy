@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getDb } from "@/lib/db";
 import { getServerSession } from "@/lib/auth";
@@ -45,11 +44,10 @@ export default async function StatystykiPage() {
   const sumSaves = userStats.reduce((a, r) => a + (r.saves ?? 0), 0);
 
   return (
-    <div className="container mx-auto max-w-5xl px-4 py-10">
-      <Link href="/" className="mb-6 inline-block font-medium text-emerald-700 hover:underline">
-        Powrot
-      </Link>
-      <h1 className="text-center text-3xl font-bold text-emerald-950">Nasze Mecze</h1>
+    <div className="container mx-auto max-w-5xl flex-1 px-4 py-10">
+      <div className="pitch-rule mx-auto mb-6 w-40" />
+      <h1 className="text-center text-3xl font-bold tracking-tight text-zinc-900">Nasze mecze</h1>
+      <p className="mt-2 text-center text-sm text-zinc-600">Podsumowanie ligi i Twoje statystyki</p>
 
       <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard title="Wszyscy gracze" value={playersCount} />
@@ -58,7 +56,7 @@ export default async function StatystykiPage() {
         <StatCard title="Nadchodzace mecze" value={upcomingMatches} />
       </div>
 
-      <h2 className="mt-12 text-center text-2xl font-semibold text-emerald-950">Twoje statystyki</h2>
+      <h2 className="mt-12 text-center text-2xl font-semibold text-zinc-900">Twoje statystyki</h2>
       <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <StatCard title="Rozegrane mecze" value={userStats.length} />
         <StatCard title="Gole" value={sumGoals} />
@@ -67,14 +65,14 @@ export default async function StatystykiPage() {
         <StatCard title="Obronione strzaly" value={sumSaves} />
       </div>
 
-      <h2 className="mt-12 text-center text-2xl font-semibold text-emerald-950">Twoje mecze</h2>
+      <h2 className="mt-12 text-center text-2xl font-semibold text-zinc-900">Twoje mecze</h2>
       {userStats.length === 0 ? (
-        <p className="mt-8 text-center text-lg text-emerald-800/70">Brak zapisanych statystyk.</p>
+        <p className="mt-8 text-center text-lg text-zinc-600">Brak zapisanych statystyk.</p>
       ) : (
-        <div className="mt-6">
+        <div className="mt-6 overflow-hidden rounded-xl border border-zinc-200/80 bg-white shadow-sm">
           <Table>
-            <TableHeader>
-              <TableRow>
+            <TableHeader className="border-b-0 bg-gradient-to-r from-emerald-950 to-emerald-900 text-white [&_th]:text-white">
+              <TableRow className="border-zinc-600/20 hover:bg-transparent">
                 <TableHead>Data</TableHead>
                 <TableHead>Godzina</TableHead>
                 <TableHead>Lokalizacja</TableHead>
@@ -108,10 +106,10 @@ function StatCard({ title, value }: { title: string; value: string | number }) {
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-base font-medium text-emerald-800/80">{title}</CardTitle>
+        <CardTitle className="text-base font-medium text-zinc-600">{title}</CardTitle>
       </CardHeader>
       <CardContent>
-        <p className="text-3xl font-bold text-emerald-900">{value}</p>
+        <p className="text-3xl font-bold tabular-nums tracking-tight text-emerald-950">{value}</p>
       </CardContent>
     </Card>
   );

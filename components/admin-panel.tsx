@@ -529,7 +529,7 @@ function UsersView({
       </div>
 
       <Dialog open={Boolean(edit)} onOpenChange={(o) => !o && setEdit(null)}>
-        <DialogContent className="border-zinc-200 sm:max-w-md">
+        <DialogContent className="sm:max-w-md">
           {edit && (
             <UserEditForm
               user={edit}
@@ -544,7 +544,7 @@ function UsersView({
       </Dialog>
 
       <Dialog open={delUser != null} onOpenChange={(o) => !o && setDelUser(null)}>
-        <DialogContent className="border-zinc-200 sm:max-w-md">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Usunąć użytkownika?</DialogTitle>
           </DialogHeader>
@@ -808,7 +808,7 @@ function MatchesView({
           }
         }}
       >
-        <DialogContent className="border-zinc-200 sm:max-w-md">
+        <DialogContent className="sm:max-w-md">
           {editRow && (
             <MatchEditForm
               m={editRow}
@@ -827,7 +827,7 @@ function MatchesView({
       </Dialog>
 
       <Dialog open={delMatch != null} onOpenChange={(o) => !o && setDelMatch(null)}>
-        <DialogContent className="border-zinc-200 sm:max-w-md">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Usunąć mecz?</DialogTitle>
           </DialogHeader>
@@ -1074,7 +1074,7 @@ function StatEditDialog({
 
   return (
     <Dialog open={id != null} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="border-zinc-200 sm:max-w-md">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Edytuj statystyki</DialogTitle>
         </DialogHeader>

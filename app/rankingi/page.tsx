@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getDb } from "@/lib/db";
 import { getServerSession } from "@/lib/auth";
@@ -64,17 +63,16 @@ export default async function RankingiPage() {
   const rankingOgolny = rankPlayers(players, "punkty");
 
   return (
-    <div className="container mx-auto max-w-6xl px-4 py-10">
-      <Link href="/" className="mb-6 inline-block font-medium text-emerald-700 hover:underline">
-        ⬅ Powrót
-      </Link>
-      <h1 className="text-center text-3xl font-bold text-emerald-950">🏆 Rankingi</h1>
+    <div className="container mx-auto max-w-6xl flex-1 px-4 py-10">
+      <div className="pitch-rule mx-auto mb-6 w-40" />
+      <h1 className="text-center text-3xl font-bold tracking-tight text-zinc-900">Rankingi</h1>
+      <p className="mt-2 text-center text-sm text-zinc-600">🏆 Tabele goli, asyst i punktów łącznie</p>
 
       <Card className="mt-8">
         <CardHeader>
-          <CardTitle className="text-lg text-emerald-900">Punktacja ogólna</CardTitle>
+          <CardTitle className="text-lg text-zinc-900">Punktacja ogólna</CardTitle>
         </CardHeader>
-        <CardContent className="text-sm leading-relaxed text-emerald-800/90">
+        <CardContent className="text-sm leading-relaxed text-zinc-700">
           <ul className="list-disc space-y-1 pl-5">
             <li>Gol: {PT_GOAL} pkt</li>
             <li>Asysta: {PT_ASSIST} pkt</li>
@@ -109,11 +107,11 @@ function RankBlock({
   format?: "1f" | "2f";
 }) {
   return (
-    <div className="rounded-xl border border-emerald-100 bg-white/95 p-4 shadow-sm">
-      <h2 className="mb-3 text-center text-lg font-semibold text-emerald-950">{title}</h2>
+    <div className="rounded-xl border border-zinc-200/80 bg-white p-4 shadow-sm">
+      <h2 className="mb-3 text-center text-lg font-semibold text-zinc-900">{title}</h2>
       <Table>
-        <TableHeader>
-          <TableRow>
+        <TableHeader className="border-b-0 bg-gradient-to-r from-emerald-950 to-emerald-900 text-white [&_th]:text-white">
+          <TableRow className="border-zinc-600/20 hover:bg-transparent">
             <TableHead className="w-12">#</TableHead>
             <TableHead>Zawodnik</TableHead>
             <TableHead className="text-right">Wartość</TableHead>
@@ -122,7 +120,7 @@ function RankBlock({
         <TableBody>
           {rows.map((r) => (
             <TableRow key={`${r.zawodnik}-${r.rank}`}>
-              <TableCell className="font-bold text-emerald-800">{r.rank}</TableCell>
+              <TableCell className="font-bold text-emerald-800/90">{r.rank}</TableCell>
               <TableCell>{r.zawodnik}</TableCell>
               <TableCell className="text-right font-medium">
                 {format === "1f" ? Number(r[col]).toFixed(1) : format === "2f" ? Number(r[col]).toFixed(2) : r[col]}

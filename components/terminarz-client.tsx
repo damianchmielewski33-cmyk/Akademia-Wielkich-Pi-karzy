@@ -147,7 +147,11 @@ export function TerminarzClient({
   return (
     <>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-2xl font-bold text-emerald-950">Terminarz</h1>
+        <div>
+          <div className="pitch-rule mb-3 w-28" />
+          <h1 className="text-2xl font-bold tracking-tight text-zinc-900 sm:text-3xl">Terminarz</h1>
+          <p className="mt-1 text-sm text-zinc-600">Zapisy na mecze i kalendarz sezonu</p>
+        </div>
         <div className="flex flex-wrap items-center gap-2">
           <Button
             type="button"
@@ -173,7 +177,7 @@ export function TerminarzClient({
         </div>
       </div>
 
-      <Card className="mt-4 border-emerald-100 bg-emerald-50/50 p-4 text-sm">
+      <Card className="mt-4 border-zinc-200/80 bg-emerald-50/40 p-4 text-sm text-zinc-800">
         <div className="flex flex-wrap gap-4">
           <span>
             Mecze: <strong>{stats.total}</strong>
@@ -190,9 +194,9 @@ export function TerminarzClient({
         </div>
       </Card>
 
-      <div className="mt-4 flex flex-wrap gap-2 rounded-xl border border-emerald-100 bg-white/80 p-3">
+      <div className="mt-4 flex flex-wrap gap-2 rounded-xl border border-zinc-200/80 bg-white p-3 shadow-sm">
         <select
-          className="rounded-lg border border-emerald-200 px-3 py-2 text-sm"
+          className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900"
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
         >
@@ -203,7 +207,7 @@ export function TerminarzClient({
           <option value="past">Po terminie</option>
         </select>
         <select
-          className="rounded-lg border border-emerald-200 px-3 py-2 text-sm"
+          className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900"
           value={sortDir}
           onChange={(e) => setSortDir(e.target.value as "asc" | "desc")}
         >
@@ -223,12 +227,12 @@ export function TerminarzClient({
       {view === "list" ? (
         <div className="mt-6 space-y-10">
           <section>
-            <h2 className="mb-3 border-b border-emerald-200 pb-2 text-lg font-semibold text-emerald-900">
+            <h2 className="mb-3 border-b border-zinc-200 pb-2 text-lg font-semibold text-zinc-900">
               Nadchodzace mecze
             </h2>
-            <div className="overflow-x-auto rounded-xl border border-emerald-100 bg-white">
+            <div className="overflow-x-auto rounded-xl border border-zinc-200/80 bg-white shadow-sm">
               <table className="w-full min-w-[640px] text-sm">
-                <thead className="bg-emerald-800 text-white">
+                <thead className="bg-gradient-to-r from-emerald-950 to-emerald-900 text-white">
                   <tr>
                     <th className="p-3 text-left">Data</th>
                     <th className="p-3 text-left">Godzina</th>
@@ -312,12 +316,12 @@ export function TerminarzClient({
           </section>
 
           <section>
-            <h2 className="mb-3 border-b border-emerald-200 pb-2 text-lg font-semibold text-emerald-900">
+            <h2 className="mb-3 border-b border-zinc-200 pb-2 text-lg font-semibold text-zinc-900">
               Mecze po terminie (nierozegrane)
             </h2>
-            <div className="overflow-x-auto rounded-xl border border-emerald-100 bg-white">
+            <div className="overflow-x-auto rounded-xl border border-zinc-200/80 bg-white shadow-sm">
               <table className="w-full min-w-[600px] text-sm">
-                <thead className="bg-emerald-800 text-white">
+                <thead className="bg-gradient-to-r from-emerald-950 to-emerald-900 text-white">
                   <tr>
                     <th className="p-3 text-left">Data</th>
                     <th className="p-3 text-left">Godzina</th>
@@ -331,7 +335,7 @@ export function TerminarzClient({
                     const pd = playersData[m.id];
                     const n = pd?.players.length ?? 0;
                     return (
-                      <tr key={m.id} className="border-b border-emerald-100 bg-amber-50/50">
+                      <tr key={m.id} className="border-b border-zinc-100 bg-amber-50/50">
                         <td className="p-3">{m.match_date}</td>
                         <td className="p-3">{m.match_time}</td>
                         <td className="p-3">{m.location}</td>
@@ -364,12 +368,12 @@ export function TerminarzClient({
           </section>
 
           <section>
-            <h2 className="mb-3 border-b border-emerald-200 pb-2 text-lg font-semibold text-emerald-900">
+            <h2 className="mb-3 border-b border-zinc-200 pb-2 text-lg font-semibold text-zinc-900">
               Rozegrane
             </h2>
-            <div className="overflow-x-auto rounded-xl border border-emerald-100 bg-white">
+            <div className="overflow-x-auto rounded-xl border border-zinc-200/80 bg-white shadow-sm">
               <table className="w-full min-w-[560px] text-sm">
-                <thead className="bg-emerald-800 text-white">
+                <thead className="bg-gradient-to-r from-emerald-950 to-emerald-900 text-white">
                   <tr>
                     <th className="p-3 text-left">Data</th>
                     <th className="p-3 text-left">Godzina</th>
@@ -380,7 +384,7 @@ export function TerminarzClient({
                 </thead>
                 <tbody>
                   {playedConfirmed.map((m) => (
-                    <tr key={m.id} className="border-b border-emerald-100 bg-red-50/40">
+                    <tr key={m.id} className="border-b border-zinc-100 bg-red-50/40">
                       <td className="p-3">{m.match_date}</td>
                       <td className="p-3">{m.match_time}</td>
                       <td className="p-3">{m.location}</td>
@@ -474,7 +478,7 @@ export function TerminarzClient({
               </p>
               <ul className="mt-3 space-y-2">
                 {selectedData.players.map((p, i) => (
-                  <li key={i} className="flex items-center gap-2 border-b border-emerald-100 pb-2 text-sm">
+                  <li key={i} className="flex items-center gap-2 border-b border-zinc-100 pb-2 text-sm">
                     <span className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-600 text-xs font-bold text-white">
                       {p.initials}
                     </span>
@@ -555,7 +559,7 @@ function CalendarView({
     cells.push(
       <div
         key={d}
-        className={`min-h-[104px] rounded-xl border border-emerald-100 bg-white p-2 shadow-sm ${isToday ? "ring-2 ring-emerald-600" : ""}`}
+        className={`min-h-[104px] rounded-xl border border-zinc-200/80 bg-white p-2 shadow-sm ${isToday ? "ring-2 ring-emerald-600" : ""}`}
       >
         <div className="text-sm font-bold text-emerald-950">{d}</div>
         <div className="mt-1 space-y-1">
@@ -582,7 +586,7 @@ function CalendarView({
   }
 
   return (
-    <div className="mt-6 rounded-2xl border border-emerald-100 bg-emerald-50/40 p-4">
+    <div className="mt-6 rounded-2xl border border-zinc-200/80 bg-emerald-50/35 p-4 shadow-sm">
       <div className="mb-3 flex items-center justify-between">
         <Button type="button" size="sm" variant="outline" onClick={onPrev}>
           Poprzedni
