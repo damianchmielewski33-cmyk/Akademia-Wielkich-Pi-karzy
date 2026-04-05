@@ -8,7 +8,7 @@ export default async function HomePage() {
 
   const nextMatch = db
     .prepare(
-      "SELECT * FROM matches WHERE match_date >= date('now') ORDER BY match_date, match_time LIMIT 1"
+      "SELECT * FROM matches WHERE datetime(match_date || ' ' || match_time) > datetime('now', 'localtime') ORDER BY match_date, match_time LIMIT 1"
     )
     .get() as MatchRow | undefined;
 

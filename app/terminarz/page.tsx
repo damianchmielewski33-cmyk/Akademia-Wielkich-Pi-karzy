@@ -26,17 +26,34 @@ export default async function TerminarzPage() {
 
   const playersData = buildPlayersData(matches, signups);
   const signedMap = userSignedMap(signups, session?.zawodnik);
-  const { upcoming, afterDate, playedConfirmed } = categorizeMatches(matches);
+  const { upcoming, playedConfirmed } = categorizeMatches(matches);
+
+  let playedMissingStatsMatchIds: number[] = [];
+  if (session) {
+    const missingRows = db
+      .prepare(
+        `SELECT m.id
+         FROM matches m
+         JOIN match_signups s ON s.match_id = m.id AND s.user_id = ?
+         WHERE m.played = 1
+           AND NOT EXISTS (
+             SELECT 1 FROM match_stats st
+             WHERE st.user_id = ? AND st.match_id = m.id
+           )`
+      )
+      .all(session.userId, session.userId) as { id: number }[];
+    playedMissingStatsMatchIds = missingRows.map((r) => r.id);
+  }
 
   return (
     <div className="container mx-auto max-w-6xl flex-1 px-4 py-8 sm:py-10">
       <TerminarzClient
         upcoming={upcoming}
-        afterDate={afterDate}
         playedConfirmed={playedConfirmed}
         allMatches={matches}
         playersData={playersData}
         userSigned={signedMap}
+        playedMissingStatsMatchIds={playedMissingStatsMatchIds}
         isLoggedIn={Boolean(session)}
         isAdmin={session?.isAdmin ?? false}
       />

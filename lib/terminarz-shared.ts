@@ -62,20 +62,23 @@ export function buildPlayersData(
 }
 
 export function categorizeMatches(matches: MatchRow[]) {
-  const today = new Date().toISOString().slice(0, 10);
   const upcoming: MatchRow[] = [];
-  const afterDate: MatchRow[] = [];
   const playedConfirmed: MatchRow[] = [];
   for (const m of matches) {
     if (m.played === 1) {
       playedConfirmed.push(m);
-    } else if (m.match_date >= today) {
-      upcoming.push(m);
     } else {
-      afterDate.push(m);
+      upcoming.push(m);
     }
   }
-  return { upcoming, afterDate, playedConfirmed };
+  const byDateTime = (a: MatchRow, b: MatchRow) => {
+    const da = `${a.match_date} ${a.match_time}`;
+    const db = `${b.match_date} ${b.match_time}`;
+    return da.localeCompare(db);
+  };
+  upcoming.sort(byDateTime);
+  playedConfirmed.sort((a, b) => -byDateTime(a, b));
+  return { upcoming, playedConfirmed };
 }
 
 export function userSignedMap(

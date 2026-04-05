@@ -6,7 +6,7 @@ export default async function SkladyPage() {
   const db = getDb();
   const nextMatch = db
     .prepare(
-      "SELECT * FROM matches WHERE match_date >= date('now') ORDER BY match_date, match_time LIMIT 1"
+      "SELECT * FROM matches WHERE datetime(match_date || ' ' || match_time) > datetime('now', 'localtime') ORDER BY match_date, match_time LIMIT 1"
     )
     .get() as MatchRow | undefined;
 
@@ -88,6 +88,8 @@ async function SkladyContent({ matchId }: { matchId: number }) {
     return {
       userId: p.user_id,
       displayName: `${fn} ${ln}`.trim() || p.zawodnik || "Zawodnik",
+      firstName: fn,
+      lastName: ln,
       zawodnik: p.zawodnik || "",
       initials: initials.toUpperCase(),
     };

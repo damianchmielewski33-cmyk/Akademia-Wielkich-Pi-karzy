@@ -75,3 +75,39 @@ body {
       rgba(120, 85, 25, 0.35) 24px
     );
 }
+
+/* Terminarz: tło tabel jak murawa na stadionie + schemat boiska + „trybuny” */
+.terminarz-stadium-layers {
+  background-color: #063d2f;
+  background-image:
+    linear-gradient(180deg, rgba(8, 18, 16, 0.78) 0%, rgba(8, 22, 18, 0.22) 18%, transparent 42%),
+    linear-gradient(0deg, rgba(5, 22, 18, 0.62) 0%, transparent 32%),
+    radial-gradient(ellipse 90% 55% at 50% 108%, rgba(0, 0, 0, 0.28), transparent 58%),
+    url("/pitch-lines.svg"),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.09) 0%, transparent 36%),
+    repeating-linear-gradient(
+      94deg,
+      rgba(0, 0, 0, 0.04) 0px,
+      rgba(0, 0, 0, 0.04) 13px,
+      rgba(255, 255, 255, 0.034) 13px,
+      rgba(255, 255, 255, 0.034) 26px
+    ),
+    linear-gradient(152deg, #118060 0%, #0c5f49 38%, #084032 100%);
+  background-size:
+    auto,
+    auto,
+    auto,
+    100% clamp(72px, 22vw, 160px),
+    auto,
+    auto,
+    auto;
+  background-position:
+    center,
+    center,
+    center,
+    center calc(100% + 2px),
+    center,
+    center,
+    center;
+  background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, repeat, repeat, no-repeat;
+}

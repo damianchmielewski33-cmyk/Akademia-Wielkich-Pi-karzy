@@ -45,6 +45,33 @@ export async function POST(req: Request) {
   }
   const { match_id, goals, assists, distance, saves } = parsed.data;
   const db = getDb();
+  const match = db
+    .prepare("SELECT id, played FROM matches WHERE id = ?")
+    .get(match_id) as { id: number; played: number } | undefined;
+  if (!match) {
+    return NextResponse.json({ error: "Nie znaleziono meczu." }, { status: 404 });
+  }
+  if (match.played !== 1) {
+    return NextResponse.json(
+      { error: "Statystyki można dodać dopiero po meczu oznaczonym jako rozegrany." },
+      { status: 400 }
+    );
+  }
+  const signup = db
+    .prepare("SELECT 1 AS ok FROM match_signups WHERE user_id = ? AND match_id = ?")
+    .get(session.userId, match_id) as { ok: number } | undefined;
+  if (!signup) {
+    return NextResponse.json(
+      { error: "Statystyki możesz uzupełnić tylko dla meczów, na które byłeś zapisany." },
+      { status: 403 }
+    );
+  }
+  const existing = db
+    .prepare("SELECT 1 AS ok FROM match_stats WHERE user_id = ? AND match_id = ?")
+    .get(session.userId, match_id) as { ok: number } | undefined;
+  if (existing) {
+    return NextResponse.json({ error: "Statystyki z tego meczu są już zapisane." }, { status: 409 });
+  }
   db.prepare(
     "INSERT INTO match_stats (user_id, match_id, goals, assists, distance, saves) VALUES (?, ?, ?, ?, ?, ?)"
   ).run(session.userId, match_id, goals, assists, distance, saves);

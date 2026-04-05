@@ -1,3 +1,7 @@
+"use client";
+
+import { useCallback, useState } from "react";
+import { LineupPlayerStatsDialog } from "@/components/lineup-player-stats-dialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { SLOT_STYLE_AWAY, SLOT_STYLE_HOME } from "@/lib/match-lineup-layout";
 import { cn } from "@/lib/utils";
@@ -5,6 +9,8 @@ import { cn } from "@/lib/utils";
 export type LineupPlayer = {
   userId: number;
   displayName: string;
+  firstName: string;
+  lastName: string;
   zawodnik: string;
   initials: string;
 };
@@ -18,17 +24,213 @@ type Props = {
   away: (number | null)[];
 };
 
-function ReadOnlyChip({ player }: { player: LineupPlayer }) {
-  const label = player.zawodnik || player.displayName;
+function PitchMarkings() {
+  return (
+    <svg
+      className="pointer-events-none absolute inset-0 h-full w-full"
+      viewBox="0 0 300 400"
+      preserveAspectRatio="xMidYMid meet"
+      aria-hidden
+    >
+      <defs>
+        <linearGradient id="pitchGoalNet" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="rgba(255,255,255,0.14)" />
+          <stop offset="100%" stopColor="rgba(255,255,255,0.04)" />
+        </linearGradient>
+      </defs>
+      {/* Linie boczne i końcowe */}
+      <rect
+        x="10"
+        y="10"
+        width="280"
+        height="380"
+        fill="none"
+        stroke="rgba(255,255,255,0.55)"
+        strokeWidth="2.25"
+        rx="3"
+      />
+      {/* Linia środkowa */}
+      <line x1="10" y1="200" x2="290" y2="200" stroke="rgba(255,255,255,0.5)" strokeWidth="2" />
+      {/* Koło środkowe */}
+      <circle cx="150" cy="200" r="36" fill="none" stroke="rgba(255,255,255,0.45)" strokeWidth="1.75" />
+      <circle cx="150" cy="200" r="2.2" fill="rgba(255,255,255,0.65)" />
+      {/* Górne pole karne + małe pole bramkowe */}
+      <rect
+        x="65"
+        y="10"
+        width="170"
+        height="78"
+        fill="none"
+        stroke="rgba(255,255,255,0.48)"
+        strokeWidth="1.75"
+      />
+      <rect
+        x="110"
+        y="10"
+        width="80"
+        height="28"
+        fill="none"
+        stroke="rgba(255,255,255,0.42)"
+        strokeWidth="1.5"
+      />
+      {/* Dolne pole karne + małe pole bramkowe */}
+      <rect
+        x="65"
+        y="312"
+        width="170"
+        height="78"
+        fill="none"
+        stroke="rgba(255,255,255,0.48)"
+        strokeWidth="1.75"
+      />
+      <rect
+        x="110"
+        y="362"
+        width="80"
+        height="28"
+        fill="none"
+        stroke="rgba(255,255,255,0.42)"
+        strokeWidth="1.5"
+      />
+      {/* Bramka górna — słupki + poprzeczka + „siatka” */}
+      <rect x="118" y="4" width="64" height="14" fill="url(#pitchGoalNet)" stroke="rgba(255,255,255,0.65)" strokeWidth="2" rx="2" />
+      <line x1="122" y1="8" x2="122" y2="16" stroke="rgba(255,255,255,0.35)" strokeWidth="0.75" />
+      <line x1="134" y1="8" x2="134" y2="16" stroke="rgba(255,255,255,0.35)" strokeWidth="0.75" />
+      <line x1="146" y1="8" x2="146" y2="16" stroke="rgba(255,255,255,0.35)" strokeWidth="0.75" />
+      <line x1="158" y1="8" x2="158" y2="16" stroke="rgba(255,255,255,0.35)" strokeWidth="0.75" />
+      <line x1="170" y1="8" x2="170" y2="16" stroke="rgba(255,255,255,0.35)" strokeWidth="0.75" />
+      <line x1="118" y1="11" x2="182" y2="11" stroke="rgba(255,255,255,0.3)" strokeWidth="0.6" />
+      <line x1="118" y1="14" x2="182" y2="14" stroke="rgba(255,255,255,0.25)" strokeWidth="0.6" />
+      {/* Bramka dolna */}
+      <rect x="118" y="382" width="64" height="14" fill="url(#pitchGoalNet)" stroke="rgba(255,255,255,0.65)" strokeWidth="2" rx="2" />
+      <line x1="122" y1="384" x2="122" y2="392" stroke="rgba(255,255,255,0.35)" strokeWidth="0.75" />
+      <line x1="134" y1="384" x2="134" y2="392" stroke="rgba(255,255,255,0.35)" strokeWidth="0.75" />
+      <line x1="146" y1="384" x2="146" y2="392" stroke="rgba(255,255,255,0.35)" strokeWidth="0.75" />
+      <line x1="158" y1="384" x2="158" y2="392" stroke="rgba(255,255,255,0.35)" strokeWidth="0.75" />
+      <line x1="170" y1="384" x2="170" y2="392" stroke="rgba(255,255,255,0.35)" strokeWidth="0.75" />
+      <line x1="118" y1="387" x2="182" y2="387" stroke="rgba(255,255,255,0.3)" strokeWidth="0.6" />
+      <line x1="118" y1="390" x2="182" y2="390" stroke="rgba(255,255,255,0.25)" strokeWidth="0.6" />
+    </svg>
+  );
+}
+
+/** Sylwetka koszulki: szeroka, niska (viewBox 100×72) — więcej miejsca na imię i nazwisko. */
+const JERSEY_VB = { w: 100, h: 72 };
+const JERSEY_CX = JERSEY_VB.w / 2;
+const JERSEY_PATH =
+  "M 28 15 Q 50 8 72 15 L 81 19 L 96 33 L 87 39 L 79 30 L 79 63 Q 50 70 21 63 L 21 30 L 13 39 L 4 33 L 19 19 Z";
+
+function JerseyToken({
+  player,
+  team,
+  onOpenStats,
+}: {
+  player: LineupPlayer;
+  team: "home" | "away";
+  onOpenStats: (userId: number) => void;
+}) {
+  const gradId = `jersey-grad-${player.userId}-${team}`;
+  const fn = player.firstName || player.displayName.split(/\s+/)[0] || "";
+  const ln =
+    player.lastName ||
+    player.displayName
+      .split(/\s+/)
+      .slice(1)
+      .join(" ") ||
+    "";
+  const label = `${player.displayName}${player.zawodnik ? ` (${player.zawodnik})` : ""}`;
+
+  const isHome = team === "home";
+  const g0 = isHome ? "#059669" : "#0ea5e9";
+  const g1 = isHome ? "#065f46" : "#1d4ed8";
+  const stripe = isHome ? "rgba(255,255,255,0.22)" : "rgba(255,255,255,0.2)";
+  const collar = isHome ? "rgba(255,255,255,0.55)" : "rgba(255,255,255,0.5)";
+
+  const vb = JERSEY_VB;
+
+  return (
+    <button
+      type="button"
+      className="relative w-[min(100%,108px)] max-w-full shrink-0 cursor-pointer appearance-none border-0 bg-transparent p-0 text-left aspect-[100/72] drop-shadow-[0_3px_6px_rgba(0,0,0,0.35)] transition-[filter,transform] hover:brightness-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/90 focus-visible:ring-offset-2 focus-visible:ring-offset-emerald-900/40 active:scale-[0.98] sm:w-[108px]"
+      aria-label={`Statystyki zawodnika: ${label}`}
+      onClick={() => onOpenStats(player.userId)}
+    >
+      <svg
+        className="block size-full"
+        viewBox={`0 0 ${vb.w} ${vb.h}`}
+        preserveAspectRatio="xMidYMid meet"
+        fill="none"
+        aria-hidden
+      >
+        <defs>
+          <linearGradient
+            id={gradId}
+            x1={JERSEY_CX}
+            y1="6"
+            x2={JERSEY_CX}
+            y2="68"
+            gradientUnits="userSpaceOnUse"
+          >
+            <stop stopColor={g0} />
+            <stop offset="1" stopColor={g1} />
+          </linearGradient>
+        </defs>
+        <path d={JERSEY_PATH} fill={`url(#${gradId})`} stroke="rgba(255,255,255,0.85)" strokeWidth="1.15" strokeLinejoin="round" />
+        <path d="M 28 15 Q 50 8 72 15" fill="none" stroke={collar} strokeWidth="1.85" strokeLinecap="round" />
+        <path d={`M ${JERSEY_CX} 24 L ${JERSEY_CX} 52`} stroke={stripe} strokeWidth="5" strokeLinecap="round" />
+        <path d="M 34 31 L 34 47" stroke={stripe} strokeWidth="2" strokeLinecap="round" opacity="0.85" />
+        <path d="M 66 31 L 66 47" stroke={stripe} strokeWidth="2" strokeLinecap="round" opacity="0.85" />
+      </svg>
+      <div className="pointer-events-none absolute inset-x-[12%] top-[24%] bottom-[16%] flex min-h-0 min-w-0 flex-col items-center justify-center px-1.5 text-center">
+        {fn ? (
+          <p className="line-clamp-2 w-full min-w-0 max-w-full break-words text-[11px] font-bold leading-tight tracking-tight text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.85)] sm:text-xs">
+            {fn}
+          </p>
+        ) : null}
+        {ln ? (
+          <p className="line-clamp-2 mt-px w-full min-w-0 max-w-full break-words text-[10px] font-semibold leading-tight text-white/95 [text-shadow:0_1px_2px_rgba(0,0,0,0.85)] sm:text-[11px]">
+            {ln}
+          </p>
+        ) : null}
+        {!fn && !ln ? (
+          <p className="line-clamp-2 w-full min-w-0 max-w-full break-words text-[10px] font-bold leading-tight text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.85)] sm:text-xs">
+            {player.displayName}
+          </p>
+        ) : null}
+      </div>
+    </button>
+  );
+}
+
+function EmptySlotToken({ index, team }: { index: number; team: "home" | "away" }) {
+  const isHome = team === "home";
+  const vb = JERSEY_VB;
   return (
     <div
-      className="flex max-w-[140px] select-none items-center gap-2 rounded-lg border border-emerald-200/90 bg-white px-2.5 py-1.5 text-left text-xs font-medium text-emerald-950 shadow-sm"
-      title={`${player.displayName}${player.zawodnik ? ` (${player.zawodnik})` : ""}`}
+      className={cn(
+        "relative w-[min(100%,108px)] max-w-full shrink-0 aspect-[100/72] opacity-90 sm:w-[108px]",
+        isHome ? "text-emerald-100/90" : "text-sky-100/90"
+      )}
     >
-      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-emerald-700 text-[0.65rem] font-bold text-white">
-        {player.initials || "?"}
+      <svg
+        className="block size-full"
+        viewBox={`0 0 ${vb.w} ${vb.h}`}
+        preserveAspectRatio="xMidYMid meet"
+        fill="none"
+        aria-hidden
+      >
+        <path
+          d={JERSEY_PATH}
+          fill="rgba(0,0,0,0.18)"
+          stroke="rgba(255,255,255,0.5)"
+          strokeWidth="1.15"
+          strokeDasharray="4 3"
+          strokeLinejoin="round"
+        />
+      </svg>
+      <span className="pointer-events-none absolute inset-0 flex items-center justify-center pt-1 text-sm font-bold text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.65)]">
+        {index + 1}
       </span>
-      <span className="truncate">{label}</span>
     </div>
   );
 }
@@ -39,12 +241,14 @@ function TeamHalfReadOnly({
   slots,
   slotStyles,
   playerById,
+  onOpenStats,
 }: {
   label: string;
   team: "home" | "away";
   slots: (number | null)[];
   slotStyles: { top: string; left: string }[];
   playerById: Map<number, LineupPlayer>;
+  onOpenStats: (userId: number) => void;
 }) {
   return (
     <div className="relative h-full min-h-[140px]">
@@ -65,18 +269,11 @@ function TeamHalfReadOnly({
             className="absolute z-20 -translate-x-1/2 -translate-y-1/2"
             style={{ top: pos.top, left: pos.left }}
           >
-            <div
-              className={cn(
-                "flex min-h-[52px] min-w-[52px] items-center justify-center rounded-full border-2 border-dashed",
-                p ? "border-white/50 bg-white/10" : "border-white/35 bg-black/15"
-              )}
-            >
-              {p ? (
-                <ReadOnlyChip player={p} />
-              ) : (
-                <span className="px-1 text-center text-[10px] font-semibold text-white/80">{i + 1}</span>
-              )}
-            </div>
+            {p ? (
+              <JerseyToken player={p} team={team} onOpenStats={onOpenStats} />
+            ) : (
+              <EmptySlotToken index={i} team={team} />
+            )}
           </div>
         );
       })}
@@ -87,6 +284,14 @@ function TeamHalfReadOnly({
 export function MatchLineupView({ matchDate, matchTime, location, players, home, away }: Props) {
   const playerById = new Map<number, LineupPlayer>();
   for (const p of players) playerById.set(p.userId, p);
+
+  const [statsOpen, setStatsOpen] = useState(false);
+  const [statsUserId, setStatsUserId] = useState<number | null>(null);
+
+  const openPlayerStats = useCallback((userId: number) => {
+    setStatsUserId(userId);
+    setStatsOpen(true);
+  }, []);
 
   return (
     <div className="space-y-4">
@@ -100,7 +305,9 @@ export function MatchLineupView({ matchDate, matchTime, location, players, home,
       <Card className="overflow-hidden border-zinc-200/80 bg-white shadow-sm">
         <CardHeader className="pb-2">
           <CardTitle className="text-base">Boisko (7 na drużynę)</CardTitle>
-          <CardDescription>Drużyna B — góra, drużyna A — dół.</CardDescription>
+          <CardDescription>
+            Drużyna B — góra, drużyna A — dół. Kliknij koszulkę zawodnika, aby zobaczyć statystyki.
+          </CardDescription>
         </CardHeader>
         <CardContent className="px-2 pb-4 sm:px-4">
           <div
@@ -111,12 +318,9 @@ export function MatchLineupView({ matchDate, matchTime, location, players, home,
               boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.12)",
             }}
           >
-            <div className="pointer-events-none absolute inset-[4%] rounded-xl border border-white/35" />
-            <div className="pointer-events-none absolute left-[4%] right-[4%] top-1/2 h-0 -translate-y-1/2 border-t-2 border-white/45" />
-            <div className="pointer-events-none absolute left-1/2 top-1/2 h-[18%] w-[18%] -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white/40" />
-            <div className="pointer-events-none absolute bottom-[4%] left-1/2 h-[3px] w-[3px] -translate-x-1/2 rounded-full bg-white/70" />
+            <PitchMarkings />
 
-            <div className="absolute inset-[4%] flex flex-col">
+            <div className="absolute inset-[3.2%] flex flex-col">
               <div className="relative min-h-0 flex-[1_1_50%]">
                 <TeamHalfReadOnly
                   label="Drużyna B"
@@ -124,6 +328,7 @@ export function MatchLineupView({ matchDate, matchTime, location, players, home,
                   slots={away}
                   slotStyles={SLOT_STYLE_AWAY}
                   playerById={playerById}
+                  onOpenStats={openPlayerStats}
                 />
               </div>
               <div className="relative min-h-0 flex-[1_1_50%]">
@@ -133,12 +338,22 @@ export function MatchLineupView({ matchDate, matchTime, location, players, home,
                   slots={home}
                   slotStyles={SLOT_STYLE_HOME}
                   playerById={playerById}
+                  onOpenStats={openPlayerStats}
                 />
               </div>
             </div>
           </div>
         </CardContent>
       </Card>
+
+      <LineupPlayerStatsDialog
+        userId={statsUserId}
+        open={statsOpen}
+        onOpenChange={(open) => {
+          setStatsOpen(open);
+          if (!open) setStatsUserId(null);
+        }}
+      />
     </div>
   );
 }
