@@ -3,16 +3,22 @@ import type { MatchRow } from "@/lib/db";
 export type SignupRow = {
   match_id: number;
   paid: number;
+  user_id: number;
   first_name: string;
   last_name: string;
   zawodnik: string;
+  profile_photo_path: string | null;
 };
 
 export type PlayerEntry = {
+  userId: number;
+  firstName: string;
+  lastName: string;
   name: string;
   zawodnik: string;
   initials: string;
   paid: number;
+  profilePhotoPath: string | null;
 };
 
 export type PlayersDataEntry = {
@@ -44,10 +50,14 @@ export function buildPlayersData(
       if (fn) initials += fn[0];
       if (ln) initials += ln[0];
       plist.push({
+        userId: p.user_id,
+        firstName: fn,
+        lastName: ln,
         name: `${fn} ${ln}`.trim(),
         zawodnik: p.zawodnik || "",
         initials,
         paid: p.paid,
+        profilePhotoPath: p.profile_photo_path ?? null,
       });
     }
     playersData[mid] = {

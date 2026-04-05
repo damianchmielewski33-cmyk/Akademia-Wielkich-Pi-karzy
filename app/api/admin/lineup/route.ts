@@ -64,8 +64,11 @@ export async function GET(req: Request) {
       players: [] as {
         userId: number;
         displayName: string;
+        firstName: string;
+        lastName: string;
         zawodnik: string;
         initials: string;
+        profilePhotoPath: string | null;
       }[],
       home: Array(7).fill(null),
       away: Array(7).fill(null),
@@ -74,13 +77,20 @@ export async function GET(req: Request) {
 
   const playersRaw = db
     .prepare(
-      `SELECT u.id AS user_id, u.first_name, u.last_name, u.player_alias AS zawodnik
+      `SELECT u.id AS user_id, u.first_name, u.last_name, u.player_alias AS zawodnik,
+              u.profile_photo_path
        FROM match_signups ms
        JOIN users u ON u.id = ms.user_id
        WHERE ms.match_id = ?
        ORDER BY u.first_name ASC, u.last_name ASC`
     )
-    .all(selected.id) as { user_id: number; first_name: string; last_name: string; zawodnik: string }[];
+    .all(selected.id) as {
+    user_id: number;
+    first_name: string;
+    last_name: string;
+    zawodnik: string;
+    profile_photo_path: string | null;
+  }[];
 
   const players = playersRaw.map((p) => {
     const fn = (p.first_name || "").trim();
@@ -91,8 +101,11 @@ export async function GET(req: Request) {
     return {
       userId: p.user_id,
       displayName: `${fn} ${ln}`.trim() || p.zawodnik || "Zawodnik",
+      firstName: fn,
+      lastName: ln,
       zawodnik: p.zawodnik || "",
       initials: initials.toUpperCase(),
+      profilePhotoPath: p.profile_photo_path ?? null,
     };
   });
 

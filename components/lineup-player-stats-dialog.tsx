@@ -10,6 +10,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
 import {
   Dialog,
   DialogContent,
@@ -22,6 +23,7 @@ type StatsPayload = {
   first_name: string;
   last_name: string;
   zawodnik: string;
+  profile_photo_path: string | null;
   matches: number;
   goals: number;
   assists: number;
@@ -91,9 +93,6 @@ export function LineupPlayerStatsDialog({ userId, open, onOpenChange }: Props) {
     [data]
   );
 
-  const initials =
-    data && `${data.first_name?.[0] ?? ""}${data.last_name?.[0] ?? ""}`.trim();
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto border-emerald-900/15 sm:max-w-xl">
@@ -114,10 +113,14 @@ export function LineupPlayerStatsDialog({ userId, open, onOpenChange }: Props) {
               )}
               {data && !loading && (
                 <div className="flex items-center gap-3 pt-2">
-                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-emerald-800 to-emerald-600 text-xl font-bold text-white ring-2 ring-emerald-900/20">
-                    {initials || "?"}
-                  </div>
-                  <span className="text-emerald-900">Zawodnik: {data.zawodnik}</span>
+                  <PlayerAvatar
+                    photoPath={data.profile_photo_path}
+                    firstName={data.first_name}
+                    lastName={data.last_name}
+                    size="lg"
+                    ringClassName="ring-2 ring-emerald-900/20"
+                  />
+                  <PlayerNameStack firstName={data.first_name} lastName={data.last_name} nick={data.zawodnik} />
                 </div>
               )}
             </div>

@@ -4,6 +4,8 @@ import type { ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { AnalyticsTracker } from "@/components/analytics-tracker";
+import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
 import { cn } from "@/lib/utils";
 import { SITE_NAME, getPublicContactEmail } from "@/lib/site";
 
@@ -11,6 +13,12 @@ type Props = {
   children: ReactNode;
   isLoggedIn: boolean;
   isAdmin: boolean;
+  account?: {
+    firstName: string;
+    lastName: string;
+    zawodnik: string;
+    profilePhotoPath: string | null;
+  } | null;
 };
 
 function NavButton({
@@ -37,7 +45,7 @@ function NavButton({
   );
 }
 
-export function SiteShell({ children, isLoggedIn, isAdmin }: Props) {
+export function SiteShell({ children, isLoggedIn, isAdmin, account = null }: Props) {
   const pathname = usePathname();
   const contactEmail = getPublicContactEmail();
   if (pathname === "/panel-admina" || pathname?.startsWith("/panel-admina")) {
@@ -46,6 +54,7 @@ export function SiteShell({ children, isLoggedIn, isAdmin }: Props) {
 
   return (
     <div className="flex min-h-screen flex-col text-zinc-900">
+      <AnalyticsTracker />
       <header className="relative z-30 border-b border-emerald-950/30 bg-gradient-to-r from-emerald-950 via-emerald-900 to-emerald-950 text-white shadow-lg">
         <div
           className="pointer-events-none absolute inset-0 opacity-[0.12]"
@@ -89,8 +98,36 @@ export function SiteShell({ children, isLoggedIn, isAdmin }: Props) {
             <NavButton href="/sklady" active={pathname === "/sklady"}>
               Składy
             </NavButton>
-            {isLoggedIn && (
+            {isLoggedIn && account ? (
               <>
+                <Link
+                  href="/profil"
+                  className={cn(
+                    "flex max-w-[min(100%,14rem)] items-center gap-2 rounded-lg px-2 py-1.5 transition-colors outline-offset-4 focus-visible:ring-2 focus-visible:ring-emerald-300 sm:max-w-[min(100%,15rem)]",
+                    pathname === "/profil"
+                      ? "bg-white/15 text-white shadow-sm"
+                      : "text-emerald-100/90 hover:bg-white/10 hover:text-white"
+                  )}
+                  aria-label="Mój profil"
+                  title="Mój profil"
+                >
+                  <PlayerAvatar
+                    photoPath={account.profilePhotoPath}
+                    firstName={account.firstName}
+                    lastName={account.lastName}
+                    size="sm"
+                    ringClassName="ring-2 ring-white/45"
+                  />
+                  <div className="hidden min-w-0 sm:block">
+                    <PlayerNameStack
+                      firstName={account.firstName}
+                      lastName={account.lastName}
+                      nick={account.zawodnik}
+                      primaryClassName="truncate text-sm font-semibold text-white"
+                      secondaryClassName="truncate text-xs text-emerald-200/90"
+                    />
+                  </div>
+                </Link>
                 <NavButton href="/statystyki" active={pathname === "/statystyki"}>
                   Statystyki
                 </NavButton>
@@ -98,7 +135,20 @@ export function SiteShell({ children, isLoggedIn, isAdmin }: Props) {
                   Rankingi
                 </NavButton>
               </>
-            )}
+            ) : null}
+            {isLoggedIn && !account ? (
+              <>
+                <NavButton href="/profil" active={pathname === "/profil"}>
+                  Mój profil
+                </NavButton>
+                <NavButton href="/statystyki" active={pathname === "/statystyki"}>
+                  Statystyki
+                </NavButton>
+                <NavButton href="/rankingi" active={pathname === "/rankingi"}>
+                  Rankingi
+                </NavButton>
+              </>
+            ) : null}
             {isAdmin && (
               <NavButton href="/panel-admina" active={pathname === "/panel-admina"}>
                 Panel admina

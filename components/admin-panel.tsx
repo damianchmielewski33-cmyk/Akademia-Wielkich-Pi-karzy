@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   Activity,
   ArrowLeft,
+  BarChart3,
   Calendar,
   LayoutDashboard,
   LayoutGrid,
@@ -18,6 +19,7 @@ import {
   Users,
 } from "lucide-react";
 import { toast } from "sonner";
+import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -51,6 +53,8 @@ const API = {
   match: (id: number) => `/api/admin/match/${id}`,
   stats: "/api/admin/stats",
   stat: (id: number) => `/api/admin/stat/${id}`,
+  analytics: (from: string, to: string) =>
+    `/api/admin/analytics?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
 };
 
 type UserRow = {
@@ -58,6 +62,7 @@ type UserRow = {
   first_name: string;
   last_name: string;
   zawodnik: string;
+  profile_photo_path: string | null;
   role: string;
 };
 
@@ -72,13 +77,47 @@ type MatchRow = {
 
 type StatRow = {
   id: number;
+  first_name: string;
+  last_name: string;
   zawodnik: string;
+  profile_photo_path: string | null;
   match_id: number;
   goals: number;
   assists: number;
   distance: number;
   saves: number;
 };
+
+type AnalyticsPayload = {
+  range: { from: string; to: string };
+  totals: {
+    total_views: number;
+    unique_visitors: number;
+    anonymous_views: number;
+    authenticated_views: number;
+  };
+  players: {
+    total_non_admin: number;
+    visited_in_range: number;
+    not_visited_in_range: number;
+    pct_visited: number | null;
+    pct_not_visited: number | null;
+    self_service_registrations_in_range: number;
+  };
+  terminarz_funnel: {
+    distinct_players_viewed: number;
+    distinct_players_viewed_and_signed_match_in_range: number;
+    pct_signed_after_view: number | null;
+  };
+  screens: { screen_key: string; label: string; total_views: number; unique_visitors: number }[];
+};
+
+function defaultAnalyticsDateRange(): { from: string; to: string } {
+  const to = new Date();
+  const from = new Date(to);
+  from.setDate(from.getDate() - 30);
+  return { from: from.toISOString().slice(0, 10), to: to.toISOString().slice(0, 10) };
+}
 
 type Summary = {
   players: number;
@@ -90,6 +129,7 @@ type Summary = {
 
 const tabs = [
   { id: "dashboard", label: "Przegląd", icon: LayoutDashboard },
+  { id: "analytics", label: "Analityka", icon: BarChart3 },
   { id: "users", label: "Użytkownicy", icon: Users },
   { id: "matches", label: "Mecze", icon: Calendar },
   { id: "lineups", label: "Składy na mecz", icon: LayoutGrid },
@@ -108,6 +148,9 @@ export function AdminPanel() {
   const [users, setUsers] = useState<UserRow[]>([]);
   const [matches, setMatches] = useState<MatchRow[]>([]);
   const [stats, setStats] = useState<StatRow[]>([]);
+  const [analytics, setAnalytics] = useState<AnalyticsPayload | null>(null);
+  const [analyticsFrom, setAnalyticsFrom] = useState(() => defaultAnalyticsDateRange().from);
+  const [analyticsTo, setAnalyticsTo] = useState(() => defaultAnalyticsDateRange().to);
 
   const loadDashboard = useCallback(async () => {
     setLoading(true);
@@ -168,6 +211,20 @@ export function AdminPanel() {
     }
   }, []);
 
+  const loadAnalytics = useCallback(async (from: string, to: string) => {
+    setLoading(true);
+    try {
+      const res = await fetch(API.analytics(from, to));
+      if (!res.ok) throw new Error();
+      setAnalytics(await res.json());
+    } catch {
+      toast.error("Nie udało się wczytać analityki");
+      setAnalytics(null);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (tab === "dashboard") void loadDashboard();
     if (tab === "users") void loadUsers();
@@ -175,6 +232,11 @@ export function AdminPanel() {
     if (tab === "stats") void loadStats();
     if (tab === "lineups") setLoading(false);
   }, [tab, loadDashboard, loadUsers, loadMatches, loadStats]);
+
+  useEffect(() => {
+    if (tab !== "analytics") return;
+    void loadAnalytics(analyticsFrom, analyticsTo);
+  }, [tab, analyticsFrom, analyticsTo, loadAnalytics]);
 
   return (
     <div className="min-h-screen bg-zinc-50 text-zinc-900">
@@ -271,6 +333,17 @@ export function AdminPanel() {
             {tab === "users" && <UsersView users={users} loading={loading} onReload={loadUsers} />}
             {tab === "matches" && <MatchesView matches={matches} loading={loading} onReload={loadMatches} />}
             {tab === "lineups" && <MatchLineupAdmin />}
+            {tab === "analytics" && (
+              <AnalyticsView
+                data={analytics}
+                loading={loading}
+                dateFrom={analyticsFrom}
+                dateTo={analyticsTo}
+                onDateFromChange={setAnalyticsFrom}
+                onDateToChange={setAnalyticsTo}
+                onReload={() => void loadAnalytics(analyticsFrom, analyticsTo)}
+              />
+            )}
             {tab === "stats" && <StatsView stats={stats} loading={loading} onReload={loadStats} />}
           </div>
         </main>
@@ -305,6 +378,248 @@ function Toolbar({
           Odśwież
         </Button>
       </div>
+    </div>
+  );
+}
+
+function AnalyticsView({
+  data,
+  loading,
+  dateFrom,
+  dateTo,
+  onDateFromChange,
+  onDateToChange,
+  onReload,
+}: {
+  data: AnalyticsPayload | null;
+  loading: boolean;
+  dateFrom: string;
+  dateTo: string;
+  onDateFromChange: (v: string) => void;
+  onDateToChange: (v: string) => void;
+  onReload: () => void;
+}) {
+  const viewSplit =
+    data != null && data.totals.anonymous_views + data.totals.authenticated_views > 0
+      ? {
+          anonPct:
+            Math.round(
+              (data.totals.anonymous_views /
+                (data.totals.anonymous_views + data.totals.authenticated_views)) *
+                1000
+            ) / 10,
+          authPct:
+            Math.round(
+              (data.totals.authenticated_views /
+                (data.totals.anonymous_views + data.totals.authenticated_views)) *
+                1000
+            ) / 10,
+        }
+      : null;
+
+  return (
+    <div>
+      <Toolbar
+        title="Analityka wejść"
+        description="Dane zbierane przy otwarciu stron przez użytkowników (bez panelu admina). Zmiana dat wczytuje raport ponownie."
+        onReload={onReload}
+        loading={loading}
+      >
+        <div className="flex flex-wrap items-end gap-3">
+          <div>
+            <Label htmlFor="adm-an-from" className="text-xs text-zinc-600">
+              Od
+            </Label>
+            <Input
+              id="adm-an-from"
+              type="date"
+              className="mt-1 w-[11rem] border-zinc-200 bg-white"
+              value={dateFrom}
+              onChange={(e) => onDateFromChange(e.target.value)}
+            />
+          </div>
+          <div>
+            <Label htmlFor="adm-an-to" className="text-xs text-zinc-600">
+              Do
+            </Label>
+            <Input
+              id="adm-an-to"
+              type="date"
+              className="mt-1 w-[11rem] border-zinc-200 bg-white"
+              value={dateTo}
+              onChange={(e) => onDateToChange(e.target.value)}
+            />
+          </div>
+        </div>
+      </Toolbar>
+
+      <Card className="mb-6 border-amber-200/80 bg-amber-50/50 shadow-sm">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base text-amber-950">Jak czytać te liczby</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2 text-sm text-amber-950/90">
+          <p>
+            <strong>Gracze zalogowani vs bez aktywności</strong> — spośród kont z rolą gracza (bez
+            administratorów), ilu miało co najmniej jedno odsłonięcie strony zalogowane w wybranym
+            okresie. Reszta to konta bez takich wejść w tym zakresie dat (nie znaczy to, że nigdy nie
+            wchodzili).
+          </p>
+          <p>
+            <strong>Rejestracje (samodzielne)</strong> — wpisy z dziennika aktywności przy
+            rejestracji z formularza (nie obejmuje kont utworzonych przez administratora).
+          </p>
+          <p>
+            <strong>Terminarz → zapis na mecz</strong> — gracze, którzy w okresie oglądali ekran
+            terminarza zalogowani, a w tym samym okresie zapisali się na dowolny mecz (wg daty
+            zapisu).
+          </p>
+          <p>
+            <strong>Wejścia anonimowe vs zalogowane</strong> — udział surowych odsłon stron bez
+            sesji vs z aktywną sesją (jedna osoba może generować wiele odsłon).
+          </p>
+        </CardContent>
+      </Card>
+
+      {!data && !loading ? (
+        <p className="text-sm text-zinc-600">Brak danych do wyświetlenia.</p>
+      ) : null}
+
+      {data ? (
+        <>
+          <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <Card className="border-zinc-200/80 bg-white shadow-sm">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-zinc-800">Wszystkie odsłony</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold tabular-nums text-emerald-950">
+                  {data.totals.total_views}
+                </p>
+                <p className="mt-1 text-xs text-zinc-500">
+                  Unikalni odbiorcy (gość lub id gracza): {data.totals.unique_visitors}
+                </p>
+              </CardContent>
+            </Card>
+            <Card className="border-zinc-200/80 bg-white shadow-sm">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-zinc-800">
+                  Odsłony: anonim / zalogowany
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {viewSplit ? (
+                  <>
+                    <p className="text-sm text-zinc-700">
+                      Anonimowe: <strong>{data.totals.anonymous_views}</strong> (
+                      {viewSplit.anonPct}%)
+                    </p>
+                    <p className="text-sm text-zinc-700">
+                      Zalogowane: <strong>{data.totals.authenticated_views}</strong> (
+                      {viewSplit.authPct}%)
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-sm text-zinc-500">Brak odsłon w okresie.</p>
+                )}
+              </CardContent>
+            </Card>
+            <Card className="border-zinc-200/80 bg-white shadow-sm">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-zinc-800">Gracze w bazie</CardTitle>
+                <CardDescription className="text-xs">Konta nie-admin</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-1 text-sm">
+                <p>
+                  Z aktywnością w okresie:{" "}
+                  <strong className="tabular-nums">{data.players.visited_in_range}</strong>
+                  {data.players.pct_visited != null ? (
+                    <span className="text-zinc-600"> ({data.players.pct_visited}%)</span>
+                  ) : null}
+                </p>
+                <p>
+                  Bez wejść zalogowanych w okresie:{" "}
+                  <strong className="tabular-nums">{data.players.not_visited_in_range}</strong>
+                  {data.players.pct_not_visited != null ? (
+                    <span className="text-zinc-600"> ({data.players.pct_not_visited}%)</span>
+                  ) : null}
+                </p>
+                <p className="text-xs text-zinc-500">
+                  Nowe konta (rejestracja): {data.players.self_service_registrations_in_range}
+                </p>
+              </CardContent>
+            </Card>
+            <Card className="border-zinc-200/80 bg-white shadow-sm">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-zinc-800">Terminarz → mecz</CardTitle>
+                <CardDescription className="text-xs">Gracze (nie-admin)</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-1 text-sm">
+                <p>
+                  Oglądali terminarz:{" "}
+                  <strong className="tabular-nums">
+                    {data.terminarz_funnel.distinct_players_viewed}
+                  </strong>
+                </p>
+                <p>
+                  Zapis na mecz w okresie:{" "}
+                  <strong className="tabular-nums">
+                    {data.terminarz_funnel.distinct_players_viewed_and_signed_match_in_range}
+                  </strong>
+                  {data.terminarz_funnel.pct_signed_after_view != null ? (
+                    <span className="text-zinc-600">
+                      {" "}
+                      ({data.terminarz_funnel.pct_signed_after_view}%)
+                    </span>
+                  ) : data.terminarz_funnel.distinct_players_viewed === 0 ? (
+                    <span className="text-zinc-500"> (–)</span>
+                  ) : null}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card className="border-zinc-200/80 bg-white shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-lg">Wejścia wg ekranu</CardTitle>
+              <CardDescription>
+                Liczba odsłon i szacunek unikalnych odbiorców (gość lub zalogowany gracz) w wybranym
+                zakresie.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-zinc-200 hover:bg-transparent">
+                    <TableHead className="text-zinc-700">Ekran</TableHead>
+                    <TableHead className="text-right text-zinc-700">Odsłony</TableHead>
+                    <TableHead className="text-right text-zinc-700">Unikalni</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {data.screens.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={3} className="text-center text-sm text-zinc-500">
+                        Brak zapisanych wejść w tym okresie (dane pojawią się po pierwszych wizytach).
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    data.screens.map((row) => (
+                      <TableRow key={row.screen_key} className="border-zinc-100">
+                        <TableCell>
+                          <span className="font-medium text-zinc-900">{row.label}</span>
+                          <span className="ml-2 font-mono text-xs text-zinc-400">{row.screen_key}</span>
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums">{row.total_views}</TableCell>
+                        <TableCell className="text-right tabular-nums">{row.unique_visitors}</TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </>
+      ) : null}
     </div>
   );
 }
@@ -504,9 +819,8 @@ function UsersView({
         <Table>
           <TableHeader>
             <TableRow className="border-zinc-200 hover:bg-transparent">
-              <TableHead className="text-zinc-700">Imię</TableHead>
-              <TableHead className="text-zinc-700">Nazwisko</TableHead>
-              <TableHead className="text-zinc-700">Pseudonim</TableHead>
+              <TableHead className="w-12 text-zinc-700" />
+              <TableHead className="text-zinc-700">Zawodnik</TableHead>
               <TableHead className="text-zinc-700">Rola</TableHead>
               <TableHead className="text-right text-zinc-700">Akcje</TableHead>
             </TableRow>
@@ -514,7 +828,7 @@ function UsersView({
           <TableBody>
             {filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center text-sm text-zinc-500">
+                <TableCell colSpan={4} className="h-24 text-center text-sm text-zinc-500">
                   {users.length === 0
                     ? "Brak użytkowników w bazie."
                     : "Brak wyników dla podanego filtra."}
@@ -523,9 +837,22 @@ function UsersView({
             ) : (
               filtered.map((u) => (
                 <TableRow key={u.id} className="border-zinc-100">
-                  <TableCell className="font-medium">{u.first_name}</TableCell>
-                  <TableCell>{u.last_name}</TableCell>
-                  <TableCell>{u.zawodnik}</TableCell>
+                  <TableCell className="align-middle">
+                    <PlayerAvatar
+                      photoPath={u.profile_photo_path}
+                      firstName={u.first_name}
+                      lastName={u.last_name}
+                      size="sm"
+                      ringClassName="ring-2 ring-zinc-200"
+                    />
+                  </TableCell>
+                  <TableCell className="align-middle">
+                    <PlayerNameStack
+                      firstName={u.first_name}
+                      lastName={u.last_name}
+                      nick={u.zawodnik}
+                    />
+                  </TableCell>
                   <TableCell>
                     {u.role === "admin" ? (
                       <Badge>Administrator</Badge>
@@ -1126,12 +1453,15 @@ function StatsView({
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase();
     if (!s) return stats;
-    return stats.filter(
-      (st) =>
+    return stats.filter((st) => {
+      const full = `${st.first_name} ${st.last_name}`.toLowerCase();
+      return (
+        full.includes(s) ||
         st.zawodnik.toLowerCase().includes(s) ||
         String(st.match_id).includes(s) ||
         String(st.id).includes(s)
-    );
+      );
+    });
   }, [stats, q]);
 
   return (
@@ -1162,6 +1492,7 @@ function StatsView({
           <TableHeader>
             <TableRow className="border-zinc-200 hover:bg-transparent">
               <TableHead className="w-14 text-zinc-600">ID</TableHead>
+              <TableHead className="w-12 text-zinc-600" />
               <TableHead className="text-zinc-700">Zawodnik</TableHead>
               <TableHead className="text-zinc-700">Mecz</TableHead>
               <TableHead className="text-zinc-700">Gole</TableHead>
@@ -1174,7 +1505,7 @@ function StatsView({
           <TableBody>
             {filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="h-24 text-center text-sm text-zinc-500">
+                <TableCell colSpan={9} className="h-24 text-center text-sm text-zinc-500">
                   {stats.length === 0 ? "Brak wpisów statystyk." : "Brak wyników dla podanego filtra."}
                 </TableCell>
               </TableRow>
@@ -1182,7 +1513,22 @@ function StatsView({
               filtered.map((s) => (
                 <TableRow key={s.id} className="border-zinc-100">
                   <TableCell className="font-mono text-xs text-zinc-500">{s.id}</TableCell>
-                  <TableCell className="font-medium">{s.zawodnik}</TableCell>
+                  <TableCell className="align-middle">
+                    <PlayerAvatar
+                      photoPath={s.profile_photo_path}
+                      firstName={s.first_name}
+                      lastName={s.last_name}
+                      size="sm"
+                      ringClassName="ring-2 ring-zinc-200"
+                    />
+                  </TableCell>
+                  <TableCell className="align-middle">
+                    <PlayerNameStack
+                      firstName={s.first_name}
+                      lastName={s.last_name}
+                      nick={s.zawodnik}
+                    />
+                  </TableCell>
                   <TableCell className="tabular-nums">{s.match_id}</TableCell>
                   <TableCell>{s.goals}</TableCell>
                   <TableCell>{s.assists}</TableCell>

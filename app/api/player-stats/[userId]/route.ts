@@ -13,8 +13,13 @@ export async function GET(_req: Request, ctx: Ctx) {
   }
   const db = getDb();
   const user = db
-    .prepare("SELECT first_name, last_name, player_alias FROM users WHERE id = ?")
-    .get(uid) as { first_name: string; last_name: string; player_alias: string } | undefined;
+    .prepare("SELECT first_name, last_name, player_alias, profile_photo_path FROM users WHERE id = ?")
+    .get(uid) as {
+    first_name: string;
+    last_name: string;
+    player_alias: string;
+    profile_photo_path: string | null;
+  } | undefined;
   if (!user) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const stats = db
@@ -45,6 +50,7 @@ export async function GET(_req: Request, ctx: Ctx) {
     first_name: user.first_name,
     last_name: user.last_name,
     zawodnik: user.player_alias,
+    profile_photo_path: user.profile_photo_path ?? null,
     matches: stats.length,
     goals: totalGoals,
     assists: totalAssists,

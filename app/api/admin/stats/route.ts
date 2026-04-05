@@ -11,7 +11,9 @@ export async function GET() {
   const rows = db
     .prepare(`
       SELECT s.id,
+             u.first_name, u.last_name,
              u.player_alias AS zawodnik,
+             u.profile_photo_path,
              s.match_id,
              s.goals, s.assists, s.distance, s.saves
       FROM match_stats s

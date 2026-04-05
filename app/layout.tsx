@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
 import { SiteShell } from "@/components/site-shell";
 import { getServerSession } from "@/lib/auth";
+import { getDb } from "@/lib/db";
 import { SITE_NAME } from "@/lib/site";
 import "./globals.css";
 
@@ -30,10 +31,43 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const session = await getServerSession();
+
+  let accountNav: {
+    firstName: string;
+    lastName: string;
+    zawodnik: string;
+    profilePhotoPath: string | null;
+  } | null = null;
+  if (session) {
+    const db = getDb();
+    const row = db
+      .prepare(
+        "SELECT first_name, last_name, player_alias AS zawodnik, profile_photo_path FROM users WHERE id = ?"
+      )
+      .get(session.userId) as
+      | {
+          first_name: string;
+          last_name: string;
+          zawodnik: string;
+          profile_photo_path: string | null;
+        }
+      | undefined;
+    accountNav = {
+      firstName: row?.first_name ?? session.firstName,
+      lastName: row?.last_name ?? session.lastName,
+      zawodnik: row?.zawodnik ?? session.zawodnik,
+      profilePhotoPath: row?.profile_photo_path ?? null,
+    };
+  }
+
   return (
     <html lang="pl">
       <body className={`${geistSans.variable} ${geistMono.variable} murawa-bg min-h-screen antialiased font-sans`}>
-        <SiteShell isLoggedIn={Boolean(session)} isAdmin={session?.isAdmin ?? false}>
+        <SiteShell
+          isLoggedIn={Boolean(session)}
+          isAdmin={session?.isAdmin ?? false}
+          account={accountNav}
+        >
           {children}
         </SiteShell>
         <Toaster

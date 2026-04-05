@@ -10,6 +10,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -24,12 +25,14 @@ export type PlayerListItem = {
   first_name: string;
   last_name: string;
   zawodnik: string;
+  profile_photo_path: string | null;
 };
 
 type StatsPayload = {
   first_name: string;
   last_name: string;
   zawodnik: string;
+  profile_photo_path: string | null;
   matches: number;
   goals: number;
   assists: number;
@@ -103,15 +106,22 @@ export function PilkarzeClient({ players }: { players: PlayerListItem[] }) {
             />
             <div className="relative p-4 sm:p-5">
               <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white/15 text-base font-bold text-white ring-2 ring-white/35 backdrop-blur-[2px]">
-                  {p.first_name[0]}
-                  {p.last_name[0]}
-                </div>
+                <PlayerAvatar
+                  photoPath={p.profile_photo_path}
+                  firstName={p.first_name}
+                  lastName={p.last_name}
+                  size="md"
+                  ringClassName="ring-2 ring-white/40"
+                  className="backdrop-blur-[2px]"
+                />
                 <div className="min-w-0 flex-1">
-                  <div className="truncate font-bold tracking-tight text-white drop-shadow-sm">
-                    {p.first_name} {p.last_name}
-                  </div>
-                  <div className="truncate text-sm text-emerald-50/90">Zawodnik: {p.zawodnik}</div>
+                  <PlayerNameStack
+                    firstName={p.first_name}
+                    lastName={p.last_name}
+                    nick={p.zawodnik}
+                    primaryClassName="font-bold tracking-tight text-white drop-shadow-sm"
+                    secondaryClassName="text-emerald-50/90"
+                  />
                 </div>
               </div>
               <Button
@@ -135,11 +145,14 @@ export function PilkarzeClient({ players }: { players: PlayerListItem[] }) {
               <div>
                 {data && (
                   <div className="flex items-center gap-3 pt-2">
-                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-emerald-800 to-emerald-600 text-xl font-bold text-white ring-2 ring-emerald-900/20">
-                      {data.first_name[0]}
-                      {data.last_name[0]}
-                    </div>
-                    <span className="text-emerald-900">{data.zawodnik}</span>
+                    <PlayerAvatar
+                      photoPath={data.profile_photo_path}
+                      firstName={data.first_name}
+                      lastName={data.last_name}
+                      size="lg"
+                      ringClassName="ring-2 ring-emerald-900/20"
+                    />
+                    <PlayerNameStack firstName={data.first_name} lastName={data.last_name} nick={data.zawodnik} />
                   </div>
                 )}
               </div>

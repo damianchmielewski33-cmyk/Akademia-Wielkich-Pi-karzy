@@ -163,13 +163,20 @@ async function SkladyContent({ matchId }: { matchId: number }) {
 
   const playersRaw = db
     .prepare(
-      `SELECT u.id AS user_id, u.first_name, u.last_name, u.player_alias AS zawodnik
+      `SELECT u.id AS user_id, u.first_name, u.last_name, u.player_alias AS zawodnik,
+              u.profile_photo_path
        FROM match_signups ms
        JOIN users u ON u.id = ms.user_id
        WHERE ms.match_id = ?
        ORDER BY u.first_name ASC, u.last_name ASC`
     )
-    .all(matchId) as { user_id: number; first_name: string; last_name: string; zawodnik: string }[];
+    .all(matchId) as {
+    user_id: number;
+    first_name: string;
+    last_name: string;
+    zawodnik: string;
+    profile_photo_path: string | null;
+  }[];
 
   const players: LineupPlayer[] = playersRaw.map((p) => {
     const fn = (p.first_name || "").trim();
@@ -184,6 +191,7 @@ async function SkladyContent({ matchId }: { matchId: number }) {
       lastName: ln,
       zawodnik: p.zawodnik || "",
       initials: initials.toUpperCase(),
+      profilePhotoPath: p.profile_photo_path ?? null,
     };
   });
 

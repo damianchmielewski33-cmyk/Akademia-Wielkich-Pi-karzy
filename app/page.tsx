@@ -14,7 +14,7 @@ export default async function HomePage() {
 
   const nextMatch = db
     .prepare(
-      "SELECT * FROM matches WHERE datetime(match_date || ' ' || match_time) > datetime('now', 'localtime') ORDER BY match_date, match_time LIMIT 1"
+      "SELECT * FROM matches WHERE played = 0 AND datetime(match_date || ' ' || match_time) > datetime('now', 'localtime') ORDER BY match_date, match_time LIMIT 1"
     )
     .get() as MatchRow | undefined;
 
@@ -28,6 +28,18 @@ export default async function HomePage() {
 
   const lineupPublicNextMatch = Boolean(nextMatch && nextMatch.lineup_public === 1);
 
+  let profilePhotoPath: string | null = null;
+  let zawodnik = "";
+  if (session) {
+    const u = db
+      .prepare("SELECT profile_photo_path, player_alias FROM users WHERE id = ?")
+      .get(session.userId) as { profile_photo_path: string | null; player_alias: string } | undefined;
+    if (u) {
+      profilePhotoPath = u.profile_photo_path ?? null;
+      zawodnik = u.player_alias ?? "";
+    }
+  }
+
   return (
     <HomeClient
       nextMatch={nextMatch ?? null}
@@ -37,6 +49,8 @@ export default async function HomePage() {
       isAdmin={session?.isAdmin ?? false}
       firstName={session?.firstName ?? ""}
       lastName={session?.lastName ?? ""}
+      zawodnik={zawodnik}
+      profilePhotoPath={profilePhotoPath}
     />
   );
 }

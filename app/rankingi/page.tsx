@@ -13,6 +13,7 @@ import {
   rankPlayers,
   type RankablePlayer,
 } from "@/lib/rankings";
+import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 export const metadata: Metadata = {
@@ -27,7 +28,10 @@ export default async function RankingiPage() {
   const db = getDb();
   const rows = db
     .prepare(
-      `SELECT u.player_alias AS zawodnik,
+      `SELECT u.id AS user_id,
+              u.first_name, u.last_name,
+              u.player_alias AS zawodnik,
+              u.profile_photo_path,
               COALESCE(SUM(s.goals), 0) AS goals,
               COALESCE(SUM(s.assists), 0) AS assists,
               COALESCE(SUM(s.distance), 0) AS distance,
@@ -35,10 +39,14 @@ export default async function RankingiPage() {
               COUNT(s.id) AS mecze
        FROM users u
        LEFT JOIN match_stats s ON s.user_id = u.id
-       GROUP BY u.id, u.player_alias`
+       GROUP BY u.id, u.first_name, u.last_name, u.player_alias, u.profile_photo_path`
     )
     .all() as {
+    user_id: number;
+    first_name: string;
+    last_name: string;
     zawodnik: string;
+    profile_photo_path: string | null;
     goals: number;
     assists: number;
     distance: number;
@@ -54,7 +62,11 @@ export default async function RankingiPage() {
     const mecze = Number(r.mecze) || 0;
     const punkty = PT_GOAL * g + PT_ASSIST * a + PT_KM * d + PT_SAVE * sv;
     return {
+      userId: r.user_id,
+      first_name: r.first_name,
+      last_name: r.last_name,
       zawodnik: r.zawodnik,
+      profile_photo_path: r.profile_photo_path ?? null,
       goals: g,
       assists: a,
       distance: d,
@@ -138,7 +150,8 @@ export default async function RankingiPage() {
                 pozycje są pomijane (np. dwoje na 1. miejscu, następny jest 3.).
               </li>
               <li>
-                Przy remisie kolejność alfabetyczna według <strong className="text-white">pseudonimu zawodnika</strong>.
+                Przy remisie kolejność alfabetyczna według{" "}
+                <strong className="text-white">imienia i nazwiska</strong>, a przy identycznych — według pseudonimu.
               </li>
               <li>
                 Wynik zaokrąglany jest do <strong className="text-white">dwóch miejsc po przecinku</strong> przy wyświetlaniu
@@ -174,7 +187,11 @@ function RankBlock({
   icon: ComponentType<{ className?: string; strokeWidth?: number }>;
   rows: {
     rank: number;
+    userId: number;
+    first_name: string;
+    last_name: string;
     zawodnik: string;
+    profile_photo_path: string | null;
     goals: number;
     assists: number;
     distance: number;
@@ -213,7 +230,7 @@ function RankBlock({
             <TableBody>
               {rows.map((r, i) => (
                 <TableRow
-                  key={`${r.zawodnik}-${r.rank}`}
+                  key={`${r.userId}-${r.rank}-${col}`}
                   className={
                     i % 2 === 0
                       ? "border-emerald-100/80 bg-emerald-50/35 hover:bg-emerald-50/55"
@@ -221,7 +238,22 @@ function RankBlock({
                   }
                 >
                   <TableCell className="font-bold tabular-nums text-emerald-800">{r.rank}</TableCell>
-                  <TableCell className="font-medium text-emerald-950">{r.zawodnik}</TableCell>
+                  <TableCell>
+                    <div className="flex min-w-0 items-center gap-2">
+                      <PlayerAvatar
+                        photoPath={r.profile_photo_path}
+                        firstName={r.first_name}
+                        lastName={r.last_name}
+                        size="sm"
+                        ringClassName="ring-2 ring-emerald-200/80"
+                      />
+                      <PlayerNameStack
+                        firstName={r.first_name}
+                        lastName={r.last_name}
+                        nick={r.zawodnik}
+                      />
+                    </div>
+                  </TableCell>
                   <TableCell className="text-right font-semibold tabular-nums text-emerald-900">
                     {format === "1f"
                       ? Number(r[col]).toFixed(1)

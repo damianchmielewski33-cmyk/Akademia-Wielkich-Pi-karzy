@@ -12,11 +12,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
 import { cn } from "@/lib/utils";
 import { SLOT_STYLE_AWAY, SLOT_STYLE_HOME } from "@/lib/match-lineup-layout";
 
 type MatchOpt = { id: number; date: string; time: string; location: string; lineupPublic: boolean };
-type Player = { userId: number; displayName: string; zawodnik: string; initials: string };
+type Player = {
+  userId: number;
+  displayName: string;
+  firstName: string;
+  lastName: string;
+  zawodnik: string;
+  initials: string;
+  profilePhotoPath: string | null;
+};
 
 type LineupState = { home: (number | null)[]; away: (number | null)[] };
 
@@ -380,8 +389,6 @@ function PlayerChip({
   player: Player;
   variant: "list" | "slot";
 }) {
-  const label = player.zawodnik || player.displayName;
-
   return (
     <div
       draggable
@@ -390,22 +397,29 @@ function PlayerChip({
         e.dataTransfer.effectAllowed = "move";
       }}
       className={cn(
-        "flex max-w-[140px] cursor-grab select-none items-center gap-2 rounded-lg border bg-white px-2.5 py-1.5 text-left text-xs font-medium shadow-sm active:cursor-grabbing",
+        "flex max-w-[200px] cursor-grab select-none items-center gap-2 rounded-lg border bg-white px-2.5 py-1.5 text-left text-xs shadow-sm active:cursor-grabbing",
         variant === "slot"
           ? "border-emerald-200/90 text-emerald-950"
           : "border-zinc-200 text-zinc-800 hover:border-emerald-300"
       )}
       title={`${player.displayName}${player.zawodnik ? ` (${player.zawodnik})` : ""}`}
     >
-      <span
-        className={cn(
-          "flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-[0.65rem] font-bold text-white",
-          variant === "slot" ? "bg-emerald-700" : "bg-zinc-600"
-        )}
-      >
-        {player.initials || "?"}
-      </span>
-      <span className="truncate">{label}</span>
+      <PlayerAvatar
+        photoPath={player.profilePhotoPath}
+        firstName={player.firstName}
+        lastName={player.lastName}
+        size="xs"
+        ringClassName={variant === "slot" ? "ring-2 ring-emerald-200" : "ring-2 ring-zinc-200"}
+      />
+      <div className="min-w-0 flex-1">
+        <PlayerNameStack
+          firstName={player.firstName}
+          lastName={player.lastName}
+          nick={player.zawodnik}
+          primaryClassName="text-[11px] font-semibold leading-tight"
+          secondaryClassName="text-[10px] text-zinc-500"
+        />
+      </div>
     </div>
   );
 }

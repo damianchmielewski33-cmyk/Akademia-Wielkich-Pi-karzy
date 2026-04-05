@@ -20,6 +20,7 @@ export async function GET() {
   const rows = db
     .prepare(`
       SELECT id, first_name, last_name, player_alias AS zawodnik,
+             profile_photo_path,
              CASE WHEN is_admin = 1 THEN 'admin' ELSE 'player' END AS role
       FROM users
       ORDER BY first_name

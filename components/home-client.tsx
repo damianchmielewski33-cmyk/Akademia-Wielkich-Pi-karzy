@@ -17,6 +17,7 @@ import {
   UserPlus,
   Users,
 } from "lucide-react";
+import { PlayerAvatar } from "@/components/player-avatar";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -38,6 +39,8 @@ type Props = {
   isAdmin: boolean;
   firstName: string;
   lastName: string;
+  zawodnik: string;
+  profilePhotoPath: string | null;
 };
 
 export function HomeClient({
@@ -48,6 +51,8 @@ export function HomeClient({
   isAdmin,
   firstName,
   lastName,
+  zawodnik,
+  profilePhotoPath,
 }: Props) {
   const router = useRouter();
   const [signupOpen, setSignupOpen] = useState(false);
@@ -113,7 +118,14 @@ export function HomeClient({
       toast.success("Statystyki zapisane");
       router.refresh();
     } else {
-      toast.error("Błąd zapisu statystyk");
+      let msg = "Błąd zapisu statystyk";
+      try {
+        const j = JSON.parse(text) as { error?: string };
+        if (typeof j.error === "string") msg = j.error;
+      } catch {
+        /* ignore */
+      }
+      toast.error(msg);
     }
   }
 
@@ -149,11 +161,22 @@ export function HomeClient({
       <div className="container mx-auto max-w-5xl flex-1 px-4 py-8 text-center sm:py-10">
         {isLoggedIn && (
           <div className="mb-8 flex items-center justify-center gap-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-emerald-700 to-emerald-600 text-xl font-bold text-white shadow-md ring-2 ring-white/30">
-              {firstName[0]}
-              {lastName[0]}
+            <PlayerAvatar
+              photoPath={profilePhotoPath}
+              firstName={firstName}
+              lastName={lastName}
+              size="lg"
+              className="shadow-md"
+            />
+            <div className="text-left">
+              <h2 className="text-2xl font-semibold text-emerald-950">Witaj!</h2>
+              <p className="text-lg font-medium text-emerald-900">
+                {`${firstName} ${lastName}`.trim() || zawodnik}
+              </p>
+              {zawodnik && `${firstName} ${lastName}`.trim() ? (
+                <p className="text-sm text-zinc-600">{zawodnik}</p>
+              ) : null}
             </div>
-            <h2 className="text-2xl font-semibold text-emerald-950">Witaj, {firstName}!</h2>
           </div>
         )}
 

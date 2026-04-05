@@ -5,7 +5,11 @@ export const PT_KM = 0.5;
 export const PT_SAVE = 2;
 
 export type RankablePlayer = {
+  userId: number;
+  first_name: string;
+  last_name: string;
   zawodnik: string;
+  profile_photo_path: string | null;
   goals: number;
   assists: number;
   distance: number;
@@ -25,7 +29,11 @@ export function rankPlayers(
     const av = a[key];
     const bv = b[key];
     if (av !== bv) return reverse ? (bv as number) - (av as number) : (av as number) - (bv as number);
-    return a.zawodnik.localeCompare(b.zawodnik);
+    const nameA = `${a.first_name} ${a.last_name}`.trim();
+    const nameB = `${b.first_name} ${b.last_name}`.trim();
+    const byName = nameA.localeCompare(nameB, "pl");
+    if (byName !== 0) return byName;
+    return a.zawodnik.localeCompare(b.zawodnik, "pl");
   });
   const out: RankedPlayer[] = [];
   let i = 0;

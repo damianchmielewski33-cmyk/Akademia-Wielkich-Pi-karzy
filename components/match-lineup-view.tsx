@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from "react";
 import { LineupPlayerStatsDialog } from "@/components/lineup-player-stats-dialog";
+import { PlayerAvatar } from "@/components/player-avatar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { SLOT_STYLE_AWAY, SLOT_STYLE_HOME } from "@/lib/match-lineup-layout";
 import { cn } from "@/lib/utils";
@@ -13,6 +14,7 @@ export type LineupPlayer = {
   lastName: string;
   zawodnik: string;
   initials: string;
+  profilePhotoPath: string | null;
 };
 
 type Props = {
@@ -151,10 +153,19 @@ function JerseyToken({
   return (
     <button
       type="button"
-      className="relative w-[min(100%,108px)] max-w-full shrink-0 cursor-pointer appearance-none border-0 bg-transparent p-0 text-left aspect-[100/72] drop-shadow-[0_3px_6px_rgba(0,0,0,0.35)] transition-[filter,transform] hover:brightness-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/90 focus-visible:ring-offset-2 focus-visible:ring-offset-emerald-900/40 active:scale-[0.98] sm:w-[108px]"
+      className="relative w-[min(100%,108px)] max-w-full shrink-0 cursor-pointer appearance-none border-0 bg-transparent p-0 pt-3 text-left aspect-[100/72] drop-shadow-[0_3px_6px_rgba(0,0,0,0.35)] transition-[filter,transform] hover:brightness-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/90 focus-visible:ring-offset-2 focus-visible:ring-offset-emerald-900/40 active:scale-[0.98] sm:w-[108px]"
       aria-label={`Statystyki zawodnika: ${label}`}
       onClick={() => onOpenStats(player.userId)}
     >
+      <span className="absolute left-1/2 top-0 z-30 -translate-x-1/2">
+        <PlayerAvatar
+          photoPath={player.profilePhotoPath}
+          firstName={player.firstName}
+          lastName={player.lastName}
+          size="xs"
+          ringClassName="ring-2 ring-white/90 shadow-sm"
+        />
+      </span>
       <svg
         className="block size-full"
         viewBox={`0 0 ${vb.w} ${vb.h}`}

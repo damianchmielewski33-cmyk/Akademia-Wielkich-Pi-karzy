@@ -23,7 +23,8 @@ export default async function TerminarzPage() {
 
   const signups = db
     .prepare(
-      `SELECT ms.match_id, ms.paid, u.first_name, u.last_name, u.player_alias AS zawodnik
+      `SELECT ms.match_id, ms.paid, u.id AS user_id, u.first_name, u.last_name,
+              u.player_alias AS zawodnik, u.profile_photo_path
        FROM match_signups ms
        JOIN users u ON u.id = ms.user_id
        ORDER BY u.first_name ASC`

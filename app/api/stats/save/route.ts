@@ -46,8 +46,8 @@ export async function POST(req: Request) {
   const { match_id, goals, assists, distance, saves } = parsed.data;
   const db = getDb();
   const match = db
-    .prepare("SELECT id, played FROM matches WHERE id = ?")
-    .get(match_id) as { id: number; played: number } | undefined;
+    .prepare("SELECT id, played, match_date FROM matches WHERE id = ?")
+    .get(match_id) as { id: number; played: number; match_date: string } | undefined;
   if (!match) {
     return NextResponse.json({ error: "Nie znaleziono meczu." }, { status: 404 });
   }
@@ -66,12 +66,43 @@ export async function POST(req: Request) {
       { status: 403 }
     );
   }
+
+  const withinEditWeek = Boolean(
+    db
+      .prepare(
+        "SELECT 1 AS ok FROM matches WHERE id = ? AND played = 1 AND date('now') <= date(match_date, '+7 days')"
+      )
+      .get(match_id) as { ok: number } | undefined
+  );
+
   const existing = db
-    .prepare("SELECT 1 AS ok FROM match_stats WHERE user_id = ? AND match_id = ?")
-    .get(session.userId, match_id) as { ok: number } | undefined;
+    .prepare("SELECT id FROM match_stats WHERE user_id = ? AND match_id = ?")
+    .get(session.userId, match_id) as { id: number } | undefined;
+
   if (existing) {
-    return NextResponse.json({ error: "Statystyki z tego meczu są już zapisane." }, { status: 409 });
+    if (!withinEditWeek) {
+      return NextResponse.json(
+        { error: "Minął tydzień od daty meczu — nie możesz już edytować tych statystyk." },
+        { status: 403 }
+      );
+    }
+    db.prepare(
+      "UPDATE match_stats SET goals = ?, assists = ?, distance = ?, saves = ? WHERE id = ? AND user_id = ?"
+    ).run(goals, assists, distance, saves, existing.id, session.userId);
+    logActivity(
+      session.userId,
+      `Zaktualizował własne statystyki za mecz id ${match_id} (bramki: ${goals}, asysty: ${assists}, km: ${distance}, obrony: ${saves})`
+    );
+    return new NextResponse("OK", { status: 200 });
   }
+
+  if (!withinEditWeek) {
+    return NextResponse.json(
+      { error: "Minął tydzień od daty meczu — nie możesz już dodać statystyk." },
+      { status: 403 }
+    );
+  }
+
   db.prepare(
     "INSERT INTO match_stats (user_id, match_id, goals, assists, distance, saves) VALUES (?, ?, ?, ?, ?, ?)"
   ).run(session.userId, match_id, goals, assists, distance, saves);

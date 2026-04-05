@@ -16,6 +16,7 @@ export async function GET() {
        JOIN match_signups s ON s.match_id = m.id
        WHERE s.user_id = ?
          AND m.played = 1
+         AND date('now') <= date(m.match_date, '+7 days')
          AND NOT EXISTS (
                SELECT 1 FROM match_stats st
                WHERE st.user_id = ? AND st.match_id = m.id

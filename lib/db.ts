@@ -62,6 +62,20 @@ function initSchema(db: Database.Database) {
       FOREIGN KEY(user_id) REFERENCES users(id)
     );
 
+    CREATE TABLE IF NOT EXISTS page_views (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      screen_key TEXT NOT NULL,
+      pathname TEXT NOT NULL,
+      user_id INTEGER,
+      visitor_id TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      FOREIGN KEY(user_id) REFERENCES users(id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_page_views_created ON page_views(created_at);
+    CREATE INDEX IF NOT EXISTS idx_page_views_screen_created ON page_views(screen_key, created_at);
+    CREATE INDEX IF NOT EXISTS idx_page_views_user_created ON page_views(user_id, created_at);
+
     CREATE TABLE IF NOT EXISTS match_lineup_slots (
       match_id INTEGER NOT NULL,
       team TEXT NOT NULL CHECK (team IN ('home', 'away')),
@@ -81,6 +95,11 @@ function initSchema(db: Database.Database) {
   const matchCols = db.prepare("PRAGMA table_info(matches)").all() as { name: string }[];
   if (!matchCols.some((c) => c.name === "lineup_public")) {
     db.exec("ALTER TABLE matches ADD COLUMN lineup_public INTEGER NOT NULL DEFAULT 0");
+  }
+
+  const userCols = db.prepare("PRAGMA table_info(users)").all() as { name: string }[];
+  if (!userCols.some((c) => c.name === "profile_photo_path")) {
+    db.exec("ALTER TABLE users ADD COLUMN profile_photo_path TEXT");
   }
 }
 
@@ -105,6 +124,7 @@ export type UserRow = {
   last_name: string;
   player_alias: string;
   is_admin: number;
+  profile_photo_path?: string | null;
 };
 
 export type MatchRow = {

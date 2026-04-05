@@ -23,6 +23,7 @@ import {
   X,
 } from "lucide-react";
 import type { MatchRow } from "@/lib/db";
+import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
 import type { PlayersDataEntry } from "@/lib/terminarz-shared";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -978,17 +979,25 @@ export function TerminarzClient({
               <ul className="mt-3 max-h-64 space-y-0 overflow-y-auto rounded-xl border border-emerald-900/10 bg-emerald-50/30">
                 {selectedData.players.map((p, i) => (
                   <li
-                    key={i}
+                    key={`${p.userId}-${i}`}
                     className={`flex flex-wrap items-center gap-2 border-b border-emerald-100/90 px-3 py-2.5 text-sm last:border-b-0 ${
                       i % 2 === 0 ? "bg-white/60" : "bg-emerald-50/40"
                     }`}
                   >
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-800 text-xs font-bold text-white ring-2 ring-white/40">
-                      {p.initials}
-                    </span>
-                    <span className="min-w-0 flex-1 font-medium text-emerald-950">
-                      {p.name} ({p.zawodnik})
-                    </span>
+                    <PlayerAvatar
+                      photoPath={p.profilePhotoPath}
+                      firstName={p.firstName}
+                      lastName={p.lastName}
+                      size="sm"
+                      ringClassName="ring-2 ring-emerald-200/90"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <PlayerNameStack
+                        firstName={p.firstName}
+                        lastName={p.lastName}
+                        nick={p.zawodnik}
+                      />
+                    </div>
                     {p.paid ? (
                       <Badge className="border-emerald-200 bg-emerald-100 text-emerald-900">Opłacone</Badge>
                     ) : (

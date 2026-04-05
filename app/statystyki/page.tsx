@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { getDb } from "@/lib/db";
 import { getServerSession } from "@/lib/auth";
+import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 export const metadata: Metadata = {
@@ -39,6 +40,17 @@ export default async function StatystykiPage() {
       .get() as { c: number }
   ).c;
   const playersCount = (db.prepare("SELECT COUNT(*) AS c FROM users").get() as { c: number }).c;
+
+  const me = db
+    .prepare(
+      "SELECT first_name, last_name, player_alias, profile_photo_path FROM users WHERE id = ?"
+    )
+    .get(session.userId) as {
+    first_name: string;
+    last_name: string;
+    player_alias: string;
+    profile_photo_path: string | null;
+  };
 
   const userStats = db
     .prepare(
@@ -85,6 +97,23 @@ export default async function StatystykiPage() {
           />
         </div>
         <p className="mt-4 text-base text-zinc-600 sm:text-lg">Podsumowanie ligi i Twoje statystyki</p>
+      </div>
+
+      <div className="mx-auto mt-8 flex max-w-md items-center justify-center gap-4 rounded-2xl border border-emerald-200/80 bg-emerald-50/40 px-5 py-4">
+        <PlayerAvatar
+          photoPath={me.profile_photo_path}
+          firstName={me.first_name}
+          lastName={me.last_name}
+          size="lg"
+          ringClassName="ring-2 ring-emerald-300/80"
+        />
+        <PlayerNameStack
+          firstName={me.first_name}
+          lastName={me.last_name}
+          nick={me.player_alias}
+          primaryClassName="text-lg font-semibold text-emerald-950"
+          secondaryClassName="text-sm text-zinc-600"
+        />
       </div>
 
       <h2 className="mt-10 text-xl font-bold tracking-tight text-emerald-950 sm:text-2xl">Liga</h2>
