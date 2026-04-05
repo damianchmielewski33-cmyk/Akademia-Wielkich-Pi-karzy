@@ -121,8 +121,12 @@ export function HomeClient({
     <div className="mx-auto grid max-w-3xl grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-3">
       <PitchTile href="/terminarz" icon={CalendarDays} title="Terminarz" desc="Mecze, zapisy, terminy" />
       <PitchTile href="/pilkarze" icon={Users} title="Piłkarze" desc="Skład i profile" />
-      <PitchTile href="/statystyki" icon={Activity} title="Statystyki" desc="Twoje liczby z boiska" />
-      <PitchTile href="/rankingi" icon={Trophy} title="Rankingi" desc="Gole, asysty, punkty" variant="gold" />
+      {isLoggedIn && (
+        <>
+          <PitchTile href="/statystyki" icon={Activity} title="Statystyki" desc="Twoje liczby z boiska" />
+          <PitchTile href="/rankingi" icon={Trophy} title="Rankingi" desc="Gole, asysty, punkty" variant="gold" />
+        </>
+      )}
       {!isLoggedIn && (
         <>
           <PitchTile href="/login" icon={LogIn} title="Logowanie" desc="Wejdź do szatni" />
@@ -233,6 +237,7 @@ export function HomeClient({
                     <Button
                       type="button"
                       disabled
+                      aria-describedby="sklady-home-hint"
                       className="w-full cursor-not-allowed border border-white/25 bg-white/10 font-semibold text-white/70 opacity-80"
                       title="Administrator musi najpierw udostępnić składy w panelu admina."
                     >
@@ -241,7 +246,7 @@ export function HomeClient({
                         Składy na mecz
                       </span>
                     </Button>
-                    <p className="text-center text-xs text-emerald-100/85">
+                    <p id="sklady-home-hint" className="text-center text-xs text-emerald-100/85">
                       Przycisk będzie aktywny, gdy administrator udostępni składy.
                     </p>
                   </div>

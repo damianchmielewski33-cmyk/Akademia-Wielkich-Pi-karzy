@@ -1,6 +1,12 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { getDb } from "@/lib/db";
 import { LoginForm } from "@/components/login-form";
+
+export const metadata: Metadata = {
+  title: "Logowanie",
+  description: "Zaloguj się do konta zawodnika akademii.",
+};
 
 type Props = { searchParams: Promise<{ next?: string }> };
 

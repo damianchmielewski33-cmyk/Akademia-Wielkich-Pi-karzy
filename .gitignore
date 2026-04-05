@@ -38,6 +38,7 @@ yarn-error.log*
 
 # lokalna baza SQLite (opcjonalnie commituj pusta strukture)
 /data/*.db
+/data/backups/
 
 # vercel
 .vercel

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Image from "next/image";
 import { redirect } from "next/navigation";
 import type { ComponentType } from "react";
@@ -13,6 +14,11 @@ import {
   type RankablePlayer,
 } from "@/lib/rankings";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+
+export const metadata: Metadata = {
+  title: "Rankingi",
+  description: "Porównanie zawodników według goli, asyst i punktów.",
+};
 
 export default async function RankingiPage() {
   const session = await getServerSession();
@@ -101,7 +107,13 @@ export default async function RankingiPage() {
               <Trophy className="h-6 w-6 shrink-0 text-white drop-shadow-sm" strokeWidth={2.25} aria-hidden />
               <h2 className="text-lg font-bold tracking-tight text-white drop-shadow-sm sm:text-xl">Punktacja ogólna</h2>
             </div>
-            <ul className="mt-3 space-y-1.5 text-sm text-emerald-50/95 sm:text-base">
+            <p className="mt-3 text-sm leading-relaxed text-emerald-50/95 sm:text-base">
+              Punkty łącznie to suma ze wszystkich zapisanych meczów: gole, asysty, przebiegnięty dystans (km) i obrony
+              bramkarza. Pozostałe tabele pokazują tylko jedną kategorię — kolejność i tak samo liczy się od największej
+              wartości w dół.
+            </p>
+            <p className="mt-2 text-sm font-semibold text-white drop-shadow-sm sm:text-base">Wartość punktów za akcję</p>
+            <ul className="mt-1.5 space-y-1.5 text-sm text-emerald-50/95 sm:text-base">
               <li>
                 Gol: <strong className="text-white">{PT_GOAL}</strong> pkt
               </li>
@@ -113,6 +125,24 @@ export default async function RankingiPage() {
               </li>
               <li>
                 Obrona: <strong className="text-white">{PT_SAVE}</strong> pkt
+              </li>
+            </ul>
+            <p className="mt-3 text-sm font-semibold text-white drop-shadow-sm sm:text-base">Wzór na punkty łącznie</p>
+            <p className="mt-1 font-mono text-xs leading-relaxed text-emerald-50/95 sm:text-sm">
+              {PT_GOAL}×gole + {PT_ASSIST}×asysty + {PT_KM}×km + {PT_SAVE}×obrony
+            </p>
+            <p className="mt-3 text-sm font-semibold text-white drop-shadow-sm sm:text-base">Miejsca w rankingu</p>
+            <ul className="mt-1.5 list-disc space-y-1.5 pl-5 text-sm leading-relaxed text-emerald-50/95 sm:text-base">
+              <li>
+                Przy <strong className="text-white">tej samej wartości</strong> zawodnicy dzielą miejsce (ex aequo); kolejne
+                pozycje są pomijane (np. dwoje na 1. miejscu, następny jest 3.).
+              </li>
+              <li>
+                Przy remisie kolejność alfabetyczna według <strong className="text-white">pseudonimu zawodnika</strong>.
+              </li>
+              <li>
+                Wynik zaokrąglany jest do <strong className="text-white">dwóch miejsc po przecinku</strong> przy wyświetlaniu
+                punktów łącznie.
               </li>
             </ul>
           </div>

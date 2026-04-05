@@ -1,6 +1,12 @@
+import type { Metadata } from "next";
 import Image from "next/image";
 import { getDb } from "@/lib/db";
 import { PilkarzeClient } from "@/components/pilkarze-client";
+
+export const metadata: Metadata = {
+  title: "Piłkarze",
+  description: "Lista zawodników i profile w akademii.",
+};
 
 export default async function PilkarzePage() {
   const db = getDb();

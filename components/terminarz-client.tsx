@@ -10,6 +10,7 @@ import {
   CalendarDays,
   ChevronLeft,
   ChevronRight,
+  Download,
   List,
   LogIn,
   MapPin,
@@ -486,7 +487,12 @@ export function TerminarzClient({
               className="h-11 w-11 drop-shadow-sm sm:h-12 sm:w-12"
               unoptimized
             />
-            <h1 className="text-3xl font-bold tracking-tight text-emerald-950 sm:text-4xl">Terminarz</h1>
+            <h1
+              id="terminarz-page-title"
+              className="whitespace-nowrap text-3xl font-bold tracking-tight text-emerald-950 sm:text-4xl"
+            >
+              Terminarz
+            </h1>
             <Image
               src="/soccer-ball.svg"
               alt=""
@@ -499,6 +505,14 @@ export function TerminarzClient({
           <p className="mt-3 max-w-xl text-sm text-zinc-600 sm:text-base">
             Zapisy na mecze, lista terminów i kalendarz — wszystko w jednym miejscu.
           </p>
+          <a
+            href="/api/terminarz/calendar"
+            download
+            className="mt-5 inline-flex items-center gap-2 rounded-xl border border-emerald-200/90 bg-white px-4 py-2.5 text-sm font-semibold text-emerald-900 shadow-sm ring-1 ring-emerald-900/5 transition-colors hover:bg-emerald-50/90"
+          >
+            <Download className="h-4 w-4 shrink-0 text-emerald-700" aria-hidden />
+            Pobierz terminarz do kalendarza (.ics)
+          </a>
         </div>
 
         <div className="mx-auto mt-8 max-w-4xl">

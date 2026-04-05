@@ -1,6 +1,12 @@
+import type { Metadata } from "next";
 import { getDb, type MatchRow } from "@/lib/db";
 import { getServerSession } from "@/lib/auth";
 import { HomeClient } from "@/components/home-client";
+
+export const metadata: Metadata = {
+  title: "Start",
+  description: "Najbliższy mecz, zapisy, terminarz i społeczność akademii.",
+};
 
 export default async function HomePage() {
   const db = getDb();

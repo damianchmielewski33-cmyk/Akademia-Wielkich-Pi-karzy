@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { SITE_NAME, getPublicContactEmail } from "@/lib/site";
 
 type Props = {
   children: ReactNode;
@@ -38,6 +39,7 @@ function NavButton({
 
 export function SiteShell({ children, isLoggedIn, isAdmin }: Props) {
   const pathname = usePathname();
+  const contactEmail = getPublicContactEmail();
   if (pathname === "/panel-admina" || pathname?.startsWith("/panel-admina")) {
     return <>{children}</>;
   }
@@ -58,7 +60,7 @@ export function SiteShell({ children, isLoggedIn, isAdmin }: Props) {
             <span className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/10 shadow-inner ring-1 ring-white/15">
               <Image
               src="/logo-akademia.svg"
-              alt=""
+              alt={SITE_NAME}
               width={40}
               height={40}
               className="h-9 w-9"
@@ -83,6 +85,9 @@ export function SiteShell({ children, isLoggedIn, isAdmin }: Props) {
             </NavButton>
             <NavButton href="/pilkarze" active={pathname === "/pilkarze"}>
               Piłkarze
+            </NavButton>
+            <NavButton href="/sklady" active={pathname === "/sklady"}>
+              Składy
             </NavButton>
             {isLoggedIn && (
               <>
@@ -164,15 +169,28 @@ export function SiteShell({ children, isLoggedIn, isAdmin }: Props) {
           <div className="flex items-center gap-3">
             <Image
               src="/logo-akademia.svg"
-              alt=""
+              alt={SITE_NAME}
               width={36}
               height={36}
               className="h-9 w-9 opacity-90"
               unoptimized
             />
             <div>
-              <p className="text-sm font-semibold text-white">Akademia Wielkich Piłkarzy</p>
+              <p className="text-sm font-semibold text-white">{SITE_NAME}</p>
               <p className="text-xs text-emerald-200/80">Terminarz, statystyki i społeczność na boisku</p>
+              <p className="mt-2 text-xs text-emerald-200/85">
+                <Link href="/o-nas" className="font-medium underline-offset-2 hover:underline">
+                  O nas i zasady
+                </Link>
+                {contactEmail ? (
+                  <>
+                    {" · "}
+                    <a href={`mailto:${contactEmail}`} className="font-medium underline-offset-2 hover:underline">
+                      {contactEmail}
+                    </a>
+                  </>
+                ) : null}
+              </p>
             </div>
           </div>
           <p className="text-xs text-emerald-200/70">© {new Date().getFullYear()} · Gra z pasją</p>

@@ -1,7 +1,13 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { getDb } from "@/lib/db";
 import { ALL_PLAYERS } from "@/lib/constants";
 import { RegisterForm } from "@/components/register-form";
+
+export const metadata: Metadata = {
+  title: "Rejestracja",
+  description: "Załóż konto i dołącz do akademii.",
+};
 
 export default async function RegisterPage() {
   const db = getDb();

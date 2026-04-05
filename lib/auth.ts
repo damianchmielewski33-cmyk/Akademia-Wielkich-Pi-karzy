@@ -1,12 +1,7 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import { SESSION_COOKIE } from "@/lib/constants";
-
-function getSecret() {
-  return new TextEncoder().encode(
-    process.env.AUTH_SECRET || "development-secret-min-32-characters-long-key"
-  );
-}
+import { getAuthSecretKey } from "@/lib/auth-secret";
 
 export type AppSession = {
   userId: number;
@@ -27,11 +22,11 @@ export async function createSessionToken(session: AppSession): Promise<string> {
     .setSubject(String(session.userId))
     .setIssuedAt()
     .setExpirationTime("30d")
-    .sign(getSecret());
+    .sign(getAuthSecretKey());
 }
 
 export async function verifySessionToken(token: string): Promise<AppSession> {
-  const { payload } = await jwtVerify(token, getSecret());
+  const { payload } = await jwtVerify(token, getAuthSecretKey());
   return {
     userId: Number(payload.sub),
     isAdmin: payload.adm === 1,

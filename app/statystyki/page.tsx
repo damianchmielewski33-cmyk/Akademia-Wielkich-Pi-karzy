@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Image from "next/image";
 import { redirect } from "next/navigation";
 import type { ComponentType } from "react";
@@ -15,6 +16,11 @@ import {
 import { getDb } from "@/lib/db";
 import { getServerSession } from "@/lib/auth";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+
+export const metadata: Metadata = {
+  title: "Statystyki",
+  description: "Twoje gole, asysty, dystans i obrony z rozegranych meczów.",
+};
 
 export default async function StatystykiPage() {
   const session = await getServerSession();

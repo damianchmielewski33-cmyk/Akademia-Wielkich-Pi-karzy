@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { getDb, type MatchRow } from "@/lib/db";
 import { getServerSession } from "@/lib/auth";
 import {
@@ -7,6 +8,11 @@ import {
   type SignupRow,
 } from "@/lib/terminarz-shared";
 import { TerminarzClient } from "@/components/terminarz-client";
+
+export const metadata: Metadata = {
+  title: "Terminarz",
+  description: "Zapisy na mecze, lista terminów, archiwum i eksport do kalendarza (.ics).",
+};
 
 export default async function TerminarzPage() {
   const db = getDb();

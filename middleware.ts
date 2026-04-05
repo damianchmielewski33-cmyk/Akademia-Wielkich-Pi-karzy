@@ -2,12 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { jwtVerify } from "jose";
 import { SESSION_COOKIE } from "@/lib/constants";
-
-function secret() {
-  return new TextEncoder().encode(
-    process.env.AUTH_SECRET || "development-secret-min-32-characters-long-key"
-  );
-}
+import { getAuthSecretKey } from "@/lib/auth-secret";
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -20,7 +15,7 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(u);
     }
     try {
-      const { payload } = await jwtVerify(token, secret());
+      const { payload } = await jwtVerify(token, getAuthSecretKey());
       if (payload.adm !== 1) {
         return new NextResponse("Brak dostępu", { status: 403 });
       }

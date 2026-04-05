@@ -1,42 +1,134 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+import { cn } from "@/lib/utils";
 import { getDb, type MatchRow } from "@/lib/db";
 import { MatchLineupView, type LineupPlayer } from "@/components/match-lineup-view";
 
-export default async function SkladyPage() {
+export const metadata: Metadata = {
+  title: "Składy",
+  description: "Publiczne ustawienia drużyn na mecze akademii.",
+};
+
+type PageProps = { searchParams: Promise<{ m?: string }> };
+
+export default async function SkladyPage({ searchParams }: PageProps) {
+  const sp = await searchParams;
   const db = getDb();
-  const nextMatch = db
+
+  const publicMatches = db
     .prepare(
-      "SELECT * FROM matches WHERE datetime(match_date || ' ' || match_time) > datetime('now', 'localtime') ORDER BY match_date, match_time LIMIT 1"
+      `SELECT * FROM matches WHERE lineup_public = 1
+       ORDER BY match_date DESC, match_time DESC`
+    )
+    .all() as MatchRow[];
+
+  const nextUpcomingAny = db
+    .prepare(
+      `SELECT * FROM matches
+       WHERE datetime(match_date || ' ' || match_time) > datetime('now', 'localtime')
+       ORDER BY match_date ASC, match_time ASC
+       LIMIT 1`
     )
     .get() as MatchRow | undefined;
 
+  if (publicMatches.length === 0) {
+    if (nextUpcomingAny) {
+      return (
+        <div className="container mx-auto max-w-lg flex-1 px-4 py-8 sm:py-10">
+          <div className="rounded-2xl border border-zinc-200 bg-white p-8 text-center shadow-sm">
+            <h1 className="text-xl font-bold text-emerald-950">Składy jeszcze niewidoczne</h1>
+            <p className="mt-2 text-sm text-zinc-600">
+              Administrator nie udostępnił jeszcze składów na najbliższy mecz. Wróć później albo sprawdź stronę główną.
+            </p>
+            <p className="mt-4 text-sm font-medium text-zinc-800">
+              {nextUpcomingAny.match_date} · {nextUpcomingAny.match_time}
+            </p>
+            <p className="text-sm text-zinc-600">{nextUpcomingAny.location}</p>
+            <Link href="/" className="mt-6 inline-block text-sm font-semibold text-emerald-700 underline">
+              Strona główna
+            </Link>
+          </div>
+        </div>
+      );
+    }
+    return (
+      <div className="container mx-auto max-w-lg flex-1 px-4 py-8 sm:py-10">
+        <div className="rounded-2xl border border-zinc-200 bg-white p-8 text-center shadow-sm">
+          <h1 className="text-xl font-bold text-emerald-950">Brak publicznych składów</h1>
+          <p className="mt-2 text-sm text-zinc-600">
+            Nie ma zaplanowanych meczów ani opublikowanych składów. Gdy pojawią się terminy, wróć do tej strony.
+          </p>
+          <Link href="/terminarz" className="mt-6 inline-block text-sm font-semibold text-emerald-700 underline">
+            Terminarz
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  const defaultUpcoming = db
+    .prepare(
+      `SELECT id FROM matches WHERE lineup_public = 1
+       AND datetime(match_date || ' ' || match_time) > datetime('now', 'localtime')
+       ORDER BY match_date ASC, match_time ASC
+       LIMIT 1`
+    )
+    .get() as { id: number } | undefined;
+
+  const defaultLatest = db
+    .prepare(
+      `SELECT id FROM matches WHERE lineup_public = 1
+       ORDER BY match_date DESC, match_time DESC
+       LIMIT 1`
+    )
+    .get() as { id: number };
+
+  const parsed = sp.m ? Number.parseInt(sp.m, 10) : NaN;
+  const ids = new Set(publicMatches.map((x) => x.id));
+  const selectedId =
+    Number.isFinite(parsed) && ids.has(parsed) ? parsed : (defaultUpcoming?.id ?? defaultLatest.id);
+
+  const navMatches = [...publicMatches].sort((a, b) => {
+    const da = `${a.match_date} ${a.match_time}`;
+    const db_ = `${b.match_date} ${b.match_time}`;
+    return da.localeCompare(db_);
+  });
+
   return (
     <div className="container mx-auto max-w-6xl flex-1 px-4 py-8 sm:py-10">
-      {!nextMatch ? (
-        <div className="mx-auto max-w-lg rounded-2xl border border-zinc-200 bg-white p-8 text-center shadow-sm">
-          <h1 className="text-xl font-bold text-emerald-950">Brak nadchodzącego meczu</h1>
-          <p className="mt-2 text-sm text-zinc-600">Gdy pojawi się termin w terminarzu, wróć tutaj po udostępnieniu składów.</p>
-          <Link href="/" className="mt-6 inline-block text-sm font-semibold text-emerald-700 underline">
-            Wróć na stronę główną
-          </Link>
-        </div>
-      ) : nextMatch.lineup_public !== 1 ? (
-        <div className="mx-auto max-w-lg rounded-2xl border border-zinc-200 bg-white p-8 text-center shadow-sm">
-          <h1 className="text-xl font-bold text-emerald-950">Składy jeszcze niewidoczne</h1>
-          <p className="mt-2 text-sm text-zinc-600">
-            Administrator nie udostępnił jeszcze składów na najbliższy mecz. Obserwuj stronę główną — przycisk „Zobacz składy” stanie się aktywny po publikacji.
-          </p>
-          <p className="mt-4 text-sm font-medium text-zinc-800">
-            {nextMatch.match_date} · {nextMatch.match_time}
-          </p>
-          <p className="text-sm text-zinc-600">{nextMatch.location}</p>
-          <Link href="/" className="mt-6 inline-block text-sm font-semibold text-emerald-700 underline">
-            Strona główna
-          </Link>
-        </div>
-      ) : (
-        <SkladyContent matchId={nextMatch.id} />
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <Link href="/" className="text-sm font-medium text-emerald-800 hover:underline">
+          ← Strona główna
+        </Link>
+        {navMatches.length > 1 && (
+          <p className="text-xs text-zinc-500 sm:text-right">Wybierz mecz, żeby zobaczyć składy z archiwum.</p>
+        )}
+      </div>
+
+      {navMatches.length > 1 && (
+        <nav className="mb-8 flex flex-wrap gap-2" aria-label="Wybór meczu">
+          {navMatches.map((m) => {
+            const active = m.id === selectedId;
+            return (
+              <Link
+                key={m.id}
+                href={`/sklady?m=${m.id}`}
+                scroll={false}
+                className={cn(
+                  "rounded-full border px-3 py-1.5 text-xs font-medium transition-colors sm:text-sm",
+                  active
+                    ? "border-emerald-700 bg-emerald-700 text-white shadow-sm"
+                    : "border-zinc-200 bg-white text-zinc-700 hover:border-emerald-300 hover:bg-emerald-50/80"
+                )}
+              >
+                {m.match_date} · {m.match_time.slice(0, 5)}
+              </Link>
+            );
+          })}
+        </nav>
       )}
+
+      <SkladyContent matchId={selectedId} />
     </div>
   );
 }
@@ -61,9 +153,9 @@ async function SkladyContent({ matchId }: { matchId: number }) {
   if (!row) {
     return (
       <p className="text-center text-sm text-zinc-600">
-        Składy nie są już dostępne do podglądu.{" "}
-        <Link href="/" className="font-semibold text-emerald-700 underline">
-          Strona główna
+        Ten mecz nie ma już publicznych składów.{" "}
+        <Link href="/sklady" className="font-semibold text-emerald-700 underline">
+          Wróć do listy
         </Link>
       </p>
     );
@@ -108,20 +200,13 @@ async function SkladyContent({ matchId }: { matchId: number }) {
   }
 
   return (
-    <div>
-      <div className="mb-6">
-        <Link href="/" className="text-sm font-medium text-emerald-800 hover:underline">
-          ← Strona główna
-        </Link>
-      </div>
-      <MatchLineupView
-        matchDate={row.match_date}
-        matchTime={row.match_time}
-        location={row.location}
-        players={players}
-        home={home}
-        away={away}
-      />
-    </div>
+    <MatchLineupView
+      matchDate={row.match_date}
+      matchTime={row.match_time}
+      location={row.location}
+      players={players}
+      home={home}
+      away={away}
+    />
   );
 }
