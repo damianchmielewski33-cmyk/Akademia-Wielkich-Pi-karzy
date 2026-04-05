@@ -1,5 +1,4 @@
-import { RoutePreloaderScreen } from "@/components/preloaders";
-
+/** Brak pełnoekranowego preloadera — szybkie wejście na formularz logowania. */
 export default function LoginLoading() {
-  return <RoutePreloaderScreen path="/login" />;
+  return null;
 }

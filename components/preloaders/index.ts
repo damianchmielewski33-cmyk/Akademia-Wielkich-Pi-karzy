@@ -11,4 +11,6 @@ export {
   ProfilBadgePreloader,
   AdminConsolePreloader,
 } from "./scenes-data";
+export { RankingNightPreloader } from "./rankingi-night-preloader";
+export { isFullBleedRoute } from "./route-preloader-config";
 export { StatsCrunchPreloader, PhotoDevelopPreloader, LineupBoardPreloader } from "./inline-scenes";

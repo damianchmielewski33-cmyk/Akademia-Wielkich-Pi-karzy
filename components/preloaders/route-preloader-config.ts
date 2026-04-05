@@ -5,9 +5,9 @@ import { PilkarzeLockerPreloader, SkladyTacticsPreloader } from "./scenes-roster
 import {
   AdminConsolePreloader,
   ProfilBadgePreloader,
-  RankingPodiumPreloader,
   StatystykiBarsPreloader,
 } from "./scenes-data";
+import { RankingNightPreloader } from "./rankingi-night-preloader";
 
 export type RoutePreloaderSpec = {
   title: string;
@@ -17,6 +17,12 @@ export type RoutePreloaderSpec = {
 
 function stripQuery(path: string) {
   return (path.split("?")[0] || "/").trim() || "/";
+}
+
+/** Pełny ekran jak transport — bez `PagePreloaderLayout` w nakładce nawigacji. */
+export function isFullBleedRoute(rawPath: string): boolean {
+  const path = stripQuery(rawPath);
+  return path.startsWith("/rankingi");
 }
 
 /** Preloader i copy dopasowane do docelowej ścieżki (nawigacja + loading.tsx). */
@@ -68,8 +74,8 @@ export function getRoutePreloaderSpec(rawPath: string): RoutePreloaderSpec {
   if (path.startsWith("/rankingi")) {
     return {
       title: "Rankingi",
-      subtitle: "Podium, medale i laury — układamy kolejność.",
-      Preloader: RankingPodiumPreloader,
+      subtitle: "Klasyfikacja — podium i kolejność w tabeli.",
+      Preloader: RankingNightPreloader,
     };
   }
   if (path.startsWith("/platnosci")) {

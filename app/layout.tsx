@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
 import { SiteShell } from "@/components/site-shell";
+import { MatchNotificationPrompt } from "@/components/match-notification-prompt";
+import { getAccountNavFields } from "@/lib/account-server";
 import { getServerSession } from "@/lib/auth";
-import { getDb } from "@/lib/db";
 import { SITE_NAME } from "@/lib/site";
 import "./globals.css";
 
@@ -39,24 +40,12 @@ export default async function RootLayout({
     profilePhotoPath: string | null;
   } | null = null;
   if (session) {
-    const db = getDb();
-    const row = db
-      .prepare(
-        "SELECT first_name, last_name, player_alias AS zawodnik, profile_photo_path FROM users WHERE id = ?"
-      )
-      .get(session.userId) as
-      | {
-          first_name: string;
-          last_name: string;
-          zawodnik: string;
-          profile_photo_path: string | null;
-        }
-      | undefined;
+    const row = getAccountNavFields(session.userId);
     accountNav = {
-      firstName: row?.first_name ?? session.firstName,
-      lastName: row?.last_name ?? session.lastName,
+      firstName: row?.firstName ?? session.firstName,
+      lastName: row?.lastName ?? session.lastName,
       zawodnik: row?.zawodnik ?? session.zawodnik,
-      profilePhotoPath: row?.profile_photo_path ?? null,
+      profilePhotoPath: row?.profilePhotoPath ?? null,
     };
   }
 
@@ -70,6 +59,7 @@ export default async function RootLayout({
         >
           {children}
         </SiteShell>
+        <MatchNotificationPrompt />
         <Toaster
           position="top-center"
           richColors

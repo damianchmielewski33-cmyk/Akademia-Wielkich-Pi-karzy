@@ -14,7 +14,16 @@ export const metadata: Metadata = {
   description: "Zapisy na mecze, lista terminów, archiwum i eksport do kalendarza (.ics).",
 };
 
-export default async function TerminarzPage() {
+type PageProps = { searchParams: Promise<{ mecz?: string }> };
+
+export default async function TerminarzPage({ searchParams }: PageProps) {
+  const sp = await searchParams;
+  const raw = sp.mecz;
+  let highlightMatchId: number | null = null;
+  if (raw) {
+    const n = Number.parseInt(raw, 10);
+    if (Number.isFinite(n) && n > 0) highlightMatchId = n;
+  }
   const db = getDb();
   const session = await getServerSession();
   const matches = db
@@ -63,6 +72,7 @@ export default async function TerminarzPage() {
         playedMissingStatsMatchIds={playedMissingStatsMatchIds}
         isLoggedIn={Boolean(session)}
         isAdmin={session?.isAdmin ?? false}
+        highlightMatchId={highlightMatchId}
       />
     </div>
   );

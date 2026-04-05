@@ -798,4 +798,249 @@ body {
   .awp-photo-svg .awp-photo__progress {
     transform: scaleX(1);
   }
+
+  .transport-preloader-v2-route,
+  .transport-preloader-v2-marker,
+  .transport-preloader-v2-pin,
+  .transport-preloader-v2-stadium,
+  .transport-preloader-v2-bar {
+    animation: none !important;
+  }
+
+  .transport-preloader-v2-route {
+    stroke-dashoffset: 0 !important;
+    stroke-dasharray: 1 !important;
+  }
+
+  .transport-preloader-v2-marker {
+    left: 74% !important;
+    top: 24% !important;
+  }
+
+  .transport-preloader-v2-bar {
+    width: 100% !important;
+  }
+
+  .ranking-preloader-v2-podium,
+  .ranking-preloader-v2-medal,
+  .ranking-preloader-v2-row-fill--1,
+  .ranking-preloader-v2-row-fill--2,
+  .ranking-preloader-v2-row-fill--3,
+  .ranking-preloader-v2-trophy,
+  .ranking-preloader-v2-bar {
+    animation: none !important;
+  }
+
+  .ranking-preloader-v2-podium {
+    transform: scaleY(1) !important;
+  }
+
+  .ranking-preloader-v2-medal {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .ranking-preloader-v2-row-fill--1,
+  .ranking-preloader-v2-row-fill--2,
+  .ranking-preloader-v2-row-fill--3 {
+    width: 70% !important;
+  }
+
+  .ranking-preloader-v2-bar {
+    width: 100% !important;
+  }
+}
+
+/* --- Preloader „Transport na mecz” (nocna nawigacja GPS / trasa do obiektu) --- */
+@keyframes transport-v2-route-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes transport-v2-marker-move {
+  0% {
+    left: 7%;
+    top: 84%;
+  }
+  22% {
+    left: 20%;
+    top: 58%;
+  }
+  48% {
+    left: 44%;
+    top: 42%;
+  }
+  72% {
+    left: 62%;
+    top: 30%;
+  }
+  100% {
+    left: 74%;
+    top: 24%;
+  }
+}
+
+@keyframes transport-v2-pin-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.35);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 20px 4px rgba(52, 211, 153, 0.2);
+    transform: scale(1.03);
+  }
+}
+
+@keyframes transport-v2-stadium-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.88;
+  }
+}
+
+@keyframes transport-v2-bar-fill {
+  to {
+    width: 100%;
+  }
+}
+
+.transport-preloader-v2-route {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: transport-v2-route-draw 2.55s ease-out forwards;
+}
+
+.transport-preloader-v2-marker {
+  animation: transport-v2-marker-move 2.7s cubic-bezier(0.33, 0.08, 0.18, 1) forwards;
+  will-change: left, top;
+}
+
+.transport-preloader-v2-pin {
+  animation: transport-v2-pin-glow 1.5s ease-in-out infinite;
+}
+
+.transport-preloader-v2-stadium {
+  animation: transport-v2-stadium-pulse 2.2s ease-in-out infinite;
+  transform-origin: center bottom;
+}
+
+.transport-preloader-v2-bar {
+  width: 0%;
+  animation: transport-v2-bar-fill 2.75s ease-out forwards;
+}
+
+/* --- Preloader „Rankingi” (nocna tablica / podium, styl jak transport) --- */
+@keyframes ranking-v2-podium-rise {
+  to {
+    transform: scaleY(1);
+  }
+}
+
+@keyframes ranking-v2-medal-pop {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes ranking-v2-row-fill-a {
+  to {
+    width: 78%;
+  }
+}
+
+@keyframes ranking-v2-row-fill-b {
+  to {
+    width: 64%;
+  }
+}
+
+@keyframes ranking-v2-row-fill-c {
+  to {
+    width: 52%;
+  }
+}
+
+@keyframes ranking-v2-trophy-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.25);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 18px 3px rgba(251, 191, 36, 0.15);
+    transform: scale(1.04);
+  }
+}
+
+@keyframes ranking-v2-bar-fill {
+  to {
+    width: 100%;
+  }
+}
+
+.ranking-preloader-v2-podium {
+  transform-origin: bottom center;
+  transform: scaleY(0);
+}
+
+.ranking-preloader-v2-podium--1 {
+  height: 108px;
+  animation: ranking-v2-podium-rise 0.75s cubic-bezier(0.34, 1.45, 0.64, 1) 0.12s forwards;
+}
+
+.ranking-preloader-v2-podium--2 {
+  height: 74px;
+  animation: ranking-v2-podium-rise 0.7s cubic-bezier(0.34, 1.45, 0.64, 1) 0.32s forwards;
+}
+
+.ranking-preloader-v2-podium--3 {
+  height: 56px;
+  animation: ranking-v2-podium-rise 0.65s cubic-bezier(0.34, 1.45, 0.64, 1) 0.48s forwards;
+}
+
+.ranking-preloader-v2-medal {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.ranking-preloader-v2-medal--1 {
+  animation: ranking-v2-medal-pop 0.5s ease-out 0.75s forwards;
+}
+
+.ranking-preloader-v2-medal--2 {
+  animation: ranking-v2-medal-pop 0.45s ease-out 0.95s forwards;
+}
+
+.ranking-preloader-v2-medal--3 {
+  animation: ranking-v2-medal-pop 0.45s ease-out 1.05s forwards;
+}
+
+.ranking-preloader-v2-row-fill--1 {
+  width: 0;
+  animation: ranking-v2-row-fill-a 0.85s ease-out 1.15s forwards;
+}
+
+.ranking-preloader-v2-row-fill--2 {
+  width: 0;
+  animation: ranking-v2-row-fill-b 0.85s ease-out 1.3s forwards;
+}
+
+.ranking-preloader-v2-row-fill--3 {
+  width: 0;
+  animation: ranking-v2-row-fill-c 0.85s ease-out 1.45s forwards;
+}
+
+.ranking-preloader-v2-trophy {
+  animation: ranking-v2-trophy-glow 1.6s ease-in-out infinite;
+}
+
+.ranking-preloader-v2-bar {
+  width: 0%;
+  animation: ranking-v2-bar-fill 2.6s ease-out forwards;
 }

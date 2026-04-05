@@ -1,5 +1,5 @@
-import { RoutePreloaderScreen } from "@/components/preloaders";
+import { RankingNightPreloader } from "@/components/preloaders/rankingi-night-preloader";
 
 export default function RankingiLoading() {
-  return <RoutePreloaderScreen path="/rankingi" />;
+  return <RankingNightPreloader />;
 }

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getDb, logActivity } from "@/lib/db";
 import { requireUser } from "@/lib/api-helpers";
+import { normalizeTransportFromBody, validateTransportBody, type SignupTransportRow } from "@/lib/transport";
 
 export const runtime = "nodejs";
 
@@ -10,7 +11,28 @@ function todayISO() {
   return new Date().toISOString().slice(0, 10);
 }
 
-export async function POST(_req: Request, ctx: Ctx) {
+function parseTransportBody(raw: unknown): SignupTransportRow | { error: string } {
+  if (raw === null || typeof raw !== "object") {
+    return { drives_car: 0, can_take_passengers: 0, needs_transport: 0 };
+  }
+  const o = raw as Record<string, unknown>;
+  if (!("drivesCar" in o) || typeof o.drivesCar !== "boolean") {
+    return { drives_car: 0, can_take_passengers: 0, needs_transport: 0 };
+  }
+  const err = validateTransportBody({
+    drivesCar: o.drivesCar,
+    canTakePassengers: typeof o.canTakePassengers === "boolean" ? o.canTakePassengers : undefined,
+    needsTransport: typeof o.needsTransport === "boolean" ? o.needsTransport : undefined,
+  });
+  if (err) return { error: err };
+  return normalizeTransportFromBody({
+    drivesCar: o.drivesCar,
+    canTakePassengers: typeof o.canTakePassengers === "boolean" ? o.canTakePassengers : undefined,
+    needsTransport: typeof o.needsTransport === "boolean" ? o.needsTransport : undefined,
+  });
+}
+
+export async function POST(req: Request, ctx: Ctx) {
   const gate = await requireUser();
   if (!gate.ok) return gate.response;
   const { id } = await ctx.params;
@@ -49,10 +71,28 @@ export async function POST(_req: Request, ctx: Ctx) {
     return NextResponse.json({ error: "Już jesteś zapisany na ten mecz!" }, { status: 400 });
   }
 
+  let rawBody: unknown = {};
+  try {
+    rawBody = await req.json();
+  } catch {
+    rawBody = {};
+  }
+  const tr = parseTransportBody(rawBody);
+  if ("error" in tr && typeof tr.error === "string") {
+    return NextResponse.json({ error: tr.error }, { status: 400 });
+  }
+  const transport = tr as SignupTransportRow;
+
   const tx = db.transaction(() => {
-    db.prepare("INSERT INTO match_signups (user_id, match_id, paid) VALUES (?, ?, 0)").run(
+    db.prepare(
+      `INSERT INTO match_signups (user_id, match_id, paid, drives_car, can_take_passengers, needs_transport)
+       VALUES (?, ?, 0, ?, ?, ?)`
+    ).run(
       gate.session.userId,
-      mid
+      mid,
+      transport.drives_car,
+      transport.can_take_passengers,
+      transport.needs_transport
     );
     db.prepare("UPDATE matches SET signed_up = signed_up + 1 WHERE id = ?").run(mid);
   });

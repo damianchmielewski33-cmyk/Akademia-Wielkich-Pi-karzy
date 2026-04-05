@@ -3,9 +3,15 @@
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { getRoutePreloaderSpec, PagePreloaderLayout } from "@/components/preloaders";
+import {
+  getRoutePreloaderSpec,
+  isFullBleedRoute,
+  PagePreloaderLayout,
+  RankingNightPreloader,
+} from "@/components/preloaders";
 
-const MIN_VISIBLE_MS = 4000;
+/** Krótszy niż wcześniej — pełna nawigacja nie powinna sztucznie blokować UI przez kilka sekund. */
+const MIN_VISIBLE_MS = 550;
 const MAX_OVERLAY_MS = 15000;
 
 function isReducedMotion() {
@@ -84,8 +90,14 @@ export function NavigationLoadingOverlay() {
         return;
       }
       if (path === null) return;
+      /** Powrót na start — bez nakładki ładowania. */
+      if (path === "/") return;
       if (path.startsWith("/api/auth/logout")) return;
       if (path === "/panel-admina" || path.startsWith("/panel-admina/")) return;
+      /** Transport ma własny preloader w layoucie — bez nakładki nawigacji (unikamy podwójnego loadera). */
+      if (path.startsWith("/transport")) return;
+      /** Logowanie i rejestracja — bez pełnoekranowego loadera przy wejściu. */
+      if (path.startsWith("/login") || path.startsWith("/register")) return;
 
       const current = pathname ?? "";
       if (path === current) return;
@@ -126,7 +138,42 @@ export function NavigationLoadingOverlay() {
     };
   }, []);
 
+  /** Jedna oś przewijania: bez tego `overflow-y-auto` na overlayu + scroll `body` dają podwójny suwak. */
+  useEffect(() => {
+    if (!visible) return;
+    const html = document.documentElement;
+    const body = document.body;
+    const scrollbarGap = window.innerWidth - html.clientWidth;
+    const prevHtmlOverflow = html.style.overflow;
+    const prevBodyOverflow = body.style.overflow;
+    const prevBodyPaddingRight = body.style.paddingRight;
+    html.style.overflow = "hidden";
+    body.style.overflow = "hidden";
+    if (scrollbarGap > 0) {
+      body.style.paddingRight = `${scrollbarGap}px`;
+    }
+    return () => {
+      html.style.overflow = prevHtmlOverflow;
+      body.style.overflow = prevBodyOverflow;
+      body.style.paddingRight = prevBodyPaddingRight;
+    };
+  }, [visible]);
+
   if (!mounted || !visible || !pendingPath) return null;
+
+  if (isFullBleedRoute(pendingPath)) {
+    return createPortal(
+      <div
+        className="fixed inset-0 z-[100] overflow-hidden bg-[#0b1220]"
+        aria-busy="true"
+        aria-live="polite"
+        aria-label="Rankingi"
+      >
+        <RankingNightPreloader />
+      </div>,
+      document.body
+    );
+  }
 
   const { title, subtitle, Preloader } = getRoutePreloaderSpec(pendingPath);
 

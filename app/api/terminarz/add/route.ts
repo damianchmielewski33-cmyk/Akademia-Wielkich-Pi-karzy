@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getDb, logActivity } from "@/lib/db";
+import { getDb, logActivity, type MatchRow } from "@/lib/db";
 import { requireAdmin } from "@/lib/api-helpers";
+import { notifySubscribersAboutNewMatch } from "@/lib/match-notifications";
 
 export const runtime = "nodejs";
 
@@ -37,5 +38,14 @@ export async function POST(req: Request) {
     gate.session.userId,
     `Dodał mecz do terminarza id ${newId}: ${date} ${time} (${location}), max. ${max_slots} miejsc`
   );
-  return NextResponse.json({ status: "ok" });
+  const matchRow = db.prepare("SELECT * FROM matches WHERE id = ?").get(newId) as MatchRow | undefined;
+  if (matchRow) {
+    try {
+      /** Serverless kończy proces zaraz po odpowiedzi — bez await maile często w ogóle nie wychodzą. */
+      await notifySubscribersAboutNewMatch(matchRow);
+    } catch (e) {
+      console.error("[terminarz/add] notifySubscribersAboutNewMatch:", e);
+    }
+  }
+  return NextResponse.json({ status: "ok", id: newId });
 }

@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import {
   Activity,
   CalendarDays,
+  Car,
   ChevronRight,
   LayoutGrid,
   LogIn,
@@ -19,6 +20,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { PlayerAvatar } from "@/components/player-avatar";
+import { MatchTransportSignupDialog } from "@/components/match-transport-signup-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -36,6 +38,8 @@ type Props = {
   nextMatch: MatchRow | null;
   lineupPublicNextMatch: boolean;
   userSigned: boolean;
+  /** Jeden przycisk „Transport na mecz” (okno 6 h przed startem albo dostęp do czatu). */
+  showTransportOnHome: boolean;
   isLoggedIn: boolean;
   isAdmin: boolean;
   firstName: string;
@@ -48,6 +52,7 @@ export function HomeClient({
   nextMatch,
   lineupPublicNextMatch,
   userSigned,
+  showTransportOnHome,
   isLoggedIn,
   isAdmin,
   firstName,
@@ -56,6 +61,7 @@ export function HomeClient({
   profilePhotoPath,
 }: Props) {
   const router = useRouter();
+  const [transportSignupOpen, setTransportSignupOpen] = useState(false);
   const [signupOpen, setSignupOpen] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [statsOpen, setStatsOpen] = useState(false);
@@ -87,20 +93,9 @@ export function HomeClient({
       .catch(() => {});
   }, []);
 
-  async function signupFromHome() {
+  function openTransportSignup() {
     if (!nextMatch) return;
-    const res = await fetch(`/api/terminarz/signup/${nextMatch.id}`, { method: "POST" });
-    const data = await res.json().catch(() => ({}));
-    if (res.status === 401) {
-      router.push("/login");
-      return;
-    }
-    if (!res.ok) {
-      toast.error(typeof data.error === "string" ? data.error : "Nie udało się zapisać");
-      return;
-    }
-    setSignupOpen(true);
-    router.refresh();
+    setTransportSignupOpen(true);
   }
 
   async function saveStats() {
@@ -154,6 +149,14 @@ export function HomeClient({
             <PitchTile href="/panel-admina" icon={Shield} title="Panel admina" desc="Zarządzanie akademią" />
           )}
         </>
+      )}
+      {isLoggedIn && userSigned && showTransportOnHome && nextMatch && (
+        <PitchTile
+          href={`/transport/${nextMatch.id}`}
+          icon={Car}
+          title="Transport na mecz"
+          desc="Lista kierowców, potrzebujących dojazdu i czat"
+        />
       )}
     </div>
   );
@@ -236,7 +239,7 @@ export function HomeClient({
                 ) : (
                   <Button
                     className="mt-4 w-full border-0 bg-white font-semibold text-emerald-900 shadow-md hover:bg-emerald-50"
-                    onClick={signupFromHome}
+                    onClick={openTransportSignup}
                   >
                     Zapisz się na mecz
                   </Button>
@@ -281,6 +284,19 @@ export function HomeClient({
           </div>
         )}
       </div>
+
+      {nextMatch && (
+        <MatchTransportSignupDialog
+          open={transportSignupOpen}
+          onOpenChange={setTransportSignupOpen}
+          matchId={nextMatch.id}
+          intent="signup"
+          onCompleted={() => {
+            setSignupOpen(true);
+            router.refresh();
+          }}
+        />
+      )}
 
       <Dialog open={signupOpen} onOpenChange={setSignupOpen}>
         <DialogContent>

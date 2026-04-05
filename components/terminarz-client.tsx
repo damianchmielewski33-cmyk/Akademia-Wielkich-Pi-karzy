@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -39,6 +39,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { MatchTransportSignupDialog } from "@/components/match-transport-signup-dialog";
 
 type Props = {
   upcoming: MatchRow[];
@@ -50,6 +51,8 @@ type Props = {
   playedMissingStatsMatchIds: number[];
   isLoggedIn: boolean;
   isAdmin: boolean;
+  /** Z URL (?mecz=) — wyróżnienie wiersza po wejściu z maila. */
+  highlightMatchId?: number | null;
 };
 
 const todayISO = () => new Date().toISOString().slice(0, 10);
@@ -123,6 +126,7 @@ export function TerminarzClient({
   playedMissingStatsMatchIds,
   isLoggedIn,
   isAdmin,
+  highlightMatchId = null,
 }: Props) {
   const router = useRouter();
   const [view, setView] = useState<"list" | "cal">("list");
@@ -143,8 +147,26 @@ export function TerminarzClient({
   const [statsAssists, setStatsAssists] = useState("0");
   const [statsDistance, setStatsDistance] = useState("0");
   const [statsSaves, setStatsSaves] = useState("0");
+  const [transportSignupOpen, setTransportSignupOpen] = useState(false);
+  const [transportSignupMatchId, setTransportSignupMatchId] = useState<number | null>(null);
 
   const missingStatsSet = useMemo(() => new Set(playedMissingStatsMatchIds), [playedMissingStatsMatchIds]);
+
+  const highlightMatch = useMemo(
+    () => (highlightMatchId ? allMatches.find((m) => m.id === highlightMatchId) : undefined),
+    [highlightMatchId, allMatches]
+  );
+
+  useEffect(() => {
+    if (highlightMatchId) setView("list");
+  }, [highlightMatchId]);
+
+  useEffect(() => {
+    if (!highlightMatchId) return;
+    const inUpcoming = upcoming.some((m) => m.id === highlightMatchId);
+    const inArchive = playedConfirmed.some((m) => m.id === highlightMatchId);
+    if (!inUpcoming && inArchive) setListTab("archive");
+  }, [highlightMatchId, upcoming, playedConfirmed]);
 
   const filteredActive = useMemo(() => {
     const t = todayISO();
@@ -188,6 +210,16 @@ export function TerminarzClient({
     return rows;
   }, [playedConfirmed, search, sortDir]);
 
+  useEffect(() => {
+    if (!highlightMatchId || view !== "list") return;
+    const t = window.setTimeout(() => {
+      document
+        .querySelector(`[data-mecz-highlight="${highlightMatchId}"]`)
+        ?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 180);
+    return () => window.clearTimeout(t);
+  }, [highlightMatchId, view, listTab, filteredActive, filteredArchive]);
+
   const statsActive = useMemo(() => {
     let total = 0,
       free = 0,
@@ -203,19 +235,9 @@ export function TerminarzClient({
     return { total, free, full, mine };
   }, [filteredActive, userSigned]);
 
-  async function signup(id: number) {
-    const res = await fetch(`/api/terminarz/signup/${id}`, { method: "POST" });
-    const data = await res.json().catch(() => ({}));
-    if (res.status === 401) {
-      window.location.href = "/login";
-      return;
-    }
-    if (!res.ok) {
-      toast.error(typeof data.error === "string" ? data.error : "Błąd");
-      return;
-    }
-    toast.success("Zapisano");
-    router.refresh();
+  function openTransportSignup(id: number) {
+    setTransportSignupMatchId(id);
+    setTransportSignupOpen(true);
   }
 
   async function unsubscribe(id: number) {
@@ -338,7 +360,7 @@ export function TerminarzClient({
               variant="default"
               className={actionBtnPrimary}
               title={`Zapisuje Cię na listę (${m.signed_up}/${m.max_slots} zajętych)`}
-              onClick={() => signup(m.id)}
+              onClick={() => openTransportSignup(m.id)}
             >
               <UserPlus className="shrink-0" aria-hidden />
               <span>
@@ -564,6 +586,24 @@ export function TerminarzClient({
 
         {view === "list" && (
           <div className="mx-auto mt-5 max-w-4xl space-y-4">
+            {highlightMatch && (
+              <div
+                role="status"
+                className="rounded-xl border-2 border-emerald-500 bg-emerald-50/95 px-4 py-3 text-sm leading-relaxed text-emerald-950 shadow-sm"
+              >
+                <span className="font-semibold">Z powiadomienia e-mail: </span>
+                poniżej <span className="font-medium">zieloną ramką</span> wyróżniony jest mecz, którego dotyczyła
+                wiadomość — możesz od razu przejść do zapisu.
+              </div>
+            )}
+            {highlightMatchId && !highlightMatch && (
+              <div
+                role="status"
+                className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950"
+              >
+                Nie znaleziono meczu o tym numerze — mógł zostać usunięty z terminarza.
+              </div>
+            )}
             <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm sm:p-5">
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-12 lg:items-end">
                 <div className="lg:col-span-4">
@@ -680,9 +720,12 @@ export function TerminarzClient({
                     return (
                       <div
                         key={m.id}
+                        data-mecz-highlight={highlightMatchId === m.id ? m.id : undefined}
                         className={cn(
                           "rounded-2xl border border-zinc-200 p-4 shadow-sm",
-                          rowClass(m.signed_up, m.max_slots)
+                          rowClass(m.signed_up, m.max_slots),
+                          highlightMatchId === m.id &&
+                            "relative z-[1] border-emerald-600 ring-2 ring-emerald-600 ring-offset-2"
                         )}
                       >
                         <div className="flex flex-wrap items-start justify-between gap-2">
@@ -745,7 +788,15 @@ export function TerminarzClient({
                             const pct = m.max_slots > 0 ? (m.signed_up / m.max_slots) * 100 : 0;
                             const past = m.match_date < todayISO();
                             return (
-                              <tr key={m.id} className={cn("border-b border-zinc-100", rowClass(m.signed_up, m.max_slots))}>
+                              <tr
+                                key={m.id}
+                                data-mecz-highlight={highlightMatchId === m.id ? m.id : undefined}
+                                className={cn(
+                                  "border-b border-zinc-100",
+                                  rowClass(m.signed_up, m.max_slots),
+                                  highlightMatchId === m.id && "shadow-[inset_0_0_0_3px_#059669]"
+                                )}
+                              >
                                 <td className="px-4 py-3 align-top">
                                   <div className="font-semibold text-emerald-950">{m.match_date}</div>
                                   {past && (
@@ -799,7 +850,12 @@ export function TerminarzClient({
                   {filteredArchive.map((m) => (
                     <div
                       key={m.id}
-                      className="rounded-2xl border border-zinc-200 bg-zinc-50/80 p-4 shadow-sm"
+                      data-mecz-highlight={highlightMatchId === m.id ? m.id : undefined}
+                      className={cn(
+                        "rounded-2xl border border-zinc-200 bg-zinc-50/80 p-4 shadow-sm",
+                        highlightMatchId === m.id &&
+                          "relative z-[1] border-emerald-600 ring-2 ring-emerald-600 ring-offset-2"
+                      )}
                     >
                       <p className="text-lg font-bold text-emerald-950">{m.match_date}</p>
                       <p className="text-sm text-zinc-700">{m.match_time}</p>
@@ -832,7 +888,14 @@ export function TerminarzClient({
                         </thead>
                         <tbody>
                           {filteredArchive.map((m) => (
-                            <tr key={m.id} className="border-b border-zinc-100 bg-zinc-50/50">
+                            <tr
+                              key={m.id}
+                              data-mecz-highlight={highlightMatchId === m.id ? m.id : undefined}
+                              className={cn(
+                                "border-b border-zinc-100 bg-zinc-50/50",
+                                highlightMatchId === m.id && "shadow-[inset_0_0_0_3px_#059669]"
+                              )}
+                            >
                               <td className="px-4 py-3 font-semibold text-emerald-950">{m.match_date}</td>
                               <td className="px-4 py-3 text-zinc-800">{m.match_time}</td>
                               <td className="px-4 py-3 text-zinc-800">{m.location}</td>
@@ -1098,6 +1161,22 @@ export function TerminarzClient({
       </Dialog>
 
       <AddMatchDialog open={addOpen} onOpenChange={setAddOpen} onDone={() => router.refresh()} />
+
+      {transportSignupMatchId != null && (
+        <MatchTransportSignupDialog
+          open={transportSignupOpen}
+          onOpenChange={(v) => {
+            setTransportSignupOpen(v);
+            if (!v) setTransportSignupMatchId(null);
+          }}
+          matchId={transportSignupMatchId}
+          intent="signup"
+          onCompleted={() => {
+            toast.success("Zapisano");
+            router.refresh();
+          }}
+        />
+      )}
     </>
   );
 }

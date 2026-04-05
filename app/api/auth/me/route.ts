@@ -6,8 +6,18 @@ export async function GET() {
   const s = await getServerSession();
   if (!s) return NextResponse.json({ user: null });
   const row = getDb()
-    .prepare("SELECT profile_photo_path FROM users WHERE id = ?")
-    .get(s.userId) as { profile_photo_path: string | null } | undefined;
+    .prepare(
+      `SELECT profile_photo_path, email, match_notifications_consent, notification_prompt_completed
+       FROM users WHERE id = ?`
+    )
+    .get(s.userId) as
+    | {
+        profile_photo_path: string | null;
+        email: string | null;
+        match_notifications_consent: number;
+        notification_prompt_completed: number;
+      }
+    | undefined;
   return NextResponse.json({
     user: {
       id: s.userId,
@@ -16,6 +26,9 @@ export async function GET() {
       zawodnik: s.zawodnik,
       is_admin: s.isAdmin ? 1 : 0,
       profile_photo_path: row?.profile_photo_path ?? null,
+      email: row?.email ?? null,
+      match_notifications_consent: row?.match_notifications_consent ?? 0,
+      notification_prompt_completed: row?.notification_prompt_completed ?? 0,
     },
   });
 }

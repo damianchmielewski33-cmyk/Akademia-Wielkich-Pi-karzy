@@ -1,5 +1,4 @@
-import { RoutePreloaderScreen } from "@/components/preloaders";
-
+/** Brak pełnoekranowego preloadera — szybkie wejście na formularz rejestracji. */
 export default function RegisterLoading() {
-  return <RoutePreloaderScreen path="/register" />;
+  return null;
 }

@@ -1,5 +1,6 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
+import { cache } from "react";
 import { SESSION_COOKIE } from "@/lib/constants";
 import { getAuthSecretKey } from "@/lib/auth-secret";
 
@@ -36,7 +37,7 @@ export async function verifySessionToken(token: string): Promise<AppSession> {
   };
 }
 
-export async function getServerSession(): Promise<AppSession | null> {
+export const getServerSession = cache(async (): Promise<AppSession | null> => {
   const jar = await cookies();
   const token = jar.get(SESSION_COOKIE)?.value;
   if (!token) return null;
@@ -45,7 +46,7 @@ export async function getServerSession(): Promise<AppSession | null> {
   } catch {
     return null;
   }
-}
+});
 
 export async function setSessionCookie(token: string) {
   const jar = await cookies();

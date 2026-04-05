@@ -13,8 +13,9 @@ import {
   Target,
   Users,
 } from "lucide-react";
-import { getDb } from "@/lib/db";
+import { getAccountNavFields } from "@/lib/account-server";
 import { getServerSession } from "@/lib/auth";
+import { getDb } from "@/lib/db";
 import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
@@ -41,15 +42,12 @@ export default async function StatystykiPage() {
   ).c;
   const playersCount = (db.prepare("SELECT COUNT(*) AS c FROM users").get() as { c: number }).c;
 
-  const me = db
-    .prepare(
-      "SELECT first_name, last_name, player_alias, profile_photo_path FROM users WHERE id = ?"
-    )
-    .get(session.userId) as {
-    first_name: string;
-    last_name: string;
-    player_alias: string;
-    profile_photo_path: string | null;
+  const nav = getAccountNavFields(session.userId);
+  const me = {
+    first_name: nav?.firstName ?? session.firstName,
+    last_name: nav?.lastName ?? session.lastName,
+    player_alias: nav?.zawodnik ?? session.zawodnik,
+    profile_photo_path: nav?.profilePhotoPath ?? null,
   };
 
   const userStats = db

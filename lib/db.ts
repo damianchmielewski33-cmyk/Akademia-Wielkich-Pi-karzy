@@ -77,6 +77,8 @@ function initSchema(db: Database.Database) {
     CREATE INDEX IF NOT EXISTS idx_page_views_screen_created ON page_views(screen_key, created_at);
     CREATE INDEX IF NOT EXISTS idx_page_views_user_created ON page_views(user_id, created_at);
 
+    CREATE INDEX IF NOT EXISTS idx_matches_played_date_time ON matches(played, match_date, match_time);
+
     CREATE TABLE IF NOT EXISTS match_lineup_slots (
       match_id INTEGER NOT NULL,
       team TEXT NOT NULL CHECK (team IN ('home', 'away')),
@@ -105,6 +107,43 @@ function initSchema(db: Database.Database) {
   if (!userCols.some((c) => c.name === "profile_photo_path")) {
     db.exec("ALTER TABLE users ADD COLUMN profile_photo_path TEXT");
   }
+  if (!userCols.some((c) => c.name === "email")) {
+    db.exec("ALTER TABLE users ADD COLUMN email TEXT");
+  }
+  if (!userCols.some((c) => c.name === "match_notifications_consent")) {
+    db.exec("ALTER TABLE users ADD COLUMN match_notifications_consent INTEGER NOT NULL DEFAULT 0");
+  }
+  if (!userCols.some((c) => c.name === "notification_prompt_completed")) {
+    db.exec("ALTER TABLE users ADD COLUMN notification_prompt_completed INTEGER NOT NULL DEFAULT 0");
+    db.prepare("UPDATE users SET notification_prompt_completed = 1").run();
+  }
+
+  const signupCols = db.prepare("PRAGMA table_info(match_signups)").all() as { name: string }[];
+  if (!signupCols.some((c) => c.name === "drives_car")) {
+    db.exec("ALTER TABLE match_signups ADD COLUMN drives_car INTEGER NOT NULL DEFAULT 0");
+  }
+  if (!signupCols.some((c) => c.name === "can_take_passengers")) {
+    db.exec("ALTER TABLE match_signups ADD COLUMN can_take_passengers INTEGER NOT NULL DEFAULT 0");
+  }
+  if (!signupCols.some((c) => c.name === "needs_transport")) {
+    db.exec("ALTER TABLE match_signups ADD COLUMN needs_transport INTEGER NOT NULL DEFAULT 0");
+  }
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS match_transport_messages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      match_id INTEGER NOT NULL,
+      user_id INTEGER NOT NULL,
+      body TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (match_id) REFERENCES matches(id) ON DELETE CASCADE,
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    );
+  `);
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_transport_msg_match_created
+    ON match_transport_messages(match_id, created_at);
+  `);
 }
 
 export function getDb(): Database.Database {
@@ -129,6 +168,12 @@ export type UserRow = {
   player_alias: string;
   is_admin: number;
   profile_photo_path?: string | null;
+  /** Adres do powiadomień o meczach (opcjonalny). */
+  email?: string | null;
+  /** 1 = zgoda na e‑maile o nowych terminach. */
+  match_notifications_consent?: number;
+  /** 1 = użytkownik udzielił odpowiedzi w oknie powitalnym (nie pokazuj ponownie). */
+  notification_prompt_completed?: number;
 };
 
 export type MatchRow = {

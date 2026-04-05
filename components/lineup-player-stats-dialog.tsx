@@ -1,15 +1,7 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState } from "react";
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
 import { StatsCrunchPreloader } from "@/components/preloaders";
 import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
 import {
@@ -19,6 +11,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+
+const PlayerStatsBarChart = dynamic(
+  () => import("@/components/player-stats-bar-chart").then((m) => m.PlayerStatsBarChart),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="mt-4 h-56 w-full animate-pulse rounded-xl border border-emerald-900/10 bg-emerald-100/40" />
+    ),
+  }
+);
 
 type StatsPayload = {
   first_name: string;
@@ -143,23 +145,7 @@ export function LineupPlayerStatsDialog({ userId, open, onOpenChange }: Props) {
               <PitchMiniStat label="Dystans" value={data.distance.toFixed(1)} />
               <PitchMiniStat label="Obrony" value={data.saves} />
             </div>
-            <div className="mt-4 h-56 w-full rounded-xl border border-emerald-900/10 bg-emerald-50/30 p-2">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData ?? []}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(6, 78, 59, 0.12)" />
-                  <XAxis dataKey="name" tick={{ fontSize: 12, fill: "#064e3b" }} />
-                  <YAxis tick={{ fontSize: 11, fill: "#064e3b" }} />
-                  <Tooltip
-                    contentStyle={{
-                      borderRadius: "0.5rem",
-                      border: "1px solid rgba(6, 95, 70, 0.2)",
-                      background: "rgba(255,255,255,0.96)",
-                    }}
-                  />
-                  <Bar dataKey="v" fill="#047857" radius={[6, 6, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+            <PlayerStatsBarChart data={chartData ?? []} />
             <h4 className="mt-5 font-bold tracking-tight text-emerald-950">Historia meczów</h4>
             <div className="pitch-rule mb-2 mt-2 w-20 opacity-60" />
             {data.games.length === 0 ? (
