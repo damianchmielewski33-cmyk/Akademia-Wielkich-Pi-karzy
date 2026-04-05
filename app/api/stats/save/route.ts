@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getDb, logActivity } from "@/lib/db";
-import { getServerSession } from "@/lib/auth";
+import { requireUser } from "@/lib/api-helpers";
+import { isWithinStatsEditWindow, utcTodayYmd } from "@/lib/match-stats-rules";
 
 export const runtime = "nodejs";
 
@@ -29,10 +30,9 @@ async function parseBody(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const session = await getServerSession();
-  if (!session) {
-    return new NextResponse("NOT_LOGGED", { status: 401 });
-  }
+  const gate = await requireUser();
+  if (!gate.ok) return gate.response;
+  const session = gate.session;
   let raw: unknown;
   try {
     raw = await parseBody(req);
@@ -67,13 +67,7 @@ export async function POST(req: Request) {
     );
   }
 
-  const withinEditWeek = Boolean(
-    db
-      .prepare(
-        "SELECT 1 AS ok FROM matches WHERE id = ? AND played = 1 AND date('now') <= date(match_date, '+7 days')"
-      )
-      .get(match_id) as { ok: number } | undefined
-  );
+  const withinEditWeek = isWithinStatsEditWindow(match.match_date, utcTodayYmd());
 
   const existing = db
     .prepare("SELECT id FROM match_stats WHERE user_id = ? AND match_id = ?")

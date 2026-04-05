@@ -17,6 +17,7 @@ import {
   Table2,
   UserPlus,
   Users,
+  Wallet,
 } from "lucide-react";
 import { toast } from "sonner";
 import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
@@ -51,6 +52,7 @@ const API = {
   user: (id: number) => `/api/admin/user/${id}`,
   matches: "/api/admin/matches",
   match: (id: number) => `/api/admin/match/${id}`,
+  matchSignups: (id: number) => `/api/admin/match/${id}/signups`,
   stats: "/api/admin/stats",
   stat: (id: number) => `/api/admin/stat/${id}`,
   analytics: (from: string, to: string) =>
@@ -73,6 +75,7 @@ type MatchRow = {
   location: string;
   players_count: number;
   played: number;
+  fee_pln?: number | null;
 };
 
 type StatRow = {
@@ -186,9 +189,10 @@ export function AdminPanel() {
       if (!res.ok) throw new Error();
       const rows = await res.json();
       setMatches(
-        rows.map((m: MatchRow & { played?: number }) => ({
+        rows.map((m: MatchRow & { played?: number; fee_pln?: number | null }) => ({
           ...m,
           played: m.played ?? 0,
+          fee_pln: m.fee_pln ?? null,
         }))
       );
     } catch {
@@ -1169,6 +1173,140 @@ function UserEditForm({
   );
 }
 
+type MatchSignupPaidRow = {
+  user_id: number;
+  paid: number;
+  first_name: string;
+  last_name: string;
+  zawodnik: string;
+  profile_photo_path: string | null;
+};
+
+function MatchSignupsDialog({
+  match,
+  open,
+  onClose,
+}: {
+  match: MatchRow | null;
+  open: boolean;
+  onClose: () => void;
+}) {
+  const [rows, setRows] = useState<MatchSignupPaidRow[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [busyId, setBusyId] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!open || !match) {
+      setRows([]);
+      return;
+    }
+    setLoading(true);
+    void fetch(API.matchSignups(match.id))
+      .then((r) => {
+        if (!r.ok) throw new Error();
+        return r.json() as Promise<{ signups: MatchSignupPaidRow[] }>;
+      })
+      .then((d) => setRows(d.signups ?? []))
+      .catch(() => {
+        toast.error("Nie udało się wczytać zapisów");
+        setRows([]);
+      })
+      .finally(() => setLoading(false));
+  }, [open, match]);
+
+  async function togglePaid(userId: number, nextPaid: boolean) {
+    if (!match) return;
+    setBusyId(userId);
+    try {
+      const res = await fetch(API.matchSignups(match.id), {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: userId, paid: nextPaid }),
+      });
+      if (!res.ok) {
+        toast.error("Nie udało się zapisać statusu opłaty");
+        return;
+      }
+      setRows((prev) =>
+        prev.map((r) => (r.user_id === userId ? { ...r, paid: nextPaid ? 1 : 0 } : r))
+      );
+      toast.success(nextPaid ? "Oznaczono jako opłacone" : "Cofnięto oznaczenie opłaty");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Zapisy i opłaty</DialogTitle>
+          {match ? (
+            <p className="text-sm font-medium text-zinc-600">
+              {match.date} · {match.time}
+            </p>
+          ) : null}
+          {match ? <p className="text-sm text-zinc-500">{match.location}</p> : null}
+        </DialogHeader>
+        {loading ? (
+          <p className="flex items-center justify-center gap-2 py-10 text-sm text-zinc-500">
+            <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+            Wczytywanie…
+          </p>
+        ) : rows.length === 0 ? (
+          <p className="py-6 text-center text-sm text-zinc-500">Brak zapisanych zawodników.</p>
+        ) : (
+          <ul className="max-h-[min(24rem,60vh)] space-y-0 overflow-y-auto rounded-xl border border-zinc-200 bg-zinc-50/50">
+            {rows.map((p, i) => (
+              <li
+                key={p.user_id}
+                className={`flex flex-wrap items-center gap-2 border-b border-zinc-100 px-3 py-2.5 text-sm last:border-b-0 ${
+                  i % 2 === 0 ? "bg-white" : "bg-zinc-50/80"
+                }`}
+              >
+                <PlayerAvatar
+                  photoPath={p.profile_photo_path}
+                  firstName={p.first_name}
+                  lastName={p.last_name}
+                  size="sm"
+                  ringClassName="ring-2 ring-zinc-200"
+                />
+                <div className="min-w-0 flex-1">
+                  <PlayerNameStack
+                    firstName={p.first_name}
+                    lastName={p.last_name}
+                    nick={p.zawodnik}
+                  />
+                </div>
+                {p.paid ? (
+                  <Badge className="border-emerald-200 bg-emerald-100 text-emerald-900">Opłacone</Badge>
+                ) : (
+                  <Badge variant="secondary">Do zapłaty</Badge>
+                )}
+                <Button
+                  size="sm"
+                  variant={p.paid ? "outline" : "default"}
+                  className="shrink-0"
+                  disabled={busyId === p.user_id}
+                  onClick={() => void togglePaid(p.user_id, !p.paid)}
+                >
+                  {busyId === p.user_id ? (
+                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                  ) : p.paid ? (
+                    "Cofnij"
+                  ) : (
+                    "Opłacone"
+                  )}
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function MatchesView({
   matches,
   loading,
@@ -1181,6 +1319,7 @@ function MatchesView({
   const [editId, setEditId] = useState<number | null>(null);
   const [editRow, setEditRow] = useState<MatchRow | null>(null);
   const [delMatch, setDelMatch] = useState<MatchRow | null>(null);
+  const [signupsMatch, setSignupsMatch] = useState<MatchRow | null>(null);
   const [q, setQ] = useState("");
 
   const filtered = useMemo(() => {
@@ -1209,6 +1348,7 @@ function MatchesView({
       location: m.location,
       players_count: 0,
       played: m.played ?? 0,
+      fee_pln: m.fee_pln ?? null,
     });
     setEditId(id);
   }
@@ -1217,7 +1357,7 @@ function MatchesView({
     <div>
       <Toolbar
         title="Mecze"
-        description="Lista terminów — edycja daty, godziny i miejsca. Szczegóły zapisów w terminarzu."
+        description="Lista terminów — edycja daty, miejsca, kwoty wpisowego oraz oznaczanie opłat za zapisy."
         onReload={onReload}
         loading={loading}
       >
@@ -1245,6 +1385,7 @@ function MatchesView({
               <TableHead className="text-zinc-700">Godzina</TableHead>
               <TableHead className="text-zinc-700">Miejsce</TableHead>
               <TableHead className="text-zinc-700">Zapisani</TableHead>
+              <TableHead className="text-right tabular-nums text-zinc-700">Kwota</TableHead>
               <TableHead className="text-zinc-700">Status</TableHead>
               <TableHead className="text-right text-zinc-700">Akcje</TableHead>
             </TableRow>
@@ -1252,7 +1393,7 @@ function MatchesView({
           <TableBody>
             {filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="h-24 text-center text-sm text-zinc-500">
+                <TableCell colSpan={8} className="h-24 text-center text-sm text-zinc-500">
                   {matches.length === 0 ? "Brak meczów w bazie." : "Brak wyników dla podanego filtra."}
                 </TableCell>
               </TableRow>
@@ -1264,6 +1405,13 @@ function MatchesView({
                   <TableCell className="tabular-nums">{m.time}</TableCell>
                   <TableCell>{m.location}</TableCell>
                   <TableCell>{m.players_count}</TableCell>
+                  <TableCell className="text-right tabular-nums text-zinc-700">
+                    {m.fee_pln != null && Number.isFinite(m.fee_pln) ? (
+                      <span title="Wpłata BLIK — kwota na mecz">{m.fee_pln} zł</span>
+                    ) : (
+                      <span className="text-zinc-400">—</span>
+                    )}
+                  </TableCell>
                   <TableCell>
                     {m.played ? (
                       <Badge variant="outline" className="border-zinc-300 font-normal text-zinc-700">
@@ -1274,7 +1422,17 @@ function MatchesView({
                     )}
                   </TableCell>
                   <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
+                    <div className="flex flex-wrap justify-end gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="border-emerald-800/25 bg-white"
+                        onClick={() => setSignupsMatch(m)}
+                        title="Zapisy i status opłaty"
+                      >
+                        <Wallet className="mr-1.5 h-3.5 w-3.5" aria-hidden />
+                        Opłaty
+                      </Button>
                       <Button size="sm" variant="secondary" onClick={() => openEdit(m.id)}>
                         Edytuj
                       </Button>
@@ -1302,6 +1460,7 @@ function MatchesView({
         <DialogContent className="sm:max-w-md">
           {editRow && (
             <MatchEditForm
+              key={editRow.id}
               m={editRow}
               onClose={() => {
                 setEditId(null);
@@ -1351,6 +1510,12 @@ function MatchesView({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <MatchSignupsDialog
+        match={signupsMatch}
+        open={signupsMatch != null}
+        onClose={() => setSignupsMatch(null)}
+      />
     </div>
   );
 }
@@ -1367,6 +1532,9 @@ function MatchEditForm({
   const [date, setDate] = useState(m.date);
   const [time, setTime] = useState(m.time);
   const [location, setLoc] = useState(m.location);
+  const [feePln, setFeePln] = useState(
+    () => (m.fee_pln != null && Number.isFinite(m.fee_pln) ? String(m.fee_pln) : "")
+  );
   const [saving, setSaving] = useState(false);
 
   return (
@@ -1404,6 +1572,19 @@ function MatchEditForm({
             onChange={(e) => setLoc(e.target.value)}
           />
         </div>
+        <div>
+          <Label htmlFor="adm-mfee">Kwota wpisowego (PLN)</Label>
+          <Input
+            id="adm-mfee"
+            type="text"
+            inputMode="decimal"
+            placeholder="np. 25 lub puste"
+            className="mt-1 border-zinc-200"
+            value={feePln}
+            onChange={(e) => setFeePln(e.target.value)}
+          />
+          <p className="mt-1 text-xs text-zinc-500">Puste pole — kwota nie jest wyświetlana na stronie płatności.</p>
+        </div>
       </div>
       <DialogFooter className="gap-2 sm:gap-0">
         <Button variant="outline" onClick={onClose} disabled={saving}>
@@ -1412,12 +1593,22 @@ function MatchEditForm({
         <Button
           disabled={saving}
           onClick={async () => {
+            const raw = feePln.trim().replace(",", ".");
+            let fee_pln: number | null = null;
+            if (raw !== "") {
+              const n = Number(raw);
+              if (!Number.isFinite(n) || n < 0) {
+                toast.error("Podaj prawidłową kwotę lub zostaw pole puste");
+                return;
+              }
+              fee_pln = n;
+            }
             setSaving(true);
             try {
               const res = await fetch(API.match(m.id), {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ date, time, location }),
+                body: JSON.stringify({ date, time, location, fee_pln }),
               });
               if (!res.ok) {
                 toast.error("Nie udało się zapisać meczu");

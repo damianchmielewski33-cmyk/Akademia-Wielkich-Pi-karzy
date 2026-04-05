@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 import { getDb, logActivity } from "@/lib/db";
-import { getServerSession } from "@/lib/auth";
+import { requireUser } from "@/lib/api-helpers";
 
 export const runtime = "nodejs";
 
@@ -30,8 +30,9 @@ function safeUnlink(absPath: string) {
 }
 
 export async function POST(req: Request) {
-  const session = await getServerSession();
-  if (!session) return NextResponse.json({ error: "Wymagane logowanie" }, { status: 401 });
+  const gate = await requireUser();
+  if (!gate.ok) return gate.response;
+  const session = gate.session;
 
   let form: FormData;
   try {
@@ -84,8 +85,9 @@ export async function POST(req: Request) {
 }
 
 export async function DELETE() {
-  const session = await getServerSession();
-  if (!session) return NextResponse.json({ error: "Wymagane logowanie" }, { status: 401 });
+  const gate = await requireUser();
+  if (!gate.ok) return gate.response;
+  const session = gate.session;
 
   const db = getDb();
   const prev = db

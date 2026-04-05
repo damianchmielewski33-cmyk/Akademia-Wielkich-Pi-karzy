@@ -50,7 +50,7 @@ type Props = {
 export function LineupPlayerStatsDialog({ userId, open, onOpenChange }: Props) {
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<StatsPayload | null>(null);
-  const [loadError, setLoadError] = useState(false);
+  const [loadError, setLoadError] = useState<false | "unauthorized" | "other">(false);
 
   useEffect(() => {
     if (!open || userId == null) {
@@ -60,17 +60,18 @@ export function LineupPlayerStatsDialog({ userId, open, onOpenChange }: Props) {
     setLoading(true);
     setData(null);
     setLoadError(false);
-    void fetch(`/api/player-stats/${userId}`)
+    void fetch(`/api/player-stats/${userId}`, { credentials: "include" })
       .then((res) => {
+        if (res.status === 401) throw new Error("unauthorized");
         if (!res.ok) throw new Error("fetch failed");
         return res.json() as Promise<StatsPayload>;
       })
       .then((j) => {
         if (!cancelled) setData(j);
       })
-      .catch(() => {
+      .catch((e) => {
         if (!cancelled) {
-          setLoadError(true);
+          setLoadError(e instanceof Error && e.message === "unauthorized" ? "unauthorized" : "other");
           setData(null);
         }
       })
@@ -110,7 +111,11 @@ export function LineupPlayerStatsDialog({ userId, open, onOpenChange }: Props) {
           <DialogDescription asChild>
             <div>
               {loadError && !loading && (
-                <p className="pt-2 text-sm text-red-700">Nie udało się wczytać statystyk. Spróbuj ponownie później.</p>
+                <p className="pt-2 text-sm text-red-700">
+                  {loadError === "unauthorized"
+                    ? "Zaloguj się, aby zobaczyć statystyki zawodnika."
+                    : "Nie udało się wczytać statystyk. Spróbuj ponownie później."}
+                </p>
               )}
               {data && !loading && (
                 <div className="flex items-center gap-3 pt-2">

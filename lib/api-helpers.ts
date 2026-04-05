@@ -6,7 +6,7 @@ export async function requireUser() {
   if (!session) {
     return {
       ok: false as const,
-      response: NextResponse.json({ error: "Unauthorized" }, { status: 401 }),
+      response: NextResponse.json({ error: "Wymagane logowanie" }, { status: 401 }),
     };
   }
   return { ok: true as const, session };
@@ -18,7 +18,7 @@ export async function requireAdmin() {
   if (!r.session.isAdmin) {
     return {
       ok: false as const,
-      response: NextResponse.json({ error: "Forbidden" }, { status: 403 }),
+      response: NextResponse.json({ error: "Brak uprawnień administratora" }, { status: 403 }),
     };
   }
   return { ok: true as const, session: r.session };

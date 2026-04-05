@@ -72,6 +72,13 @@ export function getRoutePreloaderSpec(rawPath: string): RoutePreloaderSpec {
       Preloader: RankingPodiumPreloader,
     };
   }
+  if (path.startsWith("/platnosci")) {
+    return {
+      title: "Płatności",
+      subtitle: "Wpłata BLIK na mecz — wczytujemy szczegóły i listę zapisów.",
+      Preloader: HomeStadiumPreloader,
+    };
+  }
   if (path.startsWith("/profil")) {
     return {
       title: "Profil",

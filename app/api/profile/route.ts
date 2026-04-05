@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getDb, logActivity } from "@/lib/db";
-import { getServerSession, createSessionToken, setSessionCookie } from "@/lib/auth";
+import { createSessionToken, setSessionCookie } from "@/lib/auth";
+import { requireUser } from "@/lib/api-helpers";
 import { ALL_PLAYERS } from "@/lib/constants";
 import { getProfileDashboard, getAvailablePlayerAliases } from "@/lib/profile-data";
 
@@ -18,16 +19,18 @@ const patchSchema = z
   });
 
 export async function GET() {
-  const session = await getServerSession();
-  if (!session) return NextResponse.json({ error: "Wymagane logowanie" }, { status: 401 });
+  const gate = await requireUser();
+  if (!gate.ok) return gate.response;
+  const session = gate.session;
   const data = getProfileDashboard(session.userId);
   if (!data) return NextResponse.json({ error: "Nie znaleziono konta" }, { status: 404 });
   return NextResponse.json(data);
 }
 
 export async function PATCH(req: Request) {
-  const session = await getServerSession();
-  if (!session) return NextResponse.json({ error: "Wymagane logowanie" }, { status: 401 });
+  const gate = await requireUser();
+  if (!gate.ok) return gate.response;
+  const session = gate.session;
 
   let json: unknown;
   try {

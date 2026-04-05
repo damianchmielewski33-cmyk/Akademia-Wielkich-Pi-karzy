@@ -16,6 +16,7 @@ import {
   Trophy,
   UserPlus,
   Users,
+  Wallet,
 } from "lucide-react";
 import { PlayerAvatar } from "@/components/player-avatar";
 import { Button } from "@/components/ui/button";
@@ -132,6 +133,7 @@ export function HomeClient({
   const tiles = (
     <div className="mx-auto grid max-w-3xl grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-3">
       <PitchTile href="/terminarz" icon={CalendarDays} title="Terminarz" desc="Mecze, zapisy, terminy" />
+      <PitchTile href="/platnosci" icon={Wallet} title="Płatności" desc="BLIK i status wpłaty za mecz" />
       <PitchTile href="/pilkarze" icon={Users} title="Piłkarze" desc="Skład i profile" />
       {isLoggedIn && (
         <>

@@ -1,11 +1,15 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
+import { requireUser } from "@/lib/api-helpers";
 
 export const runtime = "nodejs";
 
 type Ctx = { params: Promise<{ userId: string }> };
 
 export async function GET(_req: Request, ctx: Ctx) {
+  const gate = await requireUser();
+  if (!gate.ok) return gate.response;
+
   const { userId } = await ctx.params;
   const uid = Number(userId);
   if (!Number.isFinite(uid)) {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "sonner";
 import {
   Bar,
   BarChart,
@@ -60,8 +61,14 @@ export function PilkarzeClient({ players }: { players: PlayerListItem[] }) {
     setOpen(true);
     setData(null);
     try {
-      const res = await fetch(`/api/player-stats/${id}`);
+      const res = await fetch(`/api/player-stats/${id}`, { credentials: "include" });
+      if (res.status === 401) {
+        toast.error("Zaloguj się, aby zobaczyć statystyki zawodnika.");
+        setOpen(false);
+        return;
+      }
       if (!res.ok) {
+        toast.error("Nie udało się wczytać statystyk.");
         setOpen(false);
         return;
       }

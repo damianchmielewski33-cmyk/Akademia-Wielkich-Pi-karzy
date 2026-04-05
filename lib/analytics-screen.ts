@@ -6,6 +6,7 @@ export const SCREEN_LABELS: Record<string, string> = {
   sklady: "Składy",
   profil: "Mój profil",
   statystyki: "Statystyki",
+  platnosci: "Płatności",
   rankingi: "Rankingi",
   o_nas: "O nas",
   login: "Logowanie",
@@ -27,6 +28,7 @@ export function getScreenFromPathname(pathname: string | null): { key: string; l
   if (path === "/sklady") return { key: "sklady", label: SCREEN_LABELS.sklady };
   if (path === "/profil") return { key: "profil", label: SCREEN_LABELS.profil };
   if (path === "/statystyki") return { key: "statystyki", label: SCREEN_LABELS.statystyki };
+  if (path === "/platnosci") return { key: "platnosci", label: SCREEN_LABELS.platnosci };
   if (path === "/rankingi") return { key: "rankingi", label: SCREEN_LABELS.rankingi };
   if (path === "/o-nas") return { key: "o_nas", label: SCREEN_LABELS.o_nas };
   if (path === "/login") return { key: "login", label: SCREEN_LABELS.login };

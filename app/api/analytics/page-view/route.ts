@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getScreenFromPathname } from "@/lib/analytics-screen";
 import { getServerSession } from "@/lib/auth";
 import { getDb } from "@/lib/db";
+import { checkRateLimit, rateLimitKey, rateLimitedResponse, RATE } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
@@ -12,6 +13,9 @@ const bodySchema = z.object({
 });
 
 export async function POST(req: Request) {
+  const rl = checkRateLimit(rateLimitKey("page-view", req), RATE.pageView.limit, RATE.pageView.windowMs);
+  if (!rl.ok) return rateLimitedResponse(rl.retryAfterSec);
+
   let json: unknown;
   try {
     json = await req.json();

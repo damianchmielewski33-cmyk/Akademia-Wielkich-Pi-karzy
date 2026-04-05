@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getDb, logActivity } from "@/lib/db";
 import { createSessionToken, setSessionCookie } from "@/lib/auth";
+import { checkRateLimit, rateLimitKey, rateLimitedResponse, RATE } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
@@ -12,6 +13,9 @@ const bodySchema = z.object({
 });
 
 export async function POST(req: Request) {
+  const rl = checkRateLimit(rateLimitKey("login", req), RATE.login.limit, RATE.login.windowMs);
+  if (!rl.ok) return rateLimitedResponse(rl.retryAfterSec);
+
   let json: unknown;
   try {
     json = await req.json();
@@ -33,7 +37,7 @@ export async function POST(req: Request) {
     | undefined;
 
   if (!user) {
-    return NextResponse.json({ error: "Nieprawidłowe dane logowania mordo" }, { status: 401 });
+    return NextResponse.json({ error: "Nieprawidłowe dane logowania." }, { status: 401 });
   }
 
   const token = await createSessionToken({

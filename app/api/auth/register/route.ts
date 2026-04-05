@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getDb, logActivity } from "@/lib/db";
 import { ALL_PLAYERS } from "@/lib/constants";
 import { createSessionToken, setSessionCookie } from "@/lib/auth";
+import { checkRateLimit, rateLimitKey, rateLimitedResponse, RATE } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
@@ -14,6 +15,9 @@ const bodySchema = z.object({
 });
 
 export async function POST(req: Request) {
+  const rl = checkRateLimit(rateLimitKey("register", req), RATE.register.limit, RATE.register.windowMs);
+  if (!rl.ok) return rateLimitedResponse(rl.retryAfterSec);
+
   let json: unknown;
   try {
     json = await req.json();

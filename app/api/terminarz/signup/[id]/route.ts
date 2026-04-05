@@ -12,7 +12,7 @@ function todayISO() {
 
 export async function POST(_req: Request, ctx: Ctx) {
   const gate = await requireUser();
-  if (!gate.ok) return NextResponse.json({ error: "NOT_LOGGED" }, { status: 401 });
+  if (!gate.ok) return gate.response;
   const { id } = await ctx.params;
   const mid = Number(id);
   if (!Number.isFinite(mid)) {

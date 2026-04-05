@@ -10,6 +10,7 @@ function resolveDbPath() {
     : defaultPath;
 }
 
+/** Pojedynczy plik SQLite — naturalny model przy jednej instancji serwera; przy wielu replikach współdzielonym pliku unikaj zapisów równoległych z różnych hostów. */
 let dbInstance: Database.Database | null = null;
 
 function initSchema(db: Database.Database) {
@@ -96,6 +97,9 @@ function initSchema(db: Database.Database) {
   if (!matchCols.some((c) => c.name === "lineup_public")) {
     db.exec("ALTER TABLE matches ADD COLUMN lineup_public INTEGER NOT NULL DEFAULT 0");
   }
+  if (!matchCols.some((c) => c.name === "fee_pln")) {
+    db.exec("ALTER TABLE matches ADD COLUMN fee_pln REAL");
+  }
 
   const userCols = db.prepare("PRAGMA table_info(users)").all() as { name: string }[];
   if (!userCols.some((c) => c.name === "profile_photo_path")) {
@@ -136,4 +140,6 @@ export type MatchRow = {
   signed_up: number;
   played: number;
   lineup_public: number;
+  /** Kwota wpisowego za mecz (PLN); ustawiana przez administratora. */
+  fee_pln?: number | null;
 };

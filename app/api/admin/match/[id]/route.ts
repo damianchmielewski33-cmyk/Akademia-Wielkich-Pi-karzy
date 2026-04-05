@@ -18,7 +18,7 @@ export async function GET(_req: Request, context: RouteContext) {
   const db = getDb();
   const row = db
     .prepare(
-      "SELECT id, match_date AS date, match_time AS time, location FROM matches WHERE id = ?"
+      "SELECT id, match_date AS date, match_time AS time, location, fee_pln FROM matches WHERE id = ?"
     )
     .get(mid);
   if (!row) return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -29,6 +29,7 @@ const putSchema = z.object({
   date: z.string().min(1),
   time: z.string().min(1),
   location: z.string().min(1),
+  fee_pln: z.union([z.number().nonnegative(), z.null()]).optional(),
 });
 
 export async function PUT(req: Request, context: RouteContext) {
@@ -50,12 +51,19 @@ export async function PUT(req: Request, context: RouteContext) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
   const db = getDb();
-  db.prepare("UPDATE matches SET match_date = ?, match_time = ?, location = ? WHERE id = ?").run(
-    parsed.data.date,
-    parsed.data.time,
-    parsed.data.location,
-    mid
-  );
+  const fee = parsed.data.fee_pln;
+  if (fee !== undefined) {
+    db.prepare(
+      "UPDATE matches SET match_date = ?, match_time = ?, location = ?, fee_pln = ? WHERE id = ?"
+    ).run(parsed.data.date, parsed.data.time, parsed.data.location, fee, mid);
+  } else {
+    db.prepare("UPDATE matches SET match_date = ?, match_time = ?, location = ? WHERE id = ?").run(
+      parsed.data.date,
+      parsed.data.time,
+      parsed.data.location,
+      mid
+    );
+  }
   logActivity(
     gate.session.userId,
     `Edytował mecz id ${mid}: ${parsed.data.date} ${parsed.data.time}, ${parsed.data.location}`
