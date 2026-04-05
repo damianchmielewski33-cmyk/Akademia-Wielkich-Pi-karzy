@@ -1,0 +1,105 @@
+import { NextResponse } from "next/server";
+import fs from "fs";
+import path from "path";
+import { getDb, logActivity } from "@/lib/db";
+import { getServerSession } from "@/lib/auth";
+
+export const runtime = "nodejs";
+
+const MAX_BYTES = 2 * 1024 * 1024;
+const ALLOWED = new Map<string, string>([
+  ["image/jpeg", ".jpg"],
+  ["image/png", ".png"],
+  ["image/webp", ".webp"],
+  ["image/gif", ".gif"],
+]);
+
+function profilesDir() {
+  return path.join(process.cwd(), "public", "uploads", "profiles");
+}
+
+function safeUnlink(absPath: string) {
+  const dir = profilesDir();
+  const resolved = path.resolve(absPath);
+  if (!resolved.startsWith(path.resolve(dir))) return;
+  try {
+    fs.unlinkSync(resolved);
+  } catch {
+    /* ignore */
+  }
+}
+
+export async function POST(req: Request) {
+  const session = await getServerSession();
+  if (!session) return NextResponse.json({ error: "Wymagane logowanie" }, { status: 401 });
+
+  let form: FormData;
+  try {
+    form = await req.formData();
+  } catch {
+    return NextResponse.json({ error: "Nieprawidłowe dane formularza" }, { status: 400 });
+  }
+
+  const file = form.get("photo");
+  if (!file || !(file instanceof File) || file.size === 0) {
+    return NextResponse.json({ error: "Wybierz plik zdjęcia." }, { status: 400 });
+  }
+  if (file.size > MAX_BYTES) {
+    return NextResponse.json({ error: "Plik jest za duży (max 2 MB)." }, { status: 400 });
+  }
+
+  const mime = (file.type || "").toLowerCase();
+  const ext = ALLOWED.get(mime);
+  if (!ext) {
+    return NextResponse.json({ error: "Dozwolone: JPG, PNG, WebP, GIF." }, { status: 400 });
+  }
+
+  const buf = Buffer.from(await file.arrayBuffer());
+  if (buf.length > MAX_BYTES) {
+    return NextResponse.json({ error: "Plik jest za duży (max 2 MB)." }, { status: 400 });
+  }
+
+  const db = getDb();
+  const prev = db
+    .prepare("SELECT profile_photo_path FROM users WHERE id = ?")
+    .get(session.userId) as { profile_photo_path: string | null } | undefined;
+  if (!prev) return NextResponse.json({ error: "Nie znaleziono konta" }, { status: 404 });
+
+  fs.mkdirSync(profilesDir(), { recursive: true });
+
+  if (prev.profile_photo_path?.startsWith("/uploads/profiles/")) {
+    const oldAbs = path.join(process.cwd(), "public", prev.profile_photo_path.replace(/^\//, ""));
+    safeUnlink(oldAbs);
+  }
+
+  const filename = `${session.userId}-${Date.now()}${ext}`;
+  const publicPath = `/uploads/profiles/${filename}`;
+  const abs = path.join(profilesDir(), filename);
+  fs.writeFileSync(abs, buf);
+
+  db.prepare("UPDATE users SET profile_photo_path = ? WHERE id = ?").run(publicPath, session.userId);
+  logActivity(session.userId, "Zaktualizował zdjęcie profilowe");
+
+  return NextResponse.json({ ok: true, profile_photo_path: publicPath });
+}
+
+export async function DELETE() {
+  const session = await getServerSession();
+  if (!session) return NextResponse.json({ error: "Wymagane logowanie" }, { status: 401 });
+
+  const db = getDb();
+  const prev = db
+    .prepare("SELECT profile_photo_path FROM users WHERE id = ?")
+    .get(session.userId) as { profile_photo_path: string | null } | undefined;
+  if (!prev) return NextResponse.json({ error: "Nie znaleziono konta" }, { status: 404 });
+
+  if (prev.profile_photo_path?.startsWith("/uploads/profiles/")) {
+    const oldAbs = path.join(process.cwd(), "public", prev.profile_photo_path.replace(/^\//, ""));
+    safeUnlink(oldAbs);
+  }
+
+  db.prepare("UPDATE users SET profile_photo_path = NULL WHERE id = ?").run(session.userId);
+  logActivity(session.userId, "Usunął zdjęcie profilowe");
+
+  return NextResponse.json({ ok: true, profile_photo_path: null });
+}

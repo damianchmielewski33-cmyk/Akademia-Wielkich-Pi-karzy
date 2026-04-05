@@ -3,6 +3,10 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import {
+  AuthGoalPreloader,
+  AUTH_SUCCESS_PRELOADER_DELAY_MS,
+} from "@/components/auth-goal-preloader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,6 +25,8 @@ export function RegisterForm({ availablePlayers }: { availablePlayers: string[] 
   const [zawodnik, setZawodnik] = useState("");
   const [autoLogin, setAutoLogin] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [showGoalPreloader, setShowGoalPreloader] = useState(false);
+  const [goalPreloaderLabel, setGoalPreloaderLabel] = useState<string | undefined>(undefined);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -42,11 +48,17 @@ export function RegisterForm({ availablePlayers }: { availablePlayers: string[] 
         return;
       }
       if (data.logged_in) {
+        setGoalPreloaderLabel("Gol! Witamy w akademii…");
+        setShowGoalPreloader(true);
         toast.success("Konto utworzone — jesteś zalogowany");
+        await new Promise((r) => setTimeout(r, AUTH_SUCCESS_PRELOADER_DELAY_MS));
         router.push("/");
         router.refresh();
       } else {
+        setGoalPreloaderLabel("Konto gotowe! Idziemy do logowania…");
+        setShowGoalPreloader(true);
         toast.success("Konto utworzone — zaloguj się");
+        await new Promise((r) => setTimeout(r, AUTH_SUCCESS_PRELOADER_DELAY_MS));
         router.push("/login");
       }
     } finally {
@@ -55,7 +67,9 @@ export function RegisterForm({ availablePlayers }: { availablePlayers: string[] 
   }
 
   return (
-    <form onSubmit={onSubmit} className="mt-8 space-y-4">
+    <>
+      {showGoalPreloader && <AuthGoalPreloader label={goalPreloaderLabel} />}
+      <form onSubmit={onSubmit} className="mt-8 space-y-4">
       <div>
         <Label htmlFor="reg_fn">Imię</Label>
         <Input
@@ -112,5 +126,6 @@ export function RegisterForm({ availablePlayers }: { availablePlayers: string[] 
         <p className="text-center text-sm text-red-600">Wszyscy piłkarze są już zajęci.</p>
       )}
     </form>
+    </>
   );
 }

@@ -111,3 +111,118 @@ body {
     center;
   background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, repeat, repeat, no-repeat;
 }
+
+/* Preloader po logowaniu / rejestracji: kopnięcie i lot piłki do bramki */
+@keyframes auth-goal-kick {
+  0%,
+  12% {
+    transform: rotate(0deg);
+  }
+  22% {
+    transform: rotate(-52deg);
+  }
+  32% {
+    transform: rotate(6deg);
+  }
+  42%,
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+@keyframes auth-goal-ball {
+  0%,
+  18% {
+    transform: translate(0, 0) rotate(0deg);
+    opacity: 1;
+  }
+  20% {
+    transform: translate(0, 0) rotate(0deg);
+    opacity: 1;
+  }
+  52% {
+    transform: translate(102px, -54px) rotate(220deg);
+    opacity: 1;
+  }
+  78% {
+    transform: translate(176px, -24px) rotate(400deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(198px, -12px) rotate(520deg);
+    opacity: 0.96;
+  }
+}
+
+@keyframes auth-goal-goal-shake {
+  0%,
+  74% {
+    transform: translate3d(0, 0, 0);
+  }
+  78% {
+    transform: translate3d(-3px, 0, 0);
+  }
+  82% {
+    transform: translate3d(3px, 0, 0);
+  }
+  86% {
+    transform: translate3d(-2px, 0, 0);
+  }
+  90%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes auth-goal-arc {
+  0%,
+  18% {
+    opacity: 0;
+  }
+  22% {
+    opacity: 0.45;
+  }
+  78% {
+    opacity: 0.2;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.auth-goal-preloader-svg .auth-goal-preloader__leg {
+  transform-box: fill-box;
+  transform-origin: 50% 0%;
+  animation: auth-goal-kick 1.85s ease-in-out infinite;
+}
+
+.auth-goal-preloader-svg .auth-goal-preloader__ball {
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+  animation: auth-goal-ball 1.85s ease-in-out infinite;
+  will-change: transform;
+}
+
+.auth-goal-preloader-svg .auth-goal-preloader__goal {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: auth-goal-goal-shake 1.85s ease-in-out infinite;
+}
+
+.auth-goal-preloader-svg .auth-goal-preloader__arc {
+  animation: auth-goal-arc 1.85s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-goal-preloader-svg .auth-goal-preloader__leg,
+  .auth-goal-preloader-svg .auth-goal-preloader__ball,
+  .auth-goal-preloader-svg .auth-goal-preloader__goal,
+  .auth-goal-preloader-svg .auth-goal-preloader__arc {
+    animation: none !important;
+  }
+
+  .auth-goal-preloader-svg .auth-goal-preloader__ball {
+    transform: translate(198px, -12px) rotate(360deg);
+    opacity: 0.92;
+  }
+}

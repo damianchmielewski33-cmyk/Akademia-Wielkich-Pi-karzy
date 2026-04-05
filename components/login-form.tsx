@@ -3,6 +3,10 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import {
+  AuthGoalPreloader,
+  AUTH_SUCCESS_PRELOADER_DELAY_MS,
+} from "@/components/auth-goal-preloader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,6 +25,7 @@ export function LoginForm({ aliases, nextPath }: { aliases: string[]; nextPath: 
   const [lastName, setLastName] = useState("");
   const [zawodnik, setZawodnik] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showGoalPreloader, setShowGoalPreloader] = useState(false);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -40,7 +45,9 @@ export function LoginForm({ aliases, nextPath }: { aliases: string[]; nextPath: 
         toast.error(typeof data.error === "string" ? data.error : "Błąd logowania");
         return;
       }
+      setShowGoalPreloader(true);
       toast.success("Zalogowano");
+      await new Promise((r) => setTimeout(r, AUTH_SUCCESS_PRELOADER_DELAY_MS));
       router.push(next);
       router.refresh();
     } finally {
@@ -49,7 +56,11 @@ export function LoginForm({ aliases, nextPath }: { aliases: string[]; nextPath: 
   }
 
   return (
-    <form onSubmit={onSubmit} className="mt-8 space-y-4">
+    <>
+      {showGoalPreloader && (
+        <AuthGoalPreloader label="Cel! Zabieramy Cię na boisko…" />
+      )}
+      <form onSubmit={onSubmit} className="mt-8 space-y-4">
       <div>
         <Label htmlFor="first_name">Imię</Label>
         <Input
@@ -91,5 +102,6 @@ export function LoginForm({ aliases, nextPath }: { aliases: string[]; nextPath: 
         {loading ? "Logowanie…" : "Zaloguj się"}
       </Button>
     </form>
+    </>
   );
 }

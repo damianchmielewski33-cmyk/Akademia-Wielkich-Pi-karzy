@@ -1,0 +1,42 @@
+import { NextResponse } from "next/server";
+import { z } from "zod";
+import { getScreenFromPathname } from "@/lib/analytics-screen";
+import { getServerSession } from "@/lib/auth";
+import { getDb } from "@/lib/db";
+
+export const runtime = "nodejs";
+
+const bodySchema = z.object({
+  pathname: z.string().min(1).max(512),
+  visitorId: z.string().min(8).max(80),
+});
+
+export async function POST(req: Request) {
+  let json: unknown;
+  try {
+    json = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Nieprawidłowe JSON" }, { status: 400 });
+  }
+  const parsed = bodySchema.safeParse(json);
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Nieprawidłowe dane" }, { status: 400 });
+  }
+  const { pathname, visitorId } = parsed.data;
+  const screen = getScreenFromPathname(pathname);
+  if (!screen) {
+    return new NextResponse(null, { status: 204 });
+  }
+
+  const session = await getServerSession();
+  const userId = session ? session.userId : null;
+
+  const db = getDb();
+  const createdAt = new Date().toISOString();
+  db.prepare(
+    `INSERT INTO page_views (screen_key, pathname, user_id, visitor_id, created_at)
+     VALUES (?, ?, ?, ?, ?)`
+  ).run(screen.key, pathname.slice(0, 512), userId, visitorId.slice(0, 80), createdAt);
+
+  return new NextResponse(null, { status: 204 });
+}
