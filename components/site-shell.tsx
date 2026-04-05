@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AnalyticsTracker } from "@/components/analytics-tracker";
+import { NavigationLoadingOverlay } from "@/components/navigation-loading-overlay";
 import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
 import { cn } from "@/lib/utils";
 import { SITE_NAME, getPublicContactEmail } from "@/lib/site";
@@ -54,6 +55,7 @@ export function SiteShell({ children, isLoggedIn, isAdmin, account = null }: Pro
 
   return (
     <div className="flex min-h-screen flex-col text-zinc-900">
+      <NavigationLoadingOverlay />
       <AnalyticsTracker />
       <header className="relative z-30 border-b border-emerald-950/30 bg-gradient-to-r from-emerald-950 via-emerald-900 to-emerald-950 text-white shadow-lg">
         <div

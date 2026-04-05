@@ -10,6 +10,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { StatsCrunchPreloader } from "@/components/preloaders";
 import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
 import {
   Dialog,
@@ -126,6 +127,7 @@ export function LineupPlayerStatsDialog({ userId, open, onOpenChange }: Props) {
             </div>
           </DialogDescription>
         </DialogHeader>
+        {loading && !loadError && <StatsCrunchPreloader />}
         {data && !loading && !loadError && (
           <>
             <div className="pitch-rule mb-3 w-full max-w-xs opacity-70" />

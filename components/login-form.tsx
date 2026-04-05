@@ -58,7 +58,7 @@ export function LoginForm({ aliases, nextPath }: { aliases: string[]; nextPath: 
   return (
     <>
       {showGoalPreloader && (
-        <AuthGoalPreloader label="Cel! Zabieramy Cię na boisko…" />
+        <AuthGoalPreloader label="Czas coś pokopać" />
       )}
       <form onSubmit={onSubmit} className="mt-8 space-y-4">
       <div>

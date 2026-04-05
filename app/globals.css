@@ -193,24 +193,24 @@ body {
 .auth-goal-preloader-svg .auth-goal-preloader__leg {
   transform-box: fill-box;
   transform-origin: 50% 0%;
-  animation: auth-goal-kick 1.85s ease-in-out infinite;
+  animation: auth-goal-kick 4s ease-in-out infinite;
 }
 
 .auth-goal-preloader-svg .auth-goal-preloader__ball {
   transform-box: fill-box;
   transform-origin: 50% 50%;
-  animation: auth-goal-ball 1.85s ease-in-out infinite;
+  animation: auth-goal-ball 4s ease-in-out infinite;
   will-change: transform;
 }
 
 .auth-goal-preloader-svg .auth-goal-preloader__goal {
   transform-box: fill-box;
   transform-origin: 50% 100%;
-  animation: auth-goal-goal-shake 1.85s ease-in-out infinite;
+  animation: auth-goal-goal-shake 4s ease-in-out infinite;
 }
 
 .auth-goal-preloader-svg .auth-goal-preloader__arc {
-  animation: auth-goal-arc 1.85s ease-in-out infinite;
+  animation: auth-goal-arc 4s ease-in-out infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -224,5 +224,578 @@ body {
   .auth-goal-preloader-svg .auth-goal-preloader__ball {
     transform: translate(198px, -12px) rotate(360deg);
     opacity: 0.92;
+  }
+}
+
+/* ========== Kontekstowe preloadery (strony + inline) ========== */
+@keyframes awp-stadium-beam {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 0.95;
+  }
+}
+
+@keyframes awp-stadium-crowd {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
+}
+
+@keyframes awp-stadium-ball {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-18px);
+  }
+}
+
+@keyframes awp-stadium-shadow {
+  0%,
+  100% {
+    transform: scaleX(1);
+    opacity: 0.25;
+  }
+  50% {
+    transform: scaleX(0.72);
+    opacity: 0.15;
+  }
+}
+
+@keyframes awp-stadium-flag {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+.awp-stadium-svg .awp-stadium__beam {
+  animation: awp-stadium-beam 4s ease-in-out infinite;
+}
+
+.awp-stadium-svg .awp-stadium__beam--b {
+  animation-delay: 0.65s;
+}
+
+.awp-stadium-svg .awp-stadium__lamp {
+  animation: awp-stadium-beam 4s ease-in-out infinite;
+}
+
+.awp-stadium-svg .awp-stadium__lamp--delay {
+  animation-delay: 1s;
+}
+
+.awp-stadium-svg .awp-stadium__crowd-row--1 {
+  animation: awp-stadium-crowd 4s ease-in-out infinite;
+}
+
+.awp-stadium-svg .awp-stadium__crowd-row--2 {
+  animation: awp-stadium-crowd 4s ease-in-out infinite 0.5s;
+}
+
+.awp-stadium-svg .awp-stadium__ball {
+  animation: awp-stadium-ball 4s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+}
+
+.awp-stadium-svg .awp-stadium__ball-shadow {
+  animation: awp-stadium-shadow 4s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.awp-stadium-svg .awp-stadium__flag {
+  animation: awp-stadium-flag 4s ease-in-out infinite;
+}
+
+.awp-stadium-svg .awp-stadium__flag--b {
+  animation-delay: 1s;
+}
+
+@keyframes awp-cal-flip {
+  0%,
+  100% {
+    transform: rotate(-2deg);
+  }
+  50% {
+    transform: rotate(4deg) translateY(-3px);
+  }
+}
+
+@keyframes awp-cal-second {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes awp-cal-hour {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes awp-cal-whistle {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(-5deg);
+  }
+}
+
+.awp-calendar-svg .awp-cal__flip {
+  animation: awp-cal-flip 4s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+}
+
+.awp-calendar-svg .awp-cal__hand-min {
+  transform-box: view-box;
+  transform-origin: 268px 118px;
+  animation: awp-cal-second 8s linear infinite;
+}
+
+.awp-calendar-svg .awp-cal__hand-hour {
+  transform-box: view-box;
+  transform-origin: 268px 118px;
+  animation: awp-cal-hour 96s linear infinite;
+}
+
+.awp-calendar-svg .awp-cal__whistle {
+  animation: awp-cal-whistle 4s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: 30% 50%;
+}
+
+.awp-calendar-svg .awp-cal__cord {
+  stroke-dasharray: 40;
+  stroke-dashoffset: 0;
+  animation: awp-cal-cord 4s linear infinite;
+}
+
+@keyframes awp-cal-cord {
+  0% {
+    stroke-dashoffset: 80;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes awp-locker-sway {
+  0%,
+  100% {
+    transform: rotate(-2deg);
+  }
+  50% {
+    transform: rotate(2.5deg);
+  }
+}
+
+.awp-locker-svg .awp-locker__jersey {
+  transform-origin: 0 0;
+  animation: awp-locker-sway 4s ease-in-out infinite;
+  transform-box: fill-box;
+}
+
+@keyframes awp-tactics-marker {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.95;
+  }
+  50% {
+    transform: scale(1.12);
+    opacity: 1;
+  }
+}
+
+@keyframes awp-tactics-arrow {
+  0% {
+    stroke-dashoffset: 24;
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 0.7;
+  }
+}
+
+.awp-tactics-svg .awp-tactics__marker {
+  animation: awp-tactics-marker 4s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.awp-tactics-svg .awp-tactics__marker--away {
+  animation-duration: 4.25s;
+}
+
+.awp-tactics-svg .awp-tactics__arrow {
+  stroke-dasharray: 6 4;
+  stroke-dashoffset: 24;
+  animation: awp-tactics-arrow 4s ease-in-out infinite;
+}
+
+.awp-tactics-svg .awp-tactics__dot {
+  animation: awp-tactics-marker 4s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+@keyframes awp-statbars-grow {
+  0%,
+  12% {
+    transform: scaleY(0.15);
+    opacity: 0.5;
+  }
+  35%,
+  100% {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+}
+
+@keyframes awp-statbars-ball {
+  0%,
+  100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  50% {
+    transform: translate(-6px, 4px) rotate(180deg);
+  }
+}
+
+.awp-statbars-svg .awp-statbars__bar {
+  animation: awp-statbars-grow 4s ease-out infinite;
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+}
+
+.awp-statbars-svg .awp-statbars__mini-ball {
+  animation: awp-statbars-ball 4s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+@keyframes awp-podium-glow {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 4px rgba(250, 204, 21, 0.35));
+  }
+  50% {
+    filter: drop-shadow(0 0 14px rgba(250, 204, 21, 0.85));
+  }
+}
+
+@keyframes awp-podium-laurel {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}
+
+.awp-podium-svg .awp-podium__first {
+  animation: awp-podium-glow 4s ease-in-out infinite;
+}
+
+.awp-podium-svg .awp-podium__crown-jewel {
+  animation: awp-stadium-beam 4s ease-in-out infinite;
+}
+
+.awp-podium-svg .awp-podium__laurel {
+  animation: awp-podium-laurel 4s ease-in-out infinite;
+}
+
+.awp-podium-svg .awp-podium__laurel--r {
+  animation-delay: 0.65s;
+}
+
+@keyframes awp-badge-swing {
+  0%,
+  100% {
+    transform: rotate(-2deg);
+  }
+  50% {
+    transform: rotate(2deg);
+  }
+}
+
+@keyframes awp-badge-draw {
+  0% {
+    stroke-dashoffset: 180;
+  }
+  55% {
+    stroke-dashoffset: 0;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes awp-badge-shield {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.88;
+  }
+}
+
+.awp-badge-svg .awp-badge__lanyard {
+  animation: awp-badge-swing 4s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: 50% 0%;
+}
+
+.awp-badge-svg .awp-badge__signature path {
+  stroke-dasharray: 180;
+  stroke-dashoffset: 180;
+  animation: awp-badge-draw 4s ease-in-out infinite;
+}
+
+.awp-badge-svg .awp-badge__shield {
+  animation: awp-badge-shield 4s ease-in-out infinite;
+}
+
+@keyframes awp-admin-spark {
+  0% {
+    stroke-dashoffset: 120;
+    opacity: 0.3;
+  }
+  40% {
+    opacity: 1;
+  }
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 0.85;
+  }
+}
+
+@keyframes awp-admin-pulse {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.06);
+  }
+}
+
+@keyframes awp-admin-scan {
+  0% {
+    transform: translateX(0);
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: translateX(36px);
+    opacity: 0.35;
+  }
+}
+
+@keyframes awp-admin-chk {
+  0%,
+  45% {
+    opacity: 0.4;
+  }
+  50%,
+  100% {
+    opacity: 1;
+  }
+}
+
+.awp-admin-svg .awp-admin__spark {
+  stroke-dasharray: 120;
+  stroke-dashoffset: 120;
+  animation: awp-admin-spark 4s ease-in-out infinite;
+}
+
+.awp-admin-svg .awp-admin__tile-pulse {
+  animation: awp-admin-pulse 4s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.awp-admin-svg .awp-admin__scanline {
+  animation: awp-admin-scan 4s ease-in-out infinite;
+}
+
+.awp-admin-svg .awp-admin__chk {
+  animation: awp-admin-chk 4s ease-in-out infinite;
+}
+
+@keyframes awp-inline-stat-pulse {
+  0%,
+  15% {
+    transform: scaleY(0.2);
+    opacity: 0.5;
+  }
+  40%,
+  100% {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+}
+
+@keyframes awp-inline-stat-digits {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.awp-inline-stat-svg .awp-inline-stat__bar {
+  animation: awp-inline-stat-pulse 4s ease-out infinite;
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+}
+
+.awp-inline-stat-svg .awp-inline-stat__digits {
+  animation: awp-inline-stat-digits 4s ease-in-out infinite;
+}
+
+.awp-inline-stat-svg .awp-inline-stat__ball {
+  animation: awp-statbars-ball 4s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+@keyframes awp-photo-aperture {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes awp-photo-flash {
+  0%,
+  70% {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  78% {
+    opacity: 0.85;
+    transform: scale(1.1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.4);
+  }
+}
+
+@keyframes awp-photo-progress {
+  0% {
+    transform: scaleX(0.12);
+  }
+  100% {
+    transform: scaleX(1);
+  }
+}
+
+.awp-photo-svg .awp-photo__aperture {
+  animation: awp-photo-aperture 8s linear infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.awp-photo-svg .awp-photo__flash {
+  animation: awp-photo-flash 4s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.awp-photo-svg .awp-photo__progress {
+  animation: awp-photo-progress 4s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: left center;
+}
+
+@keyframes awp-lineup-chip {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+.awp-lineup-svg .awp-lineup__chip {
+  animation: awp-lineup-chip 4s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.awp-lineup-svg .awp-lineup__bench {
+  animation: awp-admin-pulse 4s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center bottom;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .awp-stadium-svg [class*="awp-stadium__"],
+  .awp-calendar-svg [class*="awp-cal__"],
+  .awp-locker-svg .awp-locker__jersey,
+  .awp-tactics-svg [class*="awp-tactics__"],
+  .awp-statbars-svg [class*="awp-statbars__"],
+  .awp-podium-svg [class*="awp-podium__"],
+  .awp-badge-svg [class*="awp-badge__"],
+  .awp-admin-svg [class*="awp-admin__"],
+  .awp-inline-stat-svg [class*="awp-inline-stat__"],
+  .awp-photo-svg [class*="awp-photo__"],
+  .awp-lineup-svg [class*="awp-lineup__"] {
+    animation: none !important;
+  }
+
+  .awp-calendar-svg .awp-cal__cord {
+    stroke-dashoffset: 0;
+  }
+
+  .awp-badge-svg .awp-badge__signature path {
+    stroke-dashoffset: 0;
+  }
+
+  .awp-admin-svg .awp-admin__spark {
+    stroke-dashoffset: 0;
+  }
+
+  .awp-photo-svg .awp-photo__progress {
+    transform: scaleX(1);
   }
 }

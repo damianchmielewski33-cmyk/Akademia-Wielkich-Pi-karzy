@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { LayoutGrid, Loader2 } from "lucide-react";
+import { LineupBoardPreloader } from "@/components/preloaders";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -236,9 +237,7 @@ export function MatchLineupAdmin() {
       </Toolbar>
 
       {showInitialSpinner ? (
-        <div className="flex justify-center py-20 text-zinc-500">
-          <Loader2 className="h-8 w-8 animate-spin" aria-hidden />
-        </div>
+        <LineupBoardPreloader />
       ) : matches.length === 0 ? (
         <Card className="border-zinc-200/80 bg-white shadow-sm">
           <CardHeader>

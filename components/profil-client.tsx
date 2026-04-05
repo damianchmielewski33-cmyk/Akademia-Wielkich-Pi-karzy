@@ -33,6 +33,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { PhotoDevelopPreloader } from "@/components/preloaders";
 import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
 import type { ProfileDashboard } from "@/lib/profile-data";
 
@@ -216,6 +217,7 @@ export function ProfilClient({ initial }: Props) {
                 size="profile"
                 ringClassName="ring-0"
               />
+              {uploadingPhoto ? <PhotoDevelopPreloader /> : null}
             </div>
             <div className="mt-3 w-full max-w-[240px]">
               <PlayerNameStack

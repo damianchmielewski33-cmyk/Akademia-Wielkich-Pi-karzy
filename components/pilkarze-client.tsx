@@ -10,6 +10,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { StatsCrunchPreloader } from "@/components/preloaders";
 import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -158,6 +159,7 @@ export function PilkarzeClient({ players }: { players: PlayerListItem[] }) {
               </div>
             </DialogDescription>
           </DialogHeader>
+          {loading && <StatsCrunchPreloader />}
           {data && !loading && (
             <>
               <div className="pitch-rule mb-3 w-full max-w-xs opacity-70" />
