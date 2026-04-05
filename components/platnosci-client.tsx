@@ -1,14 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import { Banknote, Check, ClipboardCopy, MapPin } from "lucide-react";
+import { useRouter } from "next/navigation";
+import type { ReactNode } from "react";
+import { useEffect, useState } from "react";
+import { Banknote, Check, ClipboardCopy, Loader2, MapPin, Shield } from "lucide-react";
 import { toast } from "sonner";
 import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { MATCH_BLIK_PHONE_COPY, MATCH_BLIK_PHONE_DISPLAY } from "@/lib/site";
+import { isValidMatchFee, matchFeeToInputString, parseMatchFeeInput } from "@/lib/utils";
 import type { MatchRow } from "@/lib/db";
 
 export type PlatnosciSignup = {
@@ -21,20 +26,74 @@ export type PlatnosciSignup = {
 };
 
 type Props = {
-  nextMatch: (MatchRow & { fee_pln?: number | null }) | null;
+  nextMatch: MatchRow | null;
   signups: PlatnosciSignup[];
   isLoggedIn: boolean;
+  isAdmin: boolean;
   userSigned: boolean;
   userPaid: boolean | null;
 };
+
+const SIGNUP_ROW_STRIPE = {
+  public: {
+    border: "border-emerald-100/90",
+    even: "bg-white/60",
+    odd: "bg-emerald-50/40",
+  },
+  admin: {
+    border: "border-emerald-100",
+    even: "bg-white",
+    odd: "bg-emerald-50/50",
+  },
+} as const;
+
+function PlatnosciSignupRow({
+  signup,
+  index,
+  variant,
+  trailing,
+}: {
+  signup: PlatnosciSignup;
+  index: number;
+  variant: keyof typeof SIGNUP_ROW_STRIPE;
+  trailing?: ReactNode;
+}) {
+  const stripe = SIGNUP_ROW_STRIPE[variant];
+  return (
+    <li
+      className={`flex flex-wrap items-center gap-2 border-b px-3 py-2.5 text-sm last:border-b-0 ${stripe.border} ${
+        index % 2 === 0 ? stripe.even : stripe.odd
+      }`}
+    >
+      <PlayerAvatar
+        photoPath={signup.profile_photo_path}
+        firstName={signup.first_name}
+        lastName={signup.last_name}
+        size="sm"
+        ringClassName="ring-2 ring-emerald-200/90"
+      />
+      <div className="min-w-0 flex-1">
+        <PlayerNameStack firstName={signup.first_name} lastName={signup.last_name} nick={signup.zawodnik} />
+      </div>
+      {signup.paid ? (
+        <Badge className="border-emerald-200 bg-emerald-100 text-emerald-900">Opłacone</Badge>
+      ) : (
+        <Badge variant="secondary">Do zapłaty</Badge>
+      )}
+      {trailing}
+    </li>
+  );
+}
 
 export function PlatnosciClient({
   nextMatch,
   signups,
   isLoggedIn,
+  isAdmin,
   userSigned,
   userPaid,
 }: Props) {
+  const router = useRouter();
   const [copied, setCopied] = useState(false);
 
   async function copyBlik() {
@@ -55,6 +114,12 @@ export function PlatnosciClient({
         <h1 className="text-3xl font-bold tracking-tight text-emerald-950 sm:text-4xl">Płatności za mecz</h1>
         <p className="mt-2 text-zinc-600">
           Informacje o wpłacie na najbliższe spotkanie — przelew <strong>BLIK</strong> na podany numer telefonu.
+          {isAdmin ? (
+            <>
+              {" "}
+              Jako administrator możesz ustawić kwotę i potwierdzać wpłaty także na tej stronie (jak w panelu admina).
+            </>
+          ) : null}
         </p>
       </div>
 
@@ -92,6 +157,10 @@ export function PlatnosciClient({
             </div>
           </Card>
 
+          {isAdmin ? (
+            <PlatnosciAdminSection nextMatch={nextMatch} signups={signups} onSaved={() => router.refresh()} />
+          ) : null}
+
           <Card className="mb-6 border-amber-900/15 bg-amber-50/40 shadow-sm">
             <CardHeader className="pb-2">
               <CardTitle className="flex items-center gap-2 text-lg text-amber-950">
@@ -123,7 +192,7 @@ export function PlatnosciClient({
               </div>
               <div className="rounded-xl border border-amber-200/80 bg-white/80 px-4 py-3 text-sm text-amber-950/90">
                 <p className="font-medium text-amber-950">Kwota</p>
-                {nextMatch.fee_pln != null && Number.isFinite(nextMatch.fee_pln) ? (
+                {isValidMatchFee(nextMatch.fee_pln) ? (
                   <p className="mt-1 text-base font-semibold tabular-nums">
                     {formatPln(nextMatch.fee_pln)}
                   </p>
@@ -192,7 +261,7 @@ export function PlatnosciClient({
             </Card>
           )}
 
-          {isLoggedIn && signups.length > 0 ? (
+          {!isAdmin && isLoggedIn && signups.length > 0 ? (
             <Card className="mt-6 border-emerald-900/10 shadow-sm">
               <CardHeader className="pb-2">
                 <CardTitle className="text-lg text-emerald-950">Zapisani na ten mecz</CardTitle>
@@ -201,32 +270,7 @@ export function PlatnosciClient({
               <CardContent>
                 <ul className="max-h-80 space-y-0 overflow-y-auto rounded-xl border border-emerald-900/10 bg-emerald-50/30">
                   {signups.map((p, i) => (
-                    <li
-                      key={p.user_id}
-                      className={`flex flex-wrap items-center gap-2 border-b border-emerald-100/90 px-3 py-2.5 text-sm last:border-b-0 ${
-                        i % 2 === 0 ? "bg-white/60" : "bg-emerald-50/40"
-                      }`}
-                    >
-                      <PlayerAvatar
-                        photoPath={p.profile_photo_path}
-                        firstName={p.first_name}
-                        lastName={p.last_name}
-                        size="sm"
-                        ringClassName="ring-2 ring-emerald-200/90"
-                      />
-                      <div className="min-w-0 flex-1">
-                        <PlayerNameStack
-                          firstName={p.first_name}
-                          lastName={p.last_name}
-                          nick={p.zawodnik}
-                        />
-                      </div>
-                      {p.paid ? (
-                        <Badge className="border-emerald-200 bg-emerald-100 text-emerald-900">Opłacone</Badge>
-                      ) : (
-                        <Badge variant="secondary">Do zapłaty</Badge>
-                      )}
-                    </li>
+                    <PlatnosciSignupRow key={p.user_id} signup={p} index={i} variant="public" />
                   ))}
                 </ul>
               </CardContent>
@@ -235,6 +279,156 @@ export function PlatnosciClient({
         </>
       )}
     </div>
+  );
+}
+
+type PlatnosciAdminSectionProps = {
+  nextMatch: MatchRow;
+  signups: PlatnosciSignup[];
+  onSaved: () => void;
+};
+
+function PlatnosciAdminSection({ nextMatch, signups: signupsProp, onSaved }: PlatnosciAdminSectionProps) {
+  const [feePln, setFeePln] = useState(() => matchFeeToInputString(nextMatch.fee_pln));
+  const [savingFee, setSavingFee] = useState(false);
+  const [rows, setRows] = useState(signupsProp);
+  const [busyId, setBusyId] = useState<number | null>(null);
+
+  useEffect(() => {
+    setRows(signupsProp);
+  }, [signupsProp]);
+
+  useEffect(() => {
+    setFeePln(matchFeeToInputString(nextMatch.fee_pln));
+  }, [nextMatch.id, nextMatch.fee_pln]);
+
+  async function saveFee() {
+    const parsed = parseMatchFeeInput(feePln);
+    if (!parsed.ok) {
+      toast.error("Podaj prawidłową kwotę lub zostaw pole puste");
+      return;
+    }
+    const fee_pln = parsed.fee;
+    setSavingFee(true);
+    try {
+      const res = await fetch(`/api/admin/match/${nextMatch.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          date: nextMatch.match_date,
+          time: nextMatch.match_time,
+          location: nextMatch.location,
+          fee_pln,
+        }),
+      });
+      if (!res.ok) {
+        toast.error("Nie udało się zapisać kwoty");
+        return;
+      }
+      toast.success("Zapisano kwotę wpisowego");
+      onSaved();
+    } finally {
+      setSavingFee(false);
+    }
+  }
+
+  async function togglePaid(userId: number, nextPaid: boolean) {
+    setBusyId(userId);
+    try {
+      const res = await fetch(`/api/admin/match/${nextMatch.id}/signups`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: userId, paid: nextPaid }),
+      });
+      if (!res.ok) {
+        toast.error("Nie udało się zapisać statusu opłaty");
+        return;
+      }
+      setRows((prev) =>
+        prev.map((r) => (r.user_id === userId ? { ...r, paid: nextPaid ? 1 : 0 } : r))
+      );
+      toast.success(nextPaid ? "Oznaczono jako opłacone" : "Cofnięto oznaczenie opłaty");
+      onSaved();
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  return (
+    <Card className="mb-6 border-2 border-emerald-800/25 bg-gradient-to-br from-emerald-950/5 to-emerald-900/10 shadow-md">
+      <CardHeader className="pb-2">
+        <CardTitle className="flex flex-wrap items-center gap-2 text-lg text-emerald-950">
+          <Shield className="h-5 w-5 shrink-0 text-emerald-800" aria-hidden />
+          Zarządzanie płatnościami (administrator)
+        </CardTitle>
+        <CardDescription>
+          Ustaw kwotę na ten mecz i oznaczaj wpłaty — te same działania co w{" "}
+          <Link href="/panel-admina" className="font-medium text-emerald-800 underline-offset-2 hover:underline">
+            panelu admina
+          </Link>{" "}
+          (zakładka Mecze: edycja kwoty, przycisk „Opłaty”).
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="rounded-xl border border-emerald-900/15 bg-white/80 px-4 py-3">
+          <Label htmlFor="platnosci-admin-fee">Kwota wpisowego (PLN)</Label>
+          <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-end">
+            <Input
+              id="platnosci-admin-fee"
+              type="text"
+              inputMode="decimal"
+              placeholder="np. 25 lub puste"
+              className="max-w-xs border-zinc-200"
+              value={feePln}
+              onChange={(e) => setFeePln(e.target.value)}
+            />
+            <Button type="button" disabled={savingFee} onClick={() => void saveFee()}>
+              {savingFee ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
+              Zapisz kwotę
+            </Button>
+          </div>
+          <p className="mt-2 text-xs text-zinc-500">Puste pole — kwota nie jest pokazywana zawodnikom powyżej.</p>
+        </div>
+
+        <div>
+          <p className="mb-2 text-sm font-medium text-emerald-950">Zapisani — status opłaty</p>
+          {rows.length === 0 ? (
+            <p className="rounded-xl border border-dashed border-emerald-900/20 bg-emerald-50/40 px-4 py-6 text-center text-sm text-zinc-600">
+              Brak zapisanych zawodników na ten mecz.
+            </p>
+          ) : (
+            <ul className="max-h-[min(24rem,70vh)] space-y-0 overflow-y-auto rounded-xl border border-emerald-900/15 bg-white">
+              {rows.map((p, i) => (
+                <PlatnosciSignupRow
+                  key={p.user_id}
+                  signup={p}
+                  index={i}
+                  variant="admin"
+                  trailing={
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={p.paid ? "outline" : "default"}
+                      className="shrink-0"
+                      disabled={busyId === p.user_id}
+                      onClick={() => void togglePaid(p.user_id, !p.paid)}
+                    >
+                      {busyId === p.user_id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                      ) : p.paid ? (
+                        "Cofnij"
+                      ) : (
+                        "Opłacone"
+                      )}
+                    </Button>
+                  }
+                />
+              ))}
+            </ul>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 

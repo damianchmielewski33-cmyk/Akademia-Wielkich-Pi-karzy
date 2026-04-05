@@ -43,7 +43,7 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { MatchLineupAdmin } from "@/components/match-lineup-admin";
 import { ALL_PLAYERS } from "@/lib/constants";
-import { cn } from "@/lib/utils";
+import { cn, isValidMatchFee, matchFeeToInputString, parseMatchFeeInput } from "@/lib/utils";
 
 const API = {
   summary: "/api/admin/summary",
@@ -1406,7 +1406,7 @@ function MatchesView({
                   <TableCell>{m.location}</TableCell>
                   <TableCell>{m.players_count}</TableCell>
                   <TableCell className="text-right tabular-nums text-zinc-700">
-                    {m.fee_pln != null && Number.isFinite(m.fee_pln) ? (
+                    {isValidMatchFee(m.fee_pln) ? (
                       <span title="Wpłata BLIK — kwota na mecz">{m.fee_pln} zł</span>
                     ) : (
                       <span className="text-zinc-400">—</span>
@@ -1532,9 +1532,7 @@ function MatchEditForm({
   const [date, setDate] = useState(m.date);
   const [time, setTime] = useState(m.time);
   const [location, setLoc] = useState(m.location);
-  const [feePln, setFeePln] = useState(
-    () => (m.fee_pln != null && Number.isFinite(m.fee_pln) ? String(m.fee_pln) : "")
-  );
+  const [feePln, setFeePln] = useState(() => matchFeeToInputString(m.fee_pln));
   const [saving, setSaving] = useState(false);
 
   return (
@@ -1593,16 +1591,12 @@ function MatchEditForm({
         <Button
           disabled={saving}
           onClick={async () => {
-            const raw = feePln.trim().replace(",", ".");
-            let fee_pln: number | null = null;
-            if (raw !== "") {
-              const n = Number(raw);
-              if (!Number.isFinite(n) || n < 0) {
-                toast.error("Podaj prawidłową kwotę lub zostaw pole puste");
-                return;
-              }
-              fee_pln = n;
+            const parsed = parseMatchFeeInput(feePln);
+            if (!parsed.ok) {
+              toast.error("Podaj prawidłową kwotę lub zostaw pole puste");
+              return;
             }
+            const fee_pln = parsed.fee;
             setSaving(true);
             try {
               const res = await fetch(API.match(m.id), {
