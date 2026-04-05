@@ -3,7 +3,7 @@ import { getAccountNavFields } from "@/lib/account-server";
 import { getServerSession } from "@/lib/auth";
 import { getDb, type MatchRow } from "@/lib/db";
 import { HomeClient } from "@/components/home-client";
-import { isTransportChatEligible, isWithinSixHoursBeforeMatch, type SignupTransportRow } from "@/lib/transport";
+import { isLocalMatchDay } from "@/lib/transport";
 
 export const metadata: Metadata = {
   title: "Start",
@@ -21,37 +21,14 @@ export default async function HomePage() {
     .get() as MatchRow | undefined;
 
   let userSigned = false;
-  let signupTransport: SignupTransportRow | null = null;
   if (nextMatch && session) {
     const signup = db
-      .prepare(
-        `SELECT id, drives_car, can_take_passengers, needs_transport FROM match_signups WHERE user_id = ? AND match_id = ?`
-      )
-      .get(session.userId, nextMatch.id) as
-      | {
-          id: number;
-          drives_car: number;
-          can_take_passengers: number;
-          needs_transport: number;
-        }
-      | undefined;
+      .prepare(`SELECT id FROM match_signups WHERE user_id = ? AND match_id = ?`)
+      .get(session.userId, nextMatch.id) as { id: number } | undefined;
     userSigned = Boolean(signup);
-    if (signup) {
-      signupTransport = {
-        drives_car: signup.drives_car,
-        can_take_passengers: signup.can_take_passengers,
-        needs_transport: signup.needs_transport,
-      };
-    }
   }
 
-  const showTransportOnHome = Boolean(
-    session &&
-      nextMatch &&
-      userSigned &&
-      (isWithinSixHoursBeforeMatch(nextMatch) ||
-        (signupTransport != null && isTransportChatEligible(signupTransport)))
-  );
+  const transportHomeActive = Boolean(nextMatch && isLocalMatchDay(nextMatch));
 
   const lineupPublicNextMatch = Boolean(nextMatch && nextMatch.lineup_public === 1);
 
@@ -68,7 +45,7 @@ export default async function HomePage() {
       nextMatch={nextMatch ?? null}
       lineupPublicNextMatch={lineupPublicNextMatch}
       userSigned={userSigned}
-      showTransportOnHome={showTransportOnHome}
+      transportHomeActive={transportHomeActive}
       isLoggedIn={Boolean(session)}
       isAdmin={session?.isAdmin ?? false}
       firstName={session?.firstName ?? ""}

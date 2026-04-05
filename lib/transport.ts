@@ -19,7 +19,17 @@ export function matchStartDate(m: { match_date: string; match_time: string }): D
   return new Date(`${m.match_date}T${timePart}`);
 }
 
-/** Przycisk „Transport na mecz” — od 6 h przed rozpoczęciem do momentu startu meczu. */
+/** Przycisk „Transport na mecz” — aktywny w lokalny kalendarzowy dzień meczu (data z bazy). */
+export function isLocalMatchDay(m: { match_date: string }): boolean {
+  const d = new Date();
+  const y = d.getFullYear();
+  const mo = String(d.getMonth() + 1).padStart(2, "0");
+  const da = String(d.getDate()).padStart(2, "0");
+  const today = `${y}-${mo}-${da}`;
+  return today === m.match_date.trim();
+}
+
+/** Od 6 h przed rozpoczęciem do momentu startu meczu. */
 export function isWithinSixHoursBeforeMatch(m: { match_date: string; match_time: string }): boolean {
   const start = matchStartDate(m).getTime();
   const now = Date.now();

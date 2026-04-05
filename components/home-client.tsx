@@ -38,8 +38,8 @@ type Props = {
   nextMatch: MatchRow | null;
   lineupPublicNextMatch: boolean;
   userSigned: boolean;
-  /** Jeden przycisk „Transport na mecz” (okno 6 h przed startem albo dostęp do czatu). */
-  showTransportOnHome: boolean;
+  /** Kafelek transportu zawsze widoczny po zapisie; link działa w lokalny dzień meczu. */
+  transportHomeActive: boolean;
   isLoggedIn: boolean;
   isAdmin: boolean;
   firstName: string;
@@ -52,7 +52,7 @@ export function HomeClient({
   nextMatch,
   lineupPublicNextMatch,
   userSigned,
-  showTransportOnHome,
+  transportHomeActive,
   isLoggedIn,
   isAdmin,
   firstName,
@@ -128,10 +128,10 @@ export function HomeClient({
   const tiles = (
     <div className="mx-auto grid max-w-3xl grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-3">
       <PitchTile href="/terminarz" icon={CalendarDays} title="Terminarz" desc="Mecze, zapisy, terminy" />
-      <PitchTile href="/platnosci" icon={Wallet} title="Płatności" desc="BLIK i status wpłaty za mecz" />
       <PitchTile href="/pilkarze" icon={Users} title="Piłkarze" desc="Skład i profile" />
       {isLoggedIn && (
         <>
+          <PitchTile href="/platnosci" icon={Wallet} title="Płatności" desc="BLIK i status wpłaty za mecz" />
           <PitchTile href="/statystyki" icon={Activity} title="Statystyki" desc="Twoje liczby z boiska" />
           <PitchTile href="/rankingi" icon={Trophy} title="Rankingi" desc="Gole, asysty, punkty" variant="gold" />
         </>
@@ -149,14 +149,6 @@ export function HomeClient({
             <PitchTile href="/panel-admina" icon={Shield} title="Panel admina" desc="Zarządzanie akademią" />
           )}
         </>
-      )}
-      {isLoggedIn && userSigned && showTransportOnHome && nextMatch && (
-        <PitchTile
-          href={`/transport/${nextMatch.id}`}
-          icon={Car}
-          title="Transport na mecz"
-          desc="Lista kierowców, potrzebujących dojazdu i czat"
-        />
       )}
     </div>
   );
@@ -248,6 +240,39 @@ export function HomeClient({
                 <Button className="mt-4 w-full border border-white/40 bg-white/10 font-semibold text-white backdrop-blur-sm hover:bg-white/20" asChild>
                   <Link href="/login">Zaloguj się, aby się zapisać</Link>
                 </Button>
+              )}
+              {isLoggedIn && userSigned && (
+                <div className="mt-4 space-y-2">
+                  {transportHomeActive ? (
+                    <Button
+                      className="w-full border-0 bg-emerald-100 font-semibold text-emerald-950 shadow-md hover:bg-white"
+                      asChild
+                    >
+                      <Link href={`/transport/${nextMatch.id}`} className="inline-flex items-center justify-center gap-2">
+                        <Car className="h-4 w-4 shrink-0" aria-hidden />
+                        Transport na mecz
+                      </Link>
+                    </Button>
+                  ) : (
+                    <>
+                      <Button
+                        type="button"
+                        disabled
+                        aria-describedby="transport-home-hint"
+                        className="w-full cursor-not-allowed border border-white/25 bg-white/10 font-semibold text-white/70 opacity-80"
+                        title="Transport na mecz — dostępny w dniu meczu."
+                      >
+                        <span className="inline-flex items-center justify-center gap-2">
+                          <Car className="h-4 w-4 shrink-0 opacity-70" aria-hidden />
+                          Transport na mecz
+                        </span>
+                      </Button>
+                      <p id="transport-home-hint" className="text-center text-xs text-emerald-100/85">
+                        Przycisk będzie aktywny w dniu meczu (lista kierowców, potrzebujących dojazdu i czat).
+                      </p>
+                    </>
+                  )}
+                </div>
               )}
               <div className="mt-4 border-t border-white/20 pt-4">
                 {lineupPublicNextMatch ? (
