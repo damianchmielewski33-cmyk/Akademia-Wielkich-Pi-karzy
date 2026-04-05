@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getDb } from "@/lib/db";
+import { getDb, logActivity } from "@/lib/db";
 import { requireUser } from "@/lib/api-helpers";
 
 export const runtime = "nodejs";
@@ -23,6 +23,8 @@ export async function POST(_req: Request, ctx: Ctx) {
     | {
         id: number;
         match_date: string;
+        match_time: string;
+        location: string;
         signed_up: number;
         max_slots: number;
         played: number;
@@ -55,6 +57,11 @@ export async function POST(_req: Request, ctx: Ctx) {
     db.prepare("UPDATE matches SET signed_up = signed_up + 1 WHERE id = ?").run(mid);
   });
   tx();
+
+  logActivity(
+    gate.session.userId,
+    `Zapisał się na mecz ${match.match_date} ${match.match_time} (${match.location}), id ${mid}`
+  );
 
   return NextResponse.json({ ok: true });
 }

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getDb } from "@/lib/db";
+import { getDb, logActivity } from "@/lib/db";
 import { requireAdmin } from "@/lib/api-helpers";
 
 export const runtime = "nodejs";
@@ -50,8 +50,21 @@ export async function PUT(req: Request, ctx: Ctx) {
   }
   const saves = parsed.data.saves ?? 0;
   const db = getDb();
+  const meta = db
+    .prepare(
+      `SELECT ms.match_id, u.first_name, u.last_name
+       FROM match_stats ms
+       JOIN users u ON u.id = ms.user_id
+       WHERE ms.id = ?`
+    )
+    .get(sid) as { match_id: number; first_name: string; last_name: string } | undefined;
+  if (!meta) return NextResponse.json({ error: "Not found" }, { status: 404 });
   db.prepare(
     `UPDATE match_stats SET goals = ?, assists = ?, distance = ?, saves = ? WHERE id = ?`
   ).run(parsed.data.goals, parsed.data.assists, parsed.data.distance, saves, sid);
+  logActivity(
+    gate.session.userId,
+    `Zmienił statystyki zawodnika ${meta.first_name} ${meta.last_name} za mecz id ${meta.match_id} (wpis #${sid})`
+  );
   return NextResponse.json({ status: "ok" });
 }

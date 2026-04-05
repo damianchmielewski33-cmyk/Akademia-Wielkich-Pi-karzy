@@ -14,6 +14,7 @@ import {
   Search,
   Shield,
   Table2,
+  UserPlus,
   Users,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -38,6 +39,7 @@ import {
 } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { MatchLineupAdmin } from "@/components/match-lineup-admin";
+import { ALL_PLAYERS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 
 const API = {
@@ -100,7 +102,9 @@ export function AdminPanel() {
   const [tab, setTab] = useState<TabId>("dashboard");
   const [loading, setLoading] = useState(true);
   const [summary, setSummary] = useState<Summary | null>(null);
-  const [activity, setActivity] = useState<{ text: string; time: string }[]>([]);
+  const [activity, setActivity] = useState<{ text: string; time: string; actorName: string | null }[]>(
+    []
+  );
   const [users, setUsers] = useState<UserRow[]>([]);
   const [matches, setMatches] = useState<MatchRow[]>([]);
   const [stats, setStats] = useState<StatRow[]>([]);
@@ -313,7 +317,7 @@ function DashboardView({
   onGoToTab,
 }: {
   summary: Summary | null;
-  activity: { text: string; time: string }[];
+  activity: { text: string; time: string; actorName: string | null }[];
   loading: boolean;
   onReload: () => void;
   onGoToTab: (t: TabId) => void;
@@ -404,23 +408,31 @@ function DashboardView({
       <Card className="mt-8 border-zinc-200/80 bg-white shadow-sm">
         <CardHeader>
           <CardTitle className="text-lg">Ostatnia aktywność</CardTitle>
-          <CardDescription>Do 25 ostatnich wpisów z dziennika systemu</CardDescription>
+          <CardDescription>
+            Do 25 ostatnich wpisów: imię i nazwisko wykonawcy oraz opis czynności i czas zdarzenia
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {activity.length === 0 ? (
             <p className="rounded-lg border border-dashed border-zinc-200 bg-zinc-50/80 px-4 py-8 text-center text-sm text-zinc-600">
-              Brak zapisów w dzienniku — pojawią się po logowaniu i innych operacjach w aplikacji.
+              Brak zapisów w dzienniku — pojawią się po logowaniu, zapisach na mecze, statystykach i
+              innych operacjach w aplikacji.
             </p>
           ) : (
             <ul className="space-y-3">
               {activity.map((item, i) => (
                 <li
                   key={`${item.time}-${i}`}
-                  className="flex flex-col gap-1 border-l-2 border-emerald-200 pl-4 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4"
+                  className="flex flex-col gap-1 border-l-2 border-emerald-200 pl-4 sm:flex-row sm:items-start sm:justify-between sm:gap-4"
                 >
-                  <span className="text-sm text-zinc-800">{item.text}</span>
+                  <div className="min-w-0 flex-1 space-y-0.5">
+                    <p className="text-sm font-medium text-zinc-900">
+                      {item.actorName ?? "—"}
+                    </p>
+                    <p className="text-sm text-zinc-600">{item.text}</p>
+                  </div>
                   <time
-                    className="shrink-0 text-xs tabular-nums text-zinc-500"
+                    className="shrink-0 text-xs tabular-nums text-zinc-500 sm:pt-0.5"
                     dateTime={item.time}
                   >
                     {item.time}
@@ -445,6 +457,7 @@ function UsersView({
   onReload: () => void;
 }) {
   const [edit, setEdit] = useState<UserRow | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
   const [delUser, setDelUser] = useState<UserRow | null>(null);
   const [q, setQ] = useState("");
 
@@ -464,10 +477,14 @@ function UsersView({
     <div>
       <Toolbar
         title="Użytkownicy"
-        description="Edycja danych, rola administratora oraz usuwanie kont."
+        description="Dodawanie kont, edycja danych, rola administratora oraz usuwanie."
         onReload={onReload}
         loading={loading}
       >
+        <Button type="button" size="sm" onClick={() => setCreateOpen(true)}>
+          <UserPlus className="mr-2 h-4 w-4" aria-hidden />
+          Dodaj użytkownika
+        </Button>
         <div className="relative w-full min-w-[200px] sm:w-64">
           <Search
             className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400"
@@ -548,6 +565,19 @@ function UsersView({
         </DialogContent>
       </Dialog>
 
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent className="sm:max-w-md">
+          <UserCreateForm
+            takenAliases={users.map((u) => u.zawodnik)}
+            onClose={() => setCreateOpen(false)}
+            onCreated={() => {
+              setCreateOpen(false);
+              onReload();
+            }}
+          />
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={delUser != null} onOpenChange={(o) => !o && setDelUser(null)}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -586,6 +616,135 @@ function UsersView({
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+function UserCreateForm({
+  takenAliases,
+  onClose,
+  onCreated,
+}: {
+  takenAliases: string[];
+  onClose: () => void;
+  onCreated: () => void;
+}) {
+  const taken = useMemo(() => new Set(takenAliases), [takenAliases]);
+  const freeAvatars = useMemo(
+    () => ALL_PLAYERS.filter((p) => !taken.has(p)),
+    [taken]
+  );
+
+  const [first_name, setFn] = useState("");
+  const [last_name, setLn] = useState("");
+  const [zawodnik, setZ] = useState("");
+  const [role, setRole] = useState<"admin" | "player">("player");
+  const [saving, setSaving] = useState(false);
+
+  return (
+    <>
+      <DialogHeader>
+        <DialogTitle>Nowy użytkownik</DialogTitle>
+      </DialogHeader>
+      <p className="text-sm text-zinc-600">
+        Konto loguje się tak jak przy rejestracji: imię, nazwisko i wybrany pseudonim piłkarza muszą
+        się zgadzać z danymi wpisanymi przy logowaniu.
+      </p>
+      <div className="space-y-3 py-2">
+        <div>
+          <Label htmlFor="adm-new-fn">Imię</Label>
+          <Input
+            id="adm-new-fn"
+            className="mt-1 border-zinc-200"
+            value={first_name}
+            onChange={(e) => setFn(e.target.value)}
+            autoComplete="off"
+          />
+        </div>
+        <div>
+          <Label htmlFor="adm-new-ln">Nazwisko</Label>
+          <Input
+            id="adm-new-ln"
+            className="mt-1 border-zinc-200"
+            value={last_name}
+            onChange={(e) => setLn(e.target.value)}
+            autoComplete="off"
+          />
+        </div>
+        <div>
+          <Label>Pseudonim zawodnika (awatar)</Label>
+          {freeAvatars.length === 0 ? (
+            <p className="mt-1 text-sm text-amber-700">
+              Wszystkie awatary są już przypisane — usuń konto lub zmień pseudonim istniejącego
+              użytkownika.
+            </p>
+          ) : (
+            <Select value={zawodnik || undefined} onValueChange={setZ}>
+              <SelectTrigger className="mt-1 border-zinc-200">
+                <SelectValue placeholder="Wybierz piłkarza" />
+              </SelectTrigger>
+              <SelectContent className="max-h-60">
+                {freeAvatars.map((p) => (
+                  <SelectItem key={p} value={p}>
+                    {p}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </div>
+        <div>
+          <Label>Rola</Label>
+          <Select value={role} onValueChange={(v) => setRole(v as "admin" | "player")}>
+            <SelectTrigger className="mt-1 border-zinc-200">
+              <SelectValue placeholder="Wybierz rolę" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="admin">Administrator</SelectItem>
+              <SelectItem value="player">Gracz</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+      <DialogFooter className="gap-2 sm:gap-0">
+        <Button variant="outline" onClick={onClose} disabled={saving}>
+          Anuluj
+        </Button>
+        <Button
+          disabled={saving || freeAvatars.length === 0 || !zawodnik}
+          onClick={async () => {
+            if (!first_name.trim() || !last_name.trim() || !zawodnik) {
+              toast.error("Uzupełnij imię, nazwisko i pseudonim");
+              return;
+            }
+            setSaving(true);
+            try {
+              const res = await fetch(API.users, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  first_name: first_name.trim(),
+                  last_name: last_name.trim(),
+                  zawodnik,
+                  role,
+                }),
+              });
+              const data = (await res.json().catch(() => ({}))) as { error?: string };
+              if (!res.ok) {
+                toast.error(data.error ?? "Nie udało się utworzyć konta");
+                return;
+              }
+              toast.success("Utworzono konto użytkownika");
+              onCreated();
+            } finally {
+              setSaving(false);
+            }
+          }}
+        >
+          {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
+          Utwórz konto
+        </Button>
+      </DialogFooter>
+    </>
   );
 }
 

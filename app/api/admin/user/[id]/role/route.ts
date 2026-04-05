@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getDb } from "@/lib/db";
+import { getDb, logActivity } from "@/lib/db";
 import { requireAdmin } from "@/lib/api-helpers";
 
 export const runtime = "nodejs";
@@ -30,9 +30,17 @@ export async function POST(req: Request, ctx: Ctx) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
   const db = getDb();
+  const target = db
+    .prepare("SELECT first_name, last_name FROM users WHERE id = ?")
+    .get(userId) as { first_name: string; last_name: string } | undefined;
+  if (!target) return NextResponse.json({ error: "Not found" }, { status: 404 });
   db.prepare("UPDATE users SET is_admin = ? WHERE id = ?").run(
     parsed.data.role === "admin" ? 1 : 0,
     userId
+  );
+  logActivity(
+    gate.session.userId,
+    `Zmienił rolę użytkownika ${target.first_name} ${target.last_name} (id ${userId}) na: ${parsed.data.role === "admin" ? "administrator" : "zawodnik"}`
   );
   return NextResponse.json({ status: "role_changed" });
 }

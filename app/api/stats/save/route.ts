@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getDb } from "@/lib/db";
+import { getDb, logActivity } from "@/lib/db";
 import { getServerSession } from "@/lib/auth";
 
 export const runtime = "nodejs";
@@ -75,5 +75,9 @@ export async function POST(req: Request) {
   db.prepare(
     "INSERT INTO match_stats (user_id, match_id, goals, assists, distance, saves) VALUES (?, ?, ?, ?, ?, ?)"
   ).run(session.userId, match_id, goals, assists, distance, saves);
+  logActivity(
+    session.userId,
+    `Uzupełnił własne statystyki za mecz id ${match_id} (bramki: ${goals}, asysty: ${assists}, km: ${distance}, obrony: ${saves})`
+  );
   return new NextResponse("OK", { status: 200 });
 }

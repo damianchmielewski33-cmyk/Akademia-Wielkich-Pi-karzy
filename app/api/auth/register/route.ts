@@ -48,7 +48,10 @@ export async function POST(req: Request) {
       )
       .run(first_name, last_name, zawodnik, isAdmin);
     const userId = Number(r.lastInsertRowid);
-    logActivity(userId, "Utworzył konto");
+    logActivity(
+      userId,
+      auto_login ? "Zarejestrował konto i zalogował się" : "Zarejestrował konto"
+    );
 
     if (auto_login) {
       const token = await createSessionToken({

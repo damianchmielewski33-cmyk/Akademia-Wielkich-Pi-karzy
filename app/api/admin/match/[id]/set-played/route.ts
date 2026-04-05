@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getDb } from "@/lib/db";
+import { getDb, logActivity } from "@/lib/db";
 import { requireAdmin } from "@/lib/api-helpers";
 
 export const runtime = "nodejs";
@@ -15,6 +15,14 @@ export async function POST(_req: Request, ctx: Ctx) {
     return NextResponse.json({ error: "Invalid id" }, { status: 400 });
   }
   const db = getDb();
+  const row = db
+    .prepare("SELECT match_date, match_time, location FROM matches WHERE id = ?")
+    .get(mid) as { match_date: string; match_time: string; location: string } | undefined;
+  if (!row) return NextResponse.json({ error: "Not found" }, { status: 404 });
   db.prepare("UPDATE matches SET played = 1 WHERE id = ?").run(mid);
+  logActivity(
+    gate.session.userId,
+    `Oznaczył mecz jako rozegrany: ${row.match_date} ${row.match_time} (${row.location}), id ${mid}`
+  );
   return NextResponse.json({ ok: true });
 }

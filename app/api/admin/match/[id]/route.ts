@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getDb } from "@/lib/db";
+import { getDb, logActivity } from "@/lib/db";
 import { requireAdmin } from "@/lib/api-helpers";
 
 export const runtime = "nodejs";
@@ -56,6 +56,10 @@ export async function PUT(req: Request, context: RouteContext) {
     parsed.data.location,
     mid
   );
+  logActivity(
+    gate.session.userId,
+    `Edytował mecz id ${mid}: ${parsed.data.date} ${parsed.data.time}, ${parsed.data.location}`
+  );
   return NextResponse.json({ status: "ok" });
 }
 
@@ -68,6 +72,14 @@ export async function DELETE(_req: Request, context: RouteContext) {
     return NextResponse.json({ error: "Invalid id" }, { status: 400 });
   }
   const db = getDb();
+  const row = db
+    .prepare("SELECT match_date, match_time, location FROM matches WHERE id = ?")
+    .get(mid) as { match_date: string; match_time: string; location: string } | undefined;
+  if (!row) return NextResponse.json({ error: "Not found" }, { status: 404 });
   db.prepare("DELETE FROM matches WHERE id = ?").run(mid);
+  logActivity(
+    gate.session.userId,
+    `Usunął mecz id ${mid}: ${row.match_date} ${row.match_time} (${row.location})`
+  );
   return NextResponse.json({ status: "deleted" });
 }

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getDb } from "@/lib/db";
+import { getDb, logActivity } from "@/lib/db";
 import { requireAdmin } from "@/lib/api-helpers";
 
 export const runtime = "nodejs";
@@ -31,5 +31,9 @@ export async function POST(req: Request) {
   db.prepare(
     "UPDATE matches SET match_date = ?, match_time = ?, location = ?, max_slots = ? WHERE id = ?"
   ).run(d.date, d.time, d.location, d.max_slots, d.match_id);
+  logActivity(
+    gate.session.userId,
+    `Edytował mecz w terminarzu id ${d.match_id}: ${d.date} ${d.time} (${d.location}), max. ${d.max_slots} miejsc`
+  );
   return NextResponse.json({ status: "ok" });
 }

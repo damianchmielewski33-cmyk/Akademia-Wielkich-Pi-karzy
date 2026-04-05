@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getDb } from "@/lib/db";
+import { getDb, logActivity } from "@/lib/db";
 import { createSessionToken, setSessionCookie } from "@/lib/auth";
 
 export const runtime = "nodejs";
@@ -44,6 +44,7 @@ export async function POST(req: Request) {
     zawodnik: user.player_alias,
   });
   await setSessionCookie(token);
+  logActivity(user.id, "Zalogował się");
 
   return NextResponse.json({
     ok: true,

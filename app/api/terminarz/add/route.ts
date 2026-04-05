@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getDb } from "@/lib/db";
+import { getDb, logActivity } from "@/lib/db";
 import { requireAdmin } from "@/lib/api-helpers";
 
 export const runtime = "nodejs";
@@ -27,9 +27,15 @@ export async function POST(req: Request) {
   }
   const { date, time, location, max_slots } = parsed.data;
   const db = getDb();
-  db.prepare(
+  const ins = db.prepare(
     `INSERT INTO matches (match_date, match_time, location, max_slots, signed_up, played)
      VALUES (?, ?, ?, ?, 0, 0)`
-  ).run(date, time, location, max_slots);
+  );
+  const r = ins.run(date, time, location, max_slots);
+  const newId = Number(r.lastInsertRowid);
+  logActivity(
+    gate.session.userId,
+    `Dodał mecz do terminarza id ${newId}: ${date} ${time} (${location}), max. ${max_slots} miejsc`
+  );
   return NextResponse.json({ status: "ok" });
 }
