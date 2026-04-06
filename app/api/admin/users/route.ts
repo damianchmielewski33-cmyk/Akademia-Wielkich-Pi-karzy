@@ -23,7 +23,10 @@ export async function GET() {
     .prepare(`
       SELECT id, first_name, last_name, player_alias AS zawodnik,
              profile_photo_path,
-             CASE WHEN is_admin = 1 THEN 'admin' ELSE 'player' END AS role
+             CASE WHEN is_admin = 1 THEN 'admin' ELSE 'player' END AS role,
+             pin_reset_requested,
+             CASE WHEN pin_hash IS NOT NULL THEN 1 ELSE 0 END AS pin_set,
+             CASE WHEN pin_hash_pending IS NOT NULL THEN 1 ELSE 0 END AS pin_change_pending
       FROM users
       ORDER BY first_name
     `)
@@ -71,7 +74,8 @@ export async function POST(req: Request) {
   try {
     const r = await db
       .prepare(
-        "INSERT INTO users (first_name, last_name, player_alias, is_admin) VALUES (?, ?, ?, ?)"
+        `INSERT INTO users (first_name, last_name, player_alias, is_admin, pin_hash, auth_version)
+         VALUES (?, ?, ?, ?, NULL, 0)`
       )
       .run(first_name, last_name, canonical, isAdmin);
     const userId = Number(r.lastInsertRowid);

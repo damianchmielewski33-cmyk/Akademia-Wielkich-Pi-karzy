@@ -6,7 +6,9 @@ export const runtime = "nodejs";
 
 export async function GET() {
   const session = await getServerSession();
-  if (!session) return NextResponse.json({ pending: false });
+  if (!session || session.needsPinSetup || session.pinChangePending) {
+    return NextResponse.json({ pending: false });
+  }
 
   const db = await getDb();
   const row = await db

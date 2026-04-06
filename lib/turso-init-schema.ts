@@ -115,6 +115,18 @@ export async function initLibsqlSchema(client: Client) {
     await client.execute("ALTER TABLE users ADD COLUMN notification_prompt_completed INTEGER NOT NULL DEFAULT 0");
     await client.execute("UPDATE users SET notification_prompt_completed = 1");
   }
+  if (!names.includes("pin_hash")) {
+    await client.execute("ALTER TABLE users ADD COLUMN pin_hash TEXT");
+  }
+  if (!names.includes("pin_reset_requested")) {
+    await client.execute("ALTER TABLE users ADD COLUMN pin_reset_requested INTEGER NOT NULL DEFAULT 0");
+  }
+  if (!names.includes("auth_version")) {
+    await client.execute("ALTER TABLE users ADD COLUMN auth_version INTEGER NOT NULL DEFAULT 0");
+  }
+  if (!names.includes("pin_hash_pending")) {
+    await client.execute("ALTER TABLE users ADD COLUMN pin_hash_pending TEXT");
+  }
 
   names = await pragmaColumnNames(client, "match_signups");
   if (!names.includes("drives_car")) {

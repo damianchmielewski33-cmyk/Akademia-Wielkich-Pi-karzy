@@ -6,6 +6,7 @@ import { resolveCanonicalPlayerAlias } from "@/lib/player-alias";
 import { isUniqueConstraintError } from "@/lib/sql-errors";
 import { createSessionToken, setSessionCookie } from "@/lib/auth";
 import { checkRateLimit, rateLimitKey, rateLimitedResponse, RATE } from "@/lib/rate-limit";
+import { hashPin, isValidPinFormat, isWeakPin, WEAK_PIN_MESSAGE } from "@/lib/pin";
 
 export const runtime = "nodejs";
 
@@ -13,6 +14,8 @@ const bodySchema = z.object({
   first_name: z.string().min(1).trim(),
   last_name: z.string().min(1).trim(),
   zawodnik: z.string().min(1).trim(),
+  pin: z.string().min(1).trim(),
+  pin_confirm: z.string().min(1).trim(),
   auto_login: z.boolean().optional(),
 });
 
@@ -31,7 +34,17 @@ export async function POST(req: Request) {
   if (!parsed.success) {
     return NextResponse.json({ error: "Wszystkie pola są wymagane." }, { status: 400 });
   }
-  const { first_name, last_name, zawodnik, auto_login } = parsed.data;
+  const { first_name, last_name, zawodnik, pin, pin_confirm, auto_login } = parsed.data;
+
+  if (pin !== pin_confirm) {
+    return NextResponse.json({ error: "PIN-y muszą być takie same." }, { status: 400 });
+  }
+  if (!isValidPinFormat(pin)) {
+    return NextResponse.json({ error: "PIN musi mieć 4–6 cyfr." }, { status: 400 });
+  }
+  if (isWeakPin(pin)) {
+    return NextResponse.json({ error: WEAK_PIN_MESSAGE }, { status: 400 });
+  }
 
   const canonical = resolveCanonicalPlayerAlias(zawodnik);
   if (!canonical) {
@@ -60,13 +73,15 @@ export async function POST(req: Request) {
     );
   }
 
+  const pinHash = await hashPin(pin);
   let userId: number;
   try {
     const r = await db
       .prepare(
-        "INSERT INTO users (first_name, last_name, player_alias, is_admin) VALUES (?, ?, ?, ?)"
+        `INSERT INTO users (first_name, last_name, player_alias, is_admin, pin_hash, auth_version)
+         VALUES (?, ?, ?, ?, ?, 0)`
       )
-      .run(first_name, last_name, canonical, isAdmin);
+      .run(first_name, last_name, canonical, isAdmin, pinHash);
     userId = Number(r.lastInsertRowid);
   } catch (e) {
     if (isUniqueConstraintError(e)) {
@@ -92,6 +107,7 @@ export async function POST(req: Request) {
         firstName: first_name,
         lastName: last_name,
         zawodnik: canonical,
+        authVersion: 0,
       });
       await setSessionCookie(token);
       return NextResponse.json(

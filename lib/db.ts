@@ -186,6 +186,18 @@ function initSchemaSync(db: Database.Database) {
     db.exec("ALTER TABLE users ADD COLUMN notification_prompt_completed INTEGER NOT NULL DEFAULT 0");
     db.prepare("UPDATE users SET notification_prompt_completed = 1").run();
   }
+  if (!userCols.some((c) => c.name === "pin_hash")) {
+    db.exec("ALTER TABLE users ADD COLUMN pin_hash TEXT");
+  }
+  if (!userCols.some((c) => c.name === "pin_reset_requested")) {
+    db.exec("ALTER TABLE users ADD COLUMN pin_reset_requested INTEGER NOT NULL DEFAULT 0");
+  }
+  if (!userCols.some((c) => c.name === "auth_version")) {
+    db.exec("ALTER TABLE users ADD COLUMN auth_version INTEGER NOT NULL DEFAULT 0");
+  }
+  if (!userCols.some((c) => c.name === "pin_hash_pending")) {
+    db.exec("ALTER TABLE users ADD COLUMN pin_hash_pending TEXT");
+  }
 
   const signupCols = db.prepare("PRAGMA table_info(match_signups)").all() as { name: string }[];
   if (!signupCols.some((c) => c.name === "drives_car")) {
@@ -268,6 +280,14 @@ export type UserRow = {
   match_notifications_consent?: number;
   /** 1 = użytkownik udzielił odpowiedzi w oknie powitalnym (nie pokazuj ponownie). */
   notification_prompt_completed?: number;
+  /** Skrót bcrypt PIN-u; NULL = wymagane ustawienie przy pierwszym logowaniu lub po resecie. */
+  pin_hash?: string | null;
+  /** 1 = użytkownik zgłosił „zapomniałem PIN-u” (widoczne dla admina). */
+  pin_reset_requested?: number;
+  /** Wersja sesji — inkrementacja unieważnia istniejące JWT (np. reset PIN przez admina). */
+  auth_version?: number;
+  /** Propozycja nowego PIN-u (bcrypt); oczekuje na zatwierdzenie przez admina. */
+  pin_hash_pending?: string | null;
 };
 
 export type MatchRow = {

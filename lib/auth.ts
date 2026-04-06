@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { cache } from "react";
 import { SESSION_COOKIE } from "@/lib/constants";
 import { getAuthSecretKey } from "@/lib/auth-secret";
+import { getDb } from "@/lib/db";
 
 export type AppSession = {
   userId: number;
@@ -10,14 +11,23 @@ export type AppSession = {
   firstName: string;
   lastName: string;
   zawodnik: string;
+  /** Wersja z tabeli users — musi się zgadzać z JWT, inaczej sesja jest nieważna (np. reset PIN). */
+  authVersion: number;
+  /** Brak pin_hash w bazie — wymagane ustawienie PIN-u (np. konto sprzed wdrożenia PIN). */
+  needsPinSetup: boolean;
+  /** Zgłoszona zmiana PIN-u czeka na akceptację admina — bez pełnego dostępu do konta. */
+  pinChangePending: boolean;
 };
 
-export async function createSessionToken(session: AppSession): Promise<string> {
+type JwtSessionFields = Omit<AppSession, "needsPinSetup" | "pinChangePending">;
+
+export async function createSessionToken(session: JwtSessionFields): Promise<string> {
   return new SignJWT({
     adm: session.isAdmin ? 1 : 0,
     fn: session.firstName,
     ln: session.lastName,
     zaw: session.zawodnik,
+    ver: session.authVersion,
   })
     .setProtectedHeader({ alg: "HS256" })
     .setSubject(String(session.userId))
@@ -26,7 +36,7 @@ export async function createSessionToken(session: AppSession): Promise<string> {
     .sign(getAuthSecretKey());
 }
 
-export async function verifySessionToken(token: string): Promise<AppSession> {
+export async function verifySessionToken(token: string): Promise<JwtSessionFields> {
   const { payload } = await jwtVerify(token, getAuthSecretKey());
   return {
     userId: Number(payload.sub),
@@ -34,6 +44,7 @@ export async function verifySessionToken(token: string): Promise<AppSession> {
     firstName: String(payload.fn ?? ""),
     lastName: String(payload.ln ?? ""),
     zawodnik: String(payload.zaw ?? ""),
+    authVersion: Number(payload.ver ?? 0),
   };
 }
 
@@ -42,7 +53,17 @@ export const getServerSession = cache(async (): Promise<AppSession | null> => {
   const token = jar.get(SESSION_COOKIE)?.value;
   if (!token) return null;
   try {
-    return await verifySessionToken(token);
+    const session = await verifySessionToken(token);
+    const db = await getDb();
+    const row = (await db
+      .prepare("SELECT auth_version, pin_hash, pin_hash_pending FROM users WHERE id = ?")
+      .get(session.userId)) as
+      | { auth_version: number; pin_hash: string | null; pin_hash_pending: string | null }
+      | undefined;
+    if (!row || row.auth_version !== session.authVersion) return null;
+    const needsPinSetup = !row.pin_hash;
+    const pinChangePending = Boolean(row.pin_hash_pending);
+    return { ...session, needsPinSetup, pinChangePending };
   } catch {
     return null;
   }

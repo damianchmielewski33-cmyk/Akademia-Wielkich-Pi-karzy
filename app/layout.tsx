@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
 import { SiteShell } from "@/components/site-shell";
+import { ShareLinkClientCleanup } from "@/components/share-link-client-cleanup";
 import { MatchNotificationPrompt } from "@/components/match-notification-prompt";
+import { PinSetupGate } from "@/components/pin-setup-gate";
 import { getAccountNavFields } from "@/lib/account-server";
 import { getServerSession } from "@/lib/auth";
 import { SITE_NAME } from "@/lib/site";
@@ -32,6 +34,9 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const session = await getServerSession();
+  const loggedInFull = Boolean(
+    session && !session.needsPinSetup && !session.pinChangePending
+  );
 
   let accountNav: {
     firstName: string;
@@ -39,12 +44,12 @@ export default async function RootLayout({
     zawodnik: string;
     profilePhotoPath: string | null;
   } | null = null;
-  if (session) {
-    const row = await getAccountNavFields(session.userId);
+  if (loggedInFull) {
+    const row = await getAccountNavFields(session!.userId);
     accountNav = {
-      firstName: row?.firstName ?? session.firstName,
-      lastName: row?.lastName ?? session.lastName,
-      zawodnik: row?.zawodnik ?? session.zawodnik,
+      firstName: row?.firstName ?? session!.firstName,
+      lastName: row?.lastName ?? session!.lastName,
+      zawodnik: row?.zawodnik ?? session!.zawodnik,
       profilePhotoPath: row?.profilePhotoPath ?? null,
     };
   }
@@ -52,13 +57,16 @@ export default async function RootLayout({
   return (
     <html lang="pl">
       <body className={`${geistSans.variable} ${geistMono.variable} murawa-bg min-h-screen antialiased font-sans`}>
-        <SiteShell
-          isLoggedIn={Boolean(session)}
-          isAdmin={session?.isAdmin ?? false}
-          account={accountNav}
-        >
-          {children}
-        </SiteShell>
+        <ShareLinkClientCleanup />
+        <PinSetupGate>
+          <SiteShell
+            isLoggedIn={loggedInFull}
+            isAdmin={session?.isAdmin && loggedInFull ? true : false}
+            account={accountNav}
+          >
+            {children}
+          </SiteShell>
+        </PinSetupGate>
         <MatchNotificationPrompt />
         <Toaster
           position="top-center"

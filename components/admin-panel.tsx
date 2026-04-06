@@ -27,6 +27,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -43,13 +44,22 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { MatchLineupAdmin } from "@/components/match-lineup-admin";
 import { ALL_PLAYERS } from "@/lib/constants";
-import { cn, isValidMatchFee, matchFeeToInputString, parseMatchFeeInput } from "@/lib/utils";
+import {
+  cn,
+  formatDateLocalYmd,
+  isValidMatchFee,
+  matchFeeToInputString,
+  parseMatchFeeInput,
+} from "@/lib/utils";
 
 const API = {
   summary: "/api/admin/summary",
   activity: "/api/admin/activity",
   users: "/api/admin/users",
   user: (id: number) => `/api/admin/user/${id}`,
+  resetPin: (id: number) => `/api/admin/user/${id}/reset-pin`,
+  approvePinChange: (id: number) => `/api/admin/user/${id}/approve-pin-change`,
+  rejectPinChange: (id: number) => `/api/admin/user/${id}/reject-pin-change`,
   matches: "/api/admin/matches",
   match: (id: number) => `/api/admin/match/${id}`,
   matchSignups: (id: number) => `/api/admin/match/${id}/signups`,
@@ -66,6 +76,9 @@ type UserRow = {
   zawodnik: string;
   profile_photo_path: string | null;
   role: string;
+  pin_reset_requested?: number;
+  pin_set?: number;
+  pin_change_pending?: number;
 };
 
 type MatchRow = {
@@ -119,7 +132,7 @@ function defaultAnalyticsDateRange(): { from: string; to: string } {
   const to = new Date();
   const from = new Date(to);
   from.setDate(from.getDate() - 30);
-  return { from: from.toISOString().slice(0, 10), to: to.toISOString().slice(0, 10) };
+  return { from: formatDateLocalYmd(from), to: formatDateLocalYmd(to) };
 }
 
 type Summary = {
@@ -128,6 +141,7 @@ type Summary = {
   matches: number;
   stats: number;
   upcoming_matches: number;
+  pin_reset_requests?: number;
 };
 
 const tabs = [
@@ -154,6 +168,7 @@ export function AdminPanel() {
   const [analytics, setAnalytics] = useState<AnalyticsPayload | null>(null);
   const [analyticsFrom, setAnalyticsFrom] = useState(() => defaultAnalyticsDateRange().from);
   const [analyticsTo, setAnalyticsTo] = useState(() => defaultAnalyticsDateRange().to);
+  const [logoutOpen, setLogoutOpen] = useState(false);
 
   const loadDashboard = useCallback(async () => {
     setLoading(true);
@@ -268,6 +283,10 @@ export function AdminPanel() {
               {tabs.map((t) => {
                 const Icon = t.icon;
                 const active = tab === t.id;
+                const pinBadge =
+                  t.id === "users" &&
+                  ((summary?.pin_reset_requests ?? 0) > 0 ||
+                    users.some((u) => (u.pin_reset_requested ?? 0) === 1));
                 return (
                   <button
                     key={t.id}
@@ -281,7 +300,16 @@ export function AdminPanel() {
                     )}
                   >
                     <Icon className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
-                    {t.label}
+                    <span className="flex min-w-0 flex-1 items-center justify-between gap-2">
+                      {t.label}
+                      {pinBadge ? (
+                        <span
+                          className="inline-flex min-h-[1.25rem] min-w-[1.25rem] shrink-0 items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white"
+                          title="Zgłoszenia zmiany PIN-u"
+                          aria-label="Zgłoszenia zmiany PIN-u"
+                        />
+                      ) : null}
+                    </span>
                   </button>
                 );
               })}
@@ -302,13 +330,14 @@ export function AdminPanel() {
                 <ArrowLeft className="h-4 w-4" aria-hidden />
                 Strona główna
               </Link>
-              <a
-                href="/api/auth/logout"
+              <button
+                type="button"
+                onClick={() => setLogoutOpen(true)}
                 className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-emerald-100/90 transition-colors hover:bg-white/10 hover:text-white"
               >
                 <LogOut className="h-4 w-4" aria-hidden />
                 Wyloguj
-              </a>
+              </button>
             </div>
           </div>
         </aside>
@@ -352,6 +381,23 @@ export function AdminPanel() {
           </div>
         </main>
       </div>
+
+      <Dialog open={logoutOpen} onOpenChange={setLogoutOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Wylogować się?</DialogTitle>
+            <DialogDescription>Czy na pewno chcesz zakończyć sesję?</DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setLogoutOpen(false)}>
+              Nie
+            </Button>
+            <Button variant="destructive" asChild>
+              <a href="/api/auth/logout">Tak</a>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -693,6 +739,19 @@ function DashboardView({
         loading={loading}
       />
 
+      {(summary?.pin_reset_requests ?? 0) > 0 ? (
+        <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-950 shadow-sm">
+          <p className="font-semibold">Zgłoszenia zmiany PIN-u</p>
+          <p className="mt-1 text-red-900/90">
+            Oczekujące sprawy (nowy PIN lub prośba o reset):{" "}
+            <strong className="tabular-nums">{summary?.pin_reset_requests}</strong>. W zakładce{" "}
+            <strong>Użytkownicy</strong> możesz <strong>zatwierdzić</strong> nowy PIN,{" "}
+            <strong>odrzucić</strong> propozycję (pozostaje stary PIN) albo wykonać pełny{" "}
+            <strong>restart PIN</strong> konta.
+          </p>
+        </div>
+      ) : null}
+
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {metrics.map((m) => {
           const Icon = m.icon;
@@ -825,6 +884,7 @@ function UsersView({
             <TableRow className="border-zinc-200 hover:bg-transparent">
               <TableHead className="w-12 text-zinc-700" />
               <TableHead className="text-zinc-700">Zawodnik</TableHead>
+              <TableHead className="text-zinc-700">PIN</TableHead>
               <TableHead className="text-zinc-700">Rola</TableHead>
               <TableHead className="text-right text-zinc-700">Akcje</TableHead>
             </TableRow>
@@ -832,7 +892,7 @@ function UsersView({
           <TableBody>
             {filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} className="h-24 text-center text-sm text-zinc-500">
+                <TableCell colSpan={5} className="h-24 text-center text-sm text-zinc-500">
                   {users.length === 0
                     ? "Brak użytkowników w bazie."
                     : "Brak wyników dla podanego filtra."}
@@ -857,6 +917,26 @@ function UsersView({
                       nick={u.zawodnik}
                     />
                   </TableCell>
+                  <TableCell className="align-middle">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {(u.pin_set ?? 0) === 1 ? (
+                        <Badge variant="secondary" className="font-normal">
+                          Ustawiony
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="border-amber-300 bg-amber-50 text-amber-950">
+                          Brak PIN
+                        </Badge>
+                      )}
+                      {(u.pin_reset_requested ?? 0) === 1 ? (
+                        <Badge className="bg-red-600 font-normal text-white hover:bg-red-600">
+                          {(u.pin_change_pending ?? 0) === 1
+                            ? "Nowy PIN — czeka"
+                            : "Prośba o reset"}
+                        </Badge>
+                      ) : null}
+                    </div>
+                  </TableCell>
                   <TableCell>
                     {u.role === "admin" ? (
                       <Badge>Administrator</Badge>
@@ -865,7 +945,78 @@ function UsersView({
                     )}
                   </TableCell>
                   <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
+                    <div className="flex flex-wrap justify-end gap-2">
+                      {(u.pin_change_pending ?? 0) === 1 ? (
+                        <>
+                          <Button
+                            size="sm"
+                            className="bg-emerald-600 text-white hover:bg-emerald-700"
+                            onClick={async () => {
+                              const ok = window.confirm(
+                                `Zatwierdzić nowy PIN dla ${u.first_name} ${u.last_name}? Od tej chwili będzie obowiązywał tylko nowy PIN (stary przestanie działać).`
+                              );
+                              if (!ok) return;
+                              const res = await fetch(API.approvePinChange(u.id), {
+                                method: "POST",
+                              });
+                              if (!res.ok) {
+                                const j = (await res.json().catch(() => ({}))) as { error?: string };
+                                toast.error(
+                                  typeof j.error === "string" ? j.error : "Nie udało się zatwierdzić"
+                                );
+                                return;
+                              }
+                              toast.success("Nowy PIN został zatwierdzony");
+                              onReload();
+                            }}
+                          >
+                            Akceptuj PIN
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="border-amber-300 text-amber-950 hover:bg-amber-50"
+                            onClick={async () => {
+                              const ok = window.confirm(
+                                `Odrzucić proponowany PIN dla ${u.first_name} ${u.last_name}? Pozostanie dotychczasowy PIN.`
+                              );
+                              if (!ok) return;
+                              const res = await fetch(API.rejectPinChange(u.id), { method: "POST" });
+                              if (!res.ok) {
+                                const j = (await res.json().catch(() => ({}))) as { error?: string };
+                                toast.error(
+                                  typeof j.error === "string" ? j.error : "Nie udało się odrzucić"
+                                );
+                                return;
+                              }
+                              toast.success("Odrzucono — aktywny PIN bez zmian");
+                              onReload();
+                            }}
+                          >
+                            Odrzuć PIN
+                          </Button>
+                        </>
+                      ) : null}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="border-red-200 text-red-800 hover:bg-red-50"
+                        onClick={async () => {
+                          const ok = window.confirm(
+                            `Zresetować PIN dla ${u.first_name} ${u.last_name}? Użytkownik będzie musiał ustawić nowy PIN przy logowaniu.`
+                          );
+                          if (!ok) return;
+                          const res = await fetch(API.resetPin(u.id), { method: "POST" });
+                          if (!res.ok) {
+                            toast.error("Nie udało się zresetować PIN-u");
+                            return;
+                          }
+                          toast.success("PIN został zresetowany");
+                          onReload();
+                        }}
+                      >
+                        Restartuj PIN
+                      </Button>
                       <Button size="sm" variant="secondary" onClick={() => setEdit(u)}>
                         Edytuj
                       </Button>
@@ -977,8 +1128,8 @@ function UserCreateForm({
         <DialogTitle>Nowy użytkownik</DialogTitle>
       </DialogHeader>
       <p className="text-sm text-zinc-600">
-        Konto loguje się tak jak przy rejestracji: imię, nazwisko i wybrany pseudonim piłkarza muszą
-        się zgadzać z danymi wpisanymi przy logowaniu.
+        Logowanie odbywa się imieniem, nazwiskiem i PIN-em. Piłkarz (awatar) jest przypisywany tutaj —
+        użytkownik ustawi PIN przy pierwszym logowaniu (jak przy rejestracji samodzielnej).
       </p>
       <div className="space-y-3 py-2">
         <div>

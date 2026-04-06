@@ -19,6 +19,7 @@ type MeUser = {
   id: number;
   notification_prompt_completed: number;
   email: string | null;
+  pin_change_pending?: number;
 };
 
 export function MatchNotificationPrompt() {
@@ -46,7 +47,9 @@ export function MatchNotificationPrompt() {
     void load();
   }, [load]);
 
-  const open = Boolean(user && user.notification_prompt_completed === 0);
+  const open = Boolean(
+    user && user.notification_prompt_completed === 0 && !user.pin_change_pending
+  );
 
   const dismiss = async () => {
     setBusy(true);

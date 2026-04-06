@@ -1,12 +1,22 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AnalyticsTracker } from "@/components/analytics-tracker";
 import { NavigationLoadingOverlay } from "@/components/navigation-loading-overlay";
 import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { SITE_NAME, getPublicContactEmail } from "@/lib/site";
 
@@ -49,6 +59,7 @@ function NavButton({
 export function SiteShell({ children, isLoggedIn, isAdmin, account = null }: Props) {
   const pathname = usePathname();
   const contactEmail = getPublicContactEmail();
+  const [logoutOpen, setLogoutOpen] = useState(false);
   if (pathname === "/panel-admina" || pathname?.startsWith("/panel-admina")) {
     return <>{children}</>;
   }
@@ -171,16 +182,34 @@ export function SiteShell({ children, isLoggedIn, isAdmin, account = null }: Pro
                 </NavButton>
               </>
             ) : (
-              <a
-                href="/api/auth/logout"
+              <button
+                type="button"
+                onClick={() => setLogoutOpen(true)}
                 className="rounded-lg px-3 py-2 text-sm font-medium text-emerald-100/85 transition-colors hover:bg-white/10 hover:text-white"
               >
                 Wyloguj
-              </a>
+              </button>
             )}
           </nav>
         </div>
       </header>
+
+      <Dialog open={logoutOpen} onOpenChange={setLogoutOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Wylogować się?</DialogTitle>
+            <DialogDescription>Czy na pewno chcesz zakończyć sesję?</DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setLogoutOpen(false)}>
+              Nie
+            </Button>
+            <Button variant="destructive" asChild>
+              <a href="/api/auth/logout">Tak</a>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <main className="relative flex flex-1 flex-col">
         <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>

@@ -51,11 +51,6 @@ export default function ONasPage() {
           (wymagane konto).
         </p>
 
-        <h2 className="pt-4 text-lg font-semibold text-emerald-950">Kalendarz (.ics)</h2>
-        <p>
-          Nadchodzące terminy możesz dodać do telefonu lub komputera — w terminarzu jest link do pliku kalendarza (format iCalendar).
-        </p>
-
         <h2 className="pt-4 text-lg font-semibold text-emerald-950">Kontakt i dane</h2>
         {email ? (
           <p>

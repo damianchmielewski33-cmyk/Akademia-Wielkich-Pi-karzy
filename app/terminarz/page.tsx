@@ -11,10 +11,10 @@ import { TerminarzClient } from "@/components/terminarz-client";
 
 export const metadata: Metadata = {
   title: "Terminarz",
-  description: "Zapisy na mecze, lista terminów, archiwum i eksport do kalendarza (.ics).",
+  description: "Zapisy na mecze, lista terminów i archiwum.",
 };
 
-type PageProps = { searchParams: Promise<{ mecz?: string }> };
+type PageProps = { searchParams: Promise<{ mecz?: string; zaproszenie?: string }> };
 
 export default async function TerminarzPage({ searchParams }: PageProps) {
   const sp = await searchParams;
@@ -24,6 +24,7 @@ export default async function TerminarzPage({ searchParams }: PageProps) {
     const n = Number.parseInt(raw, 10);
     if (Number.isFinite(n) && n > 0) highlightMatchId = n;
   }
+  const inviteFromShare = sp.zaproszenie === "1";
   const db = await getDb();
   const session = await getServerSession();
   const matches = await db
@@ -73,6 +74,7 @@ export default async function TerminarzPage({ searchParams }: PageProps) {
         isLoggedIn={Boolean(session)}
         isAdmin={session?.isAdmin ?? false}
         highlightMatchId={highlightMatchId}
+        inviteFromShare={inviteFromShare}
       />
     </div>
   );

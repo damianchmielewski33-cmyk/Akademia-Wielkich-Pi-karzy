@@ -5,6 +5,14 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+/** Kalendarz YYYY-MM-DD w strefie lokalnej (dla `input type="date"`). */
+export function formatDateLocalYmd(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
 /** Kwota do wyświetlenia w UI: skończona liczba (kolumna REAL może być null lub śmieciem). */
 export function isValidMatchFee(fee: number | null | undefined): fee is number {
   return fee != null && Number.isFinite(fee);

@@ -34,7 +34,8 @@ export async function POST(req: Request) {
 
   const session = await getServerSession();
   const db = await getDb();
-  let userId: number | null = session ? session.userId : null;
+  let userId: number | null =
+    session && !session.needsPinSetup && !session.pinChangePending ? session.userId : null;
   if (userId !== null) {
     const row = await db.prepare("SELECT 1 AS ok FROM users WHERE id = ?").get(userId) as { ok: number } | undefined;
     if (!row) userId = null;

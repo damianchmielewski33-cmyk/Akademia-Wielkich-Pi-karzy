@@ -93,12 +93,18 @@ export async function PATCH(req: Request) {
     `Zaktualizował profil (imię/nazwisko/awatar z listy): ${nextFirst} ${nextLast} (${nextAlias})`
   );
 
+  const verRow = (await db
+    .prepare("SELECT auth_version FROM users WHERE id = ?")
+    .get(session.userId)) as { auth_version: number } | undefined;
+  const authVersion = verRow?.auth_version ?? session.authVersion;
+
   const token = await createSessionToken({
     userId: session.userId,
     isAdmin: session.isAdmin,
     firstName: nextFirst,
     lastName: nextLast,
     zawodnik: nextAlias,
+    authVersion,
   });
   await setSessionCookie(token);
 

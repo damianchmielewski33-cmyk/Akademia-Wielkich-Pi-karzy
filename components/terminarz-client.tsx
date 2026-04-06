@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -10,7 +10,7 @@ import {
   CalendarDays,
   ChevronLeft,
   ChevronRight,
-  Download,
+  Link2,
   List,
   LogIn,
   MapPin,
@@ -39,7 +39,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { LoginForm } from "@/components/login-form";
 import { MatchTransportSignupDialog } from "@/components/match-transport-signup-dialog";
+import { ALL_PLAYERS } from "@/lib/constants";
+import { appendShareSessionQuery, terminarzInviteRelativePath } from "@/lib/share-link";
 
 type Props = {
   upcoming: MatchRow[];
@@ -53,6 +56,8 @@ type Props = {
   isAdmin: boolean;
   /** Z URL (?mecz=) — wyróżnienie wiersza po wejściu z maila. */
   highlightMatchId?: number | null;
+  /** Z URL (?zaproszenie=1) — link skopiowany z przycisku zaproszenia; uruchamia zapis po logowaniu. */
+  inviteFromShare?: boolean;
 };
 
 const todayISO = () => new Date().toISOString().slice(0, 10);
@@ -127,6 +132,7 @@ export function TerminarzClient({
   isLoggedIn,
   isAdmin,
   highlightMatchId = null,
+  inviteFromShare = false,
 }: Props) {
   const router = useRouter();
   const [view, setView] = useState<"list" | "cal">("list");
@@ -149,6 +155,10 @@ export function TerminarzClient({
   const [statsSaves, setStatsSaves] = useState("0");
   const [transportSignupOpen, setTransportSignupOpen] = useState(false);
   const [transportSignupMatchId, setTransportSignupMatchId] = useState<number | null>(null);
+  const [inviteGateOpen, setInviteGateOpen] = useState(false);
+  const [inviteLoginInline, setInviteLoginInline] = useState(false);
+  const inviteGateOpenedRef = useRef(false);
+  const inviteTransportOpenedRef = useRef(false);
 
   const missingStatsSet = useMemo(() => new Set(playedMissingStatsMatchIds), [playedMissingStatsMatchIds]);
 
@@ -220,6 +230,40 @@ export function TerminarzClient({
     return () => window.clearTimeout(t);
   }, [highlightMatchId, view, listTab, filteredActive, filteredArchive]);
 
+  useEffect(() => {
+    if (!inviteFromShare || isLoggedIn) return;
+    if (inviteGateOpenedRef.current) return;
+    if (highlightMatchId == null) return;
+    const m = allMatches.find((x) => x.id === highlightMatchId);
+    if (!m || m.match_date < todayISO()) return;
+    inviteGateOpenedRef.current = true;
+    setInviteGateOpen(true);
+  }, [inviteFromShare, isLoggedIn, highlightMatchId, allMatches]);
+
+  const openTransportSignup = useCallback((id: number) => {
+    setTransportSignupMatchId(id);
+    setTransportSignupOpen(true);
+  }, []);
+
+  useEffect(() => {
+    if (!inviteFromShare || !isLoggedIn) return;
+    if (inviteTransportOpenedRef.current) return;
+    if (highlightMatchId == null) return;
+    const m = allMatches.find((x) => x.id === highlightMatchId);
+    if (!m || m.match_date < todayISO()) return;
+    inviteTransportOpenedRef.current = true;
+    const free = m.max_slots - m.signed_up;
+    if (userSigned[highlightMatchId]) {
+      toast.info("Jesteś już zapisany na ten mecz.");
+      return;
+    }
+    if (free <= 0) {
+      toast.warning("Brak wolnych miejsc na ten mecz.");
+      return;
+    }
+    openTransportSignup(highlightMatchId);
+  }, [inviteFromShare, isLoggedIn, highlightMatchId, allMatches, userSigned, openTransportSignup]);
+
   const statsActive = useMemo(() => {
     let total = 0,
       free = 0,
@@ -234,11 +278,6 @@ export function TerminarzClient({
     }
     return { total, free, full, mine };
   }, [filteredActive, userSigned]);
-
-  function openTransportSignup(id: number) {
-    setTransportSignupMatchId(id);
-    setTransportSignupOpen(true);
-  }
 
   async function unsubscribe(id: number) {
     const res = await fetch(`/api/terminarz/unsubscribe/${id}`, { method: "POST" });
@@ -313,6 +352,17 @@ export function TerminarzClient({
   }
 
   const selectedData = selectedMatchId != null ? playersData[selectedMatchId] : null;
+
+  async function copyInviteLink(matchId: number) {
+    const rel = appendShareSessionQuery(terminarzInviteRelativePath(matchId));
+    const url = `${window.location.origin}${rel}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success("Skopiowano link z zaproszeniem do meczu");
+    } catch {
+      toast.error("Nie udało się skopiować linku");
+    }
+  }
 
   function activeActions(m: MatchRow) {
     const past = m.match_date < todayISO();
@@ -402,6 +452,24 @@ export function TerminarzClient({
         )}
 
         <div className="flex flex-col gap-2 border-t border-zinc-200/80 pt-2.5 sm:flex-row sm:flex-wrap">
+          {!past && (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className={actionBtnSecondary}
+              title="Wyślij znajomemu — po wejściu zaloguje się i zapisze na ten mecz"
+              onClick={() => void copyInviteLink(m.id)}
+            >
+              <Link2 className="shrink-0 text-emerald-700" aria-hidden />
+              <span>
+                <span className="block leading-tight text-zinc-900">Kopiuj link z zaproszeniem do meczu</span>
+                <span className="mt-1 block text-[11px] font-normal leading-snug text-zinc-500">
+                  Dla udostępnienia poza aplikacją (np. komunikator)
+                </span>
+              </span>
+            </Button>
+          )}
           <Button
             size="sm"
             variant="outline"
@@ -528,14 +596,6 @@ export function TerminarzClient({
           <p className="mt-3 max-w-xl text-sm text-zinc-600 sm:text-base">
             Zapisy na mecze, lista terminów i kalendarz — wszystko w jednym miejscu.
           </p>
-          <a
-            href="/api/terminarz/calendar"
-            download
-            className="mt-5 inline-flex items-center gap-2 rounded-xl border border-emerald-200/90 bg-white px-4 py-2.5 text-sm font-semibold text-emerald-900 shadow-sm ring-1 ring-emerald-900/5 transition-colors hover:bg-emerald-50/90"
-          >
-            <Download className="h-4 w-4 shrink-0 text-emerald-700" aria-hidden />
-            Pobierz terminarz do kalendarza (.ics)
-          </a>
         </div>
 
         <div className="mx-auto mt-8 max-w-4xl">
@@ -591,9 +651,19 @@ export function TerminarzClient({
                 role="status"
                 className="rounded-xl border-2 border-emerald-500 bg-emerald-50/95 px-4 py-3 text-sm leading-relaxed text-emerald-950 shadow-sm"
               >
-                <span className="font-semibold">Z powiadomienia e-mail: </span>
-                poniżej <span className="font-medium">zieloną ramką</span> wyróżniony jest mecz, którego dotyczyła
-                wiadomość — możesz od razu przejść do zapisu.
+                {inviteFromShare ? (
+                  <>
+                    <span className="font-semibold">Link z zaproszeniem: </span>
+                    poniżej <span className="font-medium">zieloną ramką</span> wyróżniony jest ten mecz — po zalogowaniu
+                    otworzy się zapis i wybór transportu.
+                  </>
+                ) : (
+                  <>
+                    <span className="font-semibold">Z powiadomienia e-mail: </span>
+                    poniżej <span className="font-medium">zieloną ramką</span> wyróżniony jest mecz, którego dotyczyła
+                    wiadomość — możesz od razu przejść do zapisu.
+                  </>
+                )}
               </div>
             )}
             {highlightMatchId && !highlightMatch && (
@@ -1177,6 +1247,112 @@ export function TerminarzClient({
           }}
         />
       )}
+
+      <Dialog
+        open={inviteGateOpen}
+        onOpenChange={(open) => {
+          setInviteGateOpen(open);
+          if (!open) setInviteLoginInline(false);
+        }}
+      >
+        <DialogContent className="max-h-[90dvh] overflow-y-auto border-emerald-900/15 sm:max-w-md">
+          {highlightMatch && (
+            <div className="space-y-3 rounded-xl border border-emerald-200/90 bg-emerald-50/70 px-4 py-3 text-sm text-emerald-950">
+              <p className="text-xs font-semibold uppercase tracking-wide text-emerald-800/80">Mecz</p>
+              <div className="grid gap-2">
+                <div>
+                  <span className="text-zinc-500">Kiedy: </span>
+                  <span className="font-medium">
+                    {highlightMatch.match_date} · {highlightMatch.match_time}
+                  </span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700" aria-hidden />
+                  <div>
+                    <span className="text-zinc-500">Gdzie: </span>
+                    <span className="font-medium">{highlightMatch.location}</span>
+                  </div>
+                </div>
+                <div>
+                  <span className="text-zinc-500">Zapisy: </span>
+                  <span className="font-medium">
+                    {highlightMatch.signed_up}/{highlightMatch.max_slots}{" "}
+                    {highlightMatch.max_slots - highlightMatch.signed_up > 0
+                      ? `(wolne: ${highlightMatch.max_slots - highlightMatch.signed_up})`
+                      : "(brak wolnych miejsc)"}
+                  </span>
+                </div>
+                <a
+                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(highlightMatch.location)}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex w-fit items-center gap-1.5 font-medium text-emerald-800 underline underline-offset-2 hover:text-emerald-950"
+                >
+                  Otwórz miejsce w Mapach Google
+                </a>
+              </div>
+            </div>
+          )}
+          {!inviteLoginInline ? (
+            <>
+              <DialogHeader>
+                <DialogTitle className="text-emerald-950">Zapis na mecz</DialogTitle>
+                <DialogDescription className="text-left text-zinc-600">
+                  Żeby zapisać się na ten termin, zaloguj się na istniejące konto lub utwórz nowe. Po zalogowaniu otworzy
+                  się wybór transportu.
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter className="flex-col gap-2 sm:justify-stretch">
+                <Button
+                  type="button"
+                  className="w-full bg-emerald-700 hover:bg-emerald-800"
+                  onClick={() => setInviteLoginInline(true)}
+                >
+                  Zaloguj się
+                </Button>
+                <Button variant="outline" className="w-full" asChild>
+                  <Link
+                    href={
+                      highlightMatchId != null
+                        ? `/register?next=${encodeURIComponent(terminarzInviteRelativePath(highlightMatchId))}`
+                        : "/register"
+                    }
+                  >
+                    Utwórz konto
+                  </Link>
+                </Button>
+              </DialogFooter>
+            </>
+          ) : (
+            <>
+              <DialogHeader>
+                <DialogTitle className="text-emerald-950">Logowanie</DialogTitle>
+                <DialogDescription className="text-left text-zinc-600">
+                  Wpisz imię, nazwisko i PIN (4–6 cyfr) — tak jak na stronie logowania.
+                </DialogDescription>
+              </DialogHeader>
+              <button
+                type="button"
+                className="mb-2 text-left text-sm font-medium text-emerald-800 underline-offset-2 hover:underline"
+                onClick={() => setInviteLoginInline(false)}
+              >
+                ← Wróć
+              </button>
+              <LoginForm
+                aliases={ALL_PLAYERS}
+                nextPath={
+                  highlightMatchId != null ? terminarzInviteRelativePath(highlightMatchId) : "/terminarz"
+                }
+                embedMode
+                onAuthenticated={() => {
+                  setInviteGateOpen(false);
+                  setInviteLoginInline(false);
+                }}
+              />
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

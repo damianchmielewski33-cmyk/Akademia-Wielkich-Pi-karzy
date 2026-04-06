@@ -2,16 +2,15 @@
 
 import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
-
-const STORAGE_KEY = "awp_visitor_id";
+import { VISITOR_ID_STORAGE_KEY } from "@/lib/constants";
 
 function getVisitorId(): string {
   if (typeof window === "undefined") return "";
   try {
-    let id = localStorage.getItem(STORAGE_KEY);
+    let id = localStorage.getItem(VISITOR_ID_STORAGE_KEY);
     if (!id || id.length < 8) {
       id = crypto.randomUUID();
-      localStorage.setItem(STORAGE_KEY, id);
+      localStorage.setItem(VISITOR_ID_STORAGE_KEY, id);
     }
     return id;
   } catch {

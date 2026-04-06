@@ -33,3 +33,25 @@ export const ALL_PLAYERS = [
 ];
 
 export const SESSION_COOKIE = "awp_session";
+
+/**
+ * Parametr zapytania dodawany do linków wysyłanych na zewnątrz (e-mail, udostępnienie).
+ * Middleware usuwa sesję i przekierowuje bez tego parametru — odbiorca nie jest traktowany jak zalogowany użytkownik z oryginalnej przeglądarki.
+ */
+export const SHARE_LINK_QUERY_PARAM = "awp_share";
+
+/** Link z terminarza „zaproszenie na mecz” — razem z `mecz` uruchamia przepływ zapisu po zalogowaniu. */
+export const INVITE_MATCH_QUERY_PARAM = "zaproszenie";
+
+/** Krótkotrwałe ciasteczko (nie httpOnly): sygnał dla klienta, żeby wyczyścić sessionStorage / localStorage po wejściu z udostępnionego linku. */
+export const CLIENT_STORAGE_CLEANUP_COOKIE = "awp_client_cleanup";
+
+/** Klucz localStorage dla anonimowej analityki — zachowujemy przy czyszczeniu po udostępnionym linku. */
+export const VISITOR_ID_STORAGE_KEY = "awp_visitor_id";
+
+/** Teksty informacyjne na stronie logowania (polityka PIN i migracja). */
+export const PIN_LOGIN_POLICY_LINES = [
+  "Logujesz się imieniem, nazwiskiem i PIN-em (4–6 cyfr). Piłkarz wybrany przy rejestracji to awatar; przy pierwszym ustawieniu PIN-u potwierdzasz tożsamość tym samym wyborem.",
+  "Konta utworzone wcześniej muszą raz ustawić PIN — bez tego nie skorzystasz z terminarza i profilu.",
+  "Jeśli w zespole są dwie osoby o tym samym imieniu i nazwisku, zgłoś to trenerowi — wtedy rozróżnimy konta.",
+] as const;

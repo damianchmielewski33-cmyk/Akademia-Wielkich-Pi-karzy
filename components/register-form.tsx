@@ -7,6 +7,7 @@ import {
   AuthGoalPreloader,
   AUTH_SUCCESS_PRELOADER_DELAY_MS,
 } from "@/components/auth-goal-preloader";
+import { isWeakPin, WEAK_PIN_MESSAGE } from "@/lib/pin-policy";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,11 +19,21 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-export function RegisterForm({ availablePlayers }: { availablePlayers: string[] }) {
+export function RegisterForm({
+  availablePlayers,
+  nextPath,
+}: {
+  availablePlayers: string[];
+  /** Po udanej rejestracji (z auto-logowaniem) lub na stronę logowania z `next`. */
+  nextPath?: string;
+}) {
   const router = useRouter();
+  const next = nextPath && nextPath.startsWith("/") ? nextPath : undefined;
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [zawodnik, setZawodnik] = useState("");
+  const [pin, setPin] = useState("");
+  const [pinConfirm, setPinConfirm] = useState("");
   const [autoLogin, setAutoLogin] = useState(true);
   const [loading, setLoading] = useState(false);
   const [showGoalPreloader, setShowGoalPreloader] = useState(false);
@@ -30,6 +41,10 @@ export function RegisterForm({ availablePlayers }: { availablePlayers: string[] 
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (isWeakPin(pin)) {
+      toast.error(WEAK_PIN_MESSAGE);
+      return;
+    }
     setLoading(true);
     try {
       const res = await fetch("/api/auth/register", {
@@ -39,6 +54,8 @@ export function RegisterForm({ availablePlayers }: { availablePlayers: string[] 
           first_name: firstName,
           last_name: lastName,
           zawodnik,
+          pin,
+          pin_confirm: pinConfirm,
           auto_login: autoLogin,
         }),
       });
@@ -52,14 +69,15 @@ export function RegisterForm({ availablePlayers }: { availablePlayers: string[] 
         setShowGoalPreloader(true);
         toast.success("Konto utworzone — jesteś zalogowany");
         await new Promise((r) => setTimeout(r, AUTH_SUCCESS_PRELOADER_DELAY_MS));
-        router.push("/");
+        router.push(next ?? "/");
         router.refresh();
       } else {
         setGoalPreloaderLabel("Konto gotowe! Idziemy do logowania…");
         setShowGoalPreloader(true);
         toast.success("Konto utworzone — zaloguj się");
         await new Promise((r) => setTimeout(r, AUTH_SUCCESS_PRELOADER_DELAY_MS));
-        router.push("/login");
+        const loginUrl = next ? `/login?next=${encodeURIComponent(next)}` : "/login";
+        router.push(loginUrl);
       }
     } finally {
       setLoading(false);
@@ -79,6 +97,7 @@ export function RegisterForm({ availablePlayers }: { availablePlayers: string[] 
           onChange={(e) => setFirstName(e.target.value)}
           placeholder="Imię"
           className="mt-1"
+          autoComplete="given-name"
         />
       </div>
       <div>
@@ -90,13 +109,14 @@ export function RegisterForm({ availablePlayers }: { availablePlayers: string[] 
           onChange={(e) => setLastName(e.target.value)}
           placeholder="Nazwisko"
           className="mt-1"
+          autoComplete="family-name"
         />
       </div>
       <div>
         <Label>Piłkarz (awatar)</Label>
         <Select required value={zawodnik} onValueChange={setZawodnik}>
           <SelectTrigger className="mt-1 w-full">
-            <SelectValue placeholder="Wybierz swojego piłkarza" />
+            <SelectValue placeholder="Wybierz piłkarza (jak przy pierwszym ustawieniu PIN-u)" />
           </SelectTrigger>
           <SelectContent>
             {availablePlayers.map((p) => (
@@ -106,6 +126,43 @@ export function RegisterForm({ availablePlayers }: { availablePlayers: string[] 
             ))}
           </SelectContent>
         </Select>
+      </div>
+      <div>
+        <Label htmlFor="reg_pin">PIN (4–6 cyfr)</Label>
+        <Input
+          id="reg_pin"
+          type="password"
+          inputMode="numeric"
+          pattern="[0-9]*"
+          required
+          minLength={4}
+          maxLength={6}
+          value={pin}
+          onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
+          placeholder="4–6 cyfr"
+          className="mt-1"
+          autoComplete="new-password"
+        />
+        <p className="mt-1 text-xs text-zinc-500">
+          Tym PIN-em logujesz się (imię, nazwisko, PIN). Unikaj sekwencji typu 1234 i samych powtórzeń jednej cyfry.
+        </p>
+      </div>
+      <div>
+        <Label htmlFor="reg_pin2">Powtórz PIN</Label>
+        <Input
+          id="reg_pin2"
+          type="password"
+          inputMode="numeric"
+          pattern="[0-9]*"
+          required
+          minLength={4}
+          maxLength={6}
+          value={pinConfirm}
+          onChange={(e) => setPinConfirm(e.target.value.replace(/\D/g, "").slice(0, 6))}
+          placeholder="Powtórz PIN"
+          className="mt-1"
+          autoComplete="new-password"
+        />
       </div>
       <div className="flex items-start gap-3 pt-1">
         <input

@@ -20,5 +20,10 @@ export async function GET() {
       )
       .get()) as { c: number }
   ).c;
-  return NextResponse.json({ players, admins, matches, stats, upcoming_matches });
+  const pin_reset_requests = (
+    (await db.prepare("SELECT COUNT(*) AS c FROM users WHERE pin_reset_requested = 1").get()) as {
+      c: number;
+    }
+  ).c;
+  return NextResponse.json({ players, admins, matches, stats, upcoming_matches, pin_reset_requests });
 }

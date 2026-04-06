@@ -1,6 +1,7 @@
 import { getAppBaseUrl } from "@/lib/app-url";
 import { getDb, type MatchRow } from "@/lib/db";
 import { isMailConfigured, sendMail } from "@/lib/mail";
+import { appendShareSessionQuery } from "@/lib/share-link";
 
 /**
  * Po dodaniu meczu: e-mail do użytkowników z podanym adresem i zgodą.
@@ -32,7 +33,7 @@ export async function notifySubscribersAboutNewMatch(match: MatchRow): Promise<v
   }
 
   const base = getAppBaseUrl();
-  const link = `${base}/terminarz?mecz=${match.id}`;
+  const link = `${base}${appendShareSessionQuery(`/terminarz?mecz=${match.id}`)}`;
   const subject = `Nowy termin meczu — ${match.match_date} ${match.match_time}`;
 
   let sent = 0;
