@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { connection, NextResponse } from "next/server";
 import { z } from "zod";
 import { getDb, logActivity } from "@/lib/db";
 import { createSessionToken, setSessionCookie } from "@/lib/auth";
@@ -13,6 +13,7 @@ const bodySchema = z.object({
 });
 
 export async function POST(req: Request) {
+  await connection();
   const rl = checkRateLimit(rateLimitKey("login", req), RATE.login.limit, RATE.login.windowMs);
   if (!rl.ok) return rateLimitedResponse(rl.retryAfterSec);
 
