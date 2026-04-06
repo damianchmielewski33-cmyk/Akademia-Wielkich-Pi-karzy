@@ -2,13 +2,15 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { SITE_NAME, getPublicContactEmail } from "@/lib/site";
 
+const DEFAULT_ONAS_CONTACT_EMAIL = "damianchmielewski33@gmail.com";
+
 export const metadata: Metadata = {
   title: "O nas",
   description: "Zasady zapisów, statystyki i kontakt — Akademia Wielkich Piłkarzy.",
 };
 
 export default function ONasPage() {
-  const email = getPublicContactEmail();
+  const email = getPublicContactEmail() ?? DEFAULT_ONAS_CONTACT_EMAIL;
 
   return (
     <div className="container mx-auto max-w-2xl flex-1 px-4 py-8 sm:py-10">
@@ -52,20 +54,13 @@ export default function ONasPage() {
         </p>
 
         <h2 className="pt-4 text-lg font-semibold text-emerald-950">Kontakt i dane</h2>
-        {email ? (
-          <p>
-            Pytania organizacyjne:{" "}
-            <a className="font-medium text-emerald-800 underline" href={`mailto:${email}`}>
-              {email}
-            </a>
-            .
-          </p>
-        ) : (
-          <p>
-            Adres e-mail kontaktowy może ustawić administrator (zmienna środowiskowa{" "}
-            <code className="rounded bg-zinc-100 px-1.5 py-0.5 text-xs text-zinc-800">NEXT_PUBLIC_CONTACT_EMAIL</code>).
-          </p>
-        )}
+        <p>
+          Pytania organizacyjne:{" "}
+          <a className="font-medium text-emerald-800 underline" href={`mailto:${email}`}>
+            {email}
+          </a>
+          .
+        </p>
         <p className="text-xs text-zinc-500">
           Konto w serwisie służy do zapisów i statystyk w ramach działalności akademii. Nie udostępniaj hasła innym osobom.
         </p>
