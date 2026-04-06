@@ -1,13 +1,10 @@
 import Database from "better-sqlite3";
 import fs from "fs";
 import path from "path";
-
-const defaultPath = path.join(process.cwd(), "data", "database.db");
+import { resolveDatabaseFilePath } from "@/lib/runtime-paths";
 
 function resolveDbPath() {
-  return process.env.DATABASE_PATH
-    ? path.resolve(process.cwd(), process.env.DATABASE_PATH)
-    : defaultPath;
+  return resolveDatabaseFilePath();
 }
 
 /** Pojedynczy plik SQLite — naturalny model przy jednej instancji serwera; przy wielu replikach współdzielonym pliku unikaj zapisów równoległych z różnych hostów. */

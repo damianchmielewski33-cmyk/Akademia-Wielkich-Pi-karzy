@@ -3,6 +3,11 @@ import fs from "fs";
 import path from "path";
 import { getDb, logActivity } from "@/lib/db";
 import { requireUser } from "@/lib/api-helpers";
+import {
+  profilePhotoPublicUrl,
+  profileUploadsDir,
+  resolveProfilePhotoAbsolute,
+} from "@/lib/runtime-paths";
 
 export const runtime = "nodejs";
 
@@ -14,14 +19,12 @@ const ALLOWED = new Map<string, string>([
   ["image/gif", ".gif"],
 ]);
 
-function profilesDir() {
-  return path.join(process.cwd(), "public", "uploads", "profiles");
-}
-
-function safeUnlink(absPath: string) {
-  const dir = profilesDir();
-  const resolved = path.resolve(absPath);
-  if (!resolved.startsWith(path.resolve(dir))) return;
+function safeUnlink(dbPath: string | null | undefined) {
+  const abs = dbPath ? resolveProfilePhotoAbsolute(dbPath) : null;
+  if (!abs) return;
+  const dirResolved = path.resolve(profileUploadsDir());
+  const resolved = path.resolve(abs);
+  if (!resolved.startsWith(dirResolved + path.sep)) return;
   try {
     fs.unlinkSync(resolved);
   } catch {
@@ -66,16 +69,15 @@ export async function POST(req: Request) {
     .get(session.userId) as { profile_photo_path: string | null } | undefined;
   if (!prev) return NextResponse.json({ error: "Nie znaleziono konta" }, { status: 404 });
 
-  fs.mkdirSync(profilesDir(), { recursive: true });
+  fs.mkdirSync(profileUploadsDir(), { recursive: true });
 
-  if (prev.profile_photo_path?.startsWith("/uploads/profiles/")) {
-    const oldAbs = path.join(process.cwd(), "public", prev.profile_photo_path.replace(/^\//, ""));
-    safeUnlink(oldAbs);
+  if (prev.profile_photo_path) {
+    safeUnlink(prev.profile_photo_path);
   }
 
   const filename = `${session.userId}-${Date.now()}${ext}`;
-  const publicPath = `/uploads/profiles/${filename}`;
-  const abs = path.join(profilesDir(), filename);
+  const publicPath = profilePhotoPublicUrl(filename);
+  const abs = path.join(profileUploadsDir(), filename);
   fs.writeFileSync(abs, buf);
 
   db.prepare("UPDATE users SET profile_photo_path = ? WHERE id = ?").run(publicPath, session.userId);
@@ -95,9 +97,8 @@ export async function DELETE() {
     .get(session.userId) as { profile_photo_path: string | null } | undefined;
   if (!prev) return NextResponse.json({ error: "Nie znaleziono konta" }, { status: 404 });
 
-  if (prev.profile_photo_path?.startsWith("/uploads/profiles/")) {
-    const oldAbs = path.join(process.cwd(), "public", prev.profile_photo_path.replace(/^\//, ""));
-    safeUnlink(oldAbs);
+  if (prev.profile_photo_path) {
+    safeUnlink(prev.profile_photo_path);
   }
 
   db.prepare("UPDATE users SET profile_photo_path = NULL WHERE id = ?").run(session.userId);
