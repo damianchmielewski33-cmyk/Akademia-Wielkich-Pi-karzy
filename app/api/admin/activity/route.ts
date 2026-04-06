@@ -7,8 +7,8 @@ export const runtime = "nodejs";
 export async function GET() {
   const gate = await requireAdmin();
   if (!gate.ok) return gate.response;
-  const db = getDb();
-  const rows = db
+  const db = await getDb();
+  const rows = (await db
     .prepare(
       `SELECT a.action, a.timestamp, u.first_name AS actor_first, u.last_name AS actor_last
        FROM activity_log a
@@ -16,7 +16,7 @@ export async function GET() {
        ORDER BY a.id DESC
        LIMIT 25`
     )
-    .all() as {
+    .all()) as {
       action: string;
       timestamp: string;
       actor_first: string | null;

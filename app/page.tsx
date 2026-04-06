@@ -11,20 +11,20 @@ export const metadata: Metadata = {
 };
 
 export default async function HomePage() {
-  const db = getDb();
+  const db = await getDb();
   const session = await getServerSession();
 
-  const nextMatch = db
+  const nextMatch = (await db
     .prepare(
       "SELECT * FROM matches WHERE played = 0 AND datetime(match_date || ' ' || match_time) > datetime('now', 'localtime') ORDER BY match_date, match_time LIMIT 1"
     )
-    .get() as MatchRow | undefined;
+    .get()) as MatchRow | undefined;
 
   let userSigned = false;
   if (nextMatch && session) {
-    const signup = db
+    const signup = (await db
       .prepare(`SELECT id FROM match_signups WHERE user_id = ? AND match_id = ?`)
-      .get(session.userId, nextMatch.id) as { id: number } | undefined;
+      .get(session.userId, nextMatch.id)) as { id: number } | undefined;
     userSigned = Boolean(signup);
   }
 
@@ -35,7 +35,7 @@ export default async function HomePage() {
   let profilePhotoPath: string | null = null;
   let zawodnik = "";
   if (session) {
-    const nav = getAccountNavFields(session.userId);
+    const nav = await getAccountNavFields(session.userId);
     profilePhotoPath = nav?.profilePhotoPath ?? null;
     zawodnik = nav?.zawodnik ?? session.zawodnik;
   }

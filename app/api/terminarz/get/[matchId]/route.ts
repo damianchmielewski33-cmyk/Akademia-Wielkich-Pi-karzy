@@ -11,8 +11,8 @@ export async function GET(_req: Request, ctx: Ctx) {
   if (!Number.isFinite(mid)) {
     return NextResponse.json({ error: "Invalid id" }, { status: 400 });
   }
-  const db = getDb();
-  const row = db
+  const db = await getDb();
+  const row = await db
     .prepare(
       "SELECT id, match_date, match_time, location, max_slots FROM matches WHERE id = ?"
     )

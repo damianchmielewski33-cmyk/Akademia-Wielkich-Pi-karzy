@@ -8,8 +8,8 @@ export async function GET() {
   const session = await getServerSession();
   if (!session) return NextResponse.json({ pending: false });
 
-  const db = getDb();
-  const row = db
+  const db = await getDb();
+  const row = await db
     .prepare(
       `SELECT m.id, m.match_date, m.match_time, m.location
        FROM matches m

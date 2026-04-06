@@ -5,12 +5,13 @@ import { getDb } from "@/lib/db";
 export async function GET() {
   const s = await getServerSession();
   if (!s) return NextResponse.json({ user: null });
-  const row = getDb()
+  const db = await getDb();
+  const row = (await db
     .prepare(
       `SELECT profile_photo_path, email, match_notifications_consent, notification_prompt_completed
        FROM users WHERE id = ?`
     )
-    .get(s.userId) as
+    .get(s.userId)) as
     | {
         profile_photo_path: string | null;
         email: string | null;

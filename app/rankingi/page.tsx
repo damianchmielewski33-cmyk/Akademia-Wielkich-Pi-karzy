@@ -25,8 +25,8 @@ export default async function RankingiPage() {
   const session = await getServerSession();
   if (!session) redirect("/login");
 
-  const db = getDb();
-  const rows = db
+  const db = await getDb();
+  const rows = await db
     .prepare(
       `SELECT u.id AS user_id,
               u.first_name, u.last_name,

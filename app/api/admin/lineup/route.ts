@@ -33,17 +33,17 @@ export async function GET(req: Request) {
   const wantedId = url.searchParams.get("matchId");
   const parsedWanted = wantedId != null && wantedId !== "" ? Number(wantedId) : NaN;
 
-  const db = getDb();
+  const db = await getDb();
   const today = todayIso();
 
-  const matchList = db
+  const matchList = (await db
     .prepare(
       `SELECT id, match_date, match_time, location, lineup_public
        FROM matches
        WHERE played = 0 AND match_date >= ?
        ORDER BY match_date ASC, match_time ASC`
     )
-    .all(today) as MatchListRow[];
+    .all(today)) as MatchListRow[];
 
   const selected =
     Number.isFinite(parsedWanted) && matchList.some((m) => m.id === parsedWanted)
@@ -75,7 +75,7 @@ export async function GET(req: Request) {
     });
   }
 
-  const playersRaw = db
+  const playersRaw = (await db
     .prepare(
       `SELECT u.id AS user_id, u.first_name, u.last_name, u.player_alias AS zawodnik,
               u.profile_photo_path
@@ -84,7 +84,7 @@ export async function GET(req: Request) {
        WHERE ms.match_id = ?
        ORDER BY u.first_name ASC, u.last_name ASC`
     )
-    .all(selected.id) as {
+    .all(selected.id)) as {
     user_id: number;
     first_name: string;
     last_name: string;
@@ -109,11 +109,11 @@ export async function GET(req: Request) {
     };
   });
 
-  const lineupRows = db
+  const lineupRows = (await db
     .prepare(
       `SELECT team, slot_index, user_id FROM match_lineup_slots WHERE match_id = ?`
     )
-    .all(selected.id) as { team: string; slot_index: number; user_id: number }[];
+    .all(selected.id)) as { team: string; slot_index: number; user_id: number }[];
 
   const home: (number | null)[] = Array(7).fill(null);
   const away: (number | null)[] = Array(7).fill(null);
@@ -161,15 +161,15 @@ export async function PUT(req: Request) {
   }
   const { match_id, home, away } = parsed.data;
 
-  const db = getDb();
+  const db = await getDb();
   const today = todayIso();
 
-  const match = db
+  const match = (await db
     .prepare(
       `SELECT id, match_date, match_time, location FROM matches
        WHERE id = ? AND played = 0 AND match_date >= ?`
     )
-    .get(match_id, today) as { id: number; match_date: string; match_time: string; location: string } | undefined;
+    .get(match_id, today)) as { id: number; match_date: string; match_time: string; location: string } | undefined;
 
   if (!match) {
     return NextResponse.json({ error: "Mecz niedostępny lub nie nadaje się do składu" }, { status: 400 });
@@ -177,9 +177,9 @@ export async function PUT(req: Request) {
 
   const signedUp = new Set(
     (
-      db
-        .prepare(`SELECT user_id FROM match_signups WHERE match_id = ?`)
-        .all(match_id) as { user_id: number }[]
+      (await db.prepare(`SELECT user_id FROM match_signups WHERE match_id = ?`).all(match_id)) as {
+        user_id: number;
+      }[]
     ).map((r) => r.user_id)
   );
 
@@ -204,18 +204,15 @@ export async function PUT(req: Request) {
     "INSERT INTO match_lineup_slots (match_id, team, slot_index, user_id) VALUES (?, ?, ?, ?)"
   );
 
-  const tx = db.transaction(() => {
-    del.run(match_id);
-    for (let i = 0; i < 7; i++) {
-      const hu = home[i];
-      if (hu != null) ins.run(match_id, "home", i, hu);
-      const au = away[i];
-      if (au != null) ins.run(match_id, "away", i, au);
-    }
-  });
-  tx();
+  await del.run(match_id);
+  for (let i = 0; i < 7; i++) {
+    const hu = home[i];
+    if (hu != null) await ins.run(match_id, "home", i, hu);
+    const au = away[i];
+    if (au != null) await ins.run(match_id, "away", i, au);
+  }
 
-  logActivity(
+  await logActivity(
     gate.session.userId,
     `Zapisano składy 7v7: mecz ${match.match_date} ${match.match_time} (${match.location}), id ${match_id}`
   );

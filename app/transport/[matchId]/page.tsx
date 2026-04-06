@@ -26,11 +26,11 @@ export default async function TransportPage({ params }: { params: Promise<{ matc
     redirect(`/login?next=${encodeURIComponent(`/transport/${matchId}`)}`);
   }
 
-  const db = getDb();
-  const match = db.prepare("SELECT * FROM matches WHERE id = ?").get(matchId) as MatchRow | undefined;
+  const db = await getDb();
+  const match = await db.prepare("SELECT * FROM matches WHERE id = ?").get(matchId) as MatchRow | undefined;
   if (!match) redirect("/");
 
-  const signupRow = db
+  const signupRow = await db
     .prepare(
       `SELECT drives_car, can_take_passengers, needs_transport FROM match_signups WHERE user_id = ? AND match_id = ?`
     )
@@ -63,7 +63,7 @@ export default async function TransportPage({ params }: { params: Promise<{ matc
     profilePhotoPath: r.profile_photo_path,
   });
 
-  const driverRows = db
+  const driverRows = await db
     .prepare(
       `SELECT u.id AS user_id, u.first_name, u.last_name, u.player_alias AS zawodnik, u.profile_photo_path
        FROM match_signups ms
@@ -80,7 +80,7 @@ export default async function TransportPage({ params }: { params: Promise<{ matc
     profile_photo_path: string | null;
   }[];
 
-  const riderRows = db
+  const riderRows = await db
     .prepare(
       `SELECT u.id AS user_id, u.first_name, u.last_name, u.player_alias AS zawodnik, u.profile_photo_path
        FROM match_signups ms
@@ -102,7 +102,7 @@ export default async function TransportPage({ params }: { params: Promise<{ matc
 
   let initialMessages: TransportMessageDTO[] = [];
   if (eligible && match.played === 0) {
-    const rows = db
+    const rows = await db
       .prepare(
         `SELECT m.id, m.body, m.created_at, m.user_id,
                 u.first_name AS first_name, u.last_name AS last_name, u.player_alias AS zawodnik

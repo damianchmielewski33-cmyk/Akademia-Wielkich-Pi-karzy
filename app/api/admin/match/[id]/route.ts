@@ -15,8 +15,8 @@ export async function GET(_req: Request, context: RouteContext) {
   if (!Number.isFinite(mid)) {
     return NextResponse.json({ error: "Invalid id" }, { status: 400 });
   }
-  const db = getDb();
-  const row = db
+  const db = await getDb();
+  const row = await db
     .prepare(
       "SELECT id, match_date AS date, match_time AS time, location, fee_pln FROM matches WHERE id = ?"
     )
@@ -50,14 +50,14 @@ export async function PUT(req: Request, context: RouteContext) {
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
-  const db = getDb();
+  const db = await getDb();
   const fee = parsed.data.fee_pln;
   if (fee !== undefined) {
-    db.prepare(
+    await db.prepare(
       "UPDATE matches SET match_date = ?, match_time = ?, location = ?, fee_pln = ? WHERE id = ?"
     ).run(parsed.data.date, parsed.data.time, parsed.data.location, fee, mid);
   } else {
-    db.prepare("UPDATE matches SET match_date = ?, match_time = ?, location = ? WHERE id = ?").run(
+    await db.prepare("UPDATE matches SET match_date = ?, match_time = ?, location = ? WHERE id = ?").run(
       parsed.data.date,
       parsed.data.time,
       parsed.data.location,
@@ -79,12 +79,12 @@ export async function DELETE(_req: Request, context: RouteContext) {
   if (!Number.isFinite(mid)) {
     return NextResponse.json({ error: "Invalid id" }, { status: 400 });
   }
-  const db = getDb();
-  const row = db
+  const db = await getDb();
+  const row = await db
     .prepare("SELECT match_date, match_time, location FROM matches WHERE id = ?")
     .get(mid) as { match_date: string; match_time: string; location: string } | undefined;
   if (!row) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  db.prepare("DELETE FROM matches WHERE id = ?").run(mid);
+  await db.prepare("DELETE FROM matches WHERE id = ?").run(mid);
   logActivity(
     gate.session.userId,
     `Usunął mecz id ${mid}: ${row.match_date} ${row.match_time} (${row.location})`

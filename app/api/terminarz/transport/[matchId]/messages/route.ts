@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getDb } from "@/lib/db";
+import { getDb, type AppDb } from "@/lib/db";
 import { requireUser } from "@/lib/api-helpers";
 import { isTransportChatEligible, type SignupTransportRow } from "@/lib/transport";
 
@@ -9,12 +9,16 @@ type Ctx = { params: Promise<{ matchId: string }> };
 
 const MAX_LEN = 1500;
 
-function getEligibleSignup(db: ReturnType<typeof getDb>, userId: number, matchId: number): SignupTransportRow | null {
-  const row = db
+async function getEligibleSignup(
+  db: AppDb,
+  userId: number,
+  matchId: number
+): Promise<SignupTransportRow | null> {
+  const row = (await db
     .prepare(
       `SELECT drives_car, can_take_passengers, needs_transport FROM match_signups WHERE user_id = ? AND match_id = ?`
     )
-    .get(userId, matchId) as SignupTransportRow | undefined;
+    .get(userId, matchId)) as SignupTransportRow | undefined;
   return row ?? null;
 }
 
@@ -27,8 +31,8 @@ export async function GET(_req: Request, ctx: Ctx) {
     return NextResponse.json({ error: "Invalid match" }, { status: 400 });
   }
 
-  const db = getDb();
-  const match = db.prepare("SELECT id, played FROM matches WHERE id = ?").get(matchId) as
+  const db = await getDb();
+  const match = await db.prepare("SELECT id, played FROM matches WHERE id = ?").get(matchId) as
     | { id: number; played: number }
     | undefined;
   if (!match) return NextResponse.json({ error: "Mecz nie istnieje" }, { status: 404 });
@@ -36,12 +40,12 @@ export async function GET(_req: Request, ctx: Ctx) {
     return NextResponse.json({ error: "Mecz rozegrany — czat niedostępny." }, { status: 400 });
   }
 
-  const signup = getEligibleSignup(db, gate.session.userId, matchId);
+  const signup = await getEligibleSignup(db, gate.session.userId, matchId);
   if (!isTransportChatEligible(signup)) {
     return NextResponse.json({ error: "Brak dostępu do czatu transportowego." }, { status: 403 });
   }
 
-  const rows = db
+  const rows = await db
     .prepare(
       `SELECT m.id, m.body, m.created_at, m.user_id,
               u.first_name AS first_name, u.last_name AS last_name, u.player_alias AS zawodnik
@@ -96,19 +100,19 @@ export async function POST(req: Request, ctx: Ctx) {
     return NextResponse.json({ error: `Maksymalnie ${MAX_LEN} znaków.` }, { status: 400 });
   }
 
-  const db = getDb();
-  const match = db.prepare("SELECT played FROM matches WHERE id = ?").get(matchId) as { played: number } | undefined;
+  const db = await getDb();
+  const match = await db.prepare("SELECT played FROM matches WHERE id = ?").get(matchId) as { played: number } | undefined;
   if (!match) return NextResponse.json({ error: "Mecz nie istnieje" }, { status: 404 });
   if (match.played === 1) {
     return NextResponse.json({ error: "Mecz rozegrany — czat niedostępny." }, { status: 400 });
   }
 
-  const signup = getEligibleSignup(db, gate.session.userId, matchId);
+  const signup = await getEligibleSignup(db, gate.session.userId, matchId);
   if (!isTransportChatEligible(signup)) {
     return NextResponse.json({ error: "Brak dostępu do czatu transportowego." }, { status: 403 });
   }
 
-  const info = db
+  const info = await db
     .prepare(
       `INSERT INTO match_transport_messages (match_id, user_id, body) VALUES (?, ?, ?)`
     )

@@ -9,8 +9,8 @@ export const metadata: Metadata = {
 };
 
 export default async function PilkarzePage() {
-  const db = getDb();
-  const gracze = db
+  const db = await getDb();
+  const gracze = await db
     .prepare(
       "SELECT id, first_name, last_name, player_alias AS zawodnik, profile_photo_path FROM users ORDER BY first_name ASC"
     )

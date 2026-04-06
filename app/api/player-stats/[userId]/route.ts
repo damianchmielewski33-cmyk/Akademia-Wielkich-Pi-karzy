@@ -15,8 +15,8 @@ export async function GET(_req: Request, ctx: Ctx) {
   if (!Number.isFinite(uid)) {
     return NextResponse.json({ error: "Invalid user" }, { status: 400 });
   }
-  const db = getDb();
-  const user = db
+  const db = await getDb();
+  const user = await db
     .prepare("SELECT first_name, last_name, player_alias, profile_photo_path FROM users WHERE id = ?")
     .get(uid) as {
     first_name: string;
@@ -26,7 +26,7 @@ export async function GET(_req: Request, ctx: Ctx) {
   } | undefined;
   if (!user) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const stats = db
+  const stats = await db
     .prepare(
       `SELECT m.match_date, m.match_time, m.location,
               s.goals, s.assists, s.distance, s.saves

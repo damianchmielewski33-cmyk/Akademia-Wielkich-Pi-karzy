@@ -44,8 +44,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
   const { match_id, goals, assists, distance, saves } = parsed.data;
-  const db = getDb();
-  const match = db
+  const db = await getDb();
+  const match = await db
     .prepare("SELECT id, played, match_date FROM matches WHERE id = ?")
     .get(match_id) as { id: number; played: number; match_date: string } | undefined;
   if (!match) {
@@ -57,7 +57,7 @@ export async function POST(req: Request) {
       { status: 400 }
     );
   }
-  const signup = db
+  const signup = await db
     .prepare("SELECT 1 AS ok FROM match_signups WHERE user_id = ? AND match_id = ?")
     .get(session.userId, match_id) as { ok: number } | undefined;
   if (!signup) {
@@ -69,7 +69,7 @@ export async function POST(req: Request) {
 
   const withinEditWeek = isWithinStatsEditWindow(match.match_date, utcTodayYmd());
 
-  const existing = db
+  const existing = await db
     .prepare("SELECT id FROM match_stats WHERE user_id = ? AND match_id = ?")
     .get(session.userId, match_id) as { id: number } | undefined;
 
@@ -80,7 +80,7 @@ export async function POST(req: Request) {
         { status: 403 }
       );
     }
-    db.prepare(
+    await db.prepare(
       "UPDATE match_stats SET goals = ?, assists = ?, distance = ?, saves = ? WHERE id = ? AND user_id = ?"
     ).run(goals, assists, distance, saves, existing.id, session.userId);
     logActivity(
@@ -97,7 +97,7 @@ export async function POST(req: Request) {
     );
   }
 
-  db.prepare(
+  await db.prepare(
     "INSERT INTO match_stats (user_id, match_id, goals, assists, distance, saves) VALUES (?, ?, ?, ?, ?, ?)"
   ).run(session.userId, match_id, goals, assists, distance, saves);
   logActivity(

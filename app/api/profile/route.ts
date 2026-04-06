@@ -5,7 +5,7 @@ import { createSessionToken, setSessionCookie } from "@/lib/auth";
 import { requireUser } from "@/lib/api-helpers";
 import { getProfileDashboard, getAvailablePlayerAliases } from "@/lib/profile-data";
 import { resolveCanonicalPlayerAlias } from "@/lib/player-alias";
-import Database from "better-sqlite3";
+import { isUniqueConstraintError } from "@/lib/sql-errors";
 
 export const runtime = "nodejs";
 
@@ -23,7 +23,7 @@ export async function GET() {
   const gate = await requireUser();
   if (!gate.ok) return gate.response;
   const session = gate.session;
-  const data = getProfileDashboard(session.userId);
+  const data = await getProfileDashboard(session.userId);
   if (!data) return NextResponse.json({ error: "Nie znaleziono konta" }, { status: 404 });
   return NextResponse.json(data);
 }
@@ -44,10 +44,10 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const db = getDb();
-  const row = db
+  const db = await getDb();
+  const row = (await db
     .prepare("SELECT first_name, last_name, player_alias FROM users WHERE id = ?")
-    .get(session.userId) as
+    .get(session.userId)) as
     | { first_name: string; last_name: string; player_alias: string }
     | undefined;
   if (!row) return NextResponse.json({ error: "Nie znaleziono konta" }, { status: 404 });
@@ -61,7 +61,7 @@ export async function PATCH(req: Request) {
     if (!canonical) {
       return NextResponse.json({ error: "Nieprawidłowy wybór piłkarza." }, { status: 400 });
     }
-    const available = new Set(getAvailablePlayerAliases(session.userId));
+    const available = new Set(await getAvailablePlayerAliases(session.userId));
     if (!available.has(canonical)) {
       return NextResponse.json({ error: "Ten piłkarz jest już zajęty." }, { status: 409 });
     }
@@ -71,14 +71,14 @@ export async function PATCH(req: Request) {
   }
 
   try {
-    db.prepare("UPDATE users SET first_name = ?, last_name = ?, player_alias = ? WHERE id = ?").run(
+    await db.prepare("UPDATE users SET first_name = ?, last_name = ?, player_alias = ? WHERE id = ?").run(
       nextFirst,
       nextLast,
       nextAlias,
       session.userId
     );
   } catch (e) {
-    if (e instanceof Database.SqliteError && e.code === "SQLITE_CONSTRAINT_UNIQUE") {
+    if (isUniqueConstraintError(e)) {
       return NextResponse.json({ error: "Ten piłkarz jest już zajęty." }, { status: 409 });
     }
     console.error("[profile] UPDATE failed", e);
@@ -88,7 +88,7 @@ export async function PATCH(req: Request) {
     );
   }
 
-  logActivity(
+  await logActivity(
     session.userId,
     `Zaktualizował profil (imię/nazwisko/awatar z listy): ${nextFirst} ${nextLast} (${nextAlias})`
   );
@@ -102,6 +102,6 @@ export async function PATCH(req: Request) {
   });
   await setSessionCookie(token);
 
-  const data = getProfileDashboard(session.userId);
+  const data = await getProfileDashboard(session.userId);
   return NextResponse.json({ ok: true, ...data });
 }

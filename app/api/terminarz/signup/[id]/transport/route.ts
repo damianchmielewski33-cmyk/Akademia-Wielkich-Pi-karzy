@@ -38,19 +38,19 @@ export async function PATCH(req: Request, ctx: Ctx) {
     needsTransport: typeof o.needsTransport === "boolean" ? o.needsTransport : undefined,
   });
 
-  const db = getDb();
-  const signup = db
+  const db = await getDb();
+  const signup = await db
     .prepare("SELECT id FROM match_signups WHERE user_id = ? AND match_id = ?")
     .get(gate.session.userId, mid);
   if (!signup) {
     return NextResponse.json({ error: "Nie jesteś zapisany na ten mecz." }, { status: 400 });
   }
-  const match = db.prepare("SELECT played FROM matches WHERE id = ?").get(mid) as { played: number } | undefined;
+  const match = await db.prepare("SELECT played FROM matches WHERE id = ?").get(mid) as { played: number } | undefined;
   if (!match || match.played === 1) {
     return NextResponse.json({ error: "Nie można zmienić transportu dla tego meczu." }, { status: 400 });
   }
 
-  db.prepare(
+  await db.prepare(
     `UPDATE match_signups SET drives_car = ?, can_take_passengers = ?, needs_transport = ? WHERE user_id = ? AND match_id = ?`
   ).run(
     transport.drives_car,

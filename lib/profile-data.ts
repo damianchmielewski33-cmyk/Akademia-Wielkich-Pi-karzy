@@ -29,13 +29,14 @@ export type ProfileActivityRow = {
   timestamp: string;
 };
 
-export function getAvailablePlayerAliases(exceptUserId: number): string[] {
-  const db = getDb();
+export async function getAvailablePlayerAliases(exceptUserId: number): Promise<string[]> {
+  const db = await getDb();
   const taken = new Set(
     (
-      db
-        .prepare("SELECT id, player_alias FROM users")
-        .all() as { id: number; player_alias: string }[]
+      (await db.prepare("SELECT id, player_alias FROM users").all()) as {
+        id: number;
+        player_alias: string;
+      }[]
     )
       .filter((r) => r.id !== exceptUserId)
       .map((r) => r.player_alias)
@@ -43,13 +44,13 @@ export function getAvailablePlayerAliases(exceptUserId: number): string[] {
   return ALL_PLAYERS.filter((p) => !taken.has(p));
 }
 
-export function getProfileDashboard(userId: number) {
-  const db = getDb();
-  const user = db
+export async function getProfileDashboard(userId: number) {
+  const db = await getDb();
+  const user = (await db
     .prepare(
       "SELECT id, first_name, last_name, player_alias, profile_photo_path, is_admin FROM users WHERE id = ?"
     )
-    .get(userId) as
+    .get(userId)) as
     | {
         id: number;
         first_name: string;
@@ -62,7 +63,7 @@ export function getProfileDashboard(userId: number) {
 
   if (!user) return null;
 
-  const statsRaw = db
+  const statsRaw = (await db
     .prepare(
       `SELECT s.id AS stat_id, s.match_id, m.match_date, m.match_time, m.location,
               s.goals, s.assists, s.distance, s.saves,
@@ -73,14 +74,14 @@ export function getProfileDashboard(userId: number) {
        WHERE s.user_id = ? AND m.played = 1
        ORDER BY m.match_date DESC, m.match_time DESC`
     )
-    .all(userId) as (Omit<ProfileMatchStatRow, "can_edit"> & { can_edit: number })[];
+    .all(userId)) as (Omit<ProfileMatchStatRow, "can_edit"> & { can_edit: number })[];
 
   const statsRows: ProfileMatchStatRow[] = statsRaw.map((r) => ({
     ...r,
     can_edit: r.can_edit === 1,
   }));
 
-  const missingRaw = db
+  const missingRaw = (await db
     .prepare(
       `SELECT m.id AS match_id, m.match_date, m.match_time, m.location,
               CASE WHEN date('now') <= date(m.match_date, '+7 days') THEN 1 ELSE 0 END AS can_add,
@@ -93,7 +94,7 @@ export function getProfileDashboard(userId: number) {
          )
        ORDER BY m.match_date DESC, m.match_time DESC`
     )
-    .all(userId, userId) as (Omit<ProfileMissingStatRow, "can_add"> & { can_add: number })[];
+    .all(userId, userId)) as (Omit<ProfileMissingStatRow, "can_add"> & { can_add: number })[];
 
   const missingRows: ProfileMissingStatRow[] = missingRaw.map((r) => ({
     ...r,
@@ -105,11 +106,11 @@ export function getProfileDashboard(userId: number) {
   const sumDist = statsRows.reduce((a, r) => a + r.distance, 0);
   const sumSaves = statsRows.reduce((a, r) => a + (r.saves ?? 0), 0);
 
-  const recentActivity = db
+  const recentActivity = (await db
     .prepare(
       "SELECT action, timestamp FROM activity_log WHERE user_id = ? ORDER BY timestamp DESC LIMIT 12"
     )
-    .all(userId) as ProfileActivityRow[];
+    .all(userId)) as ProfileActivityRow[];
 
   return {
     user: {
@@ -120,7 +121,7 @@ export function getProfileDashboard(userId: number) {
       profile_photo_path: user.profile_photo_path,
       is_admin: user.is_admin,
     },
-    available_players: getAvailablePlayerAliases(userId),
+    available_players: await getAvailablePlayerAliases(userId),
     summary: {
       matches_with_stats: statsRows.length,
       goals: sumGoals,
@@ -135,4 +136,4 @@ export function getProfileDashboard(userId: number) {
   };
 }
 
-export type ProfileDashboard = NonNullable<ReturnType<typeof getProfileDashboard>>;
+export type ProfileDashboard = NonNullable<Awaited<ReturnType<typeof getProfileDashboard>>>;

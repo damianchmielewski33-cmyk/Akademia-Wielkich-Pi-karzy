@@ -35,9 +35,9 @@ export async function POST(req: Request) {
   const session = await getServerSession();
   const userId = session ? session.userId : null;
 
-  const db = getDb();
+  const db = await getDb();
   const createdAt = new Date().toISOString();
-  db.prepare(
+  await db.prepare(
     `INSERT INTO page_views (screen_key, pathname, user_id, visitor_id, created_at)
      VALUES (?, ?, ?, ?, ?)`
   ).run(screen.key, pathname.slice(0, 512), userId, visitorId.slice(0, 80), createdAt);

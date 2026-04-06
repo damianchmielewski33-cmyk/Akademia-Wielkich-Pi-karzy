@@ -24,13 +24,13 @@ export default async function TerminarzPage({ searchParams }: PageProps) {
     const n = Number.parseInt(raw, 10);
     if (Number.isFinite(n) && n > 0) highlightMatchId = n;
   }
-  const db = getDb();
+  const db = await getDb();
   const session = await getServerSession();
-  const matches = db
+  const matches = await db
     .prepare("SELECT * FROM matches ORDER BY match_date ASC, match_time ASC")
     .all() as MatchRow[];
 
-  const signups = db
+  const signups = await db
     .prepare(
       `SELECT ms.match_id, ms.paid, u.id AS user_id, u.first_name, u.last_name,
               u.player_alias AS zawodnik, u.profile_photo_path
@@ -46,7 +46,7 @@ export default async function TerminarzPage({ searchParams }: PageProps) {
 
   let playedMissingStatsMatchIds: number[] = [];
   if (session) {
-    const missingRows = db
+    const missingRows = await db
       .prepare(
         `SELECT m.id
          FROM matches m

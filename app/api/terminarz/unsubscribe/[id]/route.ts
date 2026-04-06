@@ -18,8 +18,8 @@ export async function POST(_req: Request, ctx: Ctx) {
   if (!Number.isFinite(mid)) {
     return NextResponse.json({ error: "Invalid match" }, { status: 400 });
   }
-  const db = getDb();
-  const match = db.prepare("SELECT * FROM matches WHERE id = ?").get(mid) as
+  const db = await getDb();
+  const match = await db.prepare("SELECT * FROM matches WHERE id = ?").get(mid) as
     | { id: number; match_date: string; match_time: string; location: string; played: number }
     | undefined;
   if (!match) return NextResponse.json({ error: "Mecz nie istnieje" }, { status: 404 });
@@ -31,17 +31,14 @@ export async function POST(_req: Request, ctx: Ctx) {
     );
   }
 
-  const signup = db
+  const signup = (await db
     .prepare("SELECT * FROM match_signups WHERE user_id = ? AND match_id = ?")
-    .get(gate.session.userId, mid) as { id: number } | undefined;
+    .get(gate.session.userId, mid)) as { id: number } | undefined;
 
   if (signup) {
-    const tx = db.transaction(() => {
-      db.prepare("DELETE FROM match_signups WHERE id = ?").run(signup.id);
-      db.prepare("UPDATE matches SET signed_up = signed_up - 1 WHERE id = ?").run(mid);
-    });
-    tx();
-    logActivity(
+    await db.prepare("DELETE FROM match_signups WHERE id = ?").run(signup.id);
+    await db.prepare("UPDATE matches SET signed_up = signed_up - 1 WHERE id = ?").run(mid);
+    await logActivity(
       gate.session.userId,
       `Wypisał się z meczu ${match.match_date} ${match.match_time} (${match.location}), id ${mid}`
     );

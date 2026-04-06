@@ -40,8 +40,8 @@ export async function POST(req: Request, ctx: Ctx) {
   if (!Number.isFinite(mid)) {
     return NextResponse.json({ error: "Invalid match" }, { status: 400 });
   }
-  const db = getDb();
-  const match = db.prepare("SELECT * FROM matches WHERE id = ?").get(mid) as
+  const db = await getDb();
+  const match = await db.prepare("SELECT * FROM matches WHERE id = ?").get(mid) as
     | {
         id: number;
         match_date: string;
@@ -64,7 +64,7 @@ export async function POST(req: Request, ctx: Ctx) {
     return NextResponse.json({ error: "Brak miejsc na ten mecz!" }, { status: 400 });
   }
 
-  const existing = db
+  const existing = await db
     .prepare("SELECT id FROM match_signups WHERE user_id = ? AND match_id = ?")
     .get(gate.session.userId, mid);
   if (existing) {
@@ -83,22 +83,21 @@ export async function POST(req: Request, ctx: Ctx) {
   }
   const transport = tr as SignupTransportRow;
 
-  const tx = db.transaction(() => {
-    db.prepare(
+  await db
+    .prepare(
       `INSERT INTO match_signups (user_id, match_id, paid, drives_car, can_take_passengers, needs_transport)
        VALUES (?, ?, 0, ?, ?, ?)`
-    ).run(
+    )
+    .run(
       gate.session.userId,
       mid,
       transport.drives_car,
       transport.can_take_passengers,
       transport.needs_transport
     );
-    db.prepare("UPDATE matches SET signed_up = signed_up + 1 WHERE id = ?").run(mid);
-  });
-  tx();
+  await db.prepare("UPDATE matches SET signed_up = signed_up + 1 WHERE id = ?").run(mid);
 
-  logActivity(
+  await logActivity(
     gate.session.userId,
     `Zapisał się na mecz ${match.match_date} ${match.match_time} (${match.location}), id ${mid}`
   );

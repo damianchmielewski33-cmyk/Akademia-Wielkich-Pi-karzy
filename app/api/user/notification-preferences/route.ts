@@ -37,15 +37,15 @@ export async function POST(req: Request) {
     );
   }
 
-  const db = getDb();
+  const db = await getDb();
   const uid = gate.session.userId;
 
   if (parsed.data.action === "dismiss") {
-    db.prepare("UPDATE users SET notification_prompt_completed = 1 WHERE id = ?").run(uid);
+    await db.prepare("UPDATE users SET notification_prompt_completed = 1 WHERE id = ?").run(uid);
     return NextResponse.json({ ok: true });
   }
 
-  db.prepare(
+  await db.prepare(
     `UPDATE users SET email = ?, match_notifications_consent = 1, notification_prompt_completed = 1 WHERE id = ?`
   ).run(parsed.data.email, uid);
 

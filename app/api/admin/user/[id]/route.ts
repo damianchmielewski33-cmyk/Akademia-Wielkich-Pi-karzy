@@ -15,13 +15,15 @@ export async function GET(_req: Request, ctx: Ctx) {
   if (!Number.isFinite(userId)) {
     return NextResponse.json({ error: "Invalid id" }, { status: 400 });
   }
-  const db = getDb();
-  const row = db
-    .prepare(`
+  const db = await getDb();
+  const row = await db
+    .prepare(
+      `
       SELECT id, first_name, last_name, player_alias AS zawodnik,
              CASE WHEN is_admin = 1 THEN 'admin' ELSE 'player' END AS role
       FROM users WHERE id = ?
-    `)
+    `
+    )
     .get(userId);
   if (!row) return NextResponse.json({ error: "Not found" }, { status: 404 });
   return NextResponse.json(row);
@@ -53,11 +55,13 @@ export async function PUT(req: Request, ctx: Ctx) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
   const data = parsed.data;
-  const db = getDb();
-  db.prepare(
-    `UPDATE users SET first_name = ?, last_name = ?, player_alias = ?, is_admin = ? WHERE id = ?`
-  ).run(data.first_name, data.last_name, data.zawodnik, data.role === "admin" ? 1 : 0, userId);
-  logActivity(
+  const db = await getDb();
+  await db
+    .prepare(
+      `UPDATE users SET first_name = ?, last_name = ?, player_alias = ?, is_admin = ? WHERE id = ?`
+    )
+    .run(data.first_name, data.last_name, data.zawodnik, data.role === "admin" ? 1 : 0, userId);
+  await logActivity(
     gate.session.userId,
     `Zaktualizował profil użytkownika id ${userId}: ${data.first_name} ${data.last_name} (${data.zawodnik}), rola: ${data.role === "admin" ? "admin" : "zawodnik"}`
   );
@@ -75,33 +79,28 @@ export async function DELETE(_req: Request, ctx: Ctx) {
   if (userId === gate.session.userId) {
     return NextResponse.json({ error: "Nie możesz usunąć własnego konta" }, { status: 400 });
   }
-  const db = getDb();
-  const target = db
+  const db = await getDb();
+  const target = (await db
     .prepare("SELECT first_name, last_name, player_alias FROM users WHERE id = ?")
-    .get(userId) as { first_name: string; last_name: string; player_alias: string } | undefined;
+    .get(userId)) as { first_name: string; last_name: string; player_alias: string } | undefined;
   if (!target) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const signupMatchIds = db
+  const signupMatchIds = (await db
     .prepare("SELECT match_id FROM match_signups WHERE user_id = ?")
-    .all(userId) as { match_id: number }[];
+    .all(userId)) as { match_id: number }[];
 
-  const decSignedUp = db.prepare(
-    "UPDATE matches SET signed_up = signed_up - 1 WHERE id = ? AND signed_up > 0"
-  );
+  for (const row of signupMatchIds) {
+    await db
+      .prepare("UPDATE matches SET signed_up = signed_up - 1 WHERE id = ? AND signed_up > 0")
+      .run(row.match_id);
+  }
+  await db.prepare("UPDATE activity_log SET user_id = NULL WHERE user_id = ?").run(userId);
+  await db.prepare("DELETE FROM match_lineup_slots WHERE user_id = ?").run(userId);
+  await db.prepare("DELETE FROM match_stats WHERE user_id = ?").run(userId);
+  await db.prepare("DELETE FROM match_signups WHERE user_id = ?").run(userId);
+  await db.prepare("DELETE FROM users WHERE id = ?").run(userId);
 
-  const tx = db.transaction(() => {
-    for (const row of signupMatchIds) {
-      decSignedUp.run(row.match_id);
-    }
-    db.prepare("UPDATE activity_log SET user_id = NULL WHERE user_id = ?").run(userId);
-    db.prepare("DELETE FROM match_lineup_slots WHERE user_id = ?").run(userId);
-    db.prepare("DELETE FROM match_stats WHERE user_id = ?").run(userId);
-    db.prepare("DELETE FROM match_signups WHERE user_id = ?").run(userId);
-    db.prepare("DELETE FROM users WHERE id = ?").run(userId);
-  });
-  tx();
-
-  logActivity(
+  await logActivity(
     gate.session.userId,
     `Usunął konto: ${target.first_name} ${target.last_name} (${target.player_alias}), id ${userId}`
   );

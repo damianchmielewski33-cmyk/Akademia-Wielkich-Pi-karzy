@@ -4,7 +4,7 @@ import { getDb, logActivity } from "@/lib/db";
 import { requireAdmin } from "@/lib/api-helpers";
 import { ALL_PLAYERS } from "@/lib/constants";
 import { resolveCanonicalPlayerAlias } from "@/lib/player-alias";
-import Database from "better-sqlite3";
+import { isUniqueConstraintError } from "@/lib/sql-errors";
 
 export const runtime = "nodejs";
 
@@ -18,8 +18,8 @@ const postSchema = z.object({
 export async function GET() {
   const gate = await requireAdmin();
   if (!gate.ok) return gate.response;
-  const db = getDb();
-  const rows = db
+  const db = await getDb();
+  const rows = await db
     .prepare(`
       SELECT id, first_name, last_name, player_alias AS zawodnik,
              profile_photo_path,
@@ -54,9 +54,9 @@ export async function POST(req: Request) {
     );
   }
 
-  const db = getDb();
+  const db = await getDb();
   const taken = new Set(
-    (db.prepare("SELECT player_alias FROM users").all() as { player_alias: string }[]).map(
+    (await db.prepare("SELECT player_alias FROM users").all() as { player_alias: string }[]).map(
       (r) => r.player_alias
     )
   );
@@ -69,13 +69,13 @@ export async function POST(req: Request) {
   }
   const isAdmin = role === "admin" ? 1 : 0;
   try {
-    const r = db
+    const r = await db
       .prepare(
         "INSERT INTO users (first_name, last_name, player_alias, is_admin) VALUES (?, ?, ?, ?)"
       )
       .run(first_name, last_name, canonical, isAdmin);
     const userId = Number(r.lastInsertRowid);
-    logActivity(
+    await logActivity(
       gate.session.userId,
       `Utworzył konto użytkownika id ${userId}: ${first_name} ${last_name} (${canonical}), rola: ${role === "admin" ? "administrator" : "zawodnik"}`
     );
@@ -90,7 +90,7 @@ export async function POST(req: Request) {
       { status: 201 }
     );
   } catch (e) {
-    if (e instanceof Database.SqliteError && e.code === "SQLITE_CONSTRAINT_UNIQUE") {
+    if (isUniqueConstraintError(e)) {
       return NextResponse.json({ error: "Ten piłkarz jest już zajęty." }, { status: 409 });
     }
     console.error("[admin/users] INSERT failed", e);

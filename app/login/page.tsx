@@ -12,8 +12,8 @@ type Props = { searchParams: Promise<{ next?: string }> };
 
 export default async function LoginPage({ searchParams }: Props) {
   const { next: nextPath } = await searchParams;
-  const db = getDb();
-  const rows = db.prepare("SELECT player_alias FROM users ORDER BY player_alias").all() as {
+  const db = await getDb();
+  const rows = await db.prepare("SELECT player_alias FROM users ORDER BY player_alias").all() as {
     player_alias: string;
   }[];
   const aliases = rows.map((r) => r.player_alias);

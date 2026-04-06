@@ -4,8 +4,8 @@ import { getDb, type MatchRow } from "@/lib/db";
 import { SITE_NAME } from "@/lib/site";
 
 export async function GET() {
-  const db = getDb();
-  const matches = db
+  const db = await getDb();
+  const matches = await db
     .prepare(
       `SELECT * FROM matches
        WHERE datetime(match_date || ' ' || match_time) >= datetime('now', 'localtime')

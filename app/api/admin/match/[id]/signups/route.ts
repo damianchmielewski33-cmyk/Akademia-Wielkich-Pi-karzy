@@ -15,11 +15,11 @@ export async function GET(_req: Request, context: RouteContext) {
   if (!Number.isFinite(mid)) {
     return NextResponse.json({ error: "Invalid id" }, { status: 400 });
   }
-  const db = getDb();
-  const exists = db.prepare("SELECT 1 FROM matches WHERE id = ?").get(mid);
+  const db = await getDb();
+  const exists = await db.prepare("SELECT 1 FROM matches WHERE id = ?").get(mid);
   if (!exists) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const signups = db
+  const signups = await db
     .prepare(
       `SELECT ms.user_id AS user_id, ms.paid,
               u.first_name AS first_name, u.last_name AS last_name,
@@ -58,13 +58,13 @@ export async function PATCH(req: Request, context: RouteContext) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const db = getDb();
-  const match = db
+  const db = await getDb();
+  const match = await db
     .prepare("SELECT match_date, match_time, location FROM matches WHERE id = ?")
     .get(mid) as { match_date: string; match_time: string; location: string } | undefined;
   if (!match) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const signup = db
+  const signup = await db
     .prepare("SELECT id FROM match_signups WHERE match_id = ? AND user_id = ?")
     .get(mid, parsed.data.user_id) as { id: number } | undefined;
   if (!signup) {
@@ -72,13 +72,13 @@ export async function PATCH(req: Request, context: RouteContext) {
   }
 
   const paid = parsed.data.paid ? 1 : 0;
-  db.prepare("UPDATE match_signups SET paid = ? WHERE match_id = ? AND user_id = ?").run(
+  await db.prepare("UPDATE match_signups SET paid = ? WHERE match_id = ? AND user_id = ?").run(
     paid,
     mid,
     parsed.data.user_id
   );
 
-  const who = db
+  const who = await db
     .prepare("SELECT first_name, last_name FROM users WHERE id = ?")
     .get(parsed.data.user_id) as { first_name: string; last_name: string } | undefined;
 

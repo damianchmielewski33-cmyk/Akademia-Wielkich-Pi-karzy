@@ -28,21 +28,21 @@ export default async function StatystykiPage() {
   const session = await getServerSession();
   if (!session) redirect("/login");
 
-  const db = getDb();
-  const totalMatches = (db.prepare("SELECT COUNT(*) AS c FROM matches").get() as { c: number }).c;
+  const db = await getDb();
+  const totalMatches = (await db.prepare("SELECT COUNT(*) AS c FROM matches").get() as { c: number }).c;
   const playedMatches = (
-    db.prepare("SELECT COUNT(*) AS c FROM matches WHERE played = 1").get() as { c: number }
+    await db.prepare("SELECT COUNT(*) AS c FROM matches WHERE played = 1").get() as { c: number }
   ).c;
   const upcomingMatches = (
-    db
+    (await db
       .prepare(
         "SELECT COUNT(*) AS c FROM matches WHERE match_date >= date('now') AND played = 0"
       )
-      .get() as { c: number }
+      .get()) as { c: number }
   ).c;
-  const playersCount = (db.prepare("SELECT COUNT(*) AS c FROM users").get() as { c: number }).c;
+  const playersCount = (await db.prepare("SELECT COUNT(*) AS c FROM users").get() as { c: number }).c;
 
-  const nav = getAccountNavFields(session.userId);
+  const nav = await getAccountNavFields(session.userId);
   const me = {
     first_name: nav?.firstName ?? session.firstName,
     last_name: nav?.lastName ?? session.lastName,
@@ -50,13 +50,13 @@ export default async function StatystykiPage() {
     profile_photo_path: nav?.profilePhotoPath ?? null,
   };
 
-  const userStats = db
+  const userStats = (await db
     .prepare(
       "SELECT m.match_date, m.match_time, m.location, s.goals, s.assists, s.distance, s.saves " +
         "FROM match_stats s JOIN matches m ON m.id = s.match_id WHERE s.user_id = ? " +
         "ORDER BY m.match_date DESC, m.match_time DESC"
     )
-    .all(session.userId) as {
+    .all(session.userId)) as {
     match_date: string;
     match_time: string;
     location: string;

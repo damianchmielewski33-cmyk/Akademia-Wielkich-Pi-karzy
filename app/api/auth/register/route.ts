@@ -3,7 +3,7 @@ import { z } from "zod";
 import { getDb, logActivity } from "@/lib/db";
 import { ALL_PLAYERS } from "@/lib/constants";
 import { resolveCanonicalPlayerAlias } from "@/lib/player-alias";
-import Database from "better-sqlite3";
+import { isUniqueConstraintError } from "@/lib/sql-errors";
 import { createSessionToken, setSessionCookie } from "@/lib/auth";
 import { checkRateLimit, rateLimitKey, rateLimitedResponse, RATE } from "@/lib/rate-limit";
 
@@ -41,12 +41,16 @@ export async function POST(req: Request) {
     );
   }
 
-  const db = getDb();
-  const count = (db.prepare("SELECT COUNT(*) AS c FROM users").get() as { c: number }).c;
+  const db = await getDb();
+  const count = (
+    (await db.prepare("SELECT COUNT(*) AS c FROM users").get()) as { c: number } | undefined
+  )?.c ?? 0;
   const isAdmin = count === 0 ? 1 : 0;
 
   const taken = new Set(
-    (db.prepare("SELECT player_alias FROM users").all() as { player_alias: string }[]).map((r) => r.player_alias)
+    ((await db.prepare("SELECT player_alias FROM users").all()) as { player_alias: string }[]).map(
+      (r) => r.player_alias
+    )
   );
   const available = ALL_PLAYERS.filter((p) => !taken.has(p));
   if (!available.includes(canonical)) {
@@ -58,14 +62,14 @@ export async function POST(req: Request) {
 
   let userId: number;
   try {
-    const r = db
+    const r = await db
       .prepare(
         "INSERT INTO users (first_name, last_name, player_alias, is_admin) VALUES (?, ?, ?, ?)"
       )
       .run(first_name, last_name, canonical, isAdmin);
     userId = Number(r.lastInsertRowid);
   } catch (e) {
-    if (e instanceof Database.SqliteError && e.code === "SQLITE_CONSTRAINT_UNIQUE") {
+    if (isUniqueConstraintError(e)) {
       return NextResponse.json({ error: "Ten piłkarz jest już zajęty." }, { status: 409 });
     }
     console.error("[register] INSERT failed", e);
@@ -75,7 +79,7 @@ export async function POST(req: Request) {
     );
   }
 
-  logActivity(
+  await logActivity(
     userId,
     auto_login ? "Zarejestrował konto i zalogował się" : "Zarejestrował konto"
   );

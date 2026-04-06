@@ -28,12 +28,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Walidacja nie powiodła się", details: parsed.error.flatten() }, { status: 400 });
   }
   const { first_name, last_name, zawodnik } = parsed.data;
-  const db = getDb();
-  const user = db
+  const db = await getDb();
+  const user = (await db
     .prepare(
       "SELECT * FROM users WHERE first_name = ? AND last_name = ? AND player_alias = ?"
     )
-    .get(first_name, last_name, zawodnik) as
+    .get(first_name, last_name, zawodnik)) as
     | { id: number; first_name: string; last_name: string; player_alias: string; is_admin: number }
     | undefined;
 
@@ -49,7 +49,7 @@ export async function POST(req: Request) {
     zawodnik: user.player_alias,
   });
   await setSessionCookie(token);
-  logActivity(user.id, "Zalogował się");
+  await logActivity(user.id, "Zalogował się");
 
   return NextResponse.json({
     ok: true,

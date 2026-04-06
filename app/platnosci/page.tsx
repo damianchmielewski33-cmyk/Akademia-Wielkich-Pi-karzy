@@ -26,17 +26,17 @@ const SQL_SIGNUPS_WITH_USERS_FOR_MATCH = `
 `;
 
 export default async function PlatnosciPage() {
-  const db = getDb();
+  const db = await getDb();
   const session = await getServerSession();
 
-  const nextMatch = db.prepare(SQL_NEXT_UPCOMING_MATCH).get() as MatchRow | undefined;
+  const nextMatch = await db.prepare(SQL_NEXT_UPCOMING_MATCH).get() as MatchRow | undefined;
 
   let signups: PlatnosciSignup[] = [];
   let userSigned = false;
   let userPaid: boolean | null = null;
 
   if (nextMatch) {
-    signups = db.prepare(SQL_SIGNUPS_WITH_USERS_FOR_MATCH).all(nextMatch.id) as PlatnosciSignup[];
+    signups = await db.prepare(SQL_SIGNUPS_WITH_USERS_FOR_MATCH).all(nextMatch.id) as PlatnosciSignup[];
 
     if (session) {
       const mine = signups.find((s) => s.user_id === session.userId);

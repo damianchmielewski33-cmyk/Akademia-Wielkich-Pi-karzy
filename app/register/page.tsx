@@ -10,9 +10,9 @@ export const metadata: Metadata = {
 };
 
 export default async function RegisterPage() {
-  const db = getDb();
+  const db = await getDb();
   const taken = new Set(
-    (db.prepare("SELECT player_alias FROM users").all() as { player_alias: string }[]).map(
+    (await db.prepare("SELECT player_alias FROM users").all() as { player_alias: string }[]).map(
       (r) => r.player_alias
     )
   );

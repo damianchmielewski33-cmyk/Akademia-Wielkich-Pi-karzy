@@ -40,7 +40,7 @@ export default async function RootLayout({
     profilePhotoPath: string | null;
   } | null = null;
   if (session) {
-    const row = getAccountNavFields(session.userId);
+    const row = await getAccountNavFields(session.userId);
     accountNav = {
       firstName: row?.firstName ?? session.firstName,
       lastName: row?.lastName ?? session.lastName,

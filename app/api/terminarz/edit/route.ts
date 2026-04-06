@@ -27,8 +27,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
   const d = parsed.data;
-  const db = getDb();
-  db.prepare(
+  const db = await getDb();
+  await db.prepare(
     "UPDATE matches SET match_date = ?, match_time = ?, location = ?, max_slots = ? WHERE id = ?"
   ).run(d.date, d.time, d.location, d.max_slots, d.match_id);
   logActivity(

@@ -7,8 +7,8 @@ export const runtime = "nodejs";
 export async function GET() {
   const gate = await requireAdmin();
   if (!gate.ok) return gate.response;
-  const db = getDb();
-  const rows = db
+  const db = await getDb();
+  const rows = await db
     .prepare(`
       SELECT s.id,
              u.first_name, u.last_name,

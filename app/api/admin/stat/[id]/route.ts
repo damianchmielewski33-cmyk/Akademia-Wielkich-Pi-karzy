@@ -15,8 +15,8 @@ export async function GET(_req: Request, ctx: Ctx) {
   if (!Number.isFinite(sid)) {
     return NextResponse.json({ error: "Invalid id" }, { status: 400 });
   }
-  const db = getDb();
-  const row = db
+  const db = await getDb();
+  const row = await db
     .prepare(`SELECT id, goals, assists, distance, saves FROM match_stats WHERE id = ?`)
     .get(sid);
   if (!row) return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -49,8 +49,8 @@ export async function PUT(req: Request, ctx: Ctx) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
   const saves = parsed.data.saves ?? 0;
-  const db = getDb();
-  const meta = db
+  const db = await getDb();
+  const meta = await db
     .prepare(
       `SELECT ms.match_id, u.first_name, u.last_name
        FROM match_stats ms
@@ -59,7 +59,7 @@ export async function PUT(req: Request, ctx: Ctx) {
     )
     .get(sid) as { match_id: number; first_name: string; last_name: string } | undefined;
   if (!meta) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  db.prepare(
+  await db.prepare(
     `UPDATE match_stats SET goals = ?, assists = ?, distance = ?, saves = ? WHERE id = ?`
   ).run(parsed.data.goals, parsed.data.assists, parsed.data.distance, saves, sid);
   logActivity(

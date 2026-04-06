@@ -30,10 +30,10 @@ export async function POST(req: Request) {
   }
   const { match_id, published } = parsed.data;
 
-  const db = getDb();
+  const db = await getDb();
   const today = todayIso();
 
-  const match = db
+  const match = await db
     .prepare(
       `SELECT id, match_date, match_time, location FROM matches
        WHERE id = ? AND played = 0 AND match_date >= ?`
@@ -44,7 +44,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Mecz niedostępny" }, { status: 400 });
   }
 
-  db.prepare("UPDATE matches SET lineup_public = ? WHERE id = ?").run(published ? 1 : 0, match_id);
+  await db.prepare("UPDATE matches SET lineup_public = ? WHERE id = ?").run(published ? 1 : 0, match_id);
 
   logActivity(
     gate.session.userId,

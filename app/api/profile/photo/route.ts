@@ -63,8 +63,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Plik jest za duży (max 2 MB)." }, { status: 400 });
   }
 
-  const db = getDb();
-  const prev = db
+  const db = await getDb();
+  const prev = await db
     .prepare("SELECT profile_photo_path FROM users WHERE id = ?")
     .get(session.userId) as { profile_photo_path: string | null } | undefined;
   if (!prev) return NextResponse.json({ error: "Nie znaleziono konta" }, { status: 404 });
@@ -80,7 +80,7 @@ export async function POST(req: Request) {
   const abs = path.join(profileUploadsDir(), filename);
   fs.writeFileSync(abs, buf);
 
-  db.prepare("UPDATE users SET profile_photo_path = ? WHERE id = ?").run(publicPath, session.userId);
+  await db.prepare("UPDATE users SET profile_photo_path = ? WHERE id = ?").run(publicPath, session.userId);
   logActivity(session.userId, "Zaktualizował zdjęcie profilowe");
 
   return NextResponse.json({ ok: true, profile_photo_path: publicPath });
@@ -91,8 +91,8 @@ export async function DELETE() {
   if (!gate.ok) return gate.response;
   const session = gate.session;
 
-  const db = getDb();
-  const prev = db
+  const db = await getDb();
+  const prev = await db
     .prepare("SELECT profile_photo_path FROM users WHERE id = ?")
     .get(session.userId) as { profile_photo_path: string | null } | undefined;
   if (!prev) return NextResponse.json({ error: "Nie znaleziono konta" }, { status: 404 });
@@ -101,7 +101,7 @@ export async function DELETE() {
     safeUnlink(prev.profile_photo_path);
   }
 
-  db.prepare("UPDATE users SET profile_photo_path = NULL WHERE id = ?").run(session.userId);
+  await db.prepare("UPDATE users SET profile_photo_path = NULL WHERE id = ?").run(session.userId);
   logActivity(session.userId, "Usunął zdjęcie profilowe");
 
   return NextResponse.json({ ok: true, profile_photo_path: null });

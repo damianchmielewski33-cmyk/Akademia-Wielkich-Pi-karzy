@@ -29,12 +29,12 @@ export async function POST(req: Request, ctx: Ctx) {
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
-  const db = getDb();
-  const target = db
+  const db = await getDb();
+  const target = await db
     .prepare("SELECT first_name, last_name FROM users WHERE id = ?")
     .get(userId) as { first_name: string; last_name: string } | undefined;
   if (!target) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  db.prepare("UPDATE users SET is_admin = ? WHERE id = ?").run(
+  await db.prepare("UPDATE users SET is_admin = ? WHERE id = ?").run(
     parsed.data.role === "admin" ? 1 : 0,
     userId
   );

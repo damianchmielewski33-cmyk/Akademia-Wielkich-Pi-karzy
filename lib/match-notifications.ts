@@ -14,15 +14,15 @@ export async function notifySubscribersAboutNewMatch(match: MatchRow): Promise<v
     return;
   }
 
-  const db = getDb();
-  const rows = db
+  const db = await getDb();
+  const rows = (await db
     .prepare(
       `SELECT id, email, first_name FROM users
        WHERE match_notifications_consent = 1
          AND email IS NOT NULL
          AND TRIM(email) != ''`
     )
-    .all() as { id: number; email: string; first_name: string }[];
+    .all()) as { id: number; email: string; first_name: string }[];
 
   if (rows.length === 0) {
     console.error(

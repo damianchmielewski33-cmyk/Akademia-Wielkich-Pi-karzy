@@ -27,18 +27,18 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
   const { date, time, location, max_slots } = parsed.data;
-  const db = getDb();
+  const db = await getDb();
   const ins = db.prepare(
     `INSERT INTO matches (match_date, match_time, location, max_slots, signed_up, played)
      VALUES (?, ?, ?, ?, 0, 0)`
   );
-  const r = ins.run(date, time, location, max_slots);
+  const r = await ins.run(date, time, location, max_slots);
   const newId = Number(r.lastInsertRowid);
-  logActivity(
+  await logActivity(
     gate.session.userId,
     `Dodał mecz do terminarza id ${newId}: ${date} ${time} (${location}), max. ${max_slots} miejsc`
   );
-  const matchRow = db.prepare("SELECT * FROM matches WHERE id = ?").get(newId) as MatchRow | undefined;
+  const matchRow = await db.prepare("SELECT * FROM matches WHERE id = ?").get(newId) as MatchRow | undefined;
   if (matchRow) {
     try {
       /** Serverless kończy proces zaraz po odpowiedzi — bez await maile często w ogóle nie wychodzą. */

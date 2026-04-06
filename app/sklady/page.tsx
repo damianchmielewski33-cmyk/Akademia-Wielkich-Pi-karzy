@@ -13,16 +13,16 @@ type PageProps = { searchParams: Promise<{ m?: string }> };
 
 export default async function SkladyPage({ searchParams }: PageProps) {
   const sp = await searchParams;
-  const db = getDb();
+  const db = await getDb();
 
-  const publicMatches = db
+  const publicMatches = await db
     .prepare(
       `SELECT * FROM matches WHERE lineup_public = 1
        ORDER BY match_date DESC, match_time DESC`
     )
     .all() as MatchRow[];
 
-  const nextUpcomingAny = db
+  const nextUpcomingAny = await db
     .prepare(
       `SELECT * FROM matches
        WHERE datetime(match_date || ' ' || match_time) > datetime('now', 'localtime')
@@ -66,7 +66,7 @@ export default async function SkladyPage({ searchParams }: PageProps) {
     );
   }
 
-  const defaultUpcoming = db
+  const defaultUpcoming = await db
     .prepare(
       `SELECT id FROM matches WHERE lineup_public = 1
        AND datetime(match_date || ' ' || match_time) > datetime('now', 'localtime')
@@ -75,7 +75,7 @@ export default async function SkladyPage({ searchParams }: PageProps) {
     )
     .get() as { id: number } | undefined;
 
-  const defaultLatest = db
+  const defaultLatest = await db
     .prepare(
       `SELECT id FROM matches WHERE lineup_public = 1
        ORDER BY match_date DESC, match_time DESC
@@ -134,9 +134,9 @@ export default async function SkladyPage({ searchParams }: PageProps) {
 }
 
 async function SkladyContent({ matchId }: { matchId: number }) {
-  const db = getDb();
+  const db = await getDb();
 
-  const row = db
+  const row = await db
     .prepare(
       "SELECT id, match_date, match_time, location, lineup_public FROM matches WHERE id = ? AND lineup_public = 1"
     )
@@ -161,7 +161,7 @@ async function SkladyContent({ matchId }: { matchId: number }) {
     );
   }
 
-  const playersRaw = db
+  const playersRaw = await db
     .prepare(
       `SELECT u.id AS user_id, u.first_name, u.last_name, u.player_alias AS zawodnik,
               u.profile_photo_path
@@ -195,7 +195,7 @@ async function SkladyContent({ matchId }: { matchId: number }) {
     };
   });
 
-  const lineupRows = db
+  const lineupRows = await db
     .prepare(`SELECT team, slot_index, user_id FROM match_lineup_slots WHERE match_id = ?`)
     .all(matchId) as { team: string; slot_index: number; user_id: number }[];
 

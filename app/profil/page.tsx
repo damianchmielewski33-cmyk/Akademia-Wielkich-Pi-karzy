@@ -13,7 +13,7 @@ export default async function ProfilPage() {
   const session = await getServerSession();
   if (!session) redirect("/login?next=/profil");
 
-  const initial = getProfileDashboard(session.userId);
+  const initial = await getProfileDashboard(session.userId);
   if (!initial) redirect("/login");
 
   return <ProfilClient initial={initial} />;

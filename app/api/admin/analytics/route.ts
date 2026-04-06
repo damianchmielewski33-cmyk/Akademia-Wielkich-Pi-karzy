@@ -35,9 +35,9 @@ export async function GET(req: Request) {
     );
   }
   const { fromDate, toDate, fromIso, toIso } = range;
-  const db = getDb();
+  const db = await getDb();
 
-  const screenRows = db
+  const screenRows = await db
     .prepare(
       `SELECT screen_key,
               COUNT(*) AS total_views,
@@ -50,7 +50,7 @@ export async function GET(req: Request) {
     )
     .all(fromIso, toIso) as { screen_key: string; total_views: number; unique_visitors: number }[];
 
-  const totals = db
+  const totals = await db
     .prepare(
       `SELECT COUNT(*) AS total_views,
               COUNT(DISTINCT CASE WHEN user_id IS NOT NULL THEN CAST(user_id AS TEXT)
@@ -60,26 +60,26 @@ export async function GET(req: Request) {
     )
     .get(fromIso, toIso) as { total_views: number; unique_visitors: number };
 
-  const anonViews = db
+  const anonViews = await db
     .prepare(
       `SELECT COUNT(*) AS c FROM page_views
        WHERE created_at >= ? AND created_at <= ? AND user_id IS NULL`
     )
     .get(fromIso, toIso) as { c: number };
 
-  const authViews = db
+  const authViews = await db
     .prepare(
       `SELECT COUNT(*) AS c FROM page_views
        WHERE created_at >= ? AND created_at <= ? AND user_id IS NOT NULL`
     )
     .get(fromIso, toIso) as { c: number };
 
-  const totalPlayersRow = db
+  const totalPlayersRow = await db
     .prepare(`SELECT COUNT(*) AS c FROM users WHERE is_admin = 0`)
     .get() as { c: number };
   const totalPlayers = totalPlayersRow.c;
 
-  const playersVisitedRow = db
+  const playersVisitedRow = await db
     .prepare(
       `SELECT COUNT(DISTINCT pv.user_id) AS c
        FROM page_views pv
@@ -95,7 +95,7 @@ export async function GET(req: Request) {
   const pctPlayersInactive =
     totalPlayers > 0 ? Math.round((playersNotVisited / totalPlayers) * 1000) / 10 : null;
 
-  const selfRegRow = db
+  const selfRegRow = await db
     .prepare(
       `SELECT COUNT(*) AS c FROM activity_log
        WHERE substr(timestamp, 1, 10) >= ? AND substr(timestamp, 1, 10) <= ?
@@ -105,7 +105,7 @@ export async function GET(req: Request) {
     .get(fromDate, toDate) as { c: number };
   const selfRegistrations = selfRegRow.c;
 
-  const terminarzViewersRow = db
+  const terminarzViewersRow = await db
     .prepare(
       `SELECT COUNT(DISTINCT pv.user_id) AS c
        FROM page_views pv
@@ -117,7 +117,7 @@ export async function GET(req: Request) {
     .get(fromIso, toIso) as { c: number };
   const terminarzViewers = terminarzViewersRow.c;
 
-  const terminarzSignedRow = db
+  const terminarzSignedRow = await db
     .prepare(
       `SELECT COUNT(DISTINCT pv.user_id) AS c
        FROM page_views pv
