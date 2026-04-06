@@ -55,19 +55,32 @@ export async function POST(req: Request) {
     );
   }
 
+  let userId: number;
   try {
     const r = db
       .prepare(
         "INSERT INTO users (first_name, last_name, player_alias, is_admin) VALUES (?, ?, ?, ?)"
       )
       .run(first_name, last_name, canonical, isAdmin);
-    const userId = Number(r.lastInsertRowid);
-    logActivity(
-      userId,
-      auto_login ? "Zarejestrował konto i zalogował się" : "Zarejestrował konto"
+    userId = Number(r.lastInsertRowid);
+  } catch (e) {
+    if (e instanceof Database.SqliteError && e.code === "SQLITE_CONSTRAINT_UNIQUE") {
+      return NextResponse.json({ error: "Ten piłkarz jest już zajęty." }, { status: 409 });
+    }
+    console.error("[register] INSERT failed", e);
+    return NextResponse.json(
+      { error: "Nie udało się utworzyć konta. Spróbuj ponownie później." },
+      { status: 500 }
     );
+  }
 
-    if (auto_login) {
+  logActivity(
+    userId,
+    auto_login ? "Zarejestrował konto i zalogował się" : "Zarejestrował konto"
+  );
+
+  if (auto_login) {
+    try {
       const token = await createSessionToken({
         userId,
         isAdmin: isAdmin === 1,
@@ -90,16 +103,24 @@ export async function POST(req: Request) {
         },
         { status: 201 }
       );
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (msg.includes("AUTH_SECRET")) {
+        console.error("[register] sesja po utworzeniu konta — AUTH_SECRET:", msg);
+        return NextResponse.json(
+          {
+            error:
+              "Konto zostało utworzone, ale logowanie nie powiodło się (konfiguracja AUTH_SECRET na serwerze). Odśwież stronę i zaloguj się ręcznie lub skontaktuj się z administratorem.",
+          },
+          { status: 503 }
+        );
+      }
+      console.error("[register] createSessionToken failed", e);
+      return NextResponse.json(
+        { error: "Nie udało się dokończyć logowania. Spróbuj zalogować się ręcznie." },
+        { status: 500 }
+      );
     }
-  } catch (e) {
-    if (e instanceof Database.SqliteError && e.code === "SQLITE_CONSTRAINT_UNIQUE") {
-      return NextResponse.json({ error: "Ten piłkarz jest już zajęty." }, { status: 409 });
-    }
-    console.error("[register] INSERT failed", e);
-    return NextResponse.json(
-      { error: "Nie udało się utworzyć konta. Spróbuj ponownie później." },
-      { status: 500 }
-    );
   }
 
   return NextResponse.json({ ok: true, logged_in: false }, { status: 201 });
