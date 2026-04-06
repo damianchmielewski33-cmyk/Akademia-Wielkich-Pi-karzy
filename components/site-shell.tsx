@@ -94,9 +94,11 @@ export function SiteShell({ children, isLoggedIn, isAdmin, account = null }: Pro
             <NavButton href="/terminarz" active={pathname === "/terminarz"}>
               Terminarz
             </NavButton>
-            <NavButton href="/platnosci" active={pathname === "/platnosci"}>
-              Płatności
-            </NavButton>
+            {isLoggedIn && (
+              <NavButton href="/platnosci" active={pathname === "/platnosci"}>
+                Płatności
+              </NavButton>
+            )}
             <NavButton href="/pilkarze" active={pathname === "/pilkarze"}>
               Piłkarze
             </NavButton>
