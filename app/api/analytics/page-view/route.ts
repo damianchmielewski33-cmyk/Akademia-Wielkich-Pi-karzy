@@ -33,9 +33,13 @@ export async function POST(req: Request) {
   }
 
   const session = await getServerSession();
-  const userId = session ? session.userId : null;
-
   const db = await getDb();
+  let userId: number | null = session ? session.userId : null;
+  if (userId !== null) {
+    const row = await db.prepare("SELECT 1 AS ok FROM users WHERE id = ?").get(userId) as { ok: number } | undefined;
+    if (!row) userId = null;
+  }
+
   const createdAt = new Date().toISOString();
   await db.prepare(
     `INSERT INTO page_views (screen_key, pathname, user_id, visitor_id, created_at)
