@@ -3,6 +3,8 @@ import { z } from "zod";
 import { getDb, logActivity } from "@/lib/db";
 import { requireAdmin } from "@/lib/api-helpers";
 import { ALL_PLAYERS } from "@/lib/constants";
+import { resolveCanonicalPlayerAlias } from "@/lib/player-alias";
+import Database from "better-sqlite3";
 
 export const runtime = "nodejs";
 
@@ -44,6 +46,14 @@ export async function POST(req: Request) {
   }
   const { first_name, last_name, zawodnik, role } = parsed.data;
 
+  const canonical = resolveCanonicalPlayerAlias(zawodnik);
+  if (!canonical) {
+    return NextResponse.json(
+      { error: "Ten piłkarz jest już zajęty lub nieprawidłowy." },
+      { status: 400 }
+    );
+  }
+
   const db = getDb();
   const taken = new Set(
     (db.prepare("SELECT player_alias FROM users").all() as { player_alias: string }[]).map(
@@ -51,7 +61,7 @@ export async function POST(req: Request) {
     )
   );
   const available = ALL_PLAYERS.filter((p) => !taken.has(p));
-  if (!available.includes(zawodnik)) {
+  if (!available.includes(canonical)) {
     return NextResponse.json(
       { error: "Ten piłkarz jest już zajęty lub nieprawidłowy." },
       { status: 400 }
@@ -63,23 +73,30 @@ export async function POST(req: Request) {
       .prepare(
         "INSERT INTO users (first_name, last_name, player_alias, is_admin) VALUES (?, ?, ?, ?)"
       )
-      .run(first_name, last_name, zawodnik, isAdmin);
+      .run(first_name, last_name, canonical, isAdmin);
     const userId = Number(r.lastInsertRowid);
     logActivity(
       gate.session.userId,
-      `Utworzył konto użytkownika id ${userId}: ${first_name} ${last_name} (${zawodnik}), rola: ${role === "admin" ? "administrator" : "zawodnik"}`
+      `Utworzył konto użytkownika id ${userId}: ${first_name} ${last_name} (${canonical}), rola: ${role === "admin" ? "administrator" : "zawodnik"}`
     );
     return NextResponse.json(
       {
         id: userId,
         first_name,
         last_name,
-        zawodnik,
+        zawodnik: canonical,
         role,
       },
       { status: 201 }
     );
-  } catch {
-    return NextResponse.json({ error: "Ten piłkarz jest już zajęty." }, { status: 409 });
+  } catch (e) {
+    if (e instanceof Database.SqliteError && e.code === "SQLITE_CONSTRAINT_UNIQUE") {
+      return NextResponse.json({ error: "Ten piłkarz jest już zajęty." }, { status: 409 });
+    }
+    console.error("[admin/users] INSERT failed", e);
+    return NextResponse.json(
+      { error: "Nie udało się utworzyć konta. Spróbuj ponownie później." },
+      { status: 500 }
+    );
   }
 }

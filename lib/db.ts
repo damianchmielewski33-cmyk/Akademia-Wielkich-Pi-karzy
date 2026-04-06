@@ -1,7 +1,7 @@
 import Database from "better-sqlite3";
 import fs from "fs";
 import path from "path";
-import { resolveDatabaseFilePath } from "@/lib/runtime-paths";
+import { isVercel, resolveDatabaseFilePath } from "@/lib/runtime-paths";
 
 function resolveDbPath() {
   return resolveDatabaseFilePath();
@@ -148,7 +148,8 @@ export function getDb(): Database.Database {
   const p = resolveDbPath();
   fs.mkdirSync(path.dirname(p), { recursive: true });
   dbInstance = new Database(p);
-  dbInstance.pragma("journal_mode = WAL");
+  /** Na Vercelu (/tmp) WAL bywa problematyczny; lokalnie WAL jest wygodniejszy. */
+  dbInstance.pragma(isVercel() ? "journal_mode = DELETE" : "journal_mode = WAL");
   initSchema(dbInstance);
   return dbInstance;
 }

@@ -3,8 +3,9 @@ import { z } from "zod";
 import { getDb, logActivity } from "@/lib/db";
 import { createSessionToken, setSessionCookie } from "@/lib/auth";
 import { requireUser } from "@/lib/api-helpers";
-import { ALL_PLAYERS } from "@/lib/constants";
 import { getProfileDashboard, getAvailablePlayerAliases } from "@/lib/profile-data";
+import { resolveCanonicalPlayerAlias } from "@/lib/player-alias";
+import Database from "better-sqlite3";
 
 export const runtime = "nodejs";
 
@@ -56,13 +57,15 @@ export async function PATCH(req: Request) {
   let nextAlias = parsed.data.zawodnik ?? row.player_alias;
 
   if (parsed.data.zawodnik !== undefined) {
-    if (!ALL_PLAYERS.includes(nextAlias)) {
+    const canonical = resolveCanonicalPlayerAlias(parsed.data.zawodnik);
+    if (!canonical) {
       return NextResponse.json({ error: "Nieprawidłowy wybór piłkarza." }, { status: 400 });
     }
     const available = new Set(getAvailablePlayerAliases(session.userId));
-    if (!available.has(nextAlias)) {
+    if (!available.has(canonical)) {
       return NextResponse.json({ error: "Ten piłkarz jest już zajęty." }, { status: 409 });
     }
+    nextAlias = canonical;
   } else {
     nextAlias = row.player_alias;
   }
@@ -74,8 +77,15 @@ export async function PATCH(req: Request) {
       nextAlias,
       session.userId
     );
-  } catch {
-    return NextResponse.json({ error: "Ten piłkarz jest już zajęty." }, { status: 409 });
+  } catch (e) {
+    if (e instanceof Database.SqliteError && e.code === "SQLITE_CONSTRAINT_UNIQUE") {
+      return NextResponse.json({ error: "Ten piłkarz jest już zajęty." }, { status: 409 });
+    }
+    console.error("[profile] UPDATE failed", e);
+    return NextResponse.json(
+      { error: "Nie udało się zapisać profilu. Spróbuj ponownie później." },
+      { status: 500 }
+    );
   }
 
   logActivity(
