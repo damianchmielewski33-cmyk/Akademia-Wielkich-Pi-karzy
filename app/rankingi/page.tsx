@@ -32,14 +32,32 @@ export default async function RankingiPage() {
               u.first_name, u.last_name,
               u.player_alias AS zawodnik,
               u.profile_photo_path,
-              COALESCE(SUM(s.goals), 0) AS goals,
-              COALESCE(SUM(s.assists), 0) AS assists,
-              COALESCE(SUM(s.distance), 0) AS distance,
-              COALESCE(SUM(s.saves), 0) AS saves,
-              COUNT(s.id) AS mecze
+              COALESCE(ms.goals, 0) + COALESCE(sms.goals, 0) AS goals,
+              COALESCE(ms.assists, 0) + COALESCE(sms.assists, 0) AS assists,
+              COALESCE(ms.distance, 0) + COALESCE(sms.distance, 0) AS distance,
+              COALESCE(ms.saves, 0) + COALESCE(sms.saves, 0) AS saves,
+              COALESCE(ms.mecze, 0) + COALESCE(sms.mecze, 0) AS mecze
        FROM users u
-       LEFT JOIN match_stats s ON s.user_id = u.id
-       GROUP BY u.id, u.first_name, u.last_name, u.player_alias, u.profile_photo_path`
+       LEFT JOIN (
+         SELECT user_id,
+                SUM(goals) AS goals,
+                SUM(assists) AS assists,
+                SUM(distance) AS distance,
+                SUM(saves) AS saves,
+                COUNT(*) AS mecze
+         FROM match_stats
+         GROUP BY user_id
+       ) ms ON ms.user_id = u.id
+       LEFT JOIN (
+         SELECT user_id,
+                SUM(goals) AS goals,
+                SUM(assists) AS assists,
+                SUM(distance) AS distance,
+                SUM(saves) AS saves,
+                COUNT(*) AS mecze
+         FROM standalone_match_stats
+         GROUP BY user_id
+       ) sms ON sms.user_id = u.id`
     )
     .all() as {
     user_id: number;

@@ -105,6 +105,7 @@ export async function PATCH(req: Request) {
     lastName: nextLast,
     zawodnik: nextAlias,
     authVersion,
+    rememberMe: session.rememberMe,
   });
   await setSessionCookie(token);
 

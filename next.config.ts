@@ -8,6 +8,15 @@ const securityHeaders = [
 ] as const;
 
 const nextConfig: NextConfig = {
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "*.public.blob.vercel-storage.com",
+        pathname: "/**",
+      },
+    ],
+  },
   serverExternalPackages: ["better-sqlite3"],
   experimental: {
     optimizePackageImports: ["lucide-react"],

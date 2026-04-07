@@ -1,8 +1,10 @@
+import { put } from "@vercel/blob";
 import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 import { getDb, logActivity } from "@/lib/db";
 import { requireUser } from "@/lib/api-helpers";
+import { deleteProfileBlobIfAny, isProfileBlobStorageEnabled, isVercelBlobUrl } from "@/lib/profile-blob";
 import {
   profilePhotoPublicUrl,
   profileUploadsDir,
@@ -19,7 +21,7 @@ const ALLOWED = new Map<string, string>([
   ["image/gif", ".gif"],
 ]);
 
-function safeUnlink(dbPath: string | null | undefined) {
+function safeUnlinkLocal(dbPath: string | null | undefined) {
   const abs = dbPath ? resolveProfilePhotoAbsolute(dbPath) : null;
   if (!abs) return;
   const dirResolved = path.resolve(profileUploadsDir());
@@ -30,6 +32,15 @@ function safeUnlink(dbPath: string | null | undefined) {
   } catch {
     /* ignore */
   }
+}
+
+async function removeStoredProfilePhoto(dbPath: string | null | undefined) {
+  if (!dbPath) return;
+  if (isVercelBlobUrl(dbPath)) {
+    await deleteProfileBlobIfAny(dbPath);
+    return;
+  }
+  safeUnlinkLocal(dbPath);
 }
 
 export async function POST(req: Request) {
@@ -69,16 +80,25 @@ export async function POST(req: Request) {
     .get(session.userId) as { profile_photo_path: string | null } | undefined;
   if (!prev) return NextResponse.json({ error: "Nie znaleziono konta" }, { status: 404 });
 
-  fs.mkdirSync(profileUploadsDir(), { recursive: true });
-
   if (prev.profile_photo_path) {
-    safeUnlink(prev.profile_photo_path);
+    await removeStoredProfilePhoto(prev.profile_photo_path);
   }
 
-  const filename = `${session.userId}-${Date.now()}${ext}`;
-  const publicPath = profilePhotoPublicUrl(filename);
-  const abs = path.join(profileUploadsDir(), filename);
-  fs.writeFileSync(abs, buf);
+  let publicPath: string;
+  if (isProfileBlobStorageEnabled()) {
+    const pathname = `profiles/${session.userId}-${Date.now()}${ext}`;
+    const blob = await put(pathname, buf, {
+      access: "public",
+      contentType: mime,
+    });
+    publicPath = blob.url;
+  } else {
+    fs.mkdirSync(profileUploadsDir(), { recursive: true });
+    const filename = `${session.userId}-${Date.now()}${ext}`;
+    publicPath = profilePhotoPublicUrl(filename);
+    const abs = path.join(profileUploadsDir(), filename);
+    fs.writeFileSync(abs, buf);
+  }
 
   await db.prepare("UPDATE users SET profile_photo_path = ? WHERE id = ?").run(publicPath, session.userId);
   logActivity(session.userId, "Zaktualizował zdjęcie profilowe");
@@ -98,7 +118,7 @@ export async function DELETE() {
   if (!prev) return NextResponse.json({ error: "Nie znaleziono konta" }, { status: 404 });
 
   if (prev.profile_photo_path) {
-    safeUnlink(prev.profile_photo_path);
+    await removeStoredProfilePhoto(prev.profile_photo_path);
   }
 
   await db.prepare("UPDATE users SET profile_photo_path = NULL WHERE id = ?").run(session.userId);

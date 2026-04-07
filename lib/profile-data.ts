@@ -1,9 +1,17 @@
 import { getDb } from "@/lib/db";
 import { ALL_PLAYERS } from "@/lib/constants";
+import {
+  PARTICIPATION_SURVEY_KEY,
+  PARTICIPATION_SURVEY_LOCATION,
+  PARTICIPATION_SURVEY_MATCH_DATE,
+  PARTICIPATION_SURVEY_MATCH_TIME,
+} from "@/lib/match-participation-survey";
 
 export type ProfileMatchStatRow = {
   stat_id: number;
   match_id: number;
+  /** Uzupełnianie przez `/api/stats/save` z `survey_key` zamiast `match_id`. */
+  survey_key?: string;
   match_date: string;
   match_time: string;
   location: string;
@@ -65,19 +73,39 @@ export async function getProfileDashboard(userId: number) {
 
   const statsRaw = (await db
     .prepare(
-      `SELECT s.id AS stat_id, s.match_id, m.match_date, m.match_time, m.location,
+      `SELECT * FROM (
+       SELECT s.id AS stat_id, s.match_id, m.match_date, m.match_time, m.location,
               s.goals, s.assists, s.distance, s.saves,
               CASE WHEN date('now') <= date(m.match_date, '+7 days') THEN 1 ELSE 0 END AS can_edit,
-              date(m.match_date, '+7 days') AS edit_deadline
+              date(m.match_date, '+7 days') AS edit_deadline,
+              NULL AS survey_key
        FROM match_stats s
        JOIN matches m ON m.id = s.match_id
        WHERE s.user_id = ? AND m.played = 1
-       ORDER BY m.match_date DESC, m.match_time DESC`
+       UNION ALL
+       SELECT -1 AS stat_id, 0 AS match_id,
+              ? AS match_date, ? AS match_time, ? AS location,
+              sms.goals, sms.assists, sms.distance, sms.saves,
+              1 AS can_edit,
+              '—' AS edit_deadline,
+              ? AS survey_key
+       FROM standalone_match_stats sms
+       WHERE sms.user_id = ? AND sms.survey_key = ?
+       ) ORDER BY match_date DESC, match_time DESC`
     )
-    .all(userId)) as (Omit<ProfileMatchStatRow, "can_edit"> & { can_edit: number })[];
+    .all(
+      userId,
+      PARTICIPATION_SURVEY_MATCH_DATE,
+      PARTICIPATION_SURVEY_MATCH_TIME,
+      PARTICIPATION_SURVEY_LOCATION,
+      PARTICIPATION_SURVEY_KEY,
+      userId,
+      PARTICIPATION_SURVEY_KEY
+    )) as (Omit<ProfileMatchStatRow, "can_edit"> & { can_edit: number; survey_key: string | null })[];
 
   const statsRows: ProfileMatchStatRow[] = statsRaw.map((r) => ({
     ...r,
+    survey_key: r.survey_key ?? undefined,
     can_edit: r.can_edit === 1,
   }));
 

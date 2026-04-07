@@ -36,6 +36,7 @@ import { Badge } from "@/components/ui/badge";
 import { PhotoDevelopPreloader } from "@/components/preloaders";
 import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
 import type { ProfileDashboard } from "@/lib/profile-data";
+import { cn } from "@/lib/utils";
 
 type Props = { initial: ProfileDashboard };
 
@@ -47,10 +48,12 @@ export function ProfilClient({ initial }: Props) {
   const [zawodnik, setZawodnik] = useState(initial.user.zawodnik);
   const [savingProfile, setSavingProfile] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [editingProfile, setEditingProfile] = useState(false);
 
   const [statsOpen, setStatsOpen] = useState(false);
   const [statsCtx, setStatsCtx] = useState<{
     match_id: number;
+    survey_key?: string;
     label: string;
     goals: string;
     assists: string;
@@ -73,8 +76,8 @@ export function ProfilClient({ initial }: Props) {
     setZawodnik(json.user.zawodnik);
   }
 
-  async function saveProfile(e: React.FormEvent) {
-    e.preventDefault();
+  async function saveProfile() {
+    if (!editingProfile) return;
     setSavingProfile(true);
     try {
       const res = await fetch("/api/profile", {
@@ -96,12 +99,23 @@ export function ProfilClient({ initial }: Props) {
         const { ok, ...dash } = next;
         void ok;
         setData(dash as ProfileDashboard);
+        setFirstName(next.user.first_name);
+        setLastName(next.user.last_name);
+        setZawodnik(next.user.zawodnik);
       }
       toast.success("Profil zapisany");
+      setEditingProfile(false);
       router.refresh();
     } finally {
       setSavingProfile(false);
     }
+  }
+
+  function cancelProfileEdit() {
+    setFirstName(data.user.first_name);
+    setLastName(data.user.last_name);
+    setZawodnik(data.user.zawodnik);
+    setEditingProfile(false);
   }
 
   async function onPhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -155,27 +169,35 @@ export function ProfilClient({ initial }: Props) {
     goals: number,
     assists: number,
     distance: number,
-    saves: number
+    saves: number,
+    opts?: { blankDefaults?: boolean; surveyKey?: string }
   ) {
+    const blank = opts?.blankDefaults === true;
     setStatsCtx({
       match_id,
+      survey_key: opts?.surveyKey,
       label,
-      goals: String(goals),
-      assists: String(assists),
-      distance: String(distance),
-      saves: String(saves),
+      goals: blank ? "" : String(goals),
+      assists: blank ? "" : String(assists),
+      distance: blank ? "" : String(distance),
+      saves: blank ? "" : String(saves),
     });
     setStatsOpen(true);
   }
 
   async function submitStats() {
     if (!statsCtx) return;
+    const nz = (s: string) => (s.trim() === "" ? "0" : s);
     const fd = new FormData();
-    fd.set("match_id", String(statsCtx.match_id));
-    fd.set("goals", statsCtx.goals);
-    fd.set("assists", statsCtx.assists);
-    fd.set("distance", statsCtx.distance);
-    fd.set("saves", statsCtx.saves);
+    if (statsCtx.survey_key) {
+      fd.set("survey_key", statsCtx.survey_key);
+    } else {
+      fd.set("match_id", String(statsCtx.match_id));
+    }
+    fd.set("goals", nz(statsCtx.goals));
+    fd.set("assists", nz(statsCtx.assists));
+    fd.set("distance", nz(statsCtx.distance));
+    fd.set("saves", nz(statsCtx.saves));
     const res = await fetch("/api/stats/save", { method: "POST", body: fd });
     const text = await res.text();
     if (text === "OK") {
@@ -259,21 +281,46 @@ export function ProfilClient({ initial }: Props) {
               <p className="mt-1 text-sm text-zinc-600">
                 Logowanie odbywa się po imieniu, nazwisku i wybranym piłkarzu — po zmianie tych danych nadal jesteś zalogowany.
               </p>
-              <form onSubmit={saveProfile} className="mt-5 space-y-4">
+              <div className="mt-5 space-y-4">
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
                     <Label htmlFor="pf_fn">Imię</Label>
-                    <Input id="pf_fn" value={firstName} onChange={(e) => setFirstName(e.target.value)} className="mt-1" required />
+                    <Input
+                      id="pf_fn"
+                      value={firstName}
+                      readOnly={!editingProfile}
+                      onChange={(e) => setFirstName(e.target.value)}
+                      className={cn(
+                        "mt-1",
+                        !editingProfile && "cursor-default border-emerald-100/90 bg-zinc-50/80 text-emerald-950"
+                      )}
+                      required
+                    />
                   </div>
                   <div>
                     <Label htmlFor="pf_ln">Nazwisko</Label>
-                    <Input id="pf_ln" value={lastName} onChange={(e) => setLastName(e.target.value)} className="mt-1" required />
+                    <Input
+                      id="pf_ln"
+                      value={lastName}
+                      readOnly={!editingProfile}
+                      onChange={(e) => setLastName(e.target.value)}
+                      className={cn(
+                        "mt-1",
+                        !editingProfile && "cursor-default border-emerald-100/90 bg-zinc-50/80 text-emerald-950"
+                      )}
+                      required
+                    />
                   </div>
                 </div>
                 <div>
                   <Label>Piłkarz (postać na stronie)</Label>
-                  <Select value={zawodnik} onValueChange={setZawodnik}>
-                    <SelectTrigger className="mt-1">
+                  <Select value={zawodnik} onValueChange={setZawodnik} disabled={!editingProfile}>
+                    <SelectTrigger
+                      className={cn(
+                        "mt-1",
+                        !editingProfile && "cursor-default border-emerald-100/90 bg-zinc-50/80 opacity-100"
+                      )}
+                    >
                       <SelectValue placeholder="Wybierz" />
                     </SelectTrigger>
                     <SelectContent>
@@ -285,10 +332,28 @@ export function ProfilClient({ initial }: Props) {
                     </SelectContent>
                   </Select>
                 </div>
-                <Button type="submit" disabled={savingProfile}>
-                  {savingProfile ? "Zapisywanie…" : "Zapisz dane"}
-                </Button>
-              </form>
+                <div className="flex flex-wrap gap-2">
+                  {editingProfile ? (
+                    <>
+                      <Button type="button" disabled={savingProfile} onClick={() => void saveProfile()}>
+                        {savingProfile ? "Zapisywanie…" : "Zapisz edycje"}
+                      </Button>
+                      <Button type="button" variant="outline" disabled={savingProfile} onClick={cancelProfileEdit}>
+                        Anuluj
+                      </Button>
+                    </>
+                  ) : (
+                    <Button
+                      type="button"
+                      onClick={() => {
+                        window.setTimeout(() => setEditingProfile(true), 0);
+                      }}
+                    >
+                      Edytuj
+                    </Button>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
 
@@ -351,7 +416,9 @@ export function ProfilClient({ initial }: Props) {
                           type="button"
                           size="sm"
                           onClick={() =>
-                            openStatsEditor(m.match_id, `${m.match_date} · ${m.location}`, 0, 0, 0, 0)
+                            openStatsEditor(m.match_id, `${m.match_date} · ${m.location}`, 0, 0, 0, 0, {
+                              blankDefaults: true,
+                            })
                           }
                         >
                           Dodaj statystyki
@@ -368,7 +435,7 @@ export function ProfilClient({ initial }: Props) {
             <ul className="mt-5 space-y-2">
               {data.match_stats.map((s) => (
                 <li
-                  key={s.stat_id}
+                  key={s.survey_key ?? `stat-${s.stat_id}`}
                   className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-emerald-100/90 bg-emerald-50/35 px-3 py-2.5"
                 >
                   <div className="min-w-0 text-sm text-emerald-950">
@@ -394,7 +461,8 @@ export function ProfilClient({ initial }: Props) {
                             s.goals,
                             s.assists,
                             s.distance,
-                            s.saves ?? 0
+                            s.saves ?? 0,
+                            s.survey_key ? { surveyKey: s.survey_key } : undefined
                           )
                         }
                       >

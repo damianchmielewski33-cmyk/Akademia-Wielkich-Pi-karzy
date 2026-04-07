@@ -13,6 +13,11 @@ export type AppSession = {
   zawodnik: string;
   /** Wersja z tabeli users — musi się zgadzać z JWT, inaczej sesja jest nieważna (np. reset PIN). */
   authVersion: number;
+  /**
+   * true: użytkownik zaznaczył „Nie wylogowuj mnie” przy logowaniu (lub starszy token bez pola rm).
+   * false: po ~30 min bezczynności klient wyloguje użytkownika.
+   */
+  rememberMe: boolean;
   /** Brak pin_hash w bazie — wymagane ustawienie PIN-u (np. konto sprzed wdrożenia PIN). */
   needsPinSetup: boolean;
   /** Zgłoszona zmiana PIN-u czeka na akceptację admina — bez pełnego dostępu do konta. */
@@ -28,6 +33,8 @@ export async function createSessionToken(session: JwtSessionFields): Promise<str
     ln: session.lastName,
     zaw: session.zawodnik,
     ver: session.authVersion,
+    /** 1 = „Nie wylogowuj mnie” — brak wymuszania wylogowania po bezczynności po stronie klienta. */
+    rm: session.rememberMe ? 1 : 0,
   })
     .setProtectedHeader({ alg: "HS256" })
     .setSubject(String(session.userId))
@@ -38,6 +45,8 @@ export async function createSessionToken(session: JwtSessionFields): Promise<str
 
 export async function verifySessionToken(token: string): Promise<JwtSessionFields> {
   const { payload } = await jwtVerify(token, getAuthSecretKey());
+  const rm = payload.rm;
+  const rememberMe = rm === undefined ? true : rm === 1;
   return {
     userId: Number(payload.sub),
     isAdmin: payload.adm === 1,
@@ -45,6 +54,7 @@ export async function verifySessionToken(token: string): Promise<JwtSessionField
     lastName: String(payload.ln ?? ""),
     zawodnik: String(payload.zaw ?? ""),
     authVersion: Number(payload.ver ?? 0),
+    rememberMe,
   };
 }
 

@@ -3,16 +3,48 @@ import { z } from "zod";
 import { getDb, logActivity } from "@/lib/db";
 import { requireUser } from "@/lib/api-helpers";
 import { isWithinStatsEditWindow, utcTodayYmd } from "@/lib/match-stats-rules";
+import { PARTICIPATION_SURVEY_KEY, participationSurveyPlayedYes } from "@/lib/match-participation-survey";
 
 export const runtime = "nodejs";
 
-const bodySchema = z.object({
-  match_id: z.coerce.number().int().positive(),
+const statFields = {
   goals: z.coerce.number().int().min(0).default(0),
   assists: z.coerce.number().int().min(0).default(0),
   distance: z.coerce.number().min(0).default(0),
   saves: z.coerce.number().int().min(0).default(0),
-});
+};
+
+const emptyToUndef = (v: unknown) =>
+  v === "" || v === null || v === undefined ? undefined : v;
+
+const bodySchema = z
+  .object({
+    match_id: z.preprocess(
+      (v) => emptyToUndef(v),
+      z.coerce.number().int().positive().optional()
+    ),
+    survey_key: z.preprocess(
+      (v) => emptyToUndef(v),
+      z.string().min(1).optional()
+    ),
+    ...statFields,
+  })
+  .superRefine((val, ctx) => {
+    const hasMatch = val.match_id != null && val.match_id > 0;
+    const hasSurvey = val.survey_key != null && val.survey_key.length > 0;
+    if (hasMatch === hasSurvey) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Podaj albo match_id, albo survey_key (nie oba).",
+      });
+    }
+    if (hasSurvey && val.survey_key !== PARTICIPATION_SURVEY_KEY) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Nieobsługiwany survey_key.",
+      });
+    }
+  });
 
 async function parseBody(req: Request) {
   const ct = req.headers.get("content-type") || "";
@@ -22,6 +54,7 @@ async function parseBody(req: Request) {
   const fd = await req.formData();
   return {
     match_id: fd.get("match_id"),
+    survey_key: fd.get("survey_key"),
     goals: fd.get("goals"),
     assists: fd.get("assists"),
     distance: fd.get("distance"),
@@ -41,13 +74,52 @@ export async function POST(req: Request) {
   }
   const parsed = bodySchema.safeParse(raw);
   if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+    const msg = parsed.error.issues.map((i) => i.message).join(" ") || "Bad request";
+    return NextResponse.json({ error: msg }, { status: 400 });
   }
-  const { match_id, goals, assists, distance, saves } = parsed.data;
+  const data = parsed.data;
+  const { goals, assists, distance, saves } = data;
   const db = await getDb();
-  const match = await db
+
+  if (data.survey_key === PARTICIPATION_SURVEY_KEY) {
+    const okPlay = await participationSurveyPlayedYes(db, session.userId, PARTICIPATION_SURVEY_KEY);
+    if (!okPlay) {
+      return NextResponse.json(
+        { error: "Najpierw potwierdź w ankiecie, że grałeś w tym meczu (Tak)." },
+        { status: 403 }
+      );
+    }
+    /** Wyjątek: mecz spoza terminarza — bez limitu 7 dni od daty (ankieta 27.03). */
+    const existing = await db
+      .prepare(
+        `SELECT 1 AS ok FROM standalone_match_stats WHERE user_id = ? AND survey_key = ?`
+      )
+      .get(session.userId, PARTICIPATION_SURVEY_KEY) as { ok: number } | undefined;
+
+    if (existing) {
+      await db
+        .prepare(
+          `UPDATE standalone_match_stats SET goals = ?, assists = ?, distance = ?, saves = ?, updated_at = datetime('now') WHERE user_id = ? AND survey_key = ?`
+        )
+        .run(goals, assists, distance, saves, session.userId, PARTICIPATION_SURVEY_KEY);
+    } else {
+      await db
+        .prepare(
+          `INSERT INTO standalone_match_stats (user_id, survey_key, goals, assists, distance, saves) VALUES (?, ?, ?, ?, ?, ?)`
+        )
+        .run(session.userId, PARTICIPATION_SURVEY_KEY, goals, assists, distance, saves);
+    }
+    logActivity(
+      session.userId,
+      `Uzupełnił statystyki za mecz spoza terminarza (${PARTICIPATION_SURVEY_KEY}, bramki: ${goals}, asysty: ${assists}, km: ${distance}, obrony: ${saves})`
+    );
+    return new NextResponse("OK", { status: 200 });
+  }
+
+  const match_id = data.match_id!;
+  const match = (await db
     .prepare("SELECT id, played, match_date FROM matches WHERE id = ?")
-    .get(match_id) as { id: number; played: number; match_date: string } | undefined;
+    .get(match_id)) as { id: number; played: number; match_date: string } | undefined;
   if (!match) {
     return NextResponse.json({ error: "Nie znaleziono meczu." }, { status: 404 });
   }
@@ -57,9 +129,9 @@ export async function POST(req: Request) {
       { status: 400 }
     );
   }
-  const signup = await db
+  const signup = (await db
     .prepare("SELECT 1 AS ok FROM match_signups WHERE user_id = ? AND match_id = ?")
-    .get(session.userId, match_id) as { ok: number } | undefined;
+    .get(session.userId, match_id)) as { ok: number } | undefined;
   if (!signup) {
     return NextResponse.json(
       { error: "Statystyki możesz uzupełnić tylko dla meczów, na które byłeś zapisany." },
@@ -69,9 +141,9 @@ export async function POST(req: Request) {
 
   const withinEditWeek = isWithinStatsEditWindow(match.match_date, utcTodayYmd());
 
-  const existing = await db
+  const existing = (await db
     .prepare("SELECT id FROM match_stats WHERE user_id = ? AND match_id = ?")
-    .get(session.userId, match_id) as { id: number } | undefined;
+    .get(session.userId, match_id)) as { id: number } | undefined;
 
   if (existing) {
     if (!withinEditWeek) {

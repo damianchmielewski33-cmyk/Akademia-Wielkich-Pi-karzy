@@ -108,6 +108,7 @@ export async function POST(req: Request) {
         lastName: last_name,
         zawodnik: canonical,
         authVersion: 0,
+        rememberMe: true,
       });
       await setSessionCookie(token);
       return NextResponse.json(

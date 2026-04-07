@@ -3,8 +3,10 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
 import { SiteShell } from "@/components/site-shell";
 import { ShareLinkClientCleanup } from "@/components/share-link-client-cleanup";
+import { MatchParticipationSurveyPrompt } from "@/components/match-participation-survey-prompt";
 import { MatchNotificationPrompt } from "@/components/match-notification-prompt";
 import { PinSetupGate } from "@/components/pin-setup-gate";
+import { SessionIdleMonitor } from "@/components/session-idle-monitor";
 import { getAccountNavFields } from "@/lib/account-server";
 import { getServerSession } from "@/lib/auth";
 import { SITE_NAME } from "@/lib/site";
@@ -54,9 +56,12 @@ export default async function RootLayout({
     };
   }
 
+  const sessionIdleLogout = Boolean(session && !session.rememberMe);
+
   return (
     <html lang="pl">
       <body className={`${geistSans.variable} ${geistMono.variable} murawa-bg min-h-screen antialiased font-sans`}>
+        <SessionIdleMonitor enabled={sessionIdleLogout} />
         <ShareLinkClientCleanup />
         <PinSetupGate>
           <SiteShell
@@ -67,6 +72,7 @@ export default async function RootLayout({
             {children}
           </SiteShell>
         </PinSetupGate>
+        <MatchParticipationSurveyPrompt />
         <MatchNotificationPrompt />
         <Toaster
           position="top-center"

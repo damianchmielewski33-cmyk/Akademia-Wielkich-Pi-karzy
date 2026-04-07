@@ -55,7 +55,7 @@ export async function POST(req: Request) {
   const db = await getDb();
   const user = (await db
     .prepare(
-      "SELECT id, pin_hash FROM users WHERE first_name = ? AND last_name = ? AND player_alias = ?"
+      "SELECT id, pin_hash FROM users WHERE lower(first_name) = lower(?) AND lower(last_name) = lower(?) AND player_alias = ?"
     )
     .get(first_name, last_name, canonical)) as { id: number; pin_hash: string | null } | undefined;
 
@@ -66,7 +66,7 @@ export async function POST(req: Request) {
     return NextResponse.json(
       {
         error:
-          "To konto nie ma jeszcze ustawionego PIN-u — użyj „Pierwsze logowanie po zmianie — ustaw PIN” na stronie logowania.",
+          "To konto nie ma jeszcze ustawionego PIN-u — zaloguj się imieniem i nazwiskiem na stronie logowania (zostaniesz przekierowany na ustawienie PIN-u) albo wejdź na stronę /ustaw-pin.",
       },
       { status: 400 }
     );

@@ -10,7 +10,9 @@ export const metadata: Metadata = {
   description: "Pierwsze ustawienie PIN-u do logowania w akademii.",
 };
 
-type Props = { searchParams: Promise<{ next?: string }> };
+type Props = {
+  searchParams: Promise<{ next?: string; fn?: string; ln?: string }>;
+};
 
 export default async function UstawPinPage({ searchParams }: Props) {
   const session = await getServerSession();
@@ -18,7 +20,7 @@ export default async function UstawPinPage({ searchParams }: Props) {
     redirect("/");
   }
 
-  const { next: nextPath } = await searchParams;
+  const { next: nextPath, fn, ln } = await searchParams;
   const next = nextPath && nextPath.startsWith("/") ? nextPath : "/";
 
   return (
@@ -34,7 +36,11 @@ export default async function UstawPinPage({ searchParams }: Props) {
           ))}
         </ul>
         <div className="mt-6">
-          <UstawPinView nextPath={next} />
+          <UstawPinView
+            nextPath={next}
+            initialFirstName={typeof fn === "string" ? fn.trim() : ""}
+            initialLastName={typeof ln === "string" ? ln.trim() : ""}
+          />
         </div>
         <div className="mt-6 text-center text-sm">
           <Link href="/" className="text-emerald-600 hover:underline">

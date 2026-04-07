@@ -11,7 +11,15 @@ import { InitialPinForm } from "@/components/initial-pin-form";
 import { Button } from "@/components/ui/button";
 import { ALL_PLAYERS } from "@/lib/constants";
 
-export function UstawPinView({ nextPath }: { nextPath: string }) {
+export function UstawPinView({
+  nextPath,
+  initialFirstName = "",
+  initialLastName = "",
+}: {
+  nextPath: string;
+  initialFirstName?: string;
+  initialLastName?: string;
+}) {
   const router = useRouter();
   const next = nextPath.startsWith("/") ? nextPath : "/";
   const [showGoal, setShowGoal] = useState(false);
@@ -21,6 +29,8 @@ export function UstawPinView({ nextPath }: { nextPath: string }) {
       {showGoal && <AuthGoalPreloader label="PIN ustawiony — witamy!" />}
       <InitialPinForm
         aliases={ALL_PLAYERS}
+        initialFirstName={initialFirstName}
+        initialLastName={initialLastName}
         fieldIdPrefix="up"
         submitLabel="Ustaw PIN i kontynuuj"
         onSuccess={async () => {

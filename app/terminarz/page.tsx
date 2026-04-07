@@ -14,7 +14,14 @@ export const metadata: Metadata = {
   description: "Zapisy na mecze, lista terminów i archiwum.",
 };
 
-type PageProps = { searchParams: Promise<{ mecz?: string; zaproszenie?: string }> };
+type PageProps = {
+  searchParams: Promise<{
+    mecz?: string;
+    zaproszenie?: string;
+    statystyki?: string;
+    statystyki_ankiety?: string;
+  }>;
+};
 
 export default async function TerminarzPage({ searchParams }: PageProps) {
   const sp = await searchParams;
@@ -25,6 +32,11 @@ export default async function TerminarzPage({ searchParams }: PageProps) {
     if (Number.isFinite(n) && n > 0) highlightMatchId = n;
   }
   const inviteFromShare = sp.zaproszenie === "1";
+  const statystyki = sp.statystyki;
+  const openStatsFromUrl =
+    Boolean(highlightMatchId) && (statystyki === "1" || statystyki === "true");
+  const openStandaloneSurveyStats =
+    sp.statystyki_ankiety === "1" || sp.statystyki_ankiety === "true";
   const db = await getDb();
   const session = await getServerSession();
   const matches = await db
@@ -75,6 +87,8 @@ export default async function TerminarzPage({ searchParams }: PageProps) {
         isAdmin={session?.isAdmin ?? false}
         highlightMatchId={highlightMatchId}
         inviteFromShare={inviteFromShare}
+        openStatsFromUrl={openStatsFromUrl}
+        openStandaloneSurveyStats={openStandaloneSurveyStats}
       />
     </div>
   );

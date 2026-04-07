@@ -49,9 +49,7 @@ export const CLIENT_STORAGE_CLEANUP_COOKIE = "awp_client_cleanup";
 /** Klucz localStorage dla anonimowej analityki — zachowujemy przy czyszczeniu po udostępnionym linku. */
 export const VISITOR_ID_STORAGE_KEY = "awp_visitor_id";
 
-/** Teksty informacyjne na stronie logowania (polityka PIN i migracja). */
+/** Teksty informacyjne na stronie logowania i ustawiania PIN-u. */
 export const PIN_LOGIN_POLICY_LINES = [
   "Logujesz się imieniem, nazwiskiem i PIN-em (4–6 cyfr). Piłkarz wybrany przy rejestracji to awatar; przy pierwszym ustawieniu PIN-u potwierdzasz tożsamość tym samym wyborem.",
-  "Konta utworzone wcześniej muszą raz ustawić PIN — bez tego nie skorzystasz z terminarza i profilu.",
-  "Jeśli w zespole są dwie osoby o tym samym imieniu i nazwisku, zgłoś to trenerowi — wtedy rozróżnimy konta.",
 ] as const;

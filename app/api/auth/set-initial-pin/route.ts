@@ -56,7 +56,7 @@ export async function POST(req: Request) {
   const user = (await db
     .prepare(
       `SELECT id, first_name, last_name, player_alias, is_admin, pin_hash, auth_version
-       FROM users WHERE first_name = ? AND last_name = ? AND player_alias = ?`
+       FROM users WHERE lower(first_name) = lower(?) AND lower(last_name) = lower(?) AND player_alias = ?`
     )
     .get(first_name, last_name, canonical)) as
     | {
@@ -91,6 +91,7 @@ export async function POST(req: Request) {
     lastName: user.last_name,
     zawodnik: user.player_alias,
     authVersion: user.auth_version,
+    rememberMe: true,
   });
   await setSessionCookie(token);
   await logActivity(user.id, "Ustawił PIN i zalogował się (pierwsze logowanie po zmianie polityki)");

@@ -15,6 +15,9 @@ export async function GET(req: Request) {
   const session = await getServerSession();
   if (session) logActivity(session.userId, "Wylogował się");
   await clearSessionCookie();
-  const url = new URL("/", req.url);
-  return NextResponse.redirect(url);
+  const url = new URL(req.url);
+  const nextRaw = url.searchParams.get("next");
+  const next =
+    nextRaw && nextRaw.startsWith("/") && !nextRaw.startsWith("//") ? nextRaw : "/";
+  return NextResponse.redirect(new URL(next, req.url));
 }

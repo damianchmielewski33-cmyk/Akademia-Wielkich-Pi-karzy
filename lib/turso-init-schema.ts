@@ -154,4 +154,40 @@ export async function initLibsqlSchema(client: Client) {
     CREATE INDEX IF NOT EXISTS idx_transport_msg_match_created
     ON match_transport_messages(match_id, created_at);
   `);
+
+  await client.executeMultiple(`
+    CREATE TABLE IF NOT EXISTS match_participation_survey (
+      user_id INTEGER NOT NULL,
+      match_id INTEGER NOT NULL,
+      played INTEGER NOT NULL,
+      answered_at TEXT NOT NULL DEFAULT (datetime('now')),
+      PRIMARY KEY (user_id, match_id),
+      FOREIGN KEY (user_id) REFERENCES users(id),
+      FOREIGN KEY (match_id) REFERENCES matches(id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_match_participation_survey_match
+    ON match_participation_survey(match_id);
+  `);
+
+  await client.executeMultiple(`
+    CREATE TABLE IF NOT EXISTS participation_survey_answer (
+      user_id INTEGER NOT NULL,
+      survey_key TEXT NOT NULL,
+      played INTEGER NOT NULL,
+      answered_at TEXT NOT NULL DEFAULT (datetime('now')),
+      PRIMARY KEY (user_id, survey_key),
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    );
+    CREATE TABLE IF NOT EXISTS standalone_match_stats (
+      user_id INTEGER NOT NULL,
+      survey_key TEXT NOT NULL,
+      goals INTEGER NOT NULL DEFAULT 0,
+      assists INTEGER NOT NULL DEFAULT 0,
+      distance REAL NOT NULL DEFAULT 0,
+      saves INTEGER NOT NULL DEFAULT 0,
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      PRIMARY KEY (user_id, survey_key),
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    );
+  `);
 }

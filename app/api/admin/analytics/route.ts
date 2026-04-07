@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-helpers";
+import { localYmdInclusiveUtcRange } from "@/lib/analytics-date-range";
 import { SCREEN_LABELS } from "@/lib/analytics-screen";
 import { getDb } from "@/lib/db";
 
@@ -14,12 +15,13 @@ function parseRange(
     return { ok: false };
   }
   if (from > to) return { ok: false };
+  const { fromIso, toIso } = localYmdInclusiveUtcRange(from, to);
   return {
     ok: true,
     fromDate: from,
     toDate: to,
-    fromIso: `${from}T00:00:00.000Z`,
-    toIso: `${to}T23:59:59.999Z`,
+    fromIso,
+    toIso,
   };
 }
 
@@ -98,11 +100,11 @@ export async function GET(req: Request) {
   const selfRegRow = await db
     .prepare(
       `SELECT COUNT(*) AS c FROM activity_log
-       WHERE substr(timestamp, 1, 10) >= ? AND substr(timestamp, 1, 10) <= ?
+       WHERE datetime(timestamp) >= datetime(?) AND datetime(timestamp) <= datetime(?)
          AND user_id IS NOT NULL
          AND (action LIKE 'Zarejestrował konto%' OR action LIKE 'Zarejestrował konto i zalogował%')`
     )
-    .get(fromDate, toDate) as { c: number };
+    .get(fromIso, toIso) as { c: number };
   const selfRegistrations = selfRegRow.c;
 
   const terminarzViewersRow = await db
@@ -128,10 +130,10 @@ export async function GET(req: Request) {
          AND EXISTS (
            SELECT 1 FROM match_signups ms
            WHERE ms.user_id = pv.user_id
-             AND substr(ms.created_at, 1, 10) >= ? AND substr(ms.created_at, 1, 10) <= ?
+             AND datetime(ms.created_at) >= datetime(?) AND datetime(ms.created_at) <= datetime(?)
          )`
     )
-    .get(fromIso, toIso, fromDate, toDate) as { c: number };
+    .get(fromIso, toIso, fromIso, toIso) as { c: number };
   const terminarzSignedInRange = terminarzSignedRow.c;
   const pctTerminarzToSignup =
     terminarzViewers > 0

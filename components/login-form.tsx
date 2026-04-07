@@ -1,13 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
   AuthGoalPreloader,
   AUTH_SUCCESS_PRELOADER_DELAY_MS,
 } from "@/components/auth-goal-preloader";
-import { InitialPinForm } from "@/components/initial-pin-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -26,20 +25,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import Link from "next/link";
 import { isWeakPin, WEAK_PIN_MESSAGE } from "@/lib/pin-policy";
+import { notifyPostLoginPromptsUpdated } from "@/lib/post-login-prompts";
 
 export function LoginForm({
   aliases,
   nextPath,
-  openInitialPinOnMount,
   embedMode,
   onAuthenticated,
 }: {
   aliases: string[];
   nextPath: string;
-  /** Z ?setup=1 — otwórz modal ustawienia PIN-u. */
-  openInitialPinOnMount?: boolean;
   /** Pola logowania w modalu — bez pełnoekranowego preloadera i bez linków pomocniczych pod formularzem. */
   embedMode?: boolean;
   /** Po udanym logowaniu / ustawieniu PIN-u zamiast `router.push(next)`. */
@@ -50,10 +46,11 @@ export function LoginForm({
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [pin, setPin] = useState("");
+  /** Zaznaczone = długa sesja bez wylogowania po bezczynności (JWT `rememberMe`). */
+  const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showGoalPreloader, setShowGoalPreloader] = useState(false);
 
-  const [initialPinOpen, setInitialPinOpen] = useState(false);
   const [forgotOpen, setForgotOpen] = useState(false);
   const [forgotDoneOpen, setForgotDoneOpen] = useState(false);
   const [ffn, setFfn] = useState("");
@@ -62,14 +59,6 @@ export function LoginForm({
   const [fpin, setFpin] = useState("");
   const [fpin2, setFpin2] = useState("");
   const [forgotSaving, setForgotSaving] = useState(false);
-
-  useEffect(() => {
-    if (openInitialPinOnMount) setInitialPinOpen(true);
-  }, [openInitialPinOnMount]);
-
-  function openInitialPinModal() {
-    setInitialPinOpen(true);
-  }
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -82,6 +71,7 @@ export function LoginForm({
           first_name: firstName,
           last_name: lastName,
           pin,
+          remember_me: rememberMe,
         }),
       });
       const data = (await res.json().catch(() => ({}))) as {
@@ -90,8 +80,12 @@ export function LoginForm({
         pin_change_pending?: number;
       };
       if (res.status === 403 && data.code === "NEEDS_INITIAL_PIN") {
-        toast.info("Ustaw PIN, żeby dokończyć logowanie.");
-        openInitialPinModal();
+        toast.info("Konto wymaga pierwszego ustawienia PIN-u — przekierowujemy na stronę ustawiania PIN-u.");
+        const q = new URLSearchParams();
+        if (firstName.trim()) q.set("fn", firstName.trim());
+        if (lastName.trim()) q.set("ln", lastName.trim());
+        q.set("next", next);
+        router.push(`/ustaw-pin?${q.toString()}`);
         return;
       }
       if (!res.ok) {
@@ -109,12 +103,14 @@ export function LoginForm({
       if (onAuthenticated) {
         await router.refresh();
         onAuthenticated();
+        notifyPostLoginPromptsUpdated();
         return;
       }
       setShowGoalPreloader(true);
       await new Promise((r) => setTimeout(r, AUTH_SUCCESS_PRELOADER_DELAY_MS));
-      router.push(next);
+      await router.push(next);
       router.refresh();
+      notifyPostLoginPromptsUpdated();
     } finally {
       setLoading(false);
     }
@@ -204,9 +200,18 @@ export function LoginForm({
             placeholder="4–6 cyfr"
             className="mt-1"
           />
-          <p className="mt-1 text-xs text-zinc-500">
-            Unikaj oczywistych sekwencji (np. 1234). Logowanie wyłącznie imieniem, nazwiskiem i PIN-em.
-          </p>
+        </div>
+        <div className="flex items-start gap-3 pt-0.5">
+          <input
+            id="login_remember"
+            type="checkbox"
+            checked={rememberMe}
+            onChange={(e) => setRememberMe(e.target.checked)}
+            className="mt-1 h-4 w-4 rounded border border-zinc-300 text-emerald-600 focus:ring-2 focus:ring-emerald-500/30"
+          />
+          <Label htmlFor="login_remember" className="cursor-pointer font-normal leading-snug text-zinc-700">
+            Nie wylogowuj mnie
+          </Label>
         </div>
         <Button type="submit" className="w-full" disabled={loading}>
           {loading ? "Logowanie…" : "Zaloguj się"}
@@ -215,15 +220,6 @@ export function LoginForm({
 
       {!embedMode && (
         <div className="mt-4 flex flex-col gap-2 border-t border-zinc-100 pt-4">
-          <Button type="button" variant="outline" className="w-full" onClick={openInitialPinModal}>
-            Pierwsze logowanie po zmianie — ustaw PIN
-          </Button>
-          <Link
-            href="/ustaw-pin"
-            className="text-center text-sm font-medium text-emerald-800 hover:underline"
-          >
-            Otwórz pełną stronę ustawiania PIN-u
-          </Link>
           <button
             type="button"
             className="text-center text-sm font-medium text-emerald-700 hover:underline"
@@ -240,59 +236,6 @@ export function LoginForm({
           </button>
         </div>
       )}
-
-      <Dialog open={initialPinOpen} onOpenChange={setInitialPinOpen}>
-        <DialogContent className="sm:max-w-md">
-
-          <DialogHeader>
-
-            <DialogTitle>Nowa polityka logowania</DialogTitle>
-
-            <DialogDescription className="text-left text-zinc-600">
-
-              Od teraz logujesz się imieniem, nazwiskiem i PIN-em (bez wyboru piłkarza przy każdym
-
-              logowaniu). Aby ustawić PIN po raz pierwszy, potwierdź tożsamość — wybierz swojego
-
-              piłkarza (tak jak przy rejestracji), a następnie wpisz nowy PIN (4–6 cyfr).
-
-            </DialogDescription>
-
-          </DialogHeader>
-
-          <InitialPinForm
-
-            aliases={aliases}
-
-            initialFirstName={firstName.trim()}
-
-            initialLastName={lastName.trim()}
-
-            fieldIdPrefix="dlg-ip"
-
-            submitLabel="Ustaw PIN i zaloguj"
-
-            onSuccess={async () => {
-              setInitialPinOpen(false);
-              toast.success("PIN ustawiony — jesteś zalogowany");
-              if (onAuthenticated) {
-                await router.refresh();
-                onAuthenticated();
-                return;
-              }
-              setShowGoalPreloader(true);
-              await new Promise((r) => setTimeout(r, AUTH_SUCCESS_PRELOADER_DELAY_MS));
-              router.push(next);
-              router.refresh();
-            }}
-
-          />
-
-        </DialogContent>
-
-      </Dialog>
-
-
 
       <Dialog open={forgotOpen} onOpenChange={setForgotOpen}>
         <DialogContent className="sm:max-w-md">

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { toast } from "sonner";
 import { Bell } from "lucide-react";
 import {
@@ -23,32 +24,54 @@ type MeUser = {
 };
 
 export function MatchNotificationPrompt() {
+  const pathname = usePathname();
   const [user, setUser] = useState<MeUser | null | undefined>(undefined);
+  const [participationSurveyPending, setParticipationSurveyPending] = useState(false);
   const [email, setEmail] = useState("");
   const [consent, setConsent] = useState(false);
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
     try {
-      const r = await fetch("/api/auth/me", { credentials: "include" });
-      const data = (await r.json()) as { user: MeUser | null };
+      const [meRes, surveyRes] = await Promise.all([
+        fetch("/api/auth/me", { credentials: "include" }),
+        fetch("/api/user/match-participation-survey", { credentials: "include" }),
+      ]);
+      const data = (await meRes.json()) as { user: MeUser | null };
       if (!data.user) {
         setUser(null);
+        setParticipationSurveyPending(false);
         return;
       }
       setUser(data.user);
       if (data.user.email) setEmail(data.user.email);
+      if (surveyRes.ok) {
+        const s = (await surveyRes.json()) as { pending?: boolean };
+        setParticipationSurveyPending(s.pending === true);
+      } else {
+        setParticipationSurveyPending(false);
+      }
     } catch {
       setUser(null);
+      setParticipationSurveyPending(false);
     }
   }, []);
 
   useEffect(() => {
     void load();
+  }, [load, pathname]);
+
+  useEffect(() => {
+    const onUp = () => void load();
+    window.addEventListener("post-login-prompts-updated", onUp);
+    return () => window.removeEventListener("post-login-prompts-updated", onUp);
   }, [load]);
 
   const open = Boolean(
-    user && user.notification_prompt_completed === 0 && !user.pin_change_pending
+    user &&
+      user.notification_prompt_completed === 0 &&
+      !user.pin_change_pending &&
+      !participationSurveyPending
   );
 
   const dismiss = async () => {

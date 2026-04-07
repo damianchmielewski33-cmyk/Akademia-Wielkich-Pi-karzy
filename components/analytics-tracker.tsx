@@ -4,6 +4,8 @@ import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { VISITOR_ID_STORAGE_KEY } from "@/lib/constants";
 
+const LAST_PAGE_VIEW_KEY = "awp_analytics_last_pv";
+
 function getVisitorId(): string {
   if (typeof window === "undefined") return "";
   try {
@@ -28,7 +30,21 @@ export function AnalyticsTracker() {
     const now = Date.now();
     const last = lastRef.current;
     if (last && last.path === pathname && now - last.t < 1500) return;
+    try {
+      const raw = sessionStorage.getItem(LAST_PAGE_VIEW_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw) as { path: string; t: number };
+        if (parsed.path === pathname && now - parsed.t < 1500) return;
+      }
+    } catch {
+      /* ignore */
+    }
     lastRef.current = { path: pathname, t: now };
+    try {
+      sessionStorage.setItem(LAST_PAGE_VIEW_KEY, JSON.stringify({ path: pathname, t: now }));
+    } catch {
+      /* ignore */
+    }
 
     const visitorId = getVisitorId();
     if (!visitorId) return;

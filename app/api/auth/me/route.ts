@@ -26,6 +26,7 @@ export async function GET() {
       last_name: s.lastName,
       zawodnik: s.zawodnik,
       is_admin: s.isAdmin ? 1 : 0,
+      remember_me: s.rememberMe ? 1 : 0,
       needs_pin_setup: s.needsPinSetup ? 1 : 0,
       pin_change_pending: s.pinChangePending ? 1 : 0,
       profile_photo_path: row?.profile_photo_path ?? null,

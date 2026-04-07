@@ -128,10 +128,11 @@ type AnalyticsPayload = {
   screens: { screen_key: string; label: string; total_views: number; unique_visitors: number }[];
 };
 
+/** Domyślnie wczoraj–dziś (lokalnie), np. 06.04–07.04 gdy dziś jest 07.04. */
 function defaultAnalyticsDateRange(): { from: string; to: string } {
   const to = new Date();
   const from = new Date(to);
-  from.setDate(from.getDate() - 30);
+  from.setDate(from.getDate() - 1);
   return { from: formatDateLocalYmd(from), to: formatDateLocalYmd(to) };
 }
 
@@ -166,9 +167,24 @@ export function AdminPanel() {
   const [matches, setMatches] = useState<MatchRow[]>([]);
   const [stats, setStats] = useState<StatRow[]>([]);
   const [analytics, setAnalytics] = useState<AnalyticsPayload | null>(null);
-  const [analyticsFrom, setAnalyticsFrom] = useState(() => defaultAnalyticsDateRange().from);
-  const [analyticsTo, setAnalyticsTo] = useState(() => defaultAnalyticsDateRange().to);
+  const [analyticsRange, setAnalyticsRange] = useState(() => defaultAnalyticsDateRange());
   const [logoutOpen, setLogoutOpen] = useState(false);
+
+  const onAnalyticsFromChange = useCallback((v: string) => {
+    setAnalyticsRange((prev) => {
+      const from = v;
+      const to = from > prev.to ? from : prev.to;
+      return { from, to };
+    });
+  }, []);
+
+  const onAnalyticsToChange = useCallback((v: string) => {
+    setAnalyticsRange((prev) => {
+      const to = v;
+      const from = prev.from > to ? to : prev.from;
+      return { from, to };
+    });
+  }, []);
 
   const loadDashboard = useCallback(async () => {
     setLoading(true);
@@ -254,8 +270,8 @@ export function AdminPanel() {
 
   useEffect(() => {
     if (tab !== "analytics") return;
-    void loadAnalytics(analyticsFrom, analyticsTo);
-  }, [tab, analyticsFrom, analyticsTo, loadAnalytics]);
+    void loadAnalytics(analyticsRange.from, analyticsRange.to);
+  }, [tab, analyticsRange.from, analyticsRange.to, loadAnalytics]);
 
   return (
     <div className="min-h-screen bg-zinc-50 text-zinc-900">
@@ -370,11 +386,11 @@ export function AdminPanel() {
               <AnalyticsView
                 data={analytics}
                 loading={loading}
-                dateFrom={analyticsFrom}
-                dateTo={analyticsTo}
-                onDateFromChange={setAnalyticsFrom}
-                onDateToChange={setAnalyticsTo}
-                onReload={() => void loadAnalytics(analyticsFrom, analyticsTo)}
+                dateFrom={analyticsRange.from}
+                dateTo={analyticsRange.to}
+                onDateFromChange={onAnalyticsFromChange}
+                onDateToChange={onAnalyticsToChange}
+                onReload={() => void loadAnalytics(analyticsRange.from, analyticsRange.to)}
               />
             )}
             {tab === "stats" && <StatsView stats={stats} loading={loading} onReload={loadStats} />}
@@ -471,7 +487,7 @@ function AnalyticsView({
     <div>
       <Toolbar
         title="Analityka wejść"
-        description="Dane zbierane przy otwarciu stron przez użytkowników (bez panelu admina). Zmiana dat wczytuje raport ponownie."
+        description="Dane zbierane przy otwarciu stron przez użytkowników (bez panelu admina). Zakres dat to dni kalendarzowe w strefie Polski (Europe/Warsaw). Zmiana dat wczytuje raport ponownie."
         onReload={onReload}
         loading={loading}
       >

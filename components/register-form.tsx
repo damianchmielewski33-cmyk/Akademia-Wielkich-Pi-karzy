@@ -8,6 +8,7 @@ import {
   AUTH_SUCCESS_PRELOADER_DELAY_MS,
 } from "@/components/auth-goal-preloader";
 import { isWeakPin, WEAK_PIN_MESSAGE } from "@/lib/pin-policy";
+import { notifyPostLoginPromptsUpdated } from "@/lib/post-login-prompts";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -69,8 +70,9 @@ export function RegisterForm({
         setShowGoalPreloader(true);
         toast.success("Konto utworzone — jesteś zalogowany");
         await new Promise((r) => setTimeout(r, AUTH_SUCCESS_PRELOADER_DELAY_MS));
-        router.push(next ?? "/");
+        await router.push(next ?? "/");
         router.refresh();
+        notifyPostLoginPromptsUpdated();
       } else {
         setGoalPreloaderLabel("Konto gotowe! Idziemy do logowania…");
         setShowGoalPreloader(true);
@@ -144,7 +146,7 @@ export function RegisterForm({
           autoComplete="new-password"
         />
         <p className="mt-1 text-xs text-zinc-500">
-          Tym PIN-em logujesz się (imię, nazwisko, PIN). Unikaj sekwencji typu 1234 i samych powtórzeń jednej cyfry.
+          Unikaj oczywistych sekwencji (np. 1234). Logowanie wyłącznie imieniem, nazwiskiem i PIN-em.
         </p>
       </div>
       <div>

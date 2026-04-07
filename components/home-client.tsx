@@ -71,10 +71,10 @@ export function HomeClient({
     time: string;
     location: string;
   } | null>(null);
-  const [goals, setGoals] = useState("0");
-  const [assists, setAssists] = useState("0");
-  const [distance, setDistance] = useState("0");
-  const [saves, setSaves] = useState("0");
+  const [goals, setGoals] = useState("");
+  const [assists, setAssists] = useState("");
+  const [distance, setDistance] = useState("");
+  const [saves, setSaves] = useState("");
 
   useEffect(() => {
     fetch("/api/stats/pending")
@@ -102,10 +102,11 @@ export function HomeClient({
     if (!pendingMatch) return;
     const fd = new FormData();
     fd.set("match_id", String(pendingMatch.match_id));
-    fd.set("goals", goals);
-    fd.set("assists", assists);
-    fd.set("distance", distance);
-    fd.set("saves", saves);
+    const nz = (s: string) => (s.trim() === "" ? "0" : s);
+    fd.set("goals", nz(goals));
+    fd.set("assists", nz(assists));
+    fd.set("distance", nz(distance));
+    fd.set("saves", nz(saves));
     const res = await fetch("/api/stats/save", { method: "POST", body: fd });
     const text = await res.text();
     if (text === "OK") {

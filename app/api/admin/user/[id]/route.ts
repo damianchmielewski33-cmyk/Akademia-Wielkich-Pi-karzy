@@ -97,6 +97,8 @@ export async function DELETE(_req: Request, ctx: Ctx) {
   await db.prepare("UPDATE activity_log SET user_id = NULL WHERE user_id = ?").run(userId);
   await db.prepare("DELETE FROM match_lineup_slots WHERE user_id = ?").run(userId);
   await db.prepare("DELETE FROM match_stats WHERE user_id = ?").run(userId);
+  await db.prepare("DELETE FROM standalone_match_stats WHERE user_id = ?").run(userId);
+  await db.prepare("DELETE FROM participation_survey_answer WHERE user_id = ?").run(userId);
   await db.prepare("DELETE FROM match_signups WHERE user_id = ?").run(userId);
   await db.prepare("DELETE FROM users WHERE id = ?").run(userId);
 

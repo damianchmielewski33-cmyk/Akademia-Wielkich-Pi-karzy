@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { requireUser } from "@/lib/api-helpers";
+import {
+  PARTICIPATION_SURVEY_KEY,
+  PARTICIPATION_SURVEY_LOCATION,
+  PARTICIPATION_SURVEY_MATCH_DATE,
+  PARTICIPATION_SURVEY_MATCH_TIME,
+} from "@/lib/match-participation-survey";
 
 export const runtime = "nodejs";
 
@@ -28,14 +34,27 @@ export async function GET(_req: Request, ctx: Ctx) {
 
   const stats = await db
     .prepare(
-      `SELECT m.match_date, m.match_time, m.location,
-              s.goals, s.assists, s.distance, s.saves
-       FROM match_stats s
-       JOIN matches m ON m.id = s.match_id
-       WHERE s.user_id = ?
-       ORDER BY m.match_date DESC`
+      `SELECT * FROM (
+        SELECT m.match_date, m.match_time, m.location,
+               s.goals, s.assists, s.distance, s.saves
+        FROM match_stats s
+        JOIN matches m ON m.id = s.match_id
+        WHERE s.user_id = ?
+        UNION ALL
+        SELECT ? AS match_date, ? AS match_time, ? AS location,
+               sms.goals, sms.assists, sms.distance, sms.saves
+        FROM standalone_match_stats sms
+        WHERE sms.user_id = ? AND sms.survey_key = ?
+      ) ORDER BY match_date DESC`
     )
-    .all(uid) as {
+    .all(
+      uid,
+      PARTICIPATION_SURVEY_MATCH_DATE,
+      PARTICIPATION_SURVEY_MATCH_TIME,
+      PARTICIPATION_SURVEY_LOCATION,
+      uid,
+      PARTICIPATION_SURVEY_KEY
+    ) as {
     match_date: string;
     match_time: string;
     location: string;

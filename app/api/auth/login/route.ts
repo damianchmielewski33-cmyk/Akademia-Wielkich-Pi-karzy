@@ -11,6 +11,8 @@ const bodySchema = z.object({
   first_name: z.string().min(1).trim(),
   last_name: z.string().min(1).trim(),
   pin: z.string().min(1).trim(),
+  /** Zaznaczone „Nie wylogowuj mnie” — brak wymuszonego wylogowania po bezczynności. */
+  remember_me: z.boolean().optional(),
 });
 
 type LoginUserRow = {
@@ -39,7 +41,8 @@ export async function POST(req: Request) {
   if (!parsed.success) {
     return NextResponse.json({ error: "Walidacja nie powiodła się", details: parsed.error.flatten() }, { status: 400 });
   }
-  const { first_name, last_name, pin } = parsed.data;
+  const { first_name, last_name, pin, remember_me } = parsed.data;
+  const rememberMe = remember_me === true;
 
   if (!isValidPinFormat(pin)) {
     return NextResponse.json({ error: "PIN musi mieć 4–6 cyfr." }, { status: 400 });
@@ -49,7 +52,7 @@ export async function POST(req: Request) {
   const users = (await db
     .prepare(
       `SELECT id, first_name, last_name, player_alias, is_admin, pin_hash, pin_hash_pending, auth_version
-       FROM users WHERE first_name = ? AND last_name = ?`
+       FROM users WHERE lower(first_name) = lower(?) AND lower(last_name) = lower(?)`
     )
     .all(first_name, last_name)) as LoginUserRow[];
 
@@ -62,7 +65,7 @@ export async function POST(req: Request) {
     return NextResponse.json(
       {
         error:
-          "To konto wymaga ustawienia PIN-u (nowa polityka logowania). Użyj opcji ustawienia PIN na stronie logowania.",
+          "To konto wymaga ustawienia PIN-u — po zalogowaniu zostaniesz przekierowany na stronę ustawiania PIN-u.",
         code: "NEEDS_INITIAL_PIN" as const,
       },
       { status: 403 }
@@ -88,6 +91,7 @@ export async function POST(req: Request) {
     lastName: matched.last_name,
     zawodnik: matched.player_alias,
     authVersion: matched.auth_version,
+    rememberMe,
   });
   await setSessionCookie(token);
   await logActivity(matched.id, "Zalogował się");

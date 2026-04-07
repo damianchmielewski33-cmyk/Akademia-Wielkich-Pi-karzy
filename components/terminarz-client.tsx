@@ -43,6 +43,10 @@ import { LoginForm } from "@/components/login-form";
 import { MatchTransportSignupDialog } from "@/components/match-transport-signup-dialog";
 import { ALL_PLAYERS } from "@/lib/constants";
 import { appendShareSessionQuery, terminarzInviteRelativePath } from "@/lib/share-link";
+import {
+  getStandaloneSurveyMatchRow,
+  PARTICIPATION_SURVEY_KEY,
+} from "@/lib/match-participation-survey";
 
 type Props = {
   upcoming: MatchRow[];
@@ -58,6 +62,10 @@ type Props = {
   highlightMatchId?: number | null;
   /** Z URL (?zaproszenie=1) — link skopiowany z przycisku zaproszenia; uruchamia zapis po logowaniu. */
   inviteFromShare?: boolean;
+  /** Z URL (?statystyki=1 wraz z ?mecz=) — otwiera dialog statystyk po wejściu (mecz z bazy). */
+  openStatsFromUrl?: boolean;
+  /** Z URL (?statystyki_ankiety=1) — mecz spoza bazy (ankieta 27.03). */
+  openStandaloneSurveyStats?: boolean;
 };
 
 const todayISO = () => new Date().toISOString().slice(0, 10);
@@ -133,6 +141,8 @@ export function TerminarzClient({
   isAdmin,
   highlightMatchId = null,
   inviteFromShare = false,
+  openStatsFromUrl = false,
+  openStandaloneSurveyStats = false,
 }: Props) {
   const router = useRouter();
   const [view, setView] = useState<"list" | "cal">("list");
@@ -149,16 +159,19 @@ export function TerminarzClient({
   const [selectedMatchId, setSelectedMatchId] = useState<number | null>(null);
   const [calPopup, setCalPopup] = useState<MatchRow | null>(null);
   const [statsMatch, setStatsMatch] = useState<MatchRow | null>(null);
-  const [statsGoals, setStatsGoals] = useState("0");
-  const [statsAssists, setStatsAssists] = useState("0");
-  const [statsDistance, setStatsDistance] = useState("0");
-  const [statsSaves, setStatsSaves] = useState("0");
+  const [statsGoals, setStatsGoals] = useState("");
+  const [statsAssists, setStatsAssists] = useState("");
+  const [statsDistance, setStatsDistance] = useState("");
+  const [statsSaves, setStatsSaves] = useState("");
+  const [statsStandaloneSurveyKey, setStatsStandaloneSurveyKey] = useState<string | null>(null);
   const [transportSignupOpen, setTransportSignupOpen] = useState(false);
   const [transportSignupMatchId, setTransportSignupMatchId] = useState<number | null>(null);
   const [inviteGateOpen, setInviteGateOpen] = useState(false);
   const [inviteLoginInline, setInviteLoginInline] = useState(false);
   const inviteGateOpenedRef = useRef(false);
   const inviteTransportOpenedRef = useRef(false);
+  const statsOpenedFromUrlRef = useRef(false);
+  const standaloneStatsOpenedFromUrlRef = useRef(false);
 
   const missingStatsSet = useMemo(() => new Set(playedMissingStatsMatchIds), [playedMissingStatsMatchIds]);
 
@@ -315,27 +328,70 @@ export function TerminarzClient({
     setCalMonth(n.getMonth());
   }
 
-  function openStatsForMatch(m: MatchRow) {
+  const openStatsForMatch = useCallback((m: MatchRow) => {
+    setStatsStandaloneSurveyKey(null);
     setStatsMatch(m);
-    setStatsGoals("0");
-    setStatsAssists("0");
-    setStatsDistance("0");
-    setStatsSaves("0");
-  }
+    setStatsGoals("");
+    setStatsAssists("");
+    setStatsDistance("");
+    setStatsSaves("");
+  }, []);
+
+  useEffect(() => {
+    if (!openStandaloneSurveyStats || !isLoggedIn) return;
+    if (standaloneStatsOpenedFromUrlRef.current) return;
+    standaloneStatsOpenedFromUrlRef.current = true;
+    setView("list");
+    setListTab("archive");
+    setStatsStandaloneSurveyKey(PARTICIPATION_SURVEY_KEY);
+    setStatsMatch(getStandaloneSurveyMatchRow());
+    setStatsGoals("");
+    setStatsAssists("");
+    setStatsDistance("");
+    setStatsSaves("");
+    if (typeof window !== "undefined") {
+      const u = new URL(window.location.href);
+      u.searchParams.delete("statystyki_ankiety");
+      router.replace(u.pathname + u.search, { scroll: false });
+    }
+  }, [openStandaloneSurveyStats, isLoggedIn, router]);
+
+  useEffect(() => {
+    if (!openStatsFromUrl || highlightMatchId == null || !isLoggedIn) return;
+    if (statsOpenedFromUrlRef.current) return;
+    const m = allMatches.find((x) => x.id === highlightMatchId);
+    if (!m) return;
+    statsOpenedFromUrlRef.current = true;
+    setView("list");
+    if (playedConfirmed.some((p) => p.id === m.id)) setListTab("archive");
+    else setListTab("active");
+    openStatsForMatch(m);
+    if (typeof window !== "undefined") {
+      const u = new URL(window.location.href);
+      u.searchParams.delete("statystyki");
+      router.replace(u.pathname + u.search, { scroll: false });
+    }
+  }, [openStatsFromUrl, highlightMatchId, isLoggedIn, allMatches, playedConfirmed, router, openStatsForMatch]);
 
   async function saveMatchStats() {
     if (!statsMatch) return;
     const fd = new FormData();
-    fd.set("match_id", String(statsMatch.id));
-    fd.set("goals", statsGoals);
-    fd.set("assists", statsAssists);
-    fd.set("distance", statsDistance);
-    fd.set("saves", statsSaves);
+    if (statsStandaloneSurveyKey) {
+      fd.set("survey_key", statsStandaloneSurveyKey);
+    } else {
+      fd.set("match_id", String(statsMatch.id));
+    }
+    const nz = (s: string) => (s.trim() === "" ? "0" : s);
+    fd.set("goals", nz(statsGoals));
+    fd.set("assists", nz(statsAssists));
+    fd.set("distance", nz(statsDistance));
+    fd.set("saves", nz(statsSaves));
     const res = await fetch("/api/stats/save", { method: "POST", body: fd });
     const text = await res.text();
     if (res.ok && text === "OK") {
       toast.success("Statystyki zapisane");
       setStatsMatch(null);
+      setStatsStandaloneSurveyKey(null);
       router.refresh();
       return;
     }
@@ -1147,7 +1203,10 @@ export function TerminarzClient({
       <Dialog
         open={Boolean(statsMatch)}
         onOpenChange={(open) => {
-          if (!open) setStatsMatch(null);
+          if (!open) {
+            setStatsMatch(null);
+            setStatsStandaloneSurveyKey(null);
+          }
         }}
       >
         <DialogContent className="max-h-[90vh] overflow-y-auto border-emerald-900/15">
@@ -1166,7 +1225,17 @@ export function TerminarzClient({
                     {statsMatch.location}
                   </p>
                   <p className="text-xs text-zinc-500">
-                    Wpisz swoje liczby z tego spotkania. Możesz to zrobić tylko raz — później zmiany wykona administrator.
+                    {statsStandaloneSurveyKey ? (
+                      <>
+                        Wpisz swoje liczby z tego spotkania (mecz spoza terminarza). Możesz zapisać lub później
+                        zmienić dane tutaj albo w profilu — bez limitu 7 dni od daty meczu.
+                      </>
+                    ) : (
+                      <>
+                        Wpisz swoje liczby z tego spotkania. Możesz to zrobić tylko raz — później zmiany wykona
+                        administrator.
+                      </>
+                    )}
                   </p>
                 </div>
               </DialogDescription>
