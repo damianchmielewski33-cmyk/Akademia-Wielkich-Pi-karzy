@@ -9,6 +9,7 @@ import { PinSetupGate } from "@/components/pin-setup-gate";
 import { SessionIdleMonitor } from "@/components/session-idle-monitor";
 import { getAccountNavFields } from "@/lib/account-server";
 import { getServerSession } from "@/lib/auth";
+import { getDb } from "@/lib/db";
 import { SITE_NAME } from "@/lib/site";
 import "./globals.css";
 
@@ -58,6 +59,12 @@ export default async function RootLayout({
 
   const sessionIdleLogout = Boolean(session && !session.rememberMe);
 
+  const db = await getDb();
+  const settingsRow = (await db
+    .prepare("SELECT match_notification_prompt_enabled FROM app_settings WHERE id = 1")
+    .get()) as { match_notification_prompt_enabled: number } | undefined;
+  const matchNotificationPromptEnabled = (settingsRow?.match_notification_prompt_enabled ?? 0) === 1;
+
   return (
     <html lang="pl">
       <body className={`${geistSans.variable} ${geistMono.variable} murawa-bg min-h-screen antialiased font-sans`}>
@@ -73,7 +80,7 @@ export default async function RootLayout({
           </SiteShell>
         </PinSetupGate>
         <MatchParticipationSurveyPrompt />
-        <MatchNotificationPrompt />
+        {matchNotificationPromptEnabled ? <MatchNotificationPrompt /> : null}
         <Toaster
           position="top-center"
           richColors

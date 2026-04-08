@@ -53,3 +53,9 @@ export const VISITOR_ID_STORAGE_KEY = "awp_visitor_id";
 export const PIN_LOGIN_POLICY_LINES = [
   "Logujesz się imieniem, nazwiskiem i PIN-em (4–6 cyfr). Piłkarz wybrany przy rejestracji to awatar; przy pierwszym ustawieniu PIN-u potwierdzasz tożsamość tym samym wyborem.",
 ] as const;
+
+/**
+ * Tymczasowe przełączniki UI.
+ * Jeśli potrzebujesz wrócić do pop-upu powiadomień, ustaw na `true`.
+ */
+export const MATCH_NOTIFICATION_PROMPT_ENABLED = false;

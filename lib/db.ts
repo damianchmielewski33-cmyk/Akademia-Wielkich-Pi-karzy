@@ -157,6 +157,11 @@ function initSchemaSync(db: Database.Database) {
       FOREIGN KEY (match_id) REFERENCES matches(id) ON DELETE CASCADE,
       FOREIGN KEY (user_id) REFERENCES users(id)
     );
+
+    CREATE TABLE IF NOT EXISTS app_settings (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      match_notification_prompt_enabled INTEGER NOT NULL DEFAULT 0
+    );
   `);
 
   const cols = db.prepare("PRAGMA table_info(match_stats)").all() as { name: string }[];
@@ -246,6 +251,14 @@ function initSchemaSync(db: Database.Database) {
       FOREIGN KEY (user_id) REFERENCES users(id)
     );
   `);
+
+  // Upewnij się, że istnieje pojedynczy wiersz z ustawieniami (id=1).
+  const hasSettings = db.prepare("SELECT 1 AS ok FROM app_settings WHERE id = 1").get() as
+    | { ok: 1 }
+    | undefined;
+  if (!hasSettings) {
+    db.prepare("INSERT INTO app_settings (id, match_notification_prompt_enabled) VALUES (1, 0)").run();
+  }
 }
 
 /**

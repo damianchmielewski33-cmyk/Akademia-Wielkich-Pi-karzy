@@ -86,6 +86,11 @@ export async function initLibsqlSchema(client: Client) {
       FOREIGN KEY (match_id) REFERENCES matches(id) ON DELETE CASCADE,
       FOREIGN KEY (user_id) REFERENCES users(id)
     );
+
+    CREATE TABLE IF NOT EXISTS app_settings (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      match_notification_prompt_enabled INTEGER NOT NULL DEFAULT 0
+    );
   `);
 
   let names = await pragmaColumnNames(client, "match_stats");
@@ -190,4 +195,12 @@ export async function initLibsqlSchema(client: Client) {
       FOREIGN KEY (user_id) REFERENCES users(id)
     );
   `);
+
+  // Upewnij się, że istnieje pojedynczy wiersz z ustawieniami (id=1).
+  const rs = await client.execute("SELECT 1 AS ok FROM app_settings WHERE id = 1");
+  if (rs.rows.length === 0) {
+    await client.execute(
+      "INSERT INTO app_settings (id, match_notification_prompt_enabled) VALUES (1, 0)"
+    );
+  }
 }

@@ -55,6 +55,7 @@ import {
 const API = {
   summary: "/api/admin/summary",
   activity: "/api/admin/activity",
+  appSettings: "/api/admin/app-settings",
   users: "/api/admin/users",
   user: (id: number) => `/api/admin/user/${id}`,
   resetPin: (id: number) => `/api/admin/user/${id}/reset-pin`,
@@ -145,6 +146,10 @@ type Summary = {
   pin_reset_requests?: number;
 };
 
+type AppSettings = {
+  match_notification_prompt_enabled: boolean;
+};
+
 const tabs = [
   { id: "dashboard", label: "Przegląd", icon: LayoutDashboard },
   { id: "analytics", label: "Analityka", icon: BarChart3 },
@@ -160,6 +165,8 @@ export function AdminPanel() {
   const [tab, setTab] = useState<TabId>("dashboard");
   const [loading, setLoading] = useState(true);
   const [summary, setSummary] = useState<Summary | null>(null);
+  const [appSettings, setAppSettings] = useState<AppSettings | null>(null);
+  const [savingAppSettings, setSavingAppSettings] = useState(false);
   const [activity, setActivity] = useState<{ text: string; time: string; actorName: string | null }[]>(
     []
   );
@@ -189,16 +196,46 @@ export function AdminPanel() {
   const loadDashboard = useCallback(async () => {
     setLoading(true);
     try {
-      const [s, a] = await Promise.all([fetch(API.summary), fetch(API.activity)]);
-      if (!s.ok || !a.ok) throw new Error();
+      const [s, a, st] = await Promise.all([fetch(API.summary), fetch(API.activity), fetch(API.appSettings)]);
+      if (!s.ok || !a.ok || !st.ok) throw new Error();
       setSummary(await s.json());
       setActivity(await a.json());
+      setAppSettings(await st.json());
     } catch {
       toast.error("Nie udało się wczytać przeglądu");
     } finally {
       setLoading(false);
     }
   }, []);
+
+  const saveAppSetting = useCallback(
+    async (next: Partial<AppSettings>) => {
+      setSavingAppSettings(true);
+      try {
+        const res = await fetch(API.appSettings, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(next),
+        });
+        const j = (await res.json().catch(() => ({}))) as { error?: string };
+        if (!res.ok) {
+          throw new Error(j.error ?? "Nie udało się zapisać ustawienia");
+        }
+        setAppSettings((prev) => (prev ? { ...prev, ...next } : (next as AppSettings)));
+        toast.success("Zapisano ustawienia");
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Nie udało się zapisać ustawienia");
+        // odśwież z serwera, jeśli zapis nie wyszedł
+        void fetch(API.appSettings)
+          .then((r) => (r.ok ? (r.json() as Promise<AppSettings>) : null))
+          .then((data) => data && setAppSettings(data))
+          .catch(() => {});
+      } finally {
+        setSavingAppSettings(false);
+      }
+    },
+    []
+  );
 
   const loadUsers = useCallback(async () => {
     setLoading(true);
@@ -373,6 +410,11 @@ export function AdminPanel() {
             {tab === "dashboard" && (
               <DashboardView
                 summary={summary}
+                appSettings={appSettings}
+                savingAppSettings={savingAppSettings}
+                onToggleMatchNotificationPrompt={(enabled) =>
+                  void saveAppSetting({ match_notification_prompt_enabled: enabled })
+                }
                 activity={activity}
                 loading={loading}
                 onReload={loadDashboard}
@@ -692,12 +734,18 @@ function AnalyticsView({
 
 function DashboardView({
   summary,
+  appSettings,
+  savingAppSettings,
+  onToggleMatchNotificationPrompt,
   activity,
   loading,
   onReload,
   onGoToTab,
 }: {
   summary: Summary | null;
+  appSettings: AppSettings | null;
+  savingAppSettings: boolean;
+  onToggleMatchNotificationPrompt: (enabled: boolean) => void;
   activity: { text: string; time: string; actorName: string | null }[];
   loading: boolean;
   onReload: () => void;
@@ -798,6 +846,38 @@ function DashboardView({
           );
         })}
       </div>
+
+      <Card className="mt-8 border-zinc-200/80 bg-white shadow-sm">
+        <CardHeader>
+          <CardTitle className="text-lg">Ustawienia aplikacji</CardTitle>
+          <CardDescription>Funkcje sterowane przez administratora.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <label className="flex flex-wrap items-start justify-between gap-4 rounded-xl border border-zinc-200 bg-zinc-50/60 px-4 py-3">
+            <span className="min-w-0">
+              <span className="block text-sm font-semibold text-zinc-900">
+                Pop-up: powiadomienia o meczach
+              </span>
+              <span className="mt-1 block text-sm text-zinc-600">
+                Włącza/wyłącza okno z adresem e-mail i zgodą do powiadomień o nowych terminach w terminarzu.
+              </span>
+            </span>
+            <span className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                className="mt-0.5 h-4 w-4 rounded border-zinc-300 text-emerald-700 focus:ring-emerald-600"
+                checked={Boolean(appSettings?.match_notification_prompt_enabled)}
+                disabled={loading || savingAppSettings || appSettings == null}
+                onChange={(e) => onToggleMatchNotificationPrompt(e.target.checked)}
+                aria-label="Pop-up powiadomień o meczach"
+              />
+              <span className="text-sm font-medium text-zinc-700">
+                {appSettings?.match_notification_prompt_enabled ? "Włączony" : "Wyłączony"}
+              </span>
+            </span>
+          </label>
+        </CardContent>
+      </Card>
 
       <Card className="mt-8 border-zinc-200/80 bg-white shadow-sm">
         <CardHeader>
