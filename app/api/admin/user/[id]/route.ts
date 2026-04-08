@@ -94,6 +94,9 @@ export async function DELETE(_req: Request, ctx: Ctx) {
       .prepare("UPDATE matches SET signed_up = signed_up - 1 WHERE id = ? AND signed_up > 0")
       .run(row.match_id);
   }
+  await db.prepare("UPDATE page_views SET user_id = NULL WHERE user_id = ?").run(userId);
+  await db.prepare("DELETE FROM match_transport_messages WHERE user_id = ?").run(userId);
+  await db.prepare("DELETE FROM match_participation_survey WHERE user_id = ?").run(userId);
   await db.prepare("UPDATE activity_log SET user_id = NULL WHERE user_id = ?").run(userId);
   await db.prepare("DELETE FROM match_lineup_slots WHERE user_id = ?").run(userId);
   await db.prepare("DELETE FROM match_stats WHERE user_id = ?").run(userId);

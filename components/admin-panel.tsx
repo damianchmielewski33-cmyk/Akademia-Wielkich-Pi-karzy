@@ -1111,7 +1111,7 @@ function UsersView({
                           onReload();
                         }}
                       >
-                        Restartuj PIN
+                        Resetuj PIN
                       </Button>
                       <Button size="sm" variant="secondary" onClick={() => setEdit(u)}>
                         Edytuj

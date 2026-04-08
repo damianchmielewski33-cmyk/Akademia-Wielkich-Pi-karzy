@@ -231,6 +231,19 @@ function initSchemaSync(db: Database.Database) {
     ON match_transport_messages(match_id, created_at);
   `);
   db.exec(`
+    CREATE TABLE IF NOT EXISTS match_participation_survey (
+      user_id INTEGER NOT NULL,
+      match_id INTEGER NOT NULL,
+      played INTEGER NOT NULL,
+      answered_at TEXT NOT NULL DEFAULT (datetime('now')),
+      PRIMARY KEY (user_id, match_id),
+      FOREIGN KEY (user_id) REFERENCES users(id),
+      FOREIGN KEY (match_id) REFERENCES matches(id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_match_participation_survey_match
+    ON match_participation_survey(match_id);
+  `);
+  db.exec(`
     CREATE TABLE IF NOT EXISTS participation_survey_answer (
       user_id INTEGER NOT NULL,
       survey_key TEXT NOT NULL,
