@@ -34,13 +34,13 @@ const DialogContent = React.forwardRef<
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 rounded-2xl border border-emerald-100/90 bg-white/98 p-6 pt-8 shadow-[0_0_0_1px_rgba(255,255,255,0.85)_inset,0_28px_70px_-20px_rgba(5,80,55,0.38),0_12px_28px_-12px_rgba(15,23,42,0.12)] backdrop-blur-md duration-300 before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-[3px] before:rounded-t-2xl before:bg-gradient-to-r before:from-emerald-600 before:via-emerald-500 before:to-teal-500 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-[0.98] data-[state=open]:zoom-in-[0.98] data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]",
+        "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 rounded-2xl border border-emerald-100/90 bg-white/98 p-6 pt-8 shadow-[0_0_0_1px_rgba(255,255,255,0.85)_inset,0_28px_70px_-20px_rgba(5,80,55,0.38),0_12px_28px_-12px_rgba(15,23,42,0.12)] backdrop-blur-md duration-300 before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-[3px] before:rounded-t-2xl before:bg-gradient-to-r before:from-emerald-600 before:via-emerald-500 before:to-teal-500 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-[0.98] data-[state=open]:zoom-in-[0.98] data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] dark:border-emerald-800/60 dark:bg-zinc-900/98 dark:shadow-[0_0_0_1px_rgba(0,0,0,0.35)_inset,0_28px_70px_-20px_rgba(0,0,0,0.55)]",
         className
       )}
       {...props}
     >
       {children}
-      <DialogPrimitive.Close className="absolute right-3 top-[18px] flex h-9 w-9 items-center justify-center rounded-full border border-emerald-100/80 bg-white/90 text-emerald-800 shadow-sm transition-[color,background-color,box-shadow] hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-950 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/45 disabled:pointer-events-none">
+      <DialogPrimitive.Close className="absolute right-3 top-[18px] flex h-9 w-9 items-center justify-center rounded-full border border-emerald-100/80 bg-white/90 text-emerald-800 shadow-sm transition-[color,background-color,box-shadow] hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-950 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/45 disabled:pointer-events-none dark:border-emerald-800 dark:bg-zinc-800 dark:text-emerald-200 dark:hover:bg-zinc-700 dark:hover:text-emerald-50">
         <X className="h-4 w-4 shrink-0 opacity-80" />
         <span className="sr-only">Zamknij</span>
       </DialogPrimitive.Close>
@@ -71,7 +71,7 @@ const DialogTitle = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Title
     ref={ref}
-    className={cn("text-xl font-semibold leading-snug tracking-tight text-emerald-950", className)}
+    className={cn("text-xl font-semibold leading-snug tracking-tight text-emerald-950 dark:text-emerald-100", className)}
     {...props}
   />
 ));
@@ -83,7 +83,7 @@ const DialogDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Description
     ref={ref}
-    className={cn("text-sm leading-relaxed text-slate-600", className)}
+    className={cn("text-sm leading-relaxed text-slate-600 dark:text-zinc-400", className)}
     {...props}
   />
 ));

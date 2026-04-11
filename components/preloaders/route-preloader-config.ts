@@ -109,7 +109,7 @@ export function getRoutePreloaderSpec(rawPath: string): RoutePreloaderSpec {
   if (path.startsWith("/confirm")) {
     return {
       title: "Potwierdzenie",
-      subtitle: "Sprawdzamy zaproszenie — zaraz wracasz na boisko.",
+      subtitle: "Sprawdzamy zaproszenie — zaraz wybierzesz udział w meczu.",
       Preloader: HomeStadiumPreloader,
     };
   }

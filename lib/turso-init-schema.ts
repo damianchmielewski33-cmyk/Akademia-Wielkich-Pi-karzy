@@ -132,6 +132,9 @@ export async function initLibsqlSchema(client: Client) {
   if (!names.includes("pin_hash_pending")) {
     await client.execute("ALTER TABLE users ADD COLUMN pin_hash_pending TEXT");
   }
+  if (!names.includes("ui_theme")) {
+    await client.execute("ALTER TABLE users ADD COLUMN ui_theme TEXT NOT NULL DEFAULT 'light'");
+  }
 
   names = await pragmaColumnNames(client, "match_signups");
   if (!names.includes("drives_car")) {
@@ -142,6 +145,9 @@ export async function initLibsqlSchema(client: Client) {
   }
   if (!names.includes("needs_transport")) {
     await client.execute("ALTER TABLE match_signups ADD COLUMN needs_transport INTEGER NOT NULL DEFAULT 0");
+  }
+  if (!names.includes("commitment")) {
+    await client.execute("ALTER TABLE match_signups ADD COLUMN commitment INTEGER NOT NULL DEFAULT 1");
   }
 
   await client.executeMultiple(`

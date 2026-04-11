@@ -32,9 +32,10 @@ export default async function TransportPage({ params }: { params: Promise<{ matc
 
   const signupRow = await db
     .prepare(
-      `SELECT drives_car, can_take_passengers, needs_transport FROM match_signups WHERE user_id = ? AND match_id = ?`
+      `SELECT drives_car, can_take_passengers, needs_transport, COALESCE(commitment, 1) AS commitment
+       FROM match_signups WHERE user_id = ? AND match_id = ?`
     )
-    .get(session.userId, matchId) as SignupTransportRow | undefined;
+    .get(session.userId, matchId) as (SignupTransportRow & { commitment: number }) | undefined;
 
   if (!signupRow) {
     return (
@@ -47,7 +48,26 @@ export default async function TransportPage({ params }: { params: Promise<{ matc
     );
   }
 
-  const eligible = isTransportChatEligible(signupRow);
+  if (signupRow.commitment === 0) {
+    return (
+      <div className="container mx-auto max-w-lg flex-1 px-4 py-16 text-center">
+        <p className="text-zinc-800">
+          Masz status <strong>«jeszcze nie wiem»</strong> na ten mecz — transport i czat są dostępne po potwierdzeniu
+          udziału w składzie.
+        </p>
+        <Link href="/terminarz" className="mt-4 inline-block font-medium text-emerald-700 underline">
+          Przejdź do terminarza
+        </Link>
+      </div>
+    );
+  }
+
+  const transportFields: SignupTransportRow = {
+    drives_car: signupRow.drives_car,
+    can_take_passengers: signupRow.can_take_passengers,
+    needs_transport: signupRow.needs_transport,
+  };
+  const eligible = isTransportChatEligible(transportFields);
 
   const mapParticipant = (r: {
     user_id: number;
@@ -69,6 +89,7 @@ export default async function TransportPage({ params }: { params: Promise<{ matc
        FROM match_signups ms
        JOIN users u ON u.id = ms.user_id
        WHERE ms.match_id = ?
+         AND COALESCE(ms.commitment, 1) = 1
          AND ms.drives_car = 1 AND ms.can_take_passengers = 1
        ORDER BY u.first_name COLLATE NOCASE, u.last_name COLLATE NOCASE`
     )
@@ -86,6 +107,7 @@ export default async function TransportPage({ params }: { params: Promise<{ matc
        FROM match_signups ms
        JOIN users u ON u.id = ms.user_id
        WHERE ms.match_id = ?
+         AND COALESCE(ms.commitment, 1) = 1
          AND ms.drives_car = 0 AND ms.needs_transport = 1
        ORDER BY u.first_name COLLATE NOCASE, u.last_name COLLATE NOCASE`
     )
@@ -139,7 +161,7 @@ export default async function TransportPage({ params }: { params: Promise<{ matc
       location={match.location}
       played={match.played === 1}
       eligible={eligible}
-      signup={signupRow}
+      signup={transportFields}
       initialMessages={initialMessages}
       currentUserId={session.userId}
       canEditTransport={match.played === 0}

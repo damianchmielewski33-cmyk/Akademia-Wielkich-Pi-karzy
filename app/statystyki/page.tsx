@@ -94,7 +94,7 @@ export default async function StatystykiPage() {
 
   return (
     <div className="container mx-auto max-w-5xl flex-1 px-4 py-8 text-center sm:py-10">
-      <div className="relative mx-auto max-w-2xl overflow-hidden rounded-2xl border-2 border-white/40 bg-white/90 px-5 py-8 shadow-lg shadow-emerald-950/12 ring-1 ring-emerald-950/10 sm:px-8">
+      <div className="relative mx-auto max-w-2xl overflow-hidden rounded-2xl border-2 border-white/40 bg-white/90 px-5 py-8 shadow-lg shadow-emerald-950/12 ring-1 ring-emerald-950/10 dark:border-emerald-900/35 dark:bg-zinc-900/92 dark:shadow-black/35 dark:ring-emerald-900/35 sm:px-8">
         <div className="home-pitch-tile pointer-events-none absolute inset-0 opacity-[0.09]" aria-hidden />
         <div className="relative">
           <div className="pitch-rule mx-auto mb-5 w-40 sm:w-48" />
@@ -107,7 +107,7 @@ export default async function StatystykiPage() {
               className="h-12 w-12 drop-shadow-sm sm:h-14 sm:w-14"
               unoptimized
             />
-            <h1 className="text-3xl font-bold tracking-tight text-emerald-950 sm:text-4xl">Nasze mecze</h1>
+            <h1 className="text-3xl font-bold tracking-tight text-emerald-950 dark:text-emerald-100 sm:text-4xl">Nasze mecze</h1>
             <Image
               src="/soccer-ball.svg"
               alt=""
@@ -117,11 +117,11 @@ export default async function StatystykiPage() {
               unoptimized
             />
           </div>
-          <p className="mt-4 text-base text-zinc-600 sm:text-lg">Podsumowanie ligi i Twoje statystyki</p>
+          <p className="mt-4 text-base text-zinc-600 dark:text-zinc-400 sm:text-lg">Podsumowanie ligi i Twoje statystyki</p>
         </div>
       </div>
 
-      <div className="mx-auto mt-8 flex max-w-md items-center justify-center gap-4 rounded-2xl border-2 border-white/40 bg-white/95 px-5 py-4 shadow-md shadow-emerald-950/10 ring-1 ring-emerald-950/10">
+      <div className="mx-auto mt-8 flex max-w-md items-center justify-center gap-4 rounded-2xl border-2 border-white/40 bg-white/95 px-5 py-4 shadow-md shadow-emerald-950/10 ring-1 ring-emerald-950/10 dark:border-emerald-900/35 dark:bg-zinc-900/92 dark:shadow-black/35 dark:ring-emerald-900/35">
         <PlayerAvatar
           photoPath={me.profile_photo_path}
           firstName={me.first_name}
@@ -133,8 +133,8 @@ export default async function StatystykiPage() {
           firstName={me.first_name}
           lastName={me.last_name}
           nick={me.player_alias}
-          primaryClassName="text-lg font-semibold text-emerald-950"
-          secondaryClassName="text-sm text-zinc-600"
+          primaryClassName="text-lg font-semibold text-emerald-950 dark:text-emerald-100"
+          secondaryClassName="text-sm text-zinc-600 dark:text-zinc-400"
         />
       </div>
 
@@ -162,7 +162,7 @@ export default async function StatystykiPage() {
           <div className="relative mx-auto mt-6 max-w-2xl overflow-hidden rounded-2xl border-2 border-emerald-900/12 bg-emerald-950/[0.03] shadow-inner ring-1 ring-emerald-950/10">
             <div className="home-pitch-tile absolute inset-0 opacity-[0.18]" aria-hidden />
             <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/35 to-transparent" aria-hidden />
-            <p className="relative px-6 py-10 text-base font-medium text-emerald-950">
+            <p className="relative px-6 py-10 text-base font-medium text-emerald-950 dark:text-emerald-100">
               Brak zapisanych statystyk z meczów.
             </p>
           </div>
@@ -172,8 +172,8 @@ export default async function StatystykiPage() {
             <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-white/45" aria-hidden />
             <div className="pointer-events-none absolute bottom-0 left-0 h-9 w-9 rounded-tr-full border-t-2 border-r-2 border-white/40" aria-hidden />
             <div className="pointer-events-none absolute bottom-0 right-0 h-9 w-9 rounded-tl-full border-t-2 border-l-2 border-white/40" aria-hidden />
-            <div className="relative rounded-[0.85rem] bg-white/98 p-0.5 backdrop-blur-[2px]">
-              <div className="overflow-hidden rounded-[0.8rem] border border-emerald-900/10 bg-white">
+            <div className="relative rounded-[0.85rem] bg-white/98 p-0.5 backdrop-blur-[2px] dark:bg-zinc-900/95">
+              <div className="overflow-hidden rounded-[0.8rem] border border-emerald-900/10 bg-white dark:border-emerald-800/30 dark:bg-zinc-900/90">
                 <Table>
                   <TableHeader className="border-b-0 bg-gradient-to-r from-emerald-950 via-emerald-900 to-emerald-950 text-white [&_th]:border-white/10 [&_th]:text-white">
                     <TableRow className="border-0 hover:bg-transparent">
@@ -192,11 +192,11 @@ export default async function StatystykiPage() {
                         key={i}
                         className={
                           i % 2 === 0
-                            ? "border-emerald-100/80 bg-emerald-50/35 hover:bg-emerald-50/55"
-                            : "border-emerald-100/80 hover:bg-emerald-50/40"
+                            ? "border-emerald-100/80 bg-emerald-50/35 hover:bg-emerald-50/55 dark:border-emerald-900/35 dark:bg-emerald-950/25 dark:hover:bg-emerald-950/40"
+                            : "border-emerald-100/80 hover:bg-emerald-50/40 dark:border-emerald-900/35 dark:hover:bg-emerald-950/30"
                         }
                       >
-                        <TableCell className="font-medium text-emerald-950">{s.match_date}</TableCell>
+                        <TableCell className="font-medium text-emerald-950 dark:text-emerald-100">{s.match_date}</TableCell>
                         <TableCell>{s.match_time}</TableCell>
                         <TableCell className="max-w-[200px] truncate sm:max-w-none">{s.location}</TableCell>
                         <TableCell className="tabular-nums">{s.goals}</TableCell>
@@ -220,13 +220,13 @@ function StatsSection({ title, children, className }: { title: string; children:
   return (
     <section
       className={cn(
-        "relative mx-auto max-w-5xl overflow-hidden rounded-2xl border-2 border-white/40 bg-white/90 p-6 text-left shadow-lg shadow-emerald-950/10 ring-1 ring-emerald-950/10 sm:p-8",
+        "relative mx-auto max-w-5xl overflow-hidden rounded-2xl border-2 border-white/40 bg-white/90 p-6 text-left shadow-lg shadow-emerald-950/10 ring-1 ring-emerald-950/10 dark:border-emerald-900/35 dark:bg-zinc-900/92 dark:shadow-black/35 dark:ring-emerald-900/35 sm:p-8",
         className
       )}
     >
       <div className="home-pitch-tile pointer-events-none absolute inset-0 opacity-[0.06]" aria-hidden />
       <div className="relative">
-        <h2 className="text-xl font-bold tracking-tight text-emerald-950 sm:text-2xl">{title}</h2>
+        <h2 className="text-xl font-bold tracking-tight text-emerald-950 dark:text-emerald-100 sm:text-2xl">{title}</h2>
         <div className="pitch-rule mt-3 w-28 max-w-full opacity-90" />
         {children}
       </div>

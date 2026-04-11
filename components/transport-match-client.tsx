@@ -44,7 +44,7 @@ export function TransportMatchClient({
     <div className="container mx-auto max-w-2xl flex-1 px-4 py-8 sm:py-10">
       <div className="mb-6 text-center">
         <p className="text-xs font-semibold uppercase tracking-wider text-emerald-800/75">Transport</p>
-        <h1 className="mt-1 text-2xl font-bold tracking-tight text-emerald-950 sm:text-3xl">Transport na mecz</h1>
+        <h1 className="mt-1 text-2xl font-bold tracking-tight text-emerald-950 dark:text-emerald-100 sm:text-3xl">Transport na mecz</h1>
         <p className="mt-2 text-sm text-zinc-600">
           {matchDate} · {matchTime}
         </p>
@@ -75,7 +75,7 @@ export function TransportMatchClient({
         </p>
       ) : eligible ? (
         <section id="czat" className="space-y-3">
-          <h2 className="text-lg font-semibold text-emerald-950">Czat transportowy</h2>
+          <h2 className="text-lg font-semibold text-emerald-950 dark:text-emerald-100">Czat transportowy</h2>
           <p className="text-sm text-zinc-600">
             Widzą go tylko osoby z list powyżej: kierowcy z wolnymi miejscami oraz osoby potrzebujące dojazdu.
           </p>

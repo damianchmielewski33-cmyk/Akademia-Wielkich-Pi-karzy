@@ -65,7 +65,7 @@ export function SiteShell({ children, isLoggedIn, isAdmin, account = null }: Pro
   }
 
   return (
-    <div className="flex min-h-screen flex-col text-zinc-900">
+    <div className="flex min-h-screen flex-col text-zinc-900 dark:text-zinc-100">
       <NavigationLoadingOverlay />
       <AnalyticsTracker />
       <header className="relative z-30 border-b border-emerald-950/30 bg-gradient-to-r from-emerald-950 via-emerald-900 to-emerald-950 text-white shadow-lg">
@@ -221,7 +221,7 @@ export function SiteShell({ children, isLoggedIn, isAdmin, account = null }: Pro
             alt=""
             width={220}
             height={220}
-            className="absolute -right-16 top-8 opacity-[0.06] sm:top-12"
+            className="absolute -right-16 top-8 opacity-[0.06] sm:top-12 dark:opacity-[0.04]"
             unoptimized
           />
           <Image
@@ -229,7 +229,7 @@ export function SiteShell({ children, isLoggedIn, isAdmin, account = null }: Pro
             alt=""
             width={160}
             height={160}
-            className="absolute -left-10 bottom-24 opacity-[0.05] sm:bottom-32"
+            className="absolute -left-10 bottom-24 opacity-[0.05] sm:bottom-32 dark:opacity-[0.035]"
             unoptimized
           />
           <Image
@@ -237,7 +237,7 @@ export function SiteShell({ children, isLoggedIn, isAdmin, account = null }: Pro
             alt=""
             width={120}
             height={120}
-            className="absolute bottom-8 right-[18%] opacity-[0.04] max-sm:hidden"
+            className="absolute bottom-8 right-[18%] opacity-[0.04] max-sm:hidden dark:opacity-[0.03]"
             unoptimized
           />
         </div>

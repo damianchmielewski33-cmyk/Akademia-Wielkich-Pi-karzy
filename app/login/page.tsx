@@ -22,18 +22,18 @@ export default async function LoginPage({ searchParams }: Props) {
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center p-4 py-12">
-      <div className="w-full max-w-md rounded-2xl border border-zinc-200/80 bg-white p-8 shadow-sm">
-        <h1 className="text-center text-2xl font-bold tracking-tight text-zinc-900">Logowanie</h1>
-        <p className="mt-2 text-center text-sm text-zinc-600">
+      <div className="w-full max-w-md rounded-2xl border border-zinc-200/80 bg-white p-8 shadow-sm dark:border-zinc-700/80 dark:bg-zinc-900/90 dark:shadow-black/30">
+        <h1 className="text-center text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">Logowanie</h1>
+        <p className="mt-2 text-center text-sm text-zinc-600 dark:text-zinc-400">
           Wpisz imię, nazwisko i PIN (4–6 cyfr)
         </p>
         {wylogowano === "bezczynnosc" ? (
-          <p className="mt-3 rounded-lg border border-amber-200/90 bg-amber-50/90 px-3 py-2 text-center text-sm text-amber-950">
+          <p className="mt-3 rounded-lg border border-amber-200/90 bg-amber-50/90 px-3 py-2 text-center text-sm text-amber-950 dark:border-amber-800/60 dark:bg-amber-950/35 dark:text-amber-100">
             Wylogowano z powodu braku aktywności (30 min). Zaloguj się ponownie — możesz zaznaczyć „Nie wylogowuj
             mnie”, aby tego uniknąć.
           </p>
         ) : null}
-        <ul className="mt-3 list-inside list-disc space-y-1 text-xs text-zinc-600">
+        <ul className="mt-3 list-inside list-disc space-y-1 text-xs text-zinc-600 dark:text-zinc-400">
           {PIN_LOGIN_POLICY_LINES.map((line, i) => (
             <li key={i}>{line}</li>
           ))}
@@ -49,11 +49,11 @@ export default async function LoginPage({ searchParams }: Props) {
                 ? `/register?next=${encodeURIComponent(nextPath)}`
                 : "/register"
             }
-            className="block font-medium text-emerald-700 hover:underline"
+            className="block font-medium text-emerald-700 hover:underline dark:text-emerald-400"
           >
             Nie masz konta? Zarejestruj się
           </Link>
-          <Link href="/" className="block text-emerald-600 hover:underline">
+          <Link href="/" className="block text-emerald-600 hover:underline dark:text-emerald-400">
             ← Powrót na stronę główną
           </Link>
         </div>

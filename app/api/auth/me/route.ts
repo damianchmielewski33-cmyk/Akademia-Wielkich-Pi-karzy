@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "@/lib/auth";
 import { getDb } from "@/lib/db";
+import { normalizeUiTheme } from "@/lib/ui-theme";
 
 export async function GET() {
   const s = await getServerSession();
@@ -8,7 +9,7 @@ export async function GET() {
   const db = await getDb();
   const row = (await db
     .prepare(
-      `SELECT profile_photo_path, email, match_notifications_consent, notification_prompt_completed
+      `SELECT profile_photo_path, email, match_notifications_consent, notification_prompt_completed, ui_theme
        FROM users WHERE id = ?`
     )
     .get(s.userId)) as
@@ -17,6 +18,7 @@ export async function GET() {
         email: string | null;
         match_notifications_consent: number;
         notification_prompt_completed: number;
+        ui_theme: string | null;
       }
     | undefined;
   return NextResponse.json({
@@ -33,6 +35,7 @@ export async function GET() {
       email: row?.email ?? null,
       match_notifications_consent: row?.match_notifications_consent ?? 0,
       notification_prompt_completed: row?.notification_prompt_completed ?? 0,
+      ui_theme: normalizeUiTheme(row?.ui_theme),
     },
   });
 }

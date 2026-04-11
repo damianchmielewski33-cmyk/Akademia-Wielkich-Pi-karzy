@@ -35,7 +35,7 @@ export function ConfirmPlayedClient({ matchId }: { matchId: string }) {
         <CardHeader>
           <CardTitle>Potwierdzanie rozegrania</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4 text-sm text-emerald-900">
+        <CardContent className="space-y-4 text-sm text-emerald-900 dark:text-emerald-100">
           {status === "idle" && <p>Przetwarzanie…</p>}
           {status === "err" && <p>Nie udalo sie potwierdzic. Zaloguj sie jako admin i sprobuj ponownie.</p>}
           <Button variant="outline" onClick={() => router.push("/terminarz")}>

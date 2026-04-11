@@ -81,7 +81,7 @@ export async function GET(req: Request) {
               u.profile_photo_path
        FROM match_signups ms
        JOIN users u ON u.id = ms.user_id
-       WHERE ms.match_id = ?
+       WHERE ms.match_id = ? AND COALESCE(ms.commitment, 1) = 1
        ORDER BY u.first_name ASC, u.last_name ASC`
     )
     .all(selected.id)) as {
@@ -177,7 +177,9 @@ export async function PUT(req: Request) {
 
   const signedUp = new Set(
     (
-      (await db.prepare(`SELECT user_id FROM match_signups WHERE match_id = ?`).all(match_id)) as {
+      (await db
+      .prepare(`SELECT user_id FROM match_signups WHERE match_id = ? AND COALESCE(commitment, 1) = 1`)
+      .all(match_id)) as {
         user_id: number;
       }[]
     ).map((r) => r.user_id)

@@ -4,7 +4,7 @@ import { getServerSession } from "@/lib/auth";
 import {
   buildPlayersData,
   categorizeMatches,
-  userSignedMap,
+  userSignupKindMap,
   type SignupRow,
 } from "@/lib/terminarz-shared";
 import { TerminarzClient } from "@/components/terminarz-client";
@@ -45,7 +45,8 @@ export default async function TerminarzPage({ searchParams }: PageProps) {
 
   const signups = await db
     .prepare(
-      `SELECT ms.match_id, ms.paid, u.id AS user_id, u.first_name, u.last_name,
+      `SELECT ms.match_id, ms.paid, COALESCE(ms.commitment, 1) AS commitment,
+              u.id AS user_id, u.first_name, u.last_name,
               u.player_alias AS zawodnik, u.profile_photo_path
        FROM match_signups ms
        JOIN users u ON u.id = ms.user_id
@@ -54,7 +55,7 @@ export default async function TerminarzPage({ searchParams }: PageProps) {
     .all() as SignupRow[];
 
   const playersData = buildPlayersData(matches, signups);
-  const signedMap = userSignedMap(signups, session?.zawodnik);
+  const userSignupKind = userSignupKindMap(signups, session?.zawodnik);
   const { upcoming, playedConfirmed } = categorizeMatches(matches);
 
   let playedMissingStatsMatchIds: number[] = [];
@@ -63,7 +64,7 @@ export default async function TerminarzPage({ searchParams }: PageProps) {
       .prepare(
         `SELECT m.id
          FROM matches m
-         JOIN match_signups s ON s.match_id = m.id AND s.user_id = ?
+         JOIN match_signups s ON s.match_id = m.id AND s.user_id = ? AND COALESCE(s.commitment, 1) = 1
          WHERE m.played = 1
            AND NOT EXISTS (
              SELECT 1 FROM match_stats st
@@ -81,7 +82,7 @@ export default async function TerminarzPage({ searchParams }: PageProps) {
         playedConfirmed={playedConfirmed}
         allMatches={matches}
         playersData={playersData}
-        userSigned={signedMap}
+        userSignupKind={userSignupKind}
         playedMissingStatsMatchIds={playedMissingStatsMatchIds}
         isLoggedIn={Boolean(session)}
         isAdmin={session?.isAdmin ?? false}

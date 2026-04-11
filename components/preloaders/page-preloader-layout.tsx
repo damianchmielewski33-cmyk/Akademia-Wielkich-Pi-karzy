@@ -26,14 +26,16 @@ export function PagePreloaderLayout({ title, subtitle, children, className, vari
       <div className={cn("w-full text-center", full ? "max-w-[min(96vw,80rem)]" : "max-w-lg")}>
         <h2
           className={cn(
-            "font-semibold tracking-tight text-emerald-900",
+            "font-semibold tracking-tight text-emerald-900 dark:text-emerald-100",
             full ? "text-xl sm:text-3xl md:text-4xl" : "text-base"
           )}
         >
           {title}
         </h2>
         {subtitle ? (
-          <p className={cn("text-zinc-600", full ? "mt-3 text-base sm:text-lg md:text-xl" : "mt-1.5 text-sm")}>
+          <p
+            className={cn("text-zinc-600 dark:text-zinc-400", full ? "mt-3 text-base sm:text-lg md:text-xl" : "mt-1.5 text-sm")}
+          >
             {subtitle}
           </p>
         ) : null}

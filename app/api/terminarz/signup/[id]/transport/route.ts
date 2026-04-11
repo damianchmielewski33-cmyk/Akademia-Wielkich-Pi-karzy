@@ -40,10 +40,18 @@ export async function PATCH(req: Request, ctx: Ctx) {
 
   const db = await getDb();
   const signup = await db
-    .prepare("SELECT id FROM match_signups WHERE user_id = ? AND match_id = ?")
-    .get(gate.session.userId, mid);
+    .prepare(
+      "SELECT id, COALESCE(commitment, 1) AS commitment FROM match_signups WHERE user_id = ? AND match_id = ?"
+    )
+    .get(gate.session.userId, mid) as { id: number; commitment: number } | undefined;
   if (!signup) {
     return NextResponse.json({ error: "Nie jesteś zapisany na ten mecz." }, { status: 400 });
+  }
+  if (signup.commitment === 0) {
+    return NextResponse.json(
+      { error: "Potwierdź najpierw udział w terminarzu (status «jeszcze nie wiem»)." },
+      { status: 400 }
+    );
   }
   const match = await db.prepare("SELECT played FROM matches WHERE id = ?").get(mid) as { played: number } | undefined;
   if (!match || match.played === 1) {

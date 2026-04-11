@@ -11,6 +11,13 @@ function todayISO() {
   return new Date().toISOString().slice(0, 10);
 }
 
+function parseCommitment(raw: unknown): "tentative" | "confirmed" {
+  if (raw === null || typeof raw !== "object") return "confirmed";
+  const o = raw as Record<string, unknown>;
+  if (o.commitment === "tentative") return "tentative";
+  return "confirmed";
+}
+
 function parseTransportBody(raw: unknown): SignupTransportRow | { error: string } {
   if (raw === null || typeof raw !== "object") {
     return { drives_car: 0, can_take_passengers: 0, needs_transport: 0 };
@@ -60,9 +67,14 @@ export async function POST(req: Request, ctx: Ctx) {
       { status: 400 }
     );
   }
-  if (match.signed_up >= match.max_slots) {
-    return NextResponse.json({ error: "Brak miejsc na ten mecz!" }, { status: 400 });
+
+  let rawBody: unknown = {};
+  try {
+    rawBody = await req.json();
+  } catch {
+    rawBody = {};
   }
+  const commitment = parseCommitment(rawBody);
 
   const existing = await db
     .prepare("SELECT id FROM match_signups WHERE user_id = ? AND match_id = ?")
@@ -71,12 +83,24 @@ export async function POST(req: Request, ctx: Ctx) {
     return NextResponse.json({ error: "Już jesteś zapisany na ten mecz!" }, { status: 400 });
   }
 
-  let rawBody: unknown = {};
-  try {
-    rawBody = await req.json();
-  } catch {
-    rawBody = {};
+  if (commitment === "tentative") {
+    await db
+      .prepare(
+        `INSERT INTO match_signups (user_id, match_id, paid, commitment, drives_car, can_take_passengers, needs_transport)
+         VALUES (?, ?, 0, 0, 0, 0, 0)`
+      )
+      .run(gate.session.userId, mid);
+    await logActivity(
+      gate.session.userId,
+      `Zaznaczył «jeszcze nie wiem» przy meczu ${match.match_date} ${match.match_time} (${match.location}), id ${mid}`
+    );
+    return NextResponse.json({ ok: true });
   }
+
+  if (match.signed_up >= match.max_slots) {
+    return NextResponse.json({ error: "Brak miejsc na ten mecz!" }, { status: 400 });
+  }
+
   const tr = parseTransportBody(rawBody);
   if ("error" in tr && typeof tr.error === "string") {
     return NextResponse.json({ error: tr.error }, { status: 400 });
@@ -85,8 +109,8 @@ export async function POST(req: Request, ctx: Ctx) {
 
   await db
     .prepare(
-      `INSERT INTO match_signups (user_id, match_id, paid, drives_car, can_take_passengers, needs_transport)
-       VALUES (?, ?, 0, ?, ?, ?)`
+      `INSERT INTO match_signups (user_id, match_id, paid, commitment, drives_car, can_take_passengers, needs_transport)
+       VALUES (?, ?, 0, 1, ?, ?, ?)`
     )
     .run(
       gate.session.userId,

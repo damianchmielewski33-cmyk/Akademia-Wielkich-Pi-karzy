@@ -307,7 +307,7 @@ export function MatchLineupView({ matchDate, matchTime, location, players, home,
   return (
     <div className="space-y-4">
       <div className="text-center sm:text-left">
-        <h1 className="text-2xl font-bold tracking-tight text-emerald-950 sm:text-3xl">Składy na mecz</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-emerald-950 dark:text-emerald-100 sm:text-3xl">Składy na mecz</h1>
         <p className="mt-1 text-sm text-zinc-600 sm:text-base">
           {matchDate} · {matchTime} · {location}
         </p>

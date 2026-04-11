@@ -10,6 +10,7 @@ import {
   CalendarDays,
   Car,
   ChevronRight,
+  HelpCircle,
   LayoutGrid,
   LogIn,
   LogOut,
@@ -36,8 +37,10 @@ import type { MatchRow } from "@/lib/db";
 
 type Props = {
   nextMatch: MatchRow | null;
+  /** Np. „3 osoby się zastanawiają” — pusty gdy brak zapisów «jeszcze nie wiem». */
+  nextMatchTentativeLine: string;
   lineupPublicNextMatch: boolean;
-  userSigned: boolean;
+  nextMatchSignup: "none" | "tentative" | "confirmed";
   /** Kafelek transportu zawsze widoczny po zapisie; link działa w lokalny dzień meczu. */
   transportHomeActive: boolean;
   isLoggedIn: boolean;
@@ -50,8 +53,9 @@ type Props = {
 
 export function HomeClient({
   nextMatch,
+  nextMatchTentativeLine,
   lineupPublicNextMatch,
-  userSigned,
+  nextMatchSignup,
   transportHomeActive,
   isLoggedIn,
   isAdmin,
@@ -62,6 +66,8 @@ export function HomeClient({
 }: Props) {
   const router = useRouter();
   const [transportSignupOpen, setTransportSignupOpen] = useState(false);
+  const [transportIntent, setTransportIntent] = useState<"signup" | "confirm">("signup");
+  const [tentativeBusy, setTentativeBusy] = useState(false);
   const [signupOpen, setSignupOpen] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [statsOpen, setStatsOpen] = useState(false);
@@ -95,7 +101,39 @@ export function HomeClient({
 
   function openTransportSignup() {
     if (!nextMatch) return;
+    setTransportIntent("signup");
     setTransportSignupOpen(true);
+  }
+
+  function openConfirmFromTentative() {
+    if (!nextMatch) return;
+    setTransportIntent("confirm");
+    setTransportSignupOpen(true);
+  }
+
+  async function signupTentativeHome() {
+    if (!nextMatch) return;
+    setTentativeBusy(true);
+    try {
+      const res = await fetch(`/api/terminarz/signup/${nextMatch.id}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ commitment: "tentative" }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      if (res.status === 401) {
+        window.location.href = "/login";
+        return;
+      }
+      if (!res.ok) {
+        toast.error(typeof data.error === "string" ? data.error : "Nie udało się zapisać");
+        return;
+      }
+      toast.success("Zapisano: jeszcze nie wiem");
+      router.refresh();
+    } finally {
+      setTentativeBusy(false);
+    }
   }
 
   async function saveStats() {
@@ -167,12 +205,12 @@ export function HomeClient({
               className="shadow-md"
             />
             <div className="text-left">
-              <h2 className="text-2xl font-semibold text-emerald-950">Witaj!</h2>
-              <p className="text-lg font-medium text-emerald-900">
+              <h2 className="text-2xl font-semibold text-emerald-950 dark:text-emerald-100">Witaj!</h2>
+              <p className="text-lg font-medium text-emerald-900 dark:text-emerald-200">
                 {`${firstName} ${lastName}`.trim() || zawodnik}
               </p>
               {zawodnik && `${firstName} ${lastName}`.trim() ? (
-                <p className="text-sm text-zinc-600">{zawodnik}</p>
+                <p className="text-sm text-zinc-600 dark:text-zinc-400">{zawodnik}</p>
               ) : null}
             </div>
           </div>
@@ -189,7 +227,9 @@ export function HomeClient({
               className="h-12 w-12 drop-shadow-sm sm:h-14 sm:w-14"
               unoptimized
             />
-            <h1 className="text-3xl font-bold tracking-tight text-emerald-950 sm:text-4xl">Zostań gwiazdą boiska</h1>
+            <h1 className="text-3xl font-bold tracking-tight text-emerald-950 dark:text-emerald-100 sm:text-4xl">
+              Zostań gwiazdą boiska
+            </h1>
             <Image
               src="/soccer-ball.svg"
               alt=""
@@ -199,7 +239,7 @@ export function HomeClient({
               unoptimized
             />
           </div>
-          <p className="mt-4 text-base text-zinc-600 sm:text-lg">
+          <p className="mt-4 text-base text-zinc-600 dark:text-zinc-400 sm:text-lg">
             {isLoggedIn ? "Wybierz, co chcesz zrobić" : "Zaloguj się lub załóż konto, aby korzystać z systemu"}
           </p>
         </div>
@@ -221,32 +261,71 @@ export function HomeClient({
                 {nextMatch.match_date} · {nextMatch.match_time}
               </p>
               <p className="mt-1 text-sm text-emerald-100/95">{nextMatch.location}</p>
-              <p className="mt-2 text-xs font-medium uppercase tracking-wider text-white/75">
-                Zapisy {nextMatch.signed_up}/{nextMatch.max_slots}
-              </p>
+              <div className="mt-2 space-y-0.5 text-xs font-medium uppercase tracking-wider text-white/75">
+                <p>
+                  {nextMatch.signed_up}/{nextMatch.max_slots} zapisanych
+                </p>
+                {nextMatchTentativeLine ? (
+                  <p className="text-[11px] font-semibold normal-case tracking-normal text-amber-100/95">
+                    {nextMatchTentativeLine}
+                  </p>
+                ) : null}
+              </div>
               {isLoggedIn ? (
-                userSigned ? (
+                nextMatchSignup === "confirmed" ? (
                   <div className="mt-4 rounded-xl border border-white/30 bg-white/15 py-3 text-sm font-medium text-white backdrop-blur-sm">
                     Jesteś zapisany na ten mecz
                   </div>
+                ) : nextMatchSignup === "tentative" ? (
+                  <div className="mt-4 space-y-2">
+                    <div className="rounded-xl border border-amber-200/50 bg-amber-500/20 py-2.5 text-sm font-medium text-white backdrop-blur-sm">
+                      Status: jeszcze nie wiem (bez miejsca w składzie)
+                    </div>
+                    {nextMatch.max_slots - nextMatch.signed_up > 0 ? (
+                      <Button
+                        className="w-full border-0 bg-white font-semibold text-emerald-900 shadow-md hover:bg-emerald-50 dark:bg-zinc-100 dark:text-emerald-950 dark:hover:bg-white"
+                        onClick={openConfirmFromTentative}
+                      >
+                        Potwierdzam — wpadam na mecz
+                      </Button>
+                    ) : (
+                      <p className="text-xs text-emerald-100/90">Skład jest pełny — nie możesz teraz potwierdzić udziału.</p>
+                    )}
+                  </div>
                 ) : (
-                  <Button
-                    className="mt-4 w-full border-0 bg-white font-semibold text-emerald-900 shadow-md hover:bg-emerald-50"
-                    onClick={openTransportSignup}
-                  >
-                    Zapisz się na mecz
-                  </Button>
+                  <div className="mt-4 space-y-2">
+                    {nextMatch.max_slots - nextMatch.signed_up > 0 ? (
+                      <Button
+                        className="w-full border-0 bg-white font-semibold text-emerald-900 shadow-md hover:bg-emerald-50 dark:bg-zinc-100 dark:text-emerald-950 dark:hover:bg-white"
+                        onClick={openTransportSignup}
+                      >
+                        Zapisz się na mecz
+                      </Button>
+                    ) : (
+                      <p className="text-xs text-emerald-100/90">Skład pełny — możesz oznaczyć wstępne zainteresowanie.</p>
+                    )}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full border-white/40 bg-white/10 font-medium text-white hover:bg-white/20"
+                      disabled={tentativeBusy}
+                      onClick={() => void signupTentativeHome()}
+                    >
+                      <HelpCircle className="mr-2 h-4 w-4 shrink-0" aria-hidden />
+                      Jeszcze nie wiem
+                    </Button>
+                  </div>
                 )
               ) : (
                 <Button className="mt-4 w-full border border-white/40 bg-white/10 font-semibold text-white backdrop-blur-sm hover:bg-white/20" asChild>
                   <Link href="/login">Zaloguj się, aby się zapisać</Link>
                 </Button>
               )}
-              {isLoggedIn && userSigned && (
+              {isLoggedIn && nextMatchSignup === "confirmed" && (
                 <div className="mt-4 space-y-2">
                   {transportHomeActive ? (
                     <Button
-                      className="w-full border-0 bg-emerald-100 font-semibold text-emerald-950 shadow-md hover:bg-white"
+                      className="w-full border-0 bg-emerald-100 font-semibold text-emerald-950 shadow-md hover:bg-white dark:bg-emerald-800/90 dark:text-emerald-50 dark:hover:bg-emerald-700/90"
                       asChild
                     >
                       <Link href={`/transport/${nextMatch.id}`} className="inline-flex items-center justify-center gap-2">
@@ -278,7 +357,7 @@ export function HomeClient({
               <div className="mt-4 border-t border-white/20 pt-4">
                 {lineupPublicNextMatch ? (
                   <Button
-                    className="w-full border-0 bg-emerald-100 font-semibold text-emerald-950 shadow-md hover:bg-white"
+                    className="w-full border-0 bg-emerald-100 font-semibold text-emerald-950 shadow-md hover:bg-white dark:bg-emerald-800/90 dark:text-emerald-50 dark:hover:bg-emerald-700/90"
                     asChild
                   >
                     <Link href="/sklady" className="inline-flex items-center justify-center gap-2">
@@ -316,7 +395,7 @@ export function HomeClient({
           open={transportSignupOpen}
           onOpenChange={setTransportSignupOpen}
           matchId={nextMatch.id}
-          intent="signup"
+          intent={transportIntent === "confirm" ? "confirm" : "signup"}
           onCompleted={() => {
             setSignupOpen(true);
             router.refresh();
@@ -329,7 +408,7 @@ export function HomeClient({
           <DialogHeader>
             <DialogTitle>Zostałeś zapisany na mecz</DialogTitle>
             <DialogDescription asChild>
-              <div className="text-emerald-900">
+              <div className="text-emerald-900 dark:text-emerald-100">
                 {nextMatch && (
                   <>
                     <p>
@@ -340,7 +419,7 @@ export function HomeClient({
                     <Link
                       href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(nextMatch.location)}`}
                       target="_blank"
-                      className="mt-2 inline-block text-emerald-700 underline"
+                      className="mt-2 inline-block text-emerald-700 underline dark:text-emerald-400"
                     >
                       Otwórz w Google Maps
                     </Link>

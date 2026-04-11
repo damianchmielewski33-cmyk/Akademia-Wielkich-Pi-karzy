@@ -51,11 +51,12 @@ export function TransportRosters({ drivers, riders, currentUserId }: Props) {
   return (
     <section className="space-y-4" aria-labelledby="transport-rosters-heading">
       <div>
-        <h2 id="transport-rosters-heading" className="text-lg font-semibold text-emerald-950">
+        <h2 id="transport-rosters-heading" className="text-lg font-semibold text-emerald-950 dark:text-emerald-100">
           Kto z kim może jechać
         </h2>
         <p className="mt-1 text-sm leading-relaxed text-zinc-600">
-          <span className="font-medium text-emerald-900">Zielona kolumna</span> — osoby z wolnymi miejscami w aucie i
+          <span className="font-medium text-emerald-900 dark:text-emerald-200">Zielona kolumna</span> — osoby z wolnymi
+          miejscami w aucie i
           chęcią zabrania pasażerów. <span className="font-medium text-sky-900">Niebieska kolumna</span> — osoby, które
           jadą komunikacją i <strong>potrzebują dojazdu</strong> od kogoś z drużyny. Ustal szczegóły w czacie poniżej
           (jeśli masz dostęp).

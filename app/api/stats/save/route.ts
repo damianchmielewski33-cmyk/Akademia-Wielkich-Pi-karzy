@@ -130,7 +130,9 @@ export async function POST(req: Request) {
     );
   }
   const signup = (await db
-    .prepare("SELECT 1 AS ok FROM match_signups WHERE user_id = ? AND match_id = ?")
+    .prepare(
+      "SELECT 1 AS ok FROM match_signups WHERE user_id = ? AND match_id = ? AND COALESCE(commitment, 1) = 1"
+    )
     .get(session.userId, match_id)) as { ok: number } | undefined;
   if (!signup) {
     return NextResponse.json(

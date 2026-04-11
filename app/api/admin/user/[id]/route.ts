@@ -86,13 +86,15 @@ export async function DELETE(_req: Request, ctx: Ctx) {
   if (!target) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const signupMatchIds = (await db
-    .prepare("SELECT match_id FROM match_signups WHERE user_id = ?")
-    .all(userId)) as { match_id: number }[];
+    .prepare("SELECT match_id, COALESCE(commitment, 1) AS commitment FROM match_signups WHERE user_id = ?")
+    .all(userId)) as { match_id: number; commitment: number }[];
 
   for (const row of signupMatchIds) {
-    await db
-      .prepare("UPDATE matches SET signed_up = signed_up - 1 WHERE id = ? AND signed_up > 0")
-      .run(row.match_id);
+    if (row.commitment === 1) {
+      await db
+        .prepare("UPDATE matches SET signed_up = signed_up - 1 WHERE id = ? AND signed_up > 0")
+        .run(row.match_id);
+    }
   }
   await db.prepare("UPDATE page_views SET user_id = NULL WHERE user_id = ?").run(userId);
   await db.prepare("DELETE FROM match_transport_messages WHERE user_id = ?").run(userId);

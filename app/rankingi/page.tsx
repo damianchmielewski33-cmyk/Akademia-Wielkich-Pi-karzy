@@ -113,7 +113,7 @@ export default async function RankingiPage() {
             className="h-12 w-12 drop-shadow-sm sm:h-14 sm:w-14"
             unoptimized
           />
-          <h1 className="text-3xl font-bold tracking-tight text-emerald-950 sm:text-4xl">Rankingi</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-emerald-950 dark:text-emerald-100 sm:text-4xl">Rankingi</h1>
           <Image
             src="/soccer-ball.svg"
             alt=""
@@ -123,7 +123,7 @@ export default async function RankingiPage() {
             unoptimized
           />
         </div>
-        <p className="mt-4 text-base text-zinc-600 sm:text-lg">
+        <p className="mt-4 text-base text-zinc-600 dark:text-zinc-400 sm:text-lg">
           Tabele goli, asyst, dystansu, obron i punktów łącznie
         </p>
       </div>
@@ -231,15 +231,15 @@ function RankBlock({
       <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-white/45" aria-hidden />
       <div className="pointer-events-none absolute bottom-0 left-0 h-9 w-9 rounded-tr-full border-t-2 border-r-2 border-white/40" aria-hidden />
       <div className="pointer-events-none absolute bottom-0 right-0 h-9 w-9 rounded-tl-full border-t-2 border-l-2 border-white/40" aria-hidden />
-      <div className="relative rounded-[0.85rem] bg-white/98 p-0.5 backdrop-blur-[2px]">
-        <div className="overflow-hidden rounded-[0.8rem] border border-emerald-900/10 bg-white">
+      <div className="relative rounded-[0.85rem] bg-white/98 p-0.5 backdrop-blur-[2px] dark:bg-zinc-900/95">
+        <div className="overflow-hidden rounded-[0.8rem] border border-emerald-900/10 bg-white dark:border-emerald-800/30 dark:bg-zinc-900/90">
           <div className={`flex items-center justify-center gap-2 px-4 py-3 ${headerBar}`}>
             <Icon className="h-5 w-5 shrink-0 text-white" strokeWidth={2.25} aria-hidden />
             <h2 className="text-center text-base font-bold tracking-tight text-white sm:text-lg">{title}</h2>
           </div>
           <Table>
-            <TableHeader className="border-b border-emerald-200/80 bg-emerald-50/90 text-emerald-950 [&_th]:text-emerald-900">
-              <TableRow className="border-0 hover:bg-transparent">
+            <TableHeader className="border-b border-emerald-200/80 bg-emerald-50/90 text-emerald-950 [&_th]:text-emerald-900 dark:border-emerald-800/80 dark:bg-emerald-950/55 dark:text-emerald-100 dark:[&_th]:text-emerald-200">
+              <TableRow className="border-0 hover:bg-transparent dark:hover:bg-transparent">
                 <TableHead className="w-12">#</TableHead>
                 <TableHead>Zawodnik</TableHead>
                 <TableHead className="text-right">Wartość</TableHead>
@@ -251,11 +251,11 @@ function RankBlock({
                   key={`${r.userId}-${r.rank}-${col}`}
                   className={
                     i % 2 === 0
-                      ? "border-emerald-100/80 bg-emerald-50/35 hover:bg-emerald-50/55"
-                      : "border-emerald-100/80 hover:bg-emerald-50/40"
+                      ? "border-emerald-100/80 bg-emerald-50/35 hover:bg-emerald-50/55 dark:border-emerald-900/35 dark:bg-emerald-950/25 dark:hover:bg-emerald-950/40"
+                      : "border-emerald-100/80 hover:bg-emerald-50/40 dark:border-emerald-900/35 dark:hover:bg-emerald-950/30"
                   }
                 >
-                  <TableCell className="font-bold tabular-nums text-emerald-800">{r.rank}</TableCell>
+                  <TableCell className="font-bold tabular-nums text-emerald-800 dark:text-emerald-200">{r.rank}</TableCell>
                   <TableCell>
                     <div className="flex min-w-0 items-center gap-2">
                       <PlayerAvatar
@@ -272,7 +272,7 @@ function RankBlock({
                       />
                     </div>
                   </TableCell>
-                  <TableCell className="text-right font-semibold tabular-nums text-emerald-900">
+                  <TableCell className="text-right font-semibold tabular-nums text-emerald-900 dark:text-emerald-200">
                     {format === "1f"
                       ? Number(r[col]).toFixed(1)
                       : format === "2f"

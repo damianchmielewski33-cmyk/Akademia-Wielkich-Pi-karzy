@@ -15,7 +15,7 @@ export async function GET() {
     .prepare(
       `SELECT m.id, m.match_date, m.match_time, m.location
        FROM matches m
-       JOIN match_signups s ON s.match_id = m.id
+       JOIN match_signups s ON s.match_id = m.id AND COALESCE(s.commitment, 1) = 1
        WHERE s.user_id = ?
          AND m.played = 1
          AND date('now') <= date(m.match_date, '+7 days')

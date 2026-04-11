@@ -27,6 +27,8 @@ export type PlatnosciSignup = {
 
 type Props = {
   nextMatch: MatchRow | null;
+  /** Np. „3 osoby się zastanawiają” — pusty gdy brak «jeszcze nie wiem». */
+  nextMatchTentativeLine: string;
   signups: PlatnosciSignup[];
   isLoggedIn: boolean;
   isAdmin: boolean;
@@ -76,7 +78,9 @@ function PlatnosciSignupRow({
         <PlayerNameStack firstName={signup.first_name} lastName={signup.last_name} nick={signup.zawodnik} />
       </div>
       {signup.paid ? (
-        <Badge className="border-emerald-200 bg-emerald-100 text-emerald-900">Opłacone</Badge>
+        <Badge className="border-emerald-200 bg-emerald-100 text-emerald-900 dark:border-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-100">
+          Opłacone
+        </Badge>
       ) : (
         <Badge variant="secondary">Do zapłaty</Badge>
       )}
@@ -87,6 +91,7 @@ function PlatnosciSignupRow({
 
 export function PlatnosciClient({
   nextMatch,
+  nextMatchTentativeLine,
   signups,
   isLoggedIn,
   isAdmin,
@@ -111,8 +116,8 @@ export function PlatnosciClient({
     <div className="container mx-auto max-w-2xl flex-1 px-4 py-8 sm:py-10">
       <div className="mb-8 text-center">
         <div className="pitch-rule mx-auto mb-4 w-40 opacity-80" />
-        <h1 className="text-3xl font-bold tracking-tight text-emerald-950 sm:text-4xl">Płatności za mecz</h1>
-        <p className="mt-2 text-zinc-600">
+        <h1 className="text-3xl font-bold tracking-tight text-emerald-950 dark:text-emerald-100 sm:text-4xl">Płatności za mecz</h1>
+        <p className="mt-2 text-zinc-600 dark:text-zinc-400">
           Informacje o wpłacie na najbliższe spotkanie — przelew <strong>BLIK</strong> na podany numer telefonu.
           {isAdmin ? (
             <>
@@ -126,7 +131,7 @@ export function PlatnosciClient({
       {!nextMatch ? (
         <Card className="border-emerald-900/10 shadow-sm">
           <CardHeader>
-            <CardTitle className="text-lg text-emerald-950">Brak nadchodzącego meczu</CardTitle>
+            <CardTitle className="text-lg text-emerald-950 dark:text-emerald-100">Brak nadchodzącego meczu</CardTitle>
             <CardDescription>
               Gdy administrator doda termin w terminarzu, tutaj pojawią się szczegóły wpłaty.
             </CardDescription>
@@ -150,9 +155,14 @@ export function PlatnosciClient({
                   <MapPin className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
                   {nextMatch.location}
                 </p>
-                <p className="mt-3 text-xs text-emerald-100/85">
-                  Zapisy na mecz: {nextMatch.signed_up}/{nextMatch.max_slots}
-                </p>
+                <div className="mt-3 space-y-0.5 text-xs text-emerald-100/85">
+                  <p>
+                    {nextMatch.signed_up}/{nextMatch.max_slots} zapisanych
+                  </p>
+                  {nextMatchTentativeLine ? (
+                    <p className="text-[11px] font-semibold text-amber-100/95">{nextMatchTentativeLine}</p>
+                  ) : null}
+                </div>
               </div>
             </div>
           </Card>
@@ -202,7 +212,7 @@ export function PlatnosciClient({
                   </p>
                 )}
               </div>
-              <p className="text-xs text-zinc-600">
+              <p className="text-xs text-zinc-600 dark:text-zinc-400">
                 Po wykonaniu przelewu status „Opłacone” pojawi się na liście zapisów, gdy administrator potwierdzi wpłatę.
               </p>
             </CardContent>
@@ -242,17 +252,19 @@ export function PlatnosciClient({
           ) : (
             <Card className="border-emerald-900/10 shadow-sm">
               <CardHeader className="pb-2">
-                <CardTitle className="text-lg text-emerald-950">Twój status</CardTitle>
+                <CardTitle className="text-lg text-emerald-950 dark:text-emerald-100">Twój status</CardTitle>
               </CardHeader>
               <CardContent className="flex flex-wrap items-center gap-3">
                 {userPaid ? (
-                  <Badge className="border-emerald-200 bg-emerald-100 px-3 py-1 text-emerald-950">Opłacone</Badge>
+                  <Badge className="border-emerald-200 bg-emerald-100 px-3 py-1 text-emerald-950 dark:border-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-100">
+                    Opłacone
+                  </Badge>
                 ) : (
                   <Badge variant="secondary" className="px-3 py-1">
                     Do zapłaty
                   </Badge>
                 )}
-                <span className="text-sm text-zinc-600">
+                <span className="text-sm text-zinc-600 dark:text-zinc-400">
                   {userPaid
                     ? "Dziękujemy — wpłata została potwierdzona przez administratora."
                     : "Po wysłaniu BLIK poczekaj na potwierdzenie."}
@@ -264,7 +276,7 @@ export function PlatnosciClient({
           {!isAdmin && isLoggedIn && signups.length > 0 ? (
             <Card className="mt-6 border-emerald-900/10 shadow-sm">
               <CardHeader className="pb-2">
-                <CardTitle className="text-lg text-emerald-950">Zapisani na ten mecz</CardTitle>
+                <CardTitle className="text-lg text-emerald-950 dark:text-emerald-100">Zapisani na ten mecz</CardTitle>
                 <CardDescription>Status opłaty widoczny dla zalogowanych użytkowników.</CardDescription>
               </CardHeader>
               <CardContent>
@@ -357,7 +369,7 @@ function PlatnosciAdminSection({ nextMatch, signups: signupsProp, onSaved }: Pla
   return (
     <Card className="mb-6 border-2 border-emerald-800/25 bg-gradient-to-br from-emerald-950/5 to-emerald-900/10 shadow-md">
       <CardHeader className="pb-2">
-        <CardTitle className="flex flex-wrap items-center gap-2 text-lg text-emerald-950">
+        <CardTitle className="flex flex-wrap items-center gap-2 text-lg text-emerald-950 dark:text-emerald-100">
           <Shield className="h-5 w-5 shrink-0 text-emerald-800" aria-hidden />
           Zarządzanie płatnościami (administrator)
         </CardTitle>
@@ -391,9 +403,9 @@ function PlatnosciAdminSection({ nextMatch, signups: signupsProp, onSaved }: Pla
         </div>
 
         <div>
-          <p className="mb-2 text-sm font-medium text-emerald-950">Zapisani — status opłaty</p>
+          <p className="mb-2 text-sm font-medium text-emerald-950 dark:text-emerald-100">Zapisani — status opłaty</p>
           {rows.length === 0 ? (
-            <p className="rounded-xl border border-dashed border-emerald-900/20 bg-emerald-50/40 px-4 py-6 text-center text-sm text-zinc-600">
+            <p className="rounded-xl border border-dashed border-emerald-900/20 bg-emerald-50/40 px-4 py-6 text-center text-sm text-zinc-600 dark:border-emerald-800/40 dark:bg-emerald-950/30 dark:text-zinc-400">
               Brak zapisanych zawodników na ten mecz.
             </p>
           ) : (

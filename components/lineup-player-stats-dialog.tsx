@@ -101,7 +101,7 @@ export function LineupPlayerStatsDialog({ userId, open, onOpenChange }: Props) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto border-emerald-900/15 sm:max-w-xl">
         <DialogHeader>
-          <DialogTitle className="text-emerald-950">
+          <DialogTitle>
             {loading
               ? "Ładowanie…"
               : loadError
@@ -113,7 +113,7 @@ export function LineupPlayerStatsDialog({ userId, open, onOpenChange }: Props) {
           <DialogDescription asChild>
             <div>
               {loadError && !loading && (
-                <p className="pt-2 text-sm text-red-700">
+                <p className="pt-2 text-sm text-red-700 dark:text-red-400">
                   {loadError === "unauthorized"
                     ? "Zaloguj się, aby zobaczyć statystyki zawodnika."
                     : "Nie udało się wczytać statystyk. Spróbuj ponownie później."}
@@ -146,28 +146,28 @@ export function LineupPlayerStatsDialog({ userId, open, onOpenChange }: Props) {
               <PitchMiniStat label="Obrony" value={data.saves} />
             </div>
             <PlayerStatsBarChart data={chartData ?? []} />
-            <h4 className="mt-5 font-bold tracking-tight text-emerald-950">Historia meczów</h4>
+            <h4 className="mt-5 font-bold tracking-tight text-emerald-950 dark:text-emerald-100">Historia meczów</h4>
             <div className="pitch-rule mb-2 mt-2 w-20 opacity-60" />
             {data.games.length === 0 ? (
-              <p className="rounded-xl border border-emerald-900/10 bg-emerald-50/40 px-3 py-4 text-center text-sm text-emerald-800">
+              <p className="rounded-xl border border-emerald-900/10 bg-emerald-50/40 px-3 py-4 text-center text-sm text-emerald-800 dark:border-emerald-800/40 dark:bg-emerald-950/35 dark:text-emerald-200">
                 Brak zapisanych statystyk z rozegranych meczów.
               </p>
             ) : (
-              <ul className="mt-1 max-h-48 space-y-0 overflow-y-auto rounded-xl border border-emerald-900/10 bg-white text-sm text-emerald-950">
+              <ul className="mt-1 max-h-48 space-y-0 overflow-y-auto rounded-xl border border-emerald-900/10 bg-white text-sm text-emerald-950 dark:border-emerald-800/30 dark:bg-zinc-800/90 dark:text-emerald-100">
                 {data.games.map((g, i) => (
                   <li
                     key={`${g.date}-${g.time}-${i}`}
                     className={
                       i % 2 === 0
-                        ? "border-b border-emerald-100/90 bg-emerald-50/40 px-3 py-2.5 last:border-b-0"
-                        : "border-b border-emerald-100/90 px-3 py-2.5 last:border-b-0"
+                        ? "border-b border-emerald-100/90 bg-emerald-50/40 px-3 py-2.5 last:border-b-0 dark:border-emerald-800/40 dark:bg-emerald-950/35"
+                        : "border-b border-emerald-100/90 px-3 py-2.5 last:border-b-0 dark:border-emerald-800/40"
                     }
                   >
-                    <span className="font-medium tabular-nums text-emerald-900">
+                    <span className="font-medium tabular-nums text-emerald-900 dark:text-emerald-200">
                       {g.date} · {g.time}
                     </span>
-                    <span className="mt-0.5 block text-emerald-800/90">{g.location}</span>
-                    <span className="mt-1 block text-xs tabular-nums text-emerald-700">
+                    <span className="mt-0.5 block text-emerald-800/90 dark:text-emerald-300/90">{g.location}</span>
+                    <span className="mt-1 block text-xs tabular-nums text-emerald-700 dark:text-emerald-400">
                       G: {g.goals} · A: {g.assists} · D: {g.distance} · O: {g.saves ?? 0}
                     </span>
                   </li>

@@ -5,8 +5,11 @@ import Link from "next/link";
 import {
   Activity,
   ArrowLeft,
+  ArrowDownAZ,
+  ArrowUpAZ,
   BarChart3,
   Calendar,
+  Download,
   LayoutDashboard,
   LayoutGrid,
   Loader2,
@@ -42,6 +45,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  AdminAnalyticsHourlyCharts,
+  type AnalyticsHourlyPayload,
+} from "@/components/admin-analytics-hourly-charts";
 import { MatchLineupAdmin } from "@/components/match-lineup-admin";
 import { ALL_PLAYERS } from "@/lib/constants";
 import {
@@ -68,6 +75,7 @@ const API = {
   stat: (id: number) => `/api/admin/stat/${id}`,
   analytics: (from: string, to: string) =>
     `/api/admin/analytics?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
+  analyticsHourly: "/api/admin/analytics/hourly",
 };
 
 type UserRow = {
@@ -137,6 +145,23 @@ function defaultAnalyticsDateRange(): { from: string; to: string } {
   return { from: formatDateLocalYmd(from), to: formatDateLocalYmd(to) };
 }
 
+function analyticsPresetLastNDaysInclusive(n: number): { from: string; to: string } {
+  const to = new Date();
+  const from = new Date(to);
+  from.setDate(from.getDate() - (n - 1));
+  return { from: formatDateLocalYmd(from), to: formatDateLocalYmd(to) };
+}
+
+function analyticsPresetMonthToDate(): { from: string; to: string } {
+  const to = new Date();
+  const from = new Date(to.getFullYear(), to.getMonth(), 1);
+  return { from: formatDateLocalYmd(from), to: formatDateLocalYmd(to) };
+}
+
+function todayYmd(): string {
+  return formatDateLocalYmd(new Date());
+}
+
 type Summary = {
   players: number;
   admins: number;
@@ -175,6 +200,10 @@ export function AdminPanel() {
   const [stats, setStats] = useState<StatRow[]>([]);
   const [analytics, setAnalytics] = useState<AnalyticsPayload | null>(null);
   const [analyticsRange, setAnalyticsRange] = useState(() => defaultAnalyticsDateRange());
+  /** Osobno od `loading`, żeby uniknąć wyścigów przy szybkiej zmianie zakładki podczas fetcha analityki. */
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
+  const [analyticsFetchNonce, setAnalyticsFetchNonce] = useState(0);
+  const [analyticsHourly, setAnalyticsHourly] = useState<AnalyticsHourlyPayload | null>(null);
   const [logoutOpen, setLogoutOpen] = useState(false);
 
   const onAnalyticsFromChange = useCallback((v: string) => {
@@ -283,20 +312,6 @@ export function AdminPanel() {
     }
   }, []);
 
-  const loadAnalytics = useCallback(async (from: string, to: string) => {
-    setLoading(true);
-    try {
-      const res = await fetch(API.analytics(from, to));
-      if (!res.ok) throw new Error();
-      setAnalytics(await res.json());
-    } catch {
-      toast.error("Nie udało się wczytać analityki");
-      setAnalytics(null);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
     if (tab === "dashboard") void loadDashboard();
     if (tab === "users") void loadUsers();
@@ -306,12 +321,45 @@ export function AdminPanel() {
   }, [tab, loadDashboard, loadUsers, loadMatches, loadStats]);
 
   useEffect(() => {
-    if (tab !== "analytics") return;
-    void loadAnalytics(analyticsRange.from, analyticsRange.to);
-  }, [tab, analyticsRange.from, analyticsRange.to, loadAnalytics]);
+    if (tab !== "analytics") {
+      setAnalyticsLoading(false);
+      setAnalyticsHourly(null);
+      return;
+    }
+    let cancelled = false;
+    const { from, to } = analyticsRange;
+    setAnalyticsLoading(true);
+    void (async () => {
+      try {
+        const [resA, resH] = await Promise.all([
+          fetch(API.analytics(from, to)),
+          fetch(API.analyticsHourly),
+        ]);
+        if (cancelled) return;
+        if (!resA.ok) throw new Error();
+        setAnalytics(await resA.json());
+        if (!resH.ok) {
+          toast.error("Nie udało się wczytać wykresów godzinowych (ostatnie 7 dni)");
+        } else {
+          setAnalyticsHourly((await resH.json()) as AnalyticsHourlyPayload);
+        }
+      } catch {
+        if (!cancelled) {
+          toast.error("Nie udało się wczytać analityki");
+          setAnalytics(null);
+          setAnalyticsHourly(null);
+        }
+      } finally {
+        if (!cancelled) setAnalyticsLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [tab, analyticsRange.from, analyticsRange.to, analyticsFetchNonce]);
 
   return (
-    <div className="min-h-screen bg-zinc-50 text-zinc-900">
+    <div className="min-h-screen bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
       <div className="flex min-h-screen flex-col lg:flex-row">
         <aside
           className={cn(
@@ -396,9 +444,13 @@ export function AdminPanel() {
         </aside>
 
         <main className="relative flex-1 overflow-x-hidden p-4 sm:p-6 lg:p-8">
-          {loading && (
+          {(tab === "lineups"
+            ? false
+            : tab === "analytics"
+              ? analyticsLoading
+              : loading) && (
             <div
-              className="pointer-events-none absolute right-6 top-6 flex items-center gap-2 text-sm text-zinc-500"
+              className="pointer-events-none absolute right-6 top-6 flex items-center gap-2 text-sm text-zinc-500 dark:text-zinc-400"
               aria-live="polite"
             >
               <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
@@ -427,12 +479,14 @@ export function AdminPanel() {
             {tab === "analytics" && (
               <AnalyticsView
                 data={analytics}
-                loading={loading}
+                hourlyData={analyticsHourly}
+                loading={analyticsLoading}
                 dateFrom={analyticsRange.from}
                 dateTo={analyticsRange.to}
                 onDateFromChange={onAnalyticsFromChange}
                 onDateToChange={onAnalyticsToChange}
-                onReload={() => void loadAnalytics(analyticsRange.from, analyticsRange.to)}
+                onReload={() => setAnalyticsFetchNonce((n) => n + 1)}
+                onPresetRange={(from, to) => setAnalyticsRange({ from, to })}
               />
             )}
             {tab === "stats" && <StatsView stats={stats} loading={loading} onReload={loadStats} />}
@@ -477,7 +531,7 @@ function Toolbar({
     <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-zinc-900">{title}</h1>
-        {description ? <p className="mt-1 text-sm text-zinc-600">{description}</p> : null}
+        {description ? <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">{description}</p> : null}
       </div>
       <div className="flex flex-wrap items-center gap-2">
         {children}
@@ -490,23 +544,65 @@ function Toolbar({
   );
 }
 
+type AnalyticsScreenSortKey = "label" | "views" | "unique";
+
+function downloadAnalyticsScreensCsv(
+  rows: AnalyticsPayload["screens"],
+  range: { from: string; to: string }
+) {
+  const esc = (s: string) => `"${s.replace(/"/g, '""')}"`;
+  const header = ["Ekran", "Klucz ekranu", "Odsłony", "Unikalni odbiorcy"];
+  const body = rows.map((r) =>
+    [esc(r.label), r.screen_key, String(r.total_views), String(r.unique_visitors)].join(";")
+  );
+  const csv = "\uFEFF" + [header.join(";"), ...body].join("\r\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `analityka-ekrany-${range.from}_${range.to}.csv`;
+  a.rel = "noopener";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 function AnalyticsView({
   data,
+  hourlyData,
   loading,
   dateFrom,
   dateTo,
   onDateFromChange,
   onDateToChange,
   onReload,
+  onPresetRange,
 }: {
   data: AnalyticsPayload | null;
+  hourlyData: AnalyticsHourlyPayload | null;
   loading: boolean;
   dateFrom: string;
   dateTo: string;
   onDateFromChange: (v: string) => void;
   onDateToChange: (v: string) => void;
   onReload: () => void;
+  onPresetRange: (from: string, to: string) => void;
 }) {
+  const [screenQuery, setScreenQuery] = useState("");
+  const [sortKey, setSortKey] = useState<AnalyticsScreenSortKey>("views");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const maxDate = todayYmd();
+
+  const toggleSort = useCallback((key: AnalyticsScreenSortKey) => {
+    setSortKey((prev) => {
+      if (prev === key) {
+        setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+        return prev;
+      }
+      setSortDir(key === "label" ? "asc" : "desc");
+      return key;
+    });
+  }, []);
+
   const viewSplit =
     data != null && data.totals.anonymous_views + data.totals.authenticated_views > 0
       ? {
@@ -525,41 +621,134 @@ function AnalyticsView({
         }
       : null;
 
+  const screensPrepared = useMemo(() => {
+    if (!data) return [];
+    const q = screenQuery.trim().toLowerCase();
+    const filtered = !q
+      ? data.screens
+      : data.screens.filter(
+          (r) =>
+            r.label.toLowerCase().includes(q) ||
+            r.screen_key.toLowerCase().includes(q)
+        );
+    const mult = sortDir === "asc" ? 1 : -1;
+    return [...filtered].sort((a, b) => {
+      if (sortKey === "label") return mult * a.label.localeCompare(b.label, "pl");
+      if (sortKey === "unique") return mult * (a.unique_visitors - b.unique_visitors);
+      return mult * (a.total_views - b.total_views);
+    });
+  }, [data, screenQuery, sortKey, sortDir]);
+
+  const rangeSummary =
+    data != null
+      ? `${new Date(`${data.range.from}T12:00:00`).toLocaleDateString("pl-PL")} – ${new Date(`${data.range.to}T12:00:00`).toLocaleDateString("pl-PL")}`
+      : null;
+
   return (
-    <div>
+    <div aria-busy={loading}>
       <Toolbar
         title="Analityka wejść"
         description="Dane zbierane przy otwarciu stron przez użytkowników (bez panelu admina). Zakres dat to dni kalendarzowe w strefie Polski (Europe/Warsaw). Zmiana dat wczytuje raport ponownie."
         onReload={onReload}
         loading={loading}
       >
-        <div className="flex flex-wrap items-end gap-3">
-          <div>
-            <Label htmlFor="adm-an-from" className="text-xs text-zinc-600">
-              Od
-            </Label>
-            <Input
-              id="adm-an-from"
-              type="date"
-              className="mt-1 w-[11rem] border-zinc-200 bg-white"
-              value={dateFrom}
-              onChange={(e) => onDateFromChange(e.target.value)}
-            />
+        <div className="flex w-full flex-col gap-3 xl:w-auto">
+          <div className="flex flex-wrap items-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="border-zinc-200 bg-white dark:border-zinc-600 dark:bg-zinc-800"
+              disabled={loading}
+              onClick={() => {
+                const r = analyticsPresetLastNDaysInclusive(7);
+                onPresetRange(r.from, r.to);
+              }}
+            >
+              7 dni
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="border-zinc-200 bg-white dark:border-zinc-600 dark:bg-zinc-800"
+              disabled={loading}
+              onClick={() => {
+                const r = analyticsPresetLastNDaysInclusive(30);
+                onPresetRange(r.from, r.to);
+              }}
+            >
+              30 dni
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="border-zinc-200 bg-white dark:border-zinc-600 dark:bg-zinc-800"
+              disabled={loading}
+              onClick={() => {
+                const r = analyticsPresetMonthToDate();
+                onPresetRange(r.from, r.to);
+              }}
+            >
+              Ten miesiąc
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="border-zinc-200 bg-white dark:border-zinc-600 dark:bg-zinc-800"
+              disabled={loading}
+              onClick={() => {
+                const r = defaultAnalyticsDateRange();
+                onPresetRange(r.from, r.to);
+              }}
+            >
+              Wczoraj–dziś
+            </Button>
           </div>
-          <div>
-            <Label htmlFor="adm-an-to" className="text-xs text-zinc-600">
-              Do
-            </Label>
-            <Input
-              id="adm-an-to"
-              type="date"
-              className="mt-1 w-[11rem] border-zinc-200 bg-white"
-              value={dateTo}
-              onChange={(e) => onDateToChange(e.target.value)}
-            />
+          <div className="flex flex-wrap items-end gap-3">
+            <div>
+              <Label htmlFor="adm-an-from" className="text-xs text-zinc-600 dark:text-zinc-400">
+                Od
+              </Label>
+              <Input
+                id="adm-an-from"
+                type="date"
+                max={maxDate}
+                className="mt-1 w-[11rem] border-zinc-200 bg-white dark:border-zinc-600 dark:bg-zinc-800"
+                value={dateFrom}
+                onChange={(e) => onDateFromChange(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label htmlFor="adm-an-to" className="text-xs text-zinc-600 dark:text-zinc-400">
+                Do
+              </Label>
+              <Input
+                id="adm-an-to"
+                type="date"
+                max={maxDate}
+                className="mt-1 w-[11rem] border-zinc-200 bg-white dark:border-zinc-600 dark:bg-zinc-800"
+                value={dateTo}
+                onChange={(e) => onDateToChange(e.target.value)}
+              />
+            </div>
           </div>
         </div>
       </Toolbar>
+
+      <AdminAnalyticsHourlyCharts data={hourlyData} loading={loading && hourlyData === null} />
+
+      {rangeSummary && data ? (
+        <p className="mb-4 text-sm text-zinc-600 dark:text-zinc-400">
+          <span className="font-medium text-zinc-800">Zakres raportu (dni kalendarzowe, PL):</span>{" "}
+          {rangeSummary}{" "}
+          <span className="text-zinc-500 dark:text-zinc-400">
+            ({data.range.from} — {data.range.to})
+          </span>
+        </p>
+      ) : null}
 
       <Card className="mb-6 border-amber-200/80 bg-amber-50/50 shadow-sm">
         <CardHeader className="pb-2">
@@ -589,26 +778,26 @@ function AnalyticsView({
       </Card>
 
       {!data && !loading ? (
-        <p className="text-sm text-zinc-600">Brak danych do wyświetlenia.</p>
+        <p className="text-sm text-zinc-600 dark:text-zinc-400">Brak danych do wyświetlenia.</p>
       ) : null}
 
       {data ? (
         <>
           <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <Card className="border-zinc-200/80 bg-white shadow-sm">
+            <Card className="border-zinc-200/80 bg-white shadow-sm dark:border-zinc-700/80 dark:bg-zinc-900/90 dark:shadow-black/30">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-zinc-800">Wszystkie odsłony</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-2xl font-bold tabular-nums text-emerald-950">
+                <p className="text-2xl font-bold tabular-nums text-emerald-950 dark:text-emerald-100">
                   {data.totals.total_views}
                 </p>
-                <p className="mt-1 text-xs text-zinc-500">
+                <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
                   Unikalni odbiorcy (gość lub id gracza): {data.totals.unique_visitors}
                 </p>
               </CardContent>
             </Card>
-            <Card className="border-zinc-200/80 bg-white shadow-sm">
+            <Card className="border-zinc-200/80 bg-white shadow-sm dark:border-zinc-700/80 dark:bg-zinc-900/90 dark:shadow-black/30">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-zinc-800">
                   Odsłony: anonim / zalogowany
@@ -627,11 +816,11 @@ function AnalyticsView({
                     </p>
                   </>
                 ) : (
-                  <p className="text-sm text-zinc-500">Brak odsłon w okresie.</p>
+                  <p className="text-sm text-zinc-500 dark:text-zinc-400">Brak odsłon w okresie.</p>
                 )}
               </CardContent>
             </Card>
-            <Card className="border-zinc-200/80 bg-white shadow-sm">
+            <Card className="border-zinc-200/80 bg-white shadow-sm dark:border-zinc-700/80 dark:bg-zinc-900/90 dark:shadow-black/30">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-zinc-800">Gracze w bazie</CardTitle>
                 <CardDescription className="text-xs">Konta nie-admin</CardDescription>
@@ -641,22 +830,22 @@ function AnalyticsView({
                   Z aktywnością w okresie:{" "}
                   <strong className="tabular-nums">{data.players.visited_in_range}</strong>
                   {data.players.pct_visited != null ? (
-                    <span className="text-zinc-600"> ({data.players.pct_visited}%)</span>
+                    <span className="text-zinc-600 dark:text-zinc-400"> ({data.players.pct_visited}%)</span>
                   ) : null}
                 </p>
                 <p>
                   Bez wejść zalogowanych w okresie:{" "}
                   <strong className="tabular-nums">{data.players.not_visited_in_range}</strong>
                   {data.players.pct_not_visited != null ? (
-                    <span className="text-zinc-600"> ({data.players.pct_not_visited}%)</span>
+                    <span className="text-zinc-600 dark:text-zinc-400"> ({data.players.pct_not_visited}%)</span>
                   ) : null}
                 </p>
-                <p className="text-xs text-zinc-500">
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">
                   Nowe konta (rejestracja): {data.players.self_service_registrations_in_range}
                 </p>
               </CardContent>
             </Card>
-            <Card className="border-zinc-200/80 bg-white shadow-sm">
+            <Card className="border-zinc-200/80 bg-white shadow-sm dark:border-zinc-700/80 dark:bg-zinc-900/90 dark:shadow-black/30">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-zinc-800">Terminarz → mecz</CardTitle>
                 <CardDescription className="text-xs">Gracze (nie-admin)</CardDescription>
@@ -674,56 +863,139 @@ function AnalyticsView({
                     {data.terminarz_funnel.distinct_players_viewed_and_signed_match_in_range}
                   </strong>
                   {data.terminarz_funnel.pct_signed_after_view != null ? (
-                    <span className="text-zinc-600">
+                    <span className="text-zinc-600 dark:text-zinc-400">
                       {" "}
                       ({data.terminarz_funnel.pct_signed_after_view}%)
                     </span>
                   ) : data.terminarz_funnel.distinct_players_viewed === 0 ? (
-                    <span className="text-zinc-500"> (–)</span>
+                    <span className="text-zinc-500 dark:text-zinc-400"> (–)</span>
                   ) : null}
                 </p>
               </CardContent>
             </Card>
           </div>
 
-          <Card className="border-zinc-200/80 bg-white shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-lg">Wejścia wg ekranu</CardTitle>
-              <CardDescription>
-                Liczba odsłon i szacunek unikalnych odbiorców (gość lub zalogowany gracz) w wybranym
-                zakresie.
-              </CardDescription>
+          <Card className="border-zinc-200/80 bg-white shadow-sm dark:border-zinc-700/80 dark:bg-zinc-900/90 dark:shadow-black/30">
+            <CardHeader className="space-y-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <CardTitle className="text-lg">Wejścia wg ekranu</CardTitle>
+                  <CardDescription className="mt-1">
+                    Liczba odsłon i szacunek unikalnych odbiorców (gość lub zalogowany gracz) w wybranym
+                    zakresie. Kliknij nagłówek kolumny, aby sortować.
+                  </CardDescription>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="border-zinc-200 bg-white dark:border-zinc-600 dark:bg-zinc-800"
+                    disabled={loading || screensPrepared.length === 0}
+                    onClick={() => downloadAnalyticsScreensCsv(screensPrepared, data.range)}
+                  >
+                    <Download className="mr-2 h-4 w-4" aria-hidden />
+                    CSV (widok)
+                  </Button>
+                </div>
+              </div>
+              <div className="relative w-full min-w-[200px] sm:max-w-xs">
+                <Search
+                  className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400"
+                  aria-hidden
+                />
+                <Input
+                  className="border-zinc-200 bg-white dark:border-zinc-600 dark:bg-zinc-800 pl-9"
+                  placeholder="Filtruj ekran lub klucz…"
+                  value={screenQuery}
+                  onChange={(e) => setScreenQuery(e.target.value)}
+                  aria-label="Filtruj listę ekranów"
+                />
+              </div>
             </CardHeader>
             <CardContent className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-zinc-200 hover:bg-transparent">
-                    <TableHead className="text-zinc-700">Ekran</TableHead>
-                    <TableHead className="text-right text-zinc-700">Odsłony</TableHead>
-                    <TableHead className="text-right text-zinc-700">Unikalni</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {data.screens.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={3} className="text-center text-sm text-zinc-500">
-                        Brak zapisanych wejść w tym okresie (dane pojawią się po pierwszych wizytach).
-                      </TableCell>
+              <div className="overflow-hidden rounded-xl border border-zinc-200/80">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-zinc-200 hover:bg-transparent">
+                      <TableHead className="text-zinc-700">
+                        <button
+                          type="button"
+                          className="inline-flex items-center gap-1.5 font-medium text-zinc-800 hover:text-emerald-900 dark:text-zinc-200 dark:hover:text-emerald-300"
+                          onClick={() => toggleSort("label")}
+                        >
+                          Ekran
+                          {sortKey === "label" ? (
+                            sortDir === "asc" ? (
+                              <ArrowUpAZ className="h-3.5 w-3.5 opacity-70" aria-hidden />
+                            ) : (
+                              <ArrowDownAZ className="h-3.5 w-3.5 opacity-70" aria-hidden />
+                            )
+                          ) : null}
+                        </button>
+                      </TableHead>
+                      <TableHead className="text-right text-zinc-700">
+                        <button
+                          type="button"
+                          className="inline-flex w-full items-center justify-end gap-1.5 font-medium text-zinc-800 hover:text-emerald-900 dark:text-zinc-200 dark:hover:text-emerald-300"
+                          onClick={() => toggleSort("views")}
+                        >
+                          Odsłony
+                          {sortKey === "views" ? (
+                            sortDir === "asc" ? (
+                              <ArrowUpAZ className="h-3.5 w-3.5 opacity-70" aria-hidden />
+                            ) : (
+                              <ArrowDownAZ className="h-3.5 w-3.5 opacity-70" aria-hidden />
+                            )
+                          ) : null}
+                        </button>
+                      </TableHead>
+                      <TableHead className="text-right text-zinc-700">
+                        <button
+                          type="button"
+                          className="inline-flex w-full items-center justify-end gap-1.5 font-medium text-zinc-800 hover:text-emerald-900 dark:text-zinc-200 dark:hover:text-emerald-300"
+                          onClick={() => toggleSort("unique")}
+                        >
+                          Unikalni
+                          {sortKey === "unique" ? (
+                            sortDir === "asc" ? (
+                              <ArrowUpAZ className="h-3.5 w-3.5 opacity-70" aria-hidden />
+                            ) : (
+                              <ArrowDownAZ className="h-3.5 w-3.5 opacity-70" aria-hidden />
+                            )
+                          ) : null}
+                        </button>
+                      </TableHead>
                     </TableRow>
-                  ) : (
-                    data.screens.map((row) => (
-                      <TableRow key={row.screen_key} className="border-zinc-100">
-                        <TableCell>
-                          <span className="font-medium text-zinc-900">{row.label}</span>
-                          <span className="ml-2 font-mono text-xs text-zinc-400">{row.screen_key}</span>
+                  </TableHeader>
+                  <TableBody>
+                    {data.screens.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={3} className="text-center text-sm text-zinc-500 dark:text-zinc-400">
+                          Brak zapisanych wejść w tym okresie (dane pojawią się po pierwszych wizytach).
                         </TableCell>
-                        <TableCell className="text-right tabular-nums">{row.total_views}</TableCell>
-                        <TableCell className="text-right tabular-nums">{row.unique_visitors}</TableCell>
                       </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
+                    ) : screensPrepared.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={3} className="text-center text-sm text-zinc-500 dark:text-zinc-400">
+                          Brak wyników dla podanego filtra.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      screensPrepared.map((row) => (
+                        <TableRow key={row.screen_key} className="border-zinc-100">
+                          <TableCell>
+                            <span className="font-medium text-zinc-900">{row.label}</span>
+                            <span className="ml-2 font-mono text-xs text-zinc-400">{row.screen_key}</span>
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">{row.total_views}</TableCell>
+                          <TableCell className="text-right tabular-nums">{row.unique_visitors}</TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
             </CardContent>
           </Card>
         </>
@@ -826,7 +1098,7 @@ function DashboardView({
               onClick={() => onGoToTab(m.tab)}
               className="group text-left transition-transform hover:scale-[1.01] focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2"
             >
-              <Card className="h-full border-zinc-200/80 bg-white shadow-sm transition-shadow group-hover:shadow-md">
+              <Card className="h-full border-zinc-200/80 bg-white shadow-sm dark:border-zinc-700/80 dark:bg-zinc-900/90 dark:shadow-black/30 transition-shadow group-hover:shadow-md">
                 <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
                   <div>
                     <CardTitle className="text-base font-semibold text-zinc-800">{m.label}</CardTitle>
@@ -837,7 +1109,7 @@ function DashboardView({
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-3xl font-bold tabular-nums tracking-tight text-emerald-950">
+                  <p className="text-3xl font-bold tabular-nums tracking-tight text-emerald-950 dark:text-emerald-100">
                     {m.value ?? "–"}
                   </p>
                 </CardContent>
@@ -847,7 +1119,7 @@ function DashboardView({
         })}
       </div>
 
-      <Card className="mt-8 border-zinc-200/80 bg-white shadow-sm">
+      <Card className="mt-8 border-zinc-200/80 bg-white shadow-sm dark:border-zinc-700/80 dark:bg-zinc-900/90 dark:shadow-black/30">
         <CardHeader>
           <CardTitle className="text-lg">Ustawienia aplikacji</CardTitle>
           <CardDescription>Funkcje sterowane przez administratora.</CardDescription>
@@ -858,7 +1130,7 @@ function DashboardView({
               <span className="block text-sm font-semibold text-zinc-900">
                 Pop-up: powiadomienia o meczach
               </span>
-              <span className="mt-1 block text-sm text-zinc-600">
+              <span className="mt-1 block text-sm text-zinc-600 dark:text-zinc-400">
                 Włącza/wyłącza okno z adresem e-mail i zgodą do powiadomień o nowych terminach w terminarzu.
               </span>
             </span>
@@ -879,7 +1151,7 @@ function DashboardView({
         </CardContent>
       </Card>
 
-      <Card className="mt-8 border-zinc-200/80 bg-white shadow-sm">
+      <Card className="mt-8 border-zinc-200/80 bg-white shadow-sm dark:border-zinc-700/80 dark:bg-zinc-900/90 dark:shadow-black/30">
         <CardHeader>
           <CardTitle className="text-lg">Ostatnia aktywność</CardTitle>
           <CardDescription>
@@ -888,7 +1160,7 @@ function DashboardView({
         </CardHeader>
         <CardContent>
           {activity.length === 0 ? (
-            <p className="rounded-lg border border-dashed border-zinc-200 bg-zinc-50/80 px-4 py-8 text-center text-sm text-zinc-600">
+            <p className="rounded-lg border border-dashed border-zinc-200 bg-zinc-50/80 px-4 py-8 text-center text-sm text-zinc-600 dark:text-zinc-400">
               Brak zapisów w dzienniku — pojawią się po logowaniu, zapisach na mecze, statystykach i
               innych operacjach w aplikacji.
             </p>
@@ -903,10 +1175,10 @@ function DashboardView({
                     <p className="text-sm font-medium text-zinc-900">
                       {item.actorName ?? "—"}
                     </p>
-                    <p className="text-sm text-zinc-600">{item.text}</p>
+                    <p className="text-sm text-zinc-600 dark:text-zinc-400">{item.text}</p>
                   </div>
                   <time
-                    className="shrink-0 text-xs tabular-nums text-zinc-500 sm:pt-0.5"
+                    className="shrink-0 text-xs tabular-nums text-zinc-500 dark:text-zinc-400 sm:pt-0.5"
                     dateTime={item.time}
                   >
                     {item.time}
@@ -965,7 +1237,7 @@ function UsersView({
             aria-hidden
           />
           <Input
-            className="border-zinc-200 bg-white pl-9"
+            className="border-zinc-200 bg-white dark:border-zinc-600 dark:bg-zinc-800 pl-9"
             placeholder="Szukaj…"
             value={q}
             onChange={(e) => setQ(e.target.value)}
@@ -974,7 +1246,7 @@ function UsersView({
         </div>
       </Toolbar>
 
-      <div className="overflow-hidden rounded-xl border border-zinc-200/80 bg-white shadow-sm">
+      <div className="overflow-hidden rounded-xl border border-zinc-200/80 bg-white shadow-sm dark:border-zinc-700/80 dark:bg-zinc-900/90 dark:shadow-black/30">
         <Table>
           <TableHeader>
             <TableRow className="border-zinc-200 hover:bg-transparent">
@@ -988,7 +1260,7 @@ function UsersView({
           <TableBody>
             {filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center text-sm text-zinc-500">
+                <TableCell colSpan={5} className="h-24 text-center text-sm text-zinc-500 dark:text-zinc-400">
                   {users.length === 0
                     ? "Brak użytkowników w bazie."
                     : "Brak wyników dla podanego filtra."}
@@ -1162,7 +1434,7 @@ function UsersView({
             <DialogTitle>Usunąć użytkownika?</DialogTitle>
           </DialogHeader>
           {delUser && (
-            <p className="text-sm text-zinc-600">
+            <p className="text-sm text-zinc-600 dark:text-zinc-400">
               Konto{" "}
               <strong>
                 {delUser.first_name} {delUser.last_name}
@@ -1223,7 +1495,7 @@ function UserCreateForm({
       <DialogHeader>
         <DialogTitle>Nowy użytkownik</DialogTitle>
       </DialogHeader>
-      <p className="text-sm text-zinc-600">
+      <p className="text-sm text-zinc-600 dark:text-zinc-400">
         Logowanie odbywa się imieniem, nazwiskiem i PIN-em. Piłkarz (awatar) jest przypisywany tutaj —
         użytkownik ustawi PIN przy pierwszym logowaniu (jak przy rejestracji samodzielnej).
       </p>
@@ -1423,6 +1695,7 @@ function UserEditForm({
 type MatchSignupPaidRow = {
   user_id: number;
   paid: number;
+  commitment: number;
   first_name: string;
   last_name: string;
   zawodnik: string;
@@ -1489,19 +1762,19 @@ function MatchSignupsDialog({
         <DialogHeader>
           <DialogTitle>Zapisy i opłaty</DialogTitle>
           {match ? (
-            <p className="text-sm font-medium text-zinc-600">
+            <p className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
               {match.date} · {match.time}
             </p>
           ) : null}
-          {match ? <p className="text-sm text-zinc-500">{match.location}</p> : null}
+          {match ? <p className="text-sm text-zinc-500 dark:text-zinc-400">{match.location}</p> : null}
         </DialogHeader>
         {loading ? (
-          <p className="flex items-center justify-center gap-2 py-10 text-sm text-zinc-500">
+          <p className="flex items-center justify-center gap-2 py-10 text-sm text-zinc-500 dark:text-zinc-400">
             <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
             Wczytywanie…
           </p>
         ) : rows.length === 0 ? (
-          <p className="py-6 text-center text-sm text-zinc-500">Brak zapisanych zawodników.</p>
+          <p className="py-6 text-center text-sm text-zinc-500 dark:text-zinc-400">Brak zapisanych zawodników.</p>
         ) : (
           <ul className="max-h-[min(24rem,60vh)] space-y-0 overflow-y-auto rounded-xl border border-zinc-200 bg-zinc-50/50">
             {rows.map((p, i) => (
@@ -1525,26 +1798,34 @@ function MatchSignupsDialog({
                     nick={p.zawodnik}
                   />
                 </div>
-                {p.paid ? (
+                {p.commitment === 0 ? (
+                  <Badge variant="outline" className="border-amber-300 bg-amber-50 text-amber-950">
+                    Jeszcze nie wiem
+                  </Badge>
+                ) : p.paid ? (
                   <Badge className="border-emerald-200 bg-emerald-100 text-emerald-900">Opłacone</Badge>
                 ) : (
                   <Badge variant="secondary">Do zapłaty</Badge>
                 )}
-                <Button
-                  size="sm"
-                  variant={p.paid ? "outline" : "default"}
-                  className="shrink-0"
-                  disabled={busyId === p.user_id}
-                  onClick={() => void togglePaid(p.user_id, !p.paid)}
-                >
-                  {busyId === p.user_id ? (
-                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                  ) : p.paid ? (
-                    "Cofnij"
-                  ) : (
-                    "Opłacone"
-                  )}
-                </Button>
+                {p.commitment === 0 ? (
+                  <span className="shrink-0 text-xs text-zinc-500 dark:text-zinc-400">Wpłata po potwierdzeniu</span>
+                ) : (
+                  <Button
+                    size="sm"
+                    variant={p.paid ? "outline" : "default"}
+                    className="shrink-0"
+                    disabled={busyId === p.user_id}
+                    onClick={() => void togglePaid(p.user_id, !p.paid)}
+                  >
+                    {busyId === p.user_id ? (
+                      <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                    ) : p.paid ? (
+                      "Cofnij"
+                    ) : (
+                      "Opłacone"
+                    )}
+                  </Button>
+                )}
               </li>
             ))}
           </ul>
@@ -1614,7 +1895,7 @@ function MatchesView({
             aria-hidden
           />
           <Input
-            className="border-zinc-200 bg-white pl-9"
+            className="border-zinc-200 bg-white dark:border-zinc-600 dark:bg-zinc-800 pl-9"
             placeholder="Data, miejsce, id…"
             value={q}
             onChange={(e) => setQ(e.target.value)}
@@ -1623,11 +1904,11 @@ function MatchesView({
         </div>
       </Toolbar>
 
-      <div className="overflow-hidden rounded-xl border border-zinc-200/80 bg-white shadow-sm">
+      <div className="overflow-hidden rounded-xl border border-zinc-200/80 bg-white shadow-sm dark:border-zinc-700/80 dark:bg-zinc-900/90 dark:shadow-black/30">
         <Table>
           <TableHeader>
             <TableRow className="border-zinc-200 hover:bg-transparent">
-              <TableHead className="w-14 text-zinc-600">ID</TableHead>
+              <TableHead className="w-14 text-zinc-600 dark:text-zinc-400">ID</TableHead>
               <TableHead className="text-zinc-700">Data</TableHead>
               <TableHead className="text-zinc-700">Godzina</TableHead>
               <TableHead className="text-zinc-700">Miejsce</TableHead>
@@ -1640,14 +1921,14 @@ function MatchesView({
           <TableBody>
             {filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="h-24 text-center text-sm text-zinc-500">
+                <TableCell colSpan={8} className="h-24 text-center text-sm text-zinc-500 dark:text-zinc-400">
                   {matches.length === 0 ? "Brak meczów w bazie." : "Brak wyników dla podanego filtra."}
                 </TableCell>
               </TableRow>
             ) : (
               filtered.map((m) => (
                 <TableRow key={m.id} className="border-zinc-100">
-                  <TableCell className="font-mono text-xs text-zinc-500">{m.id}</TableCell>
+                  <TableCell className="font-mono text-xs text-zinc-500 dark:text-zinc-400">{m.id}</TableCell>
                   <TableCell className="tabular-nums">{m.date}</TableCell>
                   <TableCell className="tabular-nums">{m.time}</TableCell>
                   <TableCell>{m.location}</TableCell>
@@ -1729,7 +2010,7 @@ function MatchesView({
             <DialogTitle>Usunąć mecz?</DialogTitle>
           </DialogHeader>
           {delMatch && (
-            <p className="text-sm text-zinc-600">
+            <p className="text-sm text-zinc-600 dark:text-zinc-400">
               Mecz <strong>{delMatch.date}</strong> o <strong>{delMatch.time}</strong>,{" "}
               <strong>{delMatch.location}</strong> (id {delMatch.id}).
             </p>
@@ -1828,7 +2109,7 @@ function MatchEditForm({
             value={feePln}
             onChange={(e) => setFeePln(e.target.value)}
           />
-          <p className="mt-1 text-xs text-zinc-500">Puste pole — kwota nie jest wyświetlana na stronie płatności.</p>
+          <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">Puste pole — kwota nie jest wyświetlana na stronie płatności.</p>
         </div>
       </div>
       <DialogFooter className="gap-2 sm:gap-0">
@@ -1910,7 +2191,7 @@ function StatsView({
             aria-hidden
           />
           <Input
-            className="border-zinc-200 bg-white pl-9"
+            className="border-zinc-200 bg-white dark:border-zinc-600 dark:bg-zinc-800 pl-9"
             placeholder="Zawodnik, mecz, id…"
             value={q}
             onChange={(e) => setQ(e.target.value)}
@@ -1919,12 +2200,12 @@ function StatsView({
         </div>
       </Toolbar>
 
-      <div className="overflow-x-auto overflow-y-hidden rounded-xl border border-zinc-200/80 bg-white shadow-sm">
+      <div className="overflow-x-auto overflow-y-hidden rounded-xl border border-zinc-200/80 bg-white shadow-sm dark:border-zinc-700/80 dark:bg-zinc-900/90 dark:shadow-black/30">
         <Table>
           <TableHeader>
             <TableRow className="border-zinc-200 hover:bg-transparent">
-              <TableHead className="w-14 text-zinc-600">ID</TableHead>
-              <TableHead className="w-12 text-zinc-600" />
+              <TableHead className="w-14 text-zinc-600 dark:text-zinc-400">ID</TableHead>
+              <TableHead className="w-12 text-zinc-600 dark:text-zinc-400" />
               <TableHead className="text-zinc-700">Zawodnik</TableHead>
               <TableHead className="text-zinc-700">Mecz</TableHead>
               <TableHead className="text-zinc-700">Gole</TableHead>
@@ -1937,14 +2218,14 @@ function StatsView({
           <TableBody>
             {filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={9} className="h-24 text-center text-sm text-zinc-500">
+                <TableCell colSpan={9} className="h-24 text-center text-sm text-zinc-500 dark:text-zinc-400">
                   {stats.length === 0 ? "Brak wpisów statystyk." : "Brak wyników dla podanego filtra."}
                 </TableCell>
               </TableRow>
             ) : (
               filtered.map((s) => (
                 <TableRow key={s.id} className="border-zinc-100">
-                  <TableCell className="font-mono text-xs text-zinc-500">{s.id}</TableCell>
+                  <TableCell className="font-mono text-xs text-zinc-500 dark:text-zinc-400">{s.id}</TableCell>
                   <TableCell className="align-middle">
                     <PlayerAvatar
                       photoPath={s.profile_photo_path}

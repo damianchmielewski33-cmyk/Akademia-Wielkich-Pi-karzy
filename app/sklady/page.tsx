@@ -35,16 +35,16 @@ export default async function SkladyPage({ searchParams }: PageProps) {
     if (nextUpcomingAny) {
       return (
         <div className="container mx-auto max-w-lg flex-1 px-4 py-8 sm:py-10">
-          <div className="rounded-2xl border border-zinc-200 bg-white p-8 text-center shadow-sm">
-            <h1 className="text-xl font-bold text-emerald-950">Składy jeszcze niewidoczne</h1>
-            <p className="mt-2 text-sm text-zinc-600">
+          <div className="rounded-2xl border border-zinc-200 bg-white p-8 text-center shadow-sm dark:border-zinc-700 dark:bg-zinc-900/90">
+            <h1 className="text-xl font-bold text-emerald-950 dark:text-emerald-100">Składy jeszcze niewidoczne</h1>
+            <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
               Administrator nie udostępnił jeszcze składów na najbliższy mecz. Wróć później albo sprawdź stronę główną.
             </p>
-            <p className="mt-4 text-sm font-medium text-zinc-800">
+            <p className="mt-4 text-sm font-medium text-zinc-800 dark:text-zinc-200">
               {nextUpcomingAny.match_date} · {nextUpcomingAny.match_time}
             </p>
-            <p className="text-sm text-zinc-600">{nextUpcomingAny.location}</p>
-            <Link href="/" className="mt-6 inline-block text-sm font-semibold text-emerald-700 underline">
+            <p className="text-sm text-zinc-600 dark:text-zinc-400">{nextUpcomingAny.location}</p>
+            <Link href="/" className="mt-6 inline-block text-sm font-semibold text-emerald-700 underline dark:text-emerald-400">
               Strona główna
             </Link>
           </div>
@@ -53,12 +53,12 @@ export default async function SkladyPage({ searchParams }: PageProps) {
     }
     return (
       <div className="container mx-auto max-w-lg flex-1 px-4 py-8 sm:py-10">
-        <div className="rounded-2xl border border-zinc-200 bg-white p-8 text-center shadow-sm">
-          <h1 className="text-xl font-bold text-emerald-950">Brak publicznych składów</h1>
-          <p className="mt-2 text-sm text-zinc-600">
+        <div className="rounded-2xl border border-zinc-200 bg-white p-8 text-center shadow-sm dark:border-zinc-700 dark:bg-zinc-900/90">
+          <h1 className="text-xl font-bold text-emerald-950 dark:text-emerald-100">Brak publicznych składów</h1>
+          <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
             Nie ma zaplanowanych meczów ani opublikowanych składów. Gdy pojawią się terminy, wróć do tej strony.
           </p>
-          <Link href="/terminarz" className="mt-6 inline-block text-sm font-semibold text-emerald-700 underline">
+          <Link href="/terminarz" className="mt-6 inline-block text-sm font-semibold text-emerald-700 underline dark:text-emerald-400">
             Terminarz
           </Link>
         </div>
@@ -167,7 +167,7 @@ async function SkladyContent({ matchId }: { matchId: number }) {
               u.profile_photo_path
        FROM match_signups ms
        JOIN users u ON u.id = ms.user_id
-       WHERE ms.match_id = ?
+       WHERE ms.match_id = ? AND COALESCE(ms.commitment, 1) = 1
        ORDER BY u.first_name ASC, u.last_name ASC`
     )
     .all(matchId) as {

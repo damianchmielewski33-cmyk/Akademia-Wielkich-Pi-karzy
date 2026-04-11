@@ -1,8 +1,52 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   --background: #f4faf7;
   --foreground: #0f172a;
+}
+
+.dark {
+  color-scheme: dark;
+  --background: #0a1210;
+  /* Jaśniejszy niż slate-200 — lepszy kontrast na ciemnym tle murawy / zinc */
+  --foreground: #f1f5f9;
+}
+
+.dark body {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+.dark .murawa-bg {
+  background-color: #0a1210;
+  background-image:
+    linear-gradient(180deg, rgba(12, 22, 18, 0.98) 0%, rgba(8, 18, 14, 0.99) 100%),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 52px,
+      rgba(16, 185, 129, 0.04) 52px,
+      rgba(16, 185, 129, 0.04) 104px
+    ),
+    radial-gradient(ellipse 130% 70% at 50% -10%, rgba(16, 185, 129, 0.08), transparent 52%);
+  background-attachment: fixed;
+}
+
+@layer components {
+  .awp-card-surface {
+    @apply relative overflow-hidden rounded-2xl border-2 border-white/35 bg-white/95 p-6 shadow-lg shadow-emerald-950/10 ring-1 ring-emerald-950/10;
+  }
+  .dark .awp-card-surface {
+    @apply border-white/10 bg-zinc-900/95 shadow-black/40 ring-emerald-900/35;
+  }
+  .dark .home-pitch-tile {
+    opacity: 0.07;
+  }
+  .dark .home-pitch-tile-gold {
+    opacity: 0.08;
+  }
 }
 
 @theme inline {

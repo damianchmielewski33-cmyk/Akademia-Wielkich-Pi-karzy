@@ -136,15 +136,15 @@ export function MatchNotificationPrompt() {
         onPointerDownOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}
       >
-        <div className="border-b border-emerald-100 bg-emerald-50/80 px-6 py-5 sm:px-8">
+        <div className="border-b border-emerald-100 bg-emerald-50/80 px-6 py-5 dark:border-emerald-800/60 dark:bg-emerald-950/45 sm:px-8">
           <DialogHeader className="space-y-3 text-left">
             <div className="flex items-start gap-3">
               <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-700 text-white shadow-sm">
                 <Bell className="h-5 w-5" aria-hidden />
               </div>
               <div>
-                <DialogTitle className="text-xl text-emerald-950">Powiadomienia o meczach</DialogTitle>
-                <DialogDescription className="mt-1.5 text-sm leading-relaxed text-zinc-600">
+                <DialogTitle className="text-xl">Powiadomienia o meczach</DialogTitle>
+                <DialogDescription className="mt-1.5 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
                   Czy chcesz otrzymywać powiadomienia o nowych terminach w terminarzu?
                 </DialogDescription>
               </div>
@@ -153,7 +153,7 @@ export function MatchNotificationPrompt() {
         </div>
 
         <div className="space-y-5 px-6 py-6 sm:px-8">
-          <p className="text-sm leading-relaxed text-zinc-700">
+          <p className="text-sm leading-relaxed text-zinc-700 dark:text-zinc-300">
             Jeśli tak, podaj adres e-mail i zaznacz zgodę poniżej. Po dodaniu nowego meczu przez administratora
             wyślemy Ci krótką wiadomość z datą, godziną, miejscem i linkiem do zapisu w aplikacji.
           </p>
@@ -167,13 +167,13 @@ export function MatchNotificationPrompt() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="np. jan@example.com"
-              className="border-zinc-200"
+              className="border-zinc-200 dark:border-zinc-600"
               disabled={busy}
             />
           </div>
 
-          <div className="space-y-3 rounded-xl border border-zinc-200 bg-zinc-50/80 p-4">
-            <label className="flex cursor-pointer gap-3 text-sm leading-snug text-zinc-800">
+          <div className="space-y-3 rounded-xl border border-zinc-200 bg-zinc-50/80 p-4 dark:border-zinc-600 dark:bg-zinc-800/60">
+            <label className="flex cursor-pointer gap-3 text-sm leading-snug text-zinc-800 dark:text-zinc-200">
               <input
                 type="checkbox"
                 checked={consent}
@@ -191,11 +191,11 @@ export function MatchNotificationPrompt() {
           </div>
         </div>
 
-        <DialogFooter className="flex-col gap-2 border-t border-zinc-100 bg-zinc-50/50 px-6 py-4 sm:flex-row sm:justify-end sm:px-8">
+        <DialogFooter className="flex-col gap-2 border-t border-zinc-100 bg-zinc-50/50 px-6 py-4 dark:border-zinc-800 dark:bg-zinc-900/60 sm:flex-row sm:justify-end sm:px-8">
           <Button
             type="button"
             variant="outline"
-            className="w-full border-zinc-200 sm:w-auto"
+            className="w-full border-zinc-200 dark:border-zinc-600 sm:w-auto"
             onClick={() => void dismiss()}
             disabled={busy}
           >
@@ -203,7 +203,7 @@ export function MatchNotificationPrompt() {
           </Button>
           <Button
             type="button"
-            className="w-full bg-emerald-700 hover:bg-emerald-800 sm:w-auto"
+            className="w-full bg-emerald-700 hover:bg-emerald-800 dark:bg-emerald-600 dark:hover:bg-emerald-500 sm:w-auto"
             onClick={() => void subscribe()}
             disabled={busy}
           >

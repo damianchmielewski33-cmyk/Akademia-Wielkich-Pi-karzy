@@ -6,6 +6,7 @@ import { requireUser } from "@/lib/api-helpers";
 import { getProfileDashboard, getAvailablePlayerAliases } from "@/lib/profile-data";
 import { resolveCanonicalPlayerAlias } from "@/lib/player-alias";
 import { isUniqueConstraintError } from "@/lib/sql-errors";
+import { normalizeUiTheme } from "@/lib/ui-theme";
 
 export const runtime = "nodejs";
 
@@ -14,10 +15,16 @@ const patchSchema = z
     first_name: z.string().min(1).trim().optional(),
     last_name: z.string().min(1).trim().optional(),
     zawodnik: z.string().min(1).trim().optional(),
+    ui_theme: z.enum(["light", "dark"]).optional(),
   })
-  .refine((d) => d.first_name !== undefined || d.last_name !== undefined || d.zawodnik !== undefined, {
-    message: "Brak pól do aktualizacji.",
-  });
+  .refine(
+    (d) =>
+      d.first_name !== undefined ||
+      d.last_name !== undefined ||
+      d.zawodnik !== undefined ||
+      d.ui_theme !== undefined,
+    { message: "Brak pól do aktualizacji." }
+  );
 
 export async function GET() {
   const gate = await requireUser();
@@ -46,9 +53,9 @@ export async function PATCH(req: Request) {
 
   const db = await getDb();
   const row = (await db
-    .prepare("SELECT first_name, last_name, player_alias FROM users WHERE id = ?")
+    .prepare("SELECT first_name, last_name, player_alias, ui_theme FROM users WHERE id = ?")
     .get(session.userId)) as
-    | { first_name: string; last_name: string; player_alias: string }
+    | { first_name: string; last_name: string; player_alias: string; ui_theme: string | null }
     | undefined;
   if (!row) return NextResponse.json({ error: "Nie znaleziono konta" }, { status: 404 });
 
@@ -70,13 +77,13 @@ export async function PATCH(req: Request) {
     nextAlias = row.player_alias;
   }
 
+  const nextTheme =
+    parsed.data.ui_theme !== undefined ? normalizeUiTheme(parsed.data.ui_theme) : normalizeUiTheme(row.ui_theme);
+
   try {
-    await db.prepare("UPDATE users SET first_name = ?, last_name = ?, player_alias = ? WHERE id = ?").run(
-      nextFirst,
-      nextLast,
-      nextAlias,
-      session.userId
-    );
+    await db
+      .prepare("UPDATE users SET first_name = ?, last_name = ?, player_alias = ?, ui_theme = ? WHERE id = ?")
+      .run(nextFirst, nextLast, nextAlias, nextTheme, session.userId);
   } catch (e) {
     if (isUniqueConstraintError(e)) {
       return NextResponse.json({ error: "Ten piłkarz jest już zajęty." }, { status: 409 });

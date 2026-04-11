@@ -396,10 +396,10 @@ function PlayerChip({
         e.dataTransfer.effectAllowed = "move";
       }}
       className={cn(
-        "flex max-w-[200px] cursor-grab select-none items-center gap-2 rounded-lg border bg-white px-2.5 py-1.5 text-left text-xs shadow-sm active:cursor-grabbing",
+        "flex max-w-[200px] cursor-grab select-none items-center gap-2 rounded-lg border bg-white px-2.5 py-1.5 text-left text-xs shadow-sm active:cursor-grabbing dark:bg-zinc-800",
         variant === "slot"
-          ? "border-emerald-200/90 text-emerald-950"
-          : "border-zinc-200 text-zinc-800 hover:border-emerald-300"
+          ? "border-emerald-200/90 text-emerald-950 dark:border-emerald-700/80 dark:text-emerald-100"
+          : "border-zinc-200 text-zinc-800 hover:border-emerald-300 dark:border-zinc-600 dark:text-zinc-200 dark:hover:border-emerald-500/70"
       )}
       title={`${player.displayName}${player.zawodnik ? ` (${player.zawodnik})` : ""}`}
     >
@@ -416,7 +416,7 @@ function PlayerChip({
           lastName={player.lastName}
           nick={player.zawodnik}
           primaryClassName="text-[11px] font-semibold leading-tight"
-          secondaryClassName="text-[10px] text-zinc-500"
+          secondaryClassName="text-[10px] text-zinc-500 dark:text-zinc-400"
         />
       </div>
     </div>

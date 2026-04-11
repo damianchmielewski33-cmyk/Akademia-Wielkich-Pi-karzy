@@ -30,7 +30,7 @@ export default function KontaktPage() {
             className="h-12 w-12 drop-shadow-sm sm:h-14 sm:w-14"
             unoptimized
           />
-          <h1 className="text-3xl font-bold tracking-tight text-emerald-950 sm:text-4xl">Kontakt</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-emerald-950 dark:text-emerald-100 sm:text-4xl">Kontakt</h1>
           <Image
             src="/soccer-ball.svg"
             alt=""
@@ -40,15 +40,15 @@ export default function KontaktPage() {
             unoptimized
           />
         </div>
-        <p className="mt-4 text-base text-zinc-600 sm:text-lg">Dane kontaktowe organizatorów</p>
+        <p className="mt-4 text-base text-zinc-600 dark:text-zinc-400 sm:text-lg">Dane kontaktowe organizatorów</p>
       </div>
 
       <div className="mx-auto mt-8 max-w-3xl">
-        <section className="relative overflow-hidden rounded-2xl border-2 border-white/40 bg-white/90 p-6 text-left shadow-lg shadow-emerald-950/10 ring-1 ring-emerald-950/10 sm:p-8">
+        <section className="relative overflow-hidden rounded-2xl border-2 border-white/40 bg-white/90 p-6 text-left shadow-lg shadow-emerald-950/10 ring-1 ring-emerald-950/10 dark:border-emerald-900/35 dark:bg-zinc-900/92 dark:shadow-black/40 dark:ring-emerald-900/35 sm:p-8">
           <div className="home-pitch-tile pointer-events-none absolute inset-0 opacity-[0.07]" aria-hidden />
           <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-white/50" aria-hidden />
           <div className="relative">
-            <h2 className="text-xl font-bold tracking-tight text-emerald-950 sm:text-2xl">Organizatorzy</h2>
+            <h2 className="text-xl font-bold tracking-tight text-emerald-950 dark:text-emerald-100 sm:text-2xl">Organizatorzy</h2>
             <div className="pitch-rule mt-3 w-28 max-w-full opacity-90" />
 
             <div className="mt-6 grid gap-3">
@@ -65,7 +65,7 @@ export default function KontaktPage() {
       </div>
 
       <p className="mt-10">
-        <Link href="/" className="text-sm font-semibold text-emerald-800 hover:underline">
+        <Link href="/" className="text-sm font-semibold text-emerald-800 hover:underline dark:text-emerald-300">
           ← Strona główna
         </Link>
       </p>
@@ -115,23 +115,40 @@ function OrganizerCard({
 
         <div className="flex flex-wrap gap-2">
           {phone ? (
-            <Button asChild variant="secondary" className="bg-white/95 text-emerald-950 hover:bg-white">
+            <Button
+              asChild
+              variant="secondary"
+              className="bg-white/95 text-emerald-950 hover:bg-white dark:bg-zinc-800 dark:text-emerald-100 dark:hover:bg-zinc-700"
+            >
               <a href={`tel:${phone.replace(/\s/g, "")}`}>Zadzwoń</a>
             </Button>
           ) : null}
           {email ? (
-            <Button asChild variant="secondary" className="bg-white/95 text-emerald-950 hover:bg-white">
+            <Button
+              asChild
+              variant="secondary"
+              className="bg-white/95 text-emerald-950 hover:bg-white dark:bg-zinc-800 dark:text-emerald-100 dark:hover:bg-zinc-700"
+            >
               <a href={`mailto:${email}`}>Napisz email</a>
             </Button>
           ) : null}
           {facebookUrl ? (
-            <Button asChild variant="secondary" className="bg-white/95 text-emerald-950 hover:bg-white">
+            <Button
+              asChild
+              variant="secondary"
+              className="bg-white/95 text-emerald-950 hover:bg-white dark:bg-zinc-800 dark:text-emerald-100 dark:hover:bg-zinc-700"
+            >
               <a href={facebookUrl} target="_blank" rel="noreferrer">
                 Facebook
               </a>
             </Button>
           ) : (
-            <Button type="button" variant="secondary" disabled className="bg-white/90 text-emerald-950">
+            <Button
+              type="button"
+              variant="secondary"
+              disabled
+              className="bg-white/90 text-emerald-950 dark:bg-zinc-800/80 dark:text-zinc-500"
+            >
               Facebook
             </Button>
           )}

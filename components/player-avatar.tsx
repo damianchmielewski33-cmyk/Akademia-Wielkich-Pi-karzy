@@ -93,9 +93,18 @@ export function PlayerNameStack({
   const showNick = Boolean(nick && full && nick !== full);
   return (
     <div className={cn("min-w-0 text-left", className)}>
-      <div className={cn("truncate font-medium text-emerald-950", primaryClassName)}>{primary}</div>
+      <div
+        className={cn(
+          "truncate font-medium text-emerald-950 dark:text-emerald-100",
+          primaryClassName
+        )}
+      >
+        {primary}
+      </div>
       {showNick ? (
-        <div className={cn("truncate text-xs text-zinc-500", secondaryClassName)}>{nick}</div>
+        <div className={cn("truncate text-xs text-zinc-500 dark:text-zinc-400", secondaryClassName)}>
+          {nick}
+        </div>
       ) : null}
     </div>
   );

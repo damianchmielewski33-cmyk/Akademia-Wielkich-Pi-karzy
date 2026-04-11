@@ -23,7 +23,8 @@ function zonedYmd(utcMs: number, timeZone: string): string {
   return `${y}-${mo}-${day}`;
 }
 
-function addCalendarDaysYmd(ymd: string, delta: number): string {
+/** Przesuwa napis `YYYY-MM-DD` o `delta` dni kalendarzowych (Gregorian). */
+export function addCalendarDaysYmd(ymd: string, delta: number): string {
   const [y, mo, d] = ymd.split("-").map(Number);
   const dt = new Date(Date.UTC(y, mo - 1, d));
   dt.setUTCDate(dt.getUTCDate() + delta);
@@ -31,6 +32,24 @@ function addCalendarDaysYmd(ymd: string, delta: number): string {
   const mm = String(dt.getUTCMonth() + 1).padStart(2, "0");
   const dd = String(dt.getUTCDate()).padStart(2, "0");
   return `${yy}-${mm}-${dd}`;
+}
+
+/** Bieżący dzień kalendarzowy w podanej strefie (np. dopasowanie do `input type="date"` w PL). */
+export function nowLocalYmd(
+  timeZone: string = process.env.ANALYTICS_TIMEZONE?.trim() || DEFAULT_TZ
+): string {
+  return zonedYmd(Date.now(), timeZone);
+}
+
+/** Wszystkie dni od `fromYmd` do `toYmd` włącznie (wymaga `fromYmd <= toYmd`). */
+export function listLocalYmdsInclusive(fromYmd: string, toYmd: string): string[] {
+  const out: string[] = [];
+  let cur = fromYmd;
+  while (cur <= toYmd) {
+    out.push(cur);
+    cur = addCalendarDaysYmd(cur, 1);
+  }
+  return out;
 }
 
 /** Pierwsza milisekunda danego dnia kalendarzowego `ymd` w `timeZone`. */

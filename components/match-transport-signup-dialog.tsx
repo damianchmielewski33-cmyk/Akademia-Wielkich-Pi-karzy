@@ -21,7 +21,8 @@ type Props = {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   matchId: number;
-  intent: "signup" | "edit";
+  /** signup = nowy pełny zapis; confirm = upgrade ze statusu «jeszcze nie wiem»; edit = zmiana transportu */
+  intent: "signup" | "edit" | "confirm";
   initial?: SignupTransportRow | null;
   onCompleted: () => void;
 };
@@ -41,7 +42,7 @@ export function MatchTransportSignupDialog({
 
   useEffect(() => {
     if (!open) return;
-    if (initial && intent === "edit") {
+    if (initial && (intent === "edit" || intent === "confirm")) {
       if (initial.drives_car === 1) {
         setMode("car");
         setCanTakePassengers(initial.can_take_passengers === 1);
@@ -82,7 +83,9 @@ export function MatchTransportSignupDialog({
       const url =
         intent === "edit"
           ? `/api/terminarz/signup/${matchId}/transport`
-          : `/api/terminarz/signup/${matchId}`;
+          : intent === "confirm"
+            ? `/api/terminarz/signup/${matchId}/confirm`
+            : `/api/terminarz/signup/${matchId}`;
       const method = intent === "edit" ? "PATCH" : "POST";
       const res = await fetch(url, {
         method,
@@ -98,7 +101,9 @@ export function MatchTransportSignupDialog({
         toast.error(typeof data.error === "string" ? data.error : "Nie udało się zapisać");
         return;
       }
-      toast.success(intent === "edit" ? "Zapisano preferencje transportu" : "Zapisano");
+      toast.success(
+        intent === "edit" ? "Zapisano preferencje transportu" : intent === "confirm" ? "Potwierdzono zapis" : "Zapisano"
+      );
       onOpenChange(false);
       onCompleted();
     } finally {
@@ -110,26 +115,28 @@ export function MatchTransportSignupDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="border-emerald-900/15 sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-emerald-950">
-            {intent === "edit" ? "Transport na mecz" : "Zapis — transport"}
+          <DialogTitle>
+            {intent === "edit" ? "Transport na mecz" : intent === "confirm" ? "Potwierdź udział — transport" : "Zapis — transport"}
           </DialogTitle>
-          <DialogDescription className="text-left text-zinc-600">
+          <DialogDescription className="text-left text-zinc-600 dark:text-zinc-400">
             {intent === "signup"
               ? "Powiedz nam, jak planujesz dojazd — pomoże to ustalić transport w grupie."
-              : "Zaktualizuj informacje o dojeździe na ten mecz."}
+              : intent === "confirm"
+                ? "Potwierdzasz udział w składzie — podaj, jak planujesz dojazd."
+                : "Zaktualizuj informacje o dojeździe na ten mecz."}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-1">
           <div>
-            <p className="mb-2 text-sm font-medium text-emerald-950">Jak dotrzesz na mecz?</p>
+            <p className="mb-2 text-sm font-medium text-emerald-950 dark:text-emerald-100">Jak dotrzesz na mecz?</p>
             <div className="grid grid-cols-2 gap-2">
               <Button
                 type="button"
                 variant={mode === "car" ? "default" : "outline"}
                 className={cn(
                   "h-auto flex-col gap-1 py-3",
-                  mode === "car" && "border-0 bg-emerald-800 hover:bg-emerald-900"
+                  mode === "car" && "border-0 bg-emerald-800 hover:bg-emerald-900 dark:bg-emerald-600 dark:hover:bg-emerald-500"
                 )}
                 onClick={() => {
                   setMode("car");
@@ -144,7 +151,7 @@ export function MatchTransportSignupDialog({
                 variant={mode === "public" ? "default" : "outline"}
                 className={cn(
                   "h-auto flex-col gap-1 py-3",
-                  mode === "public" && "border-0 bg-emerald-800 hover:bg-emerald-900"
+                  mode === "public" && "border-0 bg-emerald-800 hover:bg-emerald-900 dark:bg-emerald-600 dark:hover:bg-emerald-500"
                 )}
                 onClick={() => {
                   setMode("public");
@@ -158,11 +165,11 @@ export function MatchTransportSignupDialog({
           </div>
 
           {mode === "car" && (
-            <div className="rounded-xl border border-emerald-200/80 bg-emerald-50/50 p-3">
-              <p className="text-sm font-medium text-emerald-950">Możesz zabrać pasażerów?</p>
-              <p className="mt-0.5 text-xs text-zinc-600">
-                <span className="font-semibold text-emerald-900">TAK</span> — masz wolne miejsca w aucie.{" "}
-                <span className="font-semibold text-emerald-900">NIE</span> — jedziesz sam lub nie możesz zabrać
+            <div className="rounded-xl border border-emerald-200/80 bg-emerald-50/50 p-3 dark:border-emerald-800/60 dark:bg-emerald-950/40">
+              <p className="text-sm font-medium text-emerald-950 dark:text-emerald-100">Możesz zabrać pasażerów?</p>
+              <p className="mt-0.5 text-xs text-zinc-600 dark:text-zinc-400">
+                <span className="font-semibold text-emerald-900 dark:text-emerald-200">TAK</span> — masz wolne miejsca w aucie.{" "}
+                <span className="font-semibold text-emerald-900 dark:text-emerald-200">NIE</span> — jedziesz sam lub nie możesz zabrać
                 osób.
               </p>
               <div className="mt-3 flex gap-2">
@@ -170,7 +177,10 @@ export function MatchTransportSignupDialog({
                   type="button"
                   size="sm"
                   variant={canTakePassengers === true ? "default" : "outline"}
-                  className={cn("flex-1", canTakePassengers === true && "bg-emerald-700 hover:bg-emerald-800")}
+                  className={cn(
+                    "flex-1",
+                    canTakePassengers === true && "bg-emerald-700 hover:bg-emerald-800 dark:bg-emerald-600 dark:hover:bg-emerald-500"
+                  )}
                   onClick={() => setCanTakePassengers(true)}
                 >
                   TAK
@@ -179,7 +189,10 @@ export function MatchTransportSignupDialog({
                   type="button"
                   size="sm"
                   variant={canTakePassengers === false ? "default" : "outline"}
-                  className={cn("flex-1", canTakePassengers === false && "bg-emerald-700 hover:bg-emerald-800")}
+                  className={cn(
+                    "flex-1",
+                    canTakePassengers === false && "bg-emerald-700 hover:bg-emerald-800 dark:bg-emerald-600 dark:hover:bg-emerald-500"
+                  )}
                   onClick={() => setCanTakePassengers(false)}
                 >
                   NIE
@@ -189,18 +202,21 @@ export function MatchTransportSignupDialog({
           )}
 
           {mode === "public" && (
-            <div className="rounded-xl border border-emerald-200/80 bg-emerald-50/50 p-3">
-              <p className="text-sm font-medium text-emerald-950">Potrzebujesz transportu od kogoś z drużyny?</p>
-              <p className="mt-0.5 text-xs text-zinc-600">
-                <span className="font-semibold text-emerald-900">TAK</span> — szukasz dojazdu.{" "}
-                <span className="font-semibold text-emerald-900">NIE</span> — dotrzesz samodzielnie komunikacją.
+            <div className="rounded-xl border border-emerald-200/80 bg-emerald-50/50 p-3 dark:border-emerald-800/60 dark:bg-emerald-950/40">
+              <p className="text-sm font-medium text-emerald-950 dark:text-emerald-100">Potrzebujesz transportu od kogoś z drużyny?</p>
+              <p className="mt-0.5 text-xs text-zinc-600 dark:text-zinc-400">
+                <span className="font-semibold text-emerald-900 dark:text-emerald-200">TAK</span> — szukasz dojazdu.{" "}
+                <span className="font-semibold text-emerald-900 dark:text-emerald-200">NIE</span> — dotrzesz samodzielnie komunikacją.
               </p>
               <div className="mt-3 flex gap-2">
                 <Button
                   type="button"
                   size="sm"
                   variant={needsTransport === true ? "default" : "outline"}
-                  className={cn("flex-1", needsTransport === true && "bg-emerald-700 hover:bg-emerald-800")}
+                  className={cn(
+                    "flex-1",
+                    needsTransport === true && "bg-emerald-700 hover:bg-emerald-800 dark:bg-emerald-600 dark:hover:bg-emerald-500"
+                  )}
                   onClick={() => setNeedsTransport(true)}
                 >
                   TAK
@@ -209,7 +225,10 @@ export function MatchTransportSignupDialog({
                   type="button"
                   size="sm"
                   variant={needsTransport === false ? "default" : "outline"}
-                  className={cn("flex-1", needsTransport === false && "bg-emerald-700 hover:bg-emerald-800")}
+                  className={cn(
+                    "flex-1",
+                    needsTransport === false && "bg-emerald-700 hover:bg-emerald-800 dark:bg-emerald-600 dark:hover:bg-emerald-500"
+                  )}
                   onClick={() => setNeedsTransport(false)}
                 >
                   NIE
@@ -229,7 +248,7 @@ export function MatchTransportSignupDialog({
             onClick={() => void submit()}
             disabled={busy}
           >
-            {intent === "edit" ? "Zapisz" : "Potwierdź zapis"}
+            {intent === "edit" ? "Zapisz" : intent === "confirm" ? "Potwierdź zapis" : "Potwierdź zapis"}
           </Button>
         </DialogFooter>
       </DialogContent>

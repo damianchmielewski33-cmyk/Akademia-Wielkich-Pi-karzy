@@ -35,7 +35,7 @@ export default async function PilkarzePage() {
             className="h-12 w-12 drop-shadow-sm sm:h-14 sm:w-14"
             unoptimized
           />
-          <h1 className="text-3xl font-bold tracking-tight text-emerald-950 sm:text-4xl">Piłkarze</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-emerald-950 dark:text-emerald-100 sm:text-4xl">Piłkarze</h1>
           <Image
             src="/soccer-ball.svg"
             alt=""
@@ -45,7 +45,7 @@ export default async function PilkarzePage() {
             unoptimized
           />
         </div>
-        <p className="mt-4 text-base text-zinc-600 sm:text-lg">Wszyscy zarejestrowani zawodnicy akademii</p>
+        <p className="mt-4 text-base text-zinc-600 dark:text-zinc-400 sm:text-lg">Wszyscy zarejestrowani zawodnicy akademii</p>
       </div>
 
       <div className="mt-10 text-left">

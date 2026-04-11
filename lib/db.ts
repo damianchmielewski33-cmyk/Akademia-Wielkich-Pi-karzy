@@ -203,6 +203,9 @@ function initSchemaSync(db: Database.Database) {
   if (!userCols.some((c) => c.name === "pin_hash_pending")) {
     db.exec("ALTER TABLE users ADD COLUMN pin_hash_pending TEXT");
   }
+  if (!userCols.some((c) => c.name === "ui_theme")) {
+    db.exec("ALTER TABLE users ADD COLUMN ui_theme TEXT NOT NULL DEFAULT 'light'");
+  }
 
   const signupCols = db.prepare("PRAGMA table_info(match_signups)").all() as { name: string }[];
   if (!signupCols.some((c) => c.name === "drives_car")) {
@@ -213,6 +216,9 @@ function initSchemaSync(db: Database.Database) {
   }
   if (!signupCols.some((c) => c.name === "needs_transport")) {
     db.exec("ALTER TABLE match_signups ADD COLUMN needs_transport INTEGER NOT NULL DEFAULT 0");
+  }
+  if (!signupCols.some((c) => c.name === "commitment")) {
+    db.exec("ALTER TABLE match_signups ADD COLUMN commitment INTEGER NOT NULL DEFAULT 1");
   }
 
   db.exec(`
@@ -335,6 +341,8 @@ export type UserRow = {
   auth_version?: number;
   /** Propozycja nowego PIN-u (bcrypt); oczekuje na zatwierdzenie przez admina. */
   pin_hash_pending?: string | null;
+  /** Motyw interfejsu: jasny lub ciemny. */
+  ui_theme?: string | null;
 };
 
 export type MatchRow = {

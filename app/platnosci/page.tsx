@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { getDb, type MatchRow } from "@/lib/db";
 import { getServerSession } from "@/lib/auth";
 import { PlatnosciClient, type PlatnosciSignup } from "@/components/platnosci-client";
+import { formatPonderingPlayersPolish } from "@/lib/terminarz-shared";
 
 export const metadata: Metadata = {
   title: "Płatności",
@@ -21,7 +22,7 @@ const SQL_SIGNUPS_WITH_USERS_FOR_MATCH = `
          u.first_name, u.last_name, u.player_alias AS zawodnik, u.profile_photo_path
   FROM match_signups ms
   JOIN users u ON u.id = ms.user_id
-  WHERE ms.match_id = ?
+  WHERE ms.match_id = ? AND COALESCE(ms.commitment, 1) = 1
   ORDER BY u.first_name, u.last_name
 `;
 
@@ -35,8 +36,16 @@ export default async function PlatnosciPage() {
   let userSigned = false;
   let userPaid: boolean | null = null;
 
+  let nextMatchTentativeLine = "";
   if (nextMatch) {
     signups = await db.prepare(SQL_SIGNUPS_WITH_USERS_FOR_MATCH).all(nextMatch.id) as PlatnosciSignup[];
+
+    const tRow = (await db
+      .prepare(
+        `SELECT COUNT(*) AS c FROM match_signups WHERE match_id = ? AND COALESCE(commitment, 1) = 0`
+      )
+      .get(nextMatch.id)) as { c: number } | undefined;
+    nextMatchTentativeLine = formatPonderingPlayersPolish(Number(tRow?.c ?? 0));
 
     if (session) {
       const mine = signups.find((s) => s.user_id === session.userId);
@@ -48,6 +57,7 @@ export default async function PlatnosciPage() {
   return (
     <PlatnosciClient
       nextMatch={nextMatch ?? null}
+      nextMatchTentativeLine={nextMatchTentativeLine}
       signups={session ? signups : []}
       isLoggedIn={Boolean(session)}
       isAdmin={session?.isAdmin ?? false}

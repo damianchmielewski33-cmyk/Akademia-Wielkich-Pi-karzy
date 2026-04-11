@@ -135,7 +135,7 @@ export function PilkarzeClient({ players }: { players: PlayerListItem[] }) {
                 </div>
               </div>
               <Button
-                className="mt-4 w-full border-0 bg-white font-semibold text-emerald-900 shadow-md hover:bg-emerald-50"
+                className="mt-4 w-full border-0 bg-white font-semibold text-emerald-900 shadow-md hover:bg-emerald-50 dark:bg-zinc-100 dark:text-emerald-950 dark:hover:bg-white"
                 onClick={() => showStats(p.id)}
               >
                 Statystyki
@@ -148,9 +148,7 @@ export function PilkarzeClient({ players }: { players: PlayerListItem[] }) {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto border-emerald-900/15 sm:max-w-xl">
           <DialogHeader>
-            <DialogTitle className="text-emerald-950">
-              {loading ? "Ładowanie…" : data ? `${data.first_name} ${data.last_name}` : ""}
-            </DialogTitle>
+            <DialogTitle>{loading ? "Ładowanie…" : data ? `${data.first_name} ${data.last_name}` : ""}</DialogTitle>
             <DialogDescription asChild>
               <div>
                 {data && (
@@ -180,23 +178,23 @@ export function PilkarzeClient({ players }: { players: PlayerListItem[] }) {
                 <PitchMiniStat label="Obrony" value={data.saves} />
               </div>
               <PlayerStatsBarChart data={chartData ?? []} />
-              <h4 className="mt-5 font-bold tracking-tight text-emerald-950">Historia meczów</h4>
+              <h4 className="mt-5 font-bold tracking-tight text-emerald-950 dark:text-emerald-100">Historia meczów</h4>
               <div className="pitch-rule mb-2 mt-2 w-20 opacity-60" />
-              <ul className="mt-1 max-h-48 space-y-0 overflow-y-auto rounded-xl border border-emerald-900/10 bg-white text-sm text-emerald-950">
+              <ul className="mt-1 max-h-48 space-y-0 overflow-y-auto rounded-xl border border-emerald-900/10 bg-white text-sm text-emerald-950 dark:border-emerald-800/30 dark:bg-zinc-800/90 dark:text-emerald-100">
                 {data.games.map((g, i) => (
                   <li
                     key={i}
                     className={
                       i % 2 === 0
-                        ? "border-b border-emerald-100/90 bg-emerald-50/40 px-3 py-2.5 last:border-b-0"
-                        : "border-b border-emerald-100/90 px-3 py-2.5 last:border-b-0"
+                        ? "border-b border-emerald-100/90 bg-emerald-50/40 px-3 py-2.5 last:border-b-0 dark:border-emerald-800/40 dark:bg-emerald-950/35"
+                        : "border-b border-emerald-100/90 px-3 py-2.5 last:border-b-0 dark:border-emerald-800/40"
                     }
                   >
-                    <span className="font-medium tabular-nums text-emerald-900">
+                    <span className="font-medium tabular-nums text-emerald-900 dark:text-emerald-200">
                       {g.date} · {g.time}
                     </span>
-                    <span className="mt-0.5 block text-emerald-800/90">{g.location}</span>
-                    <span className="mt-1 block text-xs tabular-nums text-emerald-700">
+                    <span className="mt-0.5 block text-emerald-800/90 dark:text-emerald-300/90">{g.location}</span>
+                    <span className="mt-1 block text-xs tabular-nums text-emerald-700 dark:text-emerald-400">
                       G: {g.goals} · A: {g.assists} · D: {g.distance} · O: {g.saves ?? 0}
                     </span>
                   </li>

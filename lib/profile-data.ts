@@ -1,5 +1,6 @@
 import { getDb } from "@/lib/db";
 import { ALL_PLAYERS } from "@/lib/constants";
+import { normalizeUiTheme } from "@/lib/ui-theme";
 import {
   PARTICIPATION_SURVEY_KEY,
   PARTICIPATION_SURVEY_LOCATION,
@@ -56,7 +57,7 @@ export async function getProfileDashboard(userId: number) {
   const db = await getDb();
   const user = (await db
     .prepare(
-      "SELECT id, first_name, last_name, player_alias, profile_photo_path, is_admin FROM users WHERE id = ?"
+      "SELECT id, first_name, last_name, player_alias, profile_photo_path, is_admin, ui_theme FROM users WHERE id = ?"
     )
     .get(userId)) as
     | {
@@ -66,6 +67,7 @@ export async function getProfileDashboard(userId: number) {
         player_alias: string;
         profile_photo_path: string | null;
         is_admin: number;
+        ui_theme: string | null;
       }
     | undefined;
 
@@ -115,7 +117,7 @@ export async function getProfileDashboard(userId: number) {
               CASE WHEN date('now') <= date(m.match_date, '+7 days') THEN 1 ELSE 0 END AS can_add,
               date(m.match_date, '+7 days') AS edit_deadline
        FROM matches m
-       JOIN match_signups sig ON sig.match_id = m.id AND sig.user_id = ?
+       JOIN match_signups sig ON sig.match_id = m.id AND sig.user_id = ? AND COALESCE(sig.commitment, 1) = 1
        WHERE m.played = 1
          AND NOT EXISTS (
            SELECT 1 FROM match_stats st WHERE st.match_id = m.id AND st.user_id = ?
@@ -148,6 +150,7 @@ export async function getProfileDashboard(userId: number) {
       zawodnik: user.player_alias,
       profile_photo_path: user.profile_photo_path,
       is_admin: user.is_admin,
+      ui_theme: normalizeUiTheme(user.ui_theme),
     },
     available_players: await getAvailablePlayerAliases(userId),
     summary: {

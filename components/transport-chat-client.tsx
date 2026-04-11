@@ -113,7 +113,7 @@ export function TransportChatClient({ matchId, currentUserId, initialMessages }:
                   }`}
                 >
                   {!mine && (
-                    <div className="mb-1 text-xs font-semibold text-emerald-900">
+                    <div className="mb-1 text-xs font-semibold text-emerald-900 dark:text-emerald-200">
                       <PlayerNameStack firstName={m.firstName} lastName={m.lastName} nick={m.zawodnik} />
                     </div>
                   )}

@@ -32,12 +32,16 @@ export async function POST(_req: Request, ctx: Ctx) {
   }
 
   const signup = (await db
-    .prepare("SELECT * FROM match_signups WHERE user_id = ? AND match_id = ?")
-    .get(gate.session.userId, mid)) as { id: number } | undefined;
+    .prepare(
+      "SELECT id, COALESCE(commitment, 1) AS commitment FROM match_signups WHERE user_id = ? AND match_id = ?"
+    )
+    .get(gate.session.userId, mid)) as { id: number; commitment: number } | undefined;
 
   if (signup) {
     await db.prepare("DELETE FROM match_signups WHERE id = ?").run(signup.id);
-    await db.prepare("UPDATE matches SET signed_up = signed_up - 1 WHERE id = ?").run(mid);
+    if (signup.commitment === 1) {
+      await db.prepare("UPDATE matches SET signed_up = signed_up - 1 WHERE id = ? AND signed_up > 0").run(mid);
+    }
     await logActivity(
       gate.session.userId,
       `Wypisał się z meczu ${match.match_date} ${match.match_time} (${match.location}), id ${mid}`

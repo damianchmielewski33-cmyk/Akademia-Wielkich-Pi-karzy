@@ -4,6 +4,7 @@ import { getServerSession } from "@/lib/auth";
 import { getDb, type MatchRow } from "@/lib/db";
 import { HomeClient } from "@/components/home-client";
 import { isLocalMatchDay } from "@/lib/transport";
+import { formatPonderingPlayersPolish } from "@/lib/terminarz-shared";
 
 export const metadata: Metadata = {
   title: "Start",
@@ -20,15 +21,30 @@ export default async function HomePage() {
     )
     .get()) as MatchRow | undefined;
 
-  let userSigned = false;
+  let nextMatchSignup: "none" | "tentative" | "confirmed" = "none";
   if (nextMatch && session) {
     const signup = (await db
-      .prepare(`SELECT id FROM match_signups WHERE user_id = ? AND match_id = ?`)
-      .get(session.userId, nextMatch.id)) as { id: number } | undefined;
-    userSigned = Boolean(signup);
+      .prepare(
+        `SELECT COALESCE(commitment, 1) AS commitment FROM match_signups WHERE user_id = ? AND match_id = ?`
+      )
+      .get(session.userId, nextMatch.id)) as { commitment: number } | undefined;
+    if (signup) {
+      nextMatchSignup = signup.commitment === 0 ? "tentative" : "confirmed";
+    }
   }
 
   const transportHomeActive = Boolean(nextMatch && isLocalMatchDay(nextMatch));
+
+  let nextMatchTentativeLine = "";
+  if (nextMatch) {
+    const row = (await db
+      .prepare(
+        `SELECT COUNT(*) AS c FROM match_signups WHERE match_id = ? AND COALESCE(commitment, 1) = 0`
+      )
+      .get(nextMatch.id)) as { c: number } | undefined;
+    const c = Number(row?.c ?? 0);
+    nextMatchTentativeLine = formatPonderingPlayersPolish(c);
+  }
 
   const lineupPublicNextMatch = Boolean(nextMatch && nextMatch.lineup_public === 1);
 
@@ -43,8 +59,9 @@ export default async function HomePage() {
   return (
     <HomeClient
       nextMatch={nextMatch ?? null}
+      nextMatchTentativeLine={nextMatchTentativeLine}
       lineupPublicNextMatch={lineupPublicNextMatch}
-      userSigned={userSigned}
+      nextMatchSignup={nextMatchSignup}
       transportHomeActive={transportHomeActive}
       isLoggedIn={Boolean(session)}
       isAdmin={session?.isAdmin ?? false}

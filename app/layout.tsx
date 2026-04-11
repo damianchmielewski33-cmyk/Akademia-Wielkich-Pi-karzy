@@ -9,8 +9,9 @@ import { PinSetupGate } from "@/components/pin-setup-gate";
 import { SessionIdleMonitor } from "@/components/session-idle-monitor";
 import { getAccountNavFields } from "@/lib/account-server";
 import { getServerSession } from "@/lib/auth";
+import { normalizeUiTheme } from "@/lib/ui-theme";
 import { getDb } from "@/lib/db";
-import { SITE_NAME } from "@/lib/site";
+import { getSiteUrl, SITE_NAME } from "@/lib/site";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -24,11 +25,28 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(getSiteUrl()),
   title: {
     default: SITE_NAME,
     template: `%s · ${SITE_NAME}`,
   },
   description: "Terminarz, statystyki i społeczność na boisku",
+  robots: {
+    index: true,
+    follow: true,
+  },
+  openGraph: {
+    type: "website",
+    locale: "pl_PL",
+    siteName: SITE_NAME,
+    title: SITE_NAME,
+    description: "Terminarz, statystyki i społeczność na boisku",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: SITE_NAME,
+    description: "Terminarz, statystyki i społeczność na boisku",
+  },
 };
 
 export default async function RootLayout({
@@ -41,6 +59,9 @@ export default async function RootLayout({
     session && !session.needsPinSetup && !session.pinChangePending
   );
 
+  const accountRow = session ? await getAccountNavFields(session.userId) : null;
+  const htmlThemeClass = accountRow && normalizeUiTheme(accountRow.uiTheme) === "dark" ? "dark" : "";
+
   let accountNav: {
     firstName: string;
     lastName: string;
@@ -48,12 +69,11 @@ export default async function RootLayout({
     profilePhotoPath: string | null;
   } | null = null;
   if (loggedInFull) {
-    const row = await getAccountNavFields(session!.userId);
     accountNav = {
-      firstName: row?.firstName ?? session!.firstName,
-      lastName: row?.lastName ?? session!.lastName,
-      zawodnik: row?.zawodnik ?? session!.zawodnik,
-      profilePhotoPath: row?.profilePhotoPath ?? null,
+      firstName: accountRow?.firstName ?? session!.firstName,
+      lastName: accountRow?.lastName ?? session!.lastName,
+      zawodnik: accountRow?.zawodnik ?? session!.zawodnik,
+      profilePhotoPath: accountRow?.profilePhotoPath ?? null,
     };
   }
 
@@ -66,7 +86,7 @@ export default async function RootLayout({
   const matchNotificationPromptEnabled = (settingsRow?.match_notification_prompt_enabled ?? 0) === 1;
 
   return (
-    <html lang="pl">
+    <html lang="pl" className={htmlThemeClass}>
       <body className={`${geistSans.variable} ${geistMono.variable} murawa-bg min-h-screen antialiased font-sans`}>
         <SessionIdleMonitor enabled={sessionIdleLogout} />
         <ShareLinkClientCleanup />
@@ -89,11 +109,11 @@ export default async function RootLayout({
             duration: 4200,
             classNames: {
               toast:
-                "group rounded-xl border border-emerald-200/90 bg-white/95 font-sans shadow-[0_12px_40px_-12px_rgba(5,80,55,0.28)] backdrop-blur-md",
-              title: "text-[15px] font-semibold text-emerald-950",
-              description: "text-sm text-slate-600",
+                "group rounded-xl border border-emerald-200/90 bg-white/95 font-sans shadow-[0_12px_40px_-12px_rgba(5,80,55,0.28)] backdrop-blur-md dark:border-emerald-800/50 dark:bg-zinc-900/95 dark:shadow-[0_12px_40px_-12px_rgba(0,0,0,0.45)]",
+              title: "text-[15px] font-semibold text-emerald-950 dark:text-emerald-100",
+              description: "text-sm text-slate-600 dark:text-zinc-400",
               closeButton:
-                "rounded-lg border border-emerald-100 bg-white text-emerald-800 hover:bg-emerald-50",
+                "rounded-lg border border-emerald-100 bg-white text-emerald-800 hover:bg-emerald-50 dark:border-emerald-800 dark:bg-zinc-800 dark:text-emerald-200 dark:hover:bg-zinc-700",
             },
           }}
         />

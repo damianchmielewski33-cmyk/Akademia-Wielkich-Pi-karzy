@@ -7,10 +7,12 @@ import { toast } from "sonner";
 import {
   Activity,
   Camera,
+  Moon,
   Pencil,
   Route,
   Share2,
   Shield,
+  Sun,
   Target,
   Trash2,
 } from "lucide-react";
@@ -36,6 +38,7 @@ import { Badge } from "@/components/ui/badge";
 import { PhotoDevelopPreloader } from "@/components/preloaders";
 import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
 import type { ProfileDashboard } from "@/lib/profile-data";
+import { normalizeUiTheme, type UiTheme } from "@/lib/ui-theme";
 import { cn } from "@/lib/utils";
 
 type Props = { initial: ProfileDashboard };
@@ -46,6 +49,7 @@ export function ProfilClient({ initial }: Props) {
   const [firstName, setFirstName] = useState(initial.user.first_name);
   const [lastName, setLastName] = useState(initial.user.last_name);
   const [zawodnik, setZawodnik] = useState(initial.user.zawodnik);
+  const [uiTheme, setUiTheme] = useState<UiTheme>(normalizeUiTheme(initial.user.ui_theme));
   const [savingProfile, setSavingProfile] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [editingProfile, setEditingProfile] = useState(false);
@@ -74,6 +78,7 @@ export function ProfilClient({ initial }: Props) {
     setFirstName(json.user.first_name);
     setLastName(json.user.last_name);
     setZawodnik(json.user.zawodnik);
+    setUiTheme(normalizeUiTheme(json.user.ui_theme));
   }
 
   async function saveProfile() {
@@ -87,6 +92,7 @@ export function ProfilClient({ initial }: Props) {
           first_name: firstName,
           last_name: lastName,
           zawodnik,
+          ui_theme: uiTheme,
         }),
       });
       const body = await res.json().catch(() => ({}));
@@ -102,6 +108,7 @@ export function ProfilClient({ initial }: Props) {
         setFirstName(next.user.first_name);
         setLastName(next.user.last_name);
         setZawodnik(next.user.zawodnik);
+        setUiTheme(normalizeUiTheme(next.user.ui_theme));
       }
       toast.success("Profil zapisany");
       setEditingProfile(false);
@@ -115,6 +122,7 @@ export function ProfilClient({ initial }: Props) {
     setFirstName(data.user.first_name);
     setLastName(data.user.last_name);
     setZawodnik(data.user.zawodnik);
+    setUiTheme(normalizeUiTheme(data.user.ui_theme));
     setEditingProfile(false);
   }
 
@@ -221,14 +229,14 @@ export function ProfilClient({ initial }: Props) {
   return (
     <div className="container mx-auto max-w-5xl flex-1 px-4 py-8 sm:py-10">
       <div className="pitch-rule mx-auto mb-5 w-40 sm:w-48" />
-      <h1 className="text-center text-3xl font-bold tracking-tight text-emerald-950 sm:text-4xl">Mój profil</h1>
-      <p className="mx-auto mt-3 max-w-2xl text-center text-base text-zinc-600">
+      <h1 className="text-center text-3xl font-bold tracking-tight text-emerald-950 dark:text-emerald-100 sm:text-4xl">Mój profil</h1>
+      <p className="mx-auto mt-3 max-w-2xl text-center text-base text-zinc-600 dark:text-zinc-400">
         Dane konta, zdjęcie, awatar z listy oraz statystyki z ostatnich meczów (edycja i uzupełnianie przez{" "}
         <strong>7 dni</strong> od daty meczu).
       </p>
 
       <div className="mx-auto mt-10 grid gap-6 lg:grid-cols-[minmax(0,280px)_1fr]">
-        <div className="relative overflow-hidden rounded-2xl border-2 border-white/35 bg-white/95 p-6 shadow-lg shadow-emerald-950/10 ring-1 ring-emerald-950/10">
+        <div className="awp-card-surface">
           <div className="home-pitch-tile pointer-events-none absolute inset-0 opacity-[0.12]" aria-hidden />
           <div className="relative flex flex-col items-center text-center">
             <div className="relative shrink-0 overflow-hidden rounded-full border-4 border-emerald-200/90 shadow-inner ring-2 ring-emerald-900/10">
@@ -247,8 +255,8 @@ export function ProfilClient({ initial }: Props) {
                 firstName={firstName}
                 lastName={lastName}
                 nick={zawodnik}
-                primaryClassName="text-base font-semibold text-emerald-950"
-                secondaryClassName="text-sm text-zinc-600"
+                primaryClassName="text-base font-semibold text-emerald-950 dark:text-emerald-100"
+                secondaryClassName="text-sm text-zinc-600 dark:text-zinc-400"
               />
             </div>
             <div className="mt-4 flex flex-wrap justify-center gap-2">
@@ -271,14 +279,14 @@ export function ProfilClient({ initial }: Props) {
         </div>
 
         <div className="space-y-6">
-          <div className="relative overflow-hidden rounded-2xl border-2 border-white/35 bg-white/95 p-6 shadow-lg shadow-emerald-950/10 ring-1 ring-emerald-950/10">
+          <div className="awp-card-surface">
             <div className="home-pitch-tile pointer-events-none absolute inset-0 opacity-[0.08]" aria-hidden />
             <div className="relative">
-              <h2 className="flex items-center gap-2 text-lg font-bold text-emerald-950">
+              <h2 className="flex items-center gap-2 text-lg font-bold text-emerald-950 dark:text-emerald-100">
                 <Pencil className="h-5 w-5 text-emerald-700" />
                 Dane i awatar (lista)
               </h2>
-              <p className="mt-1 text-sm text-zinc-600">
+              <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
                 Logowanie odbywa się po imieniu, nazwisku i wybranym piłkarzu — po zmianie tych danych nadal jesteś zalogowany.
               </p>
               <div className="mt-5 space-y-4">
@@ -292,7 +300,7 @@ export function ProfilClient({ initial }: Props) {
                       onChange={(e) => setFirstName(e.target.value)}
                       className={cn(
                         "mt-1",
-                        !editingProfile && "cursor-default border-emerald-100/90 bg-zinc-50/80 text-emerald-950"
+                        !editingProfile && "cursor-default border-emerald-100/90 bg-zinc-50/80 text-emerald-950 dark:text-emerald-100"
                       )}
                       required
                     />
@@ -306,7 +314,7 @@ export function ProfilClient({ initial }: Props) {
                       onChange={(e) => setLastName(e.target.value)}
                       className={cn(
                         "mt-1",
-                        !editingProfile && "cursor-default border-emerald-100/90 bg-zinc-50/80 text-emerald-950"
+                        !editingProfile && "cursor-default border-emerald-100/90 bg-zinc-50/80 text-emerald-950 dark:text-emerald-100"
                       )}
                       required
                     />
@@ -331,6 +339,40 @@ export function ProfilClient({ initial }: Props) {
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+                <div>
+                  <Label>Motyw strony</Label>
+                  <Select
+                    value={uiTheme}
+                    onValueChange={(v) => setUiTheme(normalizeUiTheme(v))}
+                    disabled={!editingProfile}
+                  >
+                    <SelectTrigger
+                      className={cn(
+                        "mt-1",
+                        !editingProfile && "cursor-default border-emerald-100/90 bg-zinc-50/80 opacity-100"
+                      )}
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="light">
+                        <span className="flex items-center gap-2">
+                          <Sun className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
+                          Jasny
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="dark">
+                        <span className="flex items-center gap-2">
+                          <Moon className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
+                          Ciemny
+                        </span>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="mt-1.5 text-xs text-zinc-500">
+                    Po zapisaniu stosuje się do całej aplikacji (nagłówek, treść, stopka).
+                  </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {editingProfile ? (
@@ -357,11 +399,11 @@ export function ProfilClient({ initial }: Props) {
             </div>
           </div>
 
-          <div className="relative overflow-hidden rounded-2xl border-2 border-white/35 bg-white/95 p-6 shadow-lg shadow-emerald-950/10 ring-1 ring-emerald-950/10">
+          <div className="awp-card-surface">
             <div className="home-pitch-tile-gold pointer-events-none absolute inset-0 opacity-[0.1]" aria-hidden />
             <div className="relative">
-              <h2 className="text-lg font-bold text-emerald-950">Podsumowanie</h2>
-              <p className="mt-1 text-sm text-zinc-600">
+              <h2 className="text-lg font-bold text-emerald-950 dark:text-emerald-100">Podsumowanie</h2>
+              <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
                 Szybki wgląd — pełna tabela jest w{" "}
                 <Link href="/statystyki" className="font-semibold text-emerald-800 underline-offset-2 hover:underline">
                   Statystykach
@@ -386,24 +428,26 @@ export function ProfilClient({ initial }: Props) {
         </div>
       </div>
 
-      <section className="relative mx-auto mt-10 max-w-5xl overflow-hidden rounded-2xl border-2 border-white/35 bg-white/95 p-6 shadow-lg shadow-emerald-950/10 ring-1 ring-emerald-950/10">
+      <section className="awp-card-surface mx-auto mt-10 max-w-5xl">
         <div className="home-pitch-tile pointer-events-none absolute inset-0 opacity-[0.06]" aria-hidden />
         <div className="relative">
-          <h2 className="text-lg font-bold text-emerald-950">Statystyki z meczów</h2>
-          <p className="mt-1 text-sm text-zinc-600">
+          <h2 className="text-lg font-bold text-emerald-950 dark:text-emerald-100">Statystyki z meczów</h2>
+          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
             Możesz dodać lub poprawić wpis do <strong>7 dni po dacie meczu</strong>. Później zmiany wykona wyłącznie admin.
           </p>
 
           {data.matches_missing_stats.length > 0 ? (
             <div className="mt-5">
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-emerald-900/90">Do uzupełnienia</h3>
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-emerald-900/90 dark:text-emerald-200/90">
+                Do uzupełnienia
+              </h3>
               <ul className="mt-2 space-y-2">
                 {data.matches_missing_stats.map((m) => (
                   <li
                     key={m.match_id}
                     className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-200/80 bg-amber-50/50 px-3 py-2.5"
                   >
-                    <span className="text-sm text-emerald-950">
+                    <span className="text-sm text-emerald-950 dark:text-emerald-100">
                       {m.match_date} · {m.match_time} — {m.location}
                     </span>
                     <div className="flex items-center gap-2">
@@ -438,15 +482,15 @@ export function ProfilClient({ initial }: Props) {
                   key={s.survey_key ?? `stat-${s.stat_id}`}
                   className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-emerald-100/90 bg-emerald-50/35 px-3 py-2.5"
                 >
-                  <div className="min-w-0 text-sm text-emerald-950">
+                  <div className="min-w-0 text-sm text-emerald-950 dark:text-emerald-100">
                     <span className="font-medium">{s.match_date}</span> · {s.match_time} — {s.location}
-                    <span className="mt-0.5 block text-xs text-zinc-600">
+                    <span className="mt-0.5 block text-xs text-zinc-600 dark:text-zinc-400">
                       Gole {s.goals} · Asysty {s.assists} · km {s.distance.toFixed(1)} · Obrony {s.saves ?? 0}
                     </span>
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
                     {!s.can_edit ? (
-                      <Badge variant="outline" className="font-normal text-zinc-600">
+                      <Badge variant="outline" className="font-normal text-zinc-600 dark:text-zinc-400">
                         Zablokowane (było do {s.edit_deadline})
                       </Badge>
                     ) : (
@@ -474,16 +518,16 @@ export function ProfilClient({ initial }: Props) {
               ))}
             </ul>
           ) : data.matches_missing_stats.length === 0 ? (
-            <p className="relative mt-4 text-sm text-zinc-600">Brak rozegranych meczów ze statystykami.</p>
+            <p className="relative mt-4 text-sm text-zinc-600 dark:text-zinc-400">Brak rozegranych meczów ze statystykami.</p>
           ) : null}
         </div>
       </section>
 
-      <section className="relative mx-auto mt-10 max-w-5xl overflow-hidden rounded-2xl border-2 border-white/35 bg-white/95 p-6 shadow-lg shadow-emerald-950/10 ring-1 ring-emerald-950/10">
+      <section className="awp-card-surface mx-auto mt-10 max-w-5xl">
         <div className="home-pitch-tile pointer-events-none absolute inset-0 opacity-[0.05]" aria-hidden />
         <div className="relative">
-          <h2 className="text-lg font-bold text-emerald-950">Twoja ostatnia aktywność</h2>
-          <p className="mt-1 text-sm text-zinc-600">Chronologia tego, co robiłeś na stronie (np. logowanie, zapisy, mecze).</p>
+          <h2 className="text-lg font-bold text-emerald-950 dark:text-emerald-100">Twoja ostatnia aktywność</h2>
+          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">Chronologia tego, co robiłeś na stronie (np. logowanie, zapisy, mecze).</p>
           {data.recent_activity.length === 0 ? (
             <p className="mt-4 text-sm text-zinc-500">Brak wpisów.</p>
           ) : (
@@ -491,7 +535,7 @@ export function ProfilClient({ initial }: Props) {
               {data.recent_activity.map((a, i) => (
                 <li key={i} className="text-sm text-zinc-700">
                   <span className="text-xs tabular-nums text-zinc-400">{a.timestamp}</span>
-                  <span className="mt-0.5 block text-emerald-950">{a.action}</span>
+                  <span className="mt-0.5 block text-emerald-950 dark:text-emerald-100">{a.action}</span>
                 </li>
               ))}
             </ul>
@@ -499,8 +543,8 @@ export function ProfilClient({ initial }: Props) {
         </div>
       </section>
 
-      <section className="relative mx-auto mt-10 max-w-5xl rounded-2xl border border-dashed border-emerald-300/80 bg-emerald-50/40 p-6">
-        <h2 className="text-base font-bold text-emerald-950">Skrót do strony</h2>
+      <section className="relative mx-auto mt-10 max-w-5xl rounded-2xl border border-dashed border-emerald-300/80 bg-emerald-50/40 p-6 dark:border-emerald-700/50 dark:bg-emerald-950/25">
+        <h2 className="text-base font-bold text-emerald-950 dark:text-emerald-100">Skrót do strony</h2>
         <ul className="mt-3 list-inside list-disc space-y-1.5 text-sm text-zinc-700">
           <li>
             <Link href="/terminarz" className="font-medium text-emerald-800 underline-offset-2 hover:underline">
@@ -604,13 +648,15 @@ function MiniStat({
 }) {
   return (
     <div
-      className={`rounded-xl border border-emerald-100/90 bg-white/90 px-3 py-3 shadow-sm ${muted ? "opacity-70" : ""}`}
+      className={`rounded-xl border border-emerald-100/90 bg-white/90 px-3 py-3 shadow-sm dark:border-emerald-800/50 dark:bg-zinc-800/60 ${muted ? "opacity-70" : ""}`}
     >
-      <div className="flex items-center gap-2 text-emerald-800">
+      <div className="flex items-center gap-2 text-emerald-800 dark:text-emerald-300">
         <Icon className="h-4 w-4 shrink-0" strokeWidth={2.2} />
-        <span className="text-[0.65rem] font-bold uppercase leading-tight tracking-wide text-emerald-900/85">{label}</span>
+        <span className="text-[0.65rem] font-bold uppercase leading-tight tracking-wide text-emerald-900/85 dark:text-emerald-200/90">
+          {label}
+        </span>
       </div>
-      <p className="mt-1.5 text-xl font-bold tabular-nums text-emerald-950">{value}</p>
+      <p className="mt-1.5 text-xl font-bold tabular-nums text-emerald-950 dark:text-emerald-100">{value}</p>
     </div>
   );
 }

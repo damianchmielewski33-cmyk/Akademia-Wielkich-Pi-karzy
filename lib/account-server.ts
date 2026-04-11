@@ -1,5 +1,6 @@
 import { cache } from "react";
 import { getDb } from "@/lib/db";
+import { normalizeUiTheme, type UiTheme } from "@/lib/ui-theme";
 
 /** Pola użytkownika z bazy — współdzielone w jednym żądaniu (layout + strony) przez React cache(). */
 export type AccountNavRow = {
@@ -7,6 +8,7 @@ export type AccountNavRow = {
   lastName: string;
   zawodnik: string;
   profilePhotoPath: string | null;
+  uiTheme: UiTheme;
 };
 
 export const getAccountNavFields = cache(
@@ -14,7 +16,7 @@ export const getAccountNavFields = cache(
     const db = await getDb();
     const row = (await db
       .prepare(
-        "SELECT first_name, last_name, player_alias AS zawodnik, profile_photo_path FROM users WHERE id = ?"
+        "SELECT first_name, last_name, player_alias AS zawodnik, profile_photo_path, ui_theme FROM users WHERE id = ?"
       )
       .get(userId)) as
       | {
@@ -22,6 +24,7 @@ export const getAccountNavFields = cache(
           last_name: string;
           zawodnik: string;
           profile_photo_path: string | null;
+          ui_theme: string | null;
         }
       | undefined;
     if (!row) return null;
@@ -30,6 +33,7 @@ export const getAccountNavFields = cache(
       lastName: row.last_name,
       zawodnik: row.zawodnik,
       profilePhotoPath: row.profile_photo_path ?? null,
+      uiTheme: normalizeUiTheme(row.ui_theme),
     };
   }
 );
