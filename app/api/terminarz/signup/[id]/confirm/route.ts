@@ -32,7 +32,7 @@ function parseTransportBody(raw: unknown): SignupTransportRow | { error: string 
   });
 }
 
-/** Promocja zapisu wstępnego («jeszcze nie wiem») na pełny zapis z transportem. */
+/** Promocja zapisu wstępnego («jeszcze nie wiem» / «nie biorę udziału») na pełny zapis z transportem. */
 export async function POST(req: Request, ctx: Ctx) {
   const gate = await requireUser();
   if (!gate.ok) return gate.response;
@@ -84,7 +84,7 @@ export async function POST(req: Request, ctx: Ctx) {
   if (!row) {
     return NextResponse.json({ error: "Nie masz wstępnego zapisu na ten mecz." }, { status: 400 });
   }
-  if (row.commitment !== 0) {
+  if (row.commitment !== 0 && row.commitment !== 2) {
     return NextResponse.json({ error: "Masz już potwierdzony zapis na ten mecz." }, { status: 400 });
   }
   if (match.signed_up >= match.max_slots) {

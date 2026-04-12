@@ -53,6 +53,12 @@ export async function PATCH(req: Request, ctx: Ctx) {
       { status: 400 }
     );
   }
+  if (signup.commitment === 2) {
+    return NextResponse.json(
+      { error: "Masz zaznaczone «nie biorę udziału» — zmień status w terminarzu, aby ustawić transport." },
+      { status: 400 }
+    );
+  }
   const match = await db.prepare("SELECT played FROM matches WHERE id = ?").get(mid) as { played: number } | undefined;
   if (!match || match.played === 1) {
     return NextResponse.json({ error: "Nie można zmienić transportu dla tego meczu." }, { status: 400 });

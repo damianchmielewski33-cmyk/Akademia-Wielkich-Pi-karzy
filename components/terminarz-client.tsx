@@ -57,7 +57,7 @@ type Props = {
   allMatches: MatchRow[];
   playersData: Record<number, PlayersDataEntry>;
   /** Rodzaj zapisu użytkownika na mecz (brak wpisu = nie zapisany). */
-  userSignupKind: Record<number, "tentative" | "confirmed">;
+  userSignupKind: Record<number, "tentative" | "confirmed" | "declined">;
   /** Rozegrane mecze, na które użytkownik był zapisany i nie ma jeszcze wiersza w `match_stats`. */
   playedMissingStatsMatchIds: number[];
   isLoggedIn: boolean;
@@ -336,6 +336,10 @@ export function TerminarzClient({
       toast.info("Masz już status «jeszcze nie wiem». Potwierdź udział przy tym meczu w terminarzu.");
       return;
     }
+    if (hk === "declined") {
+      toast.info("Masz już zaznaczone «nie biorę udziału». Zmień to w terminarzu, jeśli chcesz grać.");
+      return;
+    }
     setInviteParticipationOpen(true);
   }, [inviteFromShare, isLoggedIn, highlightMatchId, allMatches, userSignupKind]);
 
@@ -388,6 +392,31 @@ export function TerminarzClient({
     }
   }
 
+  async function signupDeclined(matchId: number): Promise<boolean> {
+    setTentativeBusyId(matchId);
+    try {
+      const res = await fetch(`/api/terminarz/signup/${matchId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ commitment: "declined" }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      if (res.status === 401) {
+        window.location.href = "/login";
+        return false;
+      }
+      if (!res.ok) {
+        toast.error(typeof data.error === "string" ? data.error : "Nie udało się zapisać");
+        return false;
+      }
+      toast.success("Zapisano: nie biorę udziału");
+      router.refresh();
+      return true;
+    } finally {
+      setTentativeBusyId(null);
+    }
+  }
+
   function onInviteParticipationTak() {
     if (highlightMatchId == null) return;
     const m = allMatches.find((x) => x.id === highlightMatchId);
@@ -408,9 +437,10 @@ export function TerminarzClient({
     if (ok) setInviteParticipationOpen(false);
   }
 
-  function onInviteParticipationNie() {
-    setInviteParticipationOpen(false);
-    toast.info("Nie zapisujemy Cię na ten mecz. W terminarzu możesz to zmienić w dowolnej chwili.");
+  async function onInviteParticipationNie() {
+    if (highlightMatchId == null) return;
+    const ok = await signupDeclined(highlightMatchId);
+    if (ok) setInviteParticipationOpen(false);
   }
 
   async function unsubscribe(id: number) {
@@ -634,6 +664,57 @@ export function TerminarzClient({
                 </Button>
               </>
             )
+          ) : kind === "declined" ? (
+            past ? (
+              <ActionNotice tone="muted">
+                <strong className="font-semibold text-zinc-800 dark:text-zinc-100">Nie brałeś udziału</strong> w tym
+                terminie — bez zajmowania miejsca w składzie.
+              </ActionNotice>
+            ) : (
+              <>
+                <ActionNotice tone="muted">
+                  <strong className="font-semibold text-zinc-800 dark:text-zinc-100">Nie bierzesz udziału</strong> w tym
+                  terminie — nie zajmujesz miejsca w składzie. Gdy zmienisz zdanie, potwierdź udział i wybierz transport.
+                </ActionNotice>
+                {free > 0 ? (
+                  <Button
+                    size="sm"
+                    variant="default"
+                    className={actionBtnPrimary}
+                    title="Potwierdza udział i zajmuje miejsce w składzie"
+                    onClick={() => openConfirmFromTentative(m.id)}
+                  >
+                    <UserPlus className="shrink-0" aria-hidden />
+                    <span>
+                      <span className="block leading-tight">Zmieniam zdanie — wpadam na mecz</span>
+                      <span className="mt-1 block text-[11px] font-normal leading-snug text-emerald-100/95">
+                        {freeSubtitle}
+                      </span>
+                    </span>
+                  </Button>
+                ) : (
+                  <ActionNotice tone="warning">
+                    <strong className="font-semibold text-amber-950 dark:text-amber-100">Komplet miejsc.</strong> Nie
+                    możesz teraz dołączyć do składu — możesz zostać przy deklaracji rezygnacji albo usunąć zapis.
+                  </ActionNotice>
+                )}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className={actionBtnDanger}
+                  title="Usuwasz deklarację rezygnacji z tego terminu"
+                  onClick={() => unsubscribe(m.id)}
+                >
+                  <UserMinus className="shrink-0" aria-hidden />
+                  <span>
+                    <span className="block leading-tight">Wypisz mnie</span>
+                    <span className="mt-1 block text-[11px] font-normal leading-snug text-red-700/90 dark:text-red-300">
+                      Usuń zapis z listy
+                    </span>
+                  </span>
+                </Button>
+              </>
+            )
           ) : past ? (
             <ActionNotice tone="warning">
               Termin tego meczu już minął — w aplikacji nie można się już zapisać na ten dzień.
@@ -676,6 +757,22 @@ export function TerminarzClient({
                   <span className="block leading-tight text-zinc-900 dark:text-zinc-100">Jeszcze nie wiem</span>
                   <span className="mt-1 block text-[11px] font-normal leading-snug text-zinc-500 dark:text-zinc-400">
                     Wstępne zainteresowanie bez miejsca w składzie
+                  </span>
+                </span>
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className={actionBtnSecondary}
+                disabled={tentativeBusyId === m.id}
+                title="Zapisuje Cię na liście jako osobę, która w tym terminie nie gra — bez miejsca w składzie"
+                onClick={() => void signupDeclined(m.id)}
+              >
+                <UserMinus className="shrink-0 text-zinc-600 dark:text-zinc-300" aria-hidden />
+                <span>
+                  <span className="block leading-tight text-zinc-900 dark:text-zinc-100">Nie, nie biorę udziału</span>
+                  <span className="mt-1 block text-[11px] font-normal leading-snug text-zinc-500 dark:text-zinc-400">
+                    Widoczne na liście zapisanych jako rezygnacja z terminu
                   </span>
                 </span>
               </Button>
@@ -906,25 +1003,14 @@ export function TerminarzClient({
 
         {view === "list" && (
           <div className="mx-auto mt-5 max-w-4xl space-y-4">
-            {highlightMatch && (
+            {highlightMatch && !inviteFromShare && (
               <div
                 role="status"
                 className="rounded-xl border-2 border-emerald-500 bg-emerald-50/95 px-4 py-3 text-sm leading-relaxed text-emerald-950 shadow-sm dark:border-emerald-500 dark:bg-emerald-950/40 dark:text-emerald-50"
               >
-                {inviteFromShare ? (
-                  <>
-                    <span className="font-semibold">Link z zaproszeniem: </span>
-                    poniżej <span className="font-medium">zieloną ramką</span> wyróżniony jest ten mecz — po zalogowaniu
-                    najpierw wybierzesz udział (tak / nie / «jeszcze nie wiem»), a przy odpowiedzi „tak” i wolnych
-                    miejscach — transport.
-                  </>
-                ) : (
-                  <>
-                    <span className="font-semibold">Z powiadomienia e-mail: </span>
-                    poniżej <span className="font-medium">zieloną ramką</span> wyróżniony jest mecz, którego dotyczyła
-                    wiadomość — możesz od razu przejść do zapisu.
-                  </>
-                )}
+                <span className="font-semibold">Z powiadomienia e-mail: </span>
+                poniżej <span className="font-medium">zieloną ramką</span> wyróżniony jest mecz, którego dotyczyła
+                wiadomość — możesz od razu przejść do zapisu.
               </div>
             )}
             {highlightMatchId && !highlightMatch && (
@@ -1484,7 +1570,8 @@ export function TerminarzClient({
                     playersData={playersData}
                   />
                   <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">
-                    Pełna lista zawodników poniżej — «jeszcze nie wiem» nie zajmuje miejsca w składzie.
+                    Pełna lista zawodników poniżej — «jeszcze nie wiem» i «nie biorę udziału» nie zajmują miejsca w
+                    składzie.
                   </p>
                 </div>
               ) : null}
@@ -1545,6 +1632,35 @@ export function TerminarzClient({
                       className="border-amber-400 bg-amber-100/90 text-amber-950 dark:border-amber-600 dark:bg-amber-950/50 dark:text-amber-100"
                     >
                       Jeszcze nie wiem
+                    </Badge>
+                  </li>
+                ))}
+                {selectedData.declinedPlayers.map((p, i) => (
+                  <li
+                    key={`d-${p.userId}-${i}`}
+                    className={`flex flex-wrap items-center gap-2 border-b border-red-200/70 px-3 py-2.5 text-sm last:border-b-0 dark:border-red-900/45 ${
+                      i % 2 === 0 ? "bg-red-50/60 dark:bg-red-950/25" : "bg-red-100/35 dark:bg-red-950/35"
+                    }`}
+                  >
+                    <PlayerAvatar
+                      photoPath={p.profilePhotoPath}
+                      firstName={p.firstName}
+                      lastName={p.lastName}
+                      size="sm"
+                      ringClassName="ring-2 ring-red-200/90 dark:ring-red-800/70"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <PlayerNameStack
+                        firstName={p.firstName}
+                        lastName={p.lastName}
+                        nick={p.zawodnik}
+                      />
+                    </div>
+                    <Badge
+                      variant="outline"
+                      className="border-red-300 bg-red-100/90 text-red-950 dark:border-red-700 dark:bg-red-950/50 dark:text-red-100"
+                    >
+                      Nie biorę udziału
                     </Badge>
                   </li>
                 ))}
@@ -1727,11 +1843,11 @@ export function TerminarzClient({
                 <DialogTitle>Zapis na mecz</DialogTitle>
                 <DialogDescription className="text-left text-zinc-600 dark:text-zinc-400">
                   Żeby odpowiedzieć na zaproszenie, zaloguj się lub utwórz konto. Po zalogowaniu wybierzesz, czy bierzesz
-                  udział: <strong>tak</strong>, <strong>nie</strong> lub <strong>«jeszcze nie wiem»</strong>. Dopiero
-                  przy „tak” (gdy są wolne miejsca) wybierzesz transport.
+                  udział: <strong>tak</strong>, <strong>«jeszcze nie wiem»</strong> albo <strong>«nie biorę udziału»</strong>.
+                  Dopiero przy „tak” (gdy są wolne miejsca) wybierzesz transport.
                 </DialogDescription>
               </DialogHeader>
-              <DialogFooter className="flex-col gap-2 sm:justify-stretch">
+              <DialogFooter className="flex-col gap-2 sm:flex-col sm:justify-start sm:gap-2">
                 <Button
                   type="button"
                   className="w-full bg-emerald-700 hover:bg-emerald-800 dark:bg-emerald-600 dark:hover:bg-emerald-500"
@@ -1789,8 +1905,8 @@ export function TerminarzClient({
             <DialogTitle>Zaproszenie — czy bierzesz udział?</DialogTitle>
             <DialogDescription className="text-left text-zinc-600 dark:text-zinc-400">
               <strong>Tak</strong> — potwierdzasz udział (miejsce w składzie, jeśli są wolne) i wybierasz transport.{" "}
-              <strong>«Jeszcze nie wiem»</strong> — bez miejsca w składzie, jak w terminarzu. <strong>Nie</strong> — bez
-              zapisu; zawsze możesz wrócić do meczu w terminarzu.
+              <strong>«Jeszcze nie wiem»</strong> — bez miejsca w składzie. <strong>Nie, nie biorę udziału</strong> — też
+              bez miejsca w składzie, ale trafiasz na listę jako rezygnacja z terminu (jak w terminarzu).
             </DialogDescription>
           </DialogHeader>
           {highlightMatch && (
@@ -1828,7 +1944,7 @@ export function TerminarzClient({
               </div>
             </div>
           )}
-          <DialogFooter className="flex-col gap-2 sm:justify-stretch">
+          <DialogFooter className="flex-col gap-2 sm:flex-col sm:justify-start sm:gap-2">
             <Button
               type="button"
               className="w-full bg-emerald-700 hover:bg-emerald-800 dark:bg-emerald-600 dark:hover:bg-emerald-700"
@@ -1846,7 +1962,13 @@ export function TerminarzClient({
               <HelpCircle className="mr-2 h-4 w-4 shrink-0" aria-hidden />
               Jeszcze nie wiem
             </Button>
-            <Button type="button" variant="ghost" className="w-full text-zinc-700 dark:text-zinc-300" onClick={onInviteParticipationNie}>
+            <Button
+              type="button"
+              variant="ghost"
+              className="w-full text-zinc-700 dark:text-zinc-300"
+              disabled={highlightMatchId != null && tentativeBusyId === highlightMatchId}
+              onClick={() => void onInviteParticipationNie()}
+            >
               Nie, nie biorę udziału
             </Button>
           </DialogFooter>

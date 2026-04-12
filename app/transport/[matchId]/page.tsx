@@ -62,6 +62,20 @@ export default async function TransportPage({ params }: { params: Promise<{ matc
     );
   }
 
+  if (signupRow.commitment === 2) {
+    return (
+      <div className="container mx-auto max-w-lg flex-1 px-4 py-16 text-center">
+        <p className="text-zinc-800">
+          Masz zaznaczone <strong>«nie biorę udziału»</strong> na ten mecz — transport i czat są dostępne dopiero po
+          potwierdzeniu udziału w składzie w terminarzu.
+        </p>
+        <Link href="/terminarz" className="mt-4 inline-block font-medium text-emerald-700 underline">
+          Przejdź do terminarza
+        </Link>
+      </div>
+    );
+  }
+
   const transportFields: SignupTransportRow = {
     drives_car: signupRow.drives_car,
     can_take_passengers: signupRow.can_take_passengers,

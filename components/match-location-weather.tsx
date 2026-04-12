@@ -68,7 +68,7 @@ function weekdayShortPl(isoDate: string): string {
 
 function forecastTitle(source: string): string {
   if (source === "google_weather") return `Pogoda Google — ${FORECAST_DAYS} dni`;
-  return `Prognoza ${FORECAST_DAYS} dni (Open-Meteo)`;
+  return `Prognoza ${FORECAST_DAYS} dni`;
 }
 
 export function MatchLocationWeather({

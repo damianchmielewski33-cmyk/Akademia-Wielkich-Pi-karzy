@@ -40,7 +40,7 @@ type Props = {
   /** Np. „3 osoby się zastanawiają” — pusty gdy brak zapisów «jeszcze nie wiem». */
   nextMatchTentativeLine: string;
   lineupPublicNextMatch: boolean;
-  nextMatchSignup: "none" | "tentative" | "confirmed";
+  nextMatchSignup: "none" | "tentative" | "confirmed" | "declined";
   /** Kafelek transportu zawsze widoczny po zapisie; link działa w lokalny dzień meczu. */
   transportHomeActive: boolean;
   isLoggedIn: boolean;
@@ -130,6 +130,31 @@ export function HomeClient({
         return;
       }
       toast.success("Zapisano: jeszcze nie wiem");
+      router.refresh();
+    } finally {
+      setTentativeBusy(false);
+    }
+  }
+
+  async function signupDeclinedHome() {
+    if (!nextMatch) return;
+    setTentativeBusy(true);
+    try {
+      const res = await fetch(`/api/terminarz/signup/${nextMatch.id}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ commitment: "declined" }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      if (res.status === 401) {
+        window.location.href = "/login";
+        return;
+      }
+      if (!res.ok) {
+        toast.error(typeof data.error === "string" ? data.error : "Nie udało się zapisać");
+        return;
+      }
+      toast.success("Zapisano: nie biorę udziału");
       router.refresh();
     } finally {
       setTentativeBusy(false);
@@ -292,6 +317,22 @@ export function HomeClient({
                       <p className="text-xs text-emerald-100/90">Skład jest pełny — nie możesz teraz potwierdzić udziału.</p>
                     )}
                   </div>
+                ) : nextMatchSignup === "declined" ? (
+                  <div className="mt-4 space-y-2">
+                    <div className="rounded-xl border border-red-200/40 bg-red-950/35 py-2.5 text-sm font-medium text-white backdrop-blur-sm">
+                      Nie bierzesz udziału w tym terminie (bez miejsca w składzie)
+                    </div>
+                    {nextMatch.max_slots - nextMatch.signed_up > 0 ? (
+                      <Button
+                        className="w-full border-0 bg-white font-semibold text-emerald-900 shadow-md hover:bg-emerald-50 dark:bg-zinc-100 dark:text-emerald-950 dark:hover:bg-white"
+                        onClick={openConfirmFromTentative}
+                      >
+                        Zmieniam zdanie — wpadam na mecz
+                      </Button>
+                    ) : (
+                      <p className="text-xs text-emerald-100/90">Skład jest pełny — nie możesz teraz dołączyć do składu.</p>
+                    )}
+                  </div>
                 ) : (
                   <div className="mt-4 space-y-2">
                     {nextMatch.max_slots - nextMatch.signed_up > 0 ? (
@@ -313,6 +354,15 @@ export function HomeClient({
                     >
                       <HelpCircle className="mr-2 h-4 w-4 shrink-0" aria-hidden />
                       Jeszcze nie wiem
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full border-white/25 bg-white/5 font-medium text-white/95 hover:bg-white/15"
+                      disabled={tentativeBusy}
+                      onClick={() => void signupDeclinedHome()}
+                    >
+                      Nie, nie biorę udziału
                     </Button>
                   </div>
                 )

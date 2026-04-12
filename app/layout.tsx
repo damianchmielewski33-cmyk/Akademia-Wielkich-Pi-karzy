@@ -47,6 +47,9 @@ export const metadata: Metadata = {
     title: SITE_NAME,
     description: "Terminarz, statystyki i społeczność na boisku",
   },
+  verification: {
+    google: "0--nQF7hoGJ2y1MWnQa5gtlwCvDOkpfckhesMh3m53s",
+  },
 };
 
 export default async function RootLayout({

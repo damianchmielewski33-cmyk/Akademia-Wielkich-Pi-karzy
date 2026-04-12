@@ -1,6 +1,6 @@
 import type { MatchRow } from "@/lib/db";
 
-/** 1 = potwierdzony zapis (wpadam), 0 = wstępne zainteresowanie (jeszcze nie wiem). */
+/** 1 = potwierdzony zapis (wpadam), 0 = wstępne zainteresowanie (jeszcze nie wiem), 2 = nie biorę udziału. */
 export type SignupRow = {
   match_id: number;
   paid: number;
@@ -21,7 +21,7 @@ export type PlayerEntry = {
   initials: string;
   paid: number;
   profilePhotoPath: string | null;
-  commitment: "tentative" | "confirmed";
+  commitment: "tentative" | "confirmed" | "declined";
 };
 
 export type PlayersDataEntry = {
@@ -33,6 +33,8 @@ export type PlayersDataEntry = {
   players: PlayerEntry[];
   /** Wstępnie zainteresowani (bez zajmowania miejsca). */
   tentativePlayers: PlayerEntry[];
+  /** Zadeklarowali, że w tym terminie nie grają (bez miejsca w składzie). */
+  declinedPlayers: PlayerEntry[];
 };
 
 /** Liczba zapisów «jeszcze nie wiem» dla meczu (wg zbudowanego `playersData`). */
@@ -72,13 +74,15 @@ export function buildPlayersData(
     const mid = m.id;
     const plist: PlayerEntry[] = [];
     const tentative: PlayerEntry[] = [];
+    const declined: PlayerEntry[] = [];
     for (const p of playersByMatch[mid] ?? []) {
       const fn = (p.first_name || "").trim();
       const ln = (p.last_name || "").trim();
       let initials = "";
       if (fn) initials += fn[0];
       if (ln) initials += ln[0];
-      const commitment = p.commitment === 0 ? ("tentative" as const) : ("confirmed" as const);
+      const commitment =
+        p.commitment === 0 ? ("tentative" as const) : p.commitment === 2 ? ("declined" as const) : ("confirmed" as const);
       const entry: PlayerEntry = {
         userId: p.user_id,
         firstName: fn,
@@ -91,6 +95,7 @@ export function buildPlayersData(
         commitment,
       };
       if (commitment === "tentative") tentative.push(entry);
+      else if (commitment === "declined") declined.push(entry);
       else plist.push(entry);
     }
     playersData[mid] = {
@@ -100,6 +105,7 @@ export function buildPlayersData(
       max: m.max_slots,
       players: plist,
       tentativePlayers: tentative,
+      declinedPlayers: declined,
     };
   }
   return playersData;
@@ -143,12 +149,13 @@ export function userSignedMap(
 export function userSignupKindMap(
   signups: SignupRow[],
   sessionZawodnik: string | undefined
-): Record<number, "tentative" | "confirmed"> {
-  const map: Record<number, "tentative" | "confirmed"> = {};
+): Record<number, "tentative" | "confirmed" | "declined"> {
+  const map: Record<number, "tentative" | "confirmed" | "declined"> = {};
   if (!sessionZawodnik) return map;
   for (const s of signups) {
     if (s.zawodnik === sessionZawodnik) {
-      map[s.match_id] = s.commitment === 0 ? "tentative" : "confirmed";
+      map[s.match_id] =
+        s.commitment === 0 ? "tentative" : s.commitment === 2 ? "declined" : "confirmed";
     }
   }
   return map;

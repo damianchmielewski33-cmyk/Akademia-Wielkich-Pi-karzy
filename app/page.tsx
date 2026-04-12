@@ -21,7 +21,7 @@ export default async function HomePage() {
     )
     .get()) as MatchRow | undefined;
 
-  let nextMatchSignup: "none" | "tentative" | "confirmed" = "none";
+  let nextMatchSignup: "none" | "tentative" | "confirmed" | "declined" = "none";
   if (nextMatch && session) {
     const signup = (await db
       .prepare(
@@ -29,7 +29,8 @@ export default async function HomePage() {
       )
       .get(session.userId, nextMatch.id)) as { commitment: number } | undefined;
     if (signup) {
-      nextMatchSignup = signup.commitment === 0 ? "tentative" : "confirmed";
+      nextMatchSignup =
+        signup.commitment === 0 ? "tentative" : signup.commitment === 2 ? "declined" : "confirmed";
     }
   }
 

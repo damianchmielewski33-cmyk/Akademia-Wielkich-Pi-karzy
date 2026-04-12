@@ -11,10 +11,11 @@ function todayISO() {
   return new Date().toISOString().slice(0, 10);
 }
 
-function parseCommitment(raw: unknown): "tentative" | "confirmed" {
+function parseCommitment(raw: unknown): "tentative" | "confirmed" | "declined" {
   if (raw === null || typeof raw !== "object") return "confirmed";
   const o = raw as Record<string, unknown>;
   if (o.commitment === "tentative") return "tentative";
+  if (o.commitment === "declined") return "declined";
   return "confirmed";
 }
 
@@ -76,10 +77,52 @@ export async function POST(req: Request, ctx: Ctx) {
   }
   const commitment = parseCommitment(rawBody);
 
-  const existing = await db
-    .prepare("SELECT id FROM match_signups WHERE user_id = ? AND match_id = ?")
-    .get(gate.session.userId, mid);
+  const existing = (await db
+    .prepare(
+      "SELECT id, COALESCE(commitment, 1) AS commitment FROM match_signups WHERE user_id = ? AND match_id = ?"
+    )
+    .get(gate.session.userId, mid)) as { id: number; commitment: number } | undefined;
+
   if (existing) {
+    if (existing.commitment === 1) {
+      return NextResponse.json({ error: "Już jesteś zapisany na ten mecz!" }, { status: 400 });
+    }
+    if (commitment === "tentative") {
+      if (existing.commitment === 0) {
+        return NextResponse.json({ error: "Już jesteś zapisany na ten mecz!" }, { status: 400 });
+      }
+      if (existing.commitment === 2) {
+        await db
+          .prepare(
+            `UPDATE match_signups SET commitment = 0, drives_car = 0, can_take_passengers = 0, needs_transport = 0
+             WHERE user_id = ? AND match_id = ?`
+          )
+          .run(gate.session.userId, mid);
+        await logActivity(
+          gate.session.userId,
+          `Zmienił «nie biorę udziału» na «jeszcze nie wiem» przy meczu ${match.match_date} ${match.match_time} (${match.location}), id ${mid}`
+        );
+        return NextResponse.json({ ok: true });
+      }
+    }
+    if (commitment === "declined") {
+      if (existing.commitment === 2) {
+        return NextResponse.json({ ok: true });
+      }
+      if (existing.commitment === 0) {
+        await db
+          .prepare(
+            `UPDATE match_signups SET commitment = 2, drives_car = 0, can_take_passengers = 0, needs_transport = 0
+             WHERE user_id = ? AND match_id = ?`
+          )
+          .run(gate.session.userId, mid);
+        await logActivity(
+          gate.session.userId,
+          `Zaznaczył «nie biorę udziału» przy meczu ${match.match_date} ${match.match_time} (${match.location}), id ${mid}`
+        );
+        return NextResponse.json({ ok: true });
+      }
+    }
     return NextResponse.json({ error: "Już jesteś zapisany na ten mecz!" }, { status: 400 });
   }
 
@@ -93,6 +136,20 @@ export async function POST(req: Request, ctx: Ctx) {
     await logActivity(
       gate.session.userId,
       `Zaznaczył «jeszcze nie wiem» przy meczu ${match.match_date} ${match.match_time} (${match.location}), id ${mid}`
+    );
+    return NextResponse.json({ ok: true });
+  }
+
+  if (commitment === "declined") {
+    await db
+      .prepare(
+        `INSERT INTO match_signups (user_id, match_id, paid, commitment, drives_car, can_take_passengers, needs_transport)
+         VALUES (?, ?, 0, 2, 0, 0, 0)`
+      )
+      .run(gate.session.userId, mid);
+    await logActivity(
+      gate.session.userId,
+      `Zaznaczył «nie biorę udziału» przy meczu ${match.match_date} ${match.match_time} (${match.location}), id ${mid}`
     );
     return NextResponse.json({ ok: true });
   }

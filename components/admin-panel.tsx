@@ -1802,13 +1802,19 @@ function MatchSignupsDialog({
                   <Badge variant="outline" className="border-amber-300 bg-amber-50 text-amber-950">
                     Jeszcze nie wiem
                   </Badge>
+                ) : p.commitment === 2 ? (
+                  <Badge variant="outline" className="border-red-300 bg-red-50 text-red-950 dark:border-red-800 dark:bg-red-950/40 dark:text-red-100">
+                    Nie biorę udziału
+                  </Badge>
                 ) : p.paid ? (
                   <Badge className="border-emerald-200 bg-emerald-100 text-emerald-900">Opłacone</Badge>
                 ) : (
                   <Badge variant="secondary">Do zapłaty</Badge>
                 )}
-                {p.commitment === 0 ? (
-                  <span className="shrink-0 text-xs text-zinc-500 dark:text-zinc-400">Wpłata po potwierdzeniu</span>
+                {p.commitment === 0 || p.commitment === 2 ? (
+                  <span className="shrink-0 text-xs text-zinc-500 dark:text-zinc-400">
+                    {p.commitment === 2 ? "Poza składem — brak wpłaty" : "Wpłata po potwierdzeniu"}
+                  </span>
                 ) : (
                   <Button
                     size="sm"
