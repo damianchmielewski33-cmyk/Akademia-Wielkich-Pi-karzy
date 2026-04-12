@@ -423,7 +423,7 @@ export function TerminarzClient({
     const free = m ? m.max_slots - m.signed_up : 0;
     if (free <= 0) {
       toast.warning(
-        "Skład jest pełny — nie możesz teraz zająć miejsca. Wybierz «jeszcze nie wiem» (bez miejsca w składzie) albo „Nie”."
+        "Skład jest pełny — nie możesz teraz zająć miejsca. Wybierz „Jeszcze nie wiem” (bez miejsca w składzie) albo „Nie, nie biorę udziału”."
       );
       return;
     }
@@ -1904,9 +1904,10 @@ export function TerminarzClient({
           <DialogHeader>
             <DialogTitle>Zaproszenie — czy bierzesz udział?</DialogTitle>
             <DialogDescription className="text-left text-zinc-600 dark:text-zinc-400">
-              <strong>Tak</strong> — potwierdzasz udział (miejsce w składzie, jeśli są wolne) i wybierasz transport.{" "}
-              <strong>«Jeszcze nie wiem»</strong> — bez miejsca w składzie. <strong>Nie, nie biorę udziału</strong> — też
-              bez miejsca w składzie, ale trafiasz na listę jako rezygnacja z terminu (jak w terminarzu).
+              <strong>Tak</strong> — przy wolnych miejscach w składzie potwierdzasz udział i przechodzisz do wyboru
+              transportu. <strong>Jeszcze nie wiem</strong> — bez miejsca w składzie; odpowiedź doprecyzujesz później w
+              terminarzu. <strong>Nie, nie biorę udziału</strong> — bez miejsca w składzie; działa jak rezygnacja z tego
+              terminu w terminarzu.
             </DialogDescription>
           </DialogHeader>
           {highlightMatch && (
@@ -1938,7 +1939,7 @@ export function TerminarzClient({
                   <p className="mt-1 text-xs font-medium text-emerald-900/90 dark:text-emerald-200/90">
                     {highlightMatch.max_slots - highlightMatch.signed_up > 0
                       ? `Wolnych miejsc w składzie: ${highlightMatch.max_slots - highlightMatch.signed_up}.`
-                      : "Skład pełny — „Tak” nie otworzy pełnego zapisu; możesz wybrać «jeszcze nie wiem» (bez miejsca)."}
+                      : "Skład pełny — „Tak” nie otworzy pełnego zapisu; możesz wybrać „Jeszcze nie wiem” (bez miejsca)."}
                   </p>
                 </div>
               </div>
