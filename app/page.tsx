@@ -5,10 +5,14 @@ import { getDb, type MatchRow } from "@/lib/db";
 import { HomeClient } from "@/components/home-client";
 import { isLocalMatchDay } from "@/lib/transport";
 import { formatPonderingPlayersPolish } from "@/lib/terminarz-shared";
+import { getSiteUrl } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Start",
   description: "Najbliższy mecz, zapisy, terminarz i społeczność akademii.",
+  openGraph: {
+    url: getSiteUrl(),
+  },
 };
 
 export default async function HomePage() {

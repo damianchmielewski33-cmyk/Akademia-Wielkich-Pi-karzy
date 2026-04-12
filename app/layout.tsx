@@ -11,7 +11,8 @@ import { getAccountNavFields } from "@/lib/account-server";
 import { getServerSession } from "@/lib/auth";
 import { normalizeUiTheme } from "@/lib/ui-theme";
 import { getDb } from "@/lib/db";
-import { getSiteUrl, SITE_NAME } from "@/lib/site";
+import { SiteJsonLd } from "@/components/site-json-ld";
+import { getSiteUrl, SITE_DESCRIPTION, SITE_NAME } from "@/lib/site";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -26,11 +27,16 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL(getSiteUrl()),
+  applicationName: SITE_NAME,
   title: {
     default: SITE_NAME,
     template: `%s · ${SITE_NAME}`,
   },
-  description: "Terminarz, statystyki i społeczność na boisku",
+  description: SITE_DESCRIPTION,
+  icons: {
+    icon: [{ url: "/logo-akademia.svg", type: "image/svg+xml" }],
+    apple: [{ url: "/logo-akademia.svg", type: "image/svg+xml" }],
+  },
   robots: {
     index: true,
     follow: true,
@@ -40,12 +46,12 @@ export const metadata: Metadata = {
     locale: "pl_PL",
     siteName: SITE_NAME,
     title: SITE_NAME,
-    description: "Terminarz, statystyki i społeczność na boisku",
+    description: SITE_DESCRIPTION,
   },
   twitter: {
     card: "summary_large_image",
     title: SITE_NAME,
-    description: "Terminarz, statystyki i społeczność na boisku",
+    description: SITE_DESCRIPTION,
   },
   verification: {
     google: "0--nQF7hoGJ2y1MWnQa5gtlwCvDOkpfckhesMh3m53s",
@@ -91,6 +97,7 @@ export default async function RootLayout({
   return (
     <html lang="pl" className={htmlThemeClass}>
       <body className={`${geistSans.variable} ${geistMono.variable} murawa-bg min-h-screen antialiased font-sans`}>
+        <SiteJsonLd />
         <SessionIdleMonitor enabled={sessionIdleLogout} />
         <ShareLinkClientCleanup />
         <PinSetupGate>

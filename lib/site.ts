@@ -1,5 +1,9 @@
 export const SITE_NAME = "Akademia Wielkich Piłkarzy";
 
+/** Domyślny opis pod SEO, Open Graph i schema.org. */
+export const SITE_DESCRIPTION =
+  "Terminarz meczów, statystyki, rankingi i społeczność amatorskiej piłki nożnej — Akademia Wielkich Piłkarzy.";
+
 /**
  * Kanoniczny adres witryny (bez końcowego „/”). Używany w metadataBase, sitemap i robots.
  * W produkcji ustaw NEXT_PUBLIC_SITE_URL (np. https://twoja-domena.pl). Na Vercel, gdy zmienna
