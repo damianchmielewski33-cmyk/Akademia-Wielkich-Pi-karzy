@@ -12,7 +12,7 @@ import { getServerSession } from "@/lib/auth";
 import { normalizeUiTheme } from "@/lib/ui-theme";
 import { getDb } from "@/lib/db";
 import { SiteJsonLd } from "@/components/site-json-ld";
-import { getSiteUrl, SITE_DESCRIPTION, SITE_NAME } from "@/lib/site";
+import { getGoogleSiteVerification, getSiteUrl, SITE_DESCRIPTION, SITE_NAME } from "@/lib/site";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -54,7 +54,7 @@ export const metadata: Metadata = {
     description: SITE_DESCRIPTION,
   },
   verification: {
-    google: "0--nQF7hoGJ2y1MWnQa5gtlwCvDOkpfckhesMh3m53s",
+    google: getGoogleSiteVerification(),
   },
 };
 

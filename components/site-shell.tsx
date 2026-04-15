@@ -18,7 +18,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import { SITE_NAME, getPublicContactEmail } from "@/lib/site";
+import { SITE_NAME, getPublicContactEmailWithFallback } from "@/lib/site";
 
 type Props = {
   children: ReactNode;
@@ -58,7 +58,7 @@ function NavButton({
 
 export function SiteShell({ children, isLoggedIn, isAdmin, account = null }: Props) {
   const pathname = usePathname();
-  const contactEmail = getPublicContactEmail();
+  const contactEmail = getPublicContactEmailWithFallback();
   const [logoutOpen, setLogoutOpen] = useState(false);
   if (pathname === "/panel-admina" || pathname?.startsWith("/panel-admina")) {
     return <>{children}</>;
@@ -115,6 +115,9 @@ export function SiteShell({ children, isLoggedIn, isAdmin, account = null }: Pro
             </NavButton>
             <NavButton href="/sklady" active={pathname === "/sklady"}>
               Składy
+            </NavButton>
+            <NavButton href="/o-nas" active={pathname === "/o-nas"}>
+              O nas
             </NavButton>
             <NavButton href="/kontakt" active={pathname === "/kontakt"}>
               Kontakt

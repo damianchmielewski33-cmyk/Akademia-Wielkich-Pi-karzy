@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { SITE_NAME, getPublicContactEmail } from "@/lib/site";
-
-const DEFAULT_ONAS_CONTACT_EMAIL = "damianchmielewski33@gmail.com";
+import { SITE_NAME, getPublicContactEmailWithFallback } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "O nas",
@@ -10,7 +8,7 @@ export const metadata: Metadata = {
 };
 
 export default function ONasPage() {
-  const email = getPublicContactEmail() ?? DEFAULT_ONAS_CONTACT_EMAIL;
+  const email = getPublicContactEmailWithFallback();
 
   return (
     <div className="container mx-auto max-w-2xl flex-1 px-4 py-8 sm:py-10">

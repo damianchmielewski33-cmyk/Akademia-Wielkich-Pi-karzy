@@ -3,9 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Mail, MessageCircle, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { MATCH_BLIK_PHONE_DISPLAY, SITE_NAME, getPublicContactEmail } from "@/lib/site";
-
-const DEFAULT_CONTACT_EMAIL = "damianchmielewski33@gmail.com";
+import { MATCH_BLIK_PHONE_DISPLAY, SITE_NAME, getPublicContactEmailWithFallback } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Kontakt",
@@ -13,7 +11,7 @@ export const metadata: Metadata = {
 };
 
 export default function KontaktPage() {
-  const email = getPublicContactEmail() ?? DEFAULT_CONTACT_EMAIL;
+  const email = getPublicContactEmailWithFallback();
   const fbDamian = process.env.NEXT_PUBLIC_FACEBOOK_DAMIAN?.trim() || null;
   const fbMateusz = process.env.NEXT_PUBLIC_FACEBOOK_MATEUSZ?.trim() || null;
 

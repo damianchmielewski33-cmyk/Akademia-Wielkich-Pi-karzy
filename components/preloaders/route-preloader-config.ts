@@ -36,7 +36,7 @@ export function getRoutePreloaderSpec(rawPath: string): RoutePreloaderSpec {
       Preloader: AdminConsolePreloader,
     };
   }
-  if (path.startsWith("/terminarz")) {
+  if (path.startsWith("/terminarz") || path.startsWith("/terminator")) {
     return {
       title: "Terminarz",
       subtitle: "Kalendarz, zegar i gwizdek — pobieramy najbliższe spotkania.",

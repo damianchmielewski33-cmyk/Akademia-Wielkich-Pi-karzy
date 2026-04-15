@@ -265,7 +265,9 @@ export function HomeClient({
             />
           </div>
           <p className="mt-4 text-base text-zinc-600 dark:text-zinc-400 sm:text-lg">
-            {isLoggedIn ? "Wybierz, co chcesz zrobić" : "Zaloguj się lub załóż konto, aby korzystać z systemu"}
+            {isLoggedIn
+              ? "Wybierz, co chcesz zrobić"
+              : "Zaloguj się lub załóż konto — zapisy na mecze, statystyki, rankingi i komunikacja w drużynie"}
           </p>
         </div>
 

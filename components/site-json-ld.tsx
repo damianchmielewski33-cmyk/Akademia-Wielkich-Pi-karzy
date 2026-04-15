@@ -1,9 +1,15 @@
-import { getPublicContactEmail, getSiteUrl, SITE_DESCRIPTION, SITE_NAME } from "@/lib/site";
+import {
+  getPublicContactEmailWithFallback,
+  getSiteUrl,
+  MATCH_BLIK_PHONE_E164,
+  SITE_DESCRIPTION,
+  SITE_NAME,
+} from "@/lib/site";
 
 export function SiteJsonLd() {
   const url = getSiteUrl();
   const logoUrl = `${url}/logo-akademia.svg`;
-  const email = getPublicContactEmail();
+  const email = getPublicContactEmailWithFallback();
 
   const graph: Record<string, unknown>[] = [
     {
@@ -22,7 +28,15 @@ export function SiteJsonLd() {
       url,
       logo: { "@type": "ImageObject", url: logoUrl },
       description: SITE_DESCRIPTION,
-      ...(email ? { email } : {}),
+      email,
+      contactPoint: {
+        "@type": "ContactPoint",
+        contactType: "customer support",
+        email,
+        telephone: MATCH_BLIK_PHONE_E164,
+        areaServed: "PL",
+        availableLanguage: "pl",
+      },
     },
   ];
 
