@@ -26,7 +26,14 @@ export type AppSession = {
 
 type JwtSessionFields = Omit<AppSession, "needsPinSetup" | "pinChangePending">;
 
+function sessionMaxAgeSec(rememberMe: boolean): number {
+  // Jeśli użytkownik nie zaznaczył „Nie wylogowuj mnie”, token powinien wygasać szybciej niż 30 dni.
+  // Użytkownik wciąż może być wylogowywany po bezczynności po stronie klienta, ale to nie zastępuje TTL po stronie serwera.
+  return rememberMe ? 60 * 60 * 24 * 30 : 60 * 60 * 8;
+}
+
 export async function createSessionToken(session: JwtSessionFields): Promise<string> {
+  const maxAgeSec = sessionMaxAgeSec(session.rememberMe);
   return new SignJWT({
     adm: session.isAdmin ? 1 : 0,
     fn: session.firstName,
@@ -39,7 +46,7 @@ export async function createSessionToken(session: JwtSessionFields): Promise<str
     .setProtectedHeader({ alg: "HS256" })
     .setSubject(String(session.userId))
     .setIssuedAt()
-    .setExpirationTime("30d")
+    .setExpirationTime(`${maxAgeSec}s`)
     .sign(getAuthSecretKey());
 }
 
@@ -79,13 +86,14 @@ export const getServerSession = cache(async (): Promise<AppSession | null> => {
   }
 });
 
-export async function setSessionCookie(token: string) {
+export async function setSessionCookie(token: string, opts?: { rememberMe?: boolean }) {
   const jar = await cookies();
+  const rememberMe = opts?.rememberMe ?? true;
   jar.set(SESSION_COOKIE, token, {
     httpOnly: true,
     sameSite: "lax",
     path: "/",
-    maxAge: 60 * 60 * 24 * 30,
+    maxAge: sessionMaxAgeSec(rememberMe),
     secure: process.env.NODE_ENV === "production",
   });
 }

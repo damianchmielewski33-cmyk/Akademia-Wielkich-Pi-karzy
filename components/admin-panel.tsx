@@ -23,6 +23,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { toast } from "sonner";
+import { PlayerAliasPicker } from "@/components/player-alias-picker";
 import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -50,7 +51,6 @@ import {
   type AnalyticsHourlyPayload,
 } from "@/components/admin-analytics-hourly-charts";
 import { MatchLineupAdmin } from "@/components/match-lineup-admin";
-import { ALL_PLAYERS } from "@/lib/constants";
 import {
   cn,
   formatDateLocalYmd,
@@ -1418,7 +1418,6 @@ function UsersView({
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="sm:max-w-md">
           <UserCreateForm
-            takenAliases={users.map((u) => u.zawodnik)}
             onClose={() => setCreateOpen(false)}
             onCreated={() => {
               setCreateOpen(false);
@@ -1470,20 +1469,12 @@ function UsersView({
 }
 
 function UserCreateForm({
-  takenAliases,
   onClose,
   onCreated,
 }: {
-  takenAliases: string[];
   onClose: () => void;
   onCreated: () => void;
 }) {
-  const taken = useMemo(() => new Set(takenAliases), [takenAliases]);
-  const freeAvatars = useMemo(
-    () => ALL_PLAYERS.filter((p) => !taken.has(p)),
-    [taken]
-  );
-
   const [first_name, setFn] = useState("");
   const [last_name, setLn] = useState("");
   const [zawodnik, setZ] = useState("");
@@ -1520,28 +1511,13 @@ function UserCreateForm({
             autoComplete="off"
           />
         </div>
-        <div>
-          <Label>Pseudonim zawodnika (awatar)</Label>
-          {freeAvatars.length === 0 ? (
-            <p className="mt-1 text-sm text-amber-700">
-              Wszystkie awatary są już przypisane — usuń konto lub zmień pseudonim istniejącego
-              użytkownika.
-            </p>
-          ) : (
-            <Select value={zawodnik || undefined} onValueChange={setZ}>
-              <SelectTrigger className="mt-1 border-zinc-200">
-                <SelectValue placeholder="Wybierz piłkarza" />
-              </SelectTrigger>
-              <SelectContent className="max-h-60">
-                {freeAvatars.map((p) => (
-                  <SelectItem key={p} value={p}>
-                    {p}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-        </div>
+        <PlayerAliasPicker
+          label="Pseudonim zawodnika (awatar)"
+          value={zawodnik}
+          onChange={setZ}
+          helperText="Wyszukaj piłkarza w internecie lub wpisz własny pseudonim — musi być unikalny w akademii."
+          inputClassName="border-zinc-200"
+        />
         <div>
           <Label>Rola</Label>
           <Select value={role} onValueChange={(v) => setRole(v as "admin" | "player")}>
@@ -1560,7 +1536,7 @@ function UserCreateForm({
           Anuluj
         </Button>
         <Button
-          disabled={saving || freeAvatars.length === 0 || !zawodnik}
+          disabled={saving || !zawodnik.trim()}
           onClick={async () => {
             if (!first_name.trim() || !last_name.trim() || !zawodnik) {
               toast.error("Uzupełnij imię, nazwisko i pseudonim");

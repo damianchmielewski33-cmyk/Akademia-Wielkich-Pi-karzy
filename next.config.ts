@@ -5,6 +5,9 @@ const securityHeaders = [
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+  { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
+  { key: "Cross-Origin-Resource-Policy", value: "same-site" },
+  { key: "X-DNS-Prefetch-Control", value: "off" },
 ] as const;
 
 const nextConfig: NextConfig = {
@@ -22,7 +25,15 @@ const nextConfig: NextConfig = {
     optimizePackageImports: ["lucide-react"],
   },
   async headers() {
-    return [{ source: "/:path*", headers: [...securityHeaders] }];
+    const headers = [...securityHeaders] as { key: string; value: string }[];
+    if (process.env.NODE_ENV === "production") {
+      // HSTS ma sens tylko na HTTPS; w dev na localhost powoduje problemy.
+      headers.push({
+        key: "Strict-Transport-Security",
+        value: "max-age=15552000; includeSubDomains",
+      });
+    }
+    return [{ source: "/:path*", headers }];
   },
   async redirects() {
     return [

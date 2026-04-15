@@ -12,19 +12,11 @@ import { notifyPostLoginPromptsUpdated } from "@/lib/post-login-prompts";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { PlayerAliasPicker } from "@/components/player-alias-picker";
 
 export function RegisterForm({
-  availablePlayers,
   nextPath,
 }: {
-  availablePlayers: string[];
   /** Po udanej rejestracji (z auto-logowaniem) lub na stronę logowania z `next`. */
   nextPath?: string;
 }) {
@@ -114,21 +106,12 @@ export function RegisterForm({
           autoComplete="family-name"
         />
       </div>
-      <div>
-        <Label>Piłkarz (awatar)</Label>
-        <Select required value={zawodnik} onValueChange={setZawodnik}>
-          <SelectTrigger className="mt-1 w-full">
-            <SelectValue placeholder="Wybierz piłkarza (jak przy pierwszym ustawieniu PIN-u)" />
-          </SelectTrigger>
-          <SelectContent>
-            {availablePlayers.map((p) => (
-              <SelectItem key={p} value={p}>
-                {p}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      <PlayerAliasPicker
+        label="Piłkarz (awatar)"
+        required
+        value={zawodnik}
+        onChange={setZawodnik}
+      />
       <div>
         <Label htmlFor="reg_pin">PIN (4–6 cyfr)</Label>
         <Input
@@ -178,12 +161,9 @@ export function RegisterForm({
           Zaloguj mnie automatycznie po rejestracji
         </Label>
       </div>
-      <Button type="submit" className="w-full" disabled={loading || availablePlayers.length === 0}>
+      <Button type="submit" className="w-full" disabled={loading}>
         {loading ? "Tworzenie…" : "Załóż konto"}
       </Button>
-      {availablePlayers.length === 0 && (
-        <p className="text-center text-sm text-red-600">Wszyscy piłkarze są już zajęci.</p>
-      )}
     </form>
     </>
   );

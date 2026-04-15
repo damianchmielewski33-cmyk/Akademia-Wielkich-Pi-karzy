@@ -9,8 +9,6 @@ import {
 } from "@/components/auth-goal-preloader";
 import { InitialPinForm } from "@/components/initial-pin-form";
 import { Button } from "@/components/ui/button";
-import { ALL_PLAYERS } from "@/lib/constants";
-
 export function UstawPinView({
   nextPath,
   initialFirstName = "",
@@ -28,7 +26,6 @@ export function UstawPinView({
     <>
       {showGoal && <AuthGoalPreloader label="PIN ustawiony — witamy!" />}
       <InitialPinForm
-        aliases={ALL_PLAYERS}
         initialFirstName={initialFirstName}
         initialLastName={initialLastName}
         fieldIdPrefix="up"

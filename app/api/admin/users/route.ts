@@ -2,8 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getDb, logActivity } from "@/lib/db";
 import { requireAdmin } from "@/lib/api-helpers";
-import { ALL_PLAYERS } from "@/lib/constants";
-import { resolveCanonicalPlayerAlias } from "@/lib/player-alias";
+import { normalizePlayerAlias } from "@/lib/player-alias";
 import { isUniqueConstraintError } from "@/lib/sql-errors";
 
 export const runtime = "nodejs";
@@ -49,12 +48,9 @@ export async function POST(req: Request) {
   }
   const { first_name, last_name, zawodnik, role } = parsed.data;
 
-  const canonical = resolveCanonicalPlayerAlias(zawodnik);
+  const canonical = normalizePlayerAlias(zawodnik);
   if (!canonical) {
-    return NextResponse.json(
-      { error: "Ten piłkarz jest już zajęty lub nieprawidłowy." },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "Nieprawidłowy pseudonim piłkarza (2–120 znaków)." }, { status: 400 });
   }
 
   const db = await getDb();
@@ -63,12 +59,8 @@ export async function POST(req: Request) {
       (r) => r.player_alias
     )
   );
-  const available = ALL_PLAYERS.filter((p) => !taken.has(p));
-  if (!available.includes(canonical)) {
-    return NextResponse.json(
-      { error: "Ten piłkarz jest już zajęty lub nieprawidłowy." },
-      { status: 400 }
-    );
+  if (taken.has(canonical)) {
+    return NextResponse.json({ error: "Ten pseudonim piłkarza jest już zajęty." }, { status: 409 });
   }
   const isAdmin = role === "admin" ? 1 : 0;
   try {
@@ -95,7 +87,7 @@ export async function POST(req: Request) {
     );
   } catch (e) {
     if (isUniqueConstraintError(e)) {
-      return NextResponse.json({ error: "Ten piłkarz jest już zajęty." }, { status: 409 });
+      return NextResponse.json({ error: "Ten pseudonim piłkarza jest już zajęty." }, { status: 409 });
     }
     console.error("[admin/users] INSERT failed", e);
     return NextResponse.json(

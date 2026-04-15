@@ -10,13 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { PlayerAliasPicker } from "@/components/player-alias-picker";
 import {
   Dialog,
   DialogContent,
@@ -29,12 +23,10 @@ import { isWeakPin, WEAK_PIN_MESSAGE } from "@/lib/pin-policy";
 import { notifyPostLoginPromptsUpdated } from "@/lib/post-login-prompts";
 
 export function LoginForm({
-  aliases,
   nextPath,
   embedMode,
   onAuthenticated,
 }: {
-  aliases: string[];
   nextPath: string;
   /** Pola logowania w modalu — bez pełnoekranowego preloadera i bez linków pomocniczych pod formularzem. */
   embedMode?: boolean;
@@ -256,21 +248,12 @@ export function LoginForm({
               <Label htmlFor="fg-ln">Nazwisko</Label>
               <Input id="fg-ln" className="mt-1" value={fln} onChange={(e) => setFln(e.target.value)} />
             </div>
-            <div>
-              <Label>Piłkarz</Label>
-              <Select value={fzaw || undefined} onValueChange={setFzaw}>
-                <SelectTrigger className="mt-1 w-full">
-                  <SelectValue placeholder="Wybierz piłkarza" />
-                </SelectTrigger>
-                <SelectContent>
-                  {aliases.map((a) => (
-                    <SelectItem key={a} value={a}>
-                      {a}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <PlayerAliasPicker
+              label="Piłkarz"
+              value={fzaw}
+              onChange={setFzaw}
+              helperText="Ten sam pseudonim co przy rejestracji — wyszukaj lub wpisz ręcznie."
+            />
             <div>
               <Label htmlFor="fg-pin">Nowy PIN (4–6 cyfr)</Label>
               <Input

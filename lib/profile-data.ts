@@ -1,5 +1,4 @@
 import { getDb } from "@/lib/db";
-import { ALL_PLAYERS } from "@/lib/constants";
 import { normalizeUiTheme } from "@/lib/ui-theme";
 import {
   PARTICIPATION_SURVEY_KEY,
@@ -37,21 +36,6 @@ export type ProfileActivityRow = {
   action: string;
   timestamp: string;
 };
-
-export async function getAvailablePlayerAliases(exceptUserId: number): Promise<string[]> {
-  const db = await getDb();
-  const taken = new Set(
-    (
-      (await db.prepare("SELECT id, player_alias FROM users").all()) as {
-        id: number;
-        player_alias: string;
-      }[]
-    )
-      .filter((r) => r.id !== exceptUserId)
-      .map((r) => r.player_alias)
-  );
-  return ALL_PLAYERS.filter((p) => !taken.has(p));
-}
 
 export async function getProfileDashboard(userId: number) {
   const db = await getDb();
@@ -152,7 +136,6 @@ export async function getProfileDashboard(userId: number) {
       is_admin: user.is_admin,
       ui_theme: normalizeUiTheme(user.ui_theme),
     },
-    available_players: await getAvailablePlayerAliases(userId),
     summary: {
       matches_with_stats: statsRows.length,
       goals: sumGoals,

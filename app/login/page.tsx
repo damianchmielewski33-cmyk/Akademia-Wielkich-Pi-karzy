@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { LoginForm } from "@/components/login-form";
-import { ALL_PLAYERS, PIN_LOGIN_POLICY_LINES } from "@/lib/constants";
+import { PIN_LOGIN_POLICY_LINES } from "@/lib/constants";
 
 export const metadata: Metadata = {
   title: "Logowanie",
@@ -38,10 +38,7 @@ export default async function LoginPage({ searchParams }: Props) {
             <li key={i}>{line}</li>
           ))}
         </ul>
-        <LoginForm
-          aliases={ALL_PLAYERS}
-          nextPath={nextPath && nextPath.startsWith("/") ? nextPath : "/"}
-        />
+        <LoginForm nextPath={nextPath && nextPath.startsWith("/") ? nextPath : "/"} />
         <div className="mt-6 space-y-2 text-center text-sm">
           <Link
             href={

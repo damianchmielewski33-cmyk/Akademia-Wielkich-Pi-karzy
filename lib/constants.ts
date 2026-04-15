@@ -1,37 +1,3 @@
-/** Dostępne awatary piłkarskie przy rejestracji (jak w Flask). */
-export const ALL_PLAYERS = [
-  "Lionel Messi",
-  "Cristiano Ronaldo",
-  "Kylian Mbappé",
-  "Neymar",
-  "Robert Lewandowski",
-  "Kevin De Bruyne",
-  "Erling Haaland",
-  "Luka Modrić",
-  "Karim Benzema",
-  "Mohamed Salah",
-  "Vinicius Jr",
-  "Pedri",
-  "Gavi",
-  "Antoine Griezmann",
-  "Harry Kane",
-  "Bukayo Saka",
-  "Phil Foden",
-  "Jude Bellingham",
-  "Sergio Ramos",
-  "Alisson Becker",
-  "Thibaut Courtois",
-  "Marc ter Stegen",
-  "Virgil van Dijk",
-  "Antonio Rüdiger",
-  "Joshua Kimmich",
-  "Heung-min Son",
-  "Raheem Sterling",
-  "Paulo Dybala",
-  "Ángel Di María",
-  "Martin Ødegaard",
-];
-
 export const SESSION_COOKIE = "awp_session";
 
 /**
@@ -51,7 +17,7 @@ export const VISITOR_ID_STORAGE_KEY = "awp_visitor_id";
 
 /** Teksty informacyjne na stronie logowania i ustawiania PIN-u. */
 export const PIN_LOGIN_POLICY_LINES = [
-  "Logujesz się imieniem, nazwiskiem i PIN-em (4–6 cyfr). Piłkarz wybrany przy rejestracji to awatar; przy pierwszym ustawieniu PIN-u potwierdzasz tożsamość tym samym wyborem.",
+  "Logujesz się imieniem, nazwiskiem i PIN-em (4–6 cyfr). Pseudonim piłkarza (awatar) wybierasz przy rejestracji — możesz go wyszukać w internecie albo wpisać ręcznie; przy pierwszym ustawieniu PIN-u potwierdzasz tożsamość tym samym pseudonimem.",
 ] as const;
 
 /**

@@ -93,7 +93,7 @@ export async function POST(req: Request) {
     authVersion: matched.auth_version,
     rememberMe,
   });
-  await setSessionCookie(token);
+  await setSessionCookie(token, { rememberMe });
   await logActivity(matched.id, "Zalogował się");
 
   return NextResponse.json({

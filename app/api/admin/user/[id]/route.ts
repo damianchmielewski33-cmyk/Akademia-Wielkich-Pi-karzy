@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getDb, logActivity } from "@/lib/db";
 import { requireAdmin } from "@/lib/api-helpers";
+import { normalizePlayerAlias } from "@/lib/player-alias";
 
 export const runtime = "nodejs";
 
@@ -55,15 +56,25 @@ export async function PUT(req: Request, ctx: Ctx) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
   const data = parsed.data;
+  const canonical = normalizePlayerAlias(data.zawodnik);
+  if (!canonical) {
+    return NextResponse.json({ error: "Nieprawidłowy pseudonim piłkarza (2–120 znaków)." }, { status: 400 });
+  }
   const db = await getDb();
+  const clash = (await db
+    .prepare("SELECT id FROM users WHERE player_alias = ? AND id != ?")
+    .get(canonical, userId)) as { id: number } | undefined;
+  if (clash) {
+    return NextResponse.json({ error: "Ten pseudonim piłkarza jest już zajęty." }, { status: 409 });
+  }
   await db
     .prepare(
       `UPDATE users SET first_name = ?, last_name = ?, player_alias = ?, is_admin = ? WHERE id = ?`
     )
-    .run(data.first_name, data.last_name, data.zawodnik, data.role === "admin" ? 1 : 0, userId);
+    .run(data.first_name, data.last_name, canonical, data.role === "admin" ? 1 : 0, userId);
   await logActivity(
     gate.session.userId,
-    `Zaktualizował profil użytkownika id ${userId}: ${data.first_name} ${data.last_name} (${data.zawodnik}), rola: ${data.role === "admin" ? "admin" : "zawodnik"}`
+    `Zaktualizował profil użytkownika id ${userId}: ${data.first_name} ${data.last_name} (${canonical}), rola: ${data.role === "admin" ? "admin" : "zawodnik"}`
   );
   return NextResponse.json({ status: "ok" });
 }

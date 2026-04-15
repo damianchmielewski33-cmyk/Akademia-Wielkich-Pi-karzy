@@ -57,5 +57,7 @@ export const RATE = {
   /** Logowanie i próby PIN — ostrzejszy limit ogranicza zgadywanie. */
   login: { limit: 18, windowMs: 15 * 60 * 1000 },
   register: { limit: 10, windowMs: 60 * 60 * 1000 },
+  /** Podpowiedzi piłkarzy (TheSportsDB) — limit na IP. */
+  playersSearch: { limit: 40, windowMs: 60 * 1000 },
   pageView: { limit: 200, windowMs: 60 * 1000 },
 } as const;

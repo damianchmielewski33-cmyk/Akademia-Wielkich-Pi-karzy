@@ -3,8 +3,8 @@ import { z } from "zod";
 import { getDb, logActivity } from "@/lib/db";
 import { createSessionToken, setSessionCookie } from "@/lib/auth";
 import { requireUser } from "@/lib/api-helpers";
-import { getProfileDashboard, getAvailablePlayerAliases } from "@/lib/profile-data";
-import { resolveCanonicalPlayerAlias } from "@/lib/player-alias";
+import { getProfileDashboard } from "@/lib/profile-data";
+import { normalizePlayerAlias } from "@/lib/player-alias";
 import { isUniqueConstraintError } from "@/lib/sql-errors";
 import { normalizeUiTheme } from "@/lib/ui-theme";
 
@@ -64,13 +64,15 @@ export async function PATCH(req: Request) {
   let nextAlias = parsed.data.zawodnik ?? row.player_alias;
 
   if (parsed.data.zawodnik !== undefined) {
-    const canonical = resolveCanonicalPlayerAlias(parsed.data.zawodnik);
+    const canonical = normalizePlayerAlias(parsed.data.zawodnik);
     if (!canonical) {
-      return NextResponse.json({ error: "Nieprawidłowy wybór piłkarza." }, { status: 400 });
+      return NextResponse.json({ error: "Nieprawidłowy pseudonim piłkarza (2–120 znaków)." }, { status: 400 });
     }
-    const available = new Set(await getAvailablePlayerAliases(session.userId));
-    if (!available.has(canonical)) {
-      return NextResponse.json({ error: "Ten piłkarz jest już zajęty." }, { status: 409 });
+    const clash = (await db
+      .prepare("SELECT id FROM users WHERE player_alias = ? AND id != ?")
+      .get(canonical, session.userId)) as { id: number } | undefined;
+    if (clash) {
+      return NextResponse.json({ error: "Ten pseudonim piłkarza jest już zajęty." }, { status: 409 });
     }
     nextAlias = canonical;
   } else {
@@ -86,7 +88,7 @@ export async function PATCH(req: Request) {
       .run(nextFirst, nextLast, nextAlias, nextTheme, session.userId);
   } catch (e) {
     if (isUniqueConstraintError(e)) {
-      return NextResponse.json({ error: "Ten piłkarz jest już zajęty." }, { status: 409 });
+      return NextResponse.json({ error: "Ten pseudonim piłkarza jest już zajęty." }, { status: 409 });
     }
     console.error("[profile] UPDATE failed", e);
     return NextResponse.json(
@@ -97,7 +99,7 @@ export async function PATCH(req: Request) {
 
   await logActivity(
     session.userId,
-    `Zaktualizował profil (imię/nazwisko/awatar z listy): ${nextFirst} ${nextLast} (${nextAlias})`
+    `Zaktualizował profil (imię/nazwisko/awatar): ${nextFirst} ${nextLast} (${nextAlias})`
   );
 
   const verRow = (await db
@@ -114,7 +116,7 @@ export async function PATCH(req: Request) {
     authVersion,
     rememberMe: session.rememberMe,
   });
-  await setSessionCookie(token);
+  await setSessionCookie(token, { rememberMe: session.rememberMe });
 
   const data = await getProfileDashboard(session.userId);
   return NextResponse.json({ ok: true, ...data });

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState, type ComponentType } from "react";
+import { useState, type ComponentType } from "react";
 import { toast } from "sonner";
 import {
   Activity,
@@ -36,6 +36,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { PhotoDevelopPreloader } from "@/components/preloaders";
+import { PlayerAliasPicker } from "@/components/player-alias-picker";
 import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
 import type { ProfileDashboard } from "@/lib/profile-data";
 import { normalizeUiTheme, type UiTheme } from "@/lib/ui-theme";
@@ -64,11 +65,6 @@ export function ProfilClient({ initial }: Props) {
     distance: string;
     saves: string;
   } | null>(null);
-
-  const playerOptions = useMemo(() => {
-    const set = new Set([...data.available_players, data.user.zawodnik]);
-    return Array.from(set).sort((a, b) => a.localeCompare(b, "pl"));
-  }, [data.available_players, data.user.zawodnik]);
 
   async function reloadDashboard() {
     const res = await fetch("/api/profile");
@@ -320,26 +316,20 @@ export function ProfilClient({ initial }: Props) {
                     />
                   </div>
                 </div>
-                <div>
-                  <Label>Piłkarz (postać na stronie)</Label>
-                  <Select value={zawodnik} onValueChange={setZawodnik} disabled={!editingProfile}>
-                    <SelectTrigger
-                      className={cn(
-                        "mt-1",
-                        !editingProfile && "cursor-default border-emerald-100/90 bg-zinc-50/80 opacity-100"
-                      )}
-                    >
-                      <SelectValue placeholder="Wybierz" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {playerOptions.map((p) => (
-                        <SelectItem key={p} value={p}>
-                          {p}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                <PlayerAliasPicker
+                  label="Piłkarz (postać na stronie)"
+                  value={zawodnik}
+                  onChange={setZawodnik}
+                  disabled={!editingProfile}
+                  helperText={
+                    editingProfile
+                      ? "Wyszukaj z internetu lub wpisz dowolnego piłkarza — pseudonim musi być unikalny w akademii."
+                      : ""
+                  }
+                  inputClassName={cn(
+                    !editingProfile && "cursor-default border-emerald-100/90 bg-zinc-50/80 text-emerald-950 dark:text-emerald-100"
+                  )}
+                />
                 <div>
                   <Label>Motyw strony</Label>
                   <Select

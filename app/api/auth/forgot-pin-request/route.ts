@@ -3,7 +3,7 @@ import { z } from "zod";
 import { clearSessionCookie, getServerSession } from "@/lib/auth";
 import { getDb, logActivity } from "@/lib/db";
 import { hashPin, isValidPinFormat, isWeakPin, WEAK_PIN_MESSAGE } from "@/lib/pin";
-import { resolveCanonicalPlayerAlias } from "@/lib/player-alias";
+import { normalizePlayerAlias } from "@/lib/player-alias";
 import { checkRateLimit, rateLimitKey, rateLimitedResponse, RATE } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
@@ -47,7 +47,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: WEAK_PIN_MESSAGE }, { status: 400 });
   }
 
-  const canonical = resolveCanonicalPlayerAlias(zawodnik);
+  const canonical = normalizePlayerAlias(zawodnik);
   if (!canonical) {
     return NextResponse.json({ error: "Nieprawidłowe dane." }, { status: 400 });
   }

@@ -2,7 +2,7 @@ import { connection, NextResponse } from "next/server";
 import { z } from "zod";
 import { getDb, logActivity } from "@/lib/db";
 import { createSessionToken, setSessionCookie } from "@/lib/auth";
-import { resolveCanonicalPlayerAlias } from "@/lib/player-alias";
+import { normalizePlayerAlias } from "@/lib/player-alias";
 import { checkRateLimit, rateLimitKey, rateLimitedResponse, RATE } from "@/lib/rate-limit";
 import { hashPin, isValidPinFormat, isWeakPin, WEAK_PIN_MESSAGE } from "@/lib/pin";
 
@@ -47,9 +47,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: WEAK_PIN_MESSAGE }, { status: 400 });
   }
 
-  const canonical = resolveCanonicalPlayerAlias(zawodnik);
+  const canonical = normalizePlayerAlias(zawodnik);
   if (!canonical) {
-    return NextResponse.json({ error: "Nieprawidłowy wybór piłkarza." }, { status: 400 });
+    return NextResponse.json({ error: "Nieprawidłowy pseudonim piłkarza (2–120 znaków)." }, { status: 400 });
   }
 
   const db = await getDb();
@@ -93,7 +93,7 @@ export async function POST(req: Request) {
     authVersion: user.auth_version,
     rememberMe: true,
   });
-  await setSessionCookie(token);
+  await setSessionCookie(token, { rememberMe: true });
   await logActivity(user.id, "Ustawił PIN i zalogował się (pierwsze logowanie po zmianie polityki)");
 
   return NextResponse.json({

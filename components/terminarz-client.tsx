@@ -44,7 +44,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LoginForm } from "@/components/login-form";
 import { MatchTransportSignupDialog } from "@/components/match-transport-signup-dialog";
 import { MatchLocationWeather } from "@/components/match-location-weather";
-import { ALL_PLAYERS } from "@/lib/constants";
 import { appendShareSessionQuery, terminarzInviteRelativePath } from "@/lib/share-link";
 import {
   getStandaloneSurveyMatchRow,
@@ -1884,7 +1883,6 @@ export function TerminarzClient({
                 ← Wróć
               </button>
               <LoginForm
-                aliases={ALL_PLAYERS}
                 nextPath={
                   highlightMatchId != null ? terminarzInviteRelativePath(highlightMatchId) : "/terminarz"
                 }

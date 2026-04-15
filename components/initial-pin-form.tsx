@@ -5,16 +5,9 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { PlayerAliasPicker } from "@/components/player-alias-picker";
 
 export type InitialPinFormProps = {
-  aliases: string[];
   initialFirstName?: string;
   initialLastName?: string;
   /** Prefiks id pól (dialog vs strona). */
@@ -28,7 +21,6 @@ export type InitialPinFormProps = {
  * Używane na /ustaw-pin i w modalu na stronie logowania.
  */
 export function InitialPinForm({
-  aliases,
   initialFirstName = "",
   initialLastName = "",
   fieldIdPrefix = "ip",
@@ -103,21 +95,13 @@ export function InitialPinForm({
           autoComplete="family-name"
         />
       </div>
-      <div>
-        <Label>Piłkarz (potwierdzenie tożsamości)</Label>
-        <Select required value={zawodnik || undefined} onValueChange={setZawodnik}>
-          <SelectTrigger className="mt-1 w-full">
-            <SelectValue placeholder="Wybierz piłkarza (jak przy rejestracji)" />
-          </SelectTrigger>
-          <SelectContent>
-            {aliases.map((a) => (
-              <SelectItem key={a} value={a}>
-                {a}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      <PlayerAliasPicker
+        label="Piłkarz (potwierdzenie tożsamości)"
+        required
+        value={zawodnik}
+        onChange={setZawodnik}
+        helperText="Podaj ten sam pseudonim co przy rejestracji — możesz wyszukać lub wpisać ręcznie."
+      />
       <div>
         <Label htmlFor={`${p}-pin`}>Nowy PIN (4–6 cyfr)</Label>
         <Input
