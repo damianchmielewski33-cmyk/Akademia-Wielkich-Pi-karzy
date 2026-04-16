@@ -201,6 +201,8 @@ export function MatchLocationWeather({
               <span className="text-[9px] tabular-nums text-zinc-600 dark:text-zinc-300">{day.date.slice(5)}</span>
               {icons ? (
                 <span className={cn("relative mx-auto my-0.5 block", compact ? "h-7 w-7" : "h-8 w-8")}>
+                  {/* Ikony z API Google — dynamiczne URL-e; next/image wymagałby listy domen. */}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={icons.light}
                     alt=""
@@ -208,6 +210,7 @@ export function MatchLocationWeather({
                     loading="lazy"
                     decoding="async"
                   />
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={icons.dark}
                     alt=""

@@ -1,4 +1,9 @@
+import path from "path";
 import type { NextConfig } from "next";
+import { fileURLToPath } from "url";
+
+/** Katalog projektu (Next nie powinien brać „root” z nadrzędnego package-lock — ważne m.in. na Vercelu). */
+const projectRoot = path.dirname(fileURLToPath(import.meta.url));
 
 const securityHeaders = [
   { key: "X-Frame-Options", value: "DENY" },
@@ -11,6 +16,7 @@ const securityHeaders = [
 ] as const;
 
 const nextConfig: NextConfig = {
+  outputFileTracingRoot: projectRoot,
   images: {
     remotePatterns: [
       {
