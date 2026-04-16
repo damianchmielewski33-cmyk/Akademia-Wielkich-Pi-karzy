@@ -9,6 +9,7 @@ import {
   ArrowUpAZ,
   BarChart3,
   Calendar,
+  ClipboardList,
   Download,
   LayoutDashboard,
   LayoutGrid,
@@ -135,6 +136,14 @@ type AnalyticsPayload = {
     pct_signed_after_view: number | null;
   };
   screens: { screen_key: string; label: string; total_views: number; unique_visitors: number }[];
+  /** Zdarzenia z serwera (logowanie, zapisy, statystyki itd.) w wybranym zakresie dat. */
+  activity_events: {
+    id: number;
+    action: string;
+    timestamp: string;
+    actor_label: string;
+    time_display: string;
+  }[];
 };
 
 /** Domyślnie wczoraj–dziś (lokalnie), np. 06.04–07.04 gdy dziś jest 07.04. */
@@ -192,9 +201,15 @@ export function AdminPanel() {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [appSettings, setAppSettings] = useState<AppSettings | null>(null);
   const [savingAppSettings, setSavingAppSettings] = useState(false);
-  const [activity, setActivity] = useState<{ text: string; time: string; actorName: string | null }[]>(
-    []
-  );
+  const [activity, setActivity] = useState<
+    {
+      text: string;
+      time: string;
+      actorName: string | null;
+      actorLabel?: string;
+      timeDisplay?: string;
+    }[]
+  >([]);
   const [users, setUsers] = useState<UserRow[]>([]);
   const [matches, setMatches] = useState<MatchRow[]>([]);
   const [stats, setStats] = useState<StatRow[]>([]);
@@ -588,6 +603,7 @@ function AnalyticsView({
   onPresetRange: (from: string, to: string) => void;
 }) {
   const [screenQuery, setScreenQuery] = useState("");
+  const [activityQuery, setActivityQuery] = useState("");
   const [sortKey, setSortKey] = useState<AnalyticsScreenSortKey>("views");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const maxDate = todayYmd();
@@ -638,6 +654,18 @@ function AnalyticsView({
       return mult * (a.total_views - b.total_views);
     });
   }, [data, screenQuery, sortKey, sortDir]);
+
+  const eventsPrepared = useMemo(() => {
+    const ev = data?.activity_events ?? [];
+    const q = activityQuery.trim().toLowerCase();
+    if (!q) return ev;
+    return ev.filter(
+      (e) =>
+        e.actor_label.toLowerCase().includes(q) ||
+        e.action.toLowerCase().includes(q) ||
+        e.time_display.toLowerCase().includes(q)
+    );
+  }, [data, activityQuery]);
 
   const rangeSummary =
     data != null
@@ -774,6 +802,11 @@ function AnalyticsView({
             <strong>Wejścia anonimowe vs zalogowane</strong> — udział surowych odsłon stron bez
             sesji vs z aktywną sesją (jedna osoba może generować wiele odsłon).
           </p>
+          <p>
+            <strong>Dziennik akcji</strong> — konkretne czynności zapisane po stronie serwera (nie
+            mylić z samym otwarciem stron). Dla każdego wpisu widać kto (imię, nazwisko, pseudonim),
+            opis akcji oraz znacznik czasu w Europe/Warsaw.
+          </p>
         </CardContent>
       </Card>
 
@@ -783,6 +816,86 @@ function AnalyticsView({
 
       {data ? (
         <>
+          <Card className="mb-6 border-zinc-200/80 bg-white shadow-sm dark:border-zinc-700/80 dark:bg-zinc-900/90 dark:shadow-black/30">
+            <CardHeader className="space-y-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <ClipboardList className="h-5 w-5 text-emerald-700" aria-hidden />
+                    Dziennik akcji użytkowników
+                  </CardTitle>
+                  <CardDescription className="mt-1">
+                    Zdarzenia z serwera w wybranym zakresie dat (np. logowanie, zapisy na mecze, edycje
+                    profilu). Najnowsze na górze. Do 400 wpisów na jedno wczytanie.
+                  </CardDescription>
+                </div>
+              </div>
+              <div className="relative w-full min-w-[200px] sm:max-w-md">
+                <Search
+                  className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400"
+                  aria-hidden
+                />
+                <Input
+                  className="border-zinc-200 bg-white dark:border-zinc-600 dark:bg-zinc-800 pl-9"
+                  placeholder="Szukaj po osobie, treści akcji lub czasie…"
+                  value={activityQuery}
+                  onChange={(e) => setActivityQuery(e.target.value)}
+                  aria-label="Filtruj dziennik akcji"
+                />
+              </div>
+            </CardHeader>
+            <CardContent className="overflow-x-auto">
+              <div className="max-h-[min(28rem,70vh)] overflow-y-auto overflow-x-auto rounded-xl border border-zinc-200/80">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-zinc-200 hover:bg-transparent">
+                      <TableHead className="whitespace-nowrap text-zinc-700">Czas (PL)</TableHead>
+                      <TableHead className="min-w-[10rem] text-zinc-700">Kto</TableHead>
+                      <TableHead className="text-zinc-700">Czynność</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {(data.activity_events?.length ?? 0) === 0 ? (
+                      <TableRow>
+                        <TableCell
+                          colSpan={3}
+                          className="text-center text-sm text-zinc-500 dark:text-zinc-400"
+                        >
+                          Brak wpisów dziennika dla tego zakresu dat.
+                        </TableCell>
+                      </TableRow>
+                    ) : eventsPrepared.length === 0 ? (
+                      <TableRow>
+                        <TableCell
+                          colSpan={3}
+                          className="text-center text-sm text-zinc-500 dark:text-zinc-400"
+                        >
+                          Brak wyników dla podanego filtra.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      eventsPrepared.map((row) => (
+                        <TableRow key={row.id} className="border-zinc-100">
+                          <TableCell className="whitespace-nowrap align-top text-xs tabular-nums text-zinc-600 dark:text-zinc-400">
+                            <time dateTime={row.timestamp} title={row.timestamp}>
+                              {row.time_display}
+                            </time>
+                          </TableCell>
+                          <TableCell className="align-top text-sm font-medium text-zinc-900">
+                            {row.actor_label}
+                          </TableCell>
+                          <TableCell className="align-top text-sm text-zinc-700 dark:text-zinc-300">
+                            {row.action}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+
           <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <Card className="border-zinc-200/80 bg-white shadow-sm dark:border-zinc-700/80 dark:bg-zinc-900/90 dark:shadow-black/30">
               <CardHeader className="pb-2">
@@ -1018,7 +1131,13 @@ function DashboardView({
   appSettings: AppSettings | null;
   savingAppSettings: boolean;
   onToggleMatchNotificationPrompt: (enabled: boolean) => void;
-  activity: { text: string; time: string; actorName: string | null }[];
+  activity: {
+    text: string;
+    time: string;
+    actorName: string | null;
+    actorLabel?: string;
+    timeDisplay?: string;
+  }[];
   loading: boolean;
   onReload: () => void;
   onGoToTab: (t: TabId) => void;
@@ -1155,7 +1274,8 @@ function DashboardView({
         <CardHeader>
           <CardTitle className="text-lg">Ostatnia aktywność</CardTitle>
           <CardDescription>
-            Do 25 ostatnich wpisów: imię i nazwisko wykonawcy oraz opis czynności i czas zdarzenia
+            Do 25 ostatnich wpisów z serwera: kto (imię, nazwisko i pseudonim), co zrobił, kiedy — strefa
+            Europe/Warsaw
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -1173,15 +1293,16 @@ function DashboardView({
                 >
                   <div className="min-w-0 flex-1 space-y-0.5">
                     <p className="text-sm font-medium text-zinc-900">
-                      {item.actorName ?? "—"}
+                      {item.actorLabel ?? item.actorName ?? "—"}
                     </p>
                     <p className="text-sm text-zinc-600 dark:text-zinc-400">{item.text}</p>
                   </div>
                   <time
                     className="shrink-0 text-xs tabular-nums text-zinc-500 dark:text-zinc-400 sm:pt-0.5"
                     dateTime={item.time}
+                    title={item.time}
                   >
-                    {item.time}
+                    {item.timeDisplay ?? item.time}
                   </time>
                 </li>
               ))}

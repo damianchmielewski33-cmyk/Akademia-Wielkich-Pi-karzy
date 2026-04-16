@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { formatActivityActorLabel, formatActivityTimePl } from "@/lib/activity-display";
 import { requireAdmin } from "@/lib/api-helpers";
 import { localYmdInclusiveUtcRange } from "@/lib/analytics-date-range";
 import { SCREEN_LABELS } from "@/lib/analytics-screen";
@@ -147,6 +148,39 @@ export async function GET(req: Request) {
     unique_visitors: r.unique_visitors,
   }));
 
+  const activityRows = (await db
+    .prepare(
+      `SELECT a.id, a.action, a.timestamp, a.user_id,
+              u.first_name, u.last_name, u.player_alias
+       FROM activity_log a
+       LEFT JOIN users u ON u.id = a.user_id
+       WHERE datetime(a.timestamp) >= datetime(?) AND datetime(a.timestamp) <= datetime(?)
+       ORDER BY a.id DESC
+       LIMIT 400`
+    )
+    .all(fromIso, toIso)) as {
+    id: number;
+    action: string;
+    timestamp: string;
+    user_id: number | null;
+    first_name: string | null;
+    last_name: string | null;
+    player_alias: string | null;
+  }[];
+
+  const activity_events = activityRows.map((r) => ({
+    id: r.id,
+    action: r.action,
+    timestamp: r.timestamp,
+    actor_label: formatActivityActorLabel({
+      user_id: r.user_id,
+      first_name: r.first_name,
+      last_name: r.last_name,
+      player_alias: r.player_alias,
+    }),
+    time_display: formatActivityTimePl(r.timestamp),
+  }));
+
   return NextResponse.json({
     range: { from: fromDate, to: toDate },
     totals: {
@@ -169,5 +203,6 @@ export async function GET(req: Request) {
       pct_signed_after_view: pctTerminarzToSignup,
     },
     screens,
+    activity_events,
   });
 }

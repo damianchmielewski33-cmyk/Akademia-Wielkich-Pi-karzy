@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { LayoutGrid, Loader2 } from "lucide-react";
+import { LayoutGrid, Loader2, X } from "lucide-react";
 import { LineupBoardPreloader } from "@/components/preloaders";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -31,6 +31,20 @@ type Player = {
 type LineupState = { home: (number | null)[]; away: (number | null)[] };
 
 const MIME = "application/x-awp-user";
+
+/** HTML5 DnD na wielu telefonach nie działa z dotykiem — osobny tryb „wybierz → dotknij cel”. */
+function useCoarsePointer(): boolean {
+  const [coarse, setCoarse] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mq = window.matchMedia("(pointer: coarse)");
+    const apply = () => setCoarse(mq.matches);
+    apply();
+    mq.addEventListener("change", apply);
+    return () => mq.removeEventListener("change", apply);
+  }, []);
+  return coarse;
+}
 
 function Toolbar({
   title,
@@ -75,6 +89,8 @@ export function MatchLineupAdmin() {
   const [lineupPublic, setLineupPublic] = useState(false);
   const [publishSaving, setPublishSaving] = useState(false);
   const everLoaded = useRef(false);
+  const coarsePointer = useCoarsePointer();
+  const [pickedUserId, setPickedUserId] = useState<number | null>(null);
 
   const playerById = useMemo(() => {
     const m = new Map<number, Player>();
@@ -117,6 +133,10 @@ export function MatchLineupAdmin() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    setPickedUserId(null);
+  }, [selectedId]);
 
   const togglePublish = useCallback(
     async (published: boolean) => {
@@ -226,7 +246,7 @@ export function MatchLineupAdmin() {
     <div>
       <Toolbar
         title="Składy na mecz"
-        description="Wybierz termin, przeciągnij zapisanych zawodników na jedną z 7 pozycji w każdej drużynie. Pusto = rezerwa."
+        description="Wybierz termin, ułóż zapisanych zawodników na jedną z 7 pozycji w każdej drużynie (przeciąganie na komputerze; na telefonie: wybór dotykiem). Pusto = rezerwa."
         onReload={() => void load(selectedId)}
         loading={loading}
       >
@@ -292,6 +312,22 @@ export function MatchLineupAdmin() {
             ) : null}
           </div>
 
+          {coarsePointer ? (
+            <p className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-950">
+              <strong>Telefon / dotyk:</strong> dotknij zawodnika, żeby go wybrać (zielona ramka), potem{" "}
+              <strong>puste lub zajęte pole</strong> na boisku — aby ustawić w tym miejscu. Ramka „Zapisani”:
+              dotknij, aby zdjąć wybranego z boiska do rezerwy.{" "}
+              <button
+                type="button"
+                className="font-semibold text-sky-800 underline decoration-sky-400 underline-offset-2"
+                onClick={() => setPickedUserId(null)}
+                disabled={pickedUserId == null}
+              >
+                Anuluj wybór
+              </button>
+            </p>
+          ) : null}
+
           <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
             <Card className="border-zinc-200/80 bg-white shadow-sm">
               <CardHeader className="pb-3">
@@ -300,13 +336,23 @@ export function MatchLineupAdmin() {
                   Zapisani na mecz
                 </CardTitle>
                 <CardDescription>
-                  Przeciągnij na boisko. Zawodnicy bez pozycji pozostają poza składem startowym.
+                  {coarsePointer
+                    ? "Dotknij zawodnika, potem pole na boisku. Zawodnicy bez pozycji = rezerwa."
+                    : "Przeciągnij na boisko. Zawodnicy bez pozycji pozostają poza składem startowym."}
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <BenchDropZone
                   onDropUser={clearUserEverywhere}
                   disabled={selectedId == null}
+                  touchMode={coarsePointer}
+                  pickedUserId={pickedUserId}
+                  onTouchZoneClick={() => {
+                    if (pickedUserId != null) {
+                      clearUserEverywhere(pickedUserId);
+                      setPickedUserId(null);
+                    }
+                  }}
                   className="min-h-[120px]"
                 >
                   {players.length === 0 ? (
@@ -317,7 +363,15 @@ export function MatchLineupAdmin() {
                     <ul className="flex flex-wrap gap-2">
                       {bench.map((p) => (
                         <li key={p.userId}>
-                          <PlayerChip player={p} variant="list" />
+                          <PlayerChip
+                            player={p}
+                            variant="list"
+                            touchMode={coarsePointer}
+                            selected={pickedUserId === p.userId}
+                            onToggleTouchPick={() =>
+                              setPickedUserId((cur) => (cur === p.userId ? null : p.userId))
+                            }
+                          />
                         </li>
                       ))}
                     </ul>
@@ -332,6 +386,10 @@ export function MatchLineupAdmin() {
               assignToSlot={assignToSlot}
               clearSlot={clearSlot}
               disabled={selectedId == null || players.length === 0}
+              touchMode={coarsePointer}
+              pickedUserId={pickedUserId}
+              onPickForTouch={setPickedUserId}
+              onAfterTouchPlace={() => setPickedUserId(null)}
             />
           </div>
         </div>
@@ -344,11 +402,17 @@ function BenchDropZone({
   children,
   onDropUser,
   disabled,
+  touchMode,
+  pickedUserId,
+  onTouchZoneClick,
   className,
 }: {
   children: ReactNode;
   onDropUser: (userId: number) => void;
   disabled?: boolean;
+  touchMode?: boolean;
+  pickedUserId?: number | null;
+  onTouchZoneClick?: () => void;
   className?: string;
 }) {
   const [over, setOver] = useState(false);
@@ -358,10 +422,25 @@ function BenchDropZone({
         "rounded-xl border-2 border-dashed p-3 transition-colors",
         over ? "border-emerald-500 bg-emerald-50/60" : "border-zinc-200 bg-zinc-50/50",
         disabled && "pointer-events-none opacity-50",
+        touchMode && pickedUserId != null && !disabled && "ring-2 ring-sky-400 ring-offset-2",
+        touchMode && !disabled && "cursor-pointer",
         className
       )}
+      role={touchMode ? "button" : undefined}
+      tabIndex={touchMode && !disabled ? 0 : undefined}
+      onClick={() => {
+        if (!touchMode || disabled) return;
+        onTouchZoneClick?.();
+      }}
+      onKeyDown={(e) => {
+        if (!touchMode || disabled) return;
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onTouchZoneClick?.();
+        }
+      }}
       onDragOver={(e) => {
-        if (disabled) return;
+        if (disabled || touchMode) return;
         e.preventDefault();
         setOver(true);
       }}
@@ -369,14 +448,20 @@ function BenchDropZone({
       onDrop={(e) => {
         e.preventDefault();
         setOver(false);
-        if (disabled) return;
+        if (disabled || touchMode) return;
         const raw = e.dataTransfer.getData(MIME);
         const userId = Number(raw);
         if (Number.isFinite(userId)) onDropUser(userId);
       }}
     >
       {children}
-      <p className="mt-3 text-xs text-zinc-500">Upuść tutaj, aby zdjąć zawodnika z boiska (rezerwa).</p>
+      <p className="mt-3 text-xs text-zinc-500">
+        {touchMode
+          ? pickedUserId != null
+            ? "Dotknij ten obszar, aby zdjąć wybranego zawodnika z boiska (rezerwa)."
+            : "Najpierw wybierz zawodnika na boisku lub liście, potem użyj pola poniżej."
+          : "Upuść tutaj, aby zdjąć zawodnika z boiska (rezerwa)."}
+      </p>
     </div>
   );
 }
@@ -384,22 +469,39 @@ function BenchDropZone({
 function PlayerChip({
   player,
   variant,
+  touchMode,
+  selected,
+  onToggleTouchPick,
 }: {
   player: Player;
   variant: "list" | "slot";
+  touchMode?: boolean;
+  selected?: boolean;
+  onToggleTouchPick?: () => void;
 }) {
   return (
     <div
-      draggable
+      draggable={!touchMode}
+      onClick={(e) => {
+        if (!touchMode || !onToggleTouchPick) return;
+        e.stopPropagation();
+        onToggleTouchPick();
+      }}
       onDragStart={(e) => {
+        if (touchMode) {
+          e.preventDefault();
+          return;
+        }
         e.dataTransfer.setData(MIME, String(player.userId));
         e.dataTransfer.effectAllowed = "move";
       }}
       className={cn(
-        "flex max-w-[200px] cursor-grab select-none items-center gap-2 rounded-lg border bg-white px-2.5 py-1.5 text-left text-xs shadow-sm active:cursor-grabbing dark:bg-zinc-800",
+        "flex max-w-[200px] select-none items-center gap-2 rounded-lg border bg-white px-2.5 py-1.5 text-left text-xs shadow-sm dark:bg-zinc-800",
+        touchMode ? "touch-manipulation cursor-pointer" : "cursor-grab active:cursor-grabbing",
         variant === "slot"
           ? "border-emerald-200/90 text-emerald-950 dark:border-emerald-700/80 dark:text-emerald-100"
-          : "border-zinc-200 text-zinc-800 hover:border-emerald-300 dark:border-zinc-600 dark:text-zinc-200 dark:hover:border-emerald-500/70"
+          : "border-zinc-200 text-zinc-800 hover:border-emerald-300 dark:border-zinc-600 dark:text-zinc-200 dark:hover:border-emerald-500/70",
+        selected && "ring-2 ring-emerald-500 ring-offset-2 ring-offset-white dark:ring-offset-zinc-900"
       )}
       title={`${player.displayName}${player.zawodnik ? ` (${player.zawodnik})` : ""}`}
     >
@@ -429,19 +531,30 @@ function PitchCard({
   assignToSlot,
   clearSlot,
   disabled,
+  touchMode,
+  pickedUserId,
+  onPickForTouch,
+  onAfterTouchPlace,
 }: {
   lineup: LineupState;
   playerById: Map<number, Player>;
   assignToSlot: (team: "home" | "away", slotIndex: number, userId: number) => void;
   clearSlot: (team: "home" | "away", slotIndex: number) => void;
   disabled?: boolean;
+  touchMode?: boolean;
+  pickedUserId: number | null;
+  onPickForTouch: (userId: number | null) => void;
+  onAfterTouchPlace: () => void;
 }) {
   return (
     <Card className="overflow-hidden border-zinc-200/80 bg-white shadow-sm">
       <CardHeader className="pb-2">
         <CardTitle className="text-base">Boisko (7 na drużynę)</CardTitle>
         <CardDescription>
-          Drużyna B — górna połowa, drużyna A — dolna. Klik dwukrotnie zajęte pole, aby je opróżnić.
+          Drużyna B — górna połowa, drużyna A — dolna.{" "}
+          {touchMode
+            ? "Dotknij wybranego zawodnika, potem pole; krzyżyk opróżnia pozycję. Przeciąganie działa na komputerze."
+            : "Klik dwukrotnie zajęte pole, aby je opróżnić."}
         </CardDescription>
       </CardHeader>
       <CardContent className="px-2 pb-4 sm:px-4">
@@ -473,6 +586,10 @@ function PitchCard({
                 assignToSlot={assignToSlot}
                 clearSlot={clearSlot}
                 disabled={disabled}
+                touchMode={touchMode}
+                pickedUserId={pickedUserId}
+                onPickForTouch={onPickForTouch}
+                onAfterTouchPlace={onAfterTouchPlace}
               />
             </div>
             <div className="relative min-h-0 flex-[1_1_50%]">
@@ -485,6 +602,10 @@ function PitchCard({
                 assignToSlot={assignToSlot}
                 clearSlot={clearSlot}
                 disabled={disabled}
+                touchMode={touchMode}
+                pickedUserId={pickedUserId}
+                onPickForTouch={onPickForTouch}
+                onAfterTouchPlace={onAfterTouchPlace}
               />
             </div>
           </div>
@@ -503,6 +624,10 @@ function TeamHalf({
   assignToSlot,
   clearSlot,
   disabled,
+  touchMode,
+  pickedUserId,
+  onPickForTouch,
+  onAfterTouchPlace,
 }: {
   label: string;
   team: "home" | "away";
@@ -512,6 +637,10 @@ function TeamHalf({
   assignToSlot: (team: "home" | "away", slotIndex: number, userId: number) => void;
   clearSlot: (team: "home" | "away", slotIndex: number) => void;
   disabled?: boolean;
+  touchMode?: boolean;
+  pickedUserId: number | null;
+  onPickForTouch: (userId: number | null) => void;
+  onAfterTouchPlace: () => void;
 }) {
   return (
     <div className="relative h-full min-h-[140px]">
@@ -534,29 +663,61 @@ function TeamHalf({
           >
             <div
               className={cn(
-                "flex min-h-[52px] min-w-[52px] items-center justify-center rounded-full border-2 border-dashed transition-colors",
-                p ? "border-white/50 bg-white/10" : "border-white/35 bg-black/15"
+                "relative flex min-h-[52px] min-w-[52px] items-center justify-center rounded-full border-2 border-dashed transition-colors",
+                p ? "border-white/50 bg-white/10 p-1.5" : "border-white/35 bg-black/15",
+                touchMode && pickedUserId != null && "ring-2 ring-amber-200/90 ring-offset-1 ring-offset-transparent"
               )}
+              onClick={() => {
+                if (!touchMode || disabled || pickedUserId == null) return;
+                assignToSlot(team, i, pickedUserId);
+                onAfterTouchPlace();
+              }}
               onDragOver={(e) => {
-                if (disabled) return;
+                if (disabled || touchMode) return;
                 e.preventDefault();
               }}
               onDrop={(e) => {
                 e.preventDefault();
-                if (disabled) return;
+                if (disabled || touchMode) return;
                 const raw = e.dataTransfer.getData(MIME);
                 const userId = Number(raw);
                 if (Number.isFinite(userId)) assignToSlot(team, i, userId);
               }}
               onDoubleClick={() => {
-                if (disabled || uid == null) return;
+                if (disabled || uid == null || touchMode) return;
                 clearSlot(team, i);
               }}
             >
               {p ? (
-                <PlayerChip player={p} variant="slot" />
+                <>
+                  <PlayerChip
+                    player={p}
+                    variant="slot"
+                    touchMode={touchMode}
+                    selected={pickedUserId === p.userId}
+                    onToggleTouchPick={() =>
+                      onPickForTouch(pickedUserId === p.userId ? null : p.userId)
+                    }
+                  />
+                  {touchMode ? (
+                    <button
+                      type="button"
+                      className="absolute -right-0.5 -top-0.5 flex h-6 w-6 items-center justify-center rounded-full border border-white/40 bg-zinc-900/85 text-white shadow-md hover:bg-black/90"
+                      aria-label="Opróżnij pole"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (disabled) return;
+                        clearSlot(team, i);
+                      }}
+                    >
+                      <X className="h-3.5 w-3.5" aria-hidden />
+                    </button>
+                  ) : null}
+                </>
               ) : (
-                <span className="px-1 text-center text-[10px] font-semibold text-white/80">{i + 1}</span>
+                <span className="pointer-events-none px-1 text-center text-[10px] font-semibold text-white/80">
+                  {i + 1}
+                </span>
               )}
             </div>
           </div>
