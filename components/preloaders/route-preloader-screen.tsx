@@ -7,9 +7,9 @@ type Props = {
 
 /** Jednolity, duży ekran ładowania dla segmentu — treść zależy od ścieżki. */
 export function RoutePreloaderScreen({ path }: Props) {
-  const { title, subtitle, Preloader } = getRoutePreloaderSpec(path);
+  const { title, subtitle, Preloader, surface } = getRoutePreloaderSpec(path);
   return (
-    <PagePreloaderLayout variant="full" title={title} subtitle={subtitle}>
+    <PagePreloaderLayout variant="full" surface={surface} title={title} subtitle={subtitle}>
       <Preloader />
     </PagePreloaderLayout>
   );

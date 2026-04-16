@@ -281,7 +281,14 @@ export function HomeClient({
             <div className="pointer-events-none absolute bottom-0 right-0 h-10 w-10 rounded-tl-full border-t-2 border-l-2 border-white/45" aria-hidden />
             <div className="relative px-5 py-5 text-white">
               <div className="mb-3 flex items-center justify-center gap-2">
-                <Image src="/logo-akademia.svg" alt="" width={32} height={32} className="h-8 w-8 drop-shadow" unoptimized />
+                <Image
+                  src="/logo-akademia-crest.png"
+                  alt=""
+                  width={128}
+                  height={128}
+                  className="h-8 w-8 object-contain drop-shadow"
+                  sizes="32px"
+                />
                 <h3 className="text-lg font-bold tracking-tight drop-shadow-sm">Najbliższy mecz</h3>
               </div>
               <p className="mt-1 font-semibold text-emerald-50">

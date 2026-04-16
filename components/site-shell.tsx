@@ -81,13 +81,13 @@ export function SiteShell({ children, isLoggedIn, isAdmin, account = null }: Pro
           <Link href="/" className="flex items-center gap-3 rounded-xl pr-2 outline-offset-4 focus-visible:ring-2 focus-visible:ring-emerald-300">
             <span className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/10 shadow-inner ring-1 ring-white/15">
               <Image
-              src="/logo-akademia.svg"
+              src="/logo-akademia-crest.png"
               alt={SITE_NAME}
-              width={40}
-              height={40}
-              className="h-9 w-9"
+              width={160}
+              height={160}
+              className="h-9 w-9 object-contain"
               priority
-              unoptimized
+              sizes="40px"
             />
             </span>
             <span className="text-left">
@@ -260,12 +260,12 @@ export function SiteShell({ children, isLoggedIn, isAdmin, account = null }: Pro
         <div className="relative mx-auto flex max-w-6xl flex-col items-center gap-2 px-4 py-8 text-center sm:flex-row sm:justify-between sm:text-left">
           <div className="flex items-center gap-3">
             <Image
-              src="/logo-akademia.svg"
+              src="/logo-akademia-crest.png"
               alt={SITE_NAME}
-              width={36}
-              height={36}
-              className="h-9 w-9 opacity-90"
-              unoptimized
+              width={144}
+              height={144}
+              className="h-9 w-9 object-contain opacity-90"
+              sizes="36px"
             />
             <div>
               <p className="text-sm font-semibold text-white">{SITE_NAME}</p>

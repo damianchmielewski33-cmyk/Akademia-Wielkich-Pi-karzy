@@ -175,16 +175,26 @@ export function NavigationLoadingOverlay() {
     );
   }
 
-  const { title, subtitle, Preloader } = getRoutePreloaderSpec(pendingPath);
+  const { title, subtitle, Preloader, surface } = getRoutePreloaderSpec(pendingPath);
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[100] overflow-y-auto bg-[var(--background)]/95 backdrop-blur-[2px]"
+      className={
+        surface === "crest"
+          ? "fixed inset-0 z-[100] overflow-y-auto bg-black"
+          : "fixed inset-0 z-[100] overflow-y-auto bg-[var(--background)]/95 backdrop-blur-[2px]"
+      }
       aria-busy="true"
       aria-live="polite"
       aria-label={title}
     >
-      <PagePreloaderLayout variant="full" title={title} subtitle={subtitle} className="min-h-[100dvh]">
+      <PagePreloaderLayout
+        variant="full"
+        surface={surface}
+        title={title}
+        subtitle={subtitle}
+        className="min-h-[100dvh]"
+      >
         <Preloader />
       </PagePreloaderLayout>
     </div>,

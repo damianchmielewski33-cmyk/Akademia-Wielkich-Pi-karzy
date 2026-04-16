@@ -1,4 +1,5 @@
 import type { ComponentType } from "react";
+import { BrandCrestPreloader } from "./brand-crest-preloader";
 import { HomeStadiumPreloader } from "./scenes-academy";
 import { TerminarzCalendarPreloader } from "./scenes-schedule";
 import { PilkarzeLockerPreloader, SkladyTacticsPreloader } from "./scenes-roster";
@@ -13,6 +14,7 @@ export type RoutePreloaderSpec = {
   title: string;
   subtitle: string;
   Preloader: ComponentType;
+  surface?: "murawa" | "crest";
 };
 
 function stripQuery(path: string) {
@@ -116,7 +118,8 @@ export function getRoutePreloaderSpec(rawPath: string): RoutePreloaderSpec {
 
   return {
     title: "Ładujemy stronę",
-    subtitle: "Światła stadionu, murawa i piłka — zaraz jesteś na boisku.",
-    Preloader: HomeStadiumPreloader,
+    subtitle: "Chwila — zaraz jesteś na boisku.",
+    Preloader: BrandCrestPreloader,
+    surface: "crest",
   };
 }
