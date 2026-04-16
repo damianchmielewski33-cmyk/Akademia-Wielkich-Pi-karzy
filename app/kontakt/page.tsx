@@ -3,7 +3,13 @@ import Image from "next/image";
 import Link from "next/link";
 import { Mail, MessageCircle, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { MATCH_BLIK_PHONE_DISPLAY, SITE_NAME, getPublicContactEmailWithFallback } from "@/lib/site";
+import {
+  MATCH_BLIK_PHONE_DISPLAY,
+  SITE_NAME,
+  getFacebookDamianUrl,
+  getFacebookMateuszUrl,
+  getPublicContactEmailWithFallback,
+} from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Kontakt",
@@ -12,8 +18,8 @@ export const metadata: Metadata = {
 
 export default function KontaktPage() {
   const email = getPublicContactEmailWithFallback();
-  const fbDamian = process.env.NEXT_PUBLIC_FACEBOOK_DAMIAN?.trim() || null;
-  const fbMateusz = process.env.NEXT_PUBLIC_FACEBOOK_MATEUSZ?.trim() || null;
+  const fbDamian = getFacebookDamianUrl();
+  const fbMateusz = getFacebookMateuszUrl();
 
   return (
     <div className="container mx-auto max-w-5xl flex-1 px-4 py-8 text-center sm:py-10">
@@ -111,45 +117,57 @@ function OrganizerCard({
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          {phone ? (
-            <Button
-              asChild
-              variant="secondary"
-              className="bg-white/95 text-emerald-950 hover:bg-white dark:bg-zinc-800 dark:text-emerald-100 dark:hover:bg-zinc-700"
-            >
-              <a href={`tel:${phone.replace(/\s/g, "")}`}>Zadzwoń</a>
-            </Button>
-          ) : null}
-          {email ? (
-            <Button
-              asChild
-              variant="secondary"
-              className="bg-white/95 text-emerald-950 hover:bg-white dark:bg-zinc-800 dark:text-emerald-100 dark:hover:bg-zinc-700"
-            >
-              <a href={`mailto:${email}`}>Napisz email</a>
-            </Button>
-          ) : null}
-          {facebookUrl ? (
-            <Button
-              asChild
-              variant="secondary"
-              className="bg-white/95 text-emerald-950 hover:bg-white dark:bg-zinc-800 dark:text-emerald-100 dark:hover:bg-zinc-700"
-            >
-              <a href={facebookUrl} target="_blank" rel="noreferrer">
+        <div className="flex min-w-0 flex-col gap-2 sm:items-end">
+          <div className="flex flex-wrap gap-2">
+            {phone ? (
+              <Button
+                asChild
+                variant="secondary"
+                className="bg-white/95 text-emerald-950 hover:bg-white dark:bg-zinc-800 dark:text-emerald-100 dark:hover:bg-zinc-700"
+              >
+                <a href={`tel:${phone.replace(/\s/g, "")}`}>Zadzwoń</a>
+              </Button>
+            ) : null}
+            {email ? (
+              <Button
+                asChild
+                variant="secondary"
+                className="bg-white/95 text-emerald-950 hover:bg-white dark:bg-zinc-800 dark:text-emerald-100 dark:hover:bg-zinc-700"
+              >
+                <a href={`mailto:${email}`}>Napisz email</a>
+              </Button>
+            ) : null}
+            {facebookUrl ? (
+              <Button
+                asChild
+                variant="secondary"
+                className="bg-white/95 text-emerald-950 hover:bg-white dark:bg-zinc-800 dark:text-emerald-100 dark:hover:bg-zinc-700"
+              >
+                <a href={facebookUrl} target="_blank" rel="noreferrer">
+                  Facebook
+                </a>
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                variant="secondary"
+                disabled
+                className="bg-white/90 text-emerald-950 dark:bg-zinc-800/80 dark:text-zinc-500"
+              >
                 Facebook
-              </a>
-            </Button>
-          ) : (
-            <Button
-              type="button"
-              variant="secondary"
-              disabled
-              className="bg-white/90 text-emerald-950 dark:bg-zinc-800/80 dark:text-zinc-500"
+              </Button>
+            )}
+          </div>
+          {facebookUrl ? (
+            <a
+              href={facebookUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="max-w-full break-all text-left text-xs font-medium text-emerald-100/95 underline-offset-2 hover:underline sm:text-right"
             >
-              Facebook
-            </Button>
-          )}
+              {facebookUrl}
+            </a>
+          ) : null}
         </div>
       </div>
     </div>

@@ -59,3 +59,17 @@ export function getPublicContactEmail(): string | null {
 export function getPublicContactEmailWithFallback(): string {
   return getPublicContactEmail() ?? DEFAULT_PUBLIC_CONTACT_EMAIL;
 }
+
+/** Profil Facebook — Damian Chmielewski (nadpisz przez NEXT_PUBLIC_FACEBOOK_DAMIAN). */
+export const DEFAULT_FACEBOOK_DAMIAN_URL = "https://www.facebook.com/damian.chmielewski.1422";
+
+export function getFacebookDamianUrl(): string {
+  return process.env.NEXT_PUBLIC_FACEBOOK_DAMIAN?.trim() || DEFAULT_FACEBOOK_DAMIAN_URL;
+}
+
+/** Profil Facebook — Mateusz Wierzbicki (nadpisz przez NEXT_PUBLIC_FACEBOOK_MATEUSZ). */
+export const DEFAULT_FACEBOOK_MATEUSZ_URL = "https://www.facebook.com/mateusz.wierzbicki.5268";
+
+export function getFacebookMateuszUrl(): string {
+  return process.env.NEXT_PUBLIC_FACEBOOK_MATEUSZ?.trim() || DEFAULT_FACEBOOK_MATEUSZ_URL;
+}

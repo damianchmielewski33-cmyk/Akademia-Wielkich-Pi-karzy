@@ -4,6 +4,7 @@ import fs from "fs";
 import * as path from "path";
 import { isVercel, resolveDatabaseFilePath } from "@/lib/runtime-paths";
 import { initLibsqlSchema } from "@/lib/turso-init-schema";
+import { withTransientNetworkRetries } from "@/lib/transient-network-retry";
 
 /** Lokalny plik SQLite (dev) lub Turso (gdy TURSO_DATABASE_URL). */
 export type AppDb = {
@@ -299,7 +300,20 @@ export async function getDb(): Promise<AppDb> {
       });
     }
     if (!libsqlSchemaReady) {
-      await initLibsqlSchema(libsqlClient);
+      await withTransientNetworkRetries(
+        async () => {
+          await initLibsqlSchema(libsqlClient!);
+        },
+        {
+          onBeforeRetry: () => {
+            libsqlClient?.close();
+            libsqlClient = createClient({
+              url: process.env.TURSO_DATABASE_URL!,
+              authToken: process.env.TURSO_AUTH_TOKEN?.trim() || undefined,
+            });
+          },
+        }
+      );
       libsqlSchemaReady = true;
     }
     return createLibsqlFacade(libsqlClient);

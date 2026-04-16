@@ -26,14 +26,17 @@ function normalizePath(href: string): string | null {
   return path || "/";
 }
 
+function stripQuery(p: string): string {
+  return (p.split("?")[0] || "/").trim() || "/";
+}
+
 /**
  * Next.js usuwa `loading.tsx` natychmiast po zakończeniu segmentu — animacje znikają po ułamku sekundy.
- * Nakładka włącza się po pełnym `click` na linku (bubble) i zostaje min. MIN_VISIBLE_MS lub do zmiany pathname.
+ * Nakładka włącza się po `click` na linku (capture na `document`, przed `<Link>`) i zostaje min. MIN_VISIBLE_MS po dojściu do `pendingPath`.
  * Scena SVG i teksty są takie jak dla docelowej trasy (`getRoutePreloaderSpec`).
  */
 export function NavigationLoadingOverlay() {
   const pathname = usePathname();
-  const prevPathname = useRef(pathname);
   const navStartRef = useRef<number | null>(null);
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const maxTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -107,18 +110,22 @@ export function NavigationLoadingOverlay() {
       setVisible(true);
     };
 
-    document.addEventListener("click", onClick, false);
-    return () => document.removeEventListener("click", onClick, false);
+    /** Capture: przed obsługą `<Link>` — pathname może się zmienić wcześniej niż bubble do `document`, wtedy stary efekt zostawiał nakładkę na stałe. */
+    document.addEventListener("click", onClick, true);
+    return () => document.removeEventListener("click", onClick, true);
   }, [pathname]);
 
+  /**
+   * Zdejmij nakładkę po dojściu do docelowej ścieżki (także gdy `pathname` zaktualizował się przed `visible` / `navStartRef`).
+   */
   useEffect(() => {
-    const prev = prevPathname.current;
-    if (prev === pathname) return;
-    prevPathname.current = pathname;
-
-    if (navStartRef.current === null) return;
+    if (!visible || !pendingPath) return;
+    const cur = stripQuery(pathname ?? "");
+    const pending = stripQuery(pendingPath);
+    if (cur !== pending) return;
 
     const minMs = isReducedMotion() ? 0 : MIN_VISIBLE_MS;
+    if (navStartRef.current === null) navStartRef.current = Date.now();
     const elapsed = Date.now() - navStartRef.current;
     const remaining = Math.max(0, minMs - elapsed);
 
@@ -129,7 +136,7 @@ export function NavigationLoadingOverlay() {
       navStartRef.current = null;
       closeTimerRef.current = null;
     }, remaining);
-  }, [pathname]);
+  }, [pathname, visible, pendingPath]);
 
   useEffect(() => {
     return () => {

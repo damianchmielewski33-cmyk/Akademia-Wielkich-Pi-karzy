@@ -8,14 +8,17 @@ export async function register() {
   if (process.env.TURSO_DATABASE_URL?.trim()) {
     const { createClient } = await import("@libsql/client");
     const { initLibsqlSchema } = await import("./lib/turso-init-schema");
-    const client = createClient({
-      url: process.env.TURSO_DATABASE_URL,
-      authToken: process.env.TURSO_AUTH_TOKEN?.trim() || undefined,
+    const { withTransientNetworkRetries } = await import("./lib/transient-network-retry");
+    await withTransientNetworkRetries(async () => {
+      const client = createClient({
+        url: process.env.TURSO_DATABASE_URL,
+        authToken: process.env.TURSO_AUTH_TOKEN?.trim() || undefined,
+      });
+      try {
+        await initLibsqlSchema(client);
+      } finally {
+        client.close();
+      }
     });
-    try {
-      await initLibsqlSchema(client);
-    } finally {
-      client.close();
-    }
   }
 }
