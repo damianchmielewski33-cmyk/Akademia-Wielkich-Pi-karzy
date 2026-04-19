@@ -198,9 +198,12 @@ export async function PUT(req: Request) {
 
   const assigned: number[] = [];
   for (const uid of [...home, ...away]) {
-    if (uid === null) continue;
+    if (uid == null) continue;
     const id = sqlUserId(uid);
-    if (!Number.isFinite(id) || !signedUp.has(id)) {
+    if (!Number.isFinite(id)) {
+      return NextResponse.json({ error: "Nieprawidłowe ID zawodnika w składzie" }, { status: 400 });
+    }
+    if (!signedUp.has(id)) {
       return NextResponse.json(
         { error: "W składzie są zawodnicy, którzy nie są zapisani na ten mecz" },
         { status: 400 }

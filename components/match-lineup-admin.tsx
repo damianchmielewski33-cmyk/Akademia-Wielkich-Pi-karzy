@@ -230,6 +230,8 @@ export function MatchLineupAdmin() {
     const id = Number(v);
     if (!Number.isFinite(id)) return;
     setSelectedId(id);
+    // Od razu czyścimy boisko — inaczej przy szybkim „Zapisz” w API leci nowy match_id ze starymi user_id z poprzedniego meczu.
+    setLineup({ home: Array(7).fill(null), away: Array(7).fill(null) });
     void load(id);
   };
 
@@ -250,7 +252,12 @@ export function MatchLineupAdmin() {
         onReload={() => void load(selectedId)}
         loading={loading}
       >
-        <Button type="button" size="sm" onClick={() => void save()} disabled={saving || selectedId == null}>
+        <Button
+          type="button"
+          size="sm"
+          onClick={() => void save()}
+          disabled={saving || selectedId == null || loading}
+        >
           {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
           Zapisz składy
         </Button>
