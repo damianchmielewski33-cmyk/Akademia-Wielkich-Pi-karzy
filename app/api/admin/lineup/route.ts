@@ -117,6 +117,11 @@ export async function GET(req: Request) {
     };
   });
 
+  /** Tylko zawodnicy z aktywnym zapisem (commitment=1) mogą być na boisku — stare sloty w DB ignorujemy. */
+  const eligibleIds = new Set(
+    playersRaw.map((p) => sqlUserId(p.user_id)).filter((id) => Number.isFinite(id))
+  );
+
   const lineupRows = (await db
     .prepare(
       `SELECT team, slot_index, user_id FROM match_lineup_slots WHERE match_id = ?`
@@ -128,7 +133,7 @@ export async function GET(req: Request) {
   for (const row of lineupRows) {
     if (row.slot_index < 0 || row.slot_index > 6) continue;
     const uid = sqlUserId(row.user_id);
-    if (!Number.isFinite(uid)) continue;
+    if (!Number.isFinite(uid) || !eligibleIds.has(uid)) continue;
     if (row.team === "home") home[row.slot_index] = uid;
     else if (row.team === "away") away[row.slot_index] = uid;
   }
@@ -196,20 +201,22 @@ export async function PUT(req: Request) {
       .filter((id) => Number.isFinite(id))
   );
 
+  /** Odrzuca „duchy” z UI/cache: ktoś zszedł ze składu zapisów, a slot w JSON nadal ma jego ID. */
+  function normalizeSlots(slots: (number | null)[]): (number | null)[] {
+    return slots.map((uid) => {
+      if (uid == null) return null;
+      const id = sqlUserId(uid);
+      if (!Number.isFinite(id) || !signedUp.has(id)) return null;
+      return id;
+    });
+  }
+
+  const homeN = normalizeSlots(home);
+  const awayN = normalizeSlots(away);
+
   const assigned: number[] = [];
-  for (const uid of [...home, ...away]) {
-    if (uid == null) continue;
-    const id = sqlUserId(uid);
-    if (!Number.isFinite(id)) {
-      return NextResponse.json({ error: "Nieprawidłowe ID zawodnika w składzie" }, { status: 400 });
-    }
-    if (!signedUp.has(id)) {
-      return NextResponse.json(
-        { error: "W składzie są zawodnicy, którzy nie są zapisani na ten mecz" },
-        { status: 400 }
-      );
-    }
-    assigned.push(id);
+  for (const uid of [...homeN, ...awayN]) {
+    if (uid != null) assigned.push(uid);
   }
   const unique = new Set(assigned);
   if (unique.size !== assigned.length) {
@@ -223,10 +230,10 @@ export async function PUT(req: Request) {
 
   await del.run(match_id);
   for (let i = 0; i < 7; i++) {
-    const hu = home[i];
-    if (hu != null) await ins.run(match_id, "home", i, sqlUserId(hu));
-    const au = away[i];
-    if (au != null) await ins.run(match_id, "away", i, sqlUserId(au));
+    const hu = homeN[i];
+    if (hu != null) await ins.run(match_id, "home", i, hu);
+    const au = awayN[i];
+    if (au != null) await ins.run(match_id, "away", i, au);
   }
 
   await logActivity(
