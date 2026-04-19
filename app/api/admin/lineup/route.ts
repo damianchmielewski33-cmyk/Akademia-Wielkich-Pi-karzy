@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getDb, logActivity } from "@/lib/db";
 import { requireAdmin } from "@/lib/api-helpers";
+import { pitchHalfSlotCounts, pitchSlotTotalFromSignupCount } from "@/lib/lineup-pitch-slots";
 
 export const runtime = "nodejs";
 
@@ -9,8 +10,8 @@ const slotRow = z.union([z.number().int().positive(), z.null()]);
 
 const putBodySchema = z.object({
   match_id: z.coerce.number().int().positive(),
-  home: z.array(slotRow).length(7),
-  away: z.array(slotRow).length(7),
+  home: z.array(slotRow),
+  away: z.array(slotRow),
 });
 
 function todayIso() {
@@ -32,6 +33,24 @@ type MatchListRow = {
   location: string;
   lineup_public: number;
 };
+
+function emptyLineupArrays(signupCount: number): {
+  pitchSlotTotal: number;
+  homeSlotCount: number;
+  awaySlotCount: number;
+  home: (number | null)[];
+  away: (number | null)[];
+} {
+  const pitchSlotTotal = pitchSlotTotalFromSignupCount(signupCount);
+  const { home: homeSlotCount, away: awaySlotCount } = pitchHalfSlotCounts(pitchSlotTotal);
+  return {
+    pitchSlotTotal,
+    homeSlotCount,
+    awaySlotCount,
+    home: Array(homeSlotCount).fill(null),
+    away: Array(awaySlotCount).fill(null),
+  };
+}
 
 export async function GET(req: Request) {
   const gate = await requireAdmin();
@@ -59,6 +78,7 @@ export async function GET(req: Request) {
       : matchList[0] ?? null;
 
   if (!selected) {
+    const empty = emptyLineupArrays(0);
     return NextResponse.json({
       matches: matchList.map((m) => ({
         id: m.id,
@@ -69,6 +89,9 @@ export async function GET(req: Request) {
       })),
       selectedMatchId: null,
       match: null,
+      pitchSlotTotal: empty.pitchSlotTotal,
+      homeSlotCount: empty.homeSlotCount,
+      awaySlotCount: empty.awaySlotCount,
       players: [] as {
         userId: number;
         displayName: string;
@@ -78,8 +101,8 @@ export async function GET(req: Request) {
         initials: string;
         profilePhotoPath: string | null;
       }[],
-      home: Array(7).fill(null),
-      away: Array(7).fill(null),
+      home: empty.home,
+      away: empty.away,
     });
   }
 
@@ -99,6 +122,10 @@ export async function GET(req: Request) {
     zawodnik: string;
     profile_photo_path: string | null;
   }[];
+
+  const signupCount = playersRaw.length;
+  const pitchSlotTotal = pitchSlotTotalFromSignupCount(signupCount);
+  const { home: homeSlotCount, away: awaySlotCount } = pitchHalfSlotCounts(pitchSlotTotal);
 
   const players = playersRaw.map((p) => {
     const fn = (p.first_name || "").trim();
@@ -128,14 +155,21 @@ export async function GET(req: Request) {
     )
     .all(selected.id)) as { team: string; slot_index: number; user_id: number }[];
 
-  const home: (number | null)[] = Array(7).fill(null);
-  const away: (number | null)[] = Array(7).fill(null);
+  const home: (number | null)[] = Array(homeSlotCount).fill(null);
+  const away: (number | null)[] = Array(awaySlotCount).fill(null);
+  const maxHomeIdx = homeSlotCount - 1;
+  const maxAwayIdx = awaySlotCount - 1;
+
   for (const row of lineupRows) {
-    if (row.slot_index < 0 || row.slot_index > 6) continue;
     const uid = sqlUserId(row.user_id);
     if (!Number.isFinite(uid) || !eligibleIds.has(uid)) continue;
-    if (row.team === "home") home[row.slot_index] = uid;
-    else if (row.team === "away") away[row.slot_index] = uid;
+    if (row.team === "home") {
+      if (row.slot_index < 0 || row.slot_index > maxHomeIdx) continue;
+      home[row.slot_index] = uid;
+    } else if (row.team === "away") {
+      if (row.slot_index < 0 || row.slot_index > maxAwayIdx) continue;
+      away[row.slot_index] = uid;
+    }
   }
 
   return NextResponse.json({
@@ -154,6 +188,9 @@ export async function GET(req: Request) {
       location: selected.location,
       lineupPublic: selected.lineup_public === 1,
     },
+    pitchSlotTotal,
+    homeSlotCount,
+    awaySlotCount,
     players,
     home,
     away,
@@ -190,16 +227,24 @@ export async function PUT(req: Request) {
     return NextResponse.json({ error: "Mecz niedostępny lub nie nadaje się do składu" }, { status: 400 });
   }
 
-  const signedUp = new Set(
-    (
-      (await db
-      .prepare(`SELECT user_id FROM match_signups WHERE match_id = ? AND COALESCE(commitment, 1) = 1`)
-      .all(match_id)) as {
-        user_id: unknown;
-      }[]
-    ).map((r) => sqlUserId(r.user_id))
-      .filter((id) => Number.isFinite(id))
-  );
+  const signupRows = (await db
+    .prepare(`SELECT user_id FROM match_signups WHERE match_id = ? AND COALESCE(commitment, 1) = 1`)
+    .all(match_id)) as { user_id: unknown }[];
+
+  const signupCount = signupRows.length;
+  const pitchSlotTotal = pitchSlotTotalFromSignupCount(signupCount);
+  const { home: expectedHome, away: expectedAway } = pitchHalfSlotCounts(pitchSlotTotal);
+
+  if (home.length !== expectedHome || away.length !== expectedAway) {
+    return NextResponse.json(
+      {
+        error: `Niezgodna liczba pól na boisku (oczekiwano drużyna A: ${expectedHome}, drużyna B: ${expectedAway}). Odśwież stronę.`,
+      },
+      { status: 400 }
+    );
+  }
+
+  const signedUp = new Set(signupRows.map((r) => sqlUserId(r.user_id)).filter((id) => Number.isFinite(id)));
 
   /** Odrzuca „duchy” z UI/cache: ktoś zszedł ze składu zapisów, a slot w JSON nadal ma jego ID. */
   function normalizeSlots(slots: (number | null)[]): (number | null)[] {
@@ -229,16 +274,18 @@ export async function PUT(req: Request) {
   );
 
   await del.run(match_id);
-  for (let i = 0; i < 7; i++) {
+  for (let i = 0; i < homeN.length; i++) {
     const hu = homeN[i];
     if (hu != null) await ins.run(match_id, "home", i, hu);
+  }
+  for (let i = 0; i < awayN.length; i++) {
     const au = awayN[i];
     if (au != null) await ins.run(match_id, "away", i, au);
   }
 
   await logActivity(
     gate.session.userId,
-    `Zapisano składy 7v7: mecz ${match.match_date} ${match.match_time} (${match.location}), id ${match_id}`
+    `Zapisano składy (${pitchSlotTotal} pól): mecz ${match.match_date} ${match.match_time} (${match.location}), id ${match_id}`
   );
 
   return NextResponse.json({ status: "ok" });

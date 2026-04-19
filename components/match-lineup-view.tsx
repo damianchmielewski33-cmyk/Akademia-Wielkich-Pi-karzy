@@ -4,7 +4,7 @@ import { useCallback, useState } from "react";
 import { LineupPlayerStatsDialog } from "@/components/lineup-player-stats-dialog";
 import { PlayerAvatar } from "@/components/player-avatar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { SLOT_STYLE_AWAY, SLOT_STYLE_HOME } from "@/lib/match-lineup-layout";
+import { getSlotStylesAway, getSlotStylesHome } from "@/lib/match-lineup-layout";
 import { cn } from "@/lib/utils";
 
 export type LineupPlayer = {
@@ -153,17 +153,18 @@ function JerseyToken({
   return (
     <button
       type="button"
-      className="relative w-[min(100%,108px)] max-w-full shrink-0 cursor-pointer appearance-none border-0 bg-transparent p-0 pt-3 text-left aspect-[100/72] drop-shadow-[0_3px_6px_rgba(0,0,0,0.35)] transition-[filter,transform] hover:brightness-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/90 focus-visible:ring-offset-2 focus-visible:ring-offset-emerald-900/40 active:scale-[0.98] sm:w-[108px]"
+      className="relative mx-auto aspect-[100/72] w-[clamp(56px,17vw,108px)] max-w-[min(108px,22vw)] shrink-0 cursor-pointer appearance-none border-0 bg-transparent p-0 pt-2 text-left drop-shadow-[0_3px_6px_rgba(0,0,0,0.35)] transition-[filter,transform] hover:brightness-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/90 focus-visible:ring-offset-2 focus-visible:ring-offset-emerald-900/40 active:scale-[0.98] sm:w-[clamp(88px,24vw,108px)] sm:max-w-[108px] sm:pt-3"
       aria-label={`Statystyki zawodnika: ${label}`}
       onClick={() => onOpenStats(player.userId)}
     >
-      <span className="absolute left-1/2 top-0 z-30 -translate-x-1/2">
+      <span className="absolute left-1/2 top-0 z-30 -translate-x-1/2 scale-[0.92] sm:scale-100">
         <PlayerAvatar
           photoPath={player.profilePhotoPath}
           firstName={player.firstName}
           lastName={player.lastName}
           size="xs"
           ringClassName="ring-2 ring-white/90 shadow-sm"
+          className="h-6 w-6 text-[9px] sm:h-7 sm:w-7 sm:text-[10px]"
         />
       </span>
       <svg
@@ -219,7 +220,7 @@ function EmptySlotToken({ index, team }: { index: number; team: "home" | "away" 
   return (
     <div
       className={cn(
-        "relative w-[min(100%,108px)] max-w-full shrink-0 aspect-[100/72] opacity-90 sm:w-[108px]",
+        "relative mx-auto aspect-[100/72] w-[clamp(56px,17vw,108px)] max-w-[min(108px,22vw)] shrink-0 opacity-90 sm:w-[clamp(88px,24vw,108px)] sm:max-w-[108px]",
         isHome ? "text-emerald-100/90" : "text-sky-100/90"
       )}
     >
@@ -262,11 +263,11 @@ function TeamHalfReadOnly({
   onOpenStats: (userId: number) => void;
 }) {
   return (
-    <div className="relative h-full min-h-[140px]">
+    <div className="relative h-full min-h-[112px] sm:min-h-[140px]">
       <p
         className={cn(
-          "pointer-events-none absolute left-2 z-10 rounded bg-black/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white/95",
-          team === "away" ? "top-2" : "bottom-2"
+          "pointer-events-none absolute left-1 z-10 max-w-[calc(100%-8px)] truncate rounded bg-black/20 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white/95 sm:left-2 sm:px-2 sm:text-[10px]",
+          team === "away" ? "top-1 sm:top-2" : "bottom-1 sm:bottom-2"
         )}
       >
         {label}
@@ -277,7 +278,7 @@ function TeamHalfReadOnly({
         return (
           <div
             key={`${team}-${i}`}
-            className="absolute z-20 -translate-x-1/2 -translate-y-1/2"
+            className="absolute z-20 max-w-[calc(100%+1px)] -translate-x-1/2 -translate-y-1/2"
             style={{ top: pos.top, left: pos.left }}
           >
             {p ? (
@@ -305,7 +306,7 @@ export function MatchLineupView({ matchDate, matchTime, location, players, home,
   }, []);
 
   return (
-    <div className="space-y-4">
+    <div className="min-w-0 space-y-4 overflow-x-hidden">
       <div className="text-center sm:text-left">
         <h1 className="text-2xl font-bold tracking-tight text-emerald-950 dark:text-emerald-100 sm:text-3xl">Składy na mecz</h1>
         <p className="mt-1 text-sm text-zinc-600 sm:text-base">
@@ -315,14 +316,16 @@ export function MatchLineupView({ matchDate, matchTime, location, players, home,
 
       <Card className="overflow-hidden border-zinc-200/80 bg-white shadow-sm">
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">Boisko (7 na drużynę)</CardTitle>
+          <CardTitle className="text-base">
+            Boisko ({home.length + away.length} pól: A {home.length} · B {away.length})
+          </CardTitle>
           <CardDescription>
             Drużyna B — góra, drużyna A — dół. Kliknij koszulkę zawodnika, aby zobaczyć statystyki.
           </CardDescription>
         </CardHeader>
-        <CardContent className="px-2 pb-4 sm:px-4">
+        <CardContent className="min-w-0 px-2 pb-4 sm:px-4">
           <div
-            className="relative mx-auto aspect-[3/4] w-full max-w-lg overflow-hidden rounded-2xl border-2 border-white/40 shadow-inner"
+            className="relative mx-auto aspect-[3/4] w-full max-w-[min(100%,32rem)] overflow-hidden rounded-2xl border-2 border-white/40 shadow-inner"
             style={{
               background:
                 "linear-gradient(180deg, #14532d 0%, #166534 18%, #15803d 50%, #166534 82%, #14532d 100%)",
@@ -331,23 +334,23 @@ export function MatchLineupView({ matchDate, matchTime, location, players, home,
           >
             <PitchMarkings />
 
-            <div className="absolute inset-[3.2%] flex flex-col">
-              <div className="relative min-h-0 flex-[1_1_50%]">
+            <div className="absolute inset-[5.5%] flex flex-col sm:inset-[3.2%]">
+              <div className="relative min-h-0 flex-[1_1_50%] min-h-[104px] sm:min-h-0">
                 <TeamHalfReadOnly
                   label="Drużyna B"
                   team="away"
                   slots={away}
-                  slotStyles={SLOT_STYLE_AWAY}
+                  slotStyles={getSlotStylesAway(away.length)}
                   playerById={playerById}
                   onOpenStats={openPlayerStats}
                 />
               </div>
-              <div className="relative min-h-0 flex-[1_1_50%]">
+              <div className="relative min-h-0 flex-[1_1_50%] min-h-[104px] sm:min-h-0">
                 <TeamHalfReadOnly
                   label="Drużyna A"
                   team="home"
                   slots={home}
-                  slotStyles={SLOT_STYLE_HOME}
+                  slotStyles={getSlotStylesHome(home.length)}
                   playerById={playerById}
                   onOpenStats={openPlayerStats}
                 />

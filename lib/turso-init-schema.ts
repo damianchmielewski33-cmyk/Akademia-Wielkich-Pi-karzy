@@ -80,7 +80,7 @@ export async function initLibsqlSchema(client: Client) {
     CREATE TABLE IF NOT EXISTS match_lineup_slots (
       match_id INTEGER NOT NULL,
       team TEXT NOT NULL CHECK (team IN ('home', 'away')),
-      slot_index INTEGER NOT NULL CHECK (slot_index >= 0 AND slot_index <= 6),
+      slot_index INTEGER NOT NULL CHECK (slot_index >= 0 AND slot_index <= 7),
       user_id INTEGER NOT NULL,
       PRIMARY KEY (match_id, team, slot_index),
       FOREIGN KEY (match_id) REFERENCES matches(id) ON DELETE CASCADE,
@@ -201,6 +201,30 @@ export async function initLibsqlSchema(client: Client) {
       FOREIGN KEY (user_id) REFERENCES users(id)
     );
   `);
+
+  const lineupSqlRs = await client.execute(
+    `SELECT sql FROM sqlite_master WHERE type='table' AND name='match_lineup_slots'`
+  );
+  if (lineupSqlRs.rows.length > 0) {
+    const first = lineupSqlRs.rows[0] as Record<string, unknown>;
+    const legacySql = String(first.sql ?? "");
+    if (legacySql.includes("slot_index <= 6") && !legacySql.includes("slot_index <= 7")) {
+      await client.executeMultiple(`
+        CREATE TABLE match_lineup_slots_migration (
+          match_id INTEGER NOT NULL,
+          team TEXT NOT NULL CHECK (team IN ('home', 'away')),
+          slot_index INTEGER NOT NULL CHECK (slot_index >= 0 AND slot_index <= 7),
+          user_id INTEGER NOT NULL,
+          PRIMARY KEY (match_id, team, slot_index),
+          FOREIGN KEY (match_id) REFERENCES matches(id) ON DELETE CASCADE,
+          FOREIGN KEY (user_id) REFERENCES users(id)
+        );
+        INSERT INTO match_lineup_slots_migration SELECT * FROM match_lineup_slots;
+        DROP TABLE match_lineup_slots;
+        ALTER TABLE match_lineup_slots_migration RENAME TO match_lineup_slots;
+      `);
+    }
+  }
 
   // Upewnij się, że istnieje pojedynczy wiersz z ustawieniami (id=1).
   const rs = await client.execute("SELECT 1 AS ok FROM app_settings WHERE id = 1");

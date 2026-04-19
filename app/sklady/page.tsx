@@ -3,6 +3,7 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { getDb, type MatchRow } from "@/lib/db";
 import { MatchLineupView, type LineupPlayer } from "@/components/match-lineup-view";
+import { pitchHalfSlotCounts, pitchSlotTotalFromSignupCount } from "@/lib/lineup-pitch-slots";
 
 export const metadata: Metadata = {
   title: "Składy",
@@ -199,12 +200,18 @@ async function SkladyContent({ matchId }: { matchId: number }) {
     .prepare(`SELECT team, slot_index, user_id FROM match_lineup_slots WHERE match_id = ?`)
     .all(matchId) as { team: string; slot_index: number; user_id: number }[];
 
-  const home: (number | null)[] = Array(7).fill(null);
-  const away: (number | null)[] = Array(7).fill(null);
+  const signupCount = playersRaw.length;
+  const pitchTotal = pitchSlotTotalFromSignupCount(signupCount);
+  const { home: homeSlots, away: awaySlots } = pitchHalfSlotCounts(pitchTotal);
+
+  const home: (number | null)[] = Array(homeSlots).fill(null);
+  const away: (number | null)[] = Array(awaySlots).fill(null);
   for (const r of lineupRows) {
-    if (r.slot_index < 0 || r.slot_index > 6) continue;
-    if (r.team === "home") home[r.slot_index] = r.user_id;
-    else if (r.team === "away") away[r.slot_index] = r.user_id;
+    if (r.team === "home") {
+      if (r.slot_index >= 0 && r.slot_index < home.length) home[r.slot_index] = r.user_id;
+    } else if (r.team === "away") {
+      if (r.slot_index >= 0 && r.slot_index < away.length) away[r.slot_index] = r.user_id;
+    }
   }
 
   return (

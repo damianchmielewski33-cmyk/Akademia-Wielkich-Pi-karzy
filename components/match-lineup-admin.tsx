@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/select";
 import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
 import { cn } from "@/lib/utils";
-import { SLOT_STYLE_AWAY, SLOT_STYLE_HOME } from "@/lib/match-lineup-layout";
+import { getSlotStylesAway, getSlotStylesHome } from "@/lib/match-lineup-layout";
 
 type MatchOpt = { id: number; date: string; time: string; location: string; lineupPublic: boolean };
 type Player = {
@@ -66,9 +66,13 @@ function Toolbar({
 function usePointerLineupDrag({
   assignToSlot,
   clearUserEverywhere,
+  maxHomeSlots,
+  maxAwaySlots,
 }: {
   assignToSlot: (team: "home" | "away", slotIndex: number, userId: number) => void;
   clearUserEverywhere: (userId: number) => void;
+  maxHomeSlots: number;
+  maxAwaySlots: number;
 }) {
   const dragRef = useRef<{ userId: number } | null>(null);
   const [ghost, setGhost] = useState<{ userId: number; x: number; y: number } | null>(null);
@@ -116,7 +120,8 @@ function usePointerLineupDrag({
         const team = slotEl.dataset.slotTeam as "home" | "away";
         const idx = Number(slotEl.dataset.slotIndex);
         if (team === "home" || team === "away") {
-          if (Number.isFinite(idx) && idx >= 0 && idx <= 6) {
+          const cap = team === "home" ? maxHomeSlots : maxAwaySlots;
+          if (Number.isFinite(idx) && idx >= 0 && idx < cap) {
             assignToSlot(team, idx, userId);
           }
         }
@@ -124,7 +129,7 @@ function usePointerLineupDrag({
         clearUserEverywhere(userId);
       }
     },
-    [assignToSlot, clearUserEverywhere]
+    [assignToSlot, clearUserEverywhere, maxAwaySlots, maxHomeSlots]
   );
 
   const handlePointerCancel = useCallback((e: React.PointerEvent) => {
@@ -155,10 +160,7 @@ export function MatchLineupAdmin() {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [matchInfo, setMatchInfo] = useState<MatchOpt | null>(null);
   const [players, setPlayers] = useState<Player[]>([]);
-  const [lineup, setLineup] = useState<LineupState>({
-    home: Array(7).fill(null),
-    away: Array(7).fill(null),
-  });
+  const [lineup, setLineup] = useState<LineupState>({ home: [], away: [] });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [lineupPublic, setLineupPublic] = useState(false);
@@ -180,8 +182,15 @@ export function MatchLineupAdmin() {
     setLineup((prev) => {
       const home = [...prev.home];
       const away = [...prev.away];
-      for (let i = 0; i < 7; i++) {
+      if (team === "home") {
+        if (slotIndex < 0 || slotIndex >= home.length) return prev;
+      } else {
+        if (slotIndex < 0 || slotIndex >= away.length) return prev;
+      }
+      for (let i = 0; i < home.length; i++) {
         if (home[i] === userId) home[i] = null;
+      }
+      for (let i = 0; i < away.length; i++) {
         if (away[i] === userId) away[i] = null;
       }
       if (team === "home") home[slotIndex] = userId;
@@ -207,7 +216,12 @@ export function MatchLineupAdmin() {
     }));
   }, []);
 
-  const { ghost, dragBind } = usePointerLineupDrag({ assignToSlot, clearUserEverywhere });
+  const { ghost, dragBind } = usePointerLineupDrag({
+    assignToSlot,
+    clearUserEverywhere,
+    maxHomeSlots: lineup.home.length,
+    maxAwaySlots: lineup.away.length,
+  });
 
   const load = useCallback(async (matchId?: number | null) => {
     setLoading(true);
@@ -220,6 +234,9 @@ export function MatchLineupAdmin() {
         matches: MatchOpt[];
         selectedMatchId: number | null;
         match: MatchOpt | null;
+        pitchSlotTotal: number;
+        homeSlotCount: number;
+        awaySlotCount: number;
         players: Player[];
         home: (number | null)[];
         away: (number | null)[];
@@ -306,7 +323,7 @@ export function MatchLineupAdmin() {
     const id = Number(v);
     if (!Number.isFinite(id)) return;
     setSelectedId(id);
-    setLineup({ home: Array(7).fill(null), away: Array(7).fill(null) });
+    setLineup({ home: [], away: [] });
     void load(id);
   };
 
@@ -325,7 +342,7 @@ export function MatchLineupAdmin() {
     <div className="min-w-0 overflow-x-hidden pb-4">
       <Toolbar
         title="Składy na mecz"
-        description="Wybierz termin i przeciągnij zawodników na boisko (telefon lub komputer). Pusto na boisku = rezerwa."
+        description="Liczba pól na boisku zależy od zapisów (12–16). Przeciągnij zawodników (telefon lub komputer). Pusto = rezerwa."
         onReload={() => void load(selectedId)}
         loading={loading}
       >
@@ -460,8 +477,11 @@ export function MatchLineupAdmin() {
               lineup={lineup}
               playerById={playerById}
               clearSlot={clearSlot}
-              disabled={selectedId == null || players.length === 0}
+              disabled={selectedId == null || players.length === 0 || lineup.home.length === 0}
               dragBind={dragBind}
+              pitchSlotTotal={lineup.home.length + lineup.away.length}
+              homeSlotCount={lineup.home.length}
+              awaySlotCount={lineup.away.length}
             />
           </div>
         </div>
@@ -557,11 +577,17 @@ function PitchCard({
   clearSlot,
   disabled,
   dragBind,
+  pitchSlotTotal,
+  homeSlotCount,
+  awaySlotCount,
 }: {
   lineup: LineupState;
   playerById: Map<number, Player>;
   clearSlot: (team: "home" | "away", slotIndex: number) => void;
   disabled?: boolean;
+  pitchSlotTotal: number;
+  homeSlotCount: number;
+  awaySlotCount: number;
   dragBind: (userId: number) => {
     onPointerDown: (e: React.PointerEvent<HTMLDivElement>) => void;
     onPointerMove: (e: React.PointerEvent<HTMLDivElement>) => void;
@@ -572,7 +598,9 @@ function PitchCard({
   return (
     <Card className="min-w-0 overflow-hidden border-zinc-200/80 bg-white shadow-sm">
       <CardHeader className="space-y-1 pb-2">
-        <CardTitle className="text-base">Boisko (7 na drużynę)</CardTitle>
+        <CardTitle className="text-base">
+          Boisko ({pitchSlotTotal} pól: A {homeSlotCount} · B {awaySlotCount})
+        </CardTitle>
         <CardDescription className="text-xs leading-relaxed sm:text-sm">
           Drużyna B — góra, drużyna A — dół. Przeciągnij z listy lub między polami. Dwuklik na polu (mysz) =
           opróżnij.
@@ -601,7 +629,7 @@ function PitchCard({
                 label="Drużyna B"
                 team="away"
                 slots={lineup.away}
-                slotStyles={SLOT_STYLE_AWAY}
+                slotStyles={getSlotStylesAway(lineup.away.length)}
                 playerById={playerById}
                 clearSlot={clearSlot}
                 disabled={disabled}
@@ -613,7 +641,7 @@ function PitchCard({
                 label="Drużyna A"
                 team="home"
                 slots={lineup.home}
-                slotStyles={SLOT_STYLE_HOME}
+                slotStyles={getSlotStylesHome(lineup.home.length)}
                 playerById={playerById}
                 clearSlot={clearSlot}
                 disabled={disabled}
