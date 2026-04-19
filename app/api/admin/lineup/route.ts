@@ -17,6 +17,14 @@ function todayIso() {
   return new Date().toISOString().slice(0, 10);
 }
 
+/** LibSQL/Turso zwraca INTEGER jako bigint; JSON z klienta ma number — Set.has musi porównywać ten sam typ. */
+function sqlUserId(v: unknown): number {
+  if (typeof v === "number") return v;
+  if (typeof v === "bigint") return Number(v);
+  if (typeof v === "string" && v.trim() !== "") return Number(v);
+  return NaN;
+}
+
 type MatchListRow = {
   id: number;
   match_date: string;
@@ -99,7 +107,7 @@ export async function GET(req: Request) {
     if (fn) initials += fn[0];
     if (ln) initials += ln[0];
     return {
-      userId: p.user_id,
+      userId: sqlUserId(p.user_id),
       displayName: `${fn} ${ln}`.trim() || p.zawodnik || "Zawodnik",
       firstName: fn,
       lastName: ln,
@@ -119,8 +127,10 @@ export async function GET(req: Request) {
   const away: (number | null)[] = Array(7).fill(null);
   for (const row of lineupRows) {
     if (row.slot_index < 0 || row.slot_index > 6) continue;
-    if (row.team === "home") home[row.slot_index] = row.user_id;
-    else if (row.team === "away") away[row.slot_index] = row.user_id;
+    const uid = sqlUserId(row.user_id);
+    if (!Number.isFinite(uid)) continue;
+    if (row.team === "home") home[row.slot_index] = uid;
+    else if (row.team === "away") away[row.slot_index] = uid;
   }
 
   return NextResponse.json({
@@ -180,21 +190,23 @@ export async function PUT(req: Request) {
       (await db
       .prepare(`SELECT user_id FROM match_signups WHERE match_id = ? AND COALESCE(commitment, 1) = 1`)
       .all(match_id)) as {
-        user_id: number;
+        user_id: unknown;
       }[]
-    ).map((r) => r.user_id)
+    ).map((r) => sqlUserId(r.user_id))
+      .filter((id) => Number.isFinite(id))
   );
 
   const assigned: number[] = [];
   for (const uid of [...home, ...away]) {
     if (uid === null) continue;
-    if (!signedUp.has(uid)) {
+    const id = sqlUserId(uid);
+    if (!Number.isFinite(id) || !signedUp.has(id)) {
       return NextResponse.json(
         { error: "W składzie są zawodnicy, którzy nie są zapisani na ten mecz" },
         { status: 400 }
       );
     }
-    assigned.push(uid);
+    assigned.push(id);
   }
   const unique = new Set(assigned);
   if (unique.size !== assigned.length) {
@@ -209,9 +221,9 @@ export async function PUT(req: Request) {
   await del.run(match_id);
   for (let i = 0; i < 7; i++) {
     const hu = home[i];
-    if (hu != null) await ins.run(match_id, "home", i, hu);
+    if (hu != null) await ins.run(match_id, "home", i, sqlUserId(hu));
     const au = away[i];
-    if (au != null) await ins.run(match_id, "away", i, au);
+    if (au != null) await ins.run(match_id, "away", i, sqlUserId(au));
   }
 
   await logActivity(
