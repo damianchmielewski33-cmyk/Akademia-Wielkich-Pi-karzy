@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { LayoutGrid, Loader2, X } from "lucide-react";
 import { LineupBoardPreloader } from "@/components/preloaders";
 import { toast } from "sonner";
@@ -30,22 +31,6 @@ type Player = {
 
 type LineupState = { home: (number | null)[]; away: (number | null)[] };
 
-const MIME = "application/x-awp-user";
-
-/** HTML5 DnD na wielu telefonach nie działa z dotykiem — osobny tryb „wybierz → dotknij cel”. */
-function useCoarsePointer(): boolean {
-  const [coarse, setCoarse] = useState(false);
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const mq = window.matchMedia("(pointer: coarse)");
-    const apply = () => setCoarse(mq.matches);
-    apply();
-    mq.addEventListener("change", apply);
-    return () => mq.removeEventListener("change", apply);
-  }, []);
-  return coarse;
-}
-
 function Toolbar({
   title,
   description,
@@ -60,19 +45,109 @@ function Toolbar({
   children?: ReactNode;
 }) {
   return (
-    <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-zinc-900">{title}</h1>
-        {description ? <p className="mt-1 text-sm text-zinc-600">{description}</p> : null}
+    <div className="mb-5 flex flex-col gap-4 sm:mb-6">
+      <div className="min-w-0">
+        <h1 className="text-xl font-bold tracking-tight text-zinc-900 sm:text-2xl">{title}</h1>
+        {description ? (
+          <p className="mt-1 text-xs leading-relaxed text-zinc-600 sm:text-sm">{description}</p>
+        ) : null}
       </div>
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex w-full flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
         {children}
-        <Button type="button" variant="outline" size="sm" onClick={onReload} disabled={loading}>
+        <Button type="button" variant="outline" size="sm" className="w-full sm:w-auto" onClick={onReload} disabled={loading}>
           Odśwież
         </Button>
       </div>
     </div>
   );
+}
+
+/** Przeciąganie palcem/myszą — HTML5 DnD na telefonach jest zawodne; Pointer Events działają wszędzie. */
+function usePointerLineupDrag({
+  assignToSlot,
+  clearUserEverywhere,
+}: {
+  assignToSlot: (team: "home" | "away", slotIndex: number, userId: number) => void;
+  clearUserEverywhere: (userId: number) => void;
+}) {
+  const dragRef = useRef<{ userId: number } | null>(null);
+  const [ghost, setGhost] = useState<{ userId: number; x: number; y: number } | null>(null);
+
+  useEffect(() => {
+    if (!ghost) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [ghost]);
+
+  const handlePointerDown = useCallback((e: React.PointerEvent, userId: number) => {
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    e.preventDefault();
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    dragRef.current = { userId };
+    setGhost({ userId, x: e.clientX, y: e.clientY });
+  }, []);
+
+  const handlePointerMove = useCallback((e: React.PointerEvent) => {
+    if (!dragRef.current) return;
+    setGhost((g) => (g ? { ...g, x: e.clientX, y: e.clientY } : null));
+  }, []);
+
+  const finishDrag = useCallback(
+    (e: React.PointerEvent) => {
+      const current = dragRef.current;
+      if (!current) return;
+      const { userId } = current;
+      dragRef.current = null;
+      setGhost(null);
+      try {
+        (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+      } catch {
+        /* ignore */
+      }
+
+      const el = document.elementFromPoint(e.clientX, e.clientY);
+      const slotEl = el?.closest("[data-lineup-slot]") as HTMLElement | null;
+      const benchHit = el?.closest("[data-lineup-bench]");
+
+      if (slotEl?.dataset.slotTeam != null && slotEl.dataset.slotIndex != null) {
+        const team = slotEl.dataset.slotTeam as "home" | "away";
+        const idx = Number(slotEl.dataset.slotIndex);
+        if (team === "home" || team === "away") {
+          if (Number.isFinite(idx) && idx >= 0 && idx <= 6) {
+            assignToSlot(team, idx, userId);
+          }
+        }
+      } else if (benchHit) {
+        clearUserEverywhere(userId);
+      }
+    },
+    [assignToSlot, clearUserEverywhere]
+  );
+
+  const handlePointerCancel = useCallback((e: React.PointerEvent) => {
+    dragRef.current = null;
+    setGhost(null);
+    try {
+      (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  const dragBind = useCallback(
+    (userId: number) => ({
+      onPointerDown: (e: React.PointerEvent) => handlePointerDown(e, userId),
+      onPointerMove: handlePointerMove,
+      onPointerUp: finishDrag,
+      onPointerCancel: handlePointerCancel,
+    }),
+    [finishDrag, handlePointerCancel, handlePointerDown, handlePointerMove]
+  );
+
+  return { ghost, dragBind };
 }
 
 export function MatchLineupAdmin() {
@@ -89,14 +164,50 @@ export function MatchLineupAdmin() {
   const [lineupPublic, setLineupPublic] = useState(false);
   const [publishSaving, setPublishSaving] = useState(false);
   const everLoaded = useRef(false);
-  const coarsePointer = useCoarsePointer();
-  const [pickedUserId, setPickedUserId] = useState<number | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const playerById = useMemo(() => {
     const m = new Map<number, Player>();
     for (const p of players) m.set(p.userId, p);
     return m;
   }, [players]);
+
+  const assignToSlot = useCallback((team: "home" | "away", slotIndex: number, userId: number) => {
+    setLineup((prev) => {
+      const home = [...prev.home];
+      const away = [...prev.away];
+      for (let i = 0; i < 7; i++) {
+        if (home[i] === userId) home[i] = null;
+        if (away[i] === userId) away[i] = null;
+      }
+      if (team === "home") home[slotIndex] = userId;
+      else away[slotIndex] = userId;
+      return { home, away };
+    });
+  }, []);
+
+  const clearSlot = useCallback((team: "home" | "away", slotIndex: number) => {
+    setLineup((prev) => {
+      const home = [...prev.home];
+      const away = [...prev.away];
+      if (team === "home") home[slotIndex] = null;
+      else away[slotIndex] = null;
+      return { home, away };
+    });
+  }, []);
+
+  const clearUserEverywhere = useCallback((userId: number) => {
+    setLineup((prev) => ({
+      home: prev.home.map((u) => (u === userId ? null : u)),
+      away: prev.away.map((u) => (u === userId ? null : u)),
+    }));
+  }, []);
+
+  const { ghost, dragBind } = usePointerLineupDrag({ assignToSlot, clearUserEverywhere });
 
   const load = useCallback(async (matchId?: number | null) => {
     setLoading(true);
@@ -134,10 +245,6 @@ export function MatchLineupAdmin() {
     void load();
   }, [load]);
 
-  useEffect(() => {
-    setPickedUserId(null);
-  }, [selectedId]);
-
   const togglePublish = useCallback(
     async (published: boolean) => {
       if (selectedId == null) return;
@@ -169,37 +276,6 @@ export function MatchLineupAdmin() {
     [selectedId]
   );
 
-  const assignToSlot = useCallback((team: "home" | "away", slotIndex: number, userId: number) => {
-    setLineup((prev) => {
-      const home = [...prev.home];
-      const away = [...prev.away];
-      for (let i = 0; i < 7; i++) {
-        if (home[i] === userId) home[i] = null;
-        if (away[i] === userId) away[i] = null;
-      }
-      if (team === "home") home[slotIndex] = userId;
-      else away[slotIndex] = userId;
-      return { home, away };
-    });
-  }, []);
-
-  const clearSlot = useCallback((team: "home" | "away", slotIndex: number) => {
-    setLineup((prev) => {
-      const home = [...prev.home];
-      const away = [...prev.away];
-      if (team === "home") home[slotIndex] = null;
-      else away[slotIndex] = null;
-      return { home, away };
-    });
-  }, []);
-
-  const clearUserEverywhere = useCallback((userId: number) => {
-    setLineup((prev) => ({
-      home: prev.home.map((u) => (u === userId ? null : u)),
-      away: prev.away.map((u) => (u === userId ? null : u)),
-    }));
-  }, []);
-
   async function save() {
     if (selectedId == null) return;
     setSaving(true);
@@ -230,7 +306,6 @@ export function MatchLineupAdmin() {
     const id = Number(v);
     if (!Number.isFinite(id)) return;
     setSelectedId(id);
-    // Od razu czyścimy boisko — inaczej przy szybkim „Zapisz” w API leci nowy match_id ze starymi user_id z poprzedniego meczu.
     setLineup({ home: Array(7).fill(null), away: Array(7).fill(null) });
     void load(id);
   };
@@ -244,24 +319,50 @@ export function MatchLineupAdmin() {
 
   const showInitialSpinner = loading && !everLoaded.current;
 
+  const ghostPlayer = ghost ? playerById.get(ghost.userId) : undefined;
+
   return (
-    <div>
+    <div className="min-w-0 overflow-x-hidden pb-4">
       <Toolbar
         title="Składy na mecz"
-        description="Wybierz termin, ułóż zapisanych zawodników na jedną z 7 pozycji w każdej drużynie (przeciąganie na komputerze; na telefonie: wybór dotykiem). Pusto = rezerwa."
+        description="Wybierz termin i przeciągnij zawodników na boisko (telefon lub komputer). Pusto na boisku = rezerwa."
         onReload={() => void load(selectedId)}
         loading={loading}
       >
         <Button
           type="button"
           size="sm"
+          className="w-full sm:w-auto"
           onClick={() => void save()}
           disabled={saving || selectedId == null || loading}
         >
-          {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+          {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
           Zapisz składy
         </Button>
       </Toolbar>
+
+      {mounted &&
+        ghost &&
+        ghostPlayer &&
+        createPortal(
+          <div
+            className="pointer-events-none fixed z-[200] flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-0.5 rounded-xl border-2 border-emerald-400 bg-white/95 p-1.5 shadow-xl"
+            style={{ left: ghost.x, top: ghost.y }}
+            aria-hidden
+          >
+            <PlayerAvatar
+              photoPath={ghostPlayer.profilePhotoPath}
+              firstName={ghostPlayer.firstName}
+              lastName={ghostPlayer.lastName}
+              size="sm"
+              ringClassName="ring-2 ring-emerald-300"
+            />
+            <span className="max-w-[88px] truncate text-center text-[10px] font-semibold leading-tight text-zinc-800">
+              {ghostPlayer.displayName}
+            </span>
+          </div>,
+          document.body
+        )}
 
       {showInitialSpinner ? (
         <LineupBoardPreloader />
@@ -275,109 +376,77 @@ export function MatchLineupAdmin() {
           </CardHeader>
         </Card>
       ) : (
-        <div className="space-y-6">
-          <div className="flex flex-col gap-3 rounded-xl border border-zinc-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
-            <div>
+        <div className="space-y-4 sm:space-y-6">
+          <div className="flex flex-col gap-3 rounded-xl border border-zinc-200 bg-white p-3 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-4">
+            <div className="min-w-0">
               <p className="text-sm font-semibold text-zinc-900">Widoczność na stronie głównej</p>
-              <p className="mt-0.5 text-xs text-zinc-600">
+              <p className="mt-0.5 text-xs leading-snug text-zinc-600">
                 Przycisk „Zobacz składy na mecz” jest aktywny dopiero po udostępnieniu.
               </p>
             </div>
             <Button
               type="button"
               variant={lineupPublic ? "outline" : "default"}
-              className="shrink-0"
+              className="h-auto min-h-11 w-full shrink-0 whitespace-normal px-3 py-2.5 text-center text-sm leading-snug sm:w-auto sm:min-h-10 sm:max-w-[280px]"
               disabled={publishSaving || selectedId == null}
               onClick={() => void togglePublish(!lineupPublic)}
             >
-              {publishSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
-              {lineupPublic ? "Ukryj przed zawodnikami" : "Udostępnij na stronie głównej"}
+              {publishSaving ? <Loader2 className="mr-2 inline h-4 w-4 animate-spin align-middle" aria-hidden /> : null}
+              <span className="align-middle">{lineupPublic ? "Ukryj przed zawodnikami" : "Udostępnij na stronie głównej"}</span>
             </Button>
           </div>
 
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div className="flex flex-col gap-3">
             <div className="space-y-2">
               <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">Mecz</p>
               <Select value={selectedId != null ? String(selectedId) : undefined} onValueChange={onSelectMatch}>
-                <SelectTrigger className="w-full min-w-[240px] sm:w-80" aria-label="Wybierz mecz">
-                  <SelectValue placeholder="Wybierz mecz" />
+                <SelectTrigger className="h-11 w-full max-w-full min-w-0" aria-label="Wybierz mecz">
+                  <SelectValue placeholder="Wybierz mecz" className="truncate text-left" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent position="popper" className="max-h-[min(70vh,320px)] w-[var(--radix-select-trigger-width)]">
                   {matches.map((m) => (
                     <SelectItem key={m.id} value={String(m.id)}>
-                      {m.date} · {m.time} — {m.location}
-                      {m.lineupPublic ? " · widoczne" : ""}
+                      <span className="line-clamp-2">
+                        {m.date} · {m.time} — {m.location}
+                        {m.lineupPublic ? " · widoczne" : ""}
+                      </span>
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             {matchInfo ? (
-              <p className="text-sm text-zinc-600">
+              <p className="text-xs leading-relaxed text-zinc-600 sm:text-sm">
                 Domyślnie: <strong className="text-zinc-800">najbliższy termin</strong> z terminarza.
               </p>
             ) : null}
           </div>
 
-          {coarsePointer ? (
-            <p className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-950">
-              <strong>Telefon / dotyk:</strong> dotknij zawodnika, żeby go wybrać (zielona ramka), potem{" "}
-              <strong>puste lub zajęte pole</strong> na boisku — aby ustawić w tym miejscu. Ramka „Zapisani”:
-              dotknij, aby zdjąć wybranego z boiska do rezerwy.{" "}
-              <button
-                type="button"
-                className="font-semibold text-sky-800 underline decoration-sky-400 underline-offset-2"
-                onClick={() => setPickedUserId(null)}
-                disabled={pickedUserId == null}
-              >
-                Anuluj wybór
-              </button>
-            </p>
-          ) : null}
-
-          <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
-            <Card className="border-zinc-200/80 bg-white shadow-sm">
-              <CardHeader className="pb-3">
+          <div className="grid min-w-0 gap-4 lg:gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
+            <Card className="min-w-0 border-zinc-200/80 bg-white shadow-sm">
+              <CardHeader className="space-y-1 pb-3">
                 <CardTitle className="flex items-center gap-2 text-base">
-                  <LayoutGrid className="h-4 w-4 text-emerald-700" aria-hidden />
+                  <LayoutGrid className="h-4 w-4 shrink-0 text-emerald-700" aria-hidden />
                   Zapisani na mecz
                 </CardTitle>
-                <CardDescription>
-                  {coarsePointer
-                    ? "Dotknij zawodnika, potem pole na boisku. Zawodnicy bez pozycji = rezerwa."
-                    : "Przeciągnij na boisko. Zawodnicy bez pozycji pozostają poza składem startowym."}
+                <CardDescription className="text-xs sm:text-sm">
+                  Przeciągnij chip na boisko. Zawodnicy bez pozycji = rezerwa.
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                <BenchDropZone
-                  onDropUser={clearUserEverywhere}
-                  disabled={selectedId == null}
-                  touchMode={coarsePointer}
-                  pickedUserId={pickedUserId}
-                  onTouchZoneClick={() => {
-                    if (pickedUserId != null) {
-                      clearUserEverywhere(pickedUserId);
-                      setPickedUserId(null);
-                    }
-                  }}
-                  className="min-h-[120px]"
-                >
+              <CardContent className="px-3 sm:px-6">
+                <BenchDropZone disabled={selectedId == null} className="min-h-[100px] sm:min-h-[120px]">
                   {players.length === 0 ? (
                     <p className="text-sm text-zinc-500">Brak zapisów na wybrany mecz.</p>
                   ) : bench.length === 0 ? (
                     <p className="text-sm text-zinc-500">Wszyscy zawodnicy są na boisku.</p>
                   ) : (
-                    <ul className="flex flex-wrap gap-2">
+                    <ul className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
                       {bench.map((p) => (
-                        <li key={p.userId}>
+                        <li key={p.userId} className="min-w-0">
                           <PlayerChip
                             player={p}
                             variant="list"
-                            touchMode={coarsePointer}
-                            selected={pickedUserId === p.userId}
-                            onToggleTouchPick={() =>
-                              setPickedUserId((cur) => (cur === p.userId ? null : p.userId))
-                            }
+                            dragBind={() => dragBind(p.userId)}
                           />
                         </li>
                       ))}
@@ -390,13 +459,9 @@ export function MatchLineupAdmin() {
             <PitchCard
               lineup={lineup}
               playerById={playerById}
-              assignToSlot={assignToSlot}
               clearSlot={clearSlot}
               disabled={selectedId == null || players.length === 0}
-              touchMode={coarsePointer}
-              pickedUserId={pickedUserId}
-              onPickForTouch={setPickedUserId}
-              onAfterTouchPlace={() => setPickedUserId(null)}
+              dragBind={dragBind}
             />
           </div>
         </div>
@@ -407,67 +472,25 @@ export function MatchLineupAdmin() {
 
 function BenchDropZone({
   children,
-  onDropUser,
   disabled,
-  touchMode,
-  pickedUserId,
-  onTouchZoneClick,
   className,
 }: {
   children: ReactNode;
-  onDropUser: (userId: number) => void;
   disabled?: boolean;
-  touchMode?: boolean;
-  pickedUserId?: number | null;
-  onTouchZoneClick?: () => void;
   className?: string;
 }) {
-  const [over, setOver] = useState(false);
   return (
     <div
+      data-lineup-bench
       className={cn(
-        "rounded-xl border-2 border-dashed p-3 transition-colors",
-        over ? "border-emerald-500 bg-emerald-50/60" : "border-zinc-200 bg-zinc-50/50",
+        "rounded-xl border-2 border-dashed border-zinc-200 bg-zinc-50/50 p-2 sm:p-3",
         disabled && "pointer-events-none opacity-50",
-        touchMode && pickedUserId != null && !disabled && "ring-2 ring-sky-400 ring-offset-2",
-        touchMode && !disabled && "cursor-pointer",
         className
       )}
-      role={touchMode ? "button" : undefined}
-      tabIndex={touchMode && !disabled ? 0 : undefined}
-      onClick={() => {
-        if (!touchMode || disabled) return;
-        onTouchZoneClick?.();
-      }}
-      onKeyDown={(e) => {
-        if (!touchMode || disabled) return;
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onTouchZoneClick?.();
-        }
-      }}
-      onDragOver={(e) => {
-        if (disabled || touchMode) return;
-        e.preventDefault();
-        setOver(true);
-      }}
-      onDragLeave={() => setOver(false)}
-      onDrop={(e) => {
-        e.preventDefault();
-        setOver(false);
-        if (disabled || touchMode) return;
-        const raw = e.dataTransfer.getData(MIME);
-        const userId = Number(raw);
-        if (Number.isFinite(userId)) onDropUser(userId);
-      }}
     >
       {children}
-      <p className="mt-3 text-xs text-zinc-500">
-        {touchMode
-          ? pickedUserId != null
-            ? "Dotknij ten obszar, aby zdjąć wybranego zawodnika z boiska (rezerwa)."
-            : "Najpierw wybierz zawodnika na boisku lub liście, potem użyj pola poniżej."
-          : "Upuść tutaj, aby zdjąć zawodnika z boiska (rezerwa)."}
+      <p className="mt-2 text-[11px] leading-snug text-zinc-500 sm:mt-3 sm:text-xs">
+        Upuść tutaj, aby zdjąć zawodnika z boiska (rezerwa). Na telefonie przeciągnij z powrotem na tę ramkę.
       </p>
     </div>
   );
@@ -476,39 +499,31 @@ function BenchDropZone({
 function PlayerChip({
   player,
   variant,
-  touchMode,
-  selected,
-  onToggleTouchPick,
+  dragBind,
 }: {
   player: Player;
   variant: "list" | "slot";
-  touchMode?: boolean;
-  selected?: boolean;
-  onToggleTouchPick?: () => void;
+  dragBind?: () => {
+    onPointerDown: (e: React.PointerEvent<HTMLDivElement>) => void;
+    onPointerMove: (e: React.PointerEvent<HTMLDivElement>) => void;
+    onPointerUp: (e: React.PointerEvent<HTMLDivElement>) => void;
+    onPointerCancel: (e: React.PointerEvent<HTMLDivElement>) => void;
+  };
 }) {
+  const d = dragBind?.();
+
   return (
     <div
-      draggable={!touchMode}
-      onClick={(e) => {
-        if (!touchMode || !onToggleTouchPick) return;
-        e.stopPropagation();
-        onToggleTouchPick();
-      }}
-      onDragStart={(e) => {
-        if (touchMode) {
-          e.preventDefault();
-          return;
-        }
-        e.dataTransfer.setData(MIME, String(player.userId));
-        e.dataTransfer.effectAllowed = "move";
-      }}
+      {...(d ?? {})}
+      style={{ touchAction: d ? "none" : undefined }}
       className={cn(
-        "flex max-w-[200px] select-none items-center gap-2 rounded-lg border bg-white px-2.5 py-1.5 text-left text-xs shadow-sm dark:bg-zinc-800",
-        touchMode ? "touch-manipulation cursor-pointer" : "cursor-grab active:cursor-grabbing",
+        "flex cursor-grab select-none items-center gap-1.5 rounded-lg border bg-white text-left shadow-sm active:cursor-grabbing dark:bg-zinc-800 sm:gap-2",
+        variant === "list"
+          ? "max-w-full min-h-[44px] px-2 py-1.5 text-xs touch-manipulation sm:max-w-[200px] sm:min-h-0 sm:px-2.5"
+          : "max-w-[4.25rem] flex-col gap-0.5 px-1 py-1 text-[10px] touch-manipulation sm:max-w-[5.25rem]",
         variant === "slot"
           ? "border-emerald-200/90 text-emerald-950 dark:border-emerald-700/80 dark:text-emerald-100"
-          : "border-zinc-200 text-zinc-800 hover:border-emerald-300 dark:border-zinc-600 dark:text-zinc-200 dark:hover:border-emerald-500/70",
-        selected && "ring-2 ring-emerald-500 ring-offset-2 ring-offset-white dark:ring-offset-zinc-900"
+          : "border-zinc-200 text-zinc-800 hover:border-emerald-300 dark:border-zinc-600 dark:text-zinc-200 dark:hover:border-emerald-500/70"
       )}
       title={`${player.displayName}${player.zawodnik ? ` (${player.zawodnik})` : ""}`}
     >
@@ -516,16 +531,20 @@ function PlayerChip({
         photoPath={player.profilePhotoPath}
         firstName={player.firstName}
         lastName={player.lastName}
-        size="xs"
+        size={variant === "slot" ? "xs" : "xs"}
         ringClassName={variant === "slot" ? "ring-2 ring-emerald-200" : "ring-2 ring-zinc-200"}
+        className={variant === "slot" ? "h-6 w-6 shrink-0 text-[9px] sm:h-7 sm:w-7" : undefined}
       />
-      <div className="min-w-0 flex-1">
+      <div className={cn("min-w-0 flex-1", variant === "slot" && "w-full text-center")}>
         <PlayerNameStack
           firstName={player.firstName}
           lastName={player.lastName}
           nick={player.zawodnik}
-          primaryClassName="text-[11px] font-semibold leading-tight"
-          secondaryClassName="text-[10px] text-zinc-500 dark:text-zinc-400"
+          primaryClassName={cn(
+            "font-semibold leading-tight",
+            variant === "list" ? "text-[11px] sm:text-[11px]" : "line-clamp-2 text-[9px] sm:text-[10px]"
+          )}
+          secondaryClassName={cn(variant === "slot" ? "hidden sm:block text-[9px]" : "text-[10px] text-zinc-500 dark:text-zinc-400")}
         />
       </div>
     </div>
@@ -535,39 +554,34 @@ function PlayerChip({
 function PitchCard({
   lineup,
   playerById,
-  assignToSlot,
   clearSlot,
   disabled,
-  touchMode,
-  pickedUserId,
-  onPickForTouch,
-  onAfterTouchPlace,
+  dragBind,
 }: {
   lineup: LineupState;
   playerById: Map<number, Player>;
-  assignToSlot: (team: "home" | "away", slotIndex: number, userId: number) => void;
   clearSlot: (team: "home" | "away", slotIndex: number) => void;
   disabled?: boolean;
-  touchMode?: boolean;
-  pickedUserId: number | null;
-  onPickForTouch: (userId: number | null) => void;
-  onAfterTouchPlace: () => void;
+  dragBind: (userId: number) => {
+    onPointerDown: (e: React.PointerEvent<HTMLDivElement>) => void;
+    onPointerMove: (e: React.PointerEvent<HTMLDivElement>) => void;
+    onPointerUp: (e: React.PointerEvent<HTMLDivElement>) => void;
+    onPointerCancel: (e: React.PointerEvent<HTMLDivElement>) => void;
+  };
 }) {
   return (
-    <Card className="overflow-hidden border-zinc-200/80 bg-white shadow-sm">
-      <CardHeader className="pb-2">
+    <Card className="min-w-0 overflow-hidden border-zinc-200/80 bg-white shadow-sm">
+      <CardHeader className="space-y-1 pb-2">
         <CardTitle className="text-base">Boisko (7 na drużynę)</CardTitle>
-        <CardDescription>
-          Drużyna B — górna połowa, drużyna A — dolna.{" "}
-          {touchMode
-            ? "Dotknij wybranego zawodnika, potem pole; krzyżyk opróżnia pozycję. Przeciąganie działa na komputerze."
-            : "Klik dwukrotnie zajęte pole, aby je opróżnić."}
+        <CardDescription className="text-xs leading-relaxed sm:text-sm">
+          Drużyna B — góra, drużyna A — dół. Przeciągnij z listy lub między polami. Dwuklik na polu (mysz) =
+          opróżnij.
         </CardDescription>
       </CardHeader>
-      <CardContent className="px-2 pb-4 sm:px-4">
+      <CardContent className="min-w-0 px-2 pb-3 pt-0 sm:px-4 sm:pb-4">
         <div
           className={cn(
-            "relative mx-auto aspect-[3/4] w-full max-w-lg overflow-hidden rounded-2xl border-2 border-white/40 shadow-inner",
+            "relative mx-auto aspect-[3/4] w-full max-w-[min(100%,24rem)] overflow-hidden rounded-2xl border-2 border-white/40 shadow-inner sm:max-w-lg",
             disabled && "pointer-events-none opacity-60"
           )}
           style={{
@@ -576,43 +590,34 @@ function PitchCard({
             boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.12)",
           }}
         >
-          {/* linie boiska */}
           <div className="pointer-events-none absolute inset-[4%] rounded-xl border border-white/35" />
           <div className="pointer-events-none absolute left-[4%] right-[4%] top-1/2 h-0 -translate-y-1/2 border-t-2 border-white/45" />
           <div className="pointer-events-none absolute left-1/2 top-1/2 h-[18%] w-[18%] -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white/40" />
           <div className="pointer-events-none absolute bottom-[4%] left-1/2 h-[3px] w-[3px] -translate-x-1/2 rounded-full bg-white/70" />
 
           <div className="absolute inset-[4%] flex flex-col">
-            <div className="relative min-h-0 flex-[1_1_50%]">
+            <div className="relative min-h-0 flex-[1_1_50%] min-h-[112px] sm:min-h-[140px]">
               <TeamHalf
                 label="Drużyna B"
                 team="away"
                 slots={lineup.away}
                 slotStyles={SLOT_STYLE_AWAY}
                 playerById={playerById}
-                assignToSlot={assignToSlot}
                 clearSlot={clearSlot}
                 disabled={disabled}
-                touchMode={touchMode}
-                pickedUserId={pickedUserId}
-                onPickForTouch={onPickForTouch}
-                onAfterTouchPlace={onAfterTouchPlace}
+                dragBind={dragBind}
               />
             </div>
-            <div className="relative min-h-0 flex-[1_1_50%]">
+            <div className="relative min-h-0 flex-[1_1_50%] min-h-[112px] sm:min-h-[140px]">
               <TeamHalf
                 label="Drużyna A"
                 team="home"
                 slots={lineup.home}
                 slotStyles={SLOT_STYLE_HOME}
                 playerById={playerById}
-                assignToSlot={assignToSlot}
                 clearSlot={clearSlot}
                 disabled={disabled}
-                touchMode={touchMode}
-                pickedUserId={pickedUserId}
-                onPickForTouch={onPickForTouch}
-                onAfterTouchPlace={onAfterTouchPlace}
+                dragBind={dragBind}
               />
             </div>
           </div>
@@ -628,33 +633,30 @@ function TeamHalf({
   slots,
   slotStyles,
   playerById,
-  assignToSlot,
   clearSlot,
   disabled,
-  touchMode,
-  pickedUserId,
-  onPickForTouch,
-  onAfterTouchPlace,
+  dragBind,
 }: {
   label: string;
   team: "home" | "away";
   slots: (number | null)[];
   slotStyles: { top: string; left: string }[];
   playerById: Map<number, Player>;
-  assignToSlot: (team: "home" | "away", slotIndex: number, userId: number) => void;
   clearSlot: (team: "home" | "away", slotIndex: number) => void;
   disabled?: boolean;
-  touchMode?: boolean;
-  pickedUserId: number | null;
-  onPickForTouch: (userId: number | null) => void;
-  onAfterTouchPlace: () => void;
+  dragBind: (userId: number) => {
+    onPointerDown: (e: React.PointerEvent<HTMLDivElement>) => void;
+    onPointerMove: (e: React.PointerEvent<HTMLDivElement>) => void;
+    onPointerUp: (e: React.PointerEvent<HTMLDivElement>) => void;
+    onPointerCancel: (e: React.PointerEvent<HTMLDivElement>) => void;
+  };
 }) {
   return (
-    <div className="relative h-full min-h-[140px]">
+    <div className="relative h-full min-h-[112px] sm:min-h-[140px]">
       <p
         className={cn(
-          "pointer-events-none absolute left-2 z-10 rounded bg-black/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white/95",
-          team === "away" ? "top-2" : "bottom-2"
+          "pointer-events-none absolute left-1 z-10 max-w-[calc(100%-8px)] truncate rounded bg-black/20 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white/95 sm:left-2 sm:px-2 sm:text-[10px]",
+          team === "away" ? "top-1 sm:top-2" : "bottom-1 sm:bottom-2"
         )}
       >
         {label}
@@ -665,64 +667,40 @@ function TeamHalf({
         return (
           <div
             key={`${team}-${i}`}
+            data-lineup-slot
+            data-slot-team={team}
+            data-slot-index={String(i)}
             className="absolute z-20 -translate-x-1/2 -translate-y-1/2"
             style={{ top: pos.top, left: pos.left }}
           >
             <div
               className={cn(
-                "relative flex min-h-[52px] min-w-[52px] items-center justify-center rounded-full border-2 border-dashed transition-colors",
-                p ? "border-white/50 bg-white/10 p-1.5" : "border-white/35 bg-black/15",
-                touchMode && pickedUserId != null && "ring-2 ring-amber-200/90 ring-offset-1 ring-offset-transparent"
+                "relative flex min-h-[40px] min-w-[40px] items-center justify-center rounded-full border-2 border-dashed transition-colors sm:min-h-[52px] sm:min-w-[52px]",
+                p ? "border-white/50 bg-white/10 p-0.5 sm:p-1.5" : "border-white/35 bg-black/15"
               )}
-              onClick={() => {
-                if (!touchMode || disabled || pickedUserId == null) return;
-                assignToSlot(team, i, pickedUserId);
-                onAfterTouchPlace();
-              }}
-              onDragOver={(e) => {
-                if (disabled || touchMode) return;
-                e.preventDefault();
-              }}
-              onDrop={(e) => {
-                e.preventDefault();
-                if (disabled || touchMode) return;
-                const raw = e.dataTransfer.getData(MIME);
-                const userId = Number(raw);
-                if (Number.isFinite(userId)) assignToSlot(team, i, userId);
-              }}
               onDoubleClick={() => {
-                if (disabled || uid == null || touchMode) return;
+                if (disabled || uid == null) return;
                 clearSlot(team, i);
               }}
             >
               {p ? (
                 <>
-                  <PlayerChip
-                    player={p}
-                    variant="slot"
-                    touchMode={touchMode}
-                    selected={pickedUserId === p.userId}
-                    onToggleTouchPick={() =>
-                      onPickForTouch(pickedUserId === p.userId ? null : p.userId)
-                    }
-                  />
-                  {touchMode ? (
-                    <button
-                      type="button"
-                      className="absolute -right-0.5 -top-0.5 flex h-6 w-6 items-center justify-center rounded-full border border-white/40 bg-zinc-900/85 text-white shadow-md hover:bg-black/90"
-                      aria-label="Opróżnij pole"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (disabled) return;
-                        clearSlot(team, i);
-                      }}
-                    >
-                      <X className="h-3.5 w-3.5" aria-hidden />
-                    </button>
-                  ) : null}
+                  <PlayerChip player={p} variant="slot" dragBind={() => dragBind(p.userId)} />
+                  <button
+                    type="button"
+                    className="absolute -right-0.5 -top-0.5 z-30 flex h-7 w-7 touch-manipulation items-center justify-center rounded-full border border-white/40 bg-zinc-900/90 text-white shadow-md active:bg-black sm:h-6 sm:w-6"
+                    aria-label="Opróżnij pole"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (disabled) return;
+                      clearSlot(team, i);
+                    }}
+                  >
+                    <X className="h-3.5 w-3.5" aria-hidden />
+                  </button>
                 </>
               ) : (
-                <span className="pointer-events-none px-1 text-center text-[10px] font-semibold text-white/80">
+                <span className="pointer-events-none px-0.5 text-center text-[9px] font-semibold text-white/85 sm:text-[10px]">
                   {i + 1}
                 </span>
               )}
