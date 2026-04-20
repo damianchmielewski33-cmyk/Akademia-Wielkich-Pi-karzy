@@ -158,16 +158,6 @@ function OrganizerCard({
               </Button>
             )}
           </div>
-          {facebookUrl ? (
-            <a
-              href={facebookUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="max-w-full break-all text-left text-xs font-medium text-emerald-100/95 underline-offset-2 hover:underline sm:text-right"
-            >
-              {facebookUrl}
-            </a>
-          ) : null}
         </div>
       </div>
     </div>
