@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { Mail, MessageCircle, Phone } from "lucide-react";
+import { Mail, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   MATCH_BLIK_PHONE_DISPLAY,
@@ -110,10 +110,6 @@ function OrganizerCard({
                 <span className="font-medium">{email}</span>
               </p>
             ) : null}
-            <p className="flex items-center gap-2 text-emerald-50/90">
-              <MessageCircle className="h-4 w-4" aria-hidden />
-              <span>{facebookUrl ? "Facebook" : "Kontakt przez Facebook"}</span>
-            </p>
           </div>
         </div>
 
