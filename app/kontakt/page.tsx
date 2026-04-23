@@ -62,7 +62,12 @@ export default function KontaktPage() {
                 email={email}
                 facebookUrl={fbDamian}
               />
-              <OrganizerCard name="Mateusz Wierzbicki" facebookUrl={fbMateusz} />
+              <OrganizerCard
+                name="Mateusz Wierzbicki"
+                phone="797 233 615"
+                email="mateusz.wierzbicki@opoczta.pl"
+                facebookUrl={fbMateusz}
+              />
             </div>
           </div>
         </section>
