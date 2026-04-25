@@ -75,7 +75,7 @@ export default async function RootLayout({
   );
 
   const accountRow = session ? await getAccountNavFields(session.userId) : null;
-  const htmlThemeClass = accountRow && normalizeUiTheme(accountRow.uiTheme) === "dark" ? "dark" : "";
+  const htmlThemeClass = accountRow ? (normalizeUiTheme(accountRow.uiTheme) === "dark" ? "dark" : "") : "dark";
 
   let accountNav: {
     firstName: string;
@@ -105,6 +105,13 @@ export default async function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${displayFont.variable} murawa-bg min-h-screen antialiased font-sans`}
       >
+        <script
+          // Default jest "dark" (boiskowy klimat). Ten skrypt pozwala zapamiętać wybór dla niezalogowanych.
+          dangerouslySetInnerHTML={{
+            __html:
+              "(function(){try{var t=localStorage.getItem('awp-ui-theme');if(t==='light'){document.documentElement.classList.remove('dark');}else if(t==='dark'){document.documentElement.classList.add('dark');}}catch(e){}})();",
+          }}
+        />
         <SiteJsonLd />
         <SessionIdleMonitor enabled={sessionIdleLogout} />
         <ShareLinkClientCleanup />

@@ -4,9 +4,10 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { usePathname } from "next/navigation";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import { Menu, LogOut } from "lucide-react";
+import { Menu, LogOut, Moon, Sun } from "lucide-react";
 import { AnalyticsTracker } from "@/components/analytics-tracker";
 import { NavigationLoadingOverlay } from "@/components/navigation-loading-overlay";
 import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
@@ -59,9 +60,11 @@ function NavButton({
 }
 
 export function SiteShell({ children, isLoggedIn, isAdmin, account = null }: Props) {
+  const router = useRouter();
   const pathname = usePathname();
   const contactEmail = getPublicContactEmailWithFallback();
   const [logoutOpen, setLogoutOpen] = useState(false);
+  const [themeBusy, setThemeBusy] = useState(false);
   if (pathname === "/panel-admina" || pathname?.startsWith("/panel-admina")) {
     return <>{children}</>;
   }
@@ -80,6 +83,36 @@ export function SiteShell({ children, isLoggedIn, isAdmin, account = null }: Pro
     { href: "/login", label: "Logowanie", visible: !isLoggedIn },
     { href: "/register", label: "Rejestracja", visible: !isLoggedIn },
   ];
+
+  const isDarkNow =
+    typeof document !== "undefined" ? document.documentElement.classList.contains("dark") : true;
+
+  async function toggleTheme() {
+    if (themeBusy) return;
+    const nextTheme = isDarkNow ? "light" : "dark";
+
+    // Optymistycznie przełączamy klasę natychmiast (bez "flash").
+    try {
+      document.documentElement.classList.toggle("dark", nextTheme === "dark");
+      localStorage.setItem("awp-ui-theme", nextTheme);
+    } catch {
+      /* ignore */
+    }
+
+    if (!isLoggedIn) return;
+
+    setThemeBusy(true);
+    try {
+      await fetch("/api/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ui_theme: nextTheme }),
+      });
+      router.refresh();
+    } finally {
+      setThemeBusy(false);
+    }
+  }
 
   return (
     <div className="flex min-h-screen flex-col text-zinc-900 dark:text-zinc-100">
@@ -118,6 +151,20 @@ export function SiteShell({ children, isLoggedIn, isAdmin, account = null }: Pro
           <nav className="flex items-center justify-end gap-2" aria-label="Główna nawigacja">
             {/* Desktop / tablet */}
             <div className="hidden flex-wrap items-center justify-end gap-1 sm:flex sm:gap-1.5">
+              <button
+                type="button"
+                onClick={() => void toggleTheme()}
+                disabled={themeBusy}
+                className={cn(
+                  "awp-focus-ring inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/20 bg-white/10 text-white shadow-sm transition-colors hover:bg-white/15",
+                  themeBusy && "opacity-70"
+                )}
+                aria-label={isDarkNow ? "Przełącz na jasny motyw" : "Przełącz na ciemny motyw"}
+                title={isDarkNow ? "Jasny motyw" : "Ciemny motyw"}
+              >
+                {isDarkNow ? <Sun className="h-5 w-5" aria-hidden /> : <Moon className="h-5 w-5" aria-hidden />}
+              </button>
+
               {navItems
                 .filter((x) => x.visible)
                 .filter((x) => !["/login", "/register"].includes(x.href) || !isLoggedIn)
@@ -171,6 +218,20 @@ export function SiteShell({ children, isLoggedIn, isAdmin, account = null }: Pro
 
             {/* Mobile */}
             <div className="flex items-center gap-2 sm:hidden">
+              <button
+                type="button"
+                onClick={() => void toggleTheme()}
+                disabled={themeBusy}
+                className={cn(
+                  "awp-focus-ring inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/20 bg-white/10 text-white shadow-sm hover:bg-white/15",
+                  themeBusy && "opacity-70"
+                )}
+                aria-label={isDarkNow ? "Przełącz na jasny motyw" : "Przełącz na ciemny motyw"}
+                title={isDarkNow ? "Jasny motyw" : "Ciemny motyw"}
+              >
+                {isDarkNow ? <Sun className="h-5 w-5" aria-hidden /> : <Moon className="h-5 w-5" aria-hidden />}
+              </button>
+
               {isLoggedIn && account ? (
                 <Link
                   href="/profil"
