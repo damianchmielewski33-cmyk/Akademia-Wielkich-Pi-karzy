@@ -5,6 +5,8 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
+import { Menu, LogOut } from "lucide-react";
 import { AnalyticsTracker } from "@/components/analytics-tracker";
 import { NavigationLoadingOverlay } from "@/components/navigation-loading-overlay";
 import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
@@ -45,7 +47,7 @@ function NavButton({
     <Link
       href={href}
       className={cn(
-        "rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+        "awp-focus-ring rounded-xl px-3 py-2 text-sm font-semibold transition-[background-color,color,box-shadow]",
         active
           ? "bg-white/15 text-white shadow-sm"
           : "text-emerald-100/85 hover:bg-white/10 hover:text-white"
@@ -64,6 +66,21 @@ export function SiteShell({ children, isLoggedIn, isAdmin, account = null }: Pro
     return <>{children}</>;
   }
 
+  const navItems: Array<{ href: string; label: string; visible: boolean }> = [
+    { href: "/", label: "Start", visible: true },
+    { href: "/terminarz", label: "Terminarz", visible: true },
+    { href: "/platnosci", label: "Płatności", visible: isLoggedIn },
+    { href: "/pilkarze", label: "Piłkarze", visible: true },
+    { href: "/sklady", label: "Składy", visible: true },
+    { href: "/statystyki", label: "Statystyki", visible: isLoggedIn },
+    { href: "/rankingi", label: "Rankingi", visible: isLoggedIn },
+    { href: "/o-nas", label: "O nas", visible: true },
+    { href: "/kontakt", label: "Kontakt", visible: true },
+    { href: "/panel-admina", label: "Panel admina", visible: isAdmin },
+    { href: "/login", label: "Logowanie", visible: !isLoggedIn },
+    { href: "/register", label: "Rejestracja", visible: !isLoggedIn },
+  ];
+
   return (
     <div className="flex min-h-screen flex-col text-zinc-900 dark:text-zinc-100">
       <NavigationLoadingOverlay />
@@ -78,7 +95,7 @@ export function SiteShell({ children, isLoggedIn, isAdmin, account = null }: Pro
           aria-hidden
         />
         <div className="relative mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-3 sm:py-3.5">
-          <Link href="/" className="flex items-center gap-3 rounded-xl pr-2 outline-offset-4 focus-visible:ring-2 focus-visible:ring-emerald-300">
+          <Link href="/" className="awp-focus-ring flex items-center gap-3 rounded-xl pr-2">
             <span className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/10 shadow-inner ring-1 ring-white/15">
               <Image
               src="/logo-akademia-crest.png"
@@ -98,36 +115,23 @@ export function SiteShell({ children, isLoggedIn, isAdmin, account = null }: Pro
             </span>
           </Link>
 
-          <nav className="flex flex-wrap items-center justify-end gap-1 sm:gap-1.5" aria-label="Główna nawigacja">
-            <NavButton href="/" active={pathname === "/"}>
-              Start
-            </NavButton>
-            <NavButton href="/terminarz" active={pathname === "/terminarz"}>
-              Terminarz
-            </NavButton>
-            {isLoggedIn && (
-              <NavButton href="/platnosci" active={pathname === "/platnosci"}>
-                Płatności
-              </NavButton>
-            )}
-            <NavButton href="/pilkarze" active={pathname === "/pilkarze"}>
-              Piłkarze
-            </NavButton>
-            <NavButton href="/sklady" active={pathname === "/sklady"}>
-              Składy
-            </NavButton>
-            <NavButton href="/o-nas" active={pathname === "/o-nas"}>
-              O nas
-            </NavButton>
-            <NavButton href="/kontakt" active={pathname === "/kontakt"}>
-              Kontakt
-            </NavButton>
-            {isLoggedIn && account ? (
-              <>
+          <nav className="flex items-center justify-end gap-2" aria-label="Główna nawigacja">
+            {/* Desktop / tablet */}
+            <div className="hidden flex-wrap items-center justify-end gap-1 sm:flex sm:gap-1.5">
+              {navItems
+                .filter((x) => x.visible)
+                .filter((x) => !["/login", "/register"].includes(x.href) || !isLoggedIn)
+                .map((x) => (
+                  <NavButton key={x.href} href={x.href} active={pathname === x.href}>
+                    {x.label}
+                  </NavButton>
+                ))}
+
+              {isLoggedIn && account ? (
                 <Link
                   href="/profil"
                   className={cn(
-                    "flex max-w-[min(100%,14rem)] items-center gap-2 rounded-lg px-2 py-1.5 transition-colors outline-offset-4 focus-visible:ring-2 focus-visible:ring-emerald-300 sm:max-w-[min(100%,15rem)]",
+                    "awp-focus-ring flex max-w-[min(100%,14rem)] items-center gap-2 rounded-xl px-2 py-1.5 transition-[background-color,color,box-shadow] sm:max-w-[min(100%,15rem)]",
                     pathname === "/profil"
                       ? "bg-white/15 text-white shadow-sm"
                       : "text-emerald-100/90 hover:bg-white/10 hover:text-white"
@@ -152,50 +156,99 @@ export function SiteShell({ children, isLoggedIn, isAdmin, account = null }: Pro
                     />
                   </div>
                 </Link>
-                <NavButton href="/statystyki" active={pathname === "/statystyki"}>
-                  Statystyki
-                </NavButton>
-                <NavButton href="/rankingi" active={pathname === "/rankingi"}>
-                  Rankingi
-                </NavButton>
-              </>
-            ) : null}
-            {isLoggedIn && !account ? (
-              <>
-                <NavButton href="/profil" active={pathname === "/profil"}>
-                  Mój profil
-                </NavButton>
-                <NavButton href="/statystyki" active={pathname === "/statystyki"}>
-                  Statystyki
-                </NavButton>
-                <NavButton href="/rankingi" active={pathname === "/rankingi"}>
-                  Rankingi
-                </NavButton>
-              </>
-            ) : null}
-            {isAdmin && (
-              <NavButton href="/panel-admina" active={pathname === "/panel-admina"}>
-                Panel admina
-              </NavButton>
-            )}
-            {!isLoggedIn ? (
-              <>
-                <NavButton href="/login" active={pathname === "/login"}>
-                  Logowanie
-                </NavButton>
-                <NavButton href="/register" active={pathname === "/register"}>
-                  Rejestracja
-                </NavButton>
-              </>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setLogoutOpen(true)}
-                className="rounded-lg px-3 py-2 text-sm font-medium text-emerald-100/85 transition-colors hover:bg-white/10 hover:text-white"
-              >
-                Wyloguj
-              </button>
-            )}
+              ) : null}
+
+              {isLoggedIn ? (
+                <button
+                  type="button"
+                  onClick={() => setLogoutOpen(true)}
+                  className="awp-focus-ring rounded-xl px-3 py-2 text-sm font-semibold text-emerald-100/85 transition-colors hover:bg-white/10 hover:text-white"
+                >
+                  Wyloguj
+                </button>
+              ) : null}
+            </div>
+
+            {/* Mobile */}
+            <div className="flex items-center gap-2 sm:hidden">
+              {isLoggedIn && account ? (
+                <Link
+                  href="/profil"
+                  className={cn(
+                    "awp-focus-ring flex items-center gap-2 rounded-xl px-2 py-1.5 transition-[background-color,color]",
+                    pathname === "/profil" ? "bg-white/15 text-white" : "text-emerald-100/90 hover:bg-white/10"
+                  )}
+                  aria-label="Mój profil"
+                  title="Mój profil"
+                >
+                  <PlayerAvatar
+                    photoPath={account.profilePhotoPath}
+                    firstName={account.firstName}
+                    lastName={account.lastName}
+                    size="sm"
+                    ringClassName="ring-2 ring-white/45"
+                  />
+                </Link>
+              ) : null}
+
+              <DropdownMenu.Root>
+                <DropdownMenu.Trigger asChild>
+                  <button
+                    type="button"
+                    className="awp-focus-ring inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/20 bg-white/10 text-white shadow-sm hover:bg-white/15"
+                    aria-label="Otwórz menu"
+                    title="Menu"
+                  >
+                    <Menu className="h-5 w-5" aria-hidden />
+                  </button>
+                </DropdownMenu.Trigger>
+                <DropdownMenu.Portal>
+                  <DropdownMenu.Content
+                    align="end"
+                    sideOffset={10}
+                    className="z-50 min-w-[15rem] overflow-hidden rounded-2xl border border-white/20 bg-emerald-950/95 p-1 text-white shadow-[0_26px_70px_-24px_rgba(0,0,0,0.75)] backdrop-blur-md"
+                  >
+                    {navItems
+                      .filter((x) => x.visible)
+                      .filter((x) => x.href !== "/panel-admina" || isAdmin)
+                      .filter((x) => x.href !== "/platnosci" || isLoggedIn)
+                      .filter((x) => x.href !== "/statystyki" || isLoggedIn)
+                      .filter((x) => x.href !== "/rankingi" || isLoggedIn)
+                      .filter((x) => x.href !== "/login" || !isLoggedIn)
+                      .filter((x) => x.href !== "/register" || !isLoggedIn)
+                      .map((x) => (
+                        <DropdownMenu.Item key={x.href} asChild>
+                          <Link
+                            href={x.href}
+                            className={cn(
+                              "awp-focus-ring block rounded-xl px-3 py-2 text-sm font-semibold",
+                              pathname === x.href ? "bg-white/12 text-white" : "text-emerald-50/90 hover:bg-white/10"
+                            )}
+                          >
+                            {x.label}
+                          </Link>
+                        </DropdownMenu.Item>
+                      ))}
+
+                    {isLoggedIn ? (
+                      <>
+                        <DropdownMenu.Separator className="my-1 h-px bg-white/10" />
+                        <DropdownMenu.Item
+                          className="awp-focus-ring flex cursor-pointer items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold text-emerald-50/90 hover:bg-white/10"
+                          onSelect={(e) => {
+                            e.preventDefault();
+                            setLogoutOpen(true);
+                          }}
+                        >
+                          <LogOut className="h-4 w-4" aria-hidden />
+                          Wyloguj
+                        </DropdownMenu.Item>
+                      </>
+                    ) : null}
+                  </DropdownMenu.Content>
+                </DropdownMenu.Portal>
+              </DropdownMenu.Root>
+            </div>
           </nav>
         </div>
       </header>

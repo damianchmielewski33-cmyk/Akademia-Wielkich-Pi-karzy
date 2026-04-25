@@ -40,11 +40,45 @@
 }
 
 @layer components {
+  /* ========== AWP: wspólne powierzchnie / obrysy / focus ========== */
+  .awp-focus-ring {
+    @apply outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent;
+  }
+
+  /* Uniwersalna powierzchnia „karta na murawie” */
+  .awp-surface {
+    @apply relative overflow-hidden rounded-2xl border border-white/35 bg-white/92 shadow-lg shadow-emerald-950/10 ring-1 ring-emerald-950/10 backdrop-blur-[2px];
+  }
+  .dark .awp-surface {
+    @apply border-white/10 bg-zinc-900/90 shadow-black/40 ring-emerald-900/35;
+  }
+
+  /* Mocniejsza powierzchnia pod główne sekcje / hero */
+  .awp-surface-strong {
+    @apply border-2 border-white/40 bg-white/95 shadow-xl shadow-emerald-950/14;
+  }
+  .dark .awp-surface-strong {
+    @apply border-white/12 bg-zinc-900/95 shadow-black/45;
+  }
+
+  /* Półprzezroczyste „glass” na stadionowych tłach */
+  .awp-glass {
+    @apply border border-white/35 bg-white/14 text-white backdrop-blur-md;
+  }
+  .dark .awp-glass {
+    @apply border-white/18 bg-white/8;
+  }
+
+  /* Subtelny obrys dla elementów interaktywnych na tle murawy */
+  .awp-outline {
+    @apply border border-emerald-950/15 dark:border-emerald-100/10;
+  }
+
   .awp-card-surface {
-    @apply relative overflow-hidden rounded-2xl border-2 border-white/35 bg-white/95 p-6 shadow-lg shadow-emerald-950/10 ring-1 ring-emerald-950/10;
+    @apply awp-surface awp-surface-strong p-6;
   }
   .dark .awp-card-surface {
-    @apply border-white/10 bg-zinc-900/95 shadow-black/40 ring-emerald-900/35;
+    @apply awp-surface awp-surface-strong;
   }
   .dark .home-pitch-tile {
     opacity: 0.07;
@@ -826,6 +860,10 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  html:focus-within {
+    scroll-behavior: auto;
+  }
+
   .awp-stadium-svg [class*="awp-stadium__"],
   .awp-calendar-svg [class*="awp-cal__"],
   .awp-locker-svg .awp-locker__jersey,

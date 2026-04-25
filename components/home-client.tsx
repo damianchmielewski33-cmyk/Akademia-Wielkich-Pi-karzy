@@ -230,8 +230,8 @@ export function HomeClient({
               className="shadow-md"
             />
             <div className="text-left">
-              <h2 className="text-2xl font-semibold text-emerald-950 dark:text-emerald-100">Witaj!</h2>
-              <p className="text-lg font-medium text-emerald-900 dark:text-emerald-200">
+              <h2 className="text-2xl font-bold tracking-tight text-emerald-950 dark:text-emerald-100">Witaj!</h2>
+              <p className="text-lg font-semibold text-emerald-900 dark:text-emerald-200">
                 {`${firstName} ${lastName}`.trim() || zawodnik}
               </p>
               {zawodnik && `${firstName} ${lastName}`.trim() ? (
@@ -317,7 +317,8 @@ export function HomeClient({
                     </div>
                     {nextMatch.max_slots - nextMatch.signed_up > 0 ? (
                       <Button
-                        className="w-full border-0 bg-white font-semibold text-emerald-900 shadow-md hover:bg-emerald-50 dark:bg-zinc-100 dark:text-emerald-950 dark:hover:bg-white"
+                        variant="pitch"
+                        className="w-full"
                         onClick={openConfirmFromTentative}
                       >
                         Potwierdzam — wpadam na mecz
@@ -333,7 +334,8 @@ export function HomeClient({
                     </div>
                     {nextMatch.max_slots - nextMatch.signed_up > 0 ? (
                       <Button
-                        className="w-full border-0 bg-white font-semibold text-emerald-900 shadow-md hover:bg-emerald-50 dark:bg-zinc-100 dark:text-emerald-950 dark:hover:bg-white"
+                        variant="pitch"
+                        className="w-full"
                         onClick={openConfirmFromTentative}
                       >
                         Zmieniam zdanie — wpadam na mecz
@@ -346,7 +348,8 @@ export function HomeClient({
                   <div className="mt-4 space-y-2">
                     {nextMatch.max_slots - nextMatch.signed_up > 0 ? (
                       <Button
-                        className="w-full border-0 bg-white font-semibold text-emerald-900 shadow-md hover:bg-emerald-50 dark:bg-zinc-100 dark:text-emerald-950 dark:hover:bg-white"
+                        variant="pitch"
+                        className="w-full"
                         onClick={openTransportSignup}
                       >
                         Zapisz się na mecz
@@ -356,8 +359,8 @@ export function HomeClient({
                     )}
                     <Button
                       type="button"
-                      variant="outline"
-                      className="w-full border-white/40 bg-white/10 font-medium text-white hover:bg-white/20"
+                      variant="stadium"
+                      className="w-full"
                       disabled={tentativeBusy}
                       onClick={() => void signupTentativeHome()}
                     >
@@ -366,8 +369,8 @@ export function HomeClient({
                     </Button>
                     <Button
                       type="button"
-                      variant="outline"
-                      className="w-full border-white/25 bg-white/5 font-medium text-white/95 hover:bg-white/15"
+                      variant="stadium"
+                      className="w-full border-white/25 bg-white/8 text-white/95 hover:bg-white/12"
                       disabled={tentativeBusy}
                       onClick={() => void signupDeclinedHome()}
                     >
@@ -376,7 +379,7 @@ export function HomeClient({
                   </div>
                 )
               ) : (
-                <Button className="mt-4 w-full border border-white/40 bg-white/10 font-semibold text-white backdrop-blur-sm hover:bg-white/20" asChild>
+                <Button variant="stadium" className="mt-4 w-full" asChild>
                   <Link href="/login">Zaloguj się, aby się zapisać</Link>
                 </Button>
               )}
@@ -384,7 +387,8 @@ export function HomeClient({
                 <div className="mt-4 space-y-2">
                   {transportHomeActive ? (
                     <Button
-                      className="w-full border-0 bg-emerald-100 font-semibold text-emerald-950 shadow-md hover:bg-white dark:bg-emerald-800/90 dark:text-emerald-50 dark:hover:bg-emerald-700/90"
+                      variant="pitch"
+                      className="w-full"
                       asChild
                     >
                       <Link href={`/transport/${nextMatch.id}`} className="inline-flex items-center justify-center gap-2">
@@ -416,7 +420,8 @@ export function HomeClient({
               <div className="mt-4 border-t border-white/20 pt-4">
                 {lineupPublicNextMatch ? (
                   <Button
-                    className="w-full border-0 bg-emerald-100 font-semibold text-emerald-950 shadow-md hover:bg-white dark:bg-emerald-800/90 dark:text-emerald-50 dark:hover:bg-emerald-700/90"
+                    variant="pitch"
+                    className="w-full"
                     asChild
                   >
                     <Link href="/sklady" className="inline-flex items-center justify-center gap-2">
@@ -577,7 +582,7 @@ function PitchTile({ href, icon: Icon, title, desc, variant = "pitch" }: PitchTi
   return (
     <Link
       href={href}
-      className={`group relative block h-full min-h-[5.5rem] overflow-hidden rounded-2xl border-2 border-white/30 transition-[transform,box-shadow] hover:-translate-y-0.5 hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 ${tileFrame}`}
+      className={`group relative block h-full min-h-[5.5rem] overflow-hidden rounded-2xl border-2 border-white/30 transition-[transform,box-shadow] motion-safe:hover:-translate-y-0.5 hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 ${tileFrame}`}
     >
       <div className={`absolute inset-0 ${bgClass}`} aria-hidden />
       <div
@@ -611,7 +616,7 @@ function LogoutPitchTile({ onClick }: { onClick: () => void }) {
     <button
       type="button"
       onClick={onClick}
-      className="group relative block h-full min-h-[5.5rem] w-full overflow-hidden rounded-2xl border-2 border-dashed border-white/35 bg-emerald-950/25 text-left shadow-md shadow-emerald-950/10 ring-1 ring-white/15 transition-[transform,box-shadow] hover:-translate-y-0.5 hover:bg-emerald-950/35 hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2"
+      className="group relative block h-full min-h-[5.5rem] w-full overflow-hidden rounded-2xl border-2 border-dashed border-white/35 bg-emerald-950/25 text-left shadow-md shadow-emerald-950/10 ring-1 ring-white/15 transition-[transform,box-shadow] motion-safe:hover:-translate-y-0.5 hover:bg-emerald-950/35 hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2"
     >
       <div
         className="pointer-events-none absolute inset-0 opacity-80 bg-[repeating-linear-gradient(105deg,transparent,transparent_10px,rgba(255,255,255,0.04)_10px,rgba(255,255,255,0.04)_20px)]"

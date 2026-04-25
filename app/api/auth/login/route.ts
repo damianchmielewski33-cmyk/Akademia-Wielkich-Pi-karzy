@@ -3,7 +3,7 @@ import { z } from "zod";
 import { getDb, logActivity } from "@/lib/db";
 import { createSessionToken, setSessionCookie } from "@/lib/auth";
 import { checkRateLimit, rateLimitKey, rateLimitedResponse, RATE } from "@/lib/rate-limit";
-import { isValidPinFormat, verifyPin } from "@/lib/pin";
+import { hashPin, isValidPinFormat, verifyPin } from "@/lib/pin";
 
 export const runtime = "nodejs";
 
@@ -73,15 +73,29 @@ export async function POST(req: Request) {
   }
 
   let matched: LoginUserRow | undefined;
+  let matchedLegacy = false;
   for (const u of withPin) {
-    if (await verifyPin(pin, u.pin_hash)) {
+    const r = await verifyPin(pin, u.pin_hash);
+    if (r.ok) {
       matched = u;
+      matchedLegacy = r.legacy;
       break;
     }
   }
 
   if (!matched) {
     return NextResponse.json({ error: "Nieprawidłowe dane logowania." }, { status: 401 });
+  }
+
+  // Migracja transparentna: jeśli pepper jest już skonfigurowany, a dopasował się legacy hash (bez peppera),
+  // podmień zapis w DB na nowy format przy udanym logowaniu.
+  if (matchedLegacy) {
+    try {
+      const newHash = await hashPin(pin);
+      await db.prepare("UPDATE users SET pin_hash = ? WHERE id = ?").run(newHash, matched.id);
+    } catch (e) {
+      console.warn("[login] pin hash upgrade failed (legacy->pepper)", e);
+    }
   }
 
   const token = await createSessionToken({

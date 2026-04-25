@@ -106,7 +106,7 @@ export function PilkarzeClient({ players }: { players: PlayerListItem[] }) {
         {players.map((p) => (
           <div
             key={p.id}
-            className="relative overflow-hidden rounded-2xl border-2 border-white/30 shadow-md shadow-emerald-950/12 ring-1 ring-emerald-950/10 transition-[transform,box-shadow] hover:-translate-y-0.5 hover:shadow-lg hover:shadow-emerald-950/18"
+            className="relative overflow-hidden rounded-2xl border-2 border-white/30 shadow-md shadow-emerald-950/12 ring-1 ring-emerald-950/10 transition-[transform,box-shadow] motion-safe:hover:-translate-y-0.5 hover:shadow-lg hover:shadow-emerald-950/18"
           >
             <div className="home-pitch-tile absolute inset-0" aria-hidden />
             <div className="pointer-events-none absolute inset-x-0 bottom-0 h-0.5 bg-white/45" aria-hidden />
@@ -135,7 +135,8 @@ export function PilkarzeClient({ players }: { players: PlayerListItem[] }) {
                 </div>
               </div>
               <Button
-                className="mt-4 w-full border-0 bg-white font-semibold text-emerald-900 shadow-md hover:bg-emerald-50 dark:bg-zinc-100 dark:text-emerald-950 dark:hover:bg-white"
+                variant="pitch"
+                className="mt-4 w-full"
                 onClick={() => showStats(p.id)}
               >
                 Statystyki

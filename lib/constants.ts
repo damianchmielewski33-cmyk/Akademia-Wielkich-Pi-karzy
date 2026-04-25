@@ -1,4 +1,10 @@
-export const SESSION_COOKIE = "awp_session";
+/**
+ * Ciasteczko sesji.
+ * Prefiks `__Host-` wymusza bezpieczniejsze atrybuty w przeglądarkach (m.in. brak `Domain`, `Path=/`, `Secure`),
+ * co ogranicza klasy błędów z kategorii A02 (niewłaściwe atrybuty cookie / możliwość nadpisania).
+ */
+export const SESSION_COOKIE =
+  process.env.NODE_ENV === "production" ? "__Host-awp_session" : "awp_session";
 
 /**
  * Parametr zapytania dodawany do linków wysyłanych na zewnątrz (e-mail, udostępnienie).

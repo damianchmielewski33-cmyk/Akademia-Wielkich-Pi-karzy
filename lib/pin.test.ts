@@ -23,7 +23,7 @@ describe("pin-policy", () => {
 describe("pin (bcrypt)", () => {
   it("hash i verify są spójne", async () => {
     const h = await hashPin("424242");
-    expect(await verifyPin("424242", h)).toBe(true);
-    expect(await verifyPin("000000", h)).toBe(false);
+    expect((await verifyPin("424242", h)).ok).toBe(true);
+    expect((await verifyPin("000000", h)).ok).toBe(false);
   });
 });

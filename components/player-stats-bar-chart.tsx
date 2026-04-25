@@ -14,7 +14,7 @@ export type PlayerStatsChartDatum = { name: string; v: number };
 
 export function PlayerStatsBarChart({ data }: { data: PlayerStatsChartDatum[] }) {
   return (
-    <div className="mt-4 h-56 w-full rounded-xl border border-emerald-900/10 bg-emerald-50/30 p-2">
+    <div className="awp-surface mt-4 h-56 w-full p-2 dark:bg-zinc-900/70">
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data}>
           <CartesianGrid strokeDasharray="3 3" stroke="rgba(6, 78, 59, 0.12)" />

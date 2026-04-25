@@ -151,7 +151,7 @@ function PitchTableFrame({ children }: { children: React.ReactNode }) {
 }
 
 const actionBarClass =
-  "flex flex-col gap-2.5 rounded-xl border border-zinc-200/90 bg-zinc-50/50 p-3 dark:border-zinc-600/80 dark:bg-zinc-900/55";
+  "awp-surface flex flex-col gap-2.5 rounded-2xl p-3";
 
 const actionBtnPrimary =
   "h-auto min-h-9 justify-start gap-2 whitespace-normal rounded-lg bg-emerald-700 py-2 text-left font-semibold text-white shadow-sm hover:bg-emerald-800 dark:bg-emerald-600 dark:hover:bg-emerald-700";
@@ -920,7 +920,7 @@ export function TerminarzClient({
 
   return (
     <>
-      <div className="rounded-2xl border border-zinc-200/80 bg-white/95 px-4 py-8 shadow-sm dark:border-zinc-700/90 dark:bg-zinc-900/90 sm:px-8">
+      <div className="awp-card-surface px-4 py-8 sm:px-8">
         <div className="flex flex-col items-center text-center">
           <div className="pitch-rule mx-auto mb-4 w-40 sm:w-48" />
           <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4">
@@ -991,7 +991,7 @@ export function TerminarzClient({
               <Button
                 type="button"
                 size="default"
-                className="w-full border-0 bg-emerald-800 font-semibold hover:bg-emerald-900 sm:w-auto"
+                className="w-full sm:w-auto"
                 onClick={() => setAddOpen(true)}
               >
                 Dodaj mecz
@@ -1033,14 +1033,14 @@ export function TerminarzClient({
                       value={search}
                       onChange={(e) => setSearch(e.target.value)}
                       placeholder="np. boisko, adres…"
-                      className="border-zinc-200 pl-9"
+                      className="pl-9"
                     />
                   </div>
                 </div>
                 <div className="lg:col-span-3">
                   <Label className="text-xs text-zinc-600 dark:text-zinc-400">Zakres dat (lista aktywna)</Label>
                   <select
-                    className="mt-1 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-emerald-950 shadow-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-emerald-100"
+                    className="awp-focus-ring mt-1 w-full rounded-xl border border-emerald-950/15 bg-white/90 px-3 py-2 text-sm font-medium text-emerald-950 shadow-sm shadow-emerald-950/5 dark:border-emerald-100/10 dark:bg-zinc-900/70 dark:text-emerald-100"
                     value={period}
                     onChange={(e) => setPeriod(e.target.value as "all" | "7d" | "month")}
                   >
@@ -1052,7 +1052,7 @@ export function TerminarzClient({
                 <div className="lg:col-span-3">
                   <Label className="text-xs text-zinc-600 dark:text-zinc-400">Miejsca</Label>
                   <select
-                    className="mt-1 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-emerald-950 shadow-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-emerald-100"
+                    className="awp-focus-ring mt-1 w-full rounded-xl border border-emerald-950/15 bg-white/90 px-3 py-2 text-sm font-medium text-emerald-950 shadow-sm shadow-emerald-950/5 dark:border-emerald-100/10 dark:bg-zinc-900/70 dark:text-emerald-100"
                     value={filter}
                     onChange={(e) => setFilter(e.target.value)}
                   >
@@ -1065,7 +1065,7 @@ export function TerminarzClient({
                 </div>
                 <div className="flex flex-wrap gap-2 lg:col-span-2">
                   <select
-                    className="min-w-[10rem] flex-1 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-emerald-950 shadow-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-emerald-100"
+                    className="awp-focus-ring min-w-[10rem] flex-1 rounded-xl border border-emerald-950/15 bg-white/90 px-3 py-2 text-sm font-medium text-emerald-950 shadow-sm shadow-emerald-950/5 dark:border-emerald-100/10 dark:bg-zinc-900/70 dark:text-emerald-100"
                     value={sortDir}
                     onChange={(e) => setSortDir(e.target.value as "asc" | "desc")}
                   >
@@ -1077,7 +1077,7 @@ export function TerminarzClient({
                     variant={onlyMine ? "default" : "outline"}
                     size="sm"
                     className={cn(
-                      onlyMine && "border-0 bg-emerald-800 hover:bg-emerald-900",
+                      onlyMine && "bg-emerald-700 hover:bg-emerald-800",
                       "h-10 shrink-0 px-3"
                     )}
                     onClick={() => setOnlyMine((v) => !v)}
