@@ -75,10 +75,10 @@
   }
 
   .awp-card-surface {
-    @apply awp-surface awp-surface-strong p-6;
+    @apply relative overflow-hidden rounded-2xl border-2 border-white/40 bg-white/95 p-6 shadow-xl shadow-emerald-950/14 ring-1 ring-emerald-950/10 backdrop-blur-[2px];
   }
   .dark .awp-card-surface {
-    @apply awp-surface awp-surface-strong;
+    @apply border-white/12 bg-zinc-900/95 shadow-black/45 ring-emerald-900/35;
   }
   .dark .home-pitch-tile {
     opacity: 0.07;
