@@ -6,14 +6,13 @@ import { formatPonderingPlayersPolish } from "@/lib/terminarz-shared";
 
 export const metadata: Metadata = {
   title: "Płatności",
-  description: "Wpłata BLIK na najbliższy mecz — numer telefonu i status opłaty.",
+  description: "Wpłata BLIK i portfel zawodnika — ostatni mecz (data przeszła), autoryzacje i rozliczenia.",
 };
 
-const SQL_NEXT_UPCOMING_MATCH = `
+const SQL_LAST_PAST_MATCH = `
   SELECT * FROM matches
-  WHERE played = 0
-    AND datetime(match_date || ' ' || match_time) > datetime('now', 'localtime')
-  ORDER BY match_date, match_time
+  WHERE datetime(match_date || ' ' || match_time) <= datetime('now', 'localtime')
+  ORDER BY match_date DESC, match_time DESC
   LIMIT 1
 `;
 
@@ -37,7 +36,7 @@ export default async function PlatnosciPage() {
   const db = await getDb();
   const session = await getServerSession();
 
-  const nextMatch = await db.prepare(SQL_NEXT_UPCOMING_MATCH).get() as MatchRow | undefined;
+  const nextMatch = await db.prepare(SQL_LAST_PAST_MATCH).get() as MatchRow | undefined;
 
   let signups: PlatnosciSignup[] = [];
   let userSigned = false;

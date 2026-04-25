@@ -144,6 +144,19 @@ export async function initLibsqlSchema(client: Client) {
     );
     CREATE INDEX IF NOT EXISTS idx_match_wallet_charges_match_created
     ON match_wallet_charges(match_id, created_at);
+
+    CREATE TABLE IF NOT EXISTS public_share_links (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      token TEXT NOT NULL UNIQUE,
+      kind TEXT NOT NULL CHECK (kind IN ('last_match_wallets')),
+      created_by_admin_id INTEGER NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      expires_at TEXT,
+      revoked_at TEXT,
+      FOREIGN KEY (created_by_admin_id) REFERENCES users(id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_public_share_links_kind_created
+    ON public_share_links(kind, created_at);
   `);
 
   let names = await pragmaColumnNames(client, "match_stats");

@@ -162,6 +162,8 @@ export function PlatnosciClient({
   const [chargeMatchId, setChargeMatchId] = useState<number | null>(null);
   const [chargeMap, setChargeMap] = useState<Record<number, string>>({});
   const [chargeSubmitting, setChargeSubmitting] = useState(false);
+  const [publicLinkBusy, setPublicLinkBusy] = useState(false);
+  const [publicLinkCopied, setPublicLinkCopied] = useState(false);
 
   async function fetchJson<T>(url: string, init?: RequestInit): Promise<{ ok: true; data: T } | { ok: false; error: string }> {
     try {
@@ -355,6 +357,30 @@ export function PlatnosciClient({
     }
   }
 
+  async function generatePublicLink() {
+    setPublicLinkBusy(true);
+    try {
+      const r = await fetchJson<{ ok: true; token: string; path: string }>("/api/admin/wallet/public-links", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ kind: "last_match_wallets", expires_in_days: 30 }),
+      });
+      if (!r.ok) {
+        toast.error(r.error);
+        return;
+      }
+      const url = `${window.location.origin}${r.data.path}`;
+      await navigator.clipboard.writeText(url);
+      setPublicLinkCopied(true);
+      toast.success("Skopiowano publiczny link do schowka");
+      setTimeout(() => setPublicLinkCopied(false), 2000);
+    } catch {
+      toast.error("Nie udało się skopiować linku");
+    } finally {
+      setPublicLinkBusy(false);
+    }
+  }
+
   return (
     <div className="container mx-auto max-w-2xl flex-1 px-4 py-8 sm:py-10">
       <div className="mb-8 text-center">
@@ -515,7 +541,7 @@ export function PlatnosciClient({
           <Card className="mb-6 overflow-hidden border-emerald-900/15 shadow-md">
             <div className="home-pitch-tile relative px-5 py-5 text-white">
               <div className="relative">
-                <p className="text-xs font-semibold uppercase tracking-wider text-emerald-100/90">Najbliższy mecz</p>
+                <p className="text-xs font-semibold uppercase tracking-wider text-emerald-100/90">Ostatni mecz</p>
                 <p className="mt-2 text-lg font-bold tabular-nums text-white">
                   {nextMatch.match_date} · {nextMatch.match_time}
                 </p>
@@ -546,6 +572,19 @@ export function PlatnosciClient({
                 <CardDescription>Lista zawodników, wpłaty do autoryzacji oraz rozliczenia rozegranych meczów.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
+                <div className="rounded-xl border border-emerald-900/10 bg-white/70 px-4 py-3">
+                  <p className="text-sm font-semibold text-emerald-950">Link publiczny (bez logowania)</p>
+                  <p className="mt-1 text-xs text-zinc-600">
+                    Widok portfeli zawodników, którzy byli zapisani na ostatni mecz. Link ważny 30 dni.
+                  </p>
+                  <div className="mt-3">
+                    <Button type="button" variant="secondary" disabled={publicLinkBusy} onClick={() => void generatePublicLink()}>
+                      {publicLinkBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
+                      {publicLinkCopied ? "Skopiowano" : "Generuj i kopiuj link"}
+                    </Button>
+                  </div>
+                </div>
+
                 <div className="rounded-xl border border-emerald-900/10 bg-emerald-50/30 px-4 py-3">
                   <p className="text-sm font-semibold text-emerald-950">Wpłata ręczna (admin → do potwierdzenia przez zawodnika)</p>
                   <div className="mt-3 grid gap-3 sm:grid-cols-3">

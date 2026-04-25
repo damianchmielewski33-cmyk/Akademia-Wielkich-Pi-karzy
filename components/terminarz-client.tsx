@@ -12,6 +12,7 @@ import {
   ChevronRight,
   Link2,
   List,
+  Loader2,
   LogIn,
   MapPin,
   HelpCircle,
@@ -72,6 +73,38 @@ type Props = {
 };
 
 const todayISO = () => new Date().toISOString().slice(0, 10);
+
+type AdminMatchSignupRow = {
+  user_id: number;
+  paid: number;
+  commitment: number;
+  first_name: string;
+  last_name: string;
+  zawodnik: string;
+  profile_photo_path: string | null;
+};
+
+function formatPln(n: number) {
+  const v = Math.round(n * 100) / 100;
+  return new Intl.NumberFormat("pl-PL", { style: "currency", currency: "PLN" }).format(v);
+}
+
+async function fetchJson<T>(
+  url: string,
+  init?: RequestInit
+): Promise<{ ok: true; data: T } | { ok: false; error: string }> {
+  try {
+    const res = await fetch(url, init);
+    const json = (await res.json().catch(() => null)) as unknown;
+    if (!res.ok) {
+      const msg = (json as { error?: unknown } | null)?.error;
+      return { ok: false, error: typeof msg === "string" ? msg : "Nie udało się wykonać operacji" };
+    }
+    return { ok: true, data: json as T };
+  } catch {
+    return { ok: false, error: "Błąd sieci" };
+  }
+}
 
 function MatchSignupCountsBlock({
   matchId,
@@ -226,6 +259,13 @@ export function TerminarzClient({
   const inviteParticipationShownRef = useRef(false);
   const statsOpenedFromUrlRef = useRef(false);
   const standaloneStatsOpenedFromUrlRef = useRef(false);
+  const [settleOpen, setSettleOpen] = useState(false);
+  const [settleMatch, setSettleMatch] = useState<MatchRow | null>(null);
+  const [settleLoading, setSettleLoading] = useState(false);
+  const [settleRows, setSettleRows] = useState<AdminMatchSignupRow[]>([]);
+  const [settleDefaultAmount, setSettleDefaultAmount] = useState("");
+  const [settleAmounts, setSettleAmounts] = useState<Record<number, string>>({});
+  const [settleSubmitting, setSettleSubmitting] = useState(false);
 
   const missingStatsSet = useMemo(() => new Set(playedMissingStatsMatchIds), [playedMissingStatsMatchIds]);
 
@@ -465,6 +505,76 @@ export function TerminarzClient({
     }
     toast.success("Zaktualizowano");
     router.refresh();
+  }
+
+  async function openSettleDialog(m: MatchRow) {
+    if (!isAdmin) return;
+    setSettleOpen(true);
+    setSettleMatch(m);
+    setSettleLoading(true);
+    setSettleRows([]);
+    setSettleAmounts({});
+    const fee = typeof m.fee_pln === "number" && Number.isFinite(m.fee_pln) ? String(m.fee_pln) : "";
+    setSettleDefaultAmount(fee);
+    try {
+      const r = await fetchJson<{ signups: AdminMatchSignupRow[] }>(`/api/admin/match/${m.id}/signups`);
+      if (!r.ok) {
+        toast.error(r.error);
+        return;
+      }
+      const confirmed = (r.data.signups ?? []).filter((s) => Number(s.commitment ?? 1) === 1);
+      setSettleRows(confirmed);
+      if (fee) {
+        const next: Record<number, string> = {};
+        for (const s of confirmed) next[s.user_id] = fee;
+        setSettleAmounts(next);
+      }
+    } finally {
+      setSettleLoading(false);
+    }
+  }
+
+  function applyDefaultToAll() {
+    const v = settleDefaultAmount.trim();
+    const next: Record<number, string> = {};
+    for (const s of settleRows) next[s.user_id] = v;
+    setSettleAmounts(next);
+  }
+
+  async function submitSettlement() {
+    if (!settleMatch) return;
+    const charges = settleRows
+      .map((s) => ({
+        user_id: s.user_id,
+        amount_pln: Number(String(settleAmounts[s.user_id] ?? "").replace(",", ".")),
+      }))
+      .filter((x) => Number.isFinite(x.amount_pln) && x.amount_pln > 0);
+
+    if (charges.length === 0) {
+      toast.error("Podaj kwotę dla przynajmniej jednego zawodnika");
+      return;
+    }
+    setSettleSubmitting(true);
+    try {
+      const r = await fetchJson<{ ok: true; applied: unknown[]; skipped: unknown[] }>(
+        `/api/admin/wallet/match/${settleMatch.id}/charges`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ charges }),
+        }
+      );
+      if (!r.ok) {
+        toast.error(r.error);
+        return;
+      }
+      toast.success("Rozliczono mecz — kwoty odjęte z portfeli");
+      setSettleOpen(false);
+      setSettleMatch(null);
+      router.refresh();
+    } finally {
+      setSettleSubmitting(false);
+    }
   }
 
   function openPlayers(mid: number) {
@@ -897,6 +1007,23 @@ export function TerminarzClient({
             </span>
           </span>
         </Button>
+        {isAdmin && (
+          <Button
+            size="sm"
+            variant="default"
+            className={cn(actionBtnPrimary, "bg-emerald-700 hover:bg-emerald-800")}
+            title="Odejmij wpisowe wszystkim zapisanym (kwota edytowalna)"
+            onClick={() => void openSettleDialog(m)}
+          >
+            <ShieldCheck className="shrink-0" aria-hidden />
+            <span>
+              <span className="block leading-tight">Rozlicz mecz</span>
+              <span className="mt-1 block text-[11px] font-normal leading-snug text-emerald-100/95">
+                Odejmij kwotę z portfeli zapisanych zawodników
+              </span>
+            </span>
+          </Button>
+        )}
         {isAdmin && (
           <Button
             size="sm"
@@ -1666,6 +1793,136 @@ export function TerminarzClient({
               </ul>
             </>
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={settleOpen}
+        onOpenChange={(open) => {
+          setSettleOpen(open);
+          if (!open) {
+            setSettleMatch(null);
+            setSettleRows([]);
+            setSettleAmounts({});
+            setSettleDefaultAmount("");
+          }
+        }}
+      >
+        <DialogContent className="max-h-[90vh] overflow-y-auto border-emerald-900/15 sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Rozlicz mecz</DialogTitle>
+            {settleMatch ? (
+              <DialogDescription asChild>
+                <div className="space-y-1 pt-1 text-sm text-zinc-600">
+                  <p>
+                    <span className="font-medium text-zinc-800">
+                      {settleMatch.match_date} · {settleMatch.match_time}
+                    </span>
+                  </p>
+                  <p className="text-xs text-zinc-500">
+                    Domyślnie wpisuje równą kwotę dla wszystkich (z pola „Kwota domyślna”, zwykle `fee_pln`).
+                  </p>
+                </div>
+              </DialogDescription>
+            ) : null}
+          </DialogHeader>
+
+          {settleLoading ? (
+            <div className="flex items-center gap-2 py-4 text-sm text-zinc-600">
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+              Wczytywanie zapisanych zawodników…
+            </div>
+          ) : (
+            <>
+              <div className="rounded-xl border border-emerald-900/10 bg-emerald-50/30 px-4 py-3">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+                  <div className="flex-1">
+                    <Label htmlFor="settle-default">Kwota domyślna (PLN)</Label>
+                    <Input
+                      id="settle-default"
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="np. 25"
+                      value={settleDefaultAmount}
+                      onChange={(e) => setSettleDefaultAmount(e.target.value)}
+                      className="mt-1"
+                    />
+                  </div>
+                  <Button type="button" variant="secondary" onClick={applyDefaultToAll}>
+                    Ustaw wszystkim
+                  </Button>
+                </div>
+                <p className="mt-2 text-xs text-zinc-600">
+                  Możesz edytować kwotę dla pojedynczych osób poniżej przed zapisaniem.
+                </p>
+              </div>
+
+              {settleRows.length === 0 ? (
+                <p className="rounded-xl border border-dashed border-zinc-200 bg-zinc-50/80 px-4 py-10 text-center text-sm text-zinc-600 dark:border-zinc-600 dark:bg-zinc-800/50 dark:text-zinc-400">
+                  Brak zapisanych (potwierdzonych) zawodników do rozliczenia.
+                </p>
+              ) : (
+                <div className="max-h-[50vh] space-y-2 overflow-y-auto pr-1">
+                  {settleRows.map((p) => (
+                    <div
+                      key={p.user_id}
+                      className="flex items-center gap-3 rounded-xl border border-emerald-900/10 bg-white px-3 py-2"
+                    >
+                      <PlayerAvatar
+                        photoPath={p.profile_photo_path}
+                        firstName={p.first_name}
+                        lastName={p.last_name}
+                        size="sm"
+                        ringClassName="ring-2 ring-emerald-200/90"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <PlayerNameStack firstName={p.first_name} lastName={p.last_name} nick={p.zawodnik} />
+                        <p className="mt-0.5 text-xs text-zinc-500">ID: {p.user_id}</p>
+                      </div>
+                      <div className="w-32">
+                        <Label className="sr-only" htmlFor={`settle-${p.user_id}`}>
+                          Kwota
+                        </Label>
+                        <Input
+                          id={`settle-${p.user_id}`}
+                          type="text"
+                          inputMode="decimal"
+                          placeholder="0"
+                          value={settleAmounts[p.user_id] ?? ""}
+                          onChange={(e) =>
+                            setSettleAmounts((prev) => ({ ...prev, [p.user_id]: e.target.value }))
+                          }
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="rounded-xl border border-amber-200/70 bg-amber-50/70 px-4 py-3 text-xs text-amber-950">
+                <p className="font-semibold">Uwaga</p>
+                <p className="mt-1">
+                  Rozliczenie odejmuje kwoty z portfeli. Jeśli mecz był już częściowo rozliczony, API pominie osoby już
+                  rozliczone dla tego meczu.
+                </p>
+                {settleDefaultAmount.trim() ? (
+                  <p className="mt-1">
+                    Domyślna kwota: <strong className="tabular-nums">{formatPln(Number(settleDefaultAmount.replace(",", ".")) || 0)}</strong>
+                  </p>
+                ) : null}
+              </div>
+            </>
+          )}
+
+          <DialogFooter className="gap-2 sm:justify-end">
+            <Button type="button" variant="outline" onClick={() => setSettleOpen(false)}>
+              Anuluj
+            </Button>
+            <Button type="button" disabled={settleSubmitting || settleLoading} onClick={() => void submitSettlement()}>
+              {settleSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
+              Zapisz rozliczenie
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
