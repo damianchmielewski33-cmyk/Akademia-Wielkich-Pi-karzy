@@ -589,14 +589,22 @@ export function PlatnosciClient({
                   <p className="text-sm font-semibold text-emerald-950">Wpłata ręczna (admin → do potwierdzenia przez zawodnika)</p>
                   <div className="mt-3 grid gap-3 sm:grid-cols-3">
                     <div className="sm:col-span-1">
-                      <Label htmlFor="admin-wallet-user">Zawodnik (id)</Label>
-                      <Input
+                      <Label htmlFor="admin-wallet-user">Imię i nazwisko</Label>
+                      <select
                         id="admin-wallet-user"
-                        type="number"
-                        placeholder="np. 12"
+                        className="awp-focus-ring mt-1 w-full rounded-xl border border-emerald-950/15 bg-white/90 px-3 py-2 text-sm font-medium text-emerald-950 shadow-sm shadow-emerald-950/5 dark:border-emerald-100/10 dark:bg-zinc-900/70 dark:text-emerald-100"
                         value={adminManualUserId ?? ""}
                         onChange={(e) => setAdminManualUserId(e.target.value ? Number(e.target.value) : null)}
-                      />
+                      >
+                        <option value="" disabled>
+                          Wybierz zawodnika…
+                        </option>
+                        {(adminOverview?.players ?? []).map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.first_name} {p.last_name}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                     <div className="sm:col-span-1">
                       <Label htmlFor="admin-wallet-amount">Kwota (PLN)</Label>
