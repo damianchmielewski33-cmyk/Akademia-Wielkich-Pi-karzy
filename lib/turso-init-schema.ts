@@ -91,6 +91,59 @@ export async function initLibsqlSchema(client: Client) {
       id INTEGER PRIMARY KEY CHECK (id = 1),
       match_notification_prompt_enabled INTEGER NOT NULL DEFAULT 0
     );
+
+    CREATE TABLE IF NOT EXISTS wallet_deposit_requests (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      amount_pln REAL NOT NULL,
+      created_by TEXT NOT NULL CHECK (created_by IN ('player','admin')),
+      status TEXT NOT NULL CHECK (status IN ('pending','completed','cancelled')) DEFAULT 'pending',
+      note TEXT,
+      player_declared_at TEXT,
+      admin_confirmed_received_at TEXT,
+      admin_declared_received_at TEXT,
+      player_confirmed_amount_at TEXT,
+      completed_at TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_wallet_deposit_requests_status_created
+    ON wallet_deposit_requests(status, created_at);
+    CREATE INDEX IF NOT EXISTS idx_wallet_deposit_requests_user_created
+    ON wallet_deposit_requests(user_id, created_at);
+
+    CREATE TABLE IF NOT EXISTS wallet_transactions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      kind TEXT NOT NULL CHECK (kind IN ('deposit','match_charge','adjustment')),
+      amount_pln REAL NOT NULL,
+      deposit_request_id INTEGER,
+      match_id INTEGER,
+      note TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (user_id) REFERENCES users(id),
+      FOREIGN KEY (deposit_request_id) REFERENCES wallet_deposit_requests(id),
+      FOREIGN KEY (match_id) REFERENCES matches(id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_wallet_transactions_user_created
+    ON wallet_transactions(user_id, created_at);
+    CREATE INDEX IF NOT EXISTS idx_wallet_transactions_match
+    ON wallet_transactions(match_id);
+
+    CREATE TABLE IF NOT EXISTS match_wallet_charges (
+      match_id INTEGER NOT NULL,
+      user_id INTEGER NOT NULL,
+      amount_pln REAL NOT NULL,
+      note TEXT,
+      created_by_admin_id INTEGER NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      PRIMARY KEY (match_id, user_id),
+      FOREIGN KEY (match_id) REFERENCES matches(id) ON DELETE CASCADE,
+      FOREIGN KEY (user_id) REFERENCES users(id),
+      FOREIGN KEY (created_by_admin_id) REFERENCES users(id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_match_wallet_charges_match_created
+    ON match_wallet_charges(match_id, created_at);
   `);
 
   let names = await pragmaColumnNames(client, "match_stats");

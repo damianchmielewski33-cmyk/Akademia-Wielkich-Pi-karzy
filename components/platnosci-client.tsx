@@ -25,11 +25,53 @@ export type PlatnosciSignup = {
   profile_photo_path: string | null;
 };
 
+export type PlatnosciUserLite = {
+  id: number;
+  first_name: string;
+  last_name: string;
+  zawodnik: string;
+  profile_photo_path: string | null;
+};
+
+type WalletDepositRequest = {
+  id: number;
+  user_id: number;
+  amount_pln: number;
+  created_by: "player" | "admin";
+  status: "pending" | "completed" | "cancelled";
+  note: string | null;
+  player_declared_at: string | null;
+  admin_confirmed_received_at: string | null;
+  admin_declared_received_at: string | null;
+  player_confirmed_amount_at: string | null;
+  completed_at: string | null;
+  created_at: string;
+};
+
+type WalletTransaction = {
+  id: number;
+  kind: "deposit" | "match_charge" | "adjustment";
+  amount_pln: number;
+  deposit_request_id: number | null;
+  match_id: number | null;
+  note: string | null;
+  created_at: string;
+};
+
+type AdminWalletPlayerRow = PlatnosciUserLite & { balance_pln: number };
+
+type AdminWalletOverview = {
+  players: AdminWalletPlayerRow[];
+  pendingDeposits: (WalletDepositRequest & PlatnosciSignup)[];
+  playedMatches: MatchRow[];
+};
+
 type Props = {
   nextMatch: MatchRow | null;
   /** Np. „3 osoby się zastanawiają” — pusty gdy brak «jeszcze nie wiem». */
   nextMatchTentativeLine: string;
   signups: PlatnosciSignup[];
+  allPlayers: PlatnosciUserLite[];
   isLoggedIn: boolean;
   isAdmin: boolean;
   userSigned: boolean;
@@ -93,6 +135,7 @@ export function PlatnosciClient({
   nextMatch,
   nextMatchTentativeLine,
   signups,
+  allPlayers,
   isLoggedIn,
   isAdmin,
   userSigned,
@@ -100,6 +143,89 @@ export function PlatnosciClient({
 }: Props) {
   const router = useRouter();
   const [copied, setCopied] = useState(false);
+  const [walletBalancePln, setWalletBalancePln] = useState<number | null>(null);
+  const [walletPending, setWalletPending] = useState<WalletDepositRequest[]>([]);
+  const [walletTx, setWalletTx] = useState<WalletTransaction[]>([]);
+  const [walletLoading, setWalletLoading] = useState(false);
+
+  const [depositAmount, setDepositAmount] = useState("");
+  const [depositNote, setDepositNote] = useState("");
+  const [depositSubmitting, setDepositSubmitting] = useState(false);
+
+  const [adminOverview, setAdminOverview] = useState<AdminWalletOverview | null>(null);
+  const [adminLoading, setAdminLoading] = useState(false);
+  const [adminManualUserId, setAdminManualUserId] = useState<number | null>(null);
+  const [adminManualAmount, setAdminManualAmount] = useState("");
+  const [adminManualNote, setAdminManualNote] = useState("");
+  const [adminManualSubmitting, setAdminManualSubmitting] = useState(false);
+
+  const [chargeMatchId, setChargeMatchId] = useState<number | null>(null);
+  const [chargeMap, setChargeMap] = useState<Record<number, string>>({});
+  const [chargeSubmitting, setChargeSubmitting] = useState(false);
+
+  async function fetchJson<T>(url: string, init?: RequestInit): Promise<{ ok: true; data: T } | { ok: false; error: string }> {
+    try {
+      const res = await fetch(url, init);
+      const json = (await res.json().catch(() => null)) as unknown;
+      if (!res.ok) {
+        const msg = (json as { error?: unknown } | null)?.error;
+        return { ok: false, error: typeof msg === "string" ? msg : "Nie udało się wykonać operacji" };
+      }
+      return { ok: true, data: json as T };
+    } catch {
+      return { ok: false, error: "Błąd sieci" };
+    }
+  }
+
+  async function refreshWallet() {
+    if (!isLoggedIn) return;
+    setWalletLoading(true);
+    try {
+      const r = await fetchJson<{ balance_pln: number; pending: WalletDepositRequest[]; transactions: WalletTransaction[] }>(
+        "/api/wallet/me"
+      );
+      if (!r.ok) {
+        toast.error(r.error);
+        return;
+      }
+      setWalletBalancePln(Number(r.data.balance_pln ?? 0));
+      setWalletPending(r.data.pending ?? []);
+      setWalletTx(r.data.transactions ?? []);
+    } finally {
+      setWalletLoading(false);
+    }
+  }
+
+  async function refreshAdminOverview() {
+    if (!isAdmin) return;
+    setAdminLoading(true);
+    try {
+      const r = await fetchJson<AdminWalletOverview>("/api/admin/wallet/overview");
+      if (!r.ok) {
+        toast.error(r.error);
+        return;
+      }
+      setAdminOverview(r.data);
+      if (chargeMatchId === null && r.data.playedMatches?.length) {
+        setChargeMatchId(r.data.playedMatches[0]!.id);
+      }
+      if (adminManualUserId === null && r.data.players?.length) {
+        setAdminManualUserId(r.data.players[0]!.id);
+      }
+    } finally {
+      setAdminLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    void refreshWallet();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoggedIn]);
+
+  useEffect(() => {
+    void refreshAdminOverview();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAdmin]);
 
   async function copyBlik() {
     try {
@@ -112,21 +238,263 @@ export function PlatnosciClient({
     }
   }
 
+  async function submitDeposit() {
+    const amount_pln = Number(String(depositAmount).replace(",", "."));
+    if (!Number.isFinite(amount_pln) || amount_pln <= 0) {
+      toast.error("Podaj prawidłową kwotę");
+      return;
+    }
+    setDepositSubmitting(true);
+    try {
+      const r = await fetchJson<{ ok: true; id: number }>("/api/wallet/deposits", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount_pln, note: depositNote.trim() ? depositNote.trim() : undefined }),
+      });
+      if (!r.ok) {
+        toast.error(r.error);
+        return;
+      }
+      toast.success("Zgłoszono wpłatę — czeka na autoryzację admina");
+      setDepositAmount("");
+      setDepositNote("");
+      await refreshWallet();
+      await refreshAdminOverview();
+    } finally {
+      setDepositSubmitting(false);
+    }
+  }
+
+  async function playerConfirmDeposit(depId: number) {
+    const r = await fetchJson<{ ok: true }>(`/api/wallet/deposits/${depId}/confirm`, { method: "POST" });
+    if (!r.ok) {
+      toast.error(r.error);
+      return;
+    }
+    toast.success("Potwierdzono — wpłata zaksięgowana w portfelu");
+    await refreshWallet();
+    await refreshAdminOverview();
+    router.refresh();
+  }
+
+  async function adminConfirmDeposit(depId: number) {
+    const r = await fetchJson<{ ok: true }>(`/api/admin/wallet/deposits/${depId}/confirm`, { method: "POST" });
+    if (!r.ok) {
+      toast.error(r.error);
+      return;
+    }
+    toast.success("Potwierdzono otrzymanie — wpłata zaksięgowana");
+    await refreshAdminOverview();
+    await refreshWallet();
+    router.refresh();
+  }
+
+  async function adminCreateManualDeposit() {
+    const user_id = adminManualUserId;
+    const amount_pln = Number(String(adminManualAmount).replace(",", "."));
+    if (!user_id) {
+      toast.error("Wybierz zawodnika");
+      return;
+    }
+    if (!Number.isFinite(amount_pln) || amount_pln <= 0) {
+      toast.error("Podaj prawidłową kwotę");
+      return;
+    }
+    setAdminManualSubmitting(true);
+    try {
+      const r = await fetchJson<{ ok: true; id: number }>("/api/admin/wallet/deposits", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          user_id,
+          amount_pln,
+          note: adminManualNote.trim() ? adminManualNote.trim() : undefined,
+        }),
+      });
+      if (!r.ok) {
+        toast.error(r.error);
+        return;
+      }
+      toast.success("Dodano wpłatę — zawodnik musi potwierdzić zgodność kwoty");
+      setAdminManualAmount("");
+      setAdminManualNote("");
+      await refreshAdminOverview();
+    } finally {
+      setAdminManualSubmitting(false);
+    }
+  }
+
+  async function submitMatchCharges() {
+    if (!chargeMatchId) return;
+    const payload = Object.entries(chargeMap)
+      .map(([uid, v]) => ({ user_id: Number(uid), amount_pln: Number(String(v).replace(",", ".")) }))
+      .filter((x) => Number.isFinite(x.amount_pln) && x.amount_pln > 0);
+    if (payload.length === 0) {
+      toast.error("Wpisz kwoty dla przynajmniej jednego zawodnika");
+      return;
+    }
+    setChargeSubmitting(true);
+    try {
+      const r = await fetchJson<{ ok: true; applied: unknown[]; skipped: unknown[] }>(
+        `/api/admin/wallet/match/${chargeMatchId}/charges`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ charges: payload }),
+        }
+      );
+      if (!r.ok) {
+        toast.error(r.error);
+        return;
+      }
+      toast.success("Rozliczono mecz — kwoty odjęte z portfeli");
+      setChargeMap({});
+      await refreshAdminOverview();
+    } finally {
+      setChargeSubmitting(false);
+    }
+  }
+
   return (
     <div className="container mx-auto max-w-2xl flex-1 px-4 py-8 sm:py-10">
       <div className="mb-8 text-center">
         <div className="pitch-rule mx-auto mb-4 w-40 opacity-80" />
-        <h1 className="text-3xl font-bold tracking-tight text-emerald-950 dark:text-emerald-100 sm:text-4xl">Płatności za mecz</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-emerald-950 dark:text-emerald-100 sm:text-4xl">Płatności i portfel</h1>
         <p className="mt-2 text-zinc-600 dark:text-zinc-400">
-          Informacje o wpłacie na najbliższe spotkanie — przelew <strong>BLIK</strong> na podany numer telefonu.
+          Saldo zawodnika, autoryzacje wpłat oraz rozliczenia meczów. Wpłaty wykonujesz przelewem <strong>BLIK</strong>.
           {isAdmin ? (
             <>
               {" "}
-              Jako administrator możesz ustawić kwotę i potwierdzać wpłaty także na tej stronie (jak w panelu admina).
+              Jako administrator możesz autoryzować wpłaty i rozliczać rozegrane mecze.
             </>
           ) : null}
         </p>
       </div>
+
+      {isLoggedIn ? (
+        <Card className="mb-6 border-emerald-900/10 shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg text-emerald-950 dark:text-emerald-100">Portfel zawodnika</CardTitle>
+            <CardDescription>Saldo oraz historia operacji.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-900/10 bg-emerald-50/40 px-4 py-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-emerald-900/70">Saldo</p>
+                <p className="mt-1 text-2xl font-bold tabular-nums text-emerald-950">
+                  {walletBalancePln === null ? "—" : formatPln(walletBalancePln)}
+                </p>
+              </div>
+              <Button type="button" variant="secondary" disabled={walletLoading} onClick={() => void refreshWallet()}>
+                {walletLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
+                Odśwież
+              </Button>
+            </div>
+
+            <div className="rounded-xl border border-emerald-900/10 bg-white/70 px-4 py-3">
+              <p className="text-sm font-semibold text-emerald-950">Zgłoś wpłatę do portfela</p>
+              <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                <div className="sm:col-span-1">
+                  <Label htmlFor="wallet-dep-amount">Kwota (PLN)</Label>
+                  <Input
+                    id="wallet-dep-amount"
+                    type="text"
+                    inputMode="decimal"
+                    placeholder="np. 50"
+                    value={depositAmount}
+                    onChange={(e) => setDepositAmount(e.target.value)}
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <Label htmlFor="wallet-dep-note">Opis (opcjonalnie)</Label>
+                  <Input
+                    id="wallet-dep-note"
+                    type="text"
+                    placeholder="np. wpłata na kwiecień"
+                    value={depositNote}
+                    onChange={(e) => setDepositNote(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Button type="button" disabled={depositSubmitting} onClick={() => void submitDeposit()}>
+                  {depositSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
+                  Wpłaciłem — zgłoś do autoryzacji
+                </Button>
+                <p className="text-xs text-zinc-600">
+                  Jeśli admin wprowadzi wpłatę ręcznie, tutaj pojawi się prośba o potwierdzenie zgodności kwoty.
+                </p>
+              </div>
+            </div>
+
+            {walletPending.length > 0 ? (
+              <div>
+                <p className="mb-2 text-sm font-medium text-emerald-950 dark:text-emerald-100">Autoryzacje (oczekujące)</p>
+                <ul className="space-y-2">
+                  {walletPending.map((d) => {
+                    const needsPlayerConfirm = d.created_by === "admin" && Boolean(d.admin_declared_received_at) && !d.player_confirmed_amount_at;
+                    const needsAdminConfirm = d.created_by === "player" && Boolean(d.player_declared_at) && !d.admin_confirmed_received_at;
+                    return (
+                      <li key={d.id} className="rounded-xl border border-emerald-900/10 bg-white/70 px-4 py-3">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-emerald-950">
+                              {formatPln(d.amount_pln)}{" "}
+                              <span className="text-xs font-normal text-zinc-600">
+                                · {d.created_by === "player" ? "zgłoszone przez Ciebie" : "wprowadzone przez admina"}
+                              </span>
+                            </p>
+                            {d.note ? <p className="mt-0.5 text-xs text-zinc-600">{d.note}</p> : null}
+                          </div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            {needsPlayerConfirm ? (
+                              <Button type="button" size="sm" onClick={() => void playerConfirmDeposit(d.id)}>
+                                Potwierdzam zgodność kwoty
+                              </Button>
+                            ) : needsAdminConfirm ? (
+                              <Badge variant="secondary">Czeka na potwierdzenie admina</Badge>
+                            ) : (
+                              <Badge variant="secondary">W toku</Badge>
+                            )}
+                          </div>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            ) : null}
+
+            {walletTx.length > 0 ? (
+              <div>
+                <p className="mb-2 text-sm font-medium text-emerald-950 dark:text-emerald-100">Ostatnie operacje</p>
+                <ul className="max-h-72 space-y-0 overflow-y-auto rounded-xl border border-emerald-900/10 bg-emerald-50/20">
+                  {walletTx.map((t, i) => (
+                    <li
+                      key={t.id}
+                      className={`flex flex-wrap items-center justify-between gap-2 border-b px-3 py-2.5 text-sm last:border-b-0 ${
+                        i % 2 === 0 ? "bg-white/60" : "bg-emerald-50/40"
+                      }`}
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-medium text-emerald-950">
+                          {t.kind === "deposit" ? "Wpłata" : t.kind === "match_charge" ? "Rozliczenie meczu" : "Korekta"}
+                        </p>
+                        {t.note ? <p className="truncate text-xs text-zinc-600">{t.note}</p> : null}
+                      </div>
+                      <div className="shrink-0 text-right tabular-nums">
+                        <span className={t.amount_pln >= 0 ? "text-emerald-900" : "text-amber-950"}>
+                          {formatPln(t.amount_pln)}
+                        </span>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+          </CardContent>
+        </Card>
+      ) : null}
 
       {!nextMatch ? (
         <Card className="border-emerald-900/10 shadow-sm">
@@ -169,6 +537,194 @@ export function PlatnosciClient({
 
           {isAdmin ? (
             <PlatnosciAdminSection nextMatch={nextMatch} signups={signups} onSaved={() => router.refresh()} />
+          ) : null}
+
+          {isAdmin ? (
+            <Card className="mb-6 border-2 border-emerald-800/15 bg-white/80 shadow-sm">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg text-emerald-950 dark:text-emerald-100">Portfele i autoryzacje (administrator)</CardTitle>
+                <CardDescription>Lista zawodników, wpłaty do autoryzacji oraz rozliczenia rozegranych meczów.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="rounded-xl border border-emerald-900/10 bg-emerald-50/30 px-4 py-3">
+                  <p className="text-sm font-semibold text-emerald-950">Wpłata ręczna (admin → do potwierdzenia przez zawodnika)</p>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                    <div className="sm:col-span-1">
+                      <Label htmlFor="admin-wallet-user">Zawodnik (id)</Label>
+                      <Input
+                        id="admin-wallet-user"
+                        type="number"
+                        placeholder="np. 12"
+                        value={adminManualUserId ?? ""}
+                        onChange={(e) => setAdminManualUserId(e.target.value ? Number(e.target.value) : null)}
+                      />
+                    </div>
+                    <div className="sm:col-span-1">
+                      <Label htmlFor="admin-wallet-amount">Kwota (PLN)</Label>
+                      <Input
+                        id="admin-wallet-amount"
+                        type="text"
+                        inputMode="decimal"
+                        placeholder="np. 50"
+                        value={adminManualAmount}
+                        onChange={(e) => setAdminManualAmount(e.target.value)}
+                      />
+                    </div>
+                    <div className="sm:col-span-1">
+                      <Label htmlFor="admin-wallet-note">Opis</Label>
+                      <Input
+                        id="admin-wallet-note"
+                        type="text"
+                        placeholder="opcjonalnie"
+                        value={adminManualNote}
+                        onChange={(e) => setAdminManualNote(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <div className="mt-3">
+                    <Button type="button" disabled={adminManualSubmitting} onClick={() => void adminCreateManualDeposit()}>
+                      {adminManualSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
+                      Otrzymałem pieniądze (wprowadź)
+                    </Button>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-sm font-medium text-emerald-950 dark:text-emerald-100">Wpłaty do autoryzacji</p>
+                    <Button type="button" variant="secondary" disabled={adminLoading} onClick={() => void refreshAdminOverview()}>
+                      {adminLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
+                      Odśwież
+                    </Button>
+                  </div>
+                  {adminOverview?.pendingDeposits?.length ? (
+                    <ul className="space-y-2">
+                      {adminOverview.pendingDeposits.map((d) => {
+                        const adminCanConfirm = d.created_by === "player" && !d.admin_confirmed_received_at;
+                        const playerMustConfirm = d.created_by === "admin" && !d.player_confirmed_amount_at;
+                        return (
+                          <li key={d.id} className="rounded-xl border border-emerald-900/10 bg-white/70 px-4 py-3">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <div className="flex min-w-0 items-center gap-2">
+                                <PlayerAvatar
+                                  photoPath={d.profile_photo_path}
+                                  firstName={d.first_name}
+                                  lastName={d.last_name}
+                                  size="sm"
+                                  ringClassName="ring-2 ring-emerald-200/90"
+                                />
+                                <div className="min-w-0">
+                                  <p className="truncate text-sm font-semibold text-emerald-950">
+                                    {d.first_name} {d.last_name} · {formatPln(d.amount_pln)}
+                                  </p>
+                                  <p className="truncate text-xs text-zinc-600">
+                                    {d.created_by === "player"
+                                      ? "Zawodnik zgłosił wpłatę — czeka na Twoje potwierdzenie"
+                                      : "Admin wprowadził wpłatę — czeka na potwierdzenie zawodnika"}
+                                    {d.note ? ` · ${d.note}` : ""}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex flex-wrap items-center gap-2">
+                                {adminCanConfirm ? (
+                                  <Button type="button" size="sm" onClick={() => void adminConfirmDeposit(d.id)}>
+                                    Potwierdzam: otrzymałem
+                                  </Button>
+                                ) : playerMustConfirm ? (
+                                  <Badge variant="secondary">Czeka na zawodnika</Badge>
+                                ) : (
+                                  <Badge variant="secondary">W toku</Badge>
+                                )}
+                              </div>
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  ) : (
+                    <p className="rounded-xl border border-dashed border-emerald-900/10 bg-emerald-50/20 px-4 py-6 text-center text-sm text-zinc-600">
+                      Brak wpłat do autoryzacji.
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <p className="mb-2 text-sm font-medium text-emerald-950 dark:text-emerald-100">Zarejestrowani zawodnicy — saldo</p>
+                  <ul className="max-h-80 space-y-0 overflow-y-auto rounded-xl border border-emerald-900/10 bg-emerald-50/20">
+                    {(adminOverview?.players ?? []).map((p, i) => (
+                      <li
+                        key={p.id}
+                        className={`flex flex-wrap items-center gap-2 border-b px-3 py-2.5 text-sm last:border-b-0 ${
+                          i % 2 === 0 ? "bg-white/60" : "bg-emerald-50/40"
+                        }`}
+                      >
+                        <PlayerAvatar
+                          photoPath={p.profile_photo_path}
+                          firstName={p.first_name}
+                          lastName={p.last_name}
+                          size="sm"
+                          ringClassName="ring-2 ring-emerald-200/90"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <PlayerNameStack firstName={p.first_name} lastName={p.last_name} nick={p.zawodnik} />
+                        </div>
+                        <span className="shrink-0 font-semibold tabular-nums text-emerald-950">{formatPln(Number(p.balance_pln ?? 0))}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <div className="rounded-xl border border-emerald-900/10 bg-white/70 px-4 py-3">
+                  <p className="text-sm font-semibold text-emerald-950">Rozlicz rozegrany mecz (odejmij z portfeli)</p>
+                  <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-end">
+                    <div className="flex-1">
+                      <Label htmlFor="charge-match-id">ID meczu (played=1)</Label>
+                      <Input
+                        id="charge-match-id"
+                        type="number"
+                        value={chargeMatchId ?? ""}
+                        onChange={(e) => setChargeMatchId(e.target.value ? Number(e.target.value) : null)}
+                      />
+                      <p className="mt-1 text-xs text-zinc-600">
+                        Ostatnie rozegrane mecze:{" "}
+                        {(adminOverview?.playedMatches ?? []).slice(0, 3).map((m) => `${m.id} (${m.match_date})`).join(", ") || "—"}
+                      </p>
+                    </div>
+                    <Button type="button" disabled={chargeSubmitting} onClick={() => void submitMatchCharges()}>
+                      {chargeSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
+                      Zapisz rozliczenie
+                    </Button>
+                  </div>
+
+                  <div className="mt-4">
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-600">Kwota do odjęcia per zawodnik (PLN)</p>
+                    <div className="max-h-72 space-y-2 overflow-y-auto pr-1">
+                      {(adminOverview?.players ?? []).map((p) => (
+                        <div key={p.id} className="flex items-center gap-2 rounded-lg border border-emerald-900/10 bg-white px-3 py-2">
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-medium text-emerald-950">
+                              {p.first_name} {p.last_name}
+                            </p>
+                            <p className="truncate text-xs text-zinc-600">Saldo: {formatPln(Number(p.balance_pln ?? 0))}</p>
+                          </div>
+                          <Input
+                            className="w-28"
+                            type="text"
+                            inputMode="decimal"
+                            placeholder="0"
+                            value={chargeMap[p.id] ?? ""}
+                            onChange={(e) => setChargeMap((prev) => ({ ...prev, [p.id]: e.target.value }))}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                    <p className="mt-2 text-xs text-zinc-600">
+                      Wpisz kwoty tylko dla tych zawodników, których chcesz obciążyć. Każdego zawodnika da się rozliczyć maksymalnie raz dla danego meczu.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           ) : null}
 
           <Card className="mb-6 border-amber-900/15 bg-amber-50/40 shadow-sm">
@@ -288,6 +844,36 @@ export function PlatnosciClient({
               </CardContent>
             </Card>
           ) : null}
+
+          <Card className="mt-6 border-emerald-900/10 shadow-sm">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg text-emerald-950 dark:text-emerald-100">Wszyscy zarejestrowani zawodnicy</CardTitle>
+              <CardDescription>Lista zawodników w akademii.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ul className="max-h-80 space-y-0 overflow-y-auto rounded-xl border border-emerald-900/10 bg-emerald-50/20">
+                {allPlayers.map((p, i) => (
+                  <li
+                    key={p.id}
+                    className={`flex flex-wrap items-center gap-2 border-b px-3 py-2.5 text-sm last:border-b-0 ${
+                      i % 2 === 0 ? "bg-white/60" : "bg-emerald-50/40"
+                    }`}
+                  >
+                    <PlayerAvatar
+                      photoPath={p.profile_photo_path}
+                      firstName={p.first_name}
+                      lastName={p.last_name}
+                      size="sm"
+                      ringClassName="ring-2 ring-emerald-200/90"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <PlayerNameStack firstName={p.first_name} lastName={p.last_name} nick={p.zawodnik} />
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
         </>
       )}
     </div>
