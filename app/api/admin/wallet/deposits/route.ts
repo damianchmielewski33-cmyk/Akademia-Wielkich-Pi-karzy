@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getDb, logActivity } from "@/lib/db";
 import { requireAdmin } from "@/lib/api-helpers";
+import { completeDepositRequest } from "@/lib/wallet";
 
 export const runtime = "nodejs";
 
@@ -12,7 +13,7 @@ const postSchema = z.object({
 });
 
 /**
- * Admin ręcznie wprowadza: "otrzymałem pieniądze" -> zawodnik ma do autoryzacji zgodność kwoty.
+ * Admin ręcznie wprowadza: "otrzymałem pieniądze" -> księgowane natychmiast w portfelu zawodnika.
  */
 export async function POST(req: Request) {
   const gate = await requireAdmin();
@@ -39,17 +40,21 @@ export async function POST(req: Request) {
     .prepare(
       `
       INSERT INTO wallet_deposit_requests
-        (user_id, amount_pln, created_by, status, note, admin_declared_received_at)
-      VALUES (?, ?, 'admin', 'pending', ?, datetime('now'))
+        (user_id, amount_pln, created_by, status, note, admin_declared_received_at, player_confirmed_amount_at)
+      VALUES (?, ?, 'admin', 'pending', ?, datetime('now'), datetime('now'))
     `
     )
     .run(user_id, amount_pln, note ?? null);
 
+  const depId = Number(r.lastInsertRowid);
+  const done = await completeDepositRequest(depId, gate.session.userId);
+  if (!done.ok) return NextResponse.json({ error: done.error }, { status: 409 });
+
   await logActivity(
     gate.session.userId,
-    `Wprowadził ręcznie otrzymaną wpłatę dla user ${user_id}: ${amount_pln} PLN (id ${Number(r.lastInsertRowid)})`
+    `Wprowadził ręcznie otrzymaną wpłatę dla user ${user_id}: ${amount_pln} PLN (id ${depId})`
   );
 
-  return NextResponse.json({ ok: true, id: Number(r.lastInsertRowid) }, { status: 201 });
+  return NextResponse.json({ ok: true, id: depId }, { status: 201 });
 }
 
