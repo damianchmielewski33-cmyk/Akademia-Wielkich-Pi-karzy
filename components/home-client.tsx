@@ -14,6 +14,7 @@ import {
   LayoutGrid,
   LogIn,
   LogOut,
+  Radio,
   Shield,
   Trophy,
   UserPlus,
@@ -49,6 +50,8 @@ type Props = {
   lastName: string;
   zawodnik: string;
   profilePhotoPath: string | null;
+  /** ID filmu / transmisji YouTube (osadzenie). Brak = brak sekcji na stronie. */
+  youtubeLiveVideoId: string | null;
 };
 
 export function HomeClient({
@@ -63,6 +66,7 @@ export function HomeClient({
   lastName,
   zawodnik,
   profilePhotoPath,
+  youtubeLiveVideoId,
 }: Props) {
   const router = useRouter();
   const [transportSignupOpen, setTransportSignupOpen] = useState(false);
@@ -270,6 +274,53 @@ export function HomeClient({
               : "Zaloguj się lub załóż konto — zapisy na mecze, statystyki, rankingi i komunikacja w drużynie"}
           </p>
         </div>
+
+        {youtubeLiveVideoId ? (
+          <section
+            className="mx-auto mt-10 max-w-3xl text-left"
+            aria-labelledby="home-live-heading"
+          >
+            <div className="overflow-hidden rounded-2xl border-2 border-emerald-200/80 bg-emerald-950/[0.03] shadow-lg shadow-emerald-950/10 ring-1 ring-emerald-900/10 dark:border-emerald-800/60 dark:bg-emerald-950/30 dark:ring-emerald-500/10">
+              <div className="border-b border-emerald-200/60 bg-gradient-to-r from-emerald-800/10 to-emerald-600/5 px-4 py-3 dark:border-emerald-800/50 dark:from-emerald-900/40 dark:to-emerald-950/20 sm:px-5">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                  <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-red-600 text-white shadow-sm ring-2 ring-red-500/30">
+                    <Radio className="h-4 w-4" strokeWidth={2.5} aria-hidden />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <h2
+                      id="home-live-heading"
+                      className="text-lg font-bold tracking-tight text-emerald-950 dark:text-emerald-100 sm:text-xl"
+                    >
+                      Mecz na żywo
+                    </h2>
+                    <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                      Transmisja z YouTube — oglądaj prosto z Akademii Wielkich Piłkarzy
+                    </p>
+                  </div>
+                  <Link
+                    href={`https://www.youtube.com/watch?v=${encodeURIComponent(youtubeLiveVideoId)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="shrink-0 text-sm font-semibold text-emerald-800 underline decoration-emerald-800/30 underline-offset-2 hover:text-emerald-950 dark:text-emerald-300 dark:decoration-emerald-400/40 dark:hover:text-emerald-200"
+                  >
+                    Otwórz w YouTube
+                  </Link>
+                </div>
+              </div>
+              <div className="relative aspect-video w-full bg-black">
+                <iframe
+                  title="Transmisja meczu na żywo — YouTube"
+                  className="absolute inset-0 h-full w-full"
+                  src={`https://www.youtube.com/embed/${encodeURIComponent(youtubeLiveVideoId)}?rel=0`}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowFullScreen
+                  loading="lazy"
+                  referrerPolicy="strict-origin-when-cross-origin"
+                />
+              </div>
+            </div>
+          </section>
+        ) : null}
 
         <div className="mt-8">{tiles}</div>
 

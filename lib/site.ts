@@ -73,3 +73,52 @@ export const DEFAULT_FACEBOOK_MATEUSZ_URL = "https://www.facebook.com/share/1BKj
 export function getFacebookMateuszUrl(): string {
   return process.env.NEXT_PUBLIC_FACEBOOK_MATEUSZ?.trim() || DEFAULT_FACEBOOK_MATEUSZ_URL;
 }
+
+const YT_ID_RE = /^[\w-]{11}$/;
+
+/**
+ * Wyciąga 11-znakowe ID filmu YouTube (transmisja na żywo, zapowiedź, zwykły film).
+ * Obsługa: samo ID, pełny link watch/live/embed, skrót youtu.be.
+ * Ustaw `NEXT_PUBLIC_YOUTUBE_LIVE_URL` (np. link do trwającej transmisji) albo
+ * `NEXT_PUBLIC_YOUTUBE_LIVE_VIDEO_ID` (tylko ID).
+ */
+function parseYoutubeVideoIdFromInput(raw: string): string | null {
+  const s = raw.trim();
+  if (!s) return null;
+  if (YT_ID_RE.test(s)) return s;
+  try {
+    const href = s.startsWith("http") ? s : `https://${s}`;
+    const u = new URL(href);
+    const host = u.hostname.toLowerCase();
+    if (host === "youtu.be" || host.endsWith(".youtu.be")) {
+      const id = u.pathname.split("/").filter(Boolean)[0];
+      return id && YT_ID_RE.test(id) ? id : null;
+    }
+    if (host.includes("youtube.com")) {
+      const v = u.searchParams.get("v");
+      if (v && YT_ID_RE.test(v)) return v;
+      const segs = u.pathname.split("/").filter(Boolean);
+      for (let i = 0; i < segs.length; i++) {
+        if ((segs[i] === "live" || segs[i] === "embed" || segs[i] === "shorts" || segs[i] === "v") && segs[i + 1]) {
+          const id = segs[i + 1];
+          if (YT_ID_RE.test(id)) return id;
+        }
+      }
+    }
+  } catch {
+    /* ignore */
+  }
+  return null;
+}
+
+/** ID osadzanej transmisji (publiczne — tylko do embedu). Brak = sekcja ukryta. */
+export function getPublicYoutubeLiveVideoId(): string | null {
+  const fromUrl = process.env.NEXT_PUBLIC_YOUTUBE_LIVE_URL?.trim();
+  if (fromUrl) {
+    const id = parseYoutubeVideoIdFromInput(fromUrl);
+    if (id) return id;
+  }
+  const fromId = process.env.NEXT_PUBLIC_YOUTUBE_LIVE_VIDEO_ID?.trim();
+  if (fromId) return parseYoutubeVideoIdFromInput(fromId);
+  return null;
+}

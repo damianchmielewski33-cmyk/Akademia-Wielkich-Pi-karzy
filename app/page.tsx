@@ -5,7 +5,7 @@ import { getDb, type MatchRow } from "@/lib/db";
 import { HomeClient } from "@/components/home-client";
 import { isLocalMatchDay } from "@/lib/transport";
 import { formatPonderingPlayersPolish } from "@/lib/terminarz-shared";
-import { getSiteUrl } from "@/lib/site";
+import { getPublicYoutubeLiveVideoId, getSiteUrl } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Start",
@@ -61,6 +61,8 @@ export default async function HomePage() {
     zawodnik = nav?.zawodnik ?? session.zawodnik;
   }
 
+  const youtubeLiveVideoId = getPublicYoutubeLiveVideoId();
+
   return (
     <HomeClient
       nextMatch={nextMatch ?? null}
@@ -74,6 +76,7 @@ export default async function HomePage() {
       lastName={session?.lastName ?? ""}
       zawodnik={zawodnik}
       profilePhotoPath={profilePhotoPath}
+      youtubeLiveVideoId={youtubeLiveVideoId}
     />
   );
 }
