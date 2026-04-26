@@ -46,11 +46,32 @@ export async function completeDepositRequest(depositId: number, completedByUserI
   const db = await getDb();
   const dep = (await db
     .prepare(
-      `SELECT id, user_id, amount_pln, status FROM wallet_deposit_requests WHERE id = ?`
+      `SELECT id, user_id, amount_pln, status, created_by,
+              player_declared_at, admin_confirmed_received_at,
+              admin_declared_received_at, player_confirmed_amount_at
+       FROM wallet_deposit_requests
+       WHERE id = ?`
     )
-    .get(depositId)) as { id: number; user_id: number; amount_pln: number; status: string } | undefined;
+    .get(depositId)) as
+    | {
+        id: number;
+        user_id: number;
+        amount_pln: number;
+        status: string;
+        created_by: "player" | "admin";
+        player_declared_at: string | null;
+        admin_confirmed_received_at: string | null;
+        admin_declared_received_at: string | null;
+        player_confirmed_amount_at: string | null;
+      }
+    | undefined;
   if (!dep) return { ok: false as const, error: "NOT_FOUND" as const };
   if (dep.status !== "pending") return { ok: false as const, error: "NOT_PENDING" as const };
+  // Safety: never complete without the proper party confirmation.
+  const confirmOk =
+    (dep.created_by === "player" && Boolean(dep.player_declared_at) && Boolean(dep.admin_confirmed_received_at)) ||
+    (dep.created_by === "admin" && Boolean(dep.admin_declared_received_at) && Boolean(dep.player_confirmed_amount_at));
+  if (!confirmOk) return { ok: false as const, error: "NOT_CONFIRMED" as const };
 
   await db.prepare(
     `UPDATE wallet_deposit_requests

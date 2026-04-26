@@ -405,6 +405,56 @@ export function PlatnosciClient({
         </p>
       </div>
 
+      {isAdmin ? (
+        <Card className="mb-6 border-emerald-900/10 shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg text-emerald-950 dark:text-emerald-100">Portfele graczy — saldo</CardTitle>
+            <CardDescription>Najważniejszy podgląd dla administratora.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <p className="text-xs text-zinc-600">
+                {adminOverview?.players?.length ? `Graczy: ${adminOverview.players.length}` : "—"}
+              </p>
+              <Button type="button" variant="secondary" disabled={adminLoading} onClick={() => void refreshAdminOverview()}>
+                {adminLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
+                Odśwież
+              </Button>
+            </div>
+            {adminOverview?.players?.length ? (
+              <ul className="max-h-96 space-y-0 overflow-y-auto rounded-xl border border-emerald-900/10 bg-emerald-50/20">
+                {adminOverview.players.map((p, i) => (
+                  <li
+                    key={p.id}
+                    className={`flex flex-wrap items-center gap-2 border-b px-3 py-2.5 text-sm last:border-b-0 ${
+                      i % 2 === 0 ? "bg-white/60" : "bg-emerald-50/40"
+                    }`}
+                  >
+                    <PlayerAvatar
+                      photoPath={p.profile_photo_path}
+                      firstName={p.first_name}
+                      lastName={p.last_name}
+                      size="sm"
+                      ringClassName="ring-2 ring-emerald-200/90"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <PlayerNameStack firstName={p.first_name} lastName={p.last_name} nick={p.zawodnik} />
+                    </div>
+                    <span className="shrink-0 font-semibold tabular-nums text-emerald-950">
+                      {formatPln(Number(p.balance_pln ?? 0))}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="rounded-xl border border-dashed border-emerald-900/10 bg-emerald-50/20 px-4 py-6 text-center text-sm text-zinc-600">
+                Brak danych do wyświetlenia.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      ) : null}
+
       {isLoggedIn ? (
         <Card className="mb-6 border-emerald-900/10 shadow-sm">
           <CardHeader className="pb-2">
