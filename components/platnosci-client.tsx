@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { AdminWalletsSaldoSection } from "@/components/admin-wallets-saldo-section";
 import { MATCH_BLIK_PHONE_COPY, MATCH_BLIK_PHONE_DISPLAY } from "@/lib/site";
 import { cn, isValidMatchFee, matchFeeToInputString, parseMatchFeeInput } from "@/lib/utils";
 import type { MatchRow } from "@/lib/db";
@@ -397,9 +398,12 @@ export function PlatnosciClient({
           {isAdmin ? (
             <>
               {" "}
-              Jako administrator możesz autoryzować wpłaty i rozliczać rozegrane mecze. Pełną listę sald wszystkich graczy
-              i ręczne korekty salda znajdziesz w{" "}
-              <Link className="font-semibold text-emerald-800 underline-offset-2 hover:underline dark:text-emerald-200" href="/panel-admina">
+              Jako administrator możesz autoryzować wpłaty i rozliczać rozegrane mecze; poniżej masz też pełną listę
+              sald i korekty — to samo w{" "}
+              <Link
+                className="font-semibold text-emerald-800 underline-offset-2 hover:underline dark:text-emerald-200"
+                href="/panel-admina"
+              >
                 panelu administratora
               </Link>{" "}
               (zakładka <span className="font-semibold">Portfele</span>).
@@ -408,6 +412,12 @@ export function PlatnosciClient({
         </p>
       </div>
 
+      {isAdmin ? (
+        <div className="mb-6">
+          <AdminWalletsSaldoSection embedded />
+        </div>
+      ) : null}
+
       {isLoggedIn ? (
         <Card className="mb-6 border-emerald-900/10 shadow-sm">
           <CardHeader className="pb-2">
@@ -415,10 +425,32 @@ export function PlatnosciClient({
             <CardDescription>Saldo, autoryzacje i historia operacji.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-5">
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-900/10 bg-emerald-50/40 px-4 py-3">
+            <div
+              className={cn(
+                "flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3",
+                walletBalancePln == null
+                  ? "border-emerald-900/10 bg-emerald-50/40"
+                  : walletBalancePln < 0
+                    ? "border-red-200 bg-red-50/70 dark:border-red-800/60 dark:bg-red-950/35"
+                    : walletBalancePln > 0
+                      ? "border-emerald-400 bg-emerald-100/50 dark:border-emerald-600/50 dark:bg-emerald-950/40"
+                      : "border-emerald-900/10 bg-emerald-50/40"
+              )}
+            >
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wider text-emerald-900/70">Saldo</p>
-                <p className="mt-1 text-2xl font-bold tabular-nums text-emerald-950">
+                <p
+                  className={cn(
+                    "mt-1 text-2xl font-bold tabular-nums",
+                    walletBalancePln == null
+                      ? "text-emerald-950"
+                      : walletBalancePln < 0
+                        ? "text-red-700 dark:text-red-200"
+                        : walletBalancePln > 0
+                          ? "text-emerald-800 dark:text-emerald-200"
+                          : "text-emerald-950"
+                  )}
+                >
                   {walletBalancePln === null ? "—" : formatPln(walletBalancePln)}
                 </p>
               </div>
@@ -510,7 +542,15 @@ export function PlatnosciClient({
                         {t.note ? <p className="truncate text-xs text-zinc-600">{t.note}</p> : null}
                       </div>
                       <div className="shrink-0 text-right tabular-nums">
-                        <span className={t.amount_pln >= 0 ? "text-emerald-900" : "text-amber-950"}>
+                        <span
+                          className={
+                            t.amount_pln > 0
+                              ? "text-emerald-800 dark:text-emerald-200"
+                              : t.amount_pln < 0
+                                ? "text-red-700 dark:text-red-300"
+                                : "text-zinc-700 dark:text-zinc-300"
+                          }
+                        >
                           {formatPln(t.amount_pln)}
                         </span>
                       </div>
@@ -955,6 +995,7 @@ export function PlatnosciClient({
                           {(adminOverview?.players ?? []).map((p) => {
                             const bal = Number(p.balance_pln ?? 0);
                             const neg = bal < 0;
+                            const pos = bal > 0;
                             return (
                             <div
                               key={p.id}
@@ -962,14 +1003,20 @@ export function PlatnosciClient({
                                 "flex items-center gap-2 rounded-lg border px-3 py-2",
                                 neg
                                   ? "border-red-300 bg-red-50/90 dark:border-red-800 dark:bg-red-950/40"
-                                  : "border-emerald-900/10 bg-white"
+                                  : pos
+                                    ? "border-emerald-400 bg-emerald-50/90 dark:border-emerald-600 dark:bg-emerald-950/40"
+                                    : "border-emerald-900/10 bg-white"
                               )}
                             >
                               <div className="min-w-0 flex-1">
                                 <p
                                   className={cn(
                                     "truncate text-sm font-medium",
-                                    neg ? "text-red-900 dark:text-red-200" : "text-emerald-950"
+                                    neg
+                                      ? "text-red-900 dark:text-red-200"
+                                      : pos
+                                        ? "text-emerald-900 dark:text-emerald-200"
+                                        : "text-emerald-950"
                                   )}
                                 >
                                   {p.first_name} {p.last_name}
@@ -977,13 +1024,21 @@ export function PlatnosciClient({
                                 <p
                                   className={cn(
                                     "truncate text-xs",
-                                    neg ? "font-medium text-red-700 dark:text-red-300" : "text-zinc-600"
+                                    neg
+                                      ? "font-medium text-red-700 dark:text-red-300"
+                                      : pos
+                                        ? "font-medium text-emerald-800 dark:text-emerald-200"
+                                        : "text-zinc-600"
                                   )}
                                 >
                                   Saldo: {formatPln(bal)}
                                   {neg ? (
                                     <span className="ml-2 inline-block text-[10px] font-bold uppercase text-red-800 dark:text-red-200">
                                       Niedopłata
+                                    </span>
+                                  ) : pos ? (
+                                    <span className="ml-2 inline-block text-[10px] font-bold uppercase text-emerald-800 dark:text-emerald-200">
+                                      Nadwyżka
                                     </span>
                                   ) : null}
                                 </p>

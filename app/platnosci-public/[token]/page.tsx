@@ -170,6 +170,7 @@ export default async function PlatnosciPublicPage(ctx: Ctx) {
               {rows.map((p, i) => {
                 const bal = Number(p.balance_pln ?? 0);
                 const isNegative = bal < 0;
+                const isPositive = bal > 0;
                 return (
                 <li
                   key={p.id}
@@ -177,9 +178,11 @@ export default async function PlatnosciPublicPage(ctx: Ctx) {
                     "flex flex-wrap items-center gap-2 border-b px-3 py-2.5 text-sm last:border-b-0",
                     isNegative
                       ? "border-l-4 border-l-red-600 bg-red-50/95 dark:border-l-red-500 dark:bg-red-950/40"
-                      : i % 2 === 0
-                        ? "bg-white/60 dark:bg-zinc-900/50"
-                        : "bg-emerald-50/40 dark:bg-zinc-900/30"
+                      : isPositive
+                        ? "border-l-4 border-l-emerald-600 bg-emerald-50/95 dark:border-l-emerald-500 dark:bg-emerald-950/45"
+                        : i % 2 === 0
+                          ? "bg-white/60 dark:bg-zinc-900/50"
+                          : "bg-emerald-50/40 dark:bg-zinc-900/30"
                   )}
                 >
                   <PlayerAvatar
@@ -187,7 +190,13 @@ export default async function PlatnosciPublicPage(ctx: Ctx) {
                     firstName={p.first_name}
                     lastName={p.last_name}
                     size="sm"
-                    ringClassName={isNegative ? "ring-2 ring-red-300 dark:ring-red-600/60" : "ring-2 ring-emerald-200/90"}
+                    ringClassName={
+                      isNegative
+                        ? "ring-2 ring-red-300 dark:ring-red-600/60"
+                        : isPositive
+                          ? "ring-2 ring-emerald-500 dark:ring-emerald-500/80"
+                          : "ring-2 ring-emerald-200/90"
+                    }
                   />
                   <div className="min-w-0 flex-1">
                     <PlayerNameStack firstName={p.first_name} lastName={p.last_name} nick={p.zawodnik} />
@@ -199,11 +208,22 @@ export default async function PlatnosciPublicPage(ctx: Ctx) {
                     >
                       Niedopłata
                     </span>
+                  ) : isPositive ? (
+                    <span
+                      className="shrink-0 rounded border border-emerald-300 bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-900 dark:border-emerald-700 dark:bg-emerald-900/55 dark:text-emerald-100"
+                      title="Saldo dodatnie"
+                    >
+                      Nadwyżka
+                    </span>
                   ) : null}
                   <span
                     className={cn(
                       "shrink-0 font-semibold tabular-nums",
-                      isNegative ? "text-red-700 dark:text-red-200" : "text-emerald-950 dark:text-emerald-100"
+                      isNegative
+                        ? "text-red-700 dark:text-red-200"
+                        : isPositive
+                          ? "text-emerald-800 dark:text-emerald-200"
+                          : "text-emerald-950 dark:text-emerald-100"
                     )}
                   >
                     {formatPln(bal)}
