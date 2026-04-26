@@ -100,5 +100,13 @@ export async function setSessionCookie(token: string, opts?: { rememberMe?: bool
 
 export async function clearSessionCookie() {
   const jar = await cookies();
-  jar.delete(SESSION_COOKIE);
+  // cookies().delete(name) bywa niewystarczające, jeśli cookie ma ustawione atrybuty (path/sameSite/secure).
+  // Wygaszamy je jawnie z tym samym zestawem atrybutów co przy ustawianiu.
+  jar.set(SESSION_COOKIE, "", {
+    httpOnly: true,
+    sameSite: "lax",
+    path: "/",
+    maxAge: 0,
+    secure: process.env.NODE_ENV === "production",
+  });
 }

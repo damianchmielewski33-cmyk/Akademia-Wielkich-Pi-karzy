@@ -155,6 +155,10 @@ export function PlatnosciClient({
 
   const [adminOverview, setAdminOverview] = useState<AdminWalletOverview | null>(null);
   const [adminLoading, setAdminLoading] = useState(false);
+  const [adminBalanceUserId, setAdminBalanceUserId] = useState<number | null>(null);
+  const [adminBalanceTarget, setAdminBalanceTarget] = useState("");
+  const [adminBalanceNote, setAdminBalanceNote] = useState("");
+  const [adminBalanceSubmitting, setAdminBalanceSubmitting] = useState(false);
   const [adminManualUserId, setAdminManualUserId] = useState<number | null>(null);
   const [adminManualAmount, setAdminManualAmount] = useState("");
   const [adminManualNote, setAdminManualNote] = useState("");
@@ -218,6 +222,9 @@ export function PlatnosciClient({
       setAdminOverview(r.data);
       if (chargeMatchId === null && r.data.playedMatches?.length) {
         setChargeMatchId(r.data.playedMatches[0]!.id);
+      }
+      if (adminBalanceUserId === null && r.data.players?.length) {
+        setAdminBalanceUserId(r.data.players[0]!.id);
       }
       if (adminManualUserId === null && r.data.players?.length) {
         setAdminManualUserId(r.data.players[0]!.id);
@@ -334,6 +341,54 @@ export function PlatnosciClient({
     }
   }
 
+  async function adminSetWalletBalance() {
+    const user_id = adminBalanceUserId;
+    const balance_pln = Number(String(adminBalanceTarget).replace(",", "."));
+    if (!user_id) {
+      toast.error("Wybierz zawodnika");
+      return;
+    }
+    if (!Number.isFinite(balance_pln)) {
+      toast.error("Podaj prawidłowe saldo");
+      return;
+    }
+    setAdminBalanceSubmitting(true);
+    try {
+      const r = await fetchJson<{
+        ok: true;
+        txId?: number;
+        delta_pln?: number;
+        current_balance_pln?: number;
+        target_balance_pln?: number;
+        noChange?: boolean;
+      }>("/api/admin/wallet/balance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          user_id,
+          balance_pln,
+          note: adminBalanceNote.trim() ? adminBalanceNote.trim() : undefined,
+        }),
+      });
+      if (!r.ok) {
+        toast.error(r.error);
+        return;
+      }
+      if (r.data.noChange) {
+        toast.message("Saldo bez zmian");
+      } else {
+        toast.success("Ustawiono saldo (korekta zapisana w historii)");
+      }
+      setAdminBalanceTarget("");
+      setAdminBalanceNote("");
+      await refreshAdminOverview();
+      await refreshWallet();
+      router.refresh();
+    } finally {
+      setAdminBalanceSubmitting(false);
+    }
+  }
+
   async function submitMatchCharges() {
     if (!chargeMatchId) return;
     const payload = Object.entries(chargeMap)
@@ -412,6 +467,70 @@ export function PlatnosciClient({
             <CardDescription>Najważniejszy podgląd dla administratora.</CardDescription>
           </CardHeader>
           <CardContent>
+            <div className="mb-4 rounded-2xl border border-emerald-900/10 bg-white/70 p-4">
+              <p className="text-sm font-semibold text-emerald-950">Ustaw saldo zawodnika</p>
+              <p className="mt-0.5 text-xs text-zinc-600">
+                Wpisujesz docelowe saldo. System zapisze różnicę jako „Korekta” w historii portfela.
+              </p>
+              <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                <div className="sm:col-span-1">
+                  <Label htmlFor="admin-balance-user">Zawodnik</Label>
+                  <select
+                    id="admin-balance-user"
+                    className="awp-focus-ring mt-1 w-full rounded-xl border border-emerald-950/15 bg-white/90 px-3 py-2 text-sm font-medium text-emerald-950 shadow-sm shadow-emerald-950/5 dark:border-emerald-100/10 dark:bg-zinc-900/70 dark:text-emerald-100"
+                    value={adminBalanceUserId ?? ""}
+                    onChange={(e) => setAdminBalanceUserId(e.target.value ? Number(e.target.value) : null)}
+                  >
+                    <option value="" disabled>
+                      Wybierz zawodnika…
+                    </option>
+                    {(adminOverview?.players ?? []).map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.first_name} {p.last_name}
+                      </option>
+                    ))}
+                  </select>
+                  {adminBalanceUserId && adminOverview?.players?.length ? (
+                    <p className="mt-1 text-xs text-zinc-600">
+                      Obecne saldo:{" "}
+                      {formatPln(
+                        Number(
+                          (adminOverview.players.find((p) => p.id === adminBalanceUserId)?.balance_pln ?? 0) as number
+                        )
+                      )}
+                    </p>
+                  ) : null}
+                </div>
+                <div className="sm:col-span-1">
+                  <Label htmlFor="admin-balance-target">Saldo (PLN)</Label>
+                  <Input
+                    id="admin-balance-target"
+                    type="text"
+                    inputMode="decimal"
+                    placeholder="np. 120"
+                    value={adminBalanceTarget}
+                    onChange={(e) => setAdminBalanceTarget(e.target.value)}
+                  />
+                </div>
+                <div className="sm:col-span-1">
+                  <Label htmlFor="admin-balance-note">Opis (opcjonalnie)</Label>
+                  <Input
+                    id="admin-balance-note"
+                    type="text"
+                    placeholder="np. korekta po gotówce"
+                    value={adminBalanceNote}
+                    onChange={(e) => setAdminBalanceNote(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="mt-3">
+                <Button type="button" disabled={adminBalanceSubmitting} onClick={() => void adminSetWalletBalance()}>
+                  {adminBalanceSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
+                  Ustaw saldo
+                </Button>
+              </div>
+            </div>
+
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <p className="text-xs text-zinc-600">
                 {adminOverview?.players?.length ? `Graczy: ${adminOverview.players.length}` : "—"}
