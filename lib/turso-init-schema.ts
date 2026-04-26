@@ -2,7 +2,7 @@ import type { Client } from "@libsql/client";
 
 async function pragmaColumnNames(
   client: Client,
-  table: "users" | "matches" | "match_stats" | "match_signups"
+  table: "users" | "matches" | "match_stats" | "match_signups" | "app_settings"
 ): Promise<string[]> {
   const rs = await client.execute(`PRAGMA table_info(${table})`);
   const nameIdx = rs.columns.indexOf("name");
@@ -89,7 +89,8 @@ export async function initLibsqlSchema(client: Client) {
 
     CREATE TABLE IF NOT EXISTS app_settings (
       id INTEGER PRIMARY KEY CHECK (id = 1),
-      match_notification_prompt_enabled INTEGER NOT NULL DEFAULT 0
+      match_notification_prompt_enabled INTEGER NOT NULL DEFAULT 0,
+      home_youtube_url TEXT
     );
 
     CREATE TABLE IF NOT EXISTS wallet_deposit_requests (
@@ -214,6 +215,11 @@ export async function initLibsqlSchema(client: Client) {
   }
   if (!names.includes("commitment")) {
     await client.execute("ALTER TABLE match_signups ADD COLUMN commitment INTEGER NOT NULL DEFAULT 1");
+  }
+
+  names = await pragmaColumnNames(client, "app_settings");
+  if (!names.includes("home_youtube_url")) {
+    await client.execute("ALTER TABLE app_settings ADD COLUMN home_youtube_url TEXT");
   }
 
   await client.executeMultiple(`

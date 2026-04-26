@@ -76,18 +76,40 @@ export function getFacebookMateuszUrl(): string {
 
 const YT_ID_RE = /^[\w-]{11}$/;
 
+function trimEnvRaw(raw: string | undefined): string {
+  if (!raw) return "";
+  return raw
+    .replace(/^\uFEFF/, "")
+    .trim()
+    .replace(/^["']|["']$/g, "");
+}
+
 /**
  * Wyciąga 11-znakowe ID filmu YouTube (transmisja na żywo, zapowiedź, zwykły film).
- * Obsługa: samo ID, pełny link watch/live/embed, skrót youtu.be.
- * Ustaw `NEXT_PUBLIC_YOUTUBE_LIVE_URL` (np. link do trwającej transmisji) albo
- * `NEXT_PUBLIC_YOUTUBE_LIVE_VIDEO_ID` (tylko ID).
+ * Używane też w panelu admina przy zapisie linku.
  */
-function parseYoutubeVideoIdFromInput(raw: string): string | null {
-  const s = raw.trim();
-  if (!s) return null;
-  if (YT_ID_RE.test(s)) return s;
+export function parseYoutubeVideoIdFromUserInput(raw: string): string | null {
+  return parseYoutubeVideoIdFromInputInner(raw);
+}
+
+function parseYoutubeVideoIdFromInputInner(raw: string): string | null {
+  const s0 = trimEnvRaw(raw);
+  if (!s0) return null;
+  if (YT_ID_RE.test(s0)) return s0;
+
+  const mV = s0.match(/[?&#]v=([\w-]{11})(?:$|[&#"'/?\s]|%)/);
+  if (mV?.[1] && YT_ID_RE.test(mV[1])) return mV[1];
+  const mBe = s0.match(/(?:https?:\/\/)?(?:www\.)?youtu\.be\/([\w-]{11})(?:$|[?&#"'/\s]|%)/i);
+  if (mBe?.[1] && YT_ID_RE.test(mBe[1])) return mBe[1];
+  const mLive = s0.match(/\/live\/([\w-]{11})(?:$|[?&#"'/\s]|%)/i);
+  if (mLive?.[1] && YT_ID_RE.test(mLive[1])) return mLive[1];
+  const mEmb = s0.match(/\/embed\/([\w-]{11})(?:$|[?&#"'/\s]|%)/i);
+  if (mEmb?.[1] && YT_ID_RE.test(mEmb[1])) return mEmb[1];
+  const mShorts = s0.match(/\/shorts\/([\w-]{11})(?:$|[?&#"'/\s]|%)/i);
+  if (mShorts?.[1] && YT_ID_RE.test(mShorts[1])) return mShorts[1];
+
   try {
-    const href = s.startsWith("http") ? s : `https://${s}`;
+    const href = s0.startsWith("http") ? s0 : `https://${s0}`;
     const u = new URL(href);
     const host = u.hostname.toLowerCase();
     if (host === "youtu.be" || host.endsWith(".youtu.be")) {
@@ -111,14 +133,41 @@ function parseYoutubeVideoIdFromInput(raw: string): string | null {
   return null;
 }
 
-/** ID osadzanej transmisji (publiczne — tylko do embedu). Brak = sekcja ukryta. */
+/**
+ * ID osadzanej transmisji (dane publiczne — i tak widać je w `src` iframe).
+ * Brak = sekcja na starcie ukryta.
+ *
+ * Odczyt (pierwsza skuteczna):
+ * - `NEXT_PUBLIC_YOUTUBE_LIVE_URL` — pełny link do transmisji / filmu
+ * - `NEXT_PUBLIC_YOUTUBE_LIVE_VIDEO_ID` — same 11 znaków
+ * - `YOUTUBE_LIVE_URL` / `YOUTUBE_LIVE_VIDEO_ID` — to samo, ale **bez** `NEXT_PUBLIC_` (dostępne na serwerze; strona główna czyta je przy renderze)
+ */
 export function getPublicYoutubeLiveVideoId(): string | null {
-  const fromUrl = process.env.NEXT_PUBLIC_YOUTUBE_LIVE_URL?.trim();
-  if (fromUrl) {
-    const id = parseYoutubeVideoIdFromInput(fromUrl);
+  const keys = [
+    "NEXT_PUBLIC_YOUTUBE_LIVE_URL",
+    "YOUTUBE_LIVE_URL",
+    "NEXT_PUBLIC_YOUTUBE_LIVE_VIDEO_ID",
+    "YOUTUBE_LIVE_VIDEO_ID",
+  ] as const;
+  for (const k of keys) {
+    const s = trimEnvRaw(process.env[k]);
+    if (!s) continue;
+    const id = parseYoutubeVideoIdFromInputInner(s);
     if (id) return id;
   }
-  const fromId = process.env.NEXT_PUBLIC_YOUTUBE_LIVE_VIDEO_ID?.trim();
-  if (fromId) return parseYoutubeVideoIdFromInput(fromId);
   return null;
+}
+
+/**
+ * Wartość z bazy (panel admina) ma pierwszeństwo; gdy pusta / nie da się sparsować — zmienne środowiskowe.
+ */
+export function resolveHomeYoutubeVideoId(
+  homeYoutubeUrlFromDb: string | null | undefined
+): string | null {
+  const fromDb = trimEnvRaw(homeYoutubeUrlFromDb ?? undefined);
+  if (fromDb) {
+    const id = parseYoutubeVideoIdFromInputInner(fromDb);
+    if (id) return id;
+  }
+  return getPublicYoutubeLiveVideoId();
 }

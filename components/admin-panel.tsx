@@ -15,6 +15,7 @@ import {
   LayoutGrid,
   Loader2,
   LogOut,
+  MonitorPlay,
   RefreshCw,
   Search,
   Shield,
@@ -183,6 +184,8 @@ type Summary = {
 
 type AppSettings = {
   match_notification_prompt_enabled: boolean;
+  /** Link lub ID YouTube — transmisja na stronie głównej. NULL = w razie braku w bazie może obowiązywać env. */
+  home_youtube_url: string | null;
 };
 
 const tabs = [
@@ -263,11 +266,18 @@ export function AdminPanel() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(next),
         });
-        const j = (await res.json().catch(() => ({}))) as { error?: string };
+        const j = (await res.json().catch(() => ({}))) as AppSettings & { error?: string };
         if (!res.ok) {
           throw new Error(j.error ?? "Nie udało się zapisać ustawienia");
         }
-        setAppSettings((prev) => (prev ? { ...prev, ...next } : (next as AppSettings)));
+        if (typeof j.match_notification_prompt_enabled === "boolean" && "home_youtube_url" in j) {
+          setAppSettings({
+            match_notification_prompt_enabled: j.match_notification_prompt_enabled,
+            home_youtube_url: j.home_youtube_url ?? null,
+          });
+        } else {
+          setAppSettings((prev) => (prev ? { ...prev, ...next } : (next as AppSettings)));
+        }
         toast.success("Zapisano ustawienia");
       } catch (e) {
         toast.error(e instanceof Error ? e.message : "Nie udało się zapisać ustawienia");
@@ -484,6 +494,7 @@ export function AdminPanel() {
                 onToggleMatchNotificationPrompt={(enabled) =>
                   void saveAppSetting({ match_notification_prompt_enabled: enabled })
                 }
+                onSaveHomeYoutubeUrl={(url) => void saveAppSetting({ home_youtube_url: url })}
                 activity={activity}
                 loading={loading}
                 onReload={loadDashboard}
@@ -1125,6 +1136,7 @@ function DashboardView({
   appSettings,
   savingAppSettings,
   onToggleMatchNotificationPrompt,
+  onSaveHomeYoutubeUrl,
   activity,
   loading,
   onReload,
@@ -1134,6 +1146,7 @@ function DashboardView({
   appSettings: AppSettings | null;
   savingAppSettings: boolean;
   onToggleMatchNotificationPrompt: (enabled: boolean) => void;
+  onSaveHomeYoutubeUrl: (url: string) => void;
   activity: {
     text: string;
     time: string;
@@ -1145,6 +1158,14 @@ function DashboardView({
   onReload: () => void;
   onGoToTab: (t: TabId) => void;
 }) {
+  const [youtubeDraft, setYoutubeDraft] = useState("");
+
+  useEffect(() => {
+    if (appSettings) {
+      setYoutubeDraft(appSettings.home_youtube_url ?? "");
+    }
+  }, [appSettings]);
+
   const metrics = [
     {
       key: "players",
@@ -1270,6 +1291,56 @@ function DashboardView({
               </span>
             </span>
           </label>
+
+          <div className="mt-6 rounded-xl border border-zinc-200 bg-zinc-50/60 px-4 py-3">
+            <div className="mb-2 flex items-start gap-2">
+              <MonitorPlay
+                className="mt-0.5 h-4 w-4 shrink-0 text-red-600"
+                strokeWidth={2.25}
+                aria-hidden
+              />
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-zinc-900">Transmisja na stronie głównej (YouTube)</p>
+                <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+                  Wklej pełny link do filmu lub transmisji na żywo (albo same 11 znaków ID). Wyczyść pole i zapisz, aby
+                  usunąć — wtedy, jeśli masz ustawione zmienne środowiskowe, zadziałają one jako zapas.
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <Input
+                type="url"
+                placeholder="https://www.youtube.com/watch?v=…"
+                value={youtubeDraft}
+                onChange={(e) => setYoutubeDraft(e.target.value)}
+                disabled={loading || appSettings == null}
+                className="font-mono text-sm"
+                autoComplete="off"
+                spellCheck={false}
+                aria-label="Adres YouTube na stronę główną"
+              />
+              <div className="flex shrink-0 gap-2">
+                <Button
+                  type="button"
+                  disabled={loading || savingAppSettings || appSettings == null}
+                  onClick={() => onSaveHomeYoutubeUrl(youtubeDraft.trim())}
+                >
+                  Zapisz transmisję
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={loading || savingAppSettings || appSettings == null || !youtubeDraft.trim()}
+                  onClick={() => {
+                    setYoutubeDraft("");
+                    onSaveHomeYoutubeUrl("");
+                  }}
+                >
+                  Wyczyść
+                </Button>
+              </div>
+            </div>
+          </div>
         </CardContent>
       </Card>
 

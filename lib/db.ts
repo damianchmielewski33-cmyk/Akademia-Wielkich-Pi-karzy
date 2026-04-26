@@ -185,7 +185,8 @@ function initSchemaSync(db: Database.Database) {
 
     CREATE TABLE IF NOT EXISTS app_settings (
       id INTEGER PRIMARY KEY CHECK (id = 1),
-      match_notification_prompt_enabled INTEGER NOT NULL DEFAULT 0
+      match_notification_prompt_enabled INTEGER NOT NULL DEFAULT 0,
+      home_youtube_url TEXT
     );
 
     CREATE TABLE IF NOT EXISTS wallet_deposit_requests (
@@ -363,6 +364,11 @@ function initSchemaSync(db: Database.Database) {
       FOREIGN KEY (user_id) REFERENCES users(id)
     );
   `);
+
+  const appSettingsCols = db.prepare("PRAGMA table_info(app_settings)").all() as { name: string }[];
+  if (!appSettingsCols.some((c) => c.name === "home_youtube_url")) {
+    db.exec("ALTER TABLE app_settings ADD COLUMN home_youtube_url TEXT");
+  }
 
   // Upewnij się, że istnieje pojedynczy wiersz z ustawieniami (id=1).
   const hasSettings = db.prepare("SELECT 1 AS ok FROM app_settings WHERE id = 1").get() as
