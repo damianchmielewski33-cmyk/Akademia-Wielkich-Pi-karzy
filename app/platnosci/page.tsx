@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { getDb, type MatchRow } from "@/lib/db";
 import { getServerSession } from "@/lib/auth";
-import { PlatnosciClient, type PlatnosciSignup, type PlatnosciUserLite } from "@/components/platnosci-client";
+import { PlatnosciClient, type PlatnosciSignup } from "@/components/platnosci-client";
 import { formatPonderingPlayersPolish } from "@/lib/terminarz-shared";
 
 export const metadata: Metadata = {
@@ -23,13 +23,6 @@ const SQL_SIGNUPS_WITH_USERS_FOR_MATCH = `
   JOIN users u ON u.id = ms.user_id
   WHERE ms.match_id = ? AND COALESCE(ms.commitment, 1) = 1
   ORDER BY u.first_name, u.last_name
-`;
-
-const SQL_ALL_PLAYERS = `
-  SELECT id, first_name, last_name, player_alias AS zawodnik, profile_photo_path
-  FROM users
-  WHERE COALESCE(is_admin, 0) = 0
-  ORDER BY first_name, last_name
 `;
 
 export default async function PlatnosciPage() {
@@ -60,14 +53,11 @@ export default async function PlatnosciPage() {
     }
   }
 
-  const allPlayers = (await db.prepare(SQL_ALL_PLAYERS).all()) as PlatnosciUserLite[];
-
   return (
     <PlatnosciClient
       nextMatch={nextMatch ?? null}
       nextMatchTentativeLine={nextMatchTentativeLine}
       signups={session ? signups : []}
-      allPlayers={allPlayers}
       isLoggedIn={Boolean(session)}
       isAdmin={session?.isAdmin ?? false}
       userSigned={userSigned}

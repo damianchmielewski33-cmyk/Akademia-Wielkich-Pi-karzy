@@ -51,6 +51,7 @@ import {
   AdminAnalyticsHourlyCharts,
   type AnalyticsHourlyPayload,
 } from "@/components/admin-analytics-hourly-charts";
+import { AdminWalletsSaldoSection } from "@/components/admin-wallets-saldo-section";
 import { MatchLineupAdmin } from "@/components/match-lineup-admin";
 import {
   cn,
@@ -188,6 +189,7 @@ const tabs = [
   { id: "dashboard", label: "Przegląd", icon: LayoutDashboard },
   { id: "analytics", label: "Analityka", icon: BarChart3 },
   { id: "users", label: "Użytkownicy", icon: Users },
+  { id: "wallets", label: "Portfele", icon: Wallet },
   { id: "matches", label: "Mecze", icon: Calendar },
   { id: "lineups", label: "Składy na mecz", icon: LayoutGrid },
   { id: "stats", label: "Statystyki", icon: Table2 },
@@ -332,7 +334,7 @@ export function AdminPanel() {
     if (tab === "users") void loadUsers();
     if (tab === "matches") void loadMatches();
     if (tab === "stats") void loadStats();
-    if (tab === "lineups") setLoading(false);
+    if (tab === "lineups" || tab === "wallets") setLoading(false);
   }, [tab, loadDashboard, loadUsers, loadMatches, loadStats]);
 
   useEffect(() => {
@@ -459,7 +461,7 @@ export function AdminPanel() {
         </aside>
 
         <main className="relative flex-1 overflow-x-hidden p-4 sm:p-6 lg:p-8">
-          {(tab === "lineups"
+          {(tab === "lineups" || tab === "wallets"
             ? false
             : tab === "analytics"
               ? analyticsLoading
@@ -489,6 +491,7 @@ export function AdminPanel() {
               />
             )}
             {tab === "users" && <UsersView users={users} loading={loading} onReload={loadUsers} />}
+            {tab === "wallets" && <AdminWalletsSaldoSection />}
             {tab === "matches" && <MatchesView matches={matches} loading={loading} onReload={loadMatches} />}
             {tab === "lineups" && <MatchLineupAdmin />}
             {tab === "analytics" && (

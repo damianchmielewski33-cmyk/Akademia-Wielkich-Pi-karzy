@@ -5,6 +5,7 @@ import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
   title: "Portfele po meczu",
@@ -166,26 +167,50 @@ export default async function PlatnosciPublicPage(ctx: Ctx) {
             </p>
           ) : (
             <ul className="max-h-[70vh] space-y-0 overflow-y-auto rounded-xl border border-emerald-900/10 bg-emerald-50/20">
-              {rows.map((p, i) => (
+              {rows.map((p, i) => {
+                const bal = Number(p.balance_pln ?? 0);
+                const isNegative = bal < 0;
+                return (
                 <li
                   key={p.id}
-                  className={`flex flex-wrap items-center gap-2 border-b px-3 py-2.5 text-sm last:border-b-0 ${
-                    i % 2 === 0 ? "bg-white/60" : "bg-emerald-50/40"
-                  }`}
+                  className={cn(
+                    "flex flex-wrap items-center gap-2 border-b px-3 py-2.5 text-sm last:border-b-0",
+                    isNegative
+                      ? "border-l-4 border-l-red-600 bg-red-50/95 dark:border-l-red-500 dark:bg-red-950/40"
+                      : i % 2 === 0
+                        ? "bg-white/60 dark:bg-zinc-900/50"
+                        : "bg-emerald-50/40 dark:bg-zinc-900/30"
+                  )}
                 >
                   <PlayerAvatar
                     photoPath={p.profile_photo_path}
                     firstName={p.first_name}
                     lastName={p.last_name}
                     size="sm"
-                    ringClassName="ring-2 ring-emerald-200/90"
+                    ringClassName={isNegative ? "ring-2 ring-red-300 dark:ring-red-600/60" : "ring-2 ring-emerald-200/90"}
                   />
                   <div className="min-w-0 flex-1">
                     <PlayerNameStack firstName={p.first_name} lastName={p.last_name} nick={p.zawodnik} />
                   </div>
-                  <span className="shrink-0 font-semibold tabular-nums text-emerald-950">{formatPln(Number(p.balance_pln ?? 0))}</span>
+                  {isNegative ? (
+                    <span
+                      className="shrink-0 rounded border border-red-200 bg-red-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-red-900 dark:border-red-800 dark:bg-red-900/50 dark:text-red-200"
+                      title="Saldo ujemne"
+                    >
+                      Niedopłata
+                    </span>
+                  ) : null}
+                  <span
+                    className={cn(
+                      "shrink-0 font-semibold tabular-nums",
+                      isNegative ? "text-red-700 dark:text-red-200" : "text-emerald-950 dark:text-emerald-100"
+                    )}
+                  >
+                    {formatPln(bal)}
+                  </span>
                 </li>
-              ))}
+                );
+              })}
             </ul>
           )}
           <div className="mt-4 flex flex-wrap gap-2">

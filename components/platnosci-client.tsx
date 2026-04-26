@@ -13,7 +13,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MATCH_BLIK_PHONE_COPY, MATCH_BLIK_PHONE_DISPLAY } from "@/lib/site";
-import { isValidMatchFee, matchFeeToInputString, parseMatchFeeInput } from "@/lib/utils";
+import { cn, isValidMatchFee, matchFeeToInputString, parseMatchFeeInput } from "@/lib/utils";
 import type { MatchRow } from "@/lib/db";
 
 export type PlatnosciSignup = {
@@ -71,7 +71,6 @@ type Props = {
   /** Np. „3 osoby się zastanawiają” — pusty gdy brak «jeszcze nie wiem». */
   nextMatchTentativeLine: string;
   signups: PlatnosciSignup[];
-  allPlayers: PlatnosciUserLite[];
   isLoggedIn: boolean;
   isAdmin: boolean;
   userSigned: boolean;
@@ -135,7 +134,6 @@ export function PlatnosciClient({
   nextMatch,
   nextMatchTentativeLine,
   signups,
-  allPlayers,
   isLoggedIn,
   isAdmin,
   userSigned,
@@ -155,10 +153,6 @@ export function PlatnosciClient({
 
   const [adminOverview, setAdminOverview] = useState<AdminWalletOverview | null>(null);
   const [adminLoading, setAdminLoading] = useState(false);
-  const [adminBalanceUserId, setAdminBalanceUserId] = useState<number | null>(null);
-  const [adminBalanceTarget, setAdminBalanceTarget] = useState("");
-  const [adminBalanceNote, setAdminBalanceNote] = useState("");
-  const [adminBalanceSubmitting, setAdminBalanceSubmitting] = useState(false);
   const [adminManualUserId, setAdminManualUserId] = useState<number | null>(null);
   const [adminManualAmount, setAdminManualAmount] = useState("");
   const [adminManualNote, setAdminManualNote] = useState("");
@@ -222,9 +216,6 @@ export function PlatnosciClient({
       setAdminOverview(r.data);
       if (chargeMatchId === null && r.data.playedMatches?.length) {
         setChargeMatchId(r.data.playedMatches[0]!.id);
-      }
-      if (adminBalanceUserId === null && r.data.players?.length) {
-        setAdminBalanceUserId(r.data.players[0]!.id);
       }
       if (adminManualUserId === null && r.data.players?.length) {
         setAdminManualUserId(r.data.players[0]!.id);
@@ -341,54 +332,6 @@ export function PlatnosciClient({
     }
   }
 
-  async function adminSetWalletBalance() {
-    const user_id = adminBalanceUserId;
-    const balance_pln = Number(String(adminBalanceTarget).replace(",", "."));
-    if (!user_id) {
-      toast.error("Wybierz zawodnika");
-      return;
-    }
-    if (!Number.isFinite(balance_pln)) {
-      toast.error("Podaj prawidłowe saldo");
-      return;
-    }
-    setAdminBalanceSubmitting(true);
-    try {
-      const r = await fetchJson<{
-        ok: true;
-        txId?: number;
-        delta_pln?: number;
-        current_balance_pln?: number;
-        target_balance_pln?: number;
-        noChange?: boolean;
-      }>("/api/admin/wallet/balance", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          user_id,
-          balance_pln,
-          note: adminBalanceNote.trim() ? adminBalanceNote.trim() : undefined,
-        }),
-      });
-      if (!r.ok) {
-        toast.error(r.error);
-        return;
-      }
-      if (r.data.noChange) {
-        toast.message("Saldo bez zmian");
-      } else {
-        toast.success("Ustawiono saldo (korekta zapisana w historii)");
-      }
-      setAdminBalanceTarget("");
-      setAdminBalanceNote("");
-      await refreshAdminOverview();
-      await refreshWallet();
-      router.refresh();
-    } finally {
-      setAdminBalanceSubmitting(false);
-    }
-  }
-
   async function submitMatchCharges() {
     if (!chargeMatchId) return;
     const payload = Object.entries(chargeMap)
@@ -454,125 +397,16 @@ export function PlatnosciClient({
           {isAdmin ? (
             <>
               {" "}
-              Jako administrator możesz autoryzować wpłaty i rozliczać rozegrane mecze.
+              Jako administrator możesz autoryzować wpłaty i rozliczać rozegrane mecze. Pełną listę sald wszystkich graczy
+              i ręczne korekty salda znajdziesz w{" "}
+              <Link className="font-semibold text-emerald-800 underline-offset-2 hover:underline dark:text-emerald-200" href="/panel-admina">
+                panelu administratora
+              </Link>{" "}
+              (zakładka <span className="font-semibold">Portfele</span>).
             </>
           ) : null}
         </p>
       </div>
-
-      {isAdmin ? (
-        <Card className="mb-6 border-emerald-900/10 shadow-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg text-emerald-950 dark:text-emerald-100">Portfele graczy — saldo</CardTitle>
-            <CardDescription>Najważniejszy podgląd dla administratora.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="mb-4 rounded-2xl border border-emerald-900/10 bg-white/70 p-4">
-              <p className="text-sm font-semibold text-emerald-950">Ustaw saldo zawodnika</p>
-              <p className="mt-0.5 text-xs text-zinc-600">
-                Wpisujesz docelowe saldo. System zapisze różnicę jako „Korekta” w historii portfela.
-              </p>
-              <div className="mt-3 grid gap-3 sm:grid-cols-3">
-                <div className="sm:col-span-1">
-                  <Label htmlFor="admin-balance-user">Zawodnik</Label>
-                  <select
-                    id="admin-balance-user"
-                    className="awp-focus-ring mt-1 w-full rounded-xl border border-emerald-950/15 bg-white/90 px-3 py-2 text-sm font-medium text-emerald-950 shadow-sm shadow-emerald-950/5 dark:border-emerald-100/10 dark:bg-zinc-900/70 dark:text-emerald-100"
-                    value={adminBalanceUserId ?? ""}
-                    onChange={(e) => setAdminBalanceUserId(e.target.value ? Number(e.target.value) : null)}
-                  >
-                    <option value="" disabled>
-                      Wybierz zawodnika…
-                    </option>
-                    {(adminOverview?.players ?? []).map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.first_name} {p.last_name}
-                      </option>
-                    ))}
-                  </select>
-                  {adminBalanceUserId && adminOverview?.players?.length ? (
-                    <p className="mt-1 text-xs text-zinc-600">
-                      Obecne saldo:{" "}
-                      {formatPln(
-                        Number(
-                          (adminOverview.players.find((p) => p.id === adminBalanceUserId)?.balance_pln ?? 0) as number
-                        )
-                      )}
-                    </p>
-                  ) : null}
-                </div>
-                <div className="sm:col-span-1">
-                  <Label htmlFor="admin-balance-target">Saldo (PLN)</Label>
-                  <Input
-                    id="admin-balance-target"
-                    type="text"
-                    inputMode="decimal"
-                    placeholder="np. 120"
-                    value={adminBalanceTarget}
-                    onChange={(e) => setAdminBalanceTarget(e.target.value)}
-                  />
-                </div>
-                <div className="sm:col-span-1">
-                  <Label htmlFor="admin-balance-note">Opis (opcjonalnie)</Label>
-                  <Input
-                    id="admin-balance-note"
-                    type="text"
-                    placeholder="np. korekta po gotówce"
-                    value={adminBalanceNote}
-                    onChange={(e) => setAdminBalanceNote(e.target.value)}
-                  />
-                </div>
-              </div>
-              <div className="mt-3">
-                <Button type="button" disabled={adminBalanceSubmitting} onClick={() => void adminSetWalletBalance()}>
-                  {adminBalanceSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
-                  Ustaw saldo
-                </Button>
-              </div>
-            </div>
-
-            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-              <p className="text-xs text-zinc-600">
-                {adminOverview?.players?.length ? `Graczy: ${adminOverview.players.length}` : "—"}
-              </p>
-              <Button type="button" variant="secondary" disabled={adminLoading} onClick={() => void refreshAdminOverview()}>
-                {adminLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
-                Odśwież
-              </Button>
-            </div>
-            {adminOverview?.players?.length ? (
-              <ul className="max-h-96 space-y-0 overflow-y-auto rounded-xl border border-emerald-900/10 bg-emerald-50/20">
-                {adminOverview.players.map((p, i) => (
-                  <li
-                    key={p.id}
-                    className={`flex flex-wrap items-center gap-2 border-b px-3 py-2.5 text-sm last:border-b-0 ${
-                      i % 2 === 0 ? "bg-white/60" : "bg-emerald-50/40"
-                    }`}
-                  >
-                    <PlayerAvatar
-                      photoPath={p.profile_photo_path}
-                      firstName={p.first_name}
-                      lastName={p.last_name}
-                      size="sm"
-                      ringClassName="ring-2 ring-emerald-200/90"
-                    />
-                    <div className="min-w-0 flex-1">
-                      <PlayerNameStack firstName={p.first_name} lastName={p.last_name} nick={p.zawodnik} />
-                    </div>
-                    <span className="shrink-0 font-semibold tabular-nums text-emerald-950">
-                      {formatPln(Number(p.balance_pln ?? 0))}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="rounded-xl border border-dashed border-emerald-900/10 bg-emerald-50/20 px-4 py-6 text-center text-sm text-zinc-600">
-                Brak danych do wyświetlenia.
-              </p>
-            )}
-          </CardContent>
-        </Card>
-      ) : null}
 
       {isLoggedIn ? (
         <Card className="mb-6 border-emerald-900/10 shadow-sm">
@@ -919,36 +753,6 @@ export function PlatnosciClient({
             </details>
           ) : null}
 
-          <Card className="mt-6 border-emerald-900/10 shadow-sm">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg text-emerald-950 dark:text-emerald-100">Wszyscy zarejestrowani zawodnicy</CardTitle>
-              <CardDescription>Lista zawodników w akademii.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ul className="max-h-80 space-y-0 overflow-y-auto rounded-xl border border-emerald-900/10 bg-emerald-50/20">
-                {allPlayers.map((p, i) => (
-                  <li
-                    key={p.id}
-                    className={`flex flex-wrap items-center gap-2 border-b px-3 py-2.5 text-sm last:border-b-0 ${
-                      i % 2 === 0 ? "bg-white/60" : "bg-emerald-50/40"
-                    }`}
-                  >
-                    <PlayerAvatar
-                      photoPath={p.profile_photo_path}
-                      firstName={p.first_name}
-                      lastName={p.last_name}
-                      size="sm"
-                      ringClassName="ring-2 ring-emerald-200/90"
-                    />
-                    <div className="min-w-0 flex-1">
-                      <PlayerNameStack firstName={p.first_name} lastName={p.last_name} nick={p.zawodnik} />
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </CardContent>
-          </Card>
-
           {isAdmin ? (
             <details className="group mt-6 overflow-hidden rounded-2xl border border-emerald-800/15 bg-white/80 shadow-sm">
               <summary className="awp-focus-ring cursor-pointer list-none px-5 py-4 font-semibold text-emerald-950 [&::-webkit-details-marker]:hidden">
@@ -1148,13 +952,41 @@ export function PlatnosciClient({
                       <div className="mt-4">
                         <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-600">Kwota do odjęcia per zawodnik (PLN)</p>
                         <div className="max-h-72 space-y-2 overflow-y-auto pr-1">
-                          {(adminOverview?.players ?? []).map((p) => (
-                            <div key={p.id} className="flex items-center gap-2 rounded-lg border border-emerald-900/10 bg-white px-3 py-2">
+                          {(adminOverview?.players ?? []).map((p) => {
+                            const bal = Number(p.balance_pln ?? 0);
+                            const neg = bal < 0;
+                            return (
+                            <div
+                              key={p.id}
+                              className={cn(
+                                "flex items-center gap-2 rounded-lg border px-3 py-2",
+                                neg
+                                  ? "border-red-300 bg-red-50/90 dark:border-red-800 dark:bg-red-950/40"
+                                  : "border-emerald-900/10 bg-white"
+                              )}
+                            >
                               <div className="min-w-0 flex-1">
-                                <p className="truncate text-sm font-medium text-emerald-950">
+                                <p
+                                  className={cn(
+                                    "truncate text-sm font-medium",
+                                    neg ? "text-red-900 dark:text-red-200" : "text-emerald-950"
+                                  )}
+                                >
                                   {p.first_name} {p.last_name}
                                 </p>
-                                <p className="truncate text-xs text-zinc-600">Saldo: {formatPln(Number(p.balance_pln ?? 0))}</p>
+                                <p
+                                  className={cn(
+                                    "truncate text-xs",
+                                    neg ? "font-medium text-red-700 dark:text-red-300" : "text-zinc-600"
+                                  )}
+                                >
+                                  Saldo: {formatPln(bal)}
+                                  {neg ? (
+                                    <span className="ml-2 inline-block text-[10px] font-bold uppercase text-red-800 dark:text-red-200">
+                                      Niedopłata
+                                    </span>
+                                  ) : null}
+                                </p>
                               </div>
                               <Input
                                 className="w-28"
@@ -1165,7 +997,8 @@ export function PlatnosciClient({
                                 onChange={(e) => setChargeMap((prev) => ({ ...prev, [p.id]: e.target.value }))}
                               />
                             </div>
-                          ))}
+                            );
+                          })}
                         </div>
                         <p className="mt-2 text-xs text-zinc-600">
                           Wpisz kwoty tylko dla tych zawodników, których chcesz obciążyć. Każdego zawodnika da się rozliczyć maksymalnie raz dla danego meczu.
