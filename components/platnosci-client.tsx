@@ -147,6 +147,7 @@ export function PlatnosciClient({
   const [walletPending, setWalletPending] = useState<WalletDepositRequest[]>([]);
   const [walletTx, setWalletTx] = useState<WalletTransaction[]>([]);
   const [walletLoading, setWalletLoading] = useState(false);
+  const [playerDepositConfirmAck, setPlayerDepositConfirmAck] = useState<Record<number, boolean>>({});
 
   const [depositAmount, setDepositAmount] = useState("");
   const [depositNote, setDepositNote] = useState("");
@@ -192,6 +193,13 @@ export function PlatnosciClient({
       }
       setWalletBalancePln(Number(r.data.balance_pln ?? 0));
       setWalletPending(r.data.pending ?? []);
+      setPlayerDepositConfirmAck((prev) => {
+        const next: Record<number, boolean> = {};
+        for (const d of r.data.pending ?? []) {
+          if (prev[d.id]) next[d.id] = true;
+        }
+        return next;
+      });
       setWalletTx(r.data.transactions ?? []);
     } finally {
       setWalletLoading(false);
@@ -400,8 +408,8 @@ export function PlatnosciClient({
       {isLoggedIn ? (
         <Card className="mb-6 border-emerald-900/10 shadow-sm">
           <CardHeader className="pb-2">
-            <CardTitle className="text-lg text-emerald-950 dark:text-emerald-100">Portfel zawodnika</CardTitle>
-            <CardDescription>Saldo oraz historia operacji.</CardDescription>
+            <CardTitle className="text-lg text-emerald-950 dark:text-emerald-100">Portfel</CardTitle>
+            <CardDescription>Saldo, autoryzacje i historia operacji.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-5">
             <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-900/10 bg-emerald-50/40 px-4 py-3">
@@ -417,49 +425,14 @@ export function PlatnosciClient({
               </Button>
             </div>
 
-            <div className="rounded-xl border border-emerald-900/10 bg-white/70 px-4 py-3">
-              <p className="text-sm font-semibold text-emerald-950">Zgłoś wpłatę do portfela</p>
-              <div className="mt-3 grid gap-3 sm:grid-cols-3">
-                <div className="sm:col-span-1">
-                  <Label htmlFor="wallet-dep-amount">Kwota (PLN)</Label>
-                  <Input
-                    id="wallet-dep-amount"
-                    type="text"
-                    inputMode="decimal"
-                    placeholder="np. 50"
-                    value={depositAmount}
-                    onChange={(e) => setDepositAmount(e.target.value)}
-                  />
-                </div>
-                <div className="sm:col-span-2">
-                  <Label htmlFor="wallet-dep-note">Opis (opcjonalnie)</Label>
-                  <Input
-                    id="wallet-dep-note"
-                    type="text"
-                    placeholder="np. wpłata na kwiecień"
-                    value={depositNote}
-                    onChange={(e) => setDepositNote(e.target.value)}
-                  />
-                </div>
-              </div>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <Button type="button" disabled={depositSubmitting} onClick={() => void submitDeposit()}>
-                  {depositSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
-                  Wpłaciłem — zgłoś do autoryzacji
-                </Button>
-                <p className="text-xs text-zinc-600">
-                  Jeśli admin wprowadzi wpłatę ręcznie, tutaj pojawi się prośba o potwierdzenie zgodności kwoty.
-                </p>
-              </div>
-            </div>
-
             {walletPending.length > 0 ? (
               <div>
-                <p className="mb-2 text-sm font-medium text-emerald-950 dark:text-emerald-100">Autoryzacje (oczekujące)</p>
+                <p className="mb-2 text-sm font-medium text-emerald-950 dark:text-emerald-100">Do zrobienia teraz</p>
                 <ul className="space-y-2">
                   {walletPending.map((d) => {
                     const needsPlayerConfirm = d.created_by === "admin" && Boolean(d.admin_declared_received_at) && !d.player_confirmed_amount_at;
                     const needsAdminConfirm = d.created_by === "player" && Boolean(d.player_declared_at) && !d.admin_confirmed_received_at;
+                    const acked = Boolean(playerDepositConfirmAck[d.id]);
                     return (
                       <li key={d.id} className="rounded-xl border border-emerald-900/10 bg-white/70 px-4 py-3">
                         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -474,9 +447,34 @@ export function PlatnosciClient({
                           </div>
                           <div className="flex flex-wrap items-center gap-2">
                             {needsPlayerConfirm ? (
-                              <Button type="button" size="sm" onClick={() => void playerConfirmDeposit(d.id)}>
-                                Potwierdzam zgodność kwoty
-                              </Button>
+                              <div className="flex flex-col items-end gap-2">
+                                <label className="flex cursor-pointer select-none items-center gap-2 text-xs text-zinc-700">
+                                  <input
+                                    type="checkbox"
+                                    className="h-4 w-4 rounded border-emerald-950/20 accent-emerald-700"
+                                    checked={acked}
+                                    onChange={(e) =>
+                                      setPlayerDepositConfirmAck((prev) => ({ ...prev, [d.id]: e.target.checked }))
+                                    }
+                                  />
+                                  Potwierdzam, że kwota {formatPln(d.amount_pln)} się zgadza
+                                </label>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  disabled={!acked}
+                                  onClick={async () => {
+                                    await playerConfirmDeposit(d.id);
+                                    setPlayerDepositConfirmAck((prev) => {
+                                      const next = { ...prev };
+                                      delete next[d.id];
+                                      return next;
+                                    });
+                                  }}
+                                >
+                                  Zatwierdź kwotę
+                                </Button>
+                              </div>
                             ) : needsAdminConfirm ? (
                               <Badge variant="secondary">Czeka na potwierdzenie admina</Badge>
                             ) : (
@@ -522,6 +520,55 @@ export function PlatnosciClient({
         </Card>
       ) : null}
 
+      {isLoggedIn ? (
+        <details className="group mb-6 overflow-hidden rounded-2xl border border-emerald-900/10 bg-white/70 shadow-sm">
+          <summary className="awp-focus-ring cursor-pointer list-none px-5 py-4 font-semibold text-emerald-950 [&::-webkit-details-marker]:hidden">
+            <span className="flex items-center justify-between gap-3">
+              <span>Zgłoś wpłatę do portfela</span>
+              <span className="text-xs font-medium text-zinc-600 group-open:hidden">Rozwiń</span>
+              <span className="hidden text-xs font-medium text-zinc-600 group-open:inline">Zwiń</span>
+            </span>
+            <span className="mt-1 block text-sm font-normal text-zinc-600">
+              Jeśli zrobiłeś przelew BLIK, zgłoś kwotę — admin ją potwierdzi.
+            </span>
+          </summary>
+          <div className="px-5 pb-5">
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="sm:col-span-1">
+                <Label htmlFor="wallet-dep-amount">Kwota (PLN)</Label>
+                <Input
+                  id="wallet-dep-amount"
+                  type="text"
+                  inputMode="decimal"
+                  placeholder="np. 50"
+                  value={depositAmount}
+                  onChange={(e) => setDepositAmount(e.target.value)}
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <Label htmlFor="wallet-dep-note">Opis (opcjonalnie)</Label>
+                <Input
+                  id="wallet-dep-note"
+                  type="text"
+                  placeholder="np. wpłata na kwiecień"
+                  value={depositNote}
+                  onChange={(e) => setDepositNote(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <Button type="button" disabled={depositSubmitting} onClick={() => void submitDeposit()}>
+                {depositSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
+                Wpłaciłem — zgłoś do autoryzacji
+              </Button>
+              <p className="text-xs text-zinc-600">
+                Jeśli admin wprowadzi wpłatę ręcznie, w portfelu pojawi się prośba o potwierdzenie kwoty.
+              </p>
+            </div>
+          </div>
+        </details>
+      ) : null}
+
       {!nextMatch ? (
         <Card className="border-emerald-900/10 shadow-sm">
           <CardHeader>
@@ -538,288 +585,93 @@ export function PlatnosciClient({
         </Card>
       ) : (
         <>
-          <Card className="mb-6 overflow-hidden border-emerald-900/15 shadow-md">
-            <div className="home-pitch-tile relative px-5 py-5 text-white">
-              <div className="relative">
-                <p className="text-xs font-semibold uppercase tracking-wider text-emerald-100/90">Ostatni mecz</p>
-                <p className="mt-2 text-lg font-bold tabular-nums text-white">
-                  {nextMatch.match_date} · {nextMatch.match_time}
-                </p>
-                <p className="mt-1 flex items-start gap-2 text-sm text-emerald-50/95">
-                  <MapPin className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-                  {nextMatch.location}
-                </p>
-                <div className="mt-3 space-y-0.5 text-xs text-emerald-100/85">
-                  <p>
-                    {nextMatch.signed_up}/{nextMatch.max_slots} zapisanych
+          <details className="group mb-6 overflow-hidden rounded-2xl border border-emerald-900/15 bg-white/70 shadow-md">
+            <summary className="awp-focus-ring cursor-pointer list-none px-5 py-4 font-semibold text-emerald-950 [&::-webkit-details-marker]:hidden">
+              <span className="flex items-center justify-between gap-3">
+                <span>Informacje o ostatnim meczu</span>
+                <span className="text-xs font-medium text-zinc-600 group-open:hidden">Rozwiń</span>
+                <span className="hidden text-xs font-medium text-zinc-600 group-open:inline">Zwiń</span>
+              </span>
+              <span className="mt-1 block text-sm font-normal text-zinc-600">
+                {nextMatch.match_date} · {nextMatch.match_time} · {nextMatch.location}
+              </span>
+            </summary>
+            <div className="px-5 pb-5">
+              <div className="home-pitch-tile relative overflow-hidden rounded-2xl px-5 py-5 text-white">
+                <div className="relative">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-emerald-100/90">Ostatni mecz</p>
+                  <p className="mt-2 text-lg font-bold tabular-nums text-white">
+                    {nextMatch.match_date} · {nextMatch.match_time}
                   </p>
-                  {nextMatchTentativeLine ? (
-                    <p className="text-[11px] font-semibold text-amber-100/95">{nextMatchTentativeLine}</p>
-                  ) : null}
+                  <p className="mt-1 flex items-start gap-2 text-sm text-emerald-50/95">
+                    <MapPin className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+                    {nextMatch.location}
+                  </p>
+                  <div className="mt-3 space-y-0.5 text-xs text-emerald-100/85">
+                    <p>
+                      {nextMatch.signed_up}/{nextMatch.max_slots} zapisanych
+                    </p>
+                    {nextMatchTentativeLine ? (
+                      <p className="text-[11px] font-semibold text-amber-100/95">{nextMatchTentativeLine}</p>
+                    ) : null}
+                  </div>
                 </div>
               </div>
             </div>
-          </Card>
+          </details>
 
-          {isAdmin ? (
-            <PlatnosciAdminSection nextMatch={nextMatch} signups={signups} onSaved={() => router.refresh()} />
-          ) : null}
-
-          {isAdmin ? (
-            <Card className="mb-6 border-2 border-emerald-800/15 bg-white/80 shadow-sm">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg text-emerald-950 dark:text-emerald-100">Portfele i autoryzacje (administrator)</CardTitle>
-                <CardDescription>Lista zawodników, wpłaty do autoryzacji oraz rozliczenia rozegranych meczów.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="rounded-xl border border-emerald-900/10 bg-white/70 px-4 py-3">
-                  <p className="text-sm font-semibold text-emerald-950">Link publiczny (bez logowania)</p>
-                  <p className="mt-1 text-xs text-zinc-600">
-                    Widok portfeli zawodników, którzy byli zapisani na ostatni mecz. Link ważny 30 dni.
+          <details className="group mb-6 overflow-hidden rounded-2xl border border-amber-900/15 bg-amber-50/40 shadow-sm">
+            <summary className="awp-focus-ring cursor-pointer list-none px-5 py-4 font-semibold text-amber-950 [&::-webkit-details-marker]:hidden">
+              <span className="flex items-center justify-between gap-3">
+                <span className="flex items-center gap-2">
+                  <Banknote className="h-5 w-5 shrink-0" aria-hidden />
+                  Jak opłacić udział
+                </span>
+                <span className="text-xs font-medium text-amber-950/70 group-open:hidden">Rozwiń</span>
+                <span className="hidden text-xs font-medium text-amber-950/70 group-open:inline">Zwiń</span>
+              </span>
+              <span className="mt-1 block text-sm font-normal text-amber-950/80">
+                BLIK → {MATCH_BLIK_PHONE_DISPLAY}{isValidMatchFee(nextMatch.fee_pln) ? ` · ${formatPln(nextMatch.fee_pln)}` : ""}
+              </span>
+            </summary>
+            <div className="px-5 pb-5">
+              <div className="space-y-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="font-mono text-2xl font-bold tracking-tight text-amber-950 tabular-nums">
+                    {MATCH_BLIK_PHONE_DISPLAY}
                   </p>
-                  <div className="mt-3">
-                    <Button type="button" variant="secondary" disabled={publicLinkBusy} onClick={() => void generatePublicLink()}>
-                      {publicLinkBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
-                      {publicLinkCopied ? "Skopiowano" : "Generuj i kopiuj link"}
-                    </Button>
-                  </div>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="shrink-0 border-amber-200 bg-white"
+                    onClick={() => void copyBlik()}
+                  >
+                    {copied ? (
+                      <Check className="mr-2 h-4 w-4" aria-hidden />
+                    ) : (
+                      <ClipboardCopy className="mr-2 h-4 w-4" aria-hidden />
+                    )}
+                    Kopiuj numer
+                  </Button>
                 </div>
-
-                <div className="rounded-xl border border-emerald-900/10 bg-emerald-50/30 px-4 py-3">
-                  <p className="text-sm font-semibold text-emerald-950">Wpłata ręczna (admin → do potwierdzenia przez zawodnika)</p>
-                  <div className="mt-3 grid gap-3 sm:grid-cols-3">
-                    <div className="sm:col-span-1">
-                      <Label htmlFor="admin-wallet-user">Imię i nazwisko</Label>
-                      <select
-                        id="admin-wallet-user"
-                        className="awp-focus-ring mt-1 w-full rounded-xl border border-emerald-950/15 bg-white/90 px-3 py-2 text-sm font-medium text-emerald-950 shadow-sm shadow-emerald-950/5 dark:border-emerald-100/10 dark:bg-zinc-900/70 dark:text-emerald-100"
-                        value={adminManualUserId ?? ""}
-                        onChange={(e) => setAdminManualUserId(e.target.value ? Number(e.target.value) : null)}
-                      >
-                        <option value="" disabled>
-                          Wybierz zawodnika…
-                        </option>
-                        {(adminOverview?.players ?? []).map((p) => (
-                          <option key={p.id} value={p.id}>
-                            {p.first_name} {p.last_name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="sm:col-span-1">
-                      <Label htmlFor="admin-wallet-amount">Kwota (PLN)</Label>
-                      <Input
-                        id="admin-wallet-amount"
-                        type="text"
-                        inputMode="decimal"
-                        placeholder="np. 50"
-                        value={adminManualAmount}
-                        onChange={(e) => setAdminManualAmount(e.target.value)}
-                      />
-                    </div>
-                    <div className="sm:col-span-1">
-                      <Label htmlFor="admin-wallet-note">Opis</Label>
-                      <Input
-                        id="admin-wallet-note"
-                        type="text"
-                        placeholder="opcjonalnie"
-                        value={adminManualNote}
-                        onChange={(e) => setAdminManualNote(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                  <div className="mt-3">
-                    <Button type="button" disabled={adminManualSubmitting} onClick={() => void adminCreateManualDeposit()}>
-                      {adminManualSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
-                      Otrzymałem pieniądze (wprowadź)
-                    </Button>
-                  </div>
-                </div>
-
-                <div>
-                  <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-sm font-medium text-emerald-950 dark:text-emerald-100">Wpłaty do autoryzacji</p>
-                    <Button type="button" variant="secondary" disabled={adminLoading} onClick={() => void refreshAdminOverview()}>
-                      {adminLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
-                      Odśwież
-                    </Button>
-                  </div>
-                  {adminOverview?.pendingDeposits?.length ? (
-                    <ul className="space-y-2">
-                      {adminOverview.pendingDeposits.map((d) => {
-                        const adminCanConfirm = d.created_by === "player" && !d.admin_confirmed_received_at;
-                        const playerMustConfirm = d.created_by === "admin" && !d.player_confirmed_amount_at;
-                        return (
-                          <li key={d.id} className="rounded-xl border border-emerald-900/10 bg-white/70 px-4 py-3">
-                            <div className="flex flex-wrap items-center justify-between gap-2">
-                              <div className="flex min-w-0 items-center gap-2">
-                                <PlayerAvatar
-                                  photoPath={d.profile_photo_path}
-                                  firstName={d.first_name}
-                                  lastName={d.last_name}
-                                  size="sm"
-                                  ringClassName="ring-2 ring-emerald-200/90"
-                                />
-                                <div className="min-w-0">
-                                  <p className="truncate text-sm font-semibold text-emerald-950">
-                                    {d.first_name} {d.last_name} · {formatPln(d.amount_pln)}
-                                  </p>
-                                  <p className="truncate text-xs text-zinc-600">
-                                    {d.created_by === "player"
-                                      ? "Zawodnik zgłosił wpłatę — czeka na Twoje potwierdzenie"
-                                      : "Admin wprowadził wpłatę — czeka na potwierdzenie zawodnika"}
-                                    {d.note ? ` · ${d.note}` : ""}
-                                  </p>
-                                </div>
-                              </div>
-                              <div className="flex flex-wrap items-center gap-2">
-                                {adminCanConfirm ? (
-                                  <Button type="button" size="sm" onClick={() => void adminConfirmDeposit(d.id)}>
-                                    Potwierdzam: otrzymałem
-                                  </Button>
-                                ) : playerMustConfirm ? (
-                                  <Badge variant="secondary">Czeka na zawodnika</Badge>
-                                ) : (
-                                  <Badge variant="secondary">W toku</Badge>
-                                )}
-                              </div>
-                            </div>
-                          </li>
-                        );
-                      })}
-                    </ul>
+                <div className="rounded-xl border border-amber-200/80 bg-white/80 px-4 py-3 text-sm text-amber-950/90">
+                  <p className="font-medium text-amber-950">Kwota</p>
+                  {isValidMatchFee(nextMatch.fee_pln) ? (
+                    <p className="mt-1 text-base font-semibold tabular-nums">
+                      {formatPln(nextMatch.fee_pln)}
+                    </p>
                   ) : (
-                    <p className="rounded-xl border border-dashed border-emerald-900/10 bg-emerald-50/20 px-4 py-6 text-center text-sm text-zinc-600">
-                      Brak wpłat do autoryzacji.
+                    <p className="mt-1 text-amber-950/85">
+                      Kwotę wpisowego ustala administrator — po zapisie sprawdź tutaj lub skontaktuj się z akademią.
                     </p>
                   )}
                 </div>
-
-                <div>
-                  <p className="mb-2 text-sm font-medium text-emerald-950 dark:text-emerald-100">Zarejestrowani zawodnicy — saldo</p>
-                  <ul className="max-h-80 space-y-0 overflow-y-auto rounded-xl border border-emerald-900/10 bg-emerald-50/20">
-                    {(adminOverview?.players ?? []).map((p, i) => (
-                      <li
-                        key={p.id}
-                        className={`flex flex-wrap items-center gap-2 border-b px-3 py-2.5 text-sm last:border-b-0 ${
-                          i % 2 === 0 ? "bg-white/60" : "bg-emerald-50/40"
-                        }`}
-                      >
-                        <PlayerAvatar
-                          photoPath={p.profile_photo_path}
-                          firstName={p.first_name}
-                          lastName={p.last_name}
-                          size="sm"
-                          ringClassName="ring-2 ring-emerald-200/90"
-                        />
-                        <div className="min-w-0 flex-1">
-                          <PlayerNameStack firstName={p.first_name} lastName={p.last_name} nick={p.zawodnik} />
-                        </div>
-                        <span className="shrink-0 font-semibold tabular-nums text-emerald-950">{formatPln(Number(p.balance_pln ?? 0))}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                <div className="rounded-xl border border-emerald-900/10 bg-white/70 px-4 py-3">
-                  <p className="text-sm font-semibold text-emerald-950">Rozlicz rozegrany mecz (odejmij z portfeli)</p>
-                  <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-end">
-                    <div className="flex-1">
-                      <Label htmlFor="charge-match-id">ID meczu (played=1)</Label>
-                      <Input
-                        id="charge-match-id"
-                        type="number"
-                        value={chargeMatchId ?? ""}
-                        onChange={(e) => setChargeMatchId(e.target.value ? Number(e.target.value) : null)}
-                      />
-                      <p className="mt-1 text-xs text-zinc-600">
-                        Ostatnie rozegrane mecze:{" "}
-                        {(adminOverview?.playedMatches ?? []).slice(0, 3).map((m) => `${m.id} (${m.match_date})`).join(", ") || "—"}
-                      </p>
-                    </div>
-                    <Button type="button" disabled={chargeSubmitting} onClick={() => void submitMatchCharges()}>
-                      {chargeSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
-                      Zapisz rozliczenie
-                    </Button>
-                  </div>
-
-                  <div className="mt-4">
-                    <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-600">Kwota do odjęcia per zawodnik (PLN)</p>
-                    <div className="max-h-72 space-y-2 overflow-y-auto pr-1">
-                      {(adminOverview?.players ?? []).map((p) => (
-                        <div key={p.id} className="flex items-center gap-2 rounded-lg border border-emerald-900/10 bg-white px-3 py-2">
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm font-medium text-emerald-950">
-                              {p.first_name} {p.last_name}
-                            </p>
-                            <p className="truncate text-xs text-zinc-600">Saldo: {formatPln(Number(p.balance_pln ?? 0))}</p>
-                          </div>
-                          <Input
-                            className="w-28"
-                            type="text"
-                            inputMode="decimal"
-                            placeholder="0"
-                            value={chargeMap[p.id] ?? ""}
-                            onChange={(e) => setChargeMap((prev) => ({ ...prev, [p.id]: e.target.value }))}
-                          />
-                        </div>
-                      ))}
-                    </div>
-                    <p className="mt-2 text-xs text-zinc-600">
-                      Wpisz kwoty tylko dla tych zawodników, których chcesz obciążyć. Każdego zawodnika da się rozliczyć maksymalnie raz dla danego meczu.
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ) : null}
-
-          <Card className="mb-6 border-amber-900/15 bg-amber-50/40 shadow-sm">
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-lg text-amber-950">
-                <Banknote className="h-5 w-5 shrink-0" aria-hidden />
-                Jak opłacić udział
-              </CardTitle>
-              <CardDescription className="text-amber-950/80">
-                Wyślij przelew <strong>BLIK</strong> na numer telefonu:
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <p className="font-mono text-2xl font-bold tracking-tight text-amber-950 tabular-nums">
-                  {MATCH_BLIK_PHONE_DISPLAY}
+                <p className="text-xs text-zinc-600 dark:text-zinc-400">
+                  Po wykonaniu przelewu status „Opłacone” pojawi się na liście zapisów, gdy administrator potwierdzi wpłatę.
                 </p>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  className="shrink-0 border-amber-200 bg-white"
-                  onClick={() => void copyBlik()}
-                >
-                  {copied ? (
-                    <Check className="mr-2 h-4 w-4" aria-hidden />
-                  ) : (
-                    <ClipboardCopy className="mr-2 h-4 w-4" aria-hidden />
-                  )}
-                  Kopiuj numer
-                </Button>
               </div>
-              <div className="rounded-xl border border-amber-200/80 bg-white/80 px-4 py-3 text-sm text-amber-950/90">
-                <p className="font-medium text-amber-950">Kwota</p>
-                {isValidMatchFee(nextMatch.fee_pln) ? (
-                  <p className="mt-1 text-base font-semibold tabular-nums">
-                    {formatPln(nextMatch.fee_pln)}
-                  </p>
-                ) : (
-                  <p className="mt-1 text-amber-950/85">
-                    Kwotę wpisowego ustala administrator — po zapisie sprawdź tutaj lub skontaktuj się z akademią.
-                  </p>
-                )}
-              </div>
-              <p className="text-xs text-zinc-600 dark:text-zinc-400">
-                Po wykonaniu przelewu status „Opłacone” pojawi się na liście zapisów, gdy administrator potwierdzi wpłatę.
-              </p>
-            </CardContent>
-          </Card>
+            </div>
+          </details>
 
           {!isLoggedIn ? (
             <Card className="border-emerald-900/10">
@@ -877,19 +729,25 @@ export function PlatnosciClient({
           )}
 
           {!isAdmin && isLoggedIn && signups.length > 0 ? (
-            <Card className="mt-6 border-emerald-900/10 shadow-sm">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg text-emerald-950 dark:text-emerald-100">Zapisani na ten mecz</CardTitle>
-                <CardDescription>Status opłaty widoczny dla zalogowanych użytkowników.</CardDescription>
-              </CardHeader>
-              <CardContent>
+            <details className="group mt-6 overflow-hidden rounded-2xl border border-emerald-900/10 bg-white/70 shadow-sm">
+              <summary className="awp-focus-ring cursor-pointer list-none px-5 py-4 font-semibold text-emerald-950 [&::-webkit-details-marker]:hidden">
+                <span className="flex items-center justify-between gap-3">
+                  <span>Zapisani na ten mecz</span>
+                  <span className="text-xs font-medium text-zinc-600 group-open:hidden">Rozwiń</span>
+                  <span className="hidden text-xs font-medium text-zinc-600 group-open:inline">Zwiń</span>
+                </span>
+                <span className="mt-1 block text-sm font-normal text-zinc-600">
+                  Status opłaty widoczny dla zalogowanych użytkowników.
+                </span>
+              </summary>
+              <div className="px-5 pb-5">
                 <ul className="max-h-80 space-y-0 overflow-y-auto rounded-xl border border-emerald-900/10 bg-emerald-50/30">
                   {signups.map((p, i) => (
                     <PlatnosciSignupRow key={p.user_id} signup={p} index={i} variant="public" />
                   ))}
                 </ul>
-              </CardContent>
-            </Card>
+              </div>
+            </details>
           ) : null}
 
           <Card className="mt-6 border-emerald-900/10 shadow-sm">
@@ -921,6 +779,235 @@ export function PlatnosciClient({
               </ul>
             </CardContent>
           </Card>
+
+          {isAdmin ? (
+            <details className="group mt-6 overflow-hidden rounded-2xl border border-emerald-800/15 bg-white/80 shadow-sm">
+              <summary className="awp-focus-ring cursor-pointer list-none px-5 py-4 font-semibold text-emerald-950 [&::-webkit-details-marker]:hidden">
+                <span className="flex items-center justify-between gap-3">
+                  <span className="flex items-center gap-2">
+                    <Shield className="h-5 w-5 shrink-0 text-emerald-800" aria-hidden />
+                    Panel administratora
+                  </span>
+                  <span className="text-xs font-medium text-zinc-600 group-open:hidden">Rozwiń</span>
+                  <span className="hidden text-xs font-medium text-zinc-600 group-open:inline">Zwiń</span>
+                </span>
+                <span className="mt-1 block text-sm font-normal text-zinc-600">
+                  Autoryzacje, wpłaty ręczne, link publiczny i rozliczenia meczów.
+                </span>
+              </summary>
+              <div className="px-5 pb-5">
+                <div className="space-y-6">
+                  <PlatnosciAdminSection nextMatch={nextMatch} signups={signups} onSaved={() => router.refresh()} />
+
+                  <details className="group overflow-hidden rounded-2xl border border-emerald-900/10 bg-white/70">
+                    <summary className="awp-focus-ring cursor-pointer list-none px-4 py-3 text-sm font-semibold text-emerald-950 [&::-webkit-details-marker]:hidden">
+                      <span className="flex items-center justify-between gap-3">
+                        <span>Link publiczny</span>
+                        <span className="text-xs font-medium text-zinc-600 group-open:hidden">Rozwiń</span>
+                        <span className="hidden text-xs font-medium text-zinc-600 group-open:inline">Zwiń</span>
+                      </span>
+                    </summary>
+                    <div className="px-4 pb-4">
+                      <p className="mt-1 text-xs text-zinc-600">
+                        Widok portfeli zawodników, którzy byli zapisani na ostatni mecz. Link ważny 30 dni.
+                      </p>
+                      <div className="mt-3">
+                        <Button type="button" variant="secondary" disabled={publicLinkBusy} onClick={() => void generatePublicLink()}>
+                          {publicLinkBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
+                          {publicLinkCopied ? "Skopiowano" : "Generuj i kopiuj link"}
+                        </Button>
+                      </div>
+                    </div>
+                  </details>
+
+                  <details className="group overflow-hidden rounded-2xl border border-emerald-900/10 bg-emerald-50/30">
+                    <summary className="awp-focus-ring cursor-pointer list-none px-4 py-3 text-sm font-semibold text-emerald-950 [&::-webkit-details-marker]:hidden">
+                      <span className="flex items-center justify-between gap-3">
+                        <span>Wpłata ręczna (admin → zawodnik)</span>
+                        <span className="text-xs font-medium text-zinc-600 group-open:hidden">Rozwiń</span>
+                        <span className="hidden text-xs font-medium text-zinc-600 group-open:inline">Zwiń</span>
+                      </span>
+                    </summary>
+                    <div className="px-4 pb-4">
+                      <div className="mt-2 grid gap-3 sm:grid-cols-3">
+                        <div className="sm:col-span-1">
+                          <Label htmlFor="admin-wallet-user">Imię i nazwisko</Label>
+                          <select
+                            id="admin-wallet-user"
+                            className="awp-focus-ring mt-1 w-full rounded-xl border border-emerald-950/15 bg-white/90 px-3 py-2 text-sm font-medium text-emerald-950 shadow-sm shadow-emerald-950/5 dark:border-emerald-100/10 dark:bg-zinc-900/70 dark:text-emerald-100"
+                            value={adminManualUserId ?? ""}
+                            onChange={(e) => setAdminManualUserId(e.target.value ? Number(e.target.value) : null)}
+                          >
+                            <option value="" disabled>
+                              Wybierz zawodnika…
+                            </option>
+                            {(adminOverview?.players ?? []).map((p) => (
+                              <option key={p.id} value={p.id}>
+                                {p.first_name} {p.last_name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="sm:col-span-1">
+                          <Label htmlFor="admin-wallet-amount">Kwota (PLN)</Label>
+                          <Input
+                            id="admin-wallet-amount"
+                            type="text"
+                            inputMode="decimal"
+                            placeholder="np. 50"
+                            value={adminManualAmount}
+                            onChange={(e) => setAdminManualAmount(e.target.value)}
+                          />
+                        </div>
+                        <div className="sm:col-span-1">
+                          <Label htmlFor="admin-wallet-note">Opis</Label>
+                          <Input
+                            id="admin-wallet-note"
+                            type="text"
+                            placeholder="opcjonalnie"
+                            value={adminManualNote}
+                            onChange={(e) => setAdminManualNote(e.target.value)}
+                          />
+                        </div>
+                      </div>
+                      <div className="mt-3">
+                        <Button type="button" disabled={adminManualSubmitting} onClick={() => void adminCreateManualDeposit()}>
+                          {adminManualSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
+                          Otrzymałem pieniądze (wprowadź)
+                        </Button>
+                      </div>
+                    </div>
+                  </details>
+
+                  <details className="group overflow-hidden rounded-2xl border border-emerald-900/10 bg-white/70">
+                    <summary className="awp-focus-ring cursor-pointer list-none px-4 py-3 text-sm font-semibold text-emerald-950 [&::-webkit-details-marker]:hidden">
+                      <span className="flex items-center justify-between gap-3">
+                        <span>Wpłaty do autoryzacji</span>
+                        <span className="text-xs font-medium text-zinc-600 group-open:hidden">Rozwiń</span>
+                        <span className="hidden text-xs font-medium text-zinc-600 group-open:inline">Zwiń</span>
+                      </span>
+                    </summary>
+                    <div className="px-4 pb-4">
+                      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                        <p className="text-xs text-zinc-600">Lista oczekujących wpłat (player→admin oraz admin→player).</p>
+                        <Button type="button" variant="secondary" disabled={adminLoading} onClick={() => void refreshAdminOverview()}>
+                          {adminLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
+                          Odśwież
+                        </Button>
+                      </div>
+                      {adminOverview?.pendingDeposits?.length ? (
+                        <ul className="space-y-2">
+                          {adminOverview.pendingDeposits.map((d) => {
+                            const adminCanConfirm = d.created_by === "player" && !d.admin_confirmed_received_at;
+                            const playerMustConfirm = d.created_by === "admin" && !d.player_confirmed_amount_at;
+                            return (
+                              <li key={d.id} className="rounded-xl border border-emerald-900/10 bg-white/70 px-4 py-3">
+                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                  <div className="flex min-w-0 items-center gap-2">
+                                    <PlayerAvatar
+                                      photoPath={d.profile_photo_path}
+                                      firstName={d.first_name}
+                                      lastName={d.last_name}
+                                      size="sm"
+                                      ringClassName="ring-2 ring-emerald-200/90"
+                                    />
+                                    <div className="min-w-0">
+                                      <p className="truncate text-sm font-semibold text-emerald-950">
+                                        {d.first_name} {d.last_name} · {formatPln(d.amount_pln)}
+                                      </p>
+                                      <p className="truncate text-xs text-zinc-600">
+                                        {d.created_by === "player"
+                                          ? "Zawodnik zgłosił wpłatę — czeka na Twoje potwierdzenie"
+                                          : "Admin wprowadził wpłatę — czeka na potwierdzenie zawodnika"}
+                                        {d.note ? ` · ${d.note}` : ""}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    {adminCanConfirm ? (
+                                      <Button type="button" size="sm" onClick={() => void adminConfirmDeposit(d.id)}>
+                                        Potwierdzam: otrzymałem
+                                      </Button>
+                                    ) : playerMustConfirm ? (
+                                      <Badge variant="secondary">Czeka na zawodnika</Badge>
+                                    ) : (
+                                      <Badge variant="secondary">W toku</Badge>
+                                    )}
+                                  </div>
+                                </div>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      ) : (
+                        <p className="rounded-xl border border-dashed border-emerald-900/10 bg-emerald-50/20 px-4 py-6 text-center text-sm text-zinc-600">
+                          Brak wpłat do autoryzacji.
+                        </p>
+                      )}
+                    </div>
+                  </details>
+
+                  <details className="group overflow-hidden rounded-2xl border border-emerald-900/10 bg-white/70">
+                    <summary className="awp-focus-ring cursor-pointer list-none px-4 py-3 text-sm font-semibold text-emerald-950 [&::-webkit-details-marker]:hidden">
+                      <span className="flex items-center justify-between gap-3">
+                        <span>Rozlicz rozegrany mecz (odejmij z portfeli)</span>
+                        <span className="text-xs font-medium text-zinc-600 group-open:hidden">Rozwiń</span>
+                        <span className="hidden text-xs font-medium text-zinc-600 group-open:inline">Zwiń</span>
+                      </span>
+                    </summary>
+                    <div className="px-4 pb-4">
+                      <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-end">
+                        <div className="flex-1">
+                          <Label htmlFor="charge-match-id">ID meczu (played=1)</Label>
+                          <Input
+                            id="charge-match-id"
+                            type="number"
+                            value={chargeMatchId ?? ""}
+                            onChange={(e) => setChargeMatchId(e.target.value ? Number(e.target.value) : null)}
+                          />
+                          <p className="mt-1 text-xs text-zinc-600">
+                            Ostatnie rozegrane mecze:{" "}
+                            {(adminOverview?.playedMatches ?? []).slice(0, 3).map((m) => `${m.id} (${m.match_date})`).join(", ") || "—"}
+                          </p>
+                        </div>
+                        <Button type="button" disabled={chargeSubmitting} onClick={() => void submitMatchCharges()}>
+                          {chargeSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
+                          Zapisz rozliczenie
+                        </Button>
+                      </div>
+
+                      <div className="mt-4">
+                        <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-600">Kwota do odjęcia per zawodnik (PLN)</p>
+                        <div className="max-h-72 space-y-2 overflow-y-auto pr-1">
+                          {(adminOverview?.players ?? []).map((p) => (
+                            <div key={p.id} className="flex items-center gap-2 rounded-lg border border-emerald-900/10 bg-white px-3 py-2">
+                              <div className="min-w-0 flex-1">
+                                <p className="truncate text-sm font-medium text-emerald-950">
+                                  {p.first_name} {p.last_name}
+                                </p>
+                                <p className="truncate text-xs text-zinc-600">Saldo: {formatPln(Number(p.balance_pln ?? 0))}</p>
+                              </div>
+                              <Input
+                                className="w-28"
+                                type="text"
+                                inputMode="decimal"
+                                placeholder="0"
+                                value={chargeMap[p.id] ?? ""}
+                                onChange={(e) => setChargeMap((prev) => ({ ...prev, [p.id]: e.target.value }))}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                        <p className="mt-2 text-xs text-zinc-600">
+                          Wpisz kwoty tylko dla tych zawodników, których chcesz obciążyć. Każdego zawodnika da się rozliczyć maksymalnie raz dla danego meczu.
+                        </p>
+                      </div>
+                    </div>
+                  </details>
+                </div>
+              </div>
+            </details>
+          ) : null}
         </>
       )}
     </div>
