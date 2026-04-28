@@ -183,6 +183,90 @@ function PitchTableFrame({ children }: { children: React.ReactNode }) {
   );
 }
 
+function InviteMatchCard({
+  match,
+  playersData,
+  title,
+  subtitle,
+  tone = "emerald",
+  showMapsLink = true,
+}: {
+  match: MatchRow | null;
+  playersData: Record<number, PlayersDataEntry>;
+  title: string;
+  subtitle: ReactNode;
+  tone?: "emerald" | "zinc";
+  showMapsLink?: boolean;
+}) {
+  const border =
+    tone === "zinc"
+      ? "border-zinc-200/80 dark:border-zinc-700/70"
+      : "border-emerald-900/15 dark:border-emerald-800/35";
+  return (
+    <div className={cn("relative overflow-hidden rounded-2xl border shadow-sm", border)}>
+      <div className="terminarz-stadium-layers pointer-events-none absolute inset-0 opacity-95" aria-hidden />
+      <div
+        className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/35 via-black/10 to-black/45"
+        aria-hidden
+      />
+      <div
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_70%_60%_at_50%_-10%,rgba(255,255,255,0.22),transparent_55%)]"
+        aria-hidden
+      />
+
+      <div className="relative p-4 text-white">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/80">{title}</p>
+        <h3 className="mt-1 text-lg font-bold tracking-tight">{match ? "Zaproszenie na mecz" : "Zaproszenie"}</h3>
+        <div className="mt-1 text-sm text-white/85">{subtitle}</div>
+
+        {match ? (
+          <div className="mt-4 grid gap-2 rounded-xl border border-white/15 bg-black/20 p-3 backdrop-blur-sm">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm">
+              <span className="inline-flex items-center gap-2">
+                <CalendarDays className="h-4 w-4 text-emerald-200" aria-hidden />
+                <span className="font-semibold tabular-nums">
+                  {match.match_date} · {match.match_time}
+                </span>
+              </span>
+              <span className="inline-flex items-start gap-2">
+                <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-emerald-200" aria-hidden />
+                <span className="font-semibold leading-snug">{match.location}</span>
+              </span>
+            </div>
+
+            <div className="flex items-end justify-between gap-3">
+              <MatchSignupCountsBlock
+                matchId={match.id}
+                signedUp={match.signed_up}
+                maxSlots={match.max_slots}
+                playersData={playersData}
+                variant="card"
+                tone="zinc"
+              />
+              <Badge className="bg-white/15 text-white hover:bg-white/20">
+                {match.max_slots - match.signed_up > 0
+                  ? `${match.max_slots - match.signed_up} wolnych`
+                  : "Skład pełny"}
+              </Badge>
+            </div>
+
+            {showMapsLink ? (
+              <a
+                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(match.location)}`}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex w-fit items-center gap-1.5 text-sm font-semibold text-white underline decoration-white/35 underline-offset-4 hover:decoration-white/70"
+              >
+                Otwórz miejsce w Mapach Google
+              </a>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 const actionBarClass =
   "awp-surface flex flex-col gap-2.5 rounded-2xl p-3";
 
@@ -2050,49 +2134,16 @@ export function TerminarzClient({
         }}
       >
         <DialogContent className="max-h-[90dvh] overflow-y-auto border-emerald-900/15 sm:max-w-md">
-          {highlightMatch && (
-            <div className="space-y-3 rounded-xl border border-emerald-200/90 bg-emerald-50/70 px-4 py-3 text-sm text-emerald-950 dark:border-emerald-800/50 dark:bg-emerald-950/35 dark:text-emerald-50">
-              <p className="text-xs font-semibold uppercase tracking-wide text-emerald-800/80 dark:text-emerald-300/85">
-                Mecz
-              </p>
-              <div className="grid gap-2">
-                <div>
-                  <span className="text-zinc-500 dark:text-zinc-400">Kiedy: </span>
-                  <span className="font-medium">
-                    {highlightMatch.match_date} · {highlightMatch.match_time}
-                  </span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700 dark:text-emerald-400" aria-hidden />
-                  <div>
-                    <span className="text-zinc-500 dark:text-zinc-400">Gdzie: </span>
-                    <span className="font-medium">{highlightMatch.location}</span>
-                  </div>
-                </div>
-                <div>
-                  <MatchSignupCountsBlock
-                    matchId={highlightMatch.id}
-                    signedUp={highlightMatch.signed_up}
-                    maxSlots={highlightMatch.max_slots}
-                    playersData={playersData}
-                  />
-                  <p className="mt-1 text-xs font-medium text-emerald-900/90 dark:text-emerald-200/90">
-                    {highlightMatch.max_slots - highlightMatch.signed_up > 0
-                      ? `Wolnych miejsc w składzie: ${highlightMatch.max_slots - highlightMatch.signed_up}.`
-                      : "Brak wolnych miejsc w składzie."}
-                  </p>
-                </div>
-                <a
-                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(highlightMatch.location)}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex w-fit items-center gap-1.5 font-medium text-emerald-800 underline underline-offset-2 hover:text-emerald-950 dark:text-emerald-300 dark:hover:text-emerald-100"
-                >
-                  Otwórz miejsce w Mapach Google
-                </a>
-              </div>
-            </div>
-          )}
+          <InviteMatchCard
+            match={highlightMatch ?? null}
+            playersData={playersData}
+            title="Akademia Wielkich Piłkarzy"
+            subtitle={
+              <>
+                Wejście z linku zaproszenia. Zaloguj się lub utwórz konto i odpowiedz, czy grasz w tym terminie.
+              </>
+            }
+          />
           {!inviteLoginInline ? (
             <>
               <DialogHeader>
@@ -2156,6 +2207,18 @@ export function TerminarzClient({
 
       <Dialog open={inviteParticipationOpen} onOpenChange={setInviteParticipationOpen}>
         <DialogContent className="max-h-[90dvh] overflow-y-auto border-emerald-900/15 sm:max-w-md">
+          <InviteMatchCard
+            match={highlightMatch ?? null}
+            playersData={playersData}
+            title="Zaproszenie"
+            subtitle={
+              <>
+                Wybierz odpowiedź. „Tak” działa tylko, gdy są wolne miejsca w składzie; w przeciwnym razie wybierz
+                „Jeszcze nie wiem”.
+              </>
+            }
+            showMapsLink={false}
+          />
           <DialogHeader>
             <DialogTitle>Zaproszenie — czy bierzesz udział?</DialogTitle>
             <DialogDescription className="text-left text-zinc-600 dark:text-zinc-400">
@@ -2165,41 +2228,6 @@ export function TerminarzClient({
               terminu w terminarzu.
             </DialogDescription>
           </DialogHeader>
-          {highlightMatch && (
-            <div className="space-y-3 rounded-xl border border-emerald-200/90 bg-emerald-50/70 px-4 py-3 text-sm text-emerald-950 dark:border-emerald-800/50 dark:bg-emerald-950/35 dark:text-emerald-50">
-              <p className="text-xs font-semibold uppercase tracking-wide text-emerald-800/80 dark:text-emerald-300/90">
-                Mecz
-              </p>
-              <div className="grid gap-2">
-                <div>
-                  <span className="text-zinc-500 dark:text-zinc-400">Kiedy: </span>
-                  <span className="font-medium">
-                    {highlightMatch.match_date} · {highlightMatch.match_time}
-                  </span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700 dark:text-emerald-400" aria-hidden />
-                  <div>
-                    <span className="text-zinc-500 dark:text-zinc-400">Gdzie: </span>
-                    <span className="font-medium">{highlightMatch.location}</span>
-                  </div>
-                </div>
-                <div>
-                  <MatchSignupCountsBlock
-                    matchId={highlightMatch.id}
-                    signedUp={highlightMatch.signed_up}
-                    maxSlots={highlightMatch.max_slots}
-                    playersData={playersData}
-                  />
-                  <p className="mt-1 text-xs font-medium text-emerald-900/90 dark:text-emerald-200/90">
-                    {highlightMatch.max_slots - highlightMatch.signed_up > 0
-                      ? `Wolnych miejsc w składzie: ${highlightMatch.max_slots - highlightMatch.signed_up}.`
-                      : "Skład pełny — „Tak” nie otworzy pełnego zapisu; możesz wybrać „Jeszcze nie wiem” (bez miejsca)."}
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
           <DialogFooter className="flex-col gap-2 sm:flex-col sm:justify-start sm:gap-2">
             <Button
               type="button"

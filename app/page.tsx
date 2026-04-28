@@ -5,7 +5,7 @@ import { getDb, type MatchRow } from "@/lib/db";
 import { HomeClient } from "@/components/home-client";
 import { isLocalMatchDay } from "@/lib/transport";
 import { formatPonderingPlayersPolish } from "@/lib/terminarz-shared";
-import { getSiteUrl, resolveHomeYoutubeVideoId } from "@/lib/site";
+import { getSiteUrl, parseYoutubeVideoIdFromUserInput } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Start",
@@ -64,7 +64,9 @@ export default async function HomePage() {
   const settingsRow = (await db
     .prepare("SELECT home_youtube_url FROM app_settings WHERE id = 1")
     .get()) as { home_youtube_url: string | null } | undefined;
-  const youtubeLiveVideoId = resolveHomeYoutubeVideoId(settingsRow?.home_youtube_url);
+  const youtubeLiveVideoId = settingsRow?.home_youtube_url
+    ? parseYoutubeVideoIdFromUserInput(settingsRow.home_youtube_url)
+    : null;
 
   return (
     <HomeClient
