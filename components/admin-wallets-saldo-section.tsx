@@ -91,10 +91,6 @@ export function AdminWalletsSaldoSection({ embedded = false }: AdminWalletsSaldo
       toast.error("Podaj prawidłowe saldo");
       return;
     }
-    if (balance_pln < 0) {
-      toast.error("Saldo nie może być ujemne");
-      return;
-    }
     setAdminBalanceSubmitting(true);
     try {
       const r = await fetchJson<{

@@ -8,7 +8,7 @@ export const runtime = "nodejs";
 const postSchema = z.object({
   user_id: z.coerce.number().int().positive(),
   /** Docelowe saldo (PLN). */
-  balance_pln: z.coerce.number().finite().min(0).max(10000),
+  balance_pln: z.coerce.number().finite().min(-10000).max(10000),
   note: z.string().trim().max(200).optional(),
 });
 
