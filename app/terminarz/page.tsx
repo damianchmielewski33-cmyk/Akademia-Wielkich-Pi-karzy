@@ -20,6 +20,7 @@ type PageProps = {
     zaproszenie?: string;
     statystyki?: string;
     statystyki_ankiety?: string;
+    obecnosc?: string;
   }>;
 };
 
@@ -37,6 +38,8 @@ export default async function TerminarzPage({ searchParams }: PageProps) {
     Boolean(highlightMatchId) && (statystyki === "1" || statystyki === "true");
   const openStandaloneSurveyStats =
     sp.statystyki_ankiety === "1" || sp.statystyki_ankiety === "true";
+  const openAttendanceFromUrl =
+    Boolean(highlightMatchId) && (sp.obecnosc === "1" || sp.obecnosc === "true");
   const db = await getDb();
   const session = await getServerSession();
   const matches = await db
@@ -90,6 +93,7 @@ export default async function TerminarzPage({ searchParams }: PageProps) {
         inviteFromShare={inviteFromShare}
         openStatsFromUrl={openStatsFromUrl}
         openStandaloneSurveyStats={openStandaloneSurveyStats}
+        openAttendanceFromUrl={openAttendanceFromUrl}
       />
     </div>
   );

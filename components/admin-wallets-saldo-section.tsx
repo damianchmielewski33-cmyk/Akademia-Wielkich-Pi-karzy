@@ -16,6 +16,7 @@ type AdminWalletPlayerRow = PlatnosciUserLite & { balance_pln: number };
 
 type AdminWalletOverview = {
   players: AdminWalletPlayerRow[];
+  walletUsers?: (AdminWalletPlayerRow & { is_admin?: number })[];
 };
 
 async function fetchJson<T>(url: string, init?: RequestInit): Promise<{ ok: true; data: T } | { ok: false; error: string }> {
@@ -130,8 +131,8 @@ export function AdminWalletsSaldoSection({ embedded = false }: AdminWalletsSaldo
         <div className="mb-6">
           <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">Portfele graczy</h1>
           <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-            Salda zarejestrowanych graczy (poza kontami admina) i ręczne korekty — docelowe saldo zapisuje się jako
-            transakcja korygująca w historii portfela.
+            Salda zarejestrowanych użytkowników i ręczne korekty — docelowe saldo zapisuje się jako transakcja korygująca
+            w historii portfela.
           </p>
         </div>
       ) : null}
@@ -150,7 +151,7 @@ export function AdminWalletsSaldoSection({ embedded = false }: AdminWalletsSaldo
           </CardTitle>
           <CardDescription>
             {embedded
-              ? "Podgląd sald wszystkich graczy (bez kont admina) i ręczne korekty — także w panelu → Portfele."
+              ? "Podgląd sald i ręczne korekty — także w panelu → Portfele."
               : "Najważniejszy podgląd sald i korekty ręczne."}
           </CardDescription>
         </CardHeader>
@@ -172,15 +173,19 @@ export function AdminWalletsSaldoSection({ embedded = false }: AdminWalletsSaldo
                   <option value="" disabled>
                     Wybierz zawodnika…
                   </option>
-                  {(adminOverview?.players ?? []).map((p) => (
+                  {(adminOverview?.walletUsers ?? adminOverview?.players ?? []).map((p) => (
                     <option key={p.id} value={p.id}>
                       {p.first_name} {p.last_name}
+                      {"is_admin" in p && Number((p as { is_admin?: number }).is_admin ?? 0) ? " (admin)" : ""}
                     </option>
                   ))}
                 </select>
                 {adminBalanceUserId && adminOverview?.players?.length ? (() => {
                   const b = Number(
-                    (adminOverview.players.find((p) => p.id === adminBalanceUserId)?.balance_pln ?? 0) as number
+                    (
+                      (adminOverview.walletUsers ?? adminOverview.players).find((p) => p.id === adminBalanceUserId)
+                        ?.balance_pln ?? 0
+                    ) as number
                   );
                   const neg = b < 0;
                   const pos = b > 0;
@@ -241,16 +246,21 @@ export function AdminWalletsSaldoSection({ embedded = false }: AdminWalletsSaldo
 
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <p className="text-xs text-zinc-600 dark:text-zinc-400">
-              {adminOverview?.players?.length ? `Graczy: ${adminOverview.players.length}` : "—"}
+              {(() => {
+                const list = adminOverview?.walletUsers ?? adminOverview?.players ?? [];
+                return list.length ? `Użytkowników: ${list.length}` : "—";
+              })()}
             </p>
             <Button type="button" variant="secondary" disabled={adminLoading} onClick={() => void refresh()}>
               {adminLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
               Odśwież
             </Button>
           </div>
-          {adminOverview?.players?.length ? (
+          {(() => {
+            const list = adminOverview?.walletUsers ?? adminOverview?.players ?? [];
+            return list.length ? (
             <ul className="max-h-96 space-y-0 overflow-y-auto rounded-xl border border-emerald-900/10 bg-emerald-50/20 dark:border-emerald-100/10 dark:bg-emerald-950/30">
-              {adminOverview.players.map((p, i) => {
+              {list.map((p, i) => {
                 const bal = Number(p.balance_pln ?? 0);
                 const isNegative = bal < 0;
                 const isPositive = bal > 0;
@@ -284,6 +294,14 @@ export function AdminWalletsSaldoSection({ embedded = false }: AdminWalletsSaldo
                   <div className="min-w-0 flex-1">
                     <PlayerNameStack firstName={p.first_name} lastName={p.last_name} nick={p.zawodnik} />
                   </div>
+                  {"is_admin" in p && Number((p as { is_admin?: number }).is_admin ?? 0) ? (
+                    <span
+                      className="shrink-0 rounded border border-zinc-300 bg-zinc-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-zinc-800 dark:border-zinc-700 dark:bg-zinc-900/60 dark:text-zinc-200"
+                      title="Konto administratora"
+                    >
+                      Admin
+                    </span>
+                  ) : null}
                   {isNegative ? (
                     <span
                       className="shrink-0 rounded border border-red-200 bg-red-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-red-900 dark:border-red-800 dark:bg-red-900/50 dark:text-red-200"
@@ -315,11 +333,12 @@ export function AdminWalletsSaldoSection({ embedded = false }: AdminWalletsSaldo
                 );
               })}
             </ul>
-          ) : (
+            ) : (
             <p className="rounded-xl border border-dashed border-emerald-900/10 bg-emerald-50/20 px-4 py-6 text-center text-sm text-zinc-600 dark:border-emerald-100/10 dark:bg-emerald-950/20 dark:text-zinc-400">
               {adminLoading ? "Wczytywanie…" : "Brak danych do wyświetlenia."}
             </p>
-          )}
+            );
+          })()}
         </CardContent>
       </Card>
     </div>

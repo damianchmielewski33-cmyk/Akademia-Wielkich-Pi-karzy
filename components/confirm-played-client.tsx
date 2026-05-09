@@ -21,7 +21,7 @@ export function ConfirmPlayedClient({ matchId }: { matchId: string }) {
       if (res.ok) {
         setStatus("ok");
         toast.success("Mecz oznaczony jako rozegrany");
-        router.replace("/terminarz");
+        router.replace(`/terminarz?mecz=${encodeURIComponent(String(id))}&obecnosc=1`);
       } else {
         setStatus("err");
         toast.error("Brak uprawnien lub blad");

@@ -43,7 +43,6 @@ export async function POST(req: Request) {
     .prepare("SELECT id, COALESCE(is_admin, 0) AS is_admin FROM users WHERE id = ?")
     .get(user_id)) as { id: number; is_admin: number } | undefined;
   if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
-  if (user.is_admin) return NextResponse.json({ error: "Nie można ustawić salda adminowi" }, { status: 409 });
 
   const row = (await db
     .prepare(

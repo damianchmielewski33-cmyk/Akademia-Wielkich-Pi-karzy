@@ -10,6 +10,26 @@ export async function GET() {
 
   const db = await getDb();
 
+  // Full list for admin tools that must include admin accounts (e.g. manual balance adjustment).
+  const walletUsers = await db
+    .prepare(
+      `
+      SELECT
+        u.id,
+        u.first_name,
+        u.last_name,
+        u.player_alias AS zawodnik,
+        u.profile_photo_path,
+        COALESCE(u.is_admin, 0) AS is_admin,
+        COALESCE(ROUND(SUM(t.amount_pln), 2), 0) AS balance_pln
+      FROM users u
+      LEFT JOIN wallet_transactions t ON t.user_id = u.id
+      GROUP BY u.id
+      ORDER BY u.first_name, u.last_name
+    `
+    )
+    .all();
+
   const players = await db
     .prepare(
       `
@@ -19,6 +39,7 @@ export async function GET() {
         u.last_name,
         u.player_alias AS zawodnik,
         u.profile_photo_path,
+        COALESCE(u.is_admin, 0) AS is_admin,
         COALESCE(ROUND(SUM(t.amount_pln), 2), 0) AS balance_pln
       FROM users u
       LEFT JOIN wallet_transactions t ON t.user_id = u.id
@@ -57,6 +78,6 @@ export async function GET() {
     )
     .all();
 
-  return NextResponse.json({ players, pendingDeposits, playedMatches });
+  return NextResponse.json({ walletUsers, players, pendingDeposits, playedMatches });
 }
 
