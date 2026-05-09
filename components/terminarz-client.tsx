@@ -364,6 +364,12 @@ export function TerminarzClient({
   const [manageSignupsQuery, setManageSignupsQuery] = useState("");
   const [manageSignupsBusy, setManageSignupsBusy] = useState(false);
 
+  const [attendanceOpen, setAttendanceOpen] = useState(false);
+  const [attendanceMatch, setAttendanceMatch] = useState<MatchRow | null>(null);
+  const [attendanceRows, setAttendanceRows] = useState<AdminMatchSignupRow[]>([]);
+  const [attendancePresent, setAttendancePresent] = useState<Set<number>>(new Set());
+  const [attendanceBusy, setAttendanceBusy] = useState(false);
+
   const missingStatsSet = useMemo(() => new Set(playedMissingStatsMatchIds), [playedMissingStatsMatchIds]);
 
   const highlightMatch = useMemo(
@@ -601,6 +607,10 @@ export function TerminarzClient({
       return;
     }
     toast.success("Zaktualizowano");
+    if (played) {
+      const m = allMatches.find((x) => x.id === id);
+      if (m) void openAttendanceDialog(m);
+    }
     router.refresh();
   }
 
@@ -739,13 +749,13 @@ export function TerminarzClient({
     setView("list");
     if (playedConfirmed.some((p) => p.id === m.id)) setListTab("archive");
     else setListTab("active");
-    void openManageSignups(m);
+    void openAttendanceDialog(m);
     if (typeof window !== "undefined") {
       const u = new URL(window.location.href);
       u.searchParams.delete("obecnosc");
       router.replace(u.pathname + u.search, { scroll: false });
     }
-  }, [openAttendanceFromUrl, highlightMatchId, isAdmin, allMatches, playedConfirmed, router]);
+  }, [openAttendanceFromUrl, highlightMatchId, isAdmin, allMatches, playedConfirmed, router, openAttendanceDialog]);
 
   async function ensureAdminUsersLoaded() {
     if (!isAdmin) return;
@@ -844,6 +854,58 @@ export function TerminarzClient({
       await openManageSignups(manageSignupsMatch);
     } finally {
       setManageSignupsBusy(false);
+    }
+  }
+
+  async function openAttendanceDialog(m: MatchRow) {
+    if (!isAdmin) return;
+    setAttendanceBusy(true);
+    setAttendanceMatch(m);
+    try {
+      const signupsR = await fetchJson<{ signups: AdminMatchSignupRow[] }>(`/api/admin/match/${m.id}/signups`);
+      if (!signupsR.ok) {
+        toast.error(signupsR.error);
+        return;
+      }
+      const confirmed = (signupsR.data.signups ?? []).filter((s) => Number(s.commitment ?? 1) === 1);
+      setAttendanceRows(confirmed);
+
+      const attR = await fetchJson<{ present_user_ids: number[] }>(`/api/admin/match/${m.id}/attendance`);
+      if (!attR.ok) {
+        toast.error(attR.error);
+        return;
+      }
+      setAttendancePresent(new Set((attR.data.present_user_ids ?? []).map((x) => Number(x)).filter(Number.isFinite)));
+      setAttendanceOpen(true);
+    } finally {
+      setAttendanceBusy(false);
+    }
+  }
+
+  async function saveAttendance() {
+    if (!attendanceMatch) return;
+    setAttendanceBusy(true);
+    try {
+      const ids = Array.from(attendancePresent.values());
+      const r = await fetchJson<{ ok: true; present_count: number }>(
+        `/api/admin/match/${attendanceMatch.id}/attendance`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ present_user_ids: ids }),
+        }
+      );
+      if (!r.ok) {
+        toast.error(r.error);
+        return;
+      }
+      toast.success(`Zapisano obecność (${r.data.present_count})`);
+      setAttendanceOpen(false);
+      setAttendanceMatch(null);
+      setAttendanceRows([]);
+      setAttendancePresent(new Set());
+    } finally {
+      setAttendanceBusy(false);
     }
   }
 
@@ -2152,6 +2214,107 @@ export function TerminarzClient({
         <DialogFooter className="gap-2 sm:justify-end">
           <Button type="button" variant="outline" onClick={() => setManageSignupsOpen(false)}>
             Zamknij
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    <Dialog
+      open={attendanceOpen}
+      onOpenChange={(open) => {
+        setAttendanceOpen(open);
+        if (!open) {
+          setAttendanceMatch(null);
+          setAttendanceRows([]);
+          setAttendancePresent(new Set());
+        }
+      }}
+    >
+      <DialogContent className="max-h-[90vh] overflow-y-auto border-emerald-900/15 sm:max-w-xl">
+        <DialogHeader>
+          <DialogTitle>Obecność na meczu</DialogTitle>
+          {attendanceMatch ? (
+            <DialogDescription asChild>
+              <div className="space-y-1 pt-1 text-sm text-zinc-600">
+                <p>
+                  <span className="font-medium text-zinc-800">
+                    {attendanceMatch.match_date} · {attendanceMatch.match_time}
+                  </span>
+                </p>
+                <p className="flex items-start gap-2 text-sm">
+                  <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700" aria-hidden />
+                  {attendanceMatch.location}
+                </p>
+                <p className="text-xs text-zinc-500">Zaznacz osoby, które faktycznie brały udział w meczu.</p>
+              </div>
+            </DialogDescription>
+          ) : null}
+        </DialogHeader>
+
+        {attendanceBusy ? (
+          <div className="flex items-center gap-2 py-4 text-sm text-zinc-600">
+            <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+            Wczytywanie…
+          </div>
+        ) : null}
+
+        {attendanceRows.length === 0 ? (
+          <p className="rounded-xl border border-dashed border-zinc-200 bg-zinc-50/80 px-4 py-10 text-center text-sm text-zinc-600 dark:border-zinc-600 dark:bg-zinc-800/50 dark:text-zinc-400">
+            Brak zapisanych (potwierdzonych) zawodników do zaznaczenia.
+          </p>
+        ) : (
+          <div className="max-h-[55vh] space-y-2 overflow-y-auto pr-1">
+            {attendanceRows.map((p) => {
+              const checked = attendancePresent.has(p.user_id);
+              return (
+                <label
+                  key={p.user_id}
+                  className="flex cursor-pointer items-center gap-3 rounded-xl border border-emerald-900/10 bg-white px-3 py-2 dark:bg-zinc-900"
+                >
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 accent-emerald-700"
+                    checked={checked}
+                    onChange={(e) => {
+                      const on = e.target.checked;
+                      setAttendancePresent((prev) => {
+                        const next = new Set(prev);
+                        if (on) next.add(p.user_id);
+                        else next.delete(p.user_id);
+                        return next;
+                      });
+                    }}
+                  />
+                  <PlayerAvatar
+                    photoPath={p.profile_photo_path}
+                    firstName={p.first_name}
+                    lastName={p.last_name}
+                    size="sm"
+                    ringClassName={checked ? "ring-2 ring-emerald-200/90" : "ring-2 ring-zinc-200/80"}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <PlayerNameStack firstName={p.first_name} lastName={p.last_name} nick={p.zawodnik} />
+                    <p className="mt-0.5 text-xs text-zinc-500">ID: {p.user_id}</p>
+                  </div>
+                  <Badge
+                    variant="outline"
+                    className={checked ? "border-emerald-300 bg-emerald-50 text-emerald-950" : "border-zinc-200 bg-zinc-50 text-zinc-700"}
+                  >
+                    {checked ? "Obecny" : "Nieobecny"}
+                  </Badge>
+                </label>
+              );
+            })}
+          </div>
+        )}
+
+        <DialogFooter className="gap-2 sm:justify-end">
+          <Button type="button" variant="outline" disabled={attendanceBusy} onClick={() => setAttendanceOpen(false)}>
+            Anuluj
+          </Button>
+          <Button type="button" disabled={attendanceBusy || !attendanceMatch} onClick={() => void saveAttendance()}>
+            {attendanceBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
+            Zapisz obecność
           </Button>
         </DialogFooter>
       </DialogContent>

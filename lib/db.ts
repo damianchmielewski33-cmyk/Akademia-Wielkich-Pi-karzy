@@ -344,6 +344,21 @@ function initSchemaSync(db: Database.Database) {
     ON match_participation_survey(match_id);
   `);
   db.exec(`
+    CREATE TABLE IF NOT EXISTS match_attendance (
+      match_id INTEGER NOT NULL,
+      user_id INTEGER NOT NULL,
+      present INTEGER NOT NULL,
+      marked_by_admin_id INTEGER NOT NULL,
+      marked_at TEXT NOT NULL DEFAULT (datetime('now')),
+      PRIMARY KEY (match_id, user_id),
+      FOREIGN KEY (match_id) REFERENCES matches(id) ON DELETE CASCADE,
+      FOREIGN KEY (user_id) REFERENCES users(id),
+      FOREIGN KEY (marked_by_admin_id) REFERENCES users(id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_match_attendance_match
+    ON match_attendance(match_id);
+  `);
+  db.exec(`
     CREATE TABLE IF NOT EXISTS participation_survey_answer (
       user_id INTEGER NOT NULL,
       survey_key TEXT NOT NULL,

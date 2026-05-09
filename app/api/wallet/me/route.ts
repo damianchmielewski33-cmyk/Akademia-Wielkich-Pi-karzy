@@ -30,7 +30,13 @@ export async function GET() {
   const tx = await db
     .prepare(
       `
-      SELECT id, user_id, kind, amount_pln, deposit_request_id, match_id, note, created_at
+      SELECT
+        id, user_id, kind, amount_pln, deposit_request_id, match_id, note, created_at,
+        SUM(amount_pln) OVER (
+          PARTITION BY user_id
+          ORDER BY datetime(created_at) ASC, id ASC
+          ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+        ) AS balance_after_pln
       FROM wallet_transactions
       WHERE user_id = ?
       ORDER BY datetime(created_at) DESC

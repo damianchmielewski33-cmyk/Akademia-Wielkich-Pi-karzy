@@ -13,6 +13,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AdminWalletsSaldoSection } from "@/components/admin-wallets-saldo-section";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { MATCH_BLIK_PHONE_COPY, MATCH_BLIK_PHONE_DISPLAY } from "@/lib/site";
 import { cn, isValidMatchFee, matchFeeToInputString, parseMatchFeeInput } from "@/lib/utils";
 import type { MatchRow } from "@/lib/db";
@@ -57,6 +58,7 @@ type WalletTransaction = {
   match_id: number | null;
   note: string | null;
   created_at: string;
+  balance_after_pln?: number | null;
 };
 
 type AdminWalletPlayerRow = PlatnosciUserLite & { balance_pln: number };
@@ -526,37 +528,56 @@ export function PlatnosciClient({
 
             {walletTx.length > 0 ? (
               <div>
-                <p className="mb-2 text-sm font-medium text-emerald-950 dark:text-emerald-100">Ostatnie operacje</p>
-                <ul className="max-h-72 space-y-0 overflow-y-auto rounded-xl border border-emerald-900/10 bg-emerald-50/20">
-                  {walletTx.map((t, i) => (
-                    <li
-                      key={t.id}
-                      className={`flex flex-wrap items-center justify-between gap-2 border-b px-3 py-2.5 text-sm last:border-b-0 ${
-                        i % 2 === 0 ? "bg-white/60" : "bg-emerald-50/40"
-                      }`}
-                    >
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate font-medium text-emerald-950">
-                          {t.kind === "deposit" ? "Wpłata" : t.kind === "match_charge" ? "Rozliczenie meczu" : "Korekta"}
-                        </p>
-                        {t.note ? <p className="truncate text-xs text-zinc-600">{t.note}</p> : null}
-                      </div>
-                      <div className="shrink-0 text-right tabular-nums">
-                        <span
-                          className={
-                            t.amount_pln > 0
-                              ? "text-emerald-800 dark:text-emerald-200"
-                              : t.amount_pln < 0
-                                ? "text-red-700 dark:text-red-300"
-                                : "text-zinc-700 dark:text-zinc-300"
-                          }
-                        >
-                          {formatPln(t.amount_pln)}
-                        </span>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
+                <p className="mb-2 text-sm font-medium text-emerald-950 dark:text-emerald-100">Historia salda</p>
+                <div className="max-h-80 overflow-y-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Data</TableHead>
+                        <TableHead>Operacja</TableHead>
+                        <TableHead className="text-right">Kwota</TableHead>
+                        <TableHead className="text-right">Saldo po</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {walletTx.map((t) => (
+                        <TableRow key={t.id}>
+                          <TableCell className="whitespace-nowrap text-xs text-zinc-600">
+                            {String(t.created_at ?? "").replace("T", " ").slice(0, 16)}
+                          </TableCell>
+                          <TableCell>
+                            <p className="font-medium text-emerald-950 dark:text-emerald-100">
+                              {t.kind === "deposit"
+                                ? "Wpłata"
+                                : t.kind === "match_charge"
+                                  ? "Rozliczenie meczu"
+                                  : "Korekta"}
+                            </p>
+                            {t.note ? <p className="mt-0.5 text-xs text-zinc-600">{t.note}</p> : null}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">
+                            <span
+                              className={
+                                t.amount_pln > 0
+                                  ? "text-emerald-800 dark:text-emerald-200"
+                                  : t.amount_pln < 0
+                                    ? "text-red-700 dark:text-red-300"
+                                    : "text-zinc-700 dark:text-zinc-300"
+                              }
+                            >
+                              {formatPln(t.amount_pln)}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">
+                            {typeof t.balance_after_pln === "number" && Number.isFinite(t.balance_after_pln)
+                              ? formatPln(t.balance_after_pln)
+                              : "—"}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
               </div>
             ) : null}
           </CardContent>
