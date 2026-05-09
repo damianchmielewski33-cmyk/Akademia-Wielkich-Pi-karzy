@@ -730,6 +730,23 @@ export function TerminarzClient({
     }
   }, [openStatsFromUrl, highlightMatchId, isLoggedIn, allMatches, playedConfirmed, router, openStatsForMatch]);
 
+  useEffect(() => {
+    if (!openAttendanceFromUrl || highlightMatchId == null || !isAdmin) return;
+    if (attendanceOpenedFromUrlRef.current) return;
+    const m = allMatches.find((x) => x.id === highlightMatchId);
+    if (!m) return;
+    attendanceOpenedFromUrlRef.current = true;
+    setView("list");
+    if (playedConfirmed.some((p) => p.id === m.id)) setListTab("archive");
+    else setListTab("active");
+    void openManageSignups(m);
+    if (typeof window !== "undefined") {
+      const u = new URL(window.location.href);
+      u.searchParams.delete("obecnosc");
+      router.replace(u.pathname + u.search, { scroll: false });
+    }
+  }, [openAttendanceFromUrl, highlightMatchId, isAdmin, allMatches, playedConfirmed, router]);
+
   async function ensureAdminUsersLoaded() {
     if (!isAdmin) return;
     if (adminUsersLoaded) return;
