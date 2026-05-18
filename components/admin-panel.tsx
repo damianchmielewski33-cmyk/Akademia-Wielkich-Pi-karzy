@@ -57,9 +57,6 @@ import { MatchLineupAdmin } from "@/components/match-lineup-admin";
 import {
   cn,
   formatDateLocalYmd,
-  isValidMatchFee,
-  matchFeeToInputString,
-  parseMatchFeeInput,
 } from "@/lib/utils";
 
 const API = {
@@ -201,6 +198,411 @@ const tabs = [
 ] as const;
 
 type TabId = (typeof tabs)[number]["id"];
+
+type MatchSignupPaidRow = {
+  user_id: number;
+  paid: number;
+  commitment: number;
+  first_name: string;
+  last_name: string;
+  zawodnik: string;
+  profile_photo_path: string | null;
+};
+
+function MatchesView({
+  matches,
+  loading,
+  onReload,
+}: {
+  matches: MatchRow[];
+  loading: boolean;
+  onReload: () => void;
+}) {
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [signupsOpen, setSignupsOpen] = useState(false);
+  const [selectedMatch, setSelectedMatch] = useState<MatchRow | null>(null);
+
+  const handleCancelClick = (m: MatchRow) => {
+    setSelectedMatch(m);
+    setCancelOpen(true);
+  };
+
+  const handleSignupsClick = (m: MatchRow) => {
+    setSelectedMatch(m);
+    setSignupsOpen(true);
+  };
+
+  return (
+    <div>
+      <Toolbar
+        title="Mecze"
+        description="Zarządzanie terminami, opłatami, składami i anulacjami meczów."
+        onReload={onReload}
+        loading={loading}
+      />
+
+      <div className="overflow-hidden rounded-xl border border-zinc-200/80 bg-white shadow-sm dark:border-zinc-700/80 dark:bg-zinc-900/90 dark:shadow-black/30">
+        <Table>
+          <TableHeader>
+            <TableRow className="border-zinc-200 hover:bg-transparent">
+              <TableHead className="text-zinc-700">Data</TableHead>
+              <TableHead className="text-zinc-700">Godzina</TableHead>
+              <TableHead className="text-zinc-700">Lokalizacja</TableHead>
+              <TableHead className="text-right text-zinc-700">Zapisy</TableHead>
+              <TableHead className="text-right text-zinc-700">Rozegrane</TableHead>
+              <TableHead className="text-right text-zinc-700">Opłata</TableHead>
+              <TableHead className="text-right text-zinc-700">Akcje</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {matches.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={7} className="h-24 text-center text-sm text-zinc-500 dark:text-zinc-400">
+                  Brak meczów w bazie.
+                </TableCell>
+              </TableRow>
+            ) : (
+              matches.map((m) => (
+                <TableRow key={m.id} className="border-zinc-100">
+                  <TableCell className="align-middle">{m.date}</TableCell>
+                  <TableCell className="align-middle">{m.time}</TableCell>
+                  <TableCell className="align-middle">{m.location}</TableCell>
+                  <TableCell className="text-right align-middle tabular-nums">{m.players_count}</TableCell>
+                  <TableCell className="text-right align-middle tabular-nums">{m.played}</TableCell>
+                  <TableCell className="text-right align-middle tabular-nums">
+                    {m.fee_pln !== null ? `${m.fee_pln} zł` : "–"}
+                  </TableCell>
+                  <TableCell className="text-right align-middle">
+                    <div className="flex flex-wrap justify-end gap-2">
+                      {m.cancelled ? (
+                        <Badge className="bg-red-600 text-white">Anulowany</Badge>
+                      ) : (
+                        <>
+                          <Button size="sm" variant="outline" onClick={() => handleSignupsClick(m)}>
+                            Zapisy
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={() => handleCancelClick(m)}>
+                            Anuluj
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
+
+      <Dialog open={cancelOpen} onOpenChange={(o) => !o && setCancelOpen(false)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Anulować mecz?</DialogTitle>
+          </DialogHeader>
+          {selectedMatch && <MatchCancelDialogContent match={selectedMatch} onCancelled={() => { setCancelOpen(false); onReload(); }} />}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={signupsOpen} onOpenChange={(o) => !o && setSignupsOpen(false)}>
+        <DialogContent className="sm:max-w-2xl">
+          {selectedMatch && <MatchSignupsDialogContent match={selectedMatch} onClose={() => setSignupsOpen(false)} />}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+function MatchCancelDialogContent({
+  match,
+  onCancelled,
+}: {
+  match: MatchRow;
+  onCancelled: () => void;
+}) {
+  const [reason, setReason] = useState("weather");
+  const [saving, setSaving] = useState(false);
+
+  const reasons = [
+    { value: "no-lineup", label: "Brak składu" },
+    { value: "weather", label: "Pogoda" },
+    { value: "field-unavailable", label: "Boisko niedostępne" },
+    { value: "insufficient-players", label: "Niewystarczająca liczba zawodników" },
+    { value: "admin-decision", label: "Decyzja administratora" },
+  ];
+
+  const handleCancel = async () => {
+    setSaving(true);
+    try {
+      const res = await fetch(API.matchCancel(match.id), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason }),
+      });
+
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+
+      if (!res.ok) {
+        toast.error(data.error ?? "Nie udało się anulować meczu");
+        return;
+      }
+
+      toast.success("Mecz został anulowany");
+      onCancelled();
+    } catch {
+      toast.error("Błąd podczas anulacji meczu");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <>
+      <div className="space-y-4 py-2">
+        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+          Mecz <strong>{match.date}</strong> o <strong>{match.time}</strong>, <strong>{match.location}</strong> (id {match.id}).
+        </p>
+        <div>
+          <Label htmlFor="cancel-reason">Wybierz powód anulacji</Label>
+          <Select value={reason} onValueChange={setReason}>
+            <SelectTrigger id="cancel-reason" className="mt-1 border-zinc-200">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {reasons.map((r) => (
+                <SelectItem key={r.value} value={r.value}>
+                  {r.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
+            Wszyscy zapisani gracze otrzymają powiadomienie o anulacji.
+          </p>
+        </div>
+      </div>
+      <DialogFooter className="gap-2 sm:gap-0">
+        <Button variant="outline" disabled={saving}>
+          Zamknij
+        </Button>
+        <Button variant="destructive" onClick={handleCancel} disabled={saving}>
+          {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
+          Anuluj mecz
+        </Button>
+      </DialogFooter>
+    </>
+  );
+}
+
+function MatchSignupsDialogContent({
+  match,
+  onClose,
+}: {
+  match: MatchRow;
+  onClose: () => void;
+}) {
+  const [signups, setSignups] = useState<MatchSignupPaidRow[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState<number | null>(null);
+
+  useEffect(() => {
+    setLoading(true);
+    void (async () => {
+      try {
+        const res = await fetch(API.matchSignups(match.id));
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        setSignups(data.signups);
+      } catch {
+        toast.error("Nie udało się wczytać zapisów");
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [match]);
+
+  const togglePaid = async (userId: number, currentPaid: number) => {
+    setSaving(userId);
+    try {
+      const res = await fetch(API.matchSignups(match.id), {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: userId, paid: !currentPaid }),
+      });
+      if (!res.ok) throw new Error();
+      setSignups((prev) =>
+        prev.map((s) => (s.user_id === userId ? { ...s, paid: currentPaid ? 0 : 1 } : s))
+      );
+      toast.success("Zapisano");
+    } catch {
+      toast.error("Nie udało się zapisać");
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  return (
+    <>
+      <DialogHeader>
+        <DialogTitle>Zapisy i opłaty — {match.date} {match.time}</DialogTitle>
+        <DialogDescription>{match.location}</DialogDescription>
+      </DialogHeader>
+      {loading ? (
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="h-6 w-6 animate-spin" aria-hidden />
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {signups.length === 0 ? (
+            <p className="text-center text-sm text-zinc-500 dark:text-zinc-400 py-8">
+              Brak zapisów na ten mecz.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {signups.map((s) => (
+                <div key={s.user_id} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <PlayerAvatar
+                      photoPath={s.profile_photo_path}
+                      firstName={s.first_name}
+                      lastName={s.last_name}
+                      size="sm"
+                    />
+                    <div>
+                      <p className="font-medium">{s.first_name} {s.last_name}</p>
+                      <p className="text-sm text-zinc-500">{s.zawodnik}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={s.commitment === 1 ? "default" : "secondary"}>
+                      {s.commitment === 1 ? "Potwierdzony" : "Niepewny"}
+                    </Badge>
+                    <Button
+                      size="sm"
+                      variant={s.paid ? "default" : "outline"}
+                      onClick={() => togglePaid(s.user_id, s.paid)}
+                      disabled={saving === s.user_id}
+                    >
+                      {saving === s.user_id ? <Loader2 className="h-4 w-4 animate-spin" /> : s.paid ? "Opłacony" : "Nieopłacony"}
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+      <DialogFooter>
+        <Button variant="outline" onClick={onClose}>
+          Zamknij
+        </Button>
+      </DialogFooter>
+    </>
+  );
+}
+
+function StatsView({
+  stats,
+  loading,
+  onReload,
+}: {
+  stats: StatRow[];
+  loading: boolean;
+  onReload: () => void;
+}) {
+  const [q, setQ] = useState("");
+
+  const filtered = useMemo(() => {
+    const s = q.trim().toLowerCase();
+    if (!s) return stats;
+    return stats.filter(
+      (row) =>
+        row.first_name.toLowerCase().includes(s) ||
+        row.last_name.toLowerCase().includes(s) ||
+        row.zawodnik.toLowerCase().includes(s)
+    );
+  }, [stats, q]);
+
+  return (
+    <div>
+      <Toolbar
+        title="Statystyki"
+        description="Wpisy statystyk mecze — gole, asysty, dystans, interwencje."
+        onReload={onReload}
+        loading={loading}
+      >
+        <div className="relative w-full min-w-[200px] sm:w-64">
+          <Search
+            className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400"
+            aria-hidden
+          />
+          <Input
+            className="border-zinc-200 bg-white dark:border-zinc-600 dark:bg-zinc-800 pl-9"
+            placeholder="Szukaj…"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            aria-label="Filtruj statystyki"
+          />
+        </div>
+      </Toolbar>
+
+      <div className="overflow-hidden rounded-xl border border-zinc-200/80 bg-white shadow-sm dark:border-zinc-700/80 dark:bg-zinc-900/90 dark:shadow-black/30">
+        <Table>
+          <TableHeader>
+            <TableRow className="border-zinc-200 hover:bg-transparent">
+              <TableHead className="w-12 text-zinc-700" />
+              <TableHead className="text-zinc-700">Zawodnik</TableHead>
+              <TableHead className="text-right text-zinc-700">Gole</TableHead>
+              <TableHead className="text-right text-zinc-700">Asysty</TableHead>
+              <TableHead className="text-right text-zinc-700">Dystans (m)</TableHead>
+              <TableHead className="text-right text-zinc-700">Interwencje</TableHead>
+              <TableHead className="text-right text-zinc-700">Mecz ID</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filtered.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={7} className="h-24 text-center text-sm text-zinc-500 dark:text-zinc-400">
+                  {stats.length === 0 ? "Brak statystyk w bazie." : "Brak wyników dla podanego filtra."}
+                </TableCell>
+              </TableRow>
+            ) : (
+              filtered.map((s) => (
+                <TableRow key={s.id} className="border-zinc-100">
+                  <TableCell className="align-middle">
+                    <PlayerAvatar
+                      photoPath={s.profile_photo_path}
+                      firstName={s.first_name}
+                      lastName={s.last_name}
+                      size="sm"
+                      ringClassName="ring-2 ring-zinc-200"
+                    />
+                  </TableCell>
+                  <TableCell className="align-middle">
+                    <PlayerNameStack
+                      firstName={s.first_name}
+                      lastName={s.last_name}
+                      nick={s.zawodnik}
+                    />
+                  </TableCell>
+                  <TableCell className="text-right align-middle tabular-nums">{s.goals}</TableCell>
+                  <TableCell className="text-right align-middle tabular-nums">{s.assists}</TableCell>
+                  <TableCell className="text-right align-middle tabular-nums">{s.distance}</TableCell>
+                  <TableCell className="text-right align-middle tabular-nums">{s.saves}</TableCell>
+                  <TableCell className="text-right align-middle tabular-nums">
+                    <Link href={`/panel-admina?match=${s.match_id}`} className="text-emerald-600 hover:underline">
+                      {s.match_id}
+                    </Link>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
+    </div>
+  );
+}
 
 export function AdminPanel() {
   const [tab, setTab] = useState<TabId>("dashboard");
@@ -1864,221 +2266,3 @@ function UserEditForm({
     </>
   );
 }
-
-type MatchSignupPaidRow = {
-  user_id: number;
-  paid: number;
-  commitment: number;
-  first_name: string;
-  last_name: string;
-  zawodnik: string;
-  profile_photo_path: string | null;
-};
-
-function MatchCancelDialog({
-  match,
-  open,
-  onClose,
-  onCancelled,
-}: {
-  match: MatchRow | null;
-  open: boolean;
-  onClose: () => void;
-  onCancelled: () => void;
-}) {
-  const [reason, setReason] = useState("weather");
-  const [saving, setSaving] = useState(false);
-
-  const reasons = [
-    { value: "no-lineup", label: "Brak składu" },
-    { value: "weather", label: "Pogoda" },
-    { value: "field-unavailable", label: "Boisko niedostępne" },
-    { value: "insufficient-players", label: "Niewystarczająca liczba zawodników" },
-    { value: "admin-decision", label: "Decyzja administratora" },
-  ];
-
-  const handleCancel = async () => {
-    if (!match) return;
-    setSaving(true);
-    try {
-      const res = await fetch(API.matchCancel(match.id), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reason }),
-      });
-
-      const data = (await res.json().catch(() => ({}))) as { error?: string };
-
-      if (!res.ok) {
-        toast.error(data.error ?? "Nie udało się anulować meczu");
-        return;
-      }
-
-      toast.success("Mecz został anulowany");
-      onCancelled();
-    } catch (e) {
-      toast.error("Błąd podczas anulacji meczu");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Anulować mecz?</DialogTitle>
-        </DialogHeader>
-        {match && (
-          <div className="space-y-4 py-2">
-            <p className="text-sm text-zinc-600 dark:text-zinc-400">
-              Mecz <strong>{match.date}</strong> o <strong>{match.time}</strong>,{" "}
-              <strong>{match.location}</strong> (id {match.id}).
-            </p>
-            <div>
-              <Label htmlFor="cancel-reason">Wybierz powód anulacji</Label>
-              <Select value={reason} onValueChange={setReason}>
-                <SelectTrigger id="cancel-reason" className="mt-1 border-zinc-200">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {reasons.map((r) => (
-                    <SelectItem key={r.value} value={r.value}>
-                      {r.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
-                Wszyscy zapisani gracze otrzymają powiadomienie o anulacji.
-              </p>
-            </div>
-          </div>
-        )}
-        <DialogFooter className="gap-2 sm:gap-0">
-          <Button variant="outline" onClick={onClose} disabled={saving}>
-            Zamknij
-          </Button>
-          <Button variant="destructive" onClick={handleCancel} disabled={saving}>
-            {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
-            Anuluj mecz
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function MatchSignupsDialog({
-  match,
-  open,
-  onClose,
-}: {
-  match: MatchRow | null;
-  open: boolean;
-  onClose: () => void;
-}) {
-  const [signups, setSignups] = useState<MatchSignupPaidRow[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState<number | null>(null);
-
-  useEffect(() => {
-    if (!open || !match) return;
-    setLoading(true);
-    void (async () => {
-      try {
-        const res = await fetch(API.matchSignups(match.id));
-        if (!res.ok) throw new Error();
-        const data = await res.json();
-        setSignups(data.signups);
-      } catch {
-        toast.error("Nie udało się wczytać zapisów");
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [open, match]);
-
-  const togglePaid = async (userId: number, currentPaid: number) => {
-    if (!match) return;
-    setSaving(userId);
-    try {
-      const res = await fetch(API.matchSignups(match.id), {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_id: userId, paid: !currentPaid }),
-      });
-      if (!res.ok) throw new Error();
-      setSignups((prev) =>
-        prev.map((s) => (s.user_id === userId ? { ...s, paid: currentPaid ? 0 : 1 } : s))
-      );
-      toast.success("Zapisano");
-    } catch {
-      toast.error("Nie udało się zapisać");
-    } finally {
-      setSaving(null);
-    }
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="sm:max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>Zapisy i opłaty — {match?.date} {match?.time}</DialogTitle>
-          <DialogDescription>{match?.location}</DialogDescription>
-        </DialogHeader>
-        {loading ? (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-6 w-6 animate-spin" aria-hidden />
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {signups.length === 0 ? (
-              <p className="text-center text-sm text-zinc-500 dark:text-zinc-400 py-8">
-                Brak zapisów na ten mecz.
-              </p>
-            ) : (
-              <div className="space-y-2">
-                {signups.map((s) => (
-                  <div key={s.user_id} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <PlayerAvatar
-                        photoPath={s.profile_photo_path}
-                        firstName={s.first_name}
-                        lastName={s.last_name}
-                        size="sm"
-                      />
-                      <div>
-                        <p className="font-medium">{s.first_name} {s.last_name}</p>
-                        <p className="text-sm text-zinc-500">{s.zawodnik}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant={s.commitment === 1 ? "default" : "secondary"}>
-                        {s.commitment === 1 ? "Potwierdzony" : "Niepewny"}
-                      </Badge>
-                      <Button
-                        size="sm"
-                        variant={s.paid ? "default" : "outline"}
-                        onClick={() => togglePaid(s.user_id, s.paid)}
-                        disabled={saving === s.user_id}
-                      >
-                        {saving === s.user_id ? <Loader2 className="h-4 w-4 animate-spin" /> : s.paid ? "Opłacony" : "Nieopłacony"}
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
-            Zamknij
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-

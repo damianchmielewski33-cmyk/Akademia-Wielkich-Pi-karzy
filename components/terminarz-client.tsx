@@ -370,9 +370,6 @@ export function TerminarzClient({
   const [attendancePresent, setAttendancePresent] = useState<Set<number>>(new Set());
   const [attendanceBusy, setAttendanceBusy] = useState(false);
 
-  // Pop-up dla meczu anulowanego
-  const [cancelledMatchPopup, setCancelledMatchPopup] = useState<MatchRow | null>(null);
-  const [nextMatchForCancelled, setNextMatchForCancelled] = useState<MatchRow | null>(null);
   const cancelledMatchShownRef = useRef(false);
 
   const missingStatsSet = useMemo(() => new Set(playedMissingStatsMatchIds), [playedMissingStatsMatchIds]);
@@ -381,6 +378,31 @@ export function TerminarzClient({
     () => (highlightMatchId ? allMatches.find((m) => m.id === highlightMatchId) : undefined),
     [highlightMatchId, allMatches]
   );
+
+  const openAttendanceDialog = useCallback(async (m: MatchRow) => {
+    if (!isAdmin) return;
+    setAttendanceBusy(true);
+    setAttendanceMatch(m);
+    try {
+      const signupsR = await fetchJson<{ signups: AdminMatchSignupRow[] }>(`/api/admin/match/${m.id}/signups`);
+      if (!signupsR.ok) {
+        toast.error(signupsR.error);
+        return;
+      }
+      const confirmed = (signupsR.data.signups ?? []).filter((s) => Number(s.commitment ?? 1) === 1);
+      setAttendanceRows(confirmed);
+
+      const attR = await fetchJson<{ present_user_ids: number[] }>(`/api/admin/match/${m.id}/attendance`);
+      if (!attR.ok) {
+        toast.error(attR.error);
+        return;
+      }
+      setAttendancePresent(new Set((attR.data.present_user_ids ?? []).map((x) => Number(x)).filter(Number.isFinite)));
+      setAttendanceOpen(true);
+    } finally {
+      setAttendanceBusy(false);
+    }
+  }, [isAdmin]);
 
   useEffect(() => {
     if (highlightMatchId) setView("list");
@@ -770,16 +792,8 @@ export function TerminarzClient({
     if (!cancelled) return;
 
     // Znaleziony anulowany mecz - pokaż pop-up
-    cancelledMatchShownRef.current = true;
-    setCancelledMatchPopup(cancelled);
-
-    // Szukaj następnego meczu do zapisania
-    const today = todayISO();
-    const nextMatch = upcoming.find((m) => m.match_date >= today && !m.cancelled);
-    setNextMatchForCancelled(nextMatch ?? null);
-  }, [allMatches, upcoming]);
-
-  const missingStatsSetArray = Array.from(missingStatsSet);
+    // TODO: Implementacja powiadomienia o anulacji meczu
+  }, [allMatches]);
 
   async function ensureAdminUsersLoaded() {
     if (!isAdmin) return;
@@ -881,30 +895,6 @@ export function TerminarzClient({
     }
   }
 
-  async function openAttendanceDialog(m: MatchRow) {
-    if (!isAdmin) return;
-    setAttendanceBusy(true);
-    setAttendanceMatch(m);
-    try {
-      const signupsR = await fetchJson<{ signups: AdminMatchSignupRow[] }>(`/api/admin/match/${m.id}/signups`);
-      if (!signupsR.ok) {
-        toast.error(signupsR.error);
-        return;
-      }
-      const confirmed = (signupsR.data.signups ?? []).filter((s) => Number(s.commitment ?? 1) === 1);
-      setAttendanceRows(confirmed);
-
-      const attR = await fetchJson<{ present_user_ids: number[] }>(`/api/admin/match/${m.id}/attendance`);
-      if (!attR.ok) {
-        toast.error(attR.error);
-        return;
-      }
-      setAttendancePresent(new Set((attR.data.present_user_ids ?? []).map((x) => Number(x)).filter(Number.isFinite)));
-      setAttendanceOpen(true);
-    } finally {
-      setAttendanceBusy(false);
-    }
-  }
 
   async function saveAttendance() {
     if (!attendanceMatch) return;
