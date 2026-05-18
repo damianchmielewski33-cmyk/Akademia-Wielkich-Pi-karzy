@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CopilotDiffPersistence">
+    <option name="pendingDiffs">
+      <map>
+        <entry key="$PROJECT_DIR$/app/api/admin/match/[id]/cancel/route.ts">
+          <value>
+            <PendingDiffInfo>
+              <option name="filePath" value="$PROJECT_DIR$/app/api/admin/match/[id]/cancel/route.ts" />
+              <option name="updatedContent" value="import { NextResponse } from &quot;next/server&quot;;&#10;import { z } from &quot;zod&quot;;&#10;import { getDb, logActivity } from &quot;@/lib/db&quot;;&#10;import { requireAdmin } from &quot;@/lib/api-helpers&quot;;&#10;&#10;export const runtime = &quot;nodejs&quot;;&#10;&#10;type RouteContext = { params: Promise&lt;{ id: string }&gt; };&#10;&#10;const cancelSchema = z.object({&#10;  reason: z.string().min(1),&#10;});&#10;&#10;export async function POST(req: Request, context: RouteContext) {&#10;  const gate = await requireAdmin();&#10;  if (!gate.ok) return gate.response;&#10;  const { id } = await context.params;&#10;  const mid = Number(id);&#10;  if (!Number.isFinite(mid)) {&#10;    return NextResponse.json({ error: &quot;Invalid id&quot; }, { status: 400 });&#10;  }&#10;  let json: unknown;&#10;  try {&#10;    json = await req.json();&#10;  } catch {&#10;    return NextResponse.json({ error: &quot;Bad JSON&quot; }, { status: 400 });&#10;  }&#10;  const parsed = cancelSchema.safeParse(json);&#10;  if (!parsed.success) {&#10;    return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });&#10;  }&#10;  const db = await getDb();&#10;  const row = await db&#10;    .prepare(&quot;SELECT match_date, match_time, location FROM matches WHERE id = ?&quot;)&#10;    .get(mid) as { match_date: string; match_time: string; location: string } | undefined;&#10;  if (!row) return NextResponse.json({ error: &quot;Not found&quot; }, { status: 404 });&#10;  await db.prepare(&quot;UPDATE matches SET cancelled = 1, cancellation_reason = ? WHERE id = ?&quot;).run(parsed.data.reason, mid);&#10;  logActivity(&#10;    gate.session.userId,&#10;    `Anulował mecz id ${mid}: ${row.match_date} ${row.match_time} (${row.location}), powód: ${parsed.data.reason}`&#10;  );&#10;  // TODO: notify signed up players&#10;  return NextResponse.json({ ok: true });&#10;}" />
+            </PendingDiffInfo>
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+</project>

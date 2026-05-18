@@ -261,13 +261,19 @@ function initSchemaSync(db: Database.Database) {
     db.exec("ALTER TABLE match_stats ADD COLUMN saves INTEGER NOT NULL DEFAULT 0");
   }
 
-  const matchCols = db.prepare("PRAGMA table_info(matches)").all() as { name: string }[];
-  if (!matchCols.some((c) => c.name === "lineup_public")) {
-    db.exec("ALTER TABLE matches ADD COLUMN lineup_public INTEGER NOT NULL DEFAULT 0");
-  }
-  if (!matchCols.some((c) => c.name === "fee_pln")) {
-    db.exec("ALTER TABLE matches ADD COLUMN fee_pln REAL");
-  }
+   const matchCols = db.prepare("PRAGMA table_info(matches)").all() as { name: string }[];
+   if (!matchCols.some((c) => c.name === "lineup_public")) {
+     db.exec("ALTER TABLE matches ADD COLUMN lineup_public INTEGER NOT NULL DEFAULT 0");
+   }
+   if (!matchCols.some((c) => c.name === "fee_pln")) {
+     db.exec("ALTER TABLE matches ADD COLUMN fee_pln REAL");
+   }
+   if (!matchCols.some((c) => c.name === "cancelled")) {
+     db.exec("ALTER TABLE matches ADD COLUMN cancelled INTEGER NOT NULL DEFAULT 0");
+   }
+   if (!matchCols.some((c) => c.name === "cancellation_reason")) {
+     db.exec("ALTER TABLE matches ADD COLUMN cancellation_reason TEXT");
+   }
 
   const userCols = db.prepare("PRAGMA table_info(users)").all() as { name: string }[];
   if (!userCols.some((c) => c.name === "profile_photo_path")) {
@@ -483,4 +489,8 @@ export type MatchRow = {
   lineup_public: number;
   /** Kwota wpisowego za mecz (PLN); ustawiana przez administratora. */
   fee_pln?: number | null;
+  /** 1 = mecz został anulowany. */
+  cancelled?: number;
+  /** Powód anulacji meczu. */
+  cancellation_reason?: string | null;
 };

@@ -165,13 +165,19 @@ export async function initLibsqlSchema(client: Client) {
     await client.execute("ALTER TABLE match_stats ADD COLUMN saves INTEGER NOT NULL DEFAULT 0");
   }
 
-  names = await pragmaColumnNames(client, "matches");
-  if (!names.includes("lineup_public")) {
-    await client.execute("ALTER TABLE matches ADD COLUMN lineup_public INTEGER NOT NULL DEFAULT 0");
-  }
-  if (!names.includes("fee_pln")) {
-    await client.execute("ALTER TABLE matches ADD COLUMN fee_pln REAL");
-  }
+   names = await pragmaColumnNames(client, "matches");
+   if (!names.includes("lineup_public")) {
+     await client.execute("ALTER TABLE matches ADD COLUMN lineup_public INTEGER NOT NULL DEFAULT 0");
+   }
+   if (!names.includes("fee_pln")) {
+     await client.execute("ALTER TABLE matches ADD COLUMN fee_pln REAL");
+   }
+   if (!names.includes("cancelled")) {
+     await client.execute("ALTER TABLE matches ADD COLUMN cancelled INTEGER NOT NULL DEFAULT 0");
+   }
+   if (!names.includes("cancellation_reason")) {
+     await client.execute("ALTER TABLE matches ADD COLUMN cancellation_reason TEXT");
+   }
 
   names = await pragmaColumnNames(client, "users");
   if (!names.includes("profile_photo_path")) {
