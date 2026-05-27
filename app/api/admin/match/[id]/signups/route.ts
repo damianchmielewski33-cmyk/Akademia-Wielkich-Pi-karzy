@@ -27,11 +27,12 @@ export async function GET(_req: Request, context: RouteContext) {
     .prepare(
       `SELECT ms.user_id AS user_id, ms.paid, COALESCE(ms.commitment, 1) AS commitment,
               u.first_name AS first_name, u.last_name AS last_name,
-              u.player_alias AS zawodnik, u.profile_photo_path AS profile_photo_path
+              u.player_alias AS zawodnik, u.profile_photo_path AS profile_photo_path,
+              u.is_temporary AS is_temporary
        FROM match_signups ms
        JOIN users u ON u.id = ms.user_id
        WHERE ms.match_id = ?
-       ORDER BY ms.commitment DESC, u.first_name, u.last_name`
+       ORDER BY u.is_temporary DESC, ms.commitment DESC, u.first_name, u.last_name`
     )
     .all(mid);
 

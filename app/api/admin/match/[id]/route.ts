@@ -18,7 +18,7 @@ export async function GET(_req: Request, context: RouteContext) {
   const db = await getDb();
   const row = await db
     .prepare(
-      "SELECT id, match_date AS date, match_time AS time, location, fee_pln FROM matches WHERE id = ?"
+      "SELECT id, match_date AS date, match_time AS time, location, fee_pln, max_slots FROM matches WHERE id = ?"
     )
     .get(mid);
   if (!row) return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -30,6 +30,7 @@ const putSchema = z.object({
   time: z.string().min(1),
   location: z.string().min(1),
   fee_pln: z.union([z.number().nonnegative(), z.null()]).optional(),
+  max_slots: z.coerce.number().int().min(1).optional(),
 });
 
 export async function PUT(req: Request, context: RouteContext) {
@@ -52,21 +53,29 @@ export async function PUT(req: Request, context: RouteContext) {
   }
   const db = await getDb();
   const fee = parsed.data.fee_pln;
+  const maxSlots = parsed.data.max_slots;
+
+  let query = "UPDATE matches SET match_date = ?, match_time = ?, location = ?";
+  const params: any[] = [parsed.data.date, parsed.data.time, parsed.data.location];
+
   if (fee !== undefined) {
-    await db.prepare(
-      "UPDATE matches SET match_date = ?, match_time = ?, location = ?, fee_pln = ? WHERE id = ?"
-    ).run(parsed.data.date, parsed.data.time, parsed.data.location, fee, mid);
-  } else {
-    await db.prepare("UPDATE matches SET match_date = ?, match_time = ?, location = ? WHERE id = ?").run(
-      parsed.data.date,
-      parsed.data.time,
-      parsed.data.location,
-      mid
-    );
+    query += ", fee_pln = ?";
+    params.push(fee);
   }
+
+  if (maxSlots !== undefined) {
+    query += ", max_slots = ?";
+    params.push(maxSlots);
+  }
+
+  query += " WHERE id = ?";
+  params.push(mid);
+
+  await db.prepare(query).run(...params);
+
   logActivity(
     gate.session.userId,
-    `Edytował mecz id ${mid}: ${parsed.data.date} ${parsed.data.time}, ${parsed.data.location}`
+    `Edytował mecz id ${mid}: ${parsed.data.date} ${parsed.data.time}, ${parsed.data.location}${maxSlots !== undefined ? `, max. ${maxSlots} miejsc` : ""}`
   );
   return NextResponse.json({ status: "ok" });
 }

@@ -71,6 +71,8 @@ const API = {
   matches: "/api/admin/matches",
   match: (id: number) => `/api/admin/match/${id}`,
   matchSignups: (id: number) => `/api/admin/match/${id}/signups`,
+  matchAddGuest: (id: number) => `/api/admin/match/${id}/add-guest`,
+  matchRemoveGuest: (id: number) => `/api/admin/match/${id}/remove-guest`,
   matchCancel: (id: number) => `/api/admin/match/${id}/cancel`,
   stats: "/api/admin/stats",
   stat: (id: number) => `/api/admin/stat/${id}`,
@@ -100,6 +102,7 @@ type MatchRow = {
   played: number;
   fee_pln?: number | null;
   cancelled?: number;
+  max_slots?: number;
 };
 
 type StatRow = {
@@ -207,6 +210,7 @@ type MatchSignupPaidRow = {
   last_name: string;
   zawodnik: string;
   profile_photo_path: string | null;
+  is_temporary?: number;
 };
 
 function MatchesView({
@@ -220,6 +224,7 @@ function MatchesView({
 }) {
   const [cancelOpen, setCancelOpen] = useState(false);
   const [signupsOpen, setSignupsOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   const [selectedMatch, setSelectedMatch] = useState<MatchRow | null>(null);
 
   const handleCancelClick = (m: MatchRow) => {
@@ -232,11 +237,16 @@ function MatchesView({
     setSignupsOpen(true);
   };
 
+  const handleEditClick = (m: MatchRow) => {
+    setSelectedMatch(m);
+    setEditOpen(true);
+  };
+
   return (
     <div>
       <Toolbar
         title="Mecze"
-        description="Zarządzanie terminami, opłatami, składami i anulacjami meczów."
+        description="Zarządzanie terminami, opłatami, miejscami i anulacjami meczów."
         onReload={onReload}
         loading={loading}
       />
@@ -248,7 +258,7 @@ function MatchesView({
               <TableHead className="text-zinc-700">Data</TableHead>
               <TableHead className="text-zinc-700">Godzina</TableHead>
               <TableHead className="text-zinc-700">Lokalizacja</TableHead>
-              <TableHead className="text-right text-zinc-700">Zapisy</TableHead>
+              <TableHead className="text-right text-zinc-700">Miejsca</TableHead>
               <TableHead className="text-right text-zinc-700">Rozegrane</TableHead>
               <TableHead className="text-right text-zinc-700">Opłata</TableHead>
               <TableHead className="text-right text-zinc-700">Akcje</TableHead>
@@ -267,7 +277,9 @@ function MatchesView({
                   <TableCell className="align-middle">{m.date}</TableCell>
                   <TableCell className="align-middle">{m.time}</TableCell>
                   <TableCell className="align-middle">{m.location}</TableCell>
-                  <TableCell className="text-right align-middle tabular-nums">{m.players_count}</TableCell>
+                  <TableCell className="text-right align-middle tabular-nums">
+                    {m.players_count}/{m.max_slots || "?"}
+                  </TableCell>
                   <TableCell className="text-right align-middle tabular-nums">{m.played}</TableCell>
                   <TableCell className="text-right align-middle tabular-nums">
                     {m.fee_pln !== null ? `${m.fee_pln} zł` : "–"}
@@ -278,6 +290,9 @@ function MatchesView({
                         <Badge className="bg-red-600 text-white">Anulowany</Badge>
                       ) : (
                         <>
+                          <Button size="sm" variant="outline" onClick={() => handleEditClick(m)}>
+                            Edytuj
+                          </Button>
                           <Button size="sm" variant="outline" onClick={() => handleSignupsClick(m)}>
                             Zapisy
                           </Button>
@@ -295,6 +310,15 @@ function MatchesView({
         </Table>
       </div>
 
+      <Dialog open={editOpen} onOpenChange={(o) => !o && setEditOpen(false)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edytuj mecz</DialogTitle>
+          </DialogHeader>
+          {selectedMatch && <MatchEditDialogContent match={selectedMatch} onEdited={() => { setEditOpen(false); onReload(); }} />}
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={cancelOpen} onOpenChange={(o) => !o && setCancelOpen(false)}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -305,8 +329,8 @@ function MatchesView({
       </Dialog>
 
       <Dialog open={signupsOpen} onOpenChange={(o) => !o && setSignupsOpen(false)}>
-        <DialogContent className="sm:max-w-2xl">
-          {selectedMatch && <MatchSignupsDialogContent match={selectedMatch} onClose={() => setSignupsOpen(false)} />}
+        <DialogContent className="sm:max-w-3xl">
+          {selectedMatch && <MatchSignupsDialogContent match={selectedMatch} onClose={() => setSignupsOpen(false)} onReload={onReload} />}
         </DialogContent>
       </Dialog>
     </div>
@@ -397,13 +421,20 @@ function MatchCancelDialogContent({
 function MatchSignupsDialogContent({
   match,
   onClose,
+  onReload,
 }: {
   match: MatchRow;
   onClose: () => void;
+  onReload: () => void;
 }) {
   const [signups, setSignups] = useState<MatchSignupPaidRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState<number | null>(null);
+  const [addGuestOpen, setAddGuestOpen] = useState(false);
+  const [guestFirstName, setGuestFirstName] = useState("");
+  const [guestLastName, setGuestLastName] = useState("");
+  const [guestAlias, setGuestAlias] = useState("");
+  const [addingGuest, setAddingGuest] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -441,6 +472,68 @@ function MatchSignupsDialogContent({
     }
   };
 
+  const handleAddGuest = async () => {
+    if (!guestFirstName.trim() || !guestLastName.trim() || !guestAlias.trim()) {
+      toast.error("Uzupełnij wszystkie dane gościa");
+      return;
+    }
+
+    setAddingGuest(true);
+    try {
+      const res = await fetch(API.matchAddGuest(match.id), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          first_name: guestFirstName,
+          last_name: guestLastName,
+          player_alias: guestAlias,
+        }),
+      });
+
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+
+      if (!res.ok) {
+        toast.error(data.error ?? "Nie udało się dodać gościa");
+        return;
+      }
+
+      toast.success("Gościnny piłkarz został dodany");
+      setGuestFirstName("");
+      setGuestLastName("");
+      setGuestAlias("");
+      setAddGuestOpen(false);
+      onReload();
+    } finally {
+      setAddingGuest(false);
+    }
+  };
+
+  const handleRemoveGuest = async (userId: number) => {
+    const ok = window.confirm("Czy na pewno chcesz usunąć tego gościnnego piłkarza?");
+    if (!ok) return;
+
+    setSaving(userId);
+    try {
+      const res = await fetch(API.matchRemoveGuest(match.id), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: userId }),
+      });
+
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+
+      if (!res.ok) {
+        toast.error(data.error ?? "Nie udało się usunąć piłkarza");
+        return;
+      }
+
+      toast.success("Piłkarz został usunięty");
+      onReload();
+    } finally {
+      setSaving(null);
+    }
+  };
+
   return (
     <>
       <DialogHeader>
@@ -461,30 +554,49 @@ function MatchSignupsDialogContent({
             <div className="space-y-2">
               {signups.map((s) => (
                 <div key={s.user_id} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 flex-1">
                     <PlayerAvatar
                       photoPath={s.profile_photo_path}
                       firstName={s.first_name}
                       lastName={s.last_name}
                       size="sm"
                     />
-                    <div>
-                      <p className="font-medium">{s.first_name} {s.last_name}</p>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium">{s.first_name} {s.last_name}</p>
+                        {s.is_temporary ? (
+                          <Badge className="bg-amber-100 text-amber-800">Gościnny</Badge>
+                        ) : null}
+                      </div>
                       <p className="text-sm text-zinc-500">{s.zawodnik}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Badge variant={s.commitment === 1 ? "default" : "secondary"}>
-                      {s.commitment === 1 ? "Potwierdzony" : "Niepewny"}
-                    </Badge>
-                    <Button
-                      size="sm"
-                      variant={s.paid ? "default" : "outline"}
-                      onClick={() => togglePaid(s.user_id, s.paid)}
-                      disabled={saving === s.user_id}
-                    >
-                      {saving === s.user_id ? <Loader2 className="h-4 w-4 animate-spin" /> : s.paid ? "Opłacony" : "Nieopłacony"}
-                    </Button>
+                    {!s.is_temporary && (
+                      <Badge variant={s.commitment === 1 ? "default" : "secondary"}>
+                        {s.commitment === 1 ? "Potwierdzony" : "Niepewny"}
+                      </Badge>
+                    )}
+                    {!s.is_temporary && (
+                      <Button
+                        size="sm"
+                        variant={s.paid ? "default" : "outline"}
+                        onClick={() => togglePaid(s.user_id, s.paid)}
+                        disabled={saving === s.user_id}
+                      >
+                        {saving === s.user_id ? <Loader2 className="h-4 w-4 animate-spin" /> : s.paid ? "Opłacony" : "Nieopłacony"}
+                      </Button>
+                    )}
+                    {s.is_temporary && (
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => handleRemoveGuest(s.user_id)}
+                        disabled={saving === s.user_id}
+                      >
+                        {saving === s.user_id ? <Loader2 className="h-4 w-4 animate-spin" /> : "Usuń"}
+                      </Button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -492,11 +604,70 @@ function MatchSignupsDialogContent({
           )}
         </div>
       )}
-      <DialogFooter>
+      <DialogFooter className="gap-2 sm:gap-0">
+        <Button variant="outline" size="sm" onClick={() => setAddGuestOpen(true)}>
+          Dodaj gościa
+        </Button>
         <Button variant="outline" onClick={onClose}>
           Zamknij
         </Button>
       </DialogFooter>
+
+      <Dialog open={addGuestOpen} onOpenChange={setAddGuestOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Dodaj gościnnego piłkarza</DialogTitle>
+            <DialogDescription>
+              Piłkarz będzie dostępny tylko na ten mecz
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div>
+              <Label htmlFor="guest-fn">Imię</Label>
+              <Input
+                id="guest-fn"
+                className="mt-1 border-zinc-200"
+                value={guestFirstName}
+                onChange={(e) => setGuestFirstName(e.target.value)}
+                disabled={addingGuest}
+              />
+            </div>
+            <div>
+              <Label htmlFor="guest-ln">Nazwisko</Label>
+              <Input
+                id="guest-ln"
+                className="mt-1 border-zinc-200"
+                value={guestLastName}
+                onChange={(e) => setGuestLastName(e.target.value)}
+                disabled={addingGuest}
+              />
+            </div>
+            <div>
+              <Label htmlFor="guest-alias">Pseudonim</Label>
+              <Input
+                id="guest-alias"
+                className="mt-1 border-zinc-200"
+                value={guestAlias}
+                onChange={(e) => setGuestAlias(e.target.value)}
+                disabled={addingGuest}
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => setAddGuestOpen(false)}
+              disabled={addingGuest}
+            >
+              Anuluj
+            </Button>
+            <Button onClick={handleAddGuest} disabled={addingGuest}>
+              {addingGuest ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Dodaj
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
@@ -2266,3 +2437,87 @@ function UserEditForm({
     </>
   );
 }
+
+function MatchEditDialogContent({
+  match,
+  onEdited,
+}: {
+  match: MatchRow;
+  onEdited: () => void;
+}) {
+  const [maxSlots, setMaxSlots] = useState(String(match.max_slots || 14));
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async () => {
+    const slots = Number(maxSlots);
+    if (!Number.isFinite(slots) || slots < 1) {
+      toast.error("Liczba miejsc musi być większa niż 0");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const res = await fetch(API.match(match.id), {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          date: match.date,
+          time: match.time,
+          location: match.location,
+          max_slots: slots,
+        }),
+      });
+
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+
+      if (!res.ok) {
+        toast.error(data.error ?? "Nie udało się zapisać");
+        return;
+      }
+
+      toast.success("Mecz został zaktualizowany");
+      onEdited();
+    } catch {
+      toast.error("Błąd podczas zapisu");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <>
+      <div className="space-y-4 py-2">
+        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+          <strong>{match.date}</strong> o <strong>{match.time}</strong>, <strong>{match.location}</strong>
+        </p>
+        <div>
+          <Label htmlFor="max-slots">Maksymalna liczba miejsc</Label>
+          <Input
+            id="max-slots"
+            type="number"
+            min="1"
+            value={maxSlots}
+            onChange={(e) => setMaxSlots(e.target.value)}
+            className="mt-1 border-zinc-200"
+            disabled={saving}
+          />
+          <p className="mt-1 text-xs text-zinc-500">
+            Obecnie zapisanych: <strong>{match.players_count}</strong>
+          </p>
+        </div>
+      </div>
+      <DialogFooter className="gap-2 sm:gap-0">
+        <Button variant="outline" disabled={saving}>
+          Zamknij
+        </Button>
+        <Button onClick={handleSave} disabled={saving}>
+          {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
+          Zapisz zmiany
+        </Button>
+      </DialogFooter>
+    </>
+  );
+}
+
+
+

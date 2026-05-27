@@ -304,6 +304,12 @@ function initSchemaSync(db: Database.Database) {
   if (!userCols.some((c) => c.name === "ui_theme")) {
     db.exec("ALTER TABLE users ADD COLUMN ui_theme TEXT NOT NULL DEFAULT 'light'");
   }
+  if (!userCols.some((c) => c.name === "is_temporary")) {
+    db.exec("ALTER TABLE users ADD COLUMN is_temporary INTEGER NOT NULL DEFAULT 0");
+  }
+  if (!userCols.some((c) => c.name === "temporary_guest_match_id")) {
+    db.exec("ALTER TABLE users ADD COLUMN temporary_guest_match_id INTEGER");
+  }
 
   const signupCols = db.prepare("PRAGMA table_info(match_signups)").all() as { name: string }[];
   if (!signupCols.some((c) => c.name === "drives_car")) {

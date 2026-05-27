@@ -11,7 +11,7 @@ export async function GET() {
   const rows = await db
     .prepare(`
       SELECT id, match_date AS date, match_time AS time,
-             location, signed_up AS players_count, played, fee_pln
+             location, signed_up AS players_count, played, fee_pln, max_slots, cancelled
       FROM matches
       ORDER BY match_date DESC
     `)
