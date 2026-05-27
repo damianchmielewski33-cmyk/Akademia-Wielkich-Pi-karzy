@@ -56,7 +56,7 @@ export async function PUT(req: Request, context: RouteContext) {
   const maxSlots = parsed.data.max_slots;
 
   let query = "UPDATE matches SET match_date = ?, match_time = ?, location = ?";
-  const params: any[] = [parsed.data.date, parsed.data.time, parsed.data.location];
+  const params: (string | number | null | undefined)[] = [parsed.data.date, parsed.data.time, parsed.data.location];
 
   if (fee !== undefined) {
     query += ", fee_pln = ?";

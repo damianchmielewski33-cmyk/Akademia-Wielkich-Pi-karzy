@@ -7,6 +7,17 @@ export const runtime = "nodejs";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
+type UserRow = {
+  id: number;
+  first_name: string;
+  last_name: string;
+  is_temporary: number;
+};
+
+type BalanceRow = {
+  balance: number;
+};
+
 const bodySchema = z.object({
   user_id: z.coerce.number().int().positive(),
   check_balance: z.boolean().optional(),
@@ -39,7 +50,7 @@ export async function POST(req: Request, context: RouteContext) {
 
   const user = await db
     .prepare("SELECT id, first_name, last_name, is_temporary FROM users WHERE id = ?")
-    .get(userId) as any;
+    .get(userId) as UserRow | undefined;
 
   if (!user) {
     return NextResponse.json({ error: "Użytkownik nie znaleziony" }, { status: 404 });
@@ -51,7 +62,7 @@ export async function POST(req: Request, context: RouteContext) {
 
   const balanceRow = await db
     .prepare(`SELECT COALESCE(SUM(amount_pln), 0) as balance FROM wallet_transactions WHERE user_id = ?`)
-    .get(userId) as { balance: number } | undefined;
+    .get(userId) as BalanceRow | undefined;
 
   const balance = balanceRow?.balance ?? 0;
 
@@ -63,9 +74,6 @@ export async function POST(req: Request, context: RouteContext) {
     return NextResponse.json({ error: "Gracz ma należność" }, { status: 400 });
   }
 
-  const match = await db
-    .prepare("SELECT match_date, match_time FROM matches WHERE id = ?")
-    .get(mid) as any;
 
   await db.prepare("DELETE FROM match_signups WHERE user_id = ? AND match_id = ?").run(userId, mid);
   await db.prepare("UPDATE matches SET signed_up = signed_up - 1 WHERE id = ? AND signed_up > 0").run(mid);
