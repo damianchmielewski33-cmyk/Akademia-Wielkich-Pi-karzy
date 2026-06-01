@@ -208,6 +208,12 @@ export async function initLibsqlSchema(client: Client) {
   if (!names.includes("ui_theme")) {
     await client.execute("ALTER TABLE users ADD COLUMN ui_theme TEXT NOT NULL DEFAULT 'light'");
   }
+  if (!names.includes("is_temporary")) {
+    await client.execute("ALTER TABLE users ADD COLUMN is_temporary INTEGER NOT NULL DEFAULT 0");
+  }
+  if (!names.includes("temporary_guest_match_id")) {
+    await client.execute("ALTER TABLE users ADD COLUMN temporary_guest_match_id INTEGER");
+  }
 
   names = await pragmaColumnNames(client, "match_signups");
   if (!names.includes("drives_car")) {
