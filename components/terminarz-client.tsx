@@ -30,6 +30,7 @@ import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
 import type { PlayersDataEntry } from "@/lib/terminarz-shared";
 import { formatPonderingPlayersPolish, tentativeSignupCount } from "@/lib/terminarz-shared";
 import { cn } from "@/lib/utils";
+import { nativeSelectClasses } from "@/lib/field-styles";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -1444,7 +1445,7 @@ export function TerminarzClient({
                 <div className="lg:col-span-3">
                   <Label className="text-xs text-zinc-600 dark:text-zinc-400">Zakres dat (lista aktywna)</Label>
                   <select
-                    className="awp-focus-ring mt-1 w-full rounded-xl border border-emerald-950/15 bg-white/90 px-3 py-2 text-sm font-medium text-emerald-950 shadow-sm shadow-emerald-950/5 dark:border-emerald-100/10 dark:bg-zinc-900/70 dark:text-emerald-100"
+                    className={cn(nativeSelectClasses, "mt-1 w-full")}
                     value={period}
                     onChange={(e) => setPeriod(e.target.value as "all" | "7d" | "month")}
                   >
@@ -1456,7 +1457,7 @@ export function TerminarzClient({
                 <div className="lg:col-span-3">
                   <Label className="text-xs text-zinc-600 dark:text-zinc-400">Miejsca</Label>
                   <select
-                    className="awp-focus-ring mt-1 w-full rounded-xl border border-emerald-950/15 bg-white/90 px-3 py-2 text-sm font-medium text-emerald-950 shadow-sm shadow-emerald-950/5 dark:border-emerald-100/10 dark:bg-zinc-900/70 dark:text-emerald-100"
+                    className={cn(nativeSelectClasses, "mt-1 w-full")}
                     value={filter}
                     onChange={(e) => setFilter(e.target.value)}
                   >
@@ -1469,7 +1470,7 @@ export function TerminarzClient({
                 </div>
                 <div className="flex flex-wrap gap-2 lg:col-span-2">
                   <select
-                    className="awp-focus-ring min-w-[10rem] flex-1 rounded-xl border border-emerald-950/15 bg-white/90 px-3 py-2 text-sm font-medium text-emerald-950 shadow-sm shadow-emerald-950/5 dark:border-emerald-100/10 dark:bg-zinc-900/70 dark:text-emerald-100"
+                    className={cn(nativeSelectClasses, "min-w-[10rem] flex-1")}
                     value={sortDir}
                     onChange={(e) => setSortDir(e.target.value as "asc" | "desc")}
                   >

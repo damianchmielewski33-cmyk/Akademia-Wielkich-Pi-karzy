@@ -13,6 +13,11 @@
   /* Ja┼Ťniejsze t┼éo w trybie jasnym */
   --background: #f4f6fb;
   --foreground: #0f172a;
+  color-scheme: light;
+  --awp-field-bg: #ffffff;
+  --awp-field-bg-dark: #18181b;
+  --awp-field-fg: #052e1f;
+  --awp-field-fg-dark: #ecfdf5;
 }
 
 .dark {
@@ -136,6 +141,72 @@
       "Liberation Sans",
       sans-serif;
     letter-spacing: -0.01em;
+  }
+
+  select,
+  input[type="date"],
+  input[type="time"],
+  input[type="datetime-local"],
+  input[type="month"],
+  input[type="week"] {
+    color-scheme: light;
+  }
+
+  select option,
+  select optgroup {
+    background-color: var(--awp-field-bg);
+    color: var(--awp-field-fg);
+  }
+
+  select option:checked {
+    background-color: #d1fae5;
+    color: #052e1f;
+  }
+
+  .dark select,
+  .dark input[type="date"],
+  .dark input[type="time"],
+  .dark input[type="datetime-local"],
+  .dark input[type="month"],
+  .dark input[type="week"] {
+    color-scheme: dark;
+  }
+
+  .dark select option,
+  .dark select optgroup {
+    background-color: var(--awp-field-bg-dark);
+    color: var(--awp-field-fg-dark);
+  }
+
+  .dark select option:checked {
+    background-color: #064e3b;
+    color: #ecfdf5;
+  }
+
+  input[type="date"]::-webkit-calendar-picker-indicator,
+  input[type="time"]::-webkit-calendar-picker-indicator,
+  input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    opacity: 0.55;
+  }
+
+  .dark input[type="date"]::-webkit-calendar-picker-indicator,
+  .dark input[type="time"]::-webkit-calendar-picker-indicator,
+  .dark input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+    filter: invert(0.82);
+    opacity: 0.85;
+  }
+
+  .awp-native-select {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23052e1f' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 1rem;
+  }
+
+  .dark .awp-native-select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23ecfdf5' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
   }
 }
 

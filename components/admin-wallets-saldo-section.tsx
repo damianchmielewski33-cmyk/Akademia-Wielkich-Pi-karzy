@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { PlatnosciUserLite } from "@/components/platnosci-client";
 import { cn } from "@/lib/utils";
+import { nativeSelectClasses } from "@/lib/field-styles";
 
 type AdminWalletPlayerRow = PlatnosciUserLite & { balance_pln: number };
 
@@ -194,7 +195,7 @@ export function AdminWalletsSaldoSection({ embedded = false, showPublicLinks = f
                 <Label htmlFor="admin-balance-user">Zawodnik</Label>
                 <select
                   id="admin-balance-user"
-                  className="awp-focus-ring mt-1 w-full rounded-xl border border-emerald-950/15 bg-white/90 px-3 py-2 text-sm font-medium text-emerald-950 shadow-sm shadow-emerald-950/5 dark:border-emerald-100/10 dark:bg-zinc-900/70 dark:text-emerald-100"
+                  className={cn(nativeSelectClasses, "mt-1 w-full")}
                   value={adminBalanceUserId ?? ""}
                   onChange={(e) => setAdminBalanceUserId(e.target.value ? Number(e.target.value) : null)}
                 >

@@ -2,7 +2,13 @@ import { cn } from "@/lib/utils";
 
 /** Wspólne klasy dla pól edytowalnych (input, textarea, select). */
 export const fieldBaseClasses =
-  "awp-focus-ring flex w-full rounded-xl border bg-white/95 px-3.5 py-2.5 text-sm text-zinc-900 shadow-sm shadow-emerald-950/[0.04] ring-offset-transparent transition-[border-color,box-shadow,background-color] file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-zinc-400 disabled:cursor-not-allowed disabled:opacity-55 dark:bg-zinc-900/80 dark:text-zinc-100 dark:placeholder:text-zinc-500";
+  "awp-focus-ring flex w-full rounded-xl border bg-white px-3.5 py-2.5 text-sm text-zinc-900 shadow-sm shadow-emerald-950/[0.04] ring-offset-transparent transition-[border-color,box-shadow,background-color] file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-zinc-400 disabled:cursor-not-allowed disabled:opacity-55 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-500";
+
+/** Natywny `<select>` — spójny z polami formularza (lista rozwijana przez przeglądarkę). */
+export const nativeSelectClasses = cn(
+  fieldControlClasses({ height: "min-h-11 py-2" }),
+  "awp-native-select block cursor-pointer pr-9"
+);
 
 export const fieldDefaultBorder =
   "border-emerald-950/12 hover:border-emerald-700/25 focus-visible:border-emerald-500/70 dark:border-emerald-100/12 dark:hover:border-emerald-400/25 dark:focus-visible:border-emerald-400/55";
