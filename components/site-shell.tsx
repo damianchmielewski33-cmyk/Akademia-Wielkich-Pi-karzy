@@ -72,9 +72,9 @@ export function SiteShell({ children, isLoggedIn, isAdmin, account = null }: Pro
   const navItems: Array<{ href: string; label: string; visible: boolean }> = [
     { href: "/", label: "Start", visible: true },
     { href: "/terminarz", label: "Terminarz", visible: true },
-    { href: "/platnosci", label: "P┼éatno┼Ťci", visible: isLoggedIn },
-    { href: "/pilkarze", label: "Pi┼ékarze", visible: true },
-    { href: "/sklady", label: "Sk┼éady", visible: true },
+    { href: "/platnosci", label: "Płatności", visible: isLoggedIn },
+    { href: "/pilkarze", label: "Piłkarze", visible: true },
+    { href: "/sklady", label: "Składy", visible: true },
     { href: "/statystyki", label: "Statystyki", visible: isLoggedIn },
     { href: "/rankingi", label: "Rankingi", visible: isLoggedIn },
     { href: "/o-nas", label: "O nas", visible: true },
@@ -91,7 +91,7 @@ export function SiteShell({ children, isLoggedIn, isAdmin, account = null }: Pro
     if (themeBusy) return;
     const nextTheme = isDarkNow ? "light" : "dark";
 
-    // Optymistycznie prze┼é─ůczamy klas─Ö natychmiast (bez "flash").
+    // Optymistycznie przełączamy klasę natychmiast (bez "flash").
     try {
       document.documentElement.classList.toggle("dark", nextTheme === "dark");
       localStorage.setItem("awp-ui-theme", nextTheme);
@@ -144,11 +144,11 @@ export function SiteShell({ children, isLoggedIn, isAdmin, account = null }: Pro
               <span className="block text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-[var(--mundial-gold)]">
                 Mundial 2026
               </span>
-              <span className="block text-sm font-semibold leading-snug sm:text-base">Akademia Wielkich Pi┼ékarzy</span>
+              <span className="block text-sm font-semibold leading-snug sm:text-base">Akademia Wielkich Piłkarzy</span>
             </span>
           </Link>
 
-          <nav className="flex items-center justify-end gap-2" aria-label="G┼é├│wna nawigacja">
+          <nav className="flex items-center justify-end gap-2" aria-label="Główna nawigacja">
             {/* Desktop / tablet */}
             <div className="hidden flex-wrap items-center justify-end gap-1 sm:flex sm:gap-1.5">
               <button
@@ -159,7 +159,7 @@ export function SiteShell({ children, isLoggedIn, isAdmin, account = null }: Pro
                   "awp-focus-ring inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/20 bg-white/10 text-white shadow-sm transition-colors hover:bg-white/15",
                   themeBusy && "opacity-70"
                 )}
-                aria-label={isDarkNow ? "Prze┼é─ůcz na jasny motyw" : "Prze┼é─ůcz na ciemny motyw"}
+                aria-label={isDarkNow ? "Przełącz na jasny motyw" : "Przełącz na ciemny motyw"}
                 title={isDarkNow ? "Jasny motyw" : "Ciemny motyw"}
               >
                 {isDarkNow ? <Sun className="h-5 w-5" aria-hidden /> : <Moon className="h-5 w-5" aria-hidden />}
@@ -183,8 +183,8 @@ export function SiteShell({ children, isLoggedIn, isAdmin, account = null }: Pro
                       ? "bg-white/15 text-white shadow-sm"
                       : "text-emerald-100/90 hover:bg-white/10 hover:text-white"
                   )}
-                  aria-label="M├│j profil"
-                  title="M├│j profil"
+                  aria-label="Mój profil"
+                  title="Mój profil"
                 >
                   <PlayerAvatar
                     photoPath={account.profilePhotoPath}
@@ -226,7 +226,7 @@ export function SiteShell({ children, isLoggedIn, isAdmin, account = null }: Pro
                   "awp-focus-ring inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/20 bg-white/10 text-white shadow-sm hover:bg-white/15",
                   themeBusy && "opacity-70"
                 )}
-                aria-label={isDarkNow ? "Prze┼é─ůcz na jasny motyw" : "Prze┼é─ůcz na ciemny motyw"}
+                aria-label={isDarkNow ? "Przełącz na jasny motyw" : "Przełącz na ciemny motyw"}
                 title={isDarkNow ? "Jasny motyw" : "Ciemny motyw"}
               >
                 {isDarkNow ? <Sun className="h-5 w-5" aria-hidden /> : <Moon className="h-5 w-5" aria-hidden />}
@@ -239,8 +239,8 @@ export function SiteShell({ children, isLoggedIn, isAdmin, account = null }: Pro
                     "awp-focus-ring flex items-center gap-2 rounded-xl px-2 py-1.5 transition-[background-color,color]",
                     pathname === "/profil" ? "bg-white/15 text-white" : "text-emerald-100/90 hover:bg-white/10"
                   )}
-                  aria-label="M├│j profil"
-                  title="M├│j profil"
+                  aria-label="Mój profil"
+                  title="Mój profil"
                 >
                   <PlayerAvatar
                     photoPath={account.profilePhotoPath}
@@ -257,7 +257,7 @@ export function SiteShell({ children, isLoggedIn, isAdmin, account = null }: Pro
                   <button
                     type="button"
                     className="awp-focus-ring inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/20 bg-white/10 text-white shadow-sm hover:bg-white/15"
-                    aria-label="Otw├│rz menu"
+                    aria-label="Otwórz menu"
                     title="Menu"
                   >
                     <Menu className="h-5 w-5" aria-hidden />
@@ -317,8 +317,8 @@ export function SiteShell({ children, isLoggedIn, isAdmin, account = null }: Pro
       <Dialog open={logoutOpen} onOpenChange={setLogoutOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Wylogowa─ç si─Ö?</DialogTitle>
-            <DialogDescription>Czy na pewno chcesz zako┼äczy─ç sesj─Ö?</DialogDescription>
+            <DialogTitle>Wylogować się?</DialogTitle>
+            <DialogDescription>Czy na pewno chcesz zakończyć sesję?</DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 sm:gap-0">
             <Button variant="outline" onClick={() => setLogoutOpen(false)}>
@@ -383,14 +383,14 @@ export function SiteShell({ children, isLoggedIn, isAdmin, account = null }: Pro
             />
             <div>
               <p className="text-sm font-semibold text-white">{SITE_NAME}</p>
-              <p className="text-xs text-emerald-200/80">Terminarz, statystyki i spo┼éeczno┼Ť─ç na boisku</p>
+              <p className="text-xs text-emerald-200/80">Terminarz, statystyki i społeczność na boisku</p>
               <p className="mt-2 text-xs text-emerald-200/85">
                 <Link href="/o-nas" className="font-medium underline-offset-2 hover:underline">
                   O nas i zasady
                 </Link>
                 {contactEmail ? (
                   <>
-                    {" ┬Ě "}
+                    {" · "}
                     <a href={`mailto:${contactEmail}`} className="font-medium underline-offset-2 hover:underline">
                       {contactEmail}
                     </a>
@@ -399,7 +399,7 @@ export function SiteShell({ children, isLoggedIn, isAdmin, account = null }: Pro
               </p>
             </div>
           </div>
-          <p className="text-xs text-emerald-200/70">┬ę {new Date().getFullYear()} ┬Ě Gra z pasj─ů</p>
+          <p className="text-xs text-emerald-200/70">© {new Date().getFullYear()} · Gra z pasją</p>
         </div>
       </footer>
     </div>
