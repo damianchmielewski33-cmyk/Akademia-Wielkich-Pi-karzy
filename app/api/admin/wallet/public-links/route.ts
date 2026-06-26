@@ -12,6 +12,10 @@ const postSchema = z.discriminatedUnion("kind", [
     expires_in_days: z.coerce.number().int().min(1).max(365).optional(),
   }),
   z.object({
+    kind: z.literal("all_wallets"),
+    expires_in_days: z.coerce.number().int().min(1).max(365).optional(),
+  }),
+  z.object({
     kind: z.literal("match_wallets"),
     match_id: z.coerce.number().int().positive(),
     expires_in_days: z.coerce.number().int().min(1).max(365).optional(),

@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Check, ClipboardCopy, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
 import { Button } from "@/components/ui/button";
@@ -44,13 +44,15 @@ type AdminWalletsSaldoSectionProps = {
    * false: pełny nagłówek (np. zakładka Portfele w panelu admina).
    */
   embedded?: boolean;
+  /** Przyciski generowania linków publicznych (ostatni mecz + zbiorczo). */
+  showPublicLinks?: boolean;
 };
 
 /**
  * Pełna lista sald graczy i ręczne ustawianie salda (admin).
  * Dostępne w panelu administratora; może być też osadzone na /platnosci (embedded).
  */
-export function AdminWalletsSaldoSection({ embedded = false }: AdminWalletsSaldoSectionProps) {
+export function AdminWalletsSaldoSection({ embedded = false, showPublicLinks = false }: AdminWalletsSaldoSectionProps) {
   const router = useRouter();
   const [adminOverview, setAdminOverview] = useState<AdminWalletOverview | null>(null);
   const [adminLoading, setAdminLoading] = useState(false);
@@ -58,6 +60,8 @@ export function AdminWalletsSaldoSection({ embedded = false }: AdminWalletsSaldo
   const [adminBalanceTarget, setAdminBalanceTarget] = useState("");
   const [adminBalanceNote, setAdminBalanceNote] = useState("");
   const [adminBalanceSubmitting, setAdminBalanceSubmitting] = useState(false);
+  const [publicLinkBusy, setPublicLinkBusy] = useState(false);
+  const [publicLinkCopied, setPublicLinkCopied] = useState<string | null>(null);
 
   async function refresh() {
     setAdminLoading(true);
@@ -80,6 +84,30 @@ export function AdminWalletsSaldoSection({ embedded = false }: AdminWalletsSaldo
     void refresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  async function generatePublicLink(kind: "last_match_wallets" | "all_wallets") {
+    setPublicLinkBusy(true);
+    try {
+      const r = await fetchJson<{ ok: true; token: string; path: string }>("/api/admin/wallet/public-links", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ kind, expires_in_days: 30 }),
+      });
+      if (!r.ok) {
+        toast.error(r.error);
+        return;
+      }
+      const url = `${window.location.origin}${r.data.path}`;
+      await navigator.clipboard.writeText(url);
+      setPublicLinkCopied(kind);
+      toast.success("Skopiowano link do schowka");
+      setTimeout(() => setPublicLinkCopied(null), 2000);
+    } catch {
+      toast.error("Nie udało się skopiować linku");
+    } finally {
+      setPublicLinkBusy(false);
+    }
+  }
 
   async function adminSetWalletBalance() {
     const user_id = adminBalanceUserId;
@@ -339,6 +367,43 @@ export function AdminWalletsSaldoSection({ embedded = false }: AdminWalletsSaldo
             </p>
             );
           })()}
+
+          {showPublicLinks ? (
+            <div className="mt-6 rounded-2xl border border-emerald-900/10 bg-emerald-50/30 p-4 dark:border-emerald-100/10 dark:bg-emerald-950/30">
+              <p className="text-sm font-semibold text-emerald-950 dark:text-emerald-100">Linki do podsumowania płatności</p>
+              <p className="mt-0.5 text-xs text-zinc-600 dark:text-zinc-400">
+                Wyślij zawodnikom link z podglądem sald — ostatni mecz lub zbiorcze salda wszystkich graczy.
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={publicLinkBusy}
+                  onClick={() => void generatePublicLink("last_match_wallets")}
+                >
+                  {publicLinkCopied === "last_match_wallets" ? (
+                    <Check className="mr-2 h-4 w-4" aria-hidden />
+                  ) : (
+                    <ClipboardCopy className="mr-2 h-4 w-4" aria-hidden />
+                  )}
+                  Ostatni mecz
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={publicLinkBusy}
+                  onClick={() => void generatePublicLink("all_wallets")}
+                >
+                  {publicLinkCopied === "all_wallets" ? (
+                    <Check className="mr-2 h-4 w-4" aria-hidden />
+                  ) : (
+                    <ClipboardCopy className="mr-2 h-4 w-4" aria-hidden />
+                  )}
+                  Zbiorczo — wszystkie salda
+                </Button>
+              </div>
+            </div>
+          ) : null}
         </CardContent>
       </Card>
     </div>

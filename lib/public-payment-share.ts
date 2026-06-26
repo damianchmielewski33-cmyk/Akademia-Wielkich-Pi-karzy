@@ -2,7 +2,7 @@ import { getDb } from "@/lib/db";
 
 export type PublicShareLinkRow = {
   token: string;
-  kind: "last_match_wallets" | "match_wallets" | "player_wallets";
+  kind: "last_match_wallets" | "all_wallets" | "match_wallets" | "player_wallets";
   created_at: string;
   expires_at: string | null;
   revoked_at: string | null;
@@ -60,6 +60,27 @@ export type PublicWalletView = {
 
 export async function loadPublicWalletRows(link: PublicShareLinkRow): Promise<PublicWalletView> {
   const db = await getDb();
+
+  if (link.kind === "all_wallets") {
+    const rows = (await db
+      .prepare(
+        `SELECT u.id, u.first_name, u.last_name, u.player_alias AS zawodnik, u.profile_photo_path,
+                COALESCE(ROUND(SUM(t.amount_pln), 2), 0) AS balance_pln
+         FROM users u
+         LEFT JOIN wallet_transactions t ON t.user_id = u.id
+         WHERE COALESCE(u.is_admin, 0) = 0
+         GROUP BY u.id
+         ORDER BY u.first_name, u.last_name`
+      )
+      .all()) as PublicWalletPlayerRow[];
+
+    return {
+      title: "Zbiorcze salda portfeli",
+      subtitle: "Aktualne salda wszystkich zawodników",
+      match: null,
+      rows,
+    };
+  }
 
   if (link.kind === "match_wallets" && link.match_id) {
     const match = (await db.prepare("SELECT * FROM matches WHERE id = ?").get(link.match_id)) as
