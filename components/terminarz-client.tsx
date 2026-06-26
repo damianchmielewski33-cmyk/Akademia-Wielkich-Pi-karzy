@@ -16,6 +16,7 @@ import {
   LogIn,
   MapPin,
   HelpCircle,
+  Plus,
   RotateCcw,
   Search,
   ShieldCheck,
@@ -1335,50 +1336,71 @@ export function TerminarzClient({
         </div>
 
         <div className="mx-auto mt-8 max-w-4xl">
-          <div className="flex flex-col gap-4 rounded-2xl border border-emerald-200/50 bg-gradient-to-b from-emerald-50/40 to-white p-4 dark:border-emerald-800/40 dark:from-emerald-950/30 dark:to-zinc-900/80 sm:flex-row sm:items-center sm:justify-between sm:p-5">
-            <div className="flex flex-col gap-2">
-              <span className="text-xs font-semibold uppercase tracking-wider text-emerald-800/70 dark:text-emerald-300/80">
-                Widok
-              </span>
-              <div className="inline-flex rounded-xl bg-white/90 p-1 shadow-sm ring-1 ring-emerald-900/10 dark:bg-zinc-800/90 dark:ring-emerald-800/30">
-                <button
-                  type="button"
-                  onClick={() => setView("list")}
-                  className={cn(
-                    "inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-all",
-                    view === "list"
-                      ? "bg-emerald-800 text-white shadow-md dark:bg-emerald-600"
-                      : "text-emerald-900 hover:bg-emerald-50 dark:text-emerald-100 dark:hover:bg-emerald-950/50"
-                  )}
-                >
-                  <List className="h-4 w-4 shrink-0" aria-hidden />
-                  Lista meczów
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setView("cal")}
-                  className={cn(
-                    "inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-all",
-                    view === "cal"
-                      ? "bg-emerald-800 text-white shadow-md dark:bg-emerald-600"
-                      : "text-emerald-900 hover:bg-emerald-50 dark:text-emerald-100 dark:hover:bg-emerald-950/50"
-                  )}
-                >
-                  <CalendarDays className="h-4 w-4 shrink-0" aria-hidden />
-                  Kalendarz
-                </button>
+          <div className="relative overflow-hidden rounded-2xl border-2 border-white/35 text-white shadow-lg shadow-emerald-950/20 ring-1 ring-emerald-950/15">
+            <div className="home-pitch-tile absolute inset-0" aria-hidden />
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-white/40" aria-hidden />
+            <div
+              className="pointer-events-none absolute bottom-0 left-0 h-10 w-10 rounded-tr-full border-t-2 border-r-2 border-white/45"
+              aria-hidden
+            />
+            <div
+              className="pointer-events-none absolute bottom-0 right-0 h-10 w-10 rounded-tl-full border-t-2 border-l-2 border-white/45"
+              aria-hidden
+            />
+
+            <div className="relative flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+              <div className="flex flex-col gap-2.5">
+                <span className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--mundial-gold,#f5c518)]">
+                  Widok terminarza
+                </span>
+                <div className="inline-flex rounded-xl border border-white/25 bg-black/10 p-1 backdrop-blur-sm">
+                  <button
+                    type="button"
+                    onClick={() => setView("list")}
+                    className={cn(
+                      "inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-all",
+                      view === "list"
+                        ? "bg-emerald-100 text-emerald-950 shadow-md shadow-emerald-950/20"
+                        : "text-white/90 hover:bg-white/10"
+                    )}
+                  >
+                    <List className="h-4 w-4 shrink-0" aria-hidden />
+                    Lista meczów
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setView("cal")}
+                    className={cn(
+                      "inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-all",
+                      view === "cal"
+                        ? "bg-emerald-100 text-emerald-950 shadow-md shadow-emerald-950/20"
+                        : "text-white/90 hover:bg-white/10"
+                    )}
+                  >
+                    <CalendarDays className="h-4 w-4 shrink-0" aria-hidden />
+                    Kalendarz
+                  </button>
+                </div>
               </div>
+
+              {isAdmin && (
+                <div className="flex flex-col gap-1.5 sm:items-end">
+                  <span className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--mundial-gold,#f5c518)] sm:text-right">
+                    Administrator
+                  </span>
+                  <Button
+                    type="button"
+                    variant="pitch"
+                    size="lg"
+                    className="w-full sm:w-auto"
+                    onClick={() => setAddOpen(true)}
+                  >
+                    <Plus className="h-4 w-4 shrink-0" aria-hidden />
+                    Dodaj mecz
+                  </Button>
+                </div>
+              )}
             </div>
-            {isAdmin && (
-              <Button
-                type="button"
-                size="default"
-                className="w-full sm:w-auto"
-                onClick={() => setAddOpen(true)}
-              >
-                Dodaj mecz
-              </Button>
-            )}
           </div>
         </div>
 
@@ -2609,8 +2631,8 @@ function AddMatchDialog({
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
             Anuluj
           </Button>
-          <Button type="submit" form="add-match-form">
-            Zapisz
+          <Button type="submit" form="add-match-form" variant="pitch">
+            Zapisz mecz
           </Button>
         </>
       }

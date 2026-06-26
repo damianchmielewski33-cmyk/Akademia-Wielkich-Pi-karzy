@@ -23,6 +23,11 @@ type Props = {
   onConfirmFromTentative: () => void;
 };
 
+const pitchLabel = "text-xs font-semibold uppercase tracking-[0.14em] text-[var(--mundial-gold,#f5c518)]";
+const pitchPanel = "rounded-xl border border-white/25 bg-black/10 backdrop-blur-sm";
+const pitchSecondaryBtn =
+  "inline-flex w-full items-center justify-center gap-2 rounded-lg border border-white/25 bg-black/10 px-4 py-2.5 text-sm font-semibold text-white/95 backdrop-blur-sm transition-colors hover:bg-white/10 disabled:pointer-events-none disabled:opacity-50";
+
 function formatMatchWhen(isoDate: string, time: string) {
   const [y, m, d] = isoDate.split("-").map(Number);
   if (!y || !m || !d) {
@@ -61,26 +66,27 @@ export function HomeNextMatchCard({
   const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(match.location)}`;
 
   const barClass =
-    slots.tone === "full" ? "bg-red-400/90" : slots.tone === "warn" ? "bg-amber-400/90" : "bg-white/85";
+    slots.tone === "full" ? "bg-red-400/90" : slots.tone === "warn" ? "bg-amber-400/90" : "bg-emerald-100";
 
   return (
     <section
-      className="relative mx-auto mt-8 max-w-2xl overflow-hidden rounded-2xl border-2 border-white/35 text-center shadow-lg shadow-emerald-950/20 ring-1 ring-emerald-950/15"
+      className="relative mx-auto mt-8 max-w-2xl overflow-hidden rounded-2xl border-2 border-white/35 text-white shadow-lg shadow-emerald-950/20 ring-1 ring-emerald-950/15"
       aria-labelledby="home-next-match-heading"
     >
       <div className="home-pitch-tile absolute inset-0" aria-hidden />
       <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-white/40" aria-hidden />
       <div
-        className="pointer-events-none absolute bottom-0 left-0 h-12 w-12 rounded-tr-full border-t-2 border-r-2 border-white/45"
+        className="pointer-events-none absolute bottom-0 left-0 h-10 w-10 rounded-tr-full border-t-2 border-r-2 border-white/45"
         aria-hidden
       />
       <div
-        className="pointer-events-none absolute bottom-0 right-0 h-12 w-12 rounded-tl-full border-t-2 border-l-2 border-white/45"
+        className="pointer-events-none absolute bottom-0 right-0 h-10 w-10 rounded-tl-full border-t-2 border-l-2 border-white/45"
         aria-hidden
       />
 
       <div className="relative px-5 py-5 text-white sm:px-6 sm:py-6">
-        <div className="mb-4 flex flex-col items-center gap-2">
+        <div className="mb-4 flex flex-col items-center gap-2 text-center">
+          <span className={pitchLabel}>Kolejny termin</span>
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/15 ring-2 ring-white/30 backdrop-blur-[2px]">
             <Image
               src="/logo-akademia-crest.png"
@@ -94,38 +100,39 @@ export function HomeNextMatchCard({
           <h2 id="home-next-match-heading" className="text-xl font-bold tracking-tight drop-shadow-sm sm:text-[1.35rem]">
             Najbliższy mecz
           </h2>
-          {when.weekday ? (
-            <p className="text-sm font-medium capitalize text-emerald-100/90">{when.weekday}</p>
-          ) : null}
+          {when.weekday ? <p className="text-sm font-medium capitalize text-emerald-100/90">{when.weekday}</p> : null}
         </div>
 
-        <div className="mx-auto flex max-w-sm flex-wrap items-center justify-center gap-2">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-white/30 bg-white/12 px-3 py-1.5 text-sm font-semibold tabular-nums backdrop-blur-sm">
-            <Calendar className="h-3.5 w-3.5 text-[var(--mundial-gold,#f5c518)]" aria-hidden />
-            {when.label}
-          </span>
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-white/30 bg-white/12 px-3 py-1.5 text-sm font-semibold tabular-nums backdrop-blur-sm">
-            <Clock className="h-3.5 w-3.5 text-[var(--mundial-gold,#f5c518)]" aria-hidden />
-            {match.match_time}
-          </span>
-        </div>
-
-        <div className="mx-auto mt-3 flex max-w-md items-start justify-center gap-2 text-sm text-emerald-50/95">
-          <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[var(--mundial-gold,#f5c518)]" aria-hidden />
-          <div className="min-w-0 text-left">
-            <p className="leading-snug">{match.location}</p>
-            <Link
-              href={mapsUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-1 inline-block text-xs font-semibold text-white/80 underline decoration-white/30 underline-offset-2 hover:text-white"
-            >
-              Mapa
-            </Link>
+        <div className={cn(pitchPanel, "mx-auto max-w-md px-3.5 py-3.5")}>
+          <span className={cn(pitchLabel, "mb-2.5 block text-center")}>Termin i miejsce</span>
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            <span className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-100 px-3 py-2 text-sm font-semibold tabular-nums text-emerald-950 shadow-md shadow-emerald-950/20">
+              <Calendar className="h-3.5 w-3.5 text-emerald-800" aria-hidden />
+              {when.label}
+            </span>
+            <span className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-100 px-3 py-2 text-sm font-semibold tabular-nums text-emerald-950 shadow-md shadow-emerald-950/20">
+              <Clock className="h-3.5 w-3.5 text-emerald-800" aria-hidden />
+              {match.match_time}
+            </span>
+          </div>
+          <div className="mx-auto mt-3 flex max-w-sm items-start justify-center gap-2 text-sm text-emerald-50/95">
+            <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[var(--mundial-gold,#f5c518)]" aria-hidden />
+            <div className="min-w-0 text-left">
+              <p className="leading-snug">{match.location}</p>
+              <Link
+                href={mapsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-1 inline-block text-xs font-semibold text-white/80 underline decoration-white/30 underline-offset-2 hover:text-white"
+              >
+                Mapa
+              </Link>
+            </div>
           </div>
         </div>
 
-        <div className="mx-auto mt-4 max-w-sm rounded-xl border border-white/25 bg-black/10 px-3.5 py-3 backdrop-blur-sm">
+        <div className={cn(pitchPanel, "mx-auto mt-3 max-w-md px-3.5 py-3")}>
+          <span className={cn(pitchLabel, "mb-2 block")}>Skład</span>
           <div className="flex items-center justify-between gap-2 text-xs font-semibold uppercase tracking-wider text-white/80">
             <span>
               {match.signed_up}/{match.max_slots} zapisanych
@@ -150,77 +157,80 @@ export function HomeNextMatchCard({
             />
           </div>
           {tentativeLine ? (
-            <p className="mt-2 text-left text-[11px] font-semibold normal-case tracking-normal text-amber-100/95">
+            <p className="mt-2 text-[11px] font-semibold normal-case tracking-normal text-amber-100/95">
               {tentativeLine}
             </p>
           ) : null}
         </div>
 
-        {isLoggedIn ? (
-          signup === "confirmed" ? (
-            <div className="mt-4 rounded-xl border border-white/30 bg-white/15 py-3 text-sm font-medium backdrop-blur-sm">
-              Jesteś zapisany na ten mecz
-            </div>
-          ) : signup === "tentative" ? (
-            <div className="mt-4 space-y-2">
-              <div className="rounded-xl border border-amber-200/50 bg-amber-500/20 py-2.5 text-sm font-medium backdrop-blur-sm">
-                Status: jeszcze nie wiem (bez miejsca w składzie)
-              </div>
-              {slots.free > 0 ? (
-                <Button variant="pitch" className="w-full" onClick={onConfirmFromTentative}>
-                  Potwierdzam — wpadam na mecz
-                </Button>
-              ) : (
-                <p className="text-xs text-emerald-100/90">Skład jest pełny — nie możesz teraz potwierdzić udziału.</p>
-              )}
-            </div>
-          ) : signup === "declined" ? (
-            <div className="mt-4 space-y-2">
-              <div className="rounded-xl border border-red-200/40 bg-red-950/35 py-2.5 text-sm font-medium backdrop-blur-sm">
-                Nie bierzesz udziału w tym terminie (bez miejsca w składzie)
-              </div>
-              {slots.free > 0 ? (
-                <Button variant="pitch" className="w-full" onClick={onConfirmFromTentative}>
-                  Zmieniam zdanie — wpadam na mecz
-                </Button>
-              ) : (
-                <p className="text-xs text-emerald-100/90">Skład jest pełny — nie możesz teraz dołączyć do składu.</p>
-              )}
-            </div>
+        <div className="mx-auto mt-4 max-w-md space-y-2.5">
+          <span className={cn(pitchLabel, "block text-center")}>Zapis na mecz</span>
+
+          {isLoggedIn ? (
+            signup === "confirmed" ? (
+              <div className={cn(pitchPanel, "py-3 text-center text-sm font-medium")}>Jesteś zapisany na ten mecz</div>
+            ) : signup === "tentative" ? (
+              <>
+                <div className={cn(pitchPanel, "border-amber-200/40 bg-amber-500/15 py-2.5 text-center text-sm font-medium")}>
+                  Status: jeszcze nie wiem (bez miejsca w składzie)
+                </div>
+                {slots.free > 0 ? (
+                  <Button variant="pitch" className="w-full" onClick={onConfirmFromTentative}>
+                    Potwierdzam — wpadam na mecz
+                  </Button>
+                ) : (
+                  <p className="text-center text-xs text-emerald-100/90">
+                    Skład jest pełny — nie możesz teraz potwierdzić udziału.
+                  </p>
+                )}
+              </>
+            ) : signup === "declined" ? (
+              <>
+                <div className={cn(pitchPanel, "border-red-200/35 bg-red-950/25 py-2.5 text-center text-sm font-medium")}>
+                  Nie bierzesz udziału w tym terminie (bez miejsca w składzie)
+                </div>
+                {slots.free > 0 ? (
+                  <Button variant="pitch" className="w-full" onClick={onConfirmFromTentative}>
+                    Zmieniam zdanie — wpadam na mecz
+                  </Button>
+                ) : (
+                  <p className="text-center text-xs text-emerald-100/90">
+                    Skład jest pełny — nie możesz teraz dołączyć do składu.
+                  </p>
+                )}
+              </>
+            ) : (
+              <>
+                {slots.free > 0 ? (
+                  <Button variant="pitch" className="w-full" onClick={onSignup}>
+                    Zapisz się na mecz
+                  </Button>
+                ) : (
+                  <p className="text-center text-xs text-emerald-100/90">
+                    Skład pełny — możesz oznaczyć wstępne zainteresowanie.
+                  </p>
+                )}
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  <button type="button" className={pitchSecondaryBtn} disabled={tentativeBusy} onClick={onTentative}>
+                    <HelpCircle className="h-4 w-4 shrink-0" aria-hidden />
+                    Jeszcze nie wiem
+                  </button>
+                  <button type="button" className={pitchSecondaryBtn} disabled={tentativeBusy} onClick={onDeclined}>
+                    Nie biorę udziału
+                  </button>
+                </div>
+              </>
+            )
           ) : (
-            <div className="mt-4 space-y-2">
-              {slots.free > 0 ? (
-                <Button variant="pitch" className="w-full" onClick={onSignup}>
-                  Zapisz się na mecz
-                </Button>
-              ) : (
-                <p className="text-xs text-emerald-100/90">Skład pełny — możesz oznaczyć wstępne zainteresowanie.</p>
-              )}
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                <Button type="button" variant="stadium" className="w-full" disabled={tentativeBusy} onClick={onTentative}>
-                  <HelpCircle className="mr-2 h-4 w-4 shrink-0" aria-hidden />
-                  Jeszcze nie wiem
-                </Button>
-                <Button
-                  type="button"
-                  variant="stadium"
-                  className="w-full border-white/25 bg-white/8 text-white/95 hover:bg-white/12"
-                  disabled={tentativeBusy}
-                  onClick={onDeclined}
-                >
-                  Nie biorę udziału
-                </Button>
-              </div>
-            </div>
-          )
-        ) : (
-          <Button variant="stadium" className="mt-4 w-full" asChild>
-            <Link href="/login">Zaloguj się, aby się zapisać</Link>
-          </Button>
-        )}
+            <Button variant="pitch" className="w-full" asChild>
+              <Link href="/login">Zaloguj się, aby się zapisać</Link>
+            </Button>
+          )}
+        </div>
 
         {isLoggedIn && signup === "confirmed" && (
-          <div className="mt-4 space-y-2">
+          <div className="mx-auto mt-4 max-w-md space-y-2">
+            <span className={cn(pitchLabel, "block text-center")}>Transport</span>
             {transportActive ? (
               <Button variant="pitch" className="w-full" asChild>
                 <Link href={`/transport/${match.id}`} className="inline-flex items-center justify-center gap-2">
@@ -230,18 +240,16 @@ export function HomeNextMatchCard({
               </Button>
             ) : (
               <>
-                <Button
+                <button
                   type="button"
                   disabled
                   aria-describedby="transport-home-hint"
-                  className="w-full cursor-not-allowed border border-white/25 bg-white/10 font-semibold text-white/70 opacity-80"
+                  className={cn(pitchSecondaryBtn, "cursor-not-allowed opacity-70")}
                   title="Transport na mecz — dostępny w dniu meczu."
                 >
-                  <span className="inline-flex items-center justify-center gap-2">
-                    <Car className="h-4 w-4 shrink-0 opacity-70" aria-hidden />
-                    Transport na mecz
-                  </span>
-                </Button>
+                  <Car className="h-4 w-4 shrink-0 opacity-70" aria-hidden />
+                  Transport na mecz
+                </button>
                 <p id="transport-home-hint" className="text-center text-xs text-emerald-100/85">
                   Przycisk będzie aktywny w dniu meczu (lista kierowców, potrzebujących dojazdu i czat).
                 </p>
@@ -250,7 +258,8 @@ export function HomeNextMatchCard({
           </div>
         )}
 
-        <div className="mt-4 border-t border-white/20 pt-4">
+        <div className="mx-auto mt-4 max-w-md space-y-2 border-t border-white/20 pt-4">
+          <span className={cn(pitchLabel, "block text-center")}>Składy</span>
           {lineupPublic ? (
             <Button variant="pitch" className="w-full" asChild>
               <Link href="/sklady" className="inline-flex items-center justify-center gap-2">
@@ -259,23 +268,21 @@ export function HomeNextMatchCard({
               </Link>
             </Button>
           ) : (
-            <div className="space-y-2">
-              <Button
+            <>
+              <button
                 type="button"
                 disabled
                 aria-describedby="sklady-home-hint"
-                className="w-full cursor-not-allowed border border-white/25 bg-white/10 font-semibold text-white/70 opacity-80"
+                className={cn(pitchSecondaryBtn, "cursor-not-allowed opacity-70")}
                 title="Administrator musi najpierw udostępnić składy w panelu admina."
               >
-                <span className="inline-flex items-center justify-center gap-2">
-                  <LayoutGrid className="h-4 w-4 shrink-0 opacity-70" aria-hidden />
-                  Składy na mecz
-                </span>
-              </Button>
+                <LayoutGrid className="h-4 w-4 shrink-0 opacity-70" aria-hidden />
+                Składy na mecz
+              </button>
               <p id="sklady-home-hint" className="text-center text-xs text-emerald-100/85">
                 Przycisk będzie aktywny, gdy administrator udostępni składy.
               </p>
-            </div>
+            </>
           )}
         </div>
       </div>
