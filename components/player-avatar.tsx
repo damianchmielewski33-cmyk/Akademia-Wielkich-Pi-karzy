@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { useState } from "react";
 import { cn } from "@/lib/utils";
 
 const SIZE_CLASS = {
@@ -31,11 +32,12 @@ export function PlayerAvatar({
   size = "md",
   ringClassName = "ring-2 ring-white/35",
 }: Props) {
+  const [imgFailed, setImgFailed] = useState(false);
   const initials =
     `${(firstName || "").trim()[0] ?? ""}${(lastName || "").trim()[0] ?? ""}`.toUpperCase() || "?";
   const src = (photoPath || "").trim();
 
-  if (src) {
+  if (src && !imgFailed) {
     return (
       <span
         className={cn(
@@ -52,6 +54,7 @@ export function PlayerAvatar({
           className="object-cover"
           sizes={`${IMG_PX[size]}px`}
           unoptimized
+          onError={() => setImgFailed(true)}
         />
       </span>
     );

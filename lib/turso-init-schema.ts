@@ -149,7 +149,7 @@ export async function initLibsqlSchema(client: Client) {
     CREATE TABLE IF NOT EXISTS public_share_links (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       token TEXT NOT NULL UNIQUE,
-      kind TEXT NOT NULL CHECK (kind IN ('last_match_wallets')),
+      kind TEXT NOT NULL CHECK (kind IN ('last_match_wallets', 'all_wallets', 'match_wallets', 'player_wallets')),
       created_by_admin_id INTEGER NOT NULL,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       expires_at TEXT,
@@ -315,7 +315,7 @@ export async function initLibsqlSchema(client: Client) {
   );
   if (pslSqlRs.rows.length > 0) {
     const pslSql = String((pslSqlRs.rows[0] as Record<string, unknown>).sql ?? "");
-    if (pslSql.includes("last_match_wallets") && !pslSql.includes("match_wallets")) {
+    if (pslSql.includes("CHECK") && pslSql.includes("kind") && !pslSql.includes("'all_wallets'")) {
       await client.executeMultiple(`
         CREATE TABLE public_share_links_migration (
           id INTEGER PRIMARY KEY AUTOINCREMENT,

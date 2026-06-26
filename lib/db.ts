@@ -58,6 +58,44 @@ function createSqliteFacade(db: Database.Database): AppDb {
   };
 }
 
+/** Stare bazy: CHECK(kind IN ('last_match_wallets')) — blokowało all_wallets / match_wallets / player_wallets. */
+function migratePublicShareLinksKind(db: Database.Database) {
+  const pslCols = db.prepare("PRAGMA table_info(public_share_links)").all() as { name: string }[];
+  if (!pslCols.length) return;
+  if (!pslCols.some((c) => c.name === "match_id")) {
+    db.exec("ALTER TABLE public_share_links ADD COLUMN match_id INTEGER");
+  }
+  if (!pslCols.some((c) => c.name === "user_id")) {
+    db.exec("ALTER TABLE public_share_links ADD COLUMN user_id INTEGER");
+  }
+
+  const row = db
+    .prepare(`SELECT sql FROM sqlite_master WHERE type='table' AND name='public_share_links'`)
+    .get() as { sql: string } | undefined;
+  const pslSql = row?.sql ?? "";
+  if (!pslSql.includes("CHECK") || !pslSql.includes("kind") || pslSql.includes("'all_wallets'")) return;
+
+  db.exec(`
+    CREATE TABLE public_share_links_migration (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      token TEXT NOT NULL UNIQUE,
+      kind TEXT NOT NULL,
+      created_by_admin_id INTEGER NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      expires_at TEXT,
+      revoked_at TEXT,
+      match_id INTEGER,
+      user_id INTEGER,
+      FOREIGN KEY (created_by_admin_id) REFERENCES users(id)
+    );
+    INSERT INTO public_share_links_migration (id, token, kind, created_by_admin_id, created_at, expires_at, revoked_at, match_id, user_id)
+    SELECT id, token, kind, created_by_admin_id, created_at, expires_at, revoked_at, match_id, user_id FROM public_share_links;
+    DROP TABLE public_share_links;
+    ALTER TABLE public_share_links_migration RENAME TO public_share_links;
+    CREATE INDEX IF NOT EXISTS idx_public_share_links_kind_created ON public_share_links(kind, created_at);
+  `);
+}
+
 /** Stare bazy: CHECK(slot_index <= 6) — potrzebne do 8 pozycji na połowę. */
 function migrateMatchLineupSlotsSlotIndexMax(db: Database.Database) {
   const row = db
@@ -245,7 +283,7 @@ function initSchemaSync(db: Database.Database) {
     CREATE TABLE IF NOT EXISTS public_share_links (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       token TEXT NOT NULL UNIQUE,
-      kind TEXT NOT NULL CHECK (kind IN ('last_match_wallets')),
+      kind TEXT NOT NULL CHECK (kind IN ('last_match_wallets', 'all_wallets', 'match_wallets', 'player_wallets')),
       created_by_admin_id INTEGER NOT NULL,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       expires_at TEXT,
@@ -325,6 +363,7 @@ function initSchemaSync(db: Database.Database) {
     db.exec("ALTER TABLE match_signups ADD COLUMN commitment INTEGER NOT NULL DEFAULT 1");
   }
 
+  migratePublicShareLinksKind(db);
   migrateMatchLineupSlotsSlotIndexMax(db);
 
   db.exec(`

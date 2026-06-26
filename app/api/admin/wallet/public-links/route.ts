@@ -61,20 +61,31 @@ export async function POST(req: Request) {
   const matchId = parsed.data.kind === "match_wallets" ? parsed.data.match_id : null;
   const userId = parsed.data.kind === "player_wallets" ? parsed.data.user_id : null;
 
-  if (expiresAt) {
-    await db
-      .prepare(
-        `INSERT INTO public_share_links (token, kind, created_by_admin_id, expires_at, match_id, user_id)
-         VALUES (?, ?, ?, ${expiresAt}, ?, ?)`
-      )
-      .run(token, parsed.data.kind, gate.session.userId, matchId, userId);
-  } else {
-    await db
-      .prepare(
-        `INSERT INTO public_share_links (token, kind, created_by_admin_id, expires_at, match_id, user_id)
-         VALUES (?, ?, ?, NULL, ?, ?)`
-      )
-      .run(token, parsed.data.kind, gate.session.userId, matchId, userId);
+  try {
+    if (expiresAt) {
+      await db
+        .prepare(
+          `INSERT INTO public_share_links (token, kind, created_by_admin_id, expires_at, match_id, user_id)
+           VALUES (?, ?, ?, ${expiresAt}, ?, ?)`
+        )
+        .run(token, parsed.data.kind, gate.session.userId, matchId, userId);
+    } else {
+      await db
+        .prepare(
+          `INSERT INTO public_share_links (token, kind, created_by_admin_id, expires_at, match_id, user_id)
+           VALUES (?, ?, ?, NULL, ?, ?)`
+        )
+        .run(token, parsed.data.kind, gate.session.userId, matchId, userId);
+    }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.includes("CHECK constraint") || msg.includes("constraint failed")) {
+      return NextResponse.json(
+        { error: "Baza wymaga aktualizacji schematu (typ linku). Odśwież stronę i spróbuj ponownie." },
+        { status: 500 }
+      );
+    }
+    throw err;
   }
 
   await logActivity(
