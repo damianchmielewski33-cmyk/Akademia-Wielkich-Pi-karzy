@@ -8,10 +8,7 @@ import { toast } from "sonner";
 import {
   Activity,
   CalendarDays,
-  Car,
   ChevronRight,
-  HelpCircle,
-  LayoutGrid,
   LogIn,
   LogOut,
   Radio,
@@ -21,6 +18,7 @@ import {
   Users,
   Wallet,
 } from "lucide-react";
+import { HomeNextMatchCard } from "@/components/home-next-match-card";
 import { PlayerAvatar } from "@/components/player-avatar";
 import { MatchTransportSignupDialog } from "@/components/match-transport-signup-dialog";
 import { Button } from "@/components/ui/button";
@@ -322,187 +320,23 @@ export function HomeClient({
           </section>
         ) : null}
 
-        <div className="mt-8">{tiles}</div>
+        {nextMatch ? (
+          <HomeNextMatchCard
+            match={nextMatch}
+            tentativeLine={nextMatchTentativeLine}
+            lineupPublic={lineupPublicNextMatch}
+            signup={nextMatchSignup}
+            transportActive={transportHomeActive}
+            isLoggedIn={isLoggedIn}
+            tentativeBusy={tentativeBusy}
+            onSignup={openTransportSignup}
+            onTentative={() => void signupTentativeHome()}
+            onDeclined={() => void signupDeclinedHome()}
+            onConfirmFromTentative={openConfirmFromTentative}
+          />
+        ) : null}
 
-        {nextMatch && (
-          <div className="relative mx-auto mt-8 max-w-lg overflow-hidden rounded-2xl border-2 border-white/35 text-center shadow-lg shadow-emerald-950/15 ring-1 ring-emerald-950/20">
-            <div className="home-pitch-tile absolute inset-0" aria-hidden />
-            <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-white/40" aria-hidden />
-            <div className="pointer-events-none absolute bottom-0 left-0 h-10 w-10 rounded-tr-full border-t-2 border-r-2 border-white/45" aria-hidden />
-            <div className="pointer-events-none absolute bottom-0 right-0 h-10 w-10 rounded-tl-full border-t-2 border-l-2 border-white/45" aria-hidden />
-            <div className="relative px-5 py-5 text-white">
-              <div className="mb-3 flex items-center justify-center gap-2">
-                <Image
-                  src="/logo-akademia-crest.png"
-                  alt=""
-                  width={128}
-                  height={128}
-                  className="h-8 w-8 object-contain drop-shadow"
-                  sizes="32px"
-                />
-                <h3 className="text-lg font-bold tracking-tight drop-shadow-sm">Najbliższy mecz</h3>
-              </div>
-              <p className="mt-1 font-semibold text-emerald-50">
-                {nextMatch.match_date} · {nextMatch.match_time}
-              </p>
-              <p className="mt-1 text-sm text-emerald-100/95">{nextMatch.location}</p>
-              <div className="mt-2 space-y-0.5 text-xs font-medium uppercase tracking-wider text-white/75">
-                <p>
-                  {nextMatch.signed_up}/{nextMatch.max_slots} zapisanych
-                </p>
-                {nextMatchTentativeLine ? (
-                  <p className="text-[11px] font-semibold normal-case tracking-normal text-amber-100/95">
-                    {nextMatchTentativeLine}
-                  </p>
-                ) : null}
-              </div>
-              {isLoggedIn ? (
-                nextMatchSignup === "confirmed" ? (
-                  <div className="mt-4 rounded-xl border border-white/30 bg-white/15 py-3 text-sm font-medium text-white backdrop-blur-sm">
-                    Jesteś zapisany na ten mecz
-                  </div>
-                ) : nextMatchSignup === "tentative" ? (
-                  <div className="mt-4 space-y-2">
-                    <div className="rounded-xl border border-amber-200/50 bg-amber-500/20 py-2.5 text-sm font-medium text-white backdrop-blur-sm">
-                      Status: jeszcze nie wiem (bez miejsca w składzie)
-                    </div>
-                    {nextMatch.max_slots - nextMatch.signed_up > 0 ? (
-                      <Button
-                        variant="pitch"
-                        className="w-full"
-                        onClick={openConfirmFromTentative}
-                      >
-                        Potwierdzam — wpadam na mecz
-                      </Button>
-                    ) : (
-                      <p className="text-xs text-emerald-100/90">Skład jest pełny — nie możesz teraz potwierdzić udziału.</p>
-                    )}
-                  </div>
-                ) : nextMatchSignup === "declined" ? (
-                  <div className="mt-4 space-y-2">
-                    <div className="rounded-xl border border-red-200/40 bg-red-950/35 py-2.5 text-sm font-medium text-white backdrop-blur-sm">
-                      Nie bierzesz udziału w tym terminie (bez miejsca w składzie)
-                    </div>
-                    {nextMatch.max_slots - nextMatch.signed_up > 0 ? (
-                      <Button
-                        variant="pitch"
-                        className="w-full"
-                        onClick={openConfirmFromTentative}
-                      >
-                        Zmieniam zdanie — wpadam na mecz
-                      </Button>
-                    ) : (
-                      <p className="text-xs text-emerald-100/90">Skład jest pełny — nie możesz teraz dołączyć do składu.</p>
-                    )}
-                  </div>
-                ) : (
-                  <div className="mt-4 space-y-2">
-                    {nextMatch.max_slots - nextMatch.signed_up > 0 ? (
-                      <Button
-                        variant="pitch"
-                        className="w-full"
-                        onClick={openTransportSignup}
-                      >
-                        Zapisz się na mecz
-                      </Button>
-                    ) : (
-                      <p className="text-xs text-emerald-100/90">Skład pełny — możesz oznaczyć wstępne zainteresowanie.</p>
-                    )}
-                    <Button
-                      type="button"
-                      variant="stadium"
-                      className="w-full"
-                      disabled={tentativeBusy}
-                      onClick={() => void signupTentativeHome()}
-                    >
-                      <HelpCircle className="mr-2 h-4 w-4 shrink-0" aria-hidden />
-                      Jeszcze nie wiem
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="stadium"
-                      className="w-full border-white/25 bg-white/8 text-white/95 hover:bg-white/12"
-                      disabled={tentativeBusy}
-                      onClick={() => void signupDeclinedHome()}
-                    >
-                      Nie, nie biorę udziału
-                    </Button>
-                  </div>
-                )
-              ) : (
-                <Button variant="stadium" className="mt-4 w-full" asChild>
-                  <Link href="/login">Zaloguj się, aby się zapisać</Link>
-                </Button>
-              )}
-              {isLoggedIn && nextMatchSignup === "confirmed" && (
-                <div className="mt-4 space-y-2">
-                  {transportHomeActive ? (
-                    <Button
-                      variant="pitch"
-                      className="w-full"
-                      asChild
-                    >
-                      <Link href={`/transport/${nextMatch.id}`} className="inline-flex items-center justify-center gap-2">
-                        <Car className="h-4 w-4 shrink-0" aria-hidden />
-                        Transport na mecz
-                      </Link>
-                    </Button>
-                  ) : (
-                    <>
-                      <Button
-                        type="button"
-                        disabled
-                        aria-describedby="transport-home-hint"
-                        className="w-full cursor-not-allowed border border-white/25 bg-white/10 font-semibold text-white/70 opacity-80"
-                        title="Transport na mecz — dostępny w dniu meczu."
-                      >
-                        <span className="inline-flex items-center justify-center gap-2">
-                          <Car className="h-4 w-4 shrink-0 opacity-70" aria-hidden />
-                          Transport na mecz
-                        </span>
-                      </Button>
-                      <p id="transport-home-hint" className="text-center text-xs text-emerald-100/85">
-                        Przycisk będzie aktywny w dniu meczu (lista kierowców, potrzebujących dojazdu i czat).
-                      </p>
-                    </>
-                  )}
-                </div>
-              )}
-              <div className="mt-4 border-t border-white/20 pt-4">
-                {lineupPublicNextMatch ? (
-                  <Button
-                    variant="pitch"
-                    className="w-full"
-                    asChild
-                  >
-                    <Link href="/sklady" className="inline-flex items-center justify-center gap-2">
-                      <LayoutGrid className="h-4 w-4 shrink-0" aria-hidden />
-                      Zobacz składy na mecz
-                    </Link>
-                  </Button>
-                ) : (
-                  <div className="space-y-2">
-                    <Button
-                      type="button"
-                      disabled
-                      aria-describedby="sklady-home-hint"
-                      className="w-full cursor-not-allowed border border-white/25 bg-white/10 font-semibold text-white/70 opacity-80"
-                      title="Administrator musi najpierw udostępnić składy w panelu admina."
-                    >
-                      <span className="inline-flex items-center justify-center gap-2">
-                        <LayoutGrid className="h-4 w-4 shrink-0 opacity-70" aria-hidden />
-                        Składy na mecz
-                      </span>
-                    </Button>
-                    <p id="sklady-home-hint" className="text-center text-xs text-emerald-100/85">
-                      Przycisk będzie aktywny, gdy administrator udostępni składy.
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
+        <div className="mt-8">{tiles}</div>
       </div>
 
       {nextMatch && (
