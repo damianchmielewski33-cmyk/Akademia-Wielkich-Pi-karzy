@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getDb, logActivity } from "@/lib/db";
 import { requireAdmin } from "@/lib/api-helpers";
+import { removeTemporaryGuestIfPaid } from "@/lib/guest-cleanup";
 
 export const runtime = "nodejs";
 
@@ -91,6 +92,14 @@ export async function PATCH(req: Request, context: RouteContext) {
     gate.session.userId,
     `${paid ? "Oznaczył opłatę" : "Cofnął oznaczenie opłaty"} dla ${who?.first_name ?? "?"} ${who?.last_name ?? "?"} — mecz ${match.match_date} ${match.match_time} (${match.location}), id ${mid}`
   );
+
+  if (paid === 1) {
+    await removeTemporaryGuestIfPaid({
+      userId: parsed.data.user_id,
+      matchId: mid,
+      actorUserId: gate.session.userId,
+    });
+  }
 
   return NextResponse.json({ status: "ok", paid });
 }

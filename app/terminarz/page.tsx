@@ -79,7 +79,7 @@ export default async function TerminarzPage({ searchParams }: PageProps) {
   }
 
   return (
-    <div className="container mx-auto max-w-6xl flex-1 px-4 py-8 sm:py-10">
+    <div className="container mx-auto max-w-7xl flex-1 px-4 py-8 sm:py-10">
       <TerminarzClient
         upcoming={upcoming}
         playedConfirmed={playedConfirmed}

@@ -2,7 +2,7 @@ import type { Client } from "@libsql/client";
 
 async function pragmaColumnNames(
   client: Client,
-  table: "users" | "matches" | "match_stats" | "match_signups" | "app_settings"
+  table: "users" | "matches" | "match_stats" | "match_signups" | "app_settings" | "public_share_links"
 ): Promise<string[]> {
   const rs = await client.execute(`PRAGMA table_info(${table})`);
   const nameIdx = rs.columns.indexOf("name");
@@ -301,6 +301,42 @@ export async function initLibsqlSchema(client: Client) {
       FOREIGN KEY (user_id) REFERENCES users(id)
     );
   `);
+
+  names = await pragmaColumnNames(client, "public_share_links");
+  if (!names.includes("match_id")) {
+    await client.execute("ALTER TABLE public_share_links ADD COLUMN match_id INTEGER");
+  }
+  if (!names.includes("user_id")) {
+    await client.execute("ALTER TABLE public_share_links ADD COLUMN user_id INTEGER");
+  }
+
+  const pslSqlRs = await client.execute(
+    `SELECT sql FROM sqlite_master WHERE type='table' AND name='public_share_links'`
+  );
+  if (pslSqlRs.rows.length > 0) {
+    const pslSql = String((pslSqlRs.rows[0] as Record<string, unknown>).sql ?? "");
+    if (pslSql.includes("last_match_wallets") && !pslSql.includes("match_wallets")) {
+      await client.executeMultiple(`
+        CREATE TABLE public_share_links_migration (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          token TEXT NOT NULL UNIQUE,
+          kind TEXT NOT NULL,
+          created_by_admin_id INTEGER NOT NULL,
+          created_at TEXT NOT NULL DEFAULT (datetime('now')),
+          expires_at TEXT,
+          revoked_at TEXT,
+          match_id INTEGER,
+          user_id INTEGER,
+          FOREIGN KEY (created_by_admin_id) REFERENCES users(id)
+        );
+        INSERT INTO public_share_links_migration (id, token, kind, created_by_admin_id, created_at, expires_at, revoked_at, match_id, user_id)
+        SELECT id, token, kind, created_by_admin_id, created_at, expires_at, revoked_at, match_id, user_id FROM public_share_links;
+        DROP TABLE public_share_links;
+        ALTER TABLE public_share_links_migration RENAME TO public_share_links;
+        CREATE INDEX IF NOT EXISTS idx_public_share_links_kind_created ON public_share_links(kind, created_at);
+      `);
+    }
+  }
 
   const lineupSqlRs = await client.execute(
     `SELECT sql FROM sqlite_master WHERE type='table' AND name='match_lineup_slots'`

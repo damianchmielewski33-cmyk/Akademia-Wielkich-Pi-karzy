@@ -1,4 +1,5 @@
 import { getDb } from "@/lib/db";
+import { removeTemporaryGuestIfPaid } from "@/lib/guest-cleanup";
 
 export type WalletBalanceRow = { balance_pln: number };
 
@@ -104,5 +105,11 @@ export async function createMatchCharge(args: {
     `INSERT INTO wallet_transactions (user_id, kind, amount_pln, match_id, note)
      VALUES (?, 'match_charge', ?, ?, ?)`
   ).run(args.userId, -Math.abs(args.amountPln), args.matchId, args.note ?? `Rozliczenie meczu id ${args.matchId}`);
+
+  await removeTemporaryGuestIfPaid({
+    userId: args.userId,
+    matchId: args.matchId,
+    actorUserId: args.adminId,
+  });
 }
 

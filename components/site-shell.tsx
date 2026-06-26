@@ -118,7 +118,7 @@ export function SiteShell({ children, isLoggedIn, isAdmin, account = null }: Pro
     <div className="flex min-h-screen flex-col text-zinc-900 dark:text-zinc-100">
       <NavigationLoadingOverlay />
       <AnalyticsTracker />
-      <header className="relative z-30 border-b border-emerald-950/30 bg-gradient-to-r from-emerald-950 via-emerald-900 to-emerald-950 text-white shadow-lg">
+      <header className="mundial-header relative z-30 border-b border-[var(--mundial-gold)]/30 text-white shadow-lg">
         <div
           className="pointer-events-none absolute inset-0 opacity-[0.12]"
           style={{
@@ -129,10 +129,10 @@ export function SiteShell({ children, isLoggedIn, isAdmin, account = null }: Pro
         />
         <div className="relative mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-3 sm:py-3.5">
           <Link href="/" className="awp-focus-ring flex items-center gap-3 rounded-xl pr-2">
-            <span className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/10 shadow-inner ring-1 ring-white/15">
+            <span className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/10 shadow-inner ring-1 ring-[var(--mundial-gold)]/40">
               <Image
-              src="/logo-akademia-crest.png"
-              alt={SITE_NAME}
+              src="/mundial-2026-logo.svg"
+              alt="Mundial 2026"
               width={160}
               height={160}
               className="h-9 w-9 object-contain"
@@ -141,10 +141,10 @@ export function SiteShell({ children, isLoggedIn, isAdmin, account = null }: Pro
             />
             </span>
             <span className="text-left">
-              <span className="block text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-emerald-300/95">
-                Akademia
+              <span className="block text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-[var(--mundial-gold)]">
+                Mundial 2026
               </span>
-              <span className="block text-sm font-semibold leading-snug sm:text-base">Wielkich Piłkarzy</span>
+              <span className="block text-sm font-semibold leading-snug sm:text-base">Akademia Wielkich Piłkarzy</span>
             </span>
           </Link>
 

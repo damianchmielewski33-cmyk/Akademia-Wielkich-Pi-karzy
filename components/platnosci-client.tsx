@@ -366,13 +366,16 @@ export function PlatnosciClient({
     }
   }
 
-  async function generatePublicLink() {
+  async function generatePublicLink(kind: "last_match_wallets" | "match_wallets" | "player_wallets", opts?: { match_id?: number; user_id?: number }) {
     setPublicLinkBusy(true);
     try {
+      const body: Record<string, unknown> = { kind, expires_in_days: 30 };
+      if (kind === "match_wallets" && opts?.match_id) body.match_id = opts.match_id;
+      if (kind === "player_wallets" && opts?.user_id) body.user_id = opts.user_id;
       const r = await fetchJson<{ ok: true; token: string; path: string }>("/api/admin/wallet/public-links", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ kind: "last_match_wallets", expires_in_days: 30 }),
+        body: JSON.stringify(body),
       });
       if (!r.ok) {
         toast.error(r.error);
@@ -381,7 +384,7 @@ export function PlatnosciClient({
       const url = `${window.location.origin}${r.data.path}`;
       await navigator.clipboard.writeText(url);
       setPublicLinkCopied(true);
-      toast.success("Skopiowano publiczny link do schowka");
+      toast.success("Skopiowano link do schowka");
       setTimeout(() => setPublicLinkCopied(false), 2000);
     } catch {
       toast.error("Nie udało się skopiować linku");
@@ -394,23 +397,11 @@ export function PlatnosciClient({
     <div className="container mx-auto max-w-2xl flex-1 px-4 py-8 sm:py-10">
       <div className="mb-8 text-center">
         <div className="pitch-rule mx-auto mb-4 w-40 opacity-80" />
-        <h1 className="text-3xl font-bold tracking-tight text-emerald-950 dark:text-emerald-100 sm:text-4xl">Płatności i portfel</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-[var(--mundial-navy)] dark:text-[var(--mundial-gold)] sm:text-4xl">Płatności i portfel</h1>
         <p className="mt-2 text-zinc-600 dark:text-zinc-400">
-          Saldo zawodnika, autoryzacje wpłat oraz rozliczenia meczów. Wpłaty wykonujesz przelewem <strong>BLIK</strong>.
-          {isAdmin ? (
-            <>
-              {" "}
-              Jako administrator możesz autoryzować wpłaty i rozliczać rozegrane mecze; poniżej masz też pełną listę
-              sald i korekty — to samo w{" "}
-              <Link
-                className="font-semibold text-emerald-800 underline-offset-2 hover:underline dark:text-emerald-200"
-                href="/panel-admina"
-              >
-                panelu administratora
-              </Link>{" "}
-              (zakładka <span className="font-semibold">Portfele</span>).
-            </>
-          ) : null}
+          {isAdmin
+            ? "Potwierdzaj obecność po meczu, naliczaj równo dług do portfeli i wysyłaj linki z podsumowaniem."
+            : "Sprawdź saldo portfela i historię operacji — rozliczenia wykonuje administrator po meczu."}
         </p>
       </div>
 
@@ -423,8 +414,8 @@ export function PlatnosciClient({
       {isLoggedIn ? (
         <Card className="mb-6 border-emerald-900/10 shadow-sm">
           <CardHeader className="pb-2">
-            <CardTitle className="text-lg text-emerald-950 dark:text-emerald-100">Portfel</CardTitle>
-            <CardDescription>Saldo, autoryzacje i historia operacji.</CardDescription>
+            <CardTitle className="text-lg text-emerald-950 dark:text-emerald-100">Twój portfel</CardTitle>
+            <CardDescription>Sprawdź, czy saldo się zgadza z rozliczeniami administratora.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-5">
             <div
@@ -584,7 +575,7 @@ export function PlatnosciClient({
         </Card>
       ) : null}
 
-      {isLoggedIn ? (
+      {isAdmin && isLoggedIn ? (
         <details className="group mb-6 overflow-hidden rounded-2xl border border-emerald-900/10 bg-white/70 shadow-sm">
           <summary className="awp-focus-ring cursor-pointer list-none px-5 py-4 font-semibold text-emerald-950 [&::-webkit-details-marker]:hidden">
             <span className="flex items-center justify-between gap-3">
@@ -843,13 +834,23 @@ export function PlatnosciClient({
                     </summary>
                     <div className="px-4 pb-4">
                       <p className="mt-1 text-xs text-zinc-600">
-                        Widok portfeli zawodników, którzy byli zapisani na ostatni mecz. Link ważny 30 dni.
+                        Wyślij zawodnikowi link z podsumowaniem portfela — ostatni mecz, wybrany mecz lub cała historia.
                       </p>
-                      <div className="mt-3">
-                        <Button type="button" variant="secondary" disabled={publicLinkBusy} onClick={() => void generatePublicLink()}>
-                          {publicLinkBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
-                          {publicLinkCopied ? "Skopiowano" : "Generuj i kopiuj link"}
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <Button type="button" variant="secondary" disabled={publicLinkBusy} onClick={() => void generatePublicLink("last_match_wallets")}>
+                          {publicLinkCopied ? <Check className="mr-2 h-4 w-4" aria-hidden /> : <ClipboardCopy className="mr-2 h-4 w-4" aria-hidden />}
+                          Ostatni mecz
                         </Button>
+                        {nextMatch ? (
+                          <Button type="button" variant="outline" disabled={publicLinkBusy} onClick={() => void generatePublicLink("match_wallets", { match_id: nextMatch.id })}>
+                            Ten mecz
+                          </Button>
+                        ) : null}
+                        {adminManualUserId ? (
+                          <Button type="button" variant="outline" disabled={publicLinkBusy} onClick={() => void generatePublicLink("player_wallets", { user_id: adminManualUserId })}>
+                            Wybrany zawodnik
+                          </Button>
+                        ) : null}
                       </div>
                     </div>
                   </details>

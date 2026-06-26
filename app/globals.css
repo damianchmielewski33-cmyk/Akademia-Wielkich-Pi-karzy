@@ -3,15 +3,21 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  /* Jaśniejsze, bardziej “murawowe” tło w trybie jasnym */
-  --background: #eefaf3;
+  /* Mundial 2026 — kolory motywu */
+  --mundial-navy: #1a2d5a;
+  --mundial-purple: #3d2a6e;
+  --mundial-teal: #00a651;
+  --mundial-teal-dark: #008c44;
+  --mundial-gold: #f5c518;
+  --mundial-red: #e4002b;
+  /* Jaśniejsze tło w trybie jasnym */
+  --background: #f4f6fb;
   --foreground: #0f172a;
 }
 
 .dark {
   color-scheme: dark;
-  --background: #0a1210;
-  /* Jaśniejszy niż slate-200 — lepszy kontrast na ciemnym tle murawy / zinc */
+  --background: #0c1020;
   --foreground: #f1f5f9;
 }
 
@@ -154,11 +160,23 @@ body {
   background: linear-gradient(
     90deg,
     transparent,
-    rgba(5, 150, 105, 0.55) 20%,
-    rgba(5, 150, 105, 0.85) 50%,
-    rgba(5, 150, 105, 0.55) 80%,
+    var(--mundial-gold) 20%,
+    var(--mundial-teal) 50%,
+    var(--mundial-gold) 80%,
     transparent
   );
+}
+
+.mundial-card-header {
+  background: linear-gradient(135deg, var(--mundial-navy) 0%, var(--mundial-purple) 55%, var(--mundial-teal-dark) 100%);
+}
+
+.mundial-page-accent {
+  border-color: color-mix(in srgb, var(--mundial-gold) 35%, transparent);
+}
+
+.mundial-header {
+  background: linear-gradient(90deg, var(--mundial-navy) 0%, var(--mundial-purple) 45%, var(--mundial-navy) 100%);
 }
 
 /* Kafelek strony głównej: pasy murawy + „linie kredowe” */

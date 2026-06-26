@@ -44,7 +44,9 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LoginForm } from "@/components/login-form";
 import { MatchTransportSignupDialog } from "@/components/match-transport-signup-dialog";
-import { MatchLocationWeather } from "@/components/match-location-weather";
+import { MatchManageDialog } from "@/components/match-manage-dialog";
+import { TerminarzMatchCard } from "@/components/terminarz-match-card";
+import { MatchSignupCountsBlock } from "@/components/terminarz-match-counts";
 import { appendShareSessionQuery, terminarzInviteRelativePath } from "@/lib/share-link";
 import {
   getStandaloneSurveyMatchRow,
@@ -108,81 +110,10 @@ async function fetchJson<T>(
   }
 }
 
-function MatchSignupCountsBlock({
-  matchId,
-  signedUp,
-  maxSlots,
-  playersData,
-  variant = "card",
-  tone = "emerald",
-}: {
-  matchId: number;
-  signedUp: number;
-  maxSlots: number;
-  playersData: Record<number, PlayersDataEntry>;
-  variant?: "card" | "table";
-  tone?: "emerald" | "zinc";
-}) {
-  const tentative = tentativeSignupCount(playersData, matchId);
-  const pondering = formatPonderingPlayersPolish(tentative);
-  const mainCls =
-    tone === "zinc"
-      ? variant === "table"
-        ? "font-bold text-zinc-800 dark:text-zinc-200"
-        : "text-sm font-semibold text-zinc-800 dark:text-zinc-200"
-      : variant === "table"
-        ? "font-bold text-emerald-950 dark:text-emerald-100"
-        : "text-sm font-semibold text-emerald-950 dark:text-emerald-100";
-  const subCls =
-    tone === "zinc"
-      ? variant === "table"
-        ? "mt-0.5 text-[11px] font-medium leading-snug text-zinc-600 dark:text-zinc-400"
-        : "mt-0.5 text-xs font-medium text-zinc-600 dark:text-zinc-400"
-      : variant === "table"
-        ? "mt-0.5 text-[11px] font-medium leading-snug text-emerald-800 dark:text-emerald-300"
-        : "mt-0.5 text-xs font-medium text-emerald-800/90 dark:text-emerald-300/90";
-  return (
-    <div>
-      <p className={mainCls}>
-        {signedUp}/{maxSlots} zapisanych
-      </p>
-      {pondering ? <p className={subCls}>{pondering}</p> : null}
-    </div>
-  );
-}
-
 function addDaysISO(isoDate: string, days: number): string {
   const d = new Date(isoDate + "T12:00:00");
   d.setDate(d.getDate() + days);
   return d.toISOString().slice(0, 10);
-}
-
-function rowClass(signed: number, max: number) {
-  if (max <= 0) return "bg-slate-50 dark:bg-zinc-800/70";
-  const p = (signed / max) * 100;
-  if (p < 50) {
-    return "bg-emerald-50/90 border-l-4 border-l-emerald-500 dark:bg-emerald-950/35 dark:border-l-emerald-500";
-  }
-  if (p < 80) {
-    return "bg-amber-50/90 border-l-4 border-l-amber-500 dark:bg-amber-950/30 dark:border-l-amber-500";
-  }
-  return "bg-red-50/80 border-l-4 border-l-red-500 dark:bg-red-950/35 dark:border-l-red-500";
-}
-
-function PitchTableFrame({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="relative overflow-hidden rounded-2xl p-[3px] shadow-[0_20px_50px_-18px_rgba(5,55,45,0.55)] ring-1 ring-emerald-950/20 dark:shadow-[0_20px_50px_-18px_rgba(0,0,0,0.5)] dark:ring-emerald-900/40">
-      <div className="terminarz-stadium-layers pointer-events-none absolute inset-0 rounded-2xl" aria-hidden />
-      <div
-        className="home-pitch-tile pointer-events-none absolute inset-0 rounded-2xl opacity-[0.22] mix-blend-soft-light dark:opacity-[0.14]"
-        aria-hidden
-      />
-      <div className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-b from-white/[0.08] via-transparent to-emerald-950/[0.12] dark:from-white/[0.03] dark:to-emerald-950/[0.2]" aria-hidden />
-      <div className="relative z-[1] min-w-0 overflow-x-auto overflow-y-visible rounded-[0.9rem] border border-white/50 bg-white/80 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] backdrop-blur-md supports-[backdrop-filter]:bg-white/70 dark:border-zinc-700/80 dark:bg-zinc-900/85 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] dark:supports-[backdrop-filter]:bg-zinc-900/80">
-        {children}
-      </div>
-    </div>
-  );
 }
 
 function InviteMatchCard({
@@ -196,14 +127,14 @@ function InviteMatchCard({
   match: MatchRow | null;
   playersData: Record<number, PlayersDataEntry>;
   title: string;
-  subtitle: ReactNode;
+  subtitle?: ReactNode;
   tone?: "emerald" | "zinc";
   showMapsLink?: boolean;
 }) {
   const border =
     tone === "zinc"
       ? "border-zinc-200/80 dark:border-zinc-700/70"
-      : "border-emerald-900/15 dark:border-emerald-800/35";
+      : "border-emerald-900/15 dark:border-emerald-800/35 mundial-card-header";
   return (
     <div className={cn("relative overflow-hidden rounded-2xl border shadow-sm", border)}>
       <div className="terminarz-stadium-layers pointer-events-none absolute inset-0 opacity-95" aria-hidden />
@@ -218,8 +149,8 @@ function InviteMatchCard({
 
       <div className="relative p-4 text-white">
         <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/80">{title}</p>
-        <h3 className="mt-1 text-lg font-bold tracking-tight">{match ? "Zaproszenie na mecz" : "Zaproszenie"}</h3>
-        <div className="mt-1 text-sm text-white/85">{subtitle}</div>
+        <h3 className="mt-1 text-lg font-bold tracking-tight">{match ? "Mecz w terminarzu" : "Zaproszenie"}</h3>
+        {subtitle ? <div className="mt-1 text-sm text-white/85">{subtitle}</div> : null}
 
         {match ? (
           <div className="mt-4 grid gap-2 rounded-xl border border-white/15 bg-black/20 p-3 backdrop-blur-sm">
@@ -370,6 +301,9 @@ export function TerminarzClient({
   const [attendancePresent, setAttendancePresent] = useState<Set<number>>(new Set());
   const [attendanceBusy, setAttendanceBusy] = useState(false);
 
+  const [manageMatchOpen, setManageMatchOpen] = useState(false);
+  const [manageMatch, setManageMatch] = useState<MatchRow | null>(null);
+
   const cancelledMatchShownRef = useRef(false);
 
   const missingStatsSet = useMemo(() => new Set(playedMissingStatsMatchIds), [playedMissingStatsMatchIds]);
@@ -452,10 +386,10 @@ export function TerminarzClient({
     rows.sort((a, b) => {
       const da = `${a.match_date} ${a.match_time}`;
       const db = `${b.match_date} ${b.match_time}`;
-      return sortDir === "asc" ? da.localeCompare(db) : db.localeCompare(da);
+      return db.localeCompare(da);
     });
     return rows;
-  }, [playedConfirmed, search, sortDir]);
+  }, [playedConfirmed, search]);
 
   useEffect(() => {
     if (!highlightMatchId || view !== "list") return;
@@ -651,12 +585,19 @@ export function TerminarzClient({
     const fee = typeof m.fee_pln === "number" && Number.isFinite(m.fee_pln) ? String(m.fee_pln) : "";
     setSettleDefaultAmount(fee);
     try {
-      const r = await fetchJson<{ signups: AdminMatchSignupRow[] }>(`/api/admin/match/${m.id}/signups`);
-      if (!r.ok) {
-        toast.error(r.error);
+      const [signupsR, attR] = await Promise.all([
+        fetchJson<{ signups: AdminMatchSignupRow[] }>(`/api/admin/match/${m.id}/signups`),
+        fetchJson<{ present_user_ids: number[] }>(`/api/admin/match/${m.id}/attendance`),
+      ]);
+      if (!signupsR.ok) {
+        toast.error(signupsR.error);
         return;
       }
-      const confirmed = (r.data.signups ?? []).filter((s) => Number(s.commitment ?? 1) === 1);
+      const present = new Set((attR.ok ? attR.data.present_user_ids : []).map((x) => Number(x)));
+      let confirmed = (signupsR.data.signups ?? []).filter((s) => Number(s.commitment ?? 1) === 1);
+      if (present.size > 0) {
+        confirmed = confirmed.filter((s) => present.has(s.user_id));
+      }
       setSettleRows(confirmed);
       if (fee) {
         const next: Record<number, string> = {};
@@ -958,6 +899,11 @@ export function TerminarzClient({
   }
 
   const selectedData = selectedMatchId != null ? playersData[selectedMatchId] : null;
+
+  function openManageMatch(m: MatchRow) {
+    setManageMatch(m);
+    setManageMatchOpen(true);
+  }
 
   async function copyInviteLink(matchId: number) {
     const rel = appendShareSessionQuery(terminarzInviteRelativePath(matchId));
@@ -1317,18 +1263,25 @@ export function TerminarzClient({
         {isAdmin && (
           <Button
             size="sm"
+            variant="secondary"
+            className={actionBtnAdmin}
+            title="Zaznacz kto był na boisku — przed rozliczeniem portfeli"
+            onClick={() => void openAttendanceDialog(m)}
+          >
+            <ShieldCheck className="shrink-0" aria-hidden />
+            <span className="block leading-tight">Obecność</span>
+          </Button>
+        )}
+        {isAdmin && (
+          <Button
+            size="sm"
             variant="default"
             className={cn(actionBtnPrimary, "bg-emerald-700 hover:bg-emerald-800")}
-            title="Odejmij wpisowe wszystkim zapisanym (kwota edytowalna)"
+            title="Równo nalicz dług zawodnikom obecnym na meczu"
             onClick={() => void openSettleDialog(m)}
           >
             <ShieldCheck className="shrink-0" aria-hidden />
-            <span>
-              <span className="block leading-tight">Rozlicz mecz</span>
-              <span className="mt-1 block text-[11px] font-normal leading-snug text-emerald-100/95">
-                Odejmij kwotę z portfeli zapisanych zawodników
-              </span>
-            </span>
+            <span className="block leading-tight">Rozlicz portfele</span>
           </Button>
         )}
         {isAdmin && (
@@ -1354,35 +1307,27 @@ export function TerminarzClient({
 
   return (
     <>
-      <div className="awp-card-surface px-4 py-8 sm:px-8">
+      <div className="awp-card-surface mundial-page-accent px-4 py-8 sm:px-8">
         <div className="flex flex-col items-center text-center">
           <div className="pitch-rule mx-auto mb-4 w-40 sm:w-48" />
           <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4">
             <Image
-              src="/soccer-ball.svg"
-              alt=""
-              width={48}
-              height={48}
-              className="h-11 w-11 drop-shadow-sm sm:h-12 sm:w-12"
+              src="/mundial-2026-logo.svg"
+              alt="Mundial 2026"
+              width={56}
+              height={56}
+              className="h-14 w-14 drop-shadow-md sm:h-16 sm:w-16"
               unoptimized
             />
             <h1
               id="terminarz-page-title"
-              className="whitespace-nowrap text-3xl font-bold tracking-tight text-emerald-950 dark:text-emerald-100 sm:text-4xl"
+              className="whitespace-nowrap text-3xl font-bold tracking-tight text-[var(--mundial-navy,#1a2d5a)] dark:text-[var(--mundial-gold,#f5c518)] sm:text-4xl"
             >
               Terminarz
             </h1>
-            <Image
-              src="/soccer-ball.svg"
-              alt=""
-              width={48}
-              height={48}
-              className="h-11 w-11 scale-x-[-1] drop-shadow-sm sm:h-12 sm:w-12"
-              unoptimized
-            />
           </div>
           <p className="mt-3 max-w-xl text-sm text-zinc-600 dark:text-zinc-400 sm:text-base">
-            Zapisy na mecze, lista terminów i kalendarz — wszystko w jednym miejscu.
+            Mecze Akademii — zapisz się na boisko, sprawdź skład i terminy w stylu Mundialu 2026.
           </p>
         </div>
 
@@ -1569,307 +1514,53 @@ export function TerminarzClient({
               </TabsList>
 
               <TabsContent value="active" className="mt-5">
-                <div className="space-y-4 md:hidden">
+                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                   {filteredActive.map((m) => {
-                    const pct = m.max_slots > 0 ? (m.signed_up / m.max_slots) * 100 : 0;
                     const past = m.match_date < todayISO();
                     return (
-                      <div
+                      <TerminarzMatchCard
                         key={m.id}
-                        data-mecz-highlight={highlightMatchId === m.id ? m.id : undefined}
-                        className={cn(
-                          "rounded-2xl border border-zinc-200 p-4 shadow-sm dark:border-zinc-600",
-                          rowClass(m.signed_up, m.max_slots),
-                          highlightMatchId === m.id &&
-                            "relative z-[1] border-emerald-600 ring-2 ring-emerald-600 ring-offset-2"
-                        )}
-                      >
-                        <div className="flex flex-wrap items-start justify-between gap-2">
-                          <div>
-                            <p className="text-lg font-bold text-emerald-950 dark:text-emerald-100">{m.match_date}</p>
-                            <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">{m.match_time}</p>
-                          </div>
-                          {past && (
-                            <Badge
-                              variant="outline"
-                              className="border-amber-400 bg-amber-50 text-amber-900 dark:border-amber-600 dark:bg-amber-950/40 dark:text-amber-100"
-                            >
-                              Termin minął
-                            </Badge>
-                          )}
-                        </div>
-                        <div className="mt-3 flex items-start gap-2 text-sm text-zinc-700 dark:text-zinc-300">
-                          <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700 dark:text-emerald-400" />
-                          <span>{m.location}</span>
-                        </div>
-                        <a
-                          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(m.location)}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="mt-1 inline-block text-xs font-medium text-emerald-700 underline dark:text-emerald-400"
-                        >
-                          Otwórz w Mapach
-                        </a>
-                        <div className="mt-3">
-                          <MatchSignupCountsBlock
-                            matchId={m.id}
-                            signedUp={m.signed_up}
-                            maxSlots={m.max_slots}
-                            playersData={playersData}
-                          />
-                          <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-emerald-200/80 dark:bg-emerald-900/80">
-                            <div className="h-full bg-emerald-600 transition-all dark:bg-emerald-500" style={{ width: `${pct}%` }} />
-                          </div>
-                        </div>
-                        <div className="mt-4 border-t border-zinc-200/80 pt-4 dark:border-zinc-600/80">{activeActions(m)}</div>
-                        <details className="mt-3 rounded-xl border border-zinc-200/90 bg-zinc-50/50 dark:border-zinc-600/80 dark:bg-zinc-900/50">
-                          <summary className="cursor-pointer list-none px-3 py-2 text-xs font-semibold text-emerald-900 dark:text-emerald-100 [&::-webkit-details-marker]:hidden">
-                            Prognoza pogody (10 dni) — rozwiń
-                          </summary>
-                          <div className="border-t border-zinc-200/70 px-2 pb-2 pt-1 dark:border-zinc-600/60">
-                            <MatchLocationWeather location={m.location} className="mt-0 border-t-0 pt-2" />
-                          </div>
-                        </details>
-                      </div>
+                        match={m}
+                        highlight={highlightMatchId === m.id}
+                        past={past}
+                        playersData={playersData}
+                        isAdmin={isAdmin}
+                        onManage={() => openManageMatch(m)}
+                        onCopyInvite={() => void copyInviteLink(m.id)}
+                        onOpenPlayers={() => openPlayers(m.id)}
+                        actions={activeActions(m)}
+                      />
                     );
                   })}
-                  {filteredActive.length === 0 && (
-                    <p className="rounded-xl border border-dashed border-zinc-200 bg-zinc-50/80 py-10 text-center text-sm text-zinc-600 dark:border-zinc-600 dark:bg-zinc-800/50 dark:text-zinc-400">
-                      Brak meczów spełniających kryteria. Zmień filtry lub zakres dat.
-                    </p>
-                  )}
                 </div>
-
-                <div className="hidden min-w-0 md:block">
-                  <PitchTableFrame>
-                    <table className="w-full min-w-0 table-fixed text-sm">
-                      <colgroup>
-                        <col style={{ width: "7rem" }} />
-                        <col style={{ width: "5.5rem" }} />
-                        <col />
-                        <col style={{ width: "11rem" }} />
-                        <col style={{ width: "18rem" }} />
-                      </colgroup>
-                      <thead className="bg-emerald-950 text-white">
-                        <tr>
-                          <th className="px-3 py-3 text-left font-semibold lg:px-4">Data</th>
-                          <th className="px-3 py-3 text-left font-semibold lg:px-4">Godzina</th>
-                          <th className="px-3 py-3 text-left font-semibold lg:px-4">Miejsce</th>
-                          <th className="px-3 py-3 text-left font-semibold lg:px-4">Zapisy</th>
-                          <th className="px-3 py-3 text-left font-semibold lg:px-4">Opcje</th>
-                        </tr>
-                      </thead>
-                        <tbody>
-                          {filteredActive.map((m) => {
-                            const pct = m.max_slots > 0 ? (m.signed_up / m.max_slots) * 100 : 0;
-                            const past = m.match_date < todayISO();
-                            const rowCls = rowClass(m.signed_up, m.max_slots);
-                            return (
-                              <Fragment key={m.id}>
-                                <tr
-                                  data-mecz-highlight={highlightMatchId === m.id ? m.id : undefined}
-                                  className={cn(
-                                    "border-b border-zinc-100 dark:border-zinc-700/80",
-                                    rowCls,
-                                    highlightMatchId === m.id && "shadow-[inset_0_0_0_3px_#059669]"
-                                  )}
-                                >
-                                  <td className="min-w-0 px-3 py-3 align-top lg:px-4">
-                                    <div className="font-semibold text-emerald-950 dark:text-emerald-100">{m.match_date}</div>
-                                    {past && (
-                                      <Badge
-                                        variant="outline"
-                                        className="mt-1 border-amber-400 bg-amber-50 text-[10px] text-amber-900 dark:border-amber-600 dark:bg-amber-950/40 dark:text-amber-100"
-                                      >
-                                        Termin minął
-                                      </Badge>
-                                    )}
-                                  </td>
-                                  <td className="min-w-0 px-3 py-3 align-top text-zinc-800 dark:text-zinc-300 lg:px-4">
-                                    {m.match_time}
-                                  </td>
-                                  <td className="min-w-0 px-3 py-3 align-top lg:px-4">
-                                    <Badge variant="secondary" className="block w-fit max-w-full whitespace-normal break-words font-normal">
-                                      {m.location}
-                                    </Badge>
-                                    <a
-                                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(m.location)}`}
-                                      target="_blank"
-                                      rel="noreferrer"
-                                      className="mt-1 inline-block text-xs font-medium text-emerald-700 underline dark:text-emerald-400"
-                                    >
-                                      Mapy
-                                    </a>
-                                  </td>
-                                  <td className="min-w-0 px-3 py-3 align-top lg:px-4">
-                                    <MatchSignupCountsBlock
-                                      matchId={m.id}
-                                      signedUp={m.signed_up}
-                                      maxSlots={m.max_slots}
-                                      playersData={playersData}
-                                      variant="table"
-                                    />
-                                    <div className="mt-1 h-2 w-full max-w-full overflow-hidden rounded-full bg-emerald-200 dark:bg-emerald-900/80">
-                                      <div
-                                        className="h-full bg-emerald-600 transition-all dark:bg-emerald-500"
-                                        style={{ width: `${pct}%` }}
-                                      />
-                                    </div>
-                                  </td>
-                                  <td
-                                    rowSpan={2}
-                                    className="min-w-0 border-l border-emerald-900/25 bg-white/95 px-3 py-3 align-top shadow-[-10px_0_24px_-8px_rgba(15,23,42,0.12)] dark:border-zinc-600 dark:bg-zinc-900/95 dark:shadow-[-10px_0_28px_-8px_rgba(0,0,0,0.45)] lg:px-4"
-                                  >
-                                    {activeActions(m)}
-                                  </td>
-                                </tr>
-                                <tr
-                                  data-mecz-highlight={highlightMatchId === m.id ? m.id : undefined}
-                                  className={cn(
-                                    "border-b border-zinc-100 dark:border-zinc-700/80",
-                                    rowCls,
-                                    highlightMatchId === m.id && "shadow-[inset_0_0_0_3px_#059669]"
-                                  )}
-                                >
-                                  <td colSpan={4} className="min-w-0 px-3 pb-3 pt-0 align-top lg:px-4">
-                                    <MatchLocationWeather location={m.location} layout="table-subrow" />
-                                  </td>
-                                </tr>
-                              </Fragment>
-                            );
-                          })}
-                          {filteredActive.length === 0 && (
-                            <tr>
-                              <td colSpan={5} className="px-4 py-12 text-center text-zinc-600 dark:text-zinc-400">
-                                Brak meczów spełniających kryteria.
-                              </td>
-                            </tr>
-                          )}
-                        </tbody>
-                    </table>
-                  </PitchTableFrame>
-                </div>
+                {filteredActive.length === 0 && (
+                  <p className="rounded-xl border border-dashed border-zinc-200 bg-zinc-50/80 py-10 text-center text-sm text-zinc-600 dark:border-zinc-600 dark:bg-zinc-800/50 dark:text-zinc-400">
+                    Brak meczów spełniających kryteria. Zmień filtry lub zakres dat.
+                  </p>
+                )}
               </TabsContent>
 
               <TabsContent value="archive" className="mt-5">
-                <div className="space-y-4 md:hidden">
+                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                   {filteredArchive.map((m) => (
-                    <div
+                    <TerminarzMatchCard
                       key={m.id}
-                      data-mecz-highlight={highlightMatchId === m.id ? m.id : undefined}
-                      className={cn(
-                        "rounded-2xl border border-zinc-200 bg-zinc-50/80 p-4 shadow-sm dark:border-zinc-600 dark:bg-zinc-800/60",
-                        highlightMatchId === m.id &&
-                          "relative z-[1] border-emerald-600 ring-2 ring-emerald-600 ring-offset-2"
-                      )}
-                    >
-                      <p className="text-lg font-bold text-emerald-950 dark:text-emerald-100">{m.match_date}</p>
-                      <p className="text-sm text-zinc-700 dark:text-zinc-300">{m.match_time}</p>
-                      <p className="mt-2 text-sm text-zinc-700 dark:text-zinc-300">{m.location}</p>
-                      <div className="mt-2">
-                        <MatchSignupCountsBlock
-                          matchId={m.id}
-                          signedUp={m.signed_up}
-                          maxSlots={m.max_slots}
-                          playersData={playersData}
-                          tone="zinc"
-                        />
-                      </div>
-                      <div className="mt-4">{archiveActions(m)}</div>
-                      <details className="mt-3 rounded-xl border border-zinc-200/90 bg-zinc-100/50 dark:border-zinc-600/80 dark:bg-zinc-900/50">
-                        <summary className="cursor-pointer list-none px-3 py-2 text-xs font-semibold text-zinc-800 dark:text-zinc-100 [&::-webkit-details-marker]:hidden">
-                          Prognoza pogody (10 dni) — rozwiń
-                        </summary>
-                        <div className="border-t border-zinc-200/70 px-2 pb-2 pt-1 dark:border-zinc-600/60">
-                          <MatchLocationWeather location={m.location} className="mt-0 border-t-0 pt-2" />
-                        </div>
-                      </details>
-                    </div>
+                      match={m}
+                      highlight={highlightMatchId === m.id}
+                      archive
+                      playersData={playersData}
+                      isAdmin={isAdmin}
+                      onManage={() => openManageMatch(m)}
+                      onOpenPlayers={() => openPlayers(m.id)}
+                      actions={archiveActions(m)}
+                    />
                   ))}
-                  {filteredArchive.length === 0 && (
-                    <p className="rounded-xl border border-dashed border-zinc-200 py-10 text-center text-sm text-zinc-600 dark:border-zinc-600 dark:text-zinc-400">
-                      Brak rozegranych meczów do wyświetlenia.
-                    </p>
-                  )}
                 </div>
-
-                <div className="hidden min-w-0 md:block">
-                  <PitchTableFrame>
-                    <table className="w-full min-w-0 table-fixed text-sm">
-                      <colgroup>
-                        <col style={{ width: "7rem" }} />
-                        <col style={{ width: "5.5rem" }} />
-                        <col />
-                        <col style={{ width: "11rem" }} />
-                        <col style={{ width: "18rem" }} />
-                      </colgroup>
-                      <thead className="bg-zinc-800 text-white">
-                        <tr>
-                          <th className="px-3 py-3 text-left font-semibold lg:px-4">Data</th>
-                          <th className="px-3 py-3 text-left font-semibold lg:px-4">Godzina</th>
-                          <th className="px-3 py-3 text-left font-semibold lg:px-4">Miejsce</th>
-                          <th className="px-3 py-3 text-left font-semibold lg:px-4">Zapisy</th>
-                          <th className="px-3 py-3 text-left font-semibold lg:px-4">Opcje</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {filteredArchive.map((m) => (
-                          <Fragment key={m.id}>
-                            <tr
-                              data-mecz-highlight={highlightMatchId === m.id ? m.id : undefined}
-                              className={cn(
-                                "border-b border-zinc-100 bg-zinc-50/50 dark:border-zinc-700/80 dark:bg-zinc-800/40",
-                                highlightMatchId === m.id && "shadow-[inset_0_0_0_3px_#059669]"
-                              )}
-                            >
-                              <td className="min-w-0 px-3 py-3 font-semibold text-emerald-950 dark:text-emerald-100 lg:px-4">
-                                {m.match_date}
-                              </td>
-                              <td className="min-w-0 px-3 py-3 text-zinc-800 dark:text-zinc-300 lg:px-4">{m.match_time}</td>
-                              <td className="min-w-0 px-3 py-3 align-top text-zinc-800 dark:text-zinc-300 lg:px-4">
-                                <span className="block max-w-full break-words font-medium">{m.location}</span>
-                              </td>
-                              <td className="min-w-0 px-3 py-3 text-zinc-800 dark:text-zinc-300 lg:px-4">
-                                <MatchSignupCountsBlock
-                                  matchId={m.id}
-                                  signedUp={m.signed_up}
-                                  maxSlots={m.max_slots}
-                                  playersData={playersData}
-                                  variant="table"
-                                  tone="zinc"
-                                />
-                              </td>
-                              <td
-                                rowSpan={2}
-                                className="min-w-0 border-l border-zinc-300/90 bg-zinc-50/95 px-3 py-3 align-top shadow-[-10px_0_24px_-8px_rgba(15,23,42,0.1)] dark:border-zinc-600 dark:bg-zinc-800/95 dark:shadow-[-10px_0_28px_-8px_rgba(0,0,0,0.45)] lg:px-4"
-                              >
-                                {archiveActions(m)}
-                              </td>
-                            </tr>
-                            <tr
-                              data-mecz-highlight={highlightMatchId === m.id ? m.id : undefined}
-                              className={cn(
-                                "border-b border-zinc-100 bg-zinc-50/50 dark:border-zinc-700/80 dark:bg-zinc-800/40",
-                                highlightMatchId === m.id && "shadow-[inset_0_0_0_3px_#059669]"
-                              )}
-                            >
-                              <td colSpan={4} className="min-w-0 px-3 pb-3 pt-0 align-top lg:px-4">
-                                <MatchLocationWeather location={m.location} layout="table-subrow" />
-                              </td>
-                            </tr>
-                          </Fragment>
-                        ))}
-                        {filteredArchive.length === 0 && (
-                          <tr>
-                            <td colSpan={5} className="px-4 py-12 text-center text-zinc-600 dark:text-zinc-400">
-                              Brak rozegranych meczów.
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </PitchTableFrame>
-                </div>
+                {filteredArchive.length === 0 && (
+                  <p className="rounded-xl border border-dashed border-zinc-200 py-10 text-center text-sm text-zinc-600 dark:border-zinc-600 dark:text-zinc-400">
+                    Brak rozegranych meczów do wyświetlenia.
+                  </p>
+                )}
               </TabsContent>
             </Tabs>
           </div>
@@ -2565,6 +2256,13 @@ export function TerminarzClient({
 
       <AddMatchDialog open={addOpen} onOpenChange={setAddOpen} onDone={() => router.refresh()} />
 
+      <MatchManageDialog
+        match={manageMatch}
+        open={manageMatchOpen}
+        onOpenChange={setManageMatchOpen}
+        onDone={() => router.refresh()}
+      />
+
       {transportSignupMatchId != null && (
         <MatchTransportSignupDialog
           open={transportSignupOpen}
@@ -2591,21 +2289,16 @@ export function TerminarzClient({
           <InviteMatchCard
             match={highlightMatch ?? null}
             playersData={playersData}
-            title="Akademia Wielkich Piłkarzy"
-            subtitle={
-              <>
-                Wejście z linku zaproszenia. Zaloguj się lub utwórz konto i odpowiedz, czy grasz w tym terminie.
-              </>
-            }
+            title="Zaproszenie na mecz"
+            subtitle={null}
           />
           {!inviteLoginInline ? (
             <>
               <DialogHeader>
-                <DialogTitle>Zapis na mecz</DialogTitle>
+                <DialogTitle>Czy grasz w tym terminie?</DialogTitle>
                 <DialogDescription className="text-left text-zinc-600 dark:text-zinc-400">
-                  Żeby odpowiedzieć na zaproszenie, zaloguj się lub utwórz konto. Po zalogowaniu wybierzesz, czy bierzesz
-                  udział: <strong>tak</strong>, <strong>«jeszcze nie wiem»</strong> albo <strong>«nie biorę udziału»</strong>.
-                  Dopiero przy „tak” (gdy są wolne miejsca) wybierzesz transport.
+                  Zaloguj się lub załóż konto, żeby odpowiedzieć: <strong>tak</strong>, <strong>jeszcze nie wiem</strong> albo{" "}
+                  <strong>nie biorę udziału</strong>.
                 </DialogDescription>
               </DialogHeader>
               <DialogFooter className="flex-col gap-2 sm:flex-col sm:justify-start sm:gap-2">
@@ -2664,22 +2357,14 @@ export function TerminarzClient({
           <InviteMatchCard
             match={highlightMatch ?? null}
             playersData={playersData}
-            title="Zaproszenie"
-            subtitle={
-              <>
-                Wybierz odpowiedź. „Tak” działa tylko, gdy są wolne miejsca w składzie; w przeciwnym razie wybierz
-                „Jeszcze nie wiem”.
-              </>
-            }
+            title="Twój termin"
+            subtitle={null}
             showMapsLink={false}
           />
           <DialogHeader>
-            <DialogTitle>Zaproszenie — czy bierzesz udział?</DialogTitle>
+            <DialogTitle>Czy bierzesz udział?</DialogTitle>
             <DialogDescription className="text-left text-zinc-600 dark:text-zinc-400">
-              <strong>Tak</strong> — przy wolnych miejscach w składzie potwierdzasz udział i przechodzisz do wyboru
-              transportu. <strong>Jeszcze nie wiem</strong> — bez miejsca w składzie; odpowiedź doprecyzujesz później w
-              terminarzu. <strong>Nie, nie biorę udziału</strong> — bez miejsca w składzie; działa jak rezygnacja z tego
-              terminu w terminarzu.
+              Wybierz jedną opcję. Przy odpowiedzi <strong>tak</strong> (gdy są wolne miejsca) wybierzesz też transport.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex-col gap-2 sm:flex-col sm:justify-start sm:gap-2">

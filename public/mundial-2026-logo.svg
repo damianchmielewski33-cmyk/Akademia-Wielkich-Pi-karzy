@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none" role="img" aria-label="Mundial 2026">
+  <defs>
+    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1a2d5a"/>
+      <stop offset="50%" stop-color="#3d2a6e"/>
+      <stop offset="100%" stop-color="#00a651"/>
+    </linearGradient>
+  </defs>
+  <circle cx="60" cy="60" r="56" fill="url(#g)" stroke="#f5c518" stroke-width="4"/>
+  <path d="M60 18c-8 14-12 28-12 42s4 28 12 42c8-14 12-28 12-42S68 32 60 18z" fill="#f5c518" opacity="0.95"/>
+  <path d="M18 60c14-8 28-12 42-12s28 4 42 12c-14 8-28 12-42 12S32 68 18 60z" fill="#fff" opacity="0.9"/>
+  <circle cx="60" cy="60" r="10" fill="#1a2d5a" stroke="#f5c518" stroke-width="2"/>
+  <text x="60" y="108" text-anchor="middle" font-family="Arial,sans-serif" font-size="11" font-weight="700" fill="#1a2d5a">2026</text>
+</svg>
