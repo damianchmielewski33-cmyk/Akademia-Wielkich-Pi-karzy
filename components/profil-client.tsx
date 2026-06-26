@@ -32,6 +32,7 @@ import { Badge } from "@/components/ui/badge";
 import { PhotoDevelopPreloader } from "@/components/preloaders";
 import { PlayerAliasPicker } from "@/components/player-alias-picker";
 import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
+import { PitchPageHero } from "@/components/ui/pitch-card";
 import type { ProfileDashboard } from "@/lib/profile-data";
 import { normalizeUiTheme, type UiTheme } from "@/lib/ui-theme";
 import { cn } from "@/lib/utils";
@@ -218,17 +219,14 @@ export function ProfilClient({ initial }: Props) {
 
   return (
     <div className="container mx-auto max-w-5xl flex-1 px-4 py-8 sm:py-10">
-      <div className="pitch-rule mx-auto mb-5 w-40 sm:w-48" />
-      <h1 className="text-center text-3xl font-bold tracking-tight text-emerald-950 dark:text-emerald-100 sm:text-4xl">Mój profil</h1>
-      <p className="mx-auto mt-3 max-w-2xl text-center text-base text-zinc-600 dark:text-zinc-400">
-        Dane konta, zdjęcie, awatar z listy oraz statystyki z ostatnich meczów (edycja i uzupełnianie przez{" "}
-        <strong>7 dni</strong> od daty meczu).
-      </p>
+      <PitchPageHero
+        title="Mój profil"
+        subtitle="Dane konta, zdjęcie, awatar z listy oraz statystyki z ostatnich meczów (edycja i uzupełnianie przez 7 dni od daty meczu)."
+      />
 
       <div className="mx-auto mt-10 grid gap-6 lg:grid-cols-[minmax(0,280px)_1fr]">
         <div className="awp-card-surface">
-          <div className="home-pitch-tile pointer-events-none absolute inset-0 opacity-[0.12]" aria-hidden />
-          <div className="relative flex flex-col items-center text-center">
+          <div className="flex flex-col items-center text-center">
             <div className="relative shrink-0 overflow-hidden rounded-full border-4 border-emerald-200/90 shadow-inner ring-2 ring-emerald-900/10">
               <PlayerAvatar
                 photoPath={u.profile_photo_path}
@@ -245,8 +243,8 @@ export function ProfilClient({ initial }: Props) {
                 firstName={firstName}
                 lastName={lastName}
                 nick={zawodnik}
-                primaryClassName="text-base font-semibold text-emerald-950 dark:text-emerald-100"
-                secondaryClassName="text-sm text-zinc-600 dark:text-zinc-400"
+                primaryClassName="text-base font-semibold text-white"
+                secondaryClassName="text-sm text-emerald-100/85"
               />
             </div>
             <div className="mt-4 flex flex-wrap justify-center gap-2">
@@ -264,16 +262,15 @@ export function ProfilClient({ initial }: Props) {
                 </Button>
               ) : null}
             </div>
-            <p className="mt-3 text-xs text-zinc-500">JPG, PNG, WebP lub GIF, do 2 MB.</p>
+            <p className="mt-3 text-xs text-emerald-100/75">JPG, PNG, WebP lub GIF, do 2 MB.</p>
           </div>
         </div>
 
         <div className="space-y-6">
           <div className="awp-card-surface">
-            <div className="home-pitch-tile pointer-events-none absolute inset-0 opacity-[0.08]" aria-hidden />
-            <div className="relative">
-              <h2 className="flex items-center gap-2 text-lg font-bold text-emerald-950 dark:text-emerald-100">
-                <Pencil className="h-5 w-5 text-emerald-700" />
+            <div>
+              <h2 className="flex items-center gap-2 text-lg font-bold text-white">
+                <Pencil className="h-5 w-5 text-[var(--mundial-gold,#f5c518)]" />
                 Dane i awatar (lista)
               </h2>
               <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
@@ -383,10 +380,9 @@ export function ProfilClient({ initial }: Props) {
             </div>
           </div>
 
-          <div className="awp-card-surface">
-            <div className="home-pitch-tile-gold pointer-events-none absolute inset-0 opacity-[0.1]" aria-hidden />
-            <div className="relative">
-              <h2 className="text-lg font-bold text-emerald-950 dark:text-emerald-100">Podsumowanie</h2>
+          <div className="pitch-card home-pitch-tile-gold p-5 sm:p-6">
+            <div>
+              <h2 className="text-lg font-bold text-white">Podsumowanie</h2>
               <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
                 Szybki wgląd — pełna tabela jest w{" "}
                 <Link href="/statystyki" className="font-semibold text-emerald-800 underline-offset-2 hover:underline">
@@ -413,9 +409,8 @@ export function ProfilClient({ initial }: Props) {
       </div>
 
       <section className="awp-card-surface mx-auto mt-10 max-w-5xl">
-        <div className="home-pitch-tile pointer-events-none absolute inset-0 opacity-[0.06]" aria-hidden />
-        <div className="relative">
-          <h2 className="text-lg font-bold text-emerald-950 dark:text-emerald-100">Statystyki z meczów</h2>
+        <div>
+          <h2 className="text-lg font-bold text-white">Statystyki z meczów</h2>
           <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
             Możesz dodać lub poprawić wpis do <strong>7 dni po dacie meczu</strong>. Później zmiany wykona wyłącznie admin.
           </p>
@@ -508,9 +503,8 @@ export function ProfilClient({ initial }: Props) {
       </section>
 
       <section className="awp-card-surface mx-auto mt-10 max-w-5xl">
-        <div className="home-pitch-tile pointer-events-none absolute inset-0 opacity-[0.05]" aria-hidden />
-        <div className="relative">
-          <h2 className="text-lg font-bold text-emerald-950 dark:text-emerald-100">Twoja ostatnia aktywność</h2>
+        <div>
+          <h2 className="text-lg font-bold text-white">Twoja ostatnia aktywność</h2>
           <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">Chronologia tego, co robiłeś na stronie (np. logowanie, zapisy, mecze).</p>
           {data.recent_activity.length === 0 ? (
             <p className="mt-4 text-sm text-zinc-500">Brak wpisów.</p>

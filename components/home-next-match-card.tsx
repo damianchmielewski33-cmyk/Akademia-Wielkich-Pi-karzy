@@ -4,6 +4,12 @@ import Image from "next/image";
 import Link from "next/link";
 import { Calendar, Car, Clock, HelpCircle, LayoutGrid, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  PitchCard,
+  pitchLabelClass,
+  pitchPanelClass,
+  pitchSecondaryBtnClass,
+} from "@/components/ui/pitch-card";
 import { cn } from "@/lib/utils";
 import type { MatchRow } from "@/lib/db";
 
@@ -22,11 +28,6 @@ type Props = {
   onDeclined: () => void;
   onConfirmFromTentative: () => void;
 };
-
-const pitchLabel = "text-xs font-semibold uppercase tracking-[0.14em] text-[var(--mundial-gold,#f5c518)]";
-const pitchPanel = "rounded-xl border border-white/25 bg-black/10 backdrop-blur-sm";
-const pitchSecondaryBtn =
-  "inline-flex w-full items-center justify-center gap-2 rounded-lg border border-white/25 bg-black/10 px-4 py-2.5 text-sm font-semibold text-white/95 backdrop-blur-sm transition-colors hover:bg-white/10 disabled:pointer-events-none disabled:opacity-50";
 
 function formatMatchWhen(isoDate: string, time: string) {
   const [y, m, d] = isoDate.split("-").map(Number);
@@ -69,24 +70,14 @@ export function HomeNextMatchCard({
     slots.tone === "full" ? "bg-red-400/90" : slots.tone === "warn" ? "bg-amber-400/90" : "bg-emerald-100";
 
   return (
-    <section
-      className="relative mx-auto mt-8 max-w-2xl overflow-hidden rounded-2xl border-2 border-white/35 text-white shadow-lg shadow-emerald-950/20 ring-1 ring-emerald-950/15"
+    <PitchCard
+      as="section"
+      className="mx-auto mt-8 max-w-2xl"
+      contentClassName="px-5 py-5 sm:px-6 sm:py-6"
       aria-labelledby="home-next-match-heading"
     >
-      <div className="home-pitch-tile absolute inset-0" aria-hidden />
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-white/40" aria-hidden />
-      <div
-        className="pointer-events-none absolute bottom-0 left-0 h-10 w-10 rounded-tr-full border-t-2 border-r-2 border-white/45"
-        aria-hidden
-      />
-      <div
-        className="pointer-events-none absolute bottom-0 right-0 h-10 w-10 rounded-tl-full border-t-2 border-l-2 border-white/45"
-        aria-hidden
-      />
-
-      <div className="relative px-5 py-5 text-white sm:px-6 sm:py-6">
         <div className="mb-4 flex flex-col items-center gap-2 text-center">
-          <span className={pitchLabel}>Kolejny termin</span>
+          <span className={pitchLabelClass}>Kolejny termin</span>
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/15 ring-2 ring-white/30 backdrop-blur-[2px]">
             <Image
               src="/logo-akademia-crest.png"
@@ -103,8 +94,8 @@ export function HomeNextMatchCard({
           {when.weekday ? <p className="text-sm font-medium capitalize text-emerald-100/90">{when.weekday}</p> : null}
         </div>
 
-        <div className={cn(pitchPanel, "mx-auto max-w-md px-3.5 py-3.5")}>
-          <span className={cn(pitchLabel, "mb-2.5 block text-center")}>Termin i miejsce</span>
+        <div className={cn(pitchPanelClass, "mx-auto max-w-md px-3.5 py-3.5")}>
+          <span className={cn(pitchLabelClass, "mb-2.5 block text-center")}>Termin i miejsce</span>
           <div className="flex flex-wrap items-center justify-center gap-2">
             <span className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-100 px-3 py-2 text-sm font-semibold tabular-nums text-emerald-950 shadow-md shadow-emerald-950/20">
               <Calendar className="h-3.5 w-3.5 text-emerald-800" aria-hidden />
@@ -131,8 +122,8 @@ export function HomeNextMatchCard({
           </div>
         </div>
 
-        <div className={cn(pitchPanel, "mx-auto mt-3 max-w-md px-3.5 py-3")}>
-          <span className={cn(pitchLabel, "mb-2 block")}>Skład</span>
+        <div className={cn(pitchPanelClass, "mx-auto mt-3 max-w-md px-3.5 py-3")}>
+          <span className={cn(pitchLabelClass, "mb-2 block")}>Skład</span>
           <div className="flex items-center justify-between gap-2 text-xs font-semibold uppercase tracking-wider text-white/80">
             <span>
               {match.signed_up}/{match.max_slots} zapisanych
@@ -164,14 +155,14 @@ export function HomeNextMatchCard({
         </div>
 
         <div className="mx-auto mt-4 max-w-md space-y-2.5">
-          <span className={cn(pitchLabel, "block text-center")}>Zapis na mecz</span>
+          <span className={cn(pitchLabelClass, "block text-center")}>Zapis na mecz</span>
 
           {isLoggedIn ? (
             signup === "confirmed" ? (
-              <div className={cn(pitchPanel, "py-3 text-center text-sm font-medium")}>Jesteś zapisany na ten mecz</div>
+              <div className={cn(pitchPanelClass, "py-3 text-center text-sm font-medium")}>Jesteś zapisany na ten mecz</div>
             ) : signup === "tentative" ? (
               <>
-                <div className={cn(pitchPanel, "border-amber-200/40 bg-amber-500/15 py-2.5 text-center text-sm font-medium")}>
+                <div className={cn(pitchPanelClass, "border-amber-200/40 bg-amber-500/15 py-2.5 text-center text-sm font-medium")}>
                   Status: jeszcze nie wiem (bez miejsca w składzie)
                 </div>
                 {slots.free > 0 ? (
@@ -186,7 +177,7 @@ export function HomeNextMatchCard({
               </>
             ) : signup === "declined" ? (
               <>
-                <div className={cn(pitchPanel, "border-red-200/35 bg-red-950/25 py-2.5 text-center text-sm font-medium")}>
+                <div className={cn(pitchPanelClass, "border-red-200/35 bg-red-950/25 py-2.5 text-center text-sm font-medium")}>
                   Nie bierzesz udziału w tym terminie (bez miejsca w składzie)
                 </div>
                 {slots.free > 0 ? (
@@ -211,11 +202,11 @@ export function HomeNextMatchCard({
                   </p>
                 )}
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                  <button type="button" className={pitchSecondaryBtn} disabled={tentativeBusy} onClick={onTentative}>
+                  <button type="button" className={pitchSecondaryBtnClass} disabled={tentativeBusy} onClick={onTentative}>
                     <HelpCircle className="h-4 w-4 shrink-0" aria-hidden />
                     Jeszcze nie wiem
                   </button>
-                  <button type="button" className={pitchSecondaryBtn} disabled={tentativeBusy} onClick={onDeclined}>
+                  <button type="button" className={pitchSecondaryBtnClass} disabled={tentativeBusy} onClick={onDeclined}>
                     Nie biorę udziału
                   </button>
                 </div>
@@ -230,7 +221,7 @@ export function HomeNextMatchCard({
 
         {isLoggedIn && signup === "confirmed" && (
           <div className="mx-auto mt-4 max-w-md space-y-2">
-            <span className={cn(pitchLabel, "block text-center")}>Transport</span>
+            <span className={cn(pitchLabelClass, "block text-center")}>Transport</span>
             {transportActive ? (
               <Button variant="pitch" className="w-full" asChild>
                 <Link href={`/transport/${match.id}`} className="inline-flex items-center justify-center gap-2">
@@ -244,7 +235,7 @@ export function HomeNextMatchCard({
                   type="button"
                   disabled
                   aria-describedby="transport-home-hint"
-                  className={cn(pitchSecondaryBtn, "cursor-not-allowed opacity-70")}
+                  className={cn(pitchSecondaryBtnClass, "cursor-not-allowed opacity-70")}
                   title="Transport na mecz — dostępny w dniu meczu."
                 >
                   <Car className="h-4 w-4 shrink-0 opacity-70" aria-hidden />
@@ -259,7 +250,7 @@ export function HomeNextMatchCard({
         )}
 
         <div className="mx-auto mt-4 max-w-md space-y-2 border-t border-white/20 pt-4">
-          <span className={cn(pitchLabel, "block text-center")}>Składy</span>
+          <span className={cn(pitchLabelClass, "block text-center")}>Składy</span>
           {lineupPublic ? (
             <Button variant="pitch" className="w-full" asChild>
               <Link href="/sklady" className="inline-flex items-center justify-center gap-2">
@@ -273,7 +264,7 @@ export function HomeNextMatchCard({
                 type="button"
                 disabled
                 aria-describedby="sklady-home-hint"
-                className={cn(pitchSecondaryBtn, "cursor-not-allowed opacity-70")}
+                className={cn(pitchSecondaryBtnClass, "cursor-not-allowed opacity-70")}
                 title="Administrator musi najpierw udostępnić składy w panelu admina."
               >
                 <LayoutGrid className="h-4 w-4 shrink-0 opacity-70" aria-hidden />
@@ -285,7 +276,6 @@ export function HomeNextMatchCard({
             </>
           )}
         </div>
-      </div>
-    </section>
+    </PitchCard>
   );
 }

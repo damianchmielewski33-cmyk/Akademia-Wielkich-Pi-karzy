@@ -1,4 +1,4 @@
-@import "tailwindcss";
+﻿@import "tailwindcss";
 
 @custom-variant dark (&:where(.dark, .dark *));
 
@@ -45,22 +45,42 @@
   }
 
   /* Uniwersalna powierzchnia ÔÇ×karta na murawieÔÇŁ */
+  .pitch-card {
+    @apply relative overflow-hidden rounded-2xl border-2 border-white/35 text-white shadow-lg shadow-emerald-950/20 ring-1 ring-emerald-950/15;
+  }
+
+  .pitch-label {
+    @apply text-xs font-semibold uppercase tracking-[0.14em] text-[var(--mundial-gold,#f5c518)];
+  }
+
+  .pitch-panel {
+    @apply rounded-xl border border-white/25 bg-black/10 backdrop-blur-sm;
+  }
+
+  .pitch-muted {
+    @apply text-emerald-100/90;
+  }
+
+  .pitch-heading {
+    @apply font-bold tracking-tight text-white drop-shadow-sm;
+  }
+
+  .pitch-link {
+    @apply font-semibold text-white/80 underline decoration-white/30 underline-offset-2 hover:text-white;
+  }
+
+  .pitch-chip {
+    @apply inline-flex items-center gap-1.5 rounded-lg bg-emerald-100 px-3 py-2 text-sm font-semibold tabular-nums text-emerald-950 shadow-md shadow-emerald-950/20;
+  }
+
   .awp-surface {
-    @apply relative overflow-hidden rounded-2xl border border-white/35 bg-white/92 shadow-lg shadow-emerald-950/10 ring-1 ring-emerald-950/10 backdrop-blur-[2px];
-  }
-  .dark .awp-surface {
-    @apply border-white/10 bg-zinc-900/90 shadow-black/40 ring-emerald-900/35;
+    @apply relative overflow-hidden rounded-2xl border-2 border-white/35 text-white shadow-lg shadow-emerald-950/20 ring-1 ring-emerald-950/15;
   }
 
-  /* Mocniejsza powierzchnia pod g┼é├│wne sekcje / hero */
   .awp-surface-strong {
-    @apply border-2 border-white/40 bg-white/95 shadow-xl shadow-emerald-950/14;
-  }
-  .dark .awp-surface-strong {
-    @apply border-white/12 bg-zinc-900/95 shadow-black/45;
+    @apply relative overflow-hidden rounded-2xl border-2 border-white/35 text-white shadow-xl shadow-emerald-950/25 ring-1 ring-emerald-950/15;
   }
 
-  /* P├│┼éprzezroczyste ÔÇ×glassÔÇŁ na stadionowych t┼éach */
   .awp-glass {
     @apply border border-white/35 bg-white/14 text-white backdrop-blur-md;
   }
@@ -68,22 +88,24 @@
     @apply border-white/18 bg-white/8;
   }
 
-  /* Subtelny obrys dla element├│w interaktywnych na tle murawy */
   .awp-outline {
-    @apply border border-emerald-950/15 dark:border-emerald-100/10;
+    @apply border border-white/25;
   }
 
   .awp-card-surface {
-    @apply relative overflow-hidden rounded-2xl border-2 border-white/40 bg-white/95 p-6 shadow-xl shadow-emerald-950/14 ring-1 ring-emerald-950/10 backdrop-blur-[2px];
+    @apply relative overflow-hidden rounded-2xl border-2 border-white/35 p-5 text-white shadow-lg shadow-emerald-950/20 ring-1 ring-emerald-950/15 sm:p-6;
   }
-  .dark .awp-card-surface {
-    @apply border-white/12 bg-zinc-900/95 shadow-black/45 ring-emerald-900/35;
+
+  .awp-card-surface :where(h1, h2, h3, h4, .pitch-heading) {
+    @apply text-white;
   }
-  .dark .home-pitch-tile {
-    opacity: 0.07;
+
+  .awp-card-surface :where(p, li, dd, dt, label):not(.text-inherit) {
+    @apply text-emerald-100/90;
   }
-  .dark .home-pitch-tile-gold {
-    opacity: 0.08;
+
+  .awp-card-surface a:not([class*="bg-"]):not(.text-inherit) {
+    @apply text-white/85 underline decoration-white/30 underline-offset-2 hover:text-white;
   }
 }
 
@@ -163,7 +185,11 @@ body {
 }
 
 /* Kafelek strony g┼é├│wnej: pasy murawy + ÔÇ×linie kredoweÔÇŁ */
-.home-pitch-tile {
+.home-pitch-tile,
+.pitch-card:not(.home-pitch-tile-gold),
+.awp-surface,
+.awp-surface-strong,
+.awp-card-surface:not(.home-pitch-tile-gold) {
   background-color: #0d5c45;
   background-image:
     linear-gradient(180deg, rgba(255, 255, 255, 0.07) 0%, transparent 42%),

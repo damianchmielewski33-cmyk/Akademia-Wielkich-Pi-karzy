@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import { redirect } from "next/navigation";
 import type { ComponentType } from "react";
 import { Route, Share2, Shield, Target, Trophy } from "lucide-react";
@@ -13,6 +12,7 @@ import {
   rankPlayers,
   type RankablePlayer,
 } from "@/lib/rankings";
+import { PitchCard, PitchPageHero, pitchLabelClass } from "@/components/ui/pitch-card";
 import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
@@ -102,38 +102,12 @@ export default async function RankingiPage() {
 
   return (
     <div className="container mx-auto max-w-6xl flex-1 px-4 py-8 text-center sm:py-10">
-      <div className="relative mx-auto max-w-2xl">
-        <div className="pitch-rule mx-auto mb-5 w-40 sm:w-48" />
-        <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-5">
-          <Image
-            src="/soccer-ball.svg"
-            alt=""
-            width={56}
-            height={56}
-            className="h-12 w-12 drop-shadow-sm sm:h-14 sm:w-14"
-            unoptimized
-          />
-          <h1 className="text-3xl font-bold tracking-tight text-emerald-950 dark:text-emerald-100 sm:text-4xl">Rankingi</h1>
-          <Image
-            src="/soccer-ball.svg"
-            alt=""
-            width={56}
-            height={56}
-            className="h-12 w-12 scale-x-[-1] drop-shadow-sm sm:h-14 sm:w-14"
-            unoptimized
-          />
-        </div>
-        <p className="mt-4 text-base text-zinc-600 dark:text-zinc-400 sm:text-lg">
-          Tabele goli, asyst, dystansu, obron i punktów łącznie
-        </p>
-      </div>
+      <PitchPageHero title="Rankingi" subtitle="Tabele goli, asyst, dystansu, obron i punktów łącznie" />
 
       <div className="mt-10 text-left">
-        <div className="relative mx-auto max-w-2xl overflow-hidden rounded-2xl border-2 border-white/30 shadow-lg shadow-emerald-950/15 ring-1 ring-emerald-950/15 lg:max-w-none">
-          <div className="home-pitch-tile absolute inset-0" aria-hidden />
-          <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-white/40" aria-hidden />
-          <div className="relative px-5 py-4 sm:px-6 sm:py-5">
-            <div className="flex items-center gap-2">
+        <PitchCard className="mx-auto max-w-2xl lg:max-w-none" contentClassName="px-5 py-4 sm:px-6 sm:py-5">
+            <span className={pitchLabelClass}>Punktacja</span>
+            <div className="mt-2 flex items-center gap-2">
               <Trophy className="h-6 w-6 shrink-0 text-white drop-shadow-sm" strokeWidth={2.25} aria-hidden />
               <h2 className="text-lg font-bold tracking-tight text-white drop-shadow-sm sm:text-xl">Punktacja ogólna</h2>
             </div>
@@ -176,8 +150,7 @@ export default async function RankingiPage() {
                 punktów łącznie.
               </li>
             </ul>
-          </div>
-        </div>
+        </PitchCard>
 
         <div className="mt-10 grid gap-6 lg:grid-cols-2">
           <RankBlock title="Gole" icon={Target} rows={rankingGole} col="goals" />

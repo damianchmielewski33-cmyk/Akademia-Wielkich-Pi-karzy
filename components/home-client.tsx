@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState, type ComponentType } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -19,6 +18,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { HomeNextMatchCard } from "@/components/home-next-match-card";
+import { PitchPageHero } from "@/components/ui/pitch-card";
 import { PlayerAvatar } from "@/components/player-avatar";
 import { MatchTransportSignupDialog } from "@/components/match-transport-signup-dialog";
 import { Button } from "@/components/ui/button";
@@ -229,49 +229,28 @@ export function HomeClient({
               firstName={firstName}
               lastName={lastName}
               size="lg"
-              className="shadow-md"
+              className="shadow-md ring-2 ring-white/40"
             />
             <div className="text-left">
-              <h2 className="text-2xl font-bold tracking-tight text-emerald-950 dark:text-emerald-100">Witaj!</h2>
-              <p className="text-lg font-semibold text-emerald-900 dark:text-emerald-200">
+              <h2 className="text-2xl font-bold tracking-tight text-white drop-shadow-sm">Witaj!</h2>
+              <p className="text-lg font-semibold text-emerald-100">
                 {`${firstName} ${lastName}`.trim() || zawodnik}
               </p>
               {zawodnik && `${firstName} ${lastName}`.trim() ? (
-                <p className="text-sm text-zinc-600 dark:text-zinc-400">{zawodnik}</p>
+                <p className="text-sm text-emerald-100/80">{zawodnik}</p>
               ) : null}
             </div>
           </div>
         )}
 
-        <div className="relative mx-auto max-w-2xl">
-          <div className="pitch-rule mx-auto mb-5 w-40 sm:w-48" />
-          <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-5">
-            <Image
-              src="/soccer-ball.svg"
-              alt=""
-              width={56}
-              height={56}
-              className="h-12 w-12 drop-shadow-sm sm:h-14 sm:w-14"
-              unoptimized
-            />
-            <h1 className="text-3xl font-bold tracking-tight text-emerald-950 dark:text-emerald-100 sm:text-4xl">
-              Zostań gwiazdą boiska
-            </h1>
-            <Image
-              src="/soccer-ball.svg"
-              alt=""
-              width={56}
-              height={56}
-              className="h-12 w-12 scale-x-[-1] drop-shadow-sm sm:h-14 sm:w-14"
-              unoptimized
-            />
-          </div>
-          <p className="mt-4 text-base text-zinc-600 dark:text-zinc-400 sm:text-lg">
-            {isLoggedIn
+        <PitchPageHero
+          title="Zostań gwiazdą boiska"
+          subtitle={
+            isLoggedIn
               ? "Wybierz, co chcesz zrobić"
-              : "Zaloguj się lub załóż konto — zapisy na mecze, statystyki, rankingi i komunikacja w drużynie"}
-          </p>
-        </div>
+              : "Zaloguj się lub załóż konto — zapisy na mecze, statystyki, rankingi i komunikacja w drużynie"
+          }
+        />
 
         {youtubeLiveVideoId ? (
           <section

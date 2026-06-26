@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { AdminWalletsSaldoSection } from "@/components/admin-wallets-saldo-section";
+import { PitchPageHero } from "@/components/ui/pitch-card";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -57,22 +58,20 @@ export function PlatnosciClient({ isLoggedIn, isAdmin }: Props) {
 
   return (
     <div className="container mx-auto max-w-2xl flex-1 px-4 py-8 sm:py-10">
-      <div className="mb-8 text-center">
-        <div className="pitch-rule mx-auto mb-4 w-40 opacity-80" />
-        <h1 className="text-3xl font-bold tracking-tight text-[var(--mundial-navy)] dark:text-[var(--mundial-gold)] sm:text-4xl">
-          Płatności
-        </h1>
-        <p className="mt-2 text-zinc-600 dark:text-zinc-400">
-          {isAdmin
+      <PitchPageHero
+        title="Płatności"
+        subtitle={
+          isAdmin
             ? "Salda portfeli zawodników, korekty i linki do podsumowań płatności."
             : isLoggedIn
               ? "Twoje aktualne saldo portfela."
-              : "Zaloguj się, aby zobaczyć saldo portfela."}
-        </p>
-      </div>
+              : "Zaloguj się, aby zobaczyć saldo portfela."
+        }
+      />
 
+      <div className="mt-8">
       {!isLoggedIn ? (
-        <Card className="border-emerald-900/10 shadow-sm">
+        <Card>
           <CardHeader>
             <CardTitle className="text-lg">Zaloguj się</CardTitle>
             <CardDescription>Po zalogowaniu zobaczysz saldo swojego portfela.</CardDescription>
@@ -89,47 +88,38 @@ export function PlatnosciClient({ isLoggedIn, isAdmin }: Props) {
       ) : isAdmin ? (
         <AdminWalletsSaldoSection embedded showPublicLinks />
       ) : (
-        <Card className="border-emerald-900/10 shadow-sm">
+        <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-lg text-emerald-950 dark:text-emerald-100">Twój portfel</CardTitle>
+            <CardTitle className="text-lg">Twój portfel</CardTitle>
             <CardDescription>Aktualne saldo po rozliczeniach administratora.</CardDescription>
           </CardHeader>
           <CardContent>
             <div
               className={cn(
-                "flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-4",
-                walletBalancePln == null
-                  ? "border-emerald-900/10 bg-emerald-50/40"
-                  : walletBalancePln < 0
-                    ? "border-red-200 bg-red-50/70 dark:border-red-800/60 dark:bg-red-950/35"
-                    : walletBalancePln > 0
-                      ? "border-emerald-400 bg-emerald-100/50 dark:border-emerald-600/50 dark:bg-emerald-950/40"
-                      : "border-emerald-900/10 bg-emerald-50/40"
+                "pitch-panel flex flex-wrap items-center justify-between gap-3 px-4 py-4",
+                walletBalancePln != null && walletBalancePln < 0 && "border-red-200/40 bg-red-950/25",
+                walletBalancePln != null && walletBalancePln > 0 && "border-emerald-200/40 bg-emerald-500/10"
               )}
             >
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wider text-emerald-900/70">Saldo</p>
+                <p className="pitch-label">Saldo</p>
                 <p
                   className={cn(
-                    "mt-1 text-3xl font-bold tabular-nums",
-                    walletBalancePln == null
-                      ? "text-emerald-950"
-                      : walletBalancePln < 0
-                        ? "text-red-700 dark:text-red-200"
-                        : walletBalancePln > 0
-                          ? "text-emerald-800 dark:text-emerald-200"
-                          : "text-emerald-950"
+                    "mt-1 text-3xl font-bold tabular-nums text-white",
+                    walletBalancePln == null && "text-white/75",
+                    walletBalancePln != null && walletBalancePln < 0 && "text-red-200",
+                    walletBalancePln != null && walletBalancePln > 0 && "text-emerald-100"
                   )}
                 >
                   {walletBalancePln === null ? "—" : formatPln(walletBalancePln)}
                 </p>
                 {walletBalancePln != null && walletBalancePln < 0 ? (
-                  <p className="mt-1 text-xs font-medium text-red-700 dark:text-red-300">Niedopłata do uregulowania</p>
+                  <p className="mt-1 text-xs font-medium text-red-200">Niedopłata do uregulowania</p>
                 ) : walletBalancePln != null && walletBalancePln > 0 ? (
-                  <p className="mt-1 text-xs font-medium text-emerald-800 dark:text-emerald-200">Nadwyżka na koncie</p>
+                  <p className="mt-1 text-xs font-medium text-emerald-100">Nadwyżka na koncie</p>
                 ) : null}
               </div>
-              <Button type="button" variant="secondary" disabled={walletLoading} onClick={() => void refreshWallet()}>
+              <Button type="button" variant="pitch" disabled={walletLoading} onClick={() => void refreshWallet()}>
                 {walletLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
                 Odśwież
               </Button>
@@ -137,6 +127,7 @@ export function PlatnosciClient({ isLoggedIn, isAdmin }: Props) {
           </CardContent>
         </Card>
       )}
+      </div>
     </div>
   );
 }

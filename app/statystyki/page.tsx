@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import { redirect } from "next/navigation";
 import type { ComponentType, ReactNode } from "react";
 import {
@@ -22,6 +21,7 @@ import {
   PARTICIPATION_SURVEY_MATCH_DATE,
   PARTICIPATION_SURVEY_MATCH_TIME,
 } from "@/lib/match-participation-survey";
+import { PitchCard, PitchPageHero, pitchLabelClass } from "@/components/ui/pitch-card";
 import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
@@ -94,34 +94,9 @@ export default async function StatystykiPage() {
 
   return (
     <div className="container mx-auto max-w-5xl flex-1 px-4 py-8 text-center sm:py-10">
-      <div className="relative mx-auto max-w-2xl overflow-hidden rounded-2xl border-2 border-white/40 bg-white/90 px-5 py-8 shadow-lg shadow-emerald-950/12 ring-1 ring-emerald-950/10 dark:border-emerald-900/35 dark:bg-zinc-900/92 dark:shadow-black/35 dark:ring-emerald-900/35 sm:px-8">
-        <div className="home-pitch-tile pointer-events-none absolute inset-0 opacity-[0.09]" aria-hidden />
-        <div className="relative">
-          <div className="pitch-rule mx-auto mb-5 w-40 sm:w-48" />
-          <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-5">
-            <Image
-              src="/soccer-ball.svg"
-              alt=""
-              width={56}
-              height={56}
-              className="h-12 w-12 drop-shadow-sm sm:h-14 sm:w-14"
-              unoptimized
-            />
-            <h1 className="text-3xl font-bold tracking-tight text-emerald-950 dark:text-emerald-100 sm:text-4xl">Nasze mecze</h1>
-            <Image
-              src="/soccer-ball.svg"
-              alt=""
-              width={56}
-              height={56}
-              className="h-12 w-12 scale-x-[-1] drop-shadow-sm sm:h-14 sm:w-14"
-              unoptimized
-            />
-          </div>
-          <p className="mt-4 text-base text-zinc-600 dark:text-zinc-400 sm:text-lg">Podsumowanie ligi i Twoje statystyki</p>
-        </div>
-      </div>
+      <PitchPageHero title="Nasze mecze" subtitle="Podsumowanie ligi i Twoje statystyki" />
 
-      <div className="mx-auto mt-8 flex max-w-md items-center justify-center gap-4 rounded-2xl border-2 border-white/40 bg-white/95 px-5 py-4 shadow-md shadow-emerald-950/10 ring-1 ring-emerald-950/10 dark:border-emerald-900/35 dark:bg-zinc-900/92 dark:shadow-black/35 dark:ring-emerald-900/35">
+      <PitchCard className="mx-auto mt-8 max-w-md" contentClassName="flex items-center justify-center gap-4 px-5 py-4">
         <PlayerAvatar
           photoPath={me.profile_photo_path}
           firstName={me.first_name}
@@ -133,10 +108,10 @@ export default async function StatystykiPage() {
           firstName={me.first_name}
           lastName={me.last_name}
           nick={me.player_alias}
-          primaryClassName="text-lg font-semibold text-emerald-950 dark:text-emerald-100"
-          secondaryClassName="text-sm text-zinc-600 dark:text-zinc-400"
+          primaryClassName="text-lg font-semibold text-white"
+          secondaryClassName="text-sm text-emerald-100/85"
         />
-      </div>
+      </PitchCard>
 
       <StatsSection title="Liga" className="mt-10">
         <div className="mx-auto mt-6 grid max-w-3xl grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -218,19 +193,12 @@ export default async function StatystykiPage() {
 
 function StatsSection({ title, children, className }: { title: string; children: ReactNode; className?: string }) {
   return (
-    <section
-      className={cn(
-        "relative mx-auto max-w-5xl overflow-hidden rounded-2xl border-2 border-white/40 bg-white/90 p-6 text-left shadow-lg shadow-emerald-950/10 ring-1 ring-emerald-950/10 dark:border-emerald-900/35 dark:bg-zinc-900/92 dark:shadow-black/35 dark:ring-emerald-900/35 sm:p-8",
-        className
-      )}
-    >
-      <div className="home-pitch-tile pointer-events-none absolute inset-0 opacity-[0.06]" aria-hidden />
-      <div className="relative">
-        <h2 className="text-xl font-bold tracking-tight text-emerald-950 dark:text-emerald-100 sm:text-2xl">{title}</h2>
-        <div className="pitch-rule mt-3 w-28 max-w-full opacity-90" />
-        {children}
-      </div>
-    </section>
+    <PitchCard className={cn("mx-auto max-w-5xl text-left", className)} contentClassName="p-6 sm:p-8">
+      <span className={pitchLabelClass}>Sekcja</span>
+      <h2 className="pitch-heading mt-2 text-xl sm:text-2xl">{title}</h2>
+      <div className="pitch-rule mt-3 w-28 max-w-full opacity-90" />
+      {children}
+    </PitchCard>
   );
 }
 

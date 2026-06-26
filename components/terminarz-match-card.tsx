@@ -9,6 +9,7 @@ import { MatchSignupCountsBlock } from "@/components/terminarz-match-counts";
 import { MatchLocationWeather } from "@/components/match-location-weather";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { PitchCardDecorations, pitchLabelClass, pitchPanelClass } from "@/components/ui/pitch-card";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -52,30 +53,19 @@ export function TerminarzMatchCard({
     <article
       data-mecz-highlight={highlight ? m.id : undefined}
       className={cn(
-        "group flex flex-col overflow-hidden rounded-2xl border bg-white shadow-md transition-shadow hover:shadow-lg dark:bg-zinc-900/90",
-        cancelled
-          ? "border-red-300/80 opacity-90 dark:border-red-800/60"
-          : tone === "full"
-            ? "border-red-200 dark:border-red-900/50"
-            : tone === "warn"
-              ? "border-amber-200 dark:border-amber-900/50"
-              : "border-emerald-200/80 dark:border-emerald-800/40",
-        highlight && "ring-2 ring-[var(--mundial-gold,#f5c518)] ring-offset-2 dark:ring-offset-zinc-950"
+        "pitch-card home-pitch-tile group relative flex flex-col transition-shadow hover:shadow-xl",
+        cancelled && "opacity-90",
+        highlight && "ring-2 ring-[var(--mundial-gold,#f5c518)] ring-offset-2 ring-offset-transparent"
       )}
     >
-      <div
-        className={cn(
-          "relative px-4 py-3 sm:px-5",
-          cancelled
-            ? "bg-gradient-to-r from-red-700 to-red-800 text-white"
-            : "mundial-card-header text-white"
-        )}
-      >
-        <div className="flex flex-wrap items-start justify-between gap-2">
+      <PitchCardDecorations />
+      <div className="relative px-4 py-3 sm:px-5">
+        <span className={pitchLabelClass}>{cancelled ? "Anulowany" : past ? "Archiwum" : "Mecz"}</span>
+        <div className="mt-2 flex flex-wrap items-start justify-between gap-2">
           <div className="flex items-center gap-3">
             <div className="flex flex-col items-center rounded-xl bg-white/15 px-3 py-1.5 backdrop-blur-sm">
               <Calendar className="h-4 w-4 text-[var(--mundial-gold,#f5c518)]" aria-hidden />
-              <span className="mt-0.5 text-sm font-bold tabular-nums">{m.match_date.slice(5).replace("-", ".")}</span>
+              <span className="mt-0.5 text-sm font-bold tabular-nums text-white">{m.match_date.slice(5).replace("-", ".")}</span>
               <span className="text-[10px] font-medium uppercase tracking-wide text-white/80">
                 {m.match_date.slice(0, 4)}
               </span>
@@ -83,7 +73,7 @@ export function TerminarzMatchCard({
             <div>
               <div className="flex items-center gap-2">
                 <Clock className="h-4 w-4 text-[var(--mundial-gold,#f5c518)]" aria-hidden />
-                <span className="text-lg font-bold tabular-nums">{m.match_time}</span>
+                <span className="text-lg font-bold tabular-nums text-white">{m.match_time}</span>
               </div>
               <div className="mt-1 flex flex-wrap gap-1.5">
                 {cancelled && (
@@ -102,7 +92,7 @@ export function TerminarzMatchCard({
               </div>
             </div>
           </div>
-          <div className="text-right">
+          <div className="text-right text-white">
             <MatchSignupCountsBlock
               matchId={m.id}
               signedUp={m.signed_up}
@@ -115,27 +105,27 @@ export function TerminarzMatchCard({
         </div>
       </div>
 
-      <div className="flex flex-1 flex-col px-4 py-4 sm:px-5">
-        <div className="flex items-start gap-2 text-sm text-zinc-700 dark:text-zinc-300">
-          <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[var(--mundial-teal,#00a651)]" aria-hidden />
+      <div className={cn(pitchPanelClass, "relative mx-4 mb-4 flex flex-1 flex-col px-4 py-4 sm:mx-5 sm:px-5")}>
+        <div className="flex items-start gap-2 text-sm text-emerald-50/95">
+          <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[var(--mundial-gold,#f5c518)]" aria-hidden />
           <div className="min-w-0">
             <p className="font-medium leading-snug">{m.location}</p>
             <a
               href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(m.location)}`}
               target="_blank"
               rel="noreferrer"
-              className="mt-0.5 inline-block text-xs font-medium text-[var(--mundial-teal,#00a651)] underline-offset-2 hover:underline"
+              className="pitch-link mt-0.5 inline-block text-xs"
             >
               Mapa
             </a>
           </div>
         </div>
 
-        <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-700">
+        <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-white/15">
           <div
             className={cn(
               "h-full rounded-full transition-all",
-              tone === "full" ? "bg-red-500" : tone === "warn" ? "bg-amber-500" : "bg-[var(--mundial-teal,#00a651)]"
+              tone === "full" ? "bg-red-400/90" : tone === "warn" ? "bg-amber-400/90" : "bg-emerald-100"
             )}
             style={{ width: `${Math.min(pct, 100)}%` }}
           />
@@ -180,15 +170,15 @@ export function TerminarzMatchCard({
           )}
         </div>
 
-        <div className="mt-4 flex flex-wrap gap-2 border-t border-zinc-200/80 pt-4 dark:border-zinc-700/80">{actions}</div>
+        <div className="mt-4 flex flex-wrap gap-2 border-t border-white/20 pt-4">{actions}</div>
 
         {!archive && (
-          <details className="mt-3 rounded-xl border border-zinc-200/80 bg-zinc-50/50 dark:border-zinc-700/60 dark:bg-zinc-800/40">
-            <summary className="cursor-pointer list-none px-3 py-2 text-xs font-semibold text-zinc-600 dark:text-zinc-400 [&::-webkit-details-marker]:hidden">
+          <details className="pitch-panel mt-3">
+            <summary className="cursor-pointer list-none px-3 py-2 text-xs font-semibold text-emerald-100/90 [&::-webkit-details-marker]:hidden">
               Pogoda — rozwiń
             </summary>
-            <div className="border-t border-zinc-200/70 px-2 pb-2 pt-1 dark:border-zinc-700/60">
-              <MatchLocationWeather location={m.location} className="mt-0 border-t-0 pt-2" />
+            <div className="border-t border-white/15 px-2 pb-2 pt-1">
+              <MatchLocationWeather location={m.location} className="mt-0 border-t-0 pt-2 text-emerald-50/95" />
             </div>
           </details>
         )}
