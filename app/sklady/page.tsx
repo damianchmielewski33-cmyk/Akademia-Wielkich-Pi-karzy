@@ -96,7 +96,7 @@ export default async function SkladyPage({ searchParams }: PageProps) {
   });
 
   return (
-    <div className="container mx-auto max-w-6xl flex-1 px-4 py-8 sm:py-10">
+    <div className="container mx-auto max-w-6xl flex-1 px-2 py-6 xs:px-3 sm:px-4 sm:py-10">
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <Link href="/" className="text-sm font-medium text-emerald-800 hover:underline">
           ← Strona główna
