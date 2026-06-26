@@ -320,6 +320,8 @@ export function HomeClient({
           </section>
         ) : null}
 
+        <div className="mt-8">{tiles}</div>
+
         {nextMatch ? (
           <HomeNextMatchCard
             match={nextMatch}
@@ -335,8 +337,6 @@ export function HomeClient({
             onConfirmFromTentative={openConfirmFromTentative}
           />
         ) : null}
-
-        <div className="mt-8">{tiles}</div>
       </div>
 
       {nextMatch && (
