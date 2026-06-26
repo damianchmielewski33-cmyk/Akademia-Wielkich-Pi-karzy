@@ -205,19 +205,18 @@ function InviteMatchCard({
 }
 
 const actionBarClass =
-  "awp-surface flex flex-col gap-2.5 rounded-2xl p-3";
+  "awp-match-action-bar flex flex-col gap-2.5 rounded-2xl p-3";
 
-const actionBtnPrimary =
-  "h-auto min-h-9 justify-start gap-2 whitespace-normal rounded-lg bg-emerald-700 py-2 text-left font-semibold text-white shadow-sm hover:bg-emerald-800 dark:bg-emerald-600 dark:hover:bg-emerald-700";
+const actionBtnBase =
+  "awp-match-btn h-auto min-h-9 justify-start gap-2 whitespace-normal py-2 text-left";
 
-const actionBtnDanger =
-  "h-auto min-h-9 justify-start gap-2 whitespace-normal rounded-lg border border-red-200 bg-white py-2 text-left font-semibold text-red-800 shadow-sm hover:bg-red-50 dark:border-red-900/60 dark:bg-zinc-800 dark:text-red-300 dark:hover:bg-red-950/40";
+const actionBtnPrimary = cn(actionBtnBase, "awp-match-btn--primary font-semibold");
 
-const actionBtnSecondary =
-  "h-auto min-h-9 justify-start gap-2 whitespace-normal rounded-lg border border-zinc-200 bg-white py-2 text-left font-medium text-zinc-800 shadow-sm hover:bg-zinc-100 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:hover:bg-zinc-700";
+const actionBtnDanger = cn(actionBtnBase, "awp-match-btn--danger font-semibold");
 
-const actionBtnAdmin =
-  "h-auto min-h-9 justify-start gap-2 whitespace-normal rounded-lg border border-amber-300/80 bg-amber-50 py-2 text-left font-semibold text-amber-950 shadow-sm hover:bg-amber-100 dark:border-amber-700/70 dark:bg-amber-950/40 dark:text-amber-100 dark:hover:bg-amber-950/55";
+const actionBtnSecondary = cn(actionBtnBase, "awp-match-btn--secondary font-medium");
+
+const actionBtnAdmin = cn(actionBtnBase, "awp-match-btn--admin font-semibold");
 
 function ActionNotice({
   tone,
@@ -945,7 +944,7 @@ export function TerminarzClient({
             ) : (
               <Button
                 size="sm"
-                variant="outline"
+                variant="ghost"
                 className={actionBtnDanger}
                 title="Usuwa Cię z listy i zwalnia miejsce dla innego zawodnika"
                 onClick={() => unsubscribe(m.id)}
@@ -976,7 +975,7 @@ export function TerminarzClient({
                 {free > 0 ? (
                   <Button
                     size="sm"
-                    variant="default"
+                    variant="ghost"
                     className={actionBtnPrimary}
                     title="Potwierdza udział i zajmuje miejsce w składzie"
                     onClick={() => openConfirmFromTentative(m.id)}
@@ -998,7 +997,7 @@ export function TerminarzClient({
                 )}
                 <Button
                   size="sm"
-                  variant="outline"
+                  variant="ghost"
                   className={actionBtnDanger}
                   title="Rezygnujesz z wstępnego zainteresowania tym terminem"
                   onClick={() => unsubscribe(m.id)}
@@ -1028,7 +1027,7 @@ export function TerminarzClient({
                 {free > 0 ? (
                   <Button
                     size="sm"
-                    variant="default"
+                    variant="ghost"
                     className={actionBtnPrimary}
                     title="Potwierdza udział i zajmuje miejsce w składzie"
                     onClick={() => openConfirmFromTentative(m.id)}
@@ -1049,7 +1048,7 @@ export function TerminarzClient({
                 )}
                 <Button
                   size="sm"
-                  variant="outline"
+                  variant="ghost"
                   className={actionBtnDanger}
                   title="Usuwasz deklarację rezygnacji z tego terminu"
                   onClick={() => unsubscribe(m.id)}
@@ -1073,7 +1072,7 @@ export function TerminarzClient({
               {free > 0 ? (
                 <Button
                   size="sm"
-                  variant="default"
+                  variant="ghost"
                   className={actionBtnPrimary}
                   title={`Zapisuje Cię na listę (${m.signed_up}/${m.max_slots} zapisanych)${ponderAside ? `. ${ponderAside}` : ""}`}
                   onClick={() => openTransportSignup(m.id)}
@@ -1095,7 +1094,7 @@ export function TerminarzClient({
               )}
               <Button
                 size="sm"
-                variant="outline"
+                variant="ghost"
                 className={actionBtnSecondary}
                 disabled={tentativeBusyId === m.id}
                 title="Nie zajmuje miejsca w składzie — gdy ustalisz termin, potwierdź udział osobno"
@@ -1111,7 +1110,7 @@ export function TerminarzClient({
               </Button>
               <Button
                 size="sm"
-                variant="outline"
+                variant="ghost"
                 className={actionBtnSecondary}
                 disabled={tentativeBusyId === m.id}
                 title="Zapisuje Cię na liście jako osobę, która w tym terminie nie gra — bez miejsca w składzie"
@@ -1139,7 +1138,7 @@ export function TerminarzClient({
             , żeby w przyszłości zapisywać się na mecze z terminarza.
           </ActionNotice>
         ) : (
-          <Button size="sm" variant="outline" className={actionBtnSecondary} asChild>
+          <Button size="sm" variant="ghost" className={actionBtnSecondary} asChild>
             <Link
               href="/login"
               title="Konto jest potrzebne, żeby zapisać się na listę zawodników"
@@ -1160,7 +1159,7 @@ export function TerminarzClient({
             <Button
               type="button"
               size="sm"
-              variant="outline"
+              variant="ghost"
               className={actionBtnSecondary}
               title="Wyślij znajomemu — po wejściu zaloguje się i zapisze na ten mecz"
               onClick={() => void copyInviteLink(m.id)}
@@ -1176,7 +1175,7 @@ export function TerminarzClient({
           )}
           <Button
             size="sm"
-            variant="outline"
+            variant="ghost"
             className={actionBtnSecondary}
             title="Pełna lista: imiona, pseudonimy, informacja o opłacie"
             onClick={() => openPlayers(m.id)}
@@ -1192,7 +1191,7 @@ export function TerminarzClient({
           {isAdmin && (
             <Button
               size="sm"
-              variant="outline"
+              variant="ghost"
               className={actionBtnSecondary}
               title="Ręcznie dopisz / wypisz dowolnego piłkarza z bazy"
               onClick={() => void openManageSignups(m)}
@@ -1209,7 +1208,7 @@ export function TerminarzClient({
           {isAdmin && (
             <Button
               size="sm"
-              variant="secondary"
+              variant="ghost"
               className={actionBtnAdmin}
               title="Po zatwierdzeniu mecz trafia do archiwum rozegranych"
               onClick={() => setPlayed(m.id, true)}
@@ -1235,7 +1234,7 @@ export function TerminarzClient({
         {canAddStats && (
           <Button
             size="sm"
-            variant="default"
+            variant="ghost"
             className={actionBtnPrimary}
             title="Uzupełnij gole, asysty, dystans i obrony — liczą się w statystykach i rankingach"
             onClick={() => openStatsForMatch(m)}
@@ -1251,7 +1250,7 @@ export function TerminarzClient({
         )}
         <Button
           size="sm"
-          variant="outline"
+          variant="ghost"
           className={actionBtnSecondary}
           title="Zawodnicy zapisani przed meczem — imiona i status opłaty"
           onClick={() => openPlayers(m.id)}
@@ -1267,7 +1266,7 @@ export function TerminarzClient({
         {isAdmin && (
           <Button
             size="sm"
-            variant="secondary"
+            variant="ghost"
             className={actionBtnAdmin}
             title="Zaznacz kto był na boisku — przed rozliczeniem portfeli"
             onClick={() => void openAttendanceDialog(m)}
@@ -1279,8 +1278,8 @@ export function TerminarzClient({
         {isAdmin && (
           <Button
             size="sm"
-            variant="default"
-            className={cn(actionBtnPrimary, "bg-emerald-700 hover:bg-emerald-800")}
+            variant="ghost"
+            className={actionBtnPrimary}
             title="Równo nalicz dług zawodnikom obecnym na meczu"
             onClick={() => void openSettleDialog(m)}
           >
@@ -1291,7 +1290,7 @@ export function TerminarzClient({
         {isAdmin && (
           <Button
             size="sm"
-            variant="secondary"
+            variant="ghost"
             className={actionBtnAdmin}
             title="Mecz wróci na listę „do rozegrania” jako nierozegrany"
             onClick={() => setPlayed(m.id, false)}
@@ -1630,7 +1629,7 @@ export function TerminarzClient({
                 {isLoggedIn && calPopup.played === 1 && missingStatsSet.has(calPopup.id) && (
                   <Button
                     type="button"
-                    variant="default"
+                    variant="ghost"
                     className={cn(actionBtnPrimary, "w-full sm:w-auto")}
                     onClick={() => {
                       const m = calPopup;
@@ -1649,7 +1648,7 @@ export function TerminarzClient({
                 )}
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="ghost"
                   className={cn(actionBtnSecondary, "w-full sm:w-auto")}
                   onClick={() => openPlayers(calPopup.id)}
                 >
@@ -2492,12 +2491,12 @@ function CalendarView({
                 title={tip}
                 onClick={() => onPick(m)}
                 className={cn(
-                  "block w-full rounded-md px-1.5 py-1 text-left text-[11px] font-medium leading-tight transition-colors",
+                  "awp-cal-match-btn block w-full rounded-md px-1.5 py-1 text-left text-[11px] font-medium leading-tight",
                   m.played
-                    ? "bg-zinc-200 text-zinc-800 dark:bg-zinc-600 dark:text-zinc-100"
+                    ? "awp-cal-match-btn--played"
                     : free <= 0
-                      ? "bg-red-100 text-red-900 dark:bg-red-950/60 dark:text-red-100"
-                      : "bg-emerald-100 text-emerald-900 dark:bg-emerald-900/50 dark:text-emerald-100",
+                      ? "awp-cal-match-btn--full"
+                      : "awp-cal-match-btn--open",
                   past && !m.played && "opacity-80"
                 )}
               >

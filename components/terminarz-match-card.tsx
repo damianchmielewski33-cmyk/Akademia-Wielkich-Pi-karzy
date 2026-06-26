@@ -143,19 +143,37 @@ export function TerminarzMatchCard({
 
         <div className="mt-4 flex flex-wrap gap-2">
           {onOpenPlayers && (
-            <Button type="button" size="sm" variant="outline" className="gap-1.5" onClick={onOpenPlayers}>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className={cn("awp-match-btn awp-match-btn--secondary awp-match-btn--compact gap-1.5 font-medium")}
+              onClick={onOpenPlayers}
+            >
               <Users className="h-4 w-4" aria-hidden />
               Skład
             </Button>
           )}
           {!past && onCopyInvite && (
-            <Button type="button" size="sm" variant="outline" className="gap-1.5" onClick={onCopyInvite}>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className={cn("awp-match-btn awp-match-btn--secondary awp-match-btn--compact gap-1.5 font-medium")}
+              onClick={onCopyInvite}
+            >
               <Link2 className="h-4 w-4" aria-hidden />
               Zaproszenie
             </Button>
           )}
           {isAdmin && onManage && !cancelled && (
-            <Button type="button" size="sm" variant="secondary" className="gap-1.5" onClick={onManage}>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className={cn("awp-match-btn awp-match-btn--admin awp-match-btn--compact gap-1.5 font-semibold")}
+              onClick={onManage}
+            >
               <Settings className="h-4 w-4" aria-hidden />
               Zarządzaj
             </Button>
@@ -194,14 +212,15 @@ export function TerminarzQuickBtn({
   title?: string;
   href?: string;
 }) {
-  const cls =
+  const toneClass =
     variant === "primary"
-      ? "gap-1.5 bg-[var(--mundial-teal,#00a651)] hover:bg-[var(--mundial-teal-dark,#008c44)]"
+      ? "awp-match-btn--primary"
       : variant === "danger"
-        ? "gap-1.5 border-red-200 text-red-800 hover:bg-red-50 dark:border-red-800 dark:text-red-200"
+        ? "awp-match-btn--danger"
         : variant === "admin"
-          ? "gap-1.5"
-          : "gap-1.5";
+          ? "awp-match-btn--admin"
+          : "awp-match-btn--secondary";
+  const cls = cn("awp-match-btn awp-match-btn--compact gap-1.5 font-semibold", toneClass);
   const icon =
     variant === "primary" ? (
       <UserPlus className="h-4 w-4 shrink-0" aria-hidden />
@@ -213,7 +232,7 @@ export function TerminarzQuickBtn({
 
   if (href) {
     return (
-      <Button type="button" size="sm" variant="outline" className={cls} asChild>
+      <Button type="button" size="sm" variant="ghost" className={cls} asChild>
         <Link href={href}>{icon}{children}</Link>
       </Button>
     );
@@ -223,7 +242,7 @@ export function TerminarzQuickBtn({
     <Button
       type="button"
       size="sm"
-      variant={variant === "primary" ? "default" : variant === "admin" ? "secondary" : "outline"}
+      variant="ghost"
       disabled={disabled}
       title={title}
       className={cls}
