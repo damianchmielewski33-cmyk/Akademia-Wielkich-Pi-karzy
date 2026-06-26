@@ -1,19 +1,20 @@
 "use client";
 
 import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { cn } from "@/lib/utils";
 
 type Props = {
   id?: string;
   label: string;
   value: string;
   onChange: (value: string) => void;
+  onBlur?: () => void;
   disabled?: boolean;
   required?: boolean;
   placeholder?: string;
   helperText?: string;
+  error?: string;
   className?: string;
   /** Dodatkowe klasy na elemencie `<input>`. */
   inputClassName?: string;
@@ -27,11 +28,13 @@ export function PlayerAliasPicker({
   label,
   value,
   onChange,
+  onBlur,
   disabled,
   required,
   placeholder = "Szukaj po nazwisku lub wpisz dowolnego piłkarza…",
   /** Puste `""` ukrywa podpowiedź; brak propsa — domyślny tekst pomocy. */
   helperText,
+  error,
   className,
   inputClassName,
 }: Props) {
@@ -78,62 +81,62 @@ export function PlayerAliasPicker({
   }, []);
 
   return (
-    <div ref={wrapRef} className={cn("relative", className)}>
-      <Label htmlFor={inputId}>{label}</Label>
-      <Input
-        id={inputId}
-        className={cn("mt-1", inputClassName)}
-        value={value}
-        disabled={disabled}
-        required={required}
-        placeholder={placeholder}
-        autoComplete="off"
-        role="combobox"
-        aria-expanded={open}
-        aria-controls={listId}
-        aria-autocomplete="list"
-        onChange={(e) => {
-          const v = e.target.value;
-          onChange(v);
-          setOpen(true);
-          if (debounceRef.current) clearTimeout(debounceRef.current);
-          debounceRef.current = setTimeout(() => {
-            void runSearch(v);
-          }, 320);
-        }}
-        onFocus={() => {
-          setOpen(true);
-          if (value.trim().length >= 2) void runSearch(value);
-        }}
-      />
-      {hintText ? <p className="mt-1 text-xs text-zinc-500">{hintText}</p> : null}
-      {open && !disabled && (suggestions.length > 0 || loading) ? (
-        <ul
-          id={listId}
-          className="absolute z-50 mt-1 max-h-52 w-full overflow-auto rounded-md border border-zinc-200 bg-white py-1 text-sm shadow-md dark:border-zinc-600 dark:bg-zinc-900"
-        >
-          {loading ? (
-            <li className="px-3 py-2 text-zinc-500">Szukam…</li>
-          ) : (
-            suggestions.map((s) => (
-              <li key={s.id}>
-                <button
-                  type="button"
-                  className="w-full px-3 py-2 text-left hover:bg-emerald-50 dark:hover:bg-emerald-950/50"
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => {
-                    onChange(s.name);
-                    setOpen(false);
-                    setSuggestions([]);
-                  }}
-                >
-                  {s.name}
-                </button>
-              </li>
-            ))
-          )}
-        </ul>
-      ) : null}
-    </div>
+    <FormField id={inputId} label={label} required={required} hint={error ? undefined : hintText || undefined} error={error} className={className}>
+      <div ref={wrapRef} className="relative">
+        <Input
+          value={value}
+          disabled={disabled}
+          required={required}
+          placeholder={placeholder}
+          autoComplete="off"
+          role="combobox"
+          aria-expanded={open}
+          aria-controls={listId}
+          aria-autocomplete="list"
+          className={inputClassName}
+          onBlur={onBlur}
+          onChange={(e) => {
+            const v = e.target.value;
+            onChange(v);
+            setOpen(true);
+            if (debounceRef.current) clearTimeout(debounceRef.current);
+            debounceRef.current = setTimeout(() => {
+              void runSearch(v);
+            }, 320);
+          }}
+          onFocus={() => {
+            setOpen(true);
+            if (value.trim().length >= 2) void runSearch(value);
+          }}
+        />
+        {open && !disabled && (suggestions.length > 0 || loading) ? (
+          <ul
+            id={listId}
+            className="absolute z-50 mt-1 max-h-52 w-full overflow-auto rounded-xl border border-emerald-950/12 bg-white py-1 text-sm shadow-lg shadow-emerald-950/10 dark:border-emerald-800/60 dark:bg-zinc-900"
+          >
+            {loading ? (
+              <li className="px-3 py-2 text-zinc-500">Szukam…</li>
+            ) : (
+              suggestions.map((s) => (
+                <li key={s.id}>
+                  <button
+                    type="button"
+                    className="w-full px-3 py-2 text-left hover:bg-emerald-50 dark:hover:bg-emerald-950/50"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => {
+                      onChange(s.name);
+                      setOpen(false);
+                      setSuggestions([]);
+                    }}
+                  >
+                    {s.name}
+                  </button>
+                </li>
+              ))
+            )}
+          </ul>
+        ) : null}
+      </div>
+    </FormField>
   );
 }

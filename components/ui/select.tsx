@@ -3,6 +3,7 @@
 import * as React from "react";
 import * as SelectPrimitive from "@radix-ui/react-select";
 import { Check, ChevronDown, ChevronUp } from "lucide-react";
+import { fieldControlClasses } from "@/lib/field-styles";
 import { cn } from "@/lib/utils";
 
 const Select = SelectPrimitive.Root;
@@ -11,14 +12,19 @@ const SelectValue = SelectPrimitive.Value;
 
 const SelectTrigger = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Trigger>,
-  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Trigger>
->(({ className, children, ...props }, ref) => (
+  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Trigger> & {
+    invalid?: boolean;
+    valid?: boolean;
+  }
+>(({ className, children, invalid, valid, ...props }, ref) => (
   <SelectPrimitive.Trigger
     ref={ref}
     className={cn(
-      "awp-focus-ring flex h-10 w-full items-center justify-between rounded-xl border border-emerald-950/15 bg-white/90 px-3 py-2 text-sm text-zinc-900 shadow-sm shadow-emerald-950/5 placeholder:text-zinc-400 disabled:cursor-not-allowed disabled:opacity-50 dark:border-emerald-100/10 dark:bg-zinc-900/70 dark:text-zinc-100 dark:placeholder:text-zinc-500 [&>span]:line-clamp-1",
+      fieldControlClasses({ invalid, valid, height: "h-11" }),
+      "items-center justify-between [&>span]:line-clamp-1",
       className
     )}
+    aria-invalid={invalid || undefined}
     {...props}
   >
     {children}

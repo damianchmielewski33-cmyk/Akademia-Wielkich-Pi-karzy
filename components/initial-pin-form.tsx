@@ -2,15 +2,28 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
+import { z } from "zod";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { FormInput } from "@/components/ui/form-field";
 import { PlayerAliasPicker } from "@/components/player-alias-picker";
+import { formSchemas, useValidatedForm } from "@/lib/form-validation";
+
+const initialPinSchema = z
+  .object({
+    firstName: formSchemas.requiredName("Imię"),
+    lastName: formSchemas.requiredName("Nazwisko"),
+    zawodnik: formSchemas.requiredText("Piłkarz"),
+    pin: formSchemas.pin,
+    pinConfirm: z.string().trim().min(1, "Powtórz PIN"),
+  })
+  .refine((d) => d.pin === d.pinConfirm, {
+    message: "PIN-y muszą być takie same",
+    path: ["pinConfirm"],
+  });
 
 export type InitialPinFormProps = {
   initialFirstName?: string;
   initialLastName?: string;
-  /** Prefiks id pól (dialog vs strona). */
   fieldIdPrefix?: string;
   onSuccess: () => void | Promise<void>;
   submitLabel?: string;
@@ -18,7 +31,6 @@ export type InitialPinFormProps = {
 
 /**
  * Pierwsze ustawienie PIN-u: imię, nazwisko, piłkarz (potwierdzenie), PIN ×2.
- * Używane na /ustaw-pin i w modalu na stronie logowania.
  */
 export function InitialPinForm({
   initialFirstName = "",
@@ -27,22 +39,23 @@ export function InitialPinForm({
   onSuccess,
   submitLabel = "Ustaw PIN i zaloguj",
 }: InitialPinFormProps) {
-  const [firstName, setFirstName] = useState(initialFirstName);
-  const [lastName, setLastName] = useState(initialLastName);
-  const [zawodnik, setZawodnik] = useState("");
-  const [pin, setPin] = useState("");
-  const [pin2, setPin2] = useState("");
   const [saving, setSaving] = useState(false);
+  const p = fieldIdPrefix;
+
+  const form = useValidatedForm({
+    initialValues: {
+      firstName: initialFirstName,
+      lastName: initialLastName,
+      zawodnik: "",
+      pin: "",
+      pinConfirm: "",
+    },
+    schema: initialPinSchema,
+  });
 
   async function submit() {
-    if (!firstName.trim() || !lastName.trim() || !zawodnik) {
-      toast.error("Uzupełnij imię, nazwisko i wybierz piłkarza.");
-      return;
-    }
-    if (pin !== pin2) {
-      toast.error("PIN-y muszą być takie same.");
-      return;
-    }
+    if (!form.validate()) return;
+    const { firstName, lastName, zawodnik, pin, pinConfirm } = form.values;
     setSaving(true);
     try {
       const res = await fetch("/api/auth/set-initial-pin", {
@@ -53,7 +66,7 @@ export function InitialPinForm({
           last_name: lastName.trim(),
           zawodnik,
           pin,
-          pin_confirm: pin2,
+          pin_confirm: pinConfirm,
         }),
       });
       const data = (await res.json().catch(() => ({}))) as { error?: string };
@@ -67,78 +80,72 @@ export function InitialPinForm({
     }
   }
 
-  const p = fieldIdPrefix;
-
   return (
     <div className="space-y-3">
-      <div>
-        <Label htmlFor={`${p}-fn`}>Imię</Label>
-        <Input
-          id={`${p}-fn`}
-          required
-          className="mt-1"
-          value={firstName}
-          onChange={(e) => setFirstName(e.target.value)}
-          placeholder="Imię"
-          autoComplete="given-name"
-        />
-      </div>
-      <div>
-        <Label htmlFor={`${p}-ln`}>Nazwisko</Label>
-        <Input
-          id={`${p}-ln`}
-          required
-          className="mt-1"
-          value={lastName}
-          onChange={(e) => setLastName(e.target.value)}
-          placeholder="Nazwisko"
-          autoComplete="family-name"
-        />
-      </div>
+      <FormInput
+        id={`${p}-fn`}
+        label="Imię"
+        required
+        value={form.values.firstName}
+        onChange={(e) => form.setValue("firstName", e.target.value)}
+        onBlur={() => form.setFieldTouched("firstName")}
+        error={form.errors.firstName}
+        placeholder="Imię"
+        autoComplete="given-name"
+      />
+      <FormInput
+        id={`${p}-ln`}
+        label="Nazwisko"
+        required
+        value={form.values.lastName}
+        onChange={(e) => form.setValue("lastName", e.target.value)}
+        onBlur={() => form.setFieldTouched("lastName")}
+        error={form.errors.lastName}
+        placeholder="Nazwisko"
+        autoComplete="family-name"
+      />
       <PlayerAliasPicker
         label="Piłkarz (potwierdzenie tożsamości)"
         required
-        value={zawodnik}
-        onChange={setZawodnik}
+        value={form.values.zawodnik}
+        onChange={(v) => form.setValue("zawodnik", v)}
+        onBlur={() => form.setFieldTouched("zawodnik")}
+        error={form.errors.zawodnik}
         helperText="Podaj ten sam pseudonim co przy rejestracji — możesz wyszukać lub wpisać ręcznie."
       />
-      <div>
-        <Label htmlFor={`${p}-pin`}>Nowy PIN (4–6 cyfr)</Label>
-        <Input
-          id={`${p}-pin`}
-          type="password"
-          inputMode="numeric"
-          pattern="[0-9]*"
-          required
-          minLength={4}
-          maxLength={6}
-          className="mt-1"
-          value={pin}
-          onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
-          placeholder="4–6 cyfr"
-          autoComplete="new-password"
-        />
-      </div>
-      <div>
-        <Label htmlFor={`${p}-pin2`}>Powtórz PIN</Label>
-        <Input
-          id={`${p}-pin2`}
-          type="password"
-          inputMode="numeric"
-          pattern="[0-9]*"
-          required
-          minLength={4}
-          maxLength={6}
-          className="mt-1"
-          value={pin2}
-          onChange={(e) => setPin2(e.target.value.replace(/\D/g, "").slice(0, 6))}
-          placeholder="Powtórz PIN"
-          autoComplete="new-password"
-        />
-      </div>
-      <p className="text-xs text-zinc-500">
-        Unikaj oczywistych sekwencji (np. 1234) i samych powtórzeń jednej cyfry.
-      </p>
+      <FormInput
+        id={`${p}-pin`}
+        label="Nowy PIN (4–6 cyfr)"
+        required
+        type="password"
+        inputMode="numeric"
+        pattern="[0-9]*"
+        minLength={4}
+        maxLength={6}
+        value={form.values.pin}
+        onChange={(e) => form.setValue("pin", e.target.value.replace(/\D/g, "").slice(0, 6))}
+        onBlur={() => form.setFieldTouched("pin")}
+        error={form.errors.pin}
+        placeholder="4–6 cyfr"
+        autoComplete="new-password"
+        hint="Unikaj oczywistych sekwencji (np. 1234) i samych powtórzeń jednej cyfry."
+      />
+      <FormInput
+        id={`${p}-pin2`}
+        label="Powtórz PIN"
+        required
+        type="password"
+        inputMode="numeric"
+        pattern="[0-9]*"
+        minLength={4}
+        maxLength={6}
+        value={form.values.pinConfirm}
+        onChange={(e) => form.setValue("pinConfirm", e.target.value.replace(/\D/g, "").slice(0, 6))}
+        onBlur={() => form.setFieldTouched("pinConfirm")}
+        error={form.errors.pinConfirm}
+        placeholder="Powtórz PIN"
+        autoComplete="new-password"
+      />
       <Button type="button" className="w-full" disabled={saving} onClick={() => void submit()}>
         {saving ? "Zapisywanie…" : submitLabel}
       </Button>

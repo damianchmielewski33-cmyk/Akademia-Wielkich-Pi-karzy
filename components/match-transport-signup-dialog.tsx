@@ -4,15 +4,8 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Car, TrainFront } from "lucide-react";
 import type { SignupTransportRow } from "@/lib/transport";
+import { AppModal } from "@/components/ui/app-modal";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
 type Mode = "car" | "public" | null;
@@ -112,24 +105,38 @@ export function MatchTransportSignupDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="border-emerald-900/15 sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>
-            {intent === "edit" ? "Transport na mecz" : intent === "confirm" ? "Potwierdź udział — transport" : "Zapis — transport"}
-          </DialogTitle>
-          <DialogDescription className="text-left text-zinc-600 dark:text-zinc-400">
-            {intent === "signup"
-              ? "Powiedz nam, jak planujesz dojazd — pomoże to ustalić transport w grupie."
-              : intent === "confirm"
-                ? "Potwierdzasz udział w składzie — podaj, jak planujesz dojazd."
-                : "Zaktualizuj informacje o dojeździe na ten mecz."}
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-4 py-1">
-          <div>
-            <p className="mb-2 text-sm font-medium text-emerald-950 dark:text-emerald-100">Jak dotrzesz na mecz?</p>
+    <AppModal
+      open={open}
+      onOpenChange={onOpenChange}
+      size="sm"
+      title={
+        intent === "edit" ? "Transport na mecz" : intent === "confirm" ? "Potwierdź udział — transport" : "Zapis — transport"
+      }
+      description={
+        intent === "signup"
+          ? "Powiedz nam, jak planujesz dojazd — pomoże to ustalić transport w grupie."
+          : intent === "confirm"
+            ? "Potwierdzasz udział w składzie — podaj, jak planujesz dojazd."
+            : "Zaktualizuj informacje o dojeździe na ten mecz."
+      }
+      footer={
+        <>
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={busy}>
+            Anuluj
+          </Button>
+          <Button
+            type="button"
+            className="bg-emerald-700 hover:bg-emerald-800"
+            onClick={() => void submit()}
+            disabled={busy}
+          >
+            {intent === "edit" ? "Zapisz" : intent === "confirm" ? "Potwierdź zapis" : "Potwierdź zapis"}
+          </Button>
+        </>
+      }
+    >
+      <div>
+        <p className="mb-2 text-sm font-medium text-emerald-950 dark:text-emerald-100">Jak dotrzesz na mecz?</p>
             <div className="grid grid-cols-2 gap-2">
               <Button
                 type="button"
@@ -164,7 +171,7 @@ export function MatchTransportSignupDialog({
             </div>
           </div>
 
-          {mode === "car" && (
+      {mode === "car" && (
             <div className="rounded-xl border border-emerald-200/80 bg-emerald-50/50 p-3 dark:border-emerald-800/60 dark:bg-emerald-950/40">
               <p className="text-sm font-medium text-emerald-950 dark:text-emerald-100">Możesz zabrać pasażerów?</p>
               <p className="mt-0.5 text-xs text-zinc-600 dark:text-zinc-400">
@@ -199,9 +206,9 @@ export function MatchTransportSignupDialog({
                 </Button>
               </div>
             </div>
-          )}
+      )}
 
-          {mode === "public" && (
+      {mode === "public" && (
             <div className="rounded-xl border border-emerald-200/80 bg-emerald-50/50 p-3 dark:border-emerald-800/60 dark:bg-emerald-950/40">
               <p className="text-sm font-medium text-emerald-950 dark:text-emerald-100">Potrzebujesz transportu od kogoś z drużyny?</p>
               <p className="mt-0.5 text-xs text-zinc-600 dark:text-zinc-400">
@@ -235,23 +242,7 @@ export function MatchTransportSignupDialog({
                 </Button>
               </div>
             </div>
-          )}
-        </div>
-
-        <DialogFooter className="gap-2 sm:justify-end">
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={busy}>
-            Anuluj
-          </Button>
-          <Button
-            type="button"
-            className="bg-emerald-700 hover:bg-emerald-800"
-            onClick={() => void submit()}
-            disabled={busy}
-          >
-            {intent === "edit" ? "Zapisz" : intent === "confirm" ? "Potwierdź zapis" : "Potwierdź zapis"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      )}
+    </AppModal>
   );
 }

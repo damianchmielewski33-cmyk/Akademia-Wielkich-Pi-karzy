@@ -16,15 +16,9 @@ import {
   Target,
   Trash2,
 } from "lucide-react";
+import { AppModal } from "@/components/ui/app-modal";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { FormInput } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -556,71 +550,60 @@ export function ProfilClient({ initial }: Props) {
         </ul>
       </section>
 
-      <Dialog open={statsOpen} onOpenChange={setStatsOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Statystyki meczu</DialogTitle>
-            <DialogDescription>{statsCtx?.label}</DialogDescription>
-          </DialogHeader>
-          {statsCtx ? (
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div>
-                <Label htmlFor="st_g">Gole</Label>
-                <Input
-                  id="st_g"
-                  type="number"
-                  min={0}
-                  value={statsCtx.goals}
-                  onChange={(e) => setStatsCtx({ ...statsCtx, goals: e.target.value })}
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <Label htmlFor="st_a">Asysty</Label>
-                <Input
-                  id="st_a"
-                  type="number"
-                  min={0}
-                  value={statsCtx.assists}
-                  onChange={(e) => setStatsCtx({ ...statsCtx, assists: e.target.value })}
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <Label htmlFor="st_d">Dystans (km)</Label>
-                <Input
-                  id="st_d"
-                  type="number"
-                  min={0}
-                  step="0.1"
-                  value={statsCtx.distance}
-                  onChange={(e) => setStatsCtx({ ...statsCtx, distance: e.target.value })}
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <Label htmlFor="st_s">Obronione strzały</Label>
-                <Input
-                  id="st_s"
-                  type="number"
-                  min={0}
-                  value={statsCtx.saves}
-                  onChange={(e) => setStatsCtx({ ...statsCtx, saves: e.target.value })}
-                  className="mt-1"
-                />
-              </div>
-            </div>
-          ) : null}
-          <DialogFooter className="gap-2 sm:gap-0">
+      <AppModal
+        open={statsOpen}
+        onOpenChange={setStatsOpen}
+        title="Statystyki meczu"
+        description={statsCtx?.label}
+        footer={
+          <>
             <Button type="button" variant="outline" onClick={() => setStatsOpen(false)}>
               Anuluj
             </Button>
             <Button type="button" onClick={submitStats}>
               Zapisz
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </>
+        }
+      >
+        {statsCtx ? (
+          <div className="grid gap-3 sm:grid-cols-2">
+            <FormInput
+              id="st_g"
+              label="Gole"
+              type="number"
+              min={0}
+              value={statsCtx.goals}
+              onChange={(e) => setStatsCtx({ ...statsCtx, goals: e.target.value })}
+            />
+            <FormInput
+              id="st_a"
+              label="Asysty"
+              type="number"
+              min={0}
+              value={statsCtx.assists}
+              onChange={(e) => setStatsCtx({ ...statsCtx, assists: e.target.value })}
+            />
+            <FormInput
+              id="st_d"
+              label="Dystans (km)"
+              type="number"
+              min={0}
+              step="0.1"
+              value={statsCtx.distance}
+              onChange={(e) => setStatsCtx({ ...statsCtx, distance: e.target.value })}
+            />
+            <FormInput
+              id="st_s"
+              label="Obronione strzały"
+              type="number"
+              min={0}
+              value={statsCtx.saves}
+              onChange={(e) => setStatsCtx({ ...statsCtx, saves: e.target.value })}
+            />
+          </div>
+        ) : null}
+      </AppModal>
     </div>
   );
 }

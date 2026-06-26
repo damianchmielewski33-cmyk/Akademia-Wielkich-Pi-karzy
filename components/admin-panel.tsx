@@ -26,10 +26,14 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { PlayerAliasPicker } from "@/components/player-alias-picker";
+import { FormInput } from "@/components/ui/form-field";
+import { formSchemas, useValidatedForm } from "@/lib/form-validation";
+import { z } from "zod";
 import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { AppModal } from "@/components/ui/app-modal";
 import {
   Dialog,
   DialogContent,
@@ -431,10 +435,16 @@ function MatchSignupsDialogContent({
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState<number | null>(null);
   const [addGuestOpen, setAddGuestOpen] = useState(false);
-  const [guestFirstName, setGuestFirstName] = useState("");
-  const [guestLastName, setGuestLastName] = useState("");
-  const [guestAlias, setGuestAlias] = useState("");
   const [addingGuest, setAddingGuest] = useState(false);
+
+  const guestForm = useValidatedForm({
+    initialValues: { guestFirstName: "", guestLastName: "", guestAlias: "" },
+    schema: z.object({
+      guestFirstName: formSchemas.requiredName("Imię"),
+      guestLastName: formSchemas.requiredName("Nazwisko"),
+      guestAlias: formSchemas.playerAlias,
+    }),
+  });
 
   useEffect(() => {
     setLoading(true);
@@ -473,10 +483,8 @@ function MatchSignupsDialogContent({
   };
 
   const handleAddGuest = async () => {
-    if (!guestFirstName.trim() || !guestLastName.trim() || !guestAlias.trim()) {
-      toast.error("Uzupełnij wszystkie dane gościa");
-      return;
-    }
+    if (!guestForm.validate()) return;
+    const { guestFirstName, guestLastName, guestAlias } = guestForm.values;
 
     setAddingGuest(true);
     try {
@@ -498,9 +506,7 @@ function MatchSignupsDialogContent({
       }
 
       toast.success("Gościnny piłkarz został dodany");
-      setGuestFirstName("");
-      setGuestLastName("");
-      setGuestAlias("");
+      guestForm.reset();
       setAddGuestOpen(false);
       onReload();
     } finally {
@@ -613,61 +619,58 @@ function MatchSignupsDialogContent({
         </Button>
       </DialogFooter>
 
-      <Dialog open={addGuestOpen} onOpenChange={setAddGuestOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Dodaj gościnnego piłkarza</DialogTitle>
-            <DialogDescription>
-              Piłkarz będzie dostępny tylko na ten mecz
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3 py-2">
-            <div>
-              <Label htmlFor="guest-fn">Imię</Label>
-              <Input
-                id="guest-fn"
-                className="mt-1 border-zinc-200"
-                value={guestFirstName}
-                onChange={(e) => setGuestFirstName(e.target.value)}
-                disabled={addingGuest}
-              />
-            </div>
-            <div>
-              <Label htmlFor="guest-ln">Nazwisko</Label>
-              <Input
-                id="guest-ln"
-                className="mt-1 border-zinc-200"
-                value={guestLastName}
-                onChange={(e) => setGuestLastName(e.target.value)}
-                disabled={addingGuest}
-              />
-            </div>
-            <div>
-              <Label htmlFor="guest-alias">Pseudonim</Label>
-              <Input
-                id="guest-alias"
-                className="mt-1 border-zinc-200"
-                value={guestAlias}
-                onChange={(e) => setGuestAlias(e.target.value)}
-                disabled={addingGuest}
-              />
-            </div>
-          </div>
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button
-              variant="outline"
-              onClick={() => setAddGuestOpen(false)}
-              disabled={addingGuest}
-            >
+      <AppModal
+        open={addGuestOpen}
+        onOpenChange={(o) => {
+          if (!o) guestForm.reset();
+          setAddGuestOpen(o);
+        }}
+        size="sm"
+        title="Dodaj gościnnego piłkarza"
+        description="Piłkarz będzie dostępny tylko na ten mecz"
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setAddGuestOpen(false)} disabled={addingGuest}>
               Anuluj
             </Button>
-            <Button onClick={handleAddGuest} disabled={addingGuest}>
+            <Button onClick={() => void handleAddGuest()} disabled={addingGuest}>
               {addingGuest ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               Dodaj
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </>
+        }
+      >
+        <FormInput
+          id="guest-fn"
+          label="Imię"
+          required
+          value={guestForm.values.guestFirstName}
+          onChange={(e) => guestForm.setValue("guestFirstName", e.target.value)}
+          onBlur={() => guestForm.setFieldTouched("guestFirstName")}
+          error={guestForm.errors.guestFirstName}
+          disabled={addingGuest}
+        />
+        <FormInput
+          id="guest-ln"
+          label="Nazwisko"
+          required
+          value={guestForm.values.guestLastName}
+          onChange={(e) => guestForm.setValue("guestLastName", e.target.value)}
+          onBlur={() => guestForm.setFieldTouched("guestLastName")}
+          error={guestForm.errors.guestLastName}
+          disabled={addingGuest}
+        />
+        <FormInput
+          id="guest-alias"
+          label="Pseudonim"
+          required
+          value={guestForm.values.guestAlias}
+          onChange={(e) => guestForm.setValue("guestAlias", e.target.value)}
+          onBlur={() => guestForm.setFieldTouched("guestAlias")}
+          error={guestForm.errors.guestAlias}
+          disabled={addingGuest}
+        />
+      </AppModal>
     </>
   );
 }
@@ -2245,11 +2248,16 @@ function UserCreateForm({
   onClose: () => void;
   onCreated: () => void;
 }) {
-  const [first_name, setFn] = useState("");
-  const [last_name, setLn] = useState("");
-  const [zawodnik, setZ] = useState("");
   const [role, setRole] = useState<"admin" | "player">("player");
   const [saving, setSaving] = useState(false);
+  const form = useValidatedForm({
+    initialValues: { first_name: "", last_name: "", zawodnik: "" },
+    schema: z.object({
+      first_name: formSchemas.requiredName("Imię"),
+      last_name: formSchemas.requiredName("Nazwisko"),
+      zawodnik: formSchemas.requiredText("Pseudonim"),
+    }),
+  });
 
   return (
     <>
@@ -2261,37 +2269,39 @@ function UserCreateForm({
         użytkownik ustawi PIN przy pierwszym logowaniu (jak przy rejestracji samodzielnej).
       </p>
       <div className="space-y-3 py-2">
-        <div>
-          <Label htmlFor="adm-new-fn">Imię</Label>
-          <Input
-            id="adm-new-fn"
-            className="mt-1 border-zinc-200"
-            value={first_name}
-            onChange={(e) => setFn(e.target.value)}
-            autoComplete="off"
-          />
-        </div>
-        <div>
-          <Label htmlFor="adm-new-ln">Nazwisko</Label>
-          <Input
-            id="adm-new-ln"
-            className="mt-1 border-zinc-200"
-            value={last_name}
-            onChange={(e) => setLn(e.target.value)}
-            autoComplete="off"
-          />
-        </div>
+        <FormInput
+          id="adm-new-fn"
+          label="Imię"
+          required
+          value={form.values.first_name}
+          onChange={(e) => form.setValue("first_name", e.target.value)}
+          onBlur={() => form.setFieldTouched("first_name")}
+          error={form.errors.first_name}
+          autoComplete="off"
+        />
+        <FormInput
+          id="adm-new-ln"
+          label="Nazwisko"
+          required
+          value={form.values.last_name}
+          onChange={(e) => form.setValue("last_name", e.target.value)}
+          onBlur={() => form.setFieldTouched("last_name")}
+          error={form.errors.last_name}
+          autoComplete="off"
+        />
         <PlayerAliasPicker
           label="Pseudonim zawodnika (awatar)"
-          value={zawodnik}
-          onChange={setZ}
+          required
+          value={form.values.zawodnik}
+          onChange={(v) => form.setValue("zawodnik", v)}
+          onBlur={() => form.setFieldTouched("zawodnik")}
+          error={form.errors.zawodnik}
           helperText="Wyszukaj piłkarza w internecie lub wpisz własny pseudonim — musi być unikalny w akademii."
-          inputClassName="border-zinc-200"
         />
         <div>
           <Label>Rola</Label>
           <Select value={role} onValueChange={(v) => setRole(v as "admin" | "player")}>
-            <SelectTrigger className="mt-1 border-zinc-200">
+            <SelectTrigger className="mt-1.5">
               <SelectValue placeholder="Wybierz rolę" />
             </SelectTrigger>
             <SelectContent>
@@ -2306,12 +2316,10 @@ function UserCreateForm({
           Anuluj
         </Button>
         <Button
-          disabled={saving || !zawodnik.trim()}
+          disabled={saving}
           onClick={async () => {
-            if (!first_name.trim() || !last_name.trim() || !zawodnik) {
-              toast.error("Uzupełnij imię, nazwisko i pseudonim");
-              return;
-            }
+            if (!form.validate()) return;
+            const { first_name, last_name, zawodnik } = form.values;
             setSaving(true);
             try {
               const res = await fetch(API.users, {
@@ -2445,15 +2453,15 @@ function MatchEditDialogContent({
   match: MatchRow;
   onEdited: () => void;
 }) {
-  const [maxSlots, setMaxSlots] = useState(String(match.max_slots || 14));
   const [saving, setSaving] = useState(false);
+  const form = useValidatedForm({
+    initialValues: { maxSlots: match.max_slots || 14 },
+    schema: z.object({ maxSlots: formSchemas.maxSlots }),
+  });
 
   const handleSave = async () => {
-    const slots = Number(maxSlots);
-    if (!Number.isFinite(slots) || slots < 1) {
-      toast.error("Liczba miejsc musi być większa niż 0");
-      return;
-    }
+    if (!form.validate()) return;
+    const slots = form.values.maxSlots;
 
     setSaving(true);
     try {
@@ -2490,21 +2498,23 @@ function MatchEditDialogContent({
         <p className="text-sm text-zinc-600 dark:text-zinc-400">
           <strong>{match.date}</strong> o <strong>{match.time}</strong>, <strong>{match.location}</strong>
         </p>
-        <div>
-          <Label htmlFor="max-slots">Maksymalna liczba miejsc</Label>
-          <Input
-            id="max-slots"
-            type="number"
-            min="1"
-            value={maxSlots}
-            onChange={(e) => setMaxSlots(e.target.value)}
-            className="mt-1 border-zinc-200"
-            disabled={saving}
-          />
-          <p className="mt-1 text-xs text-zinc-500">
-            Obecnie zapisanych: <strong>{match.players_count}</strong>
-          </p>
-        </div>
+        <FormInput
+          id="max-slots"
+          label="Maksymalna liczba miejsc"
+          required
+          type="number"
+          min={1}
+          value={String(form.values.maxSlots)}
+          onChange={(e) => form.setValue("maxSlots", Number(e.target.value) || 0)}
+          onBlur={() => form.setFieldTouched("maxSlots")}
+          error={form.errors.maxSlots}
+          disabled={saving}
+          hint={
+            <>
+              Obecnie zapisanych: <strong>{match.players_count}</strong>
+            </>
+          }
+        />
       </div>
       <DialogFooter className="gap-2 sm:gap-0">
         <Button variant="outline" disabled={saving}>

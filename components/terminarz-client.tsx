@@ -45,6 +45,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LoginForm } from "@/components/login-form";
 import { MatchTransportSignupDialog } from "@/components/match-transport-signup-dialog";
 import { MatchManageDialog } from "@/components/match-manage-dialog";
+import { AppModal } from "@/components/ui/app-modal";
+import { FormInput } from "@/components/ui/form-field";
+import { formSchemas, useValidatedForm } from "@/lib/form-validation";
+import { z } from "zod";
 import { TerminarzMatchCard } from "@/components/terminarz-match-card";
 import { MatchSignupCountsBlock } from "@/components/terminarz-match-counts";
 import { appendShareSessionQuery, terminarzInviteRelativePath } from "@/lib/share-link";
@@ -2548,6 +2552,13 @@ function CalendarView({
   );
 }
 
+const addMatchSchema = z.object({
+  location: formSchemas.matchLocation,
+  date: formSchemas.matchDate,
+  time: formSchemas.matchTime,
+  maxSlots: formSchemas.maxSlots,
+});
+
 function AddMatchDialog({
   open,
   onOpenChange,
@@ -2557,60 +2568,92 @@ function AddMatchDialog({
   onOpenChange: (v: boolean) => void;
   onDone: () => void;
 }) {
-  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+  const form = useValidatedForm({
+    initialValues: { location: "", date: "", time: "", maxSlots: 10 },
+    schema: addMatchSchema,
+  });
+
+  async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const fd = new FormData(e.currentTarget);
-    const payload = {
-      location: String(fd.get("location") || ""),
-      date: String(fd.get("date") || ""),
-      time: String(fd.get("time") || ""),
-      max_slots: Number(fd.get("max_slots") || 1),
-    };
+    if (!form.validate()) return;
+    const { location, date, time, maxSlots } = form.values;
     const res = await fetch("/api/terminarz/add", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({
+        location: location.trim(),
+        date,
+        time,
+        max_slots: maxSlots,
+      }),
     });
     if (!res.ok) {
       toast.error("Nie dodano meczu");
       return;
     }
+    form.reset();
     onOpenChange(false);
     onDone();
     toast.success("Mecz dodany");
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="border-emerald-900/15">
-        <DialogHeader>
-          <DialogTitle className="text-emerald-950 dark:text-emerald-100">Dodaj mecz</DialogTitle>
-        </DialogHeader>
-        <form onSubmit={onSubmit} className="space-y-3">
-          <div>
-            <Label>Lokalizacja</Label>
-            <Input name="location" required className="mt-1" />
-          </div>
-          <div>
-            <Label>Data</Label>
-            <Input name="date" type="date" required className="mt-1" />
-          </div>
-          <div>
-            <Label>Godzina</Label>
-            <Input name="time" type="time" required className="mt-1" />
-          </div>
-          <div>
-            <Label>Ilość miejsc</Label>
-            <Input name="max_slots" type="number" min={1} required className="mt-1" defaultValue={10} />
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Anuluj
-            </Button>
-            <Button type="submit">Zapisz</Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+    <AppModal
+      open={open}
+      onOpenChange={(v) => {
+        if (!v) form.reset();
+        onOpenChange(v);
+      }}
+      title="Dodaj mecz"
+      footer={
+        <>
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            Anuluj
+          </Button>
+          <Button type="submit" form="add-match-form">
+            Zapisz
+          </Button>
+        </>
+      }
+    >
+      <form id="add-match-form" onSubmit={onSubmit} className="space-y-3">
+        <FormInput
+          label="Lokalizacja"
+          required
+          value={form.values.location}
+          onChange={(e) => form.setValue("location", e.target.value)}
+          onBlur={() => form.setFieldTouched("location")}
+          error={form.errors.location}
+        />
+        <FormInput
+          label="Data"
+          required
+          type="date"
+          value={form.values.date}
+          onChange={(e) => form.setValue("date", e.target.value)}
+          onBlur={() => form.setFieldTouched("date")}
+          error={form.errors.date}
+        />
+        <FormInput
+          label="Godzina"
+          required
+          type="time"
+          value={form.values.time}
+          onChange={(e) => form.setValue("time", e.target.value)}
+          onBlur={() => form.setFieldTouched("time")}
+          error={form.errors.time}
+        />
+        <FormInput
+          label="Ilość miejsc"
+          required
+          type="number"
+          min={1}
+          value={String(form.values.maxSlots)}
+          onChange={(e) => form.setValue("maxSlots", Number(e.target.value) || 0)}
+          onBlur={() => form.setFieldTouched("maxSlots")}
+          error={form.errors.maxSlots}
+        />
+      </form>
+    </AppModal>
   );
 }

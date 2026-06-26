@@ -13,8 +13,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { FormInput } from "@/components/ui/form-field";
+import { formSchemas } from "@/lib/form-validation";
+import { z } from "zod";
 
 type MeUser = {
   id: number;
@@ -27,9 +28,10 @@ export function MatchNotificationPrompt() {
   const pathname = usePathname();
   const [user, setUser] = useState<MeUser | null | undefined>(undefined);
   const [participationSurveyPending, setParticipationSurveyPending] = useState(false);
-  const [email, setEmail] = useState("");
   const [consent, setConsent] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [email, setEmail] = useState("");
+  const [emailError, setEmailError] = useState<string | undefined>();
 
   const load = useCallback(async () => {
     try {
@@ -101,11 +103,13 @@ export function MatchNotificationPrompt() {
       toast.error("Zaznacz zgodę, aby zapisać powiadomienia.");
       return;
     }
-    const trimmed = email.trim();
-    if (!trimmed) {
-      toast.error("Podaj adres e-mail.");
+    const parsed = z.object({ email: formSchemas.email }).safeParse({ email });
+    if (!parsed.success) {
+      setEmailError(parsed.error.issues[0]?.message ?? "Podaj poprawny adres e-mail");
       return;
     }
+    setEmailError(undefined);
+    const trimmed = parsed.data.email.trim();
     setBusy(true);
     try {
       const r = await fetch("/api/user/notification-preferences", {
@@ -158,19 +162,25 @@ export function MatchNotificationPrompt() {
             wyślemy Ci krótką wiadomość z datą, godziną, miejscem i linkiem do zapisu w aplikacji.
           </p>
 
-          <div className="space-y-2">
-            <Label htmlFor="notif-email">Adres e-mail</Label>
-            <Input
-              id="notif-email"
-              type="email"
-              autoComplete="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="np. jan@example.com"
-              className="border-zinc-200 dark:border-zinc-600"
-              disabled={busy}
-            />
-          </div>
+          <FormInput
+            id="notif-email"
+            label="Adres e-mail"
+            required
+            type="email"
+            autoComplete="email"
+            value={email}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              if (emailError) setEmailError(undefined);
+            }}
+            onBlur={() => {
+              const parsed = z.object({ email: formSchemas.email }).safeParse({ email });
+              setEmailError(parsed.success ? undefined : parsed.error.issues[0]?.message);
+            }}
+            error={emailError}
+            placeholder="np. jan@example.com"
+            disabled={busy}
+          />
 
           <div className="space-y-3 rounded-xl border border-zinc-200 bg-zinc-50/80 p-4 dark:border-zinc-600 dark:bg-zinc-800/60">
             <label className="flex cursor-pointer gap-3 text-sm leading-snug text-zinc-800 dark:text-zinc-200">

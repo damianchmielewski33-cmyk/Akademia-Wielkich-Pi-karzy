@@ -3,24 +3,37 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { z } from "zod";
 import {
   AuthGoalPreloader,
   AUTH_SUCCESS_PRELOADER_DELAY_MS,
 } from "@/components/auth-goal-preloader";
+import { AppModal } from "@/components/ui/app-modal";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { FormInput } from "@/components/ui/form-field";
 import { Label } from "@/components/ui/label";
 import { PlayerAliasPicker } from "@/components/player-alias-picker";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { isWeakPin, WEAK_PIN_MESSAGE } from "@/lib/pin-policy";
+import { formSchemas, useValidatedForm } from "@/lib/form-validation";
 import { notifyPostLoginPromptsUpdated } from "@/lib/post-login-prompts";
+
+const loginSchema = z.object({
+  firstName: formSchemas.requiredName("Imię"),
+  lastName: formSchemas.requiredName("Nazwisko"),
+  pin: formSchemas.pin,
+});
+
+const forgotSchema = z
+  .object({
+    firstName: formSchemas.requiredName("Imię"),
+    lastName: formSchemas.requiredName("Nazwisko"),
+    zawodnik: formSchemas.requiredText("Piłkarz"),
+    pin: formSchemas.pin,
+    pinConfirm: z.string().trim().min(1, "Powtórz PIN"),
+  })
+  .refine((d) => d.pin === d.pinConfirm, {
+    message: "PIN-y muszą być takie same",
+    path: ["pinConfirm"],
+  });
 
 export function LoginForm({
   nextPath,
@@ -28,32 +41,33 @@ export function LoginForm({
   onAuthenticated,
 }: {
   nextPath: string;
-  /** Pola logowania w modalu — bez pełnoekranowego preloadera i bez linków pomocniczych pod formularzem. */
   embedMode?: boolean;
-  /** Po udanym logowaniu / ustawieniu PIN-u zamiast `router.push(next)`. */
   onAuthenticated?: () => void;
 }) {
   const router = useRouter();
   const next = nextPath || "/";
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [pin, setPin] = useState("");
-  /** Zaznaczone = długa sesja bez wylogowania po bezczynności (JWT `rememberMe`). */
   const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showGoalPreloader, setShowGoalPreloader] = useState(false);
 
   const [forgotOpen, setForgotOpen] = useState(false);
   const [forgotDoneOpen, setForgotDoneOpen] = useState(false);
-  const [ffn, setFfn] = useState("");
-  const [fln, setFln] = useState("");
-  const [fzaw, setFzaw] = useState("");
-  const [fpin, setFpin] = useState("");
-  const [fpin2, setFpin2] = useState("");
   const [forgotSaving, setForgotSaving] = useState(false);
+
+  const loginForm = useValidatedForm({
+    initialValues: { firstName: "", lastName: "", pin: "" },
+    schema: loginSchema,
+  });
+
+  const forgotForm = useValidatedForm({
+    initialValues: { firstName: "", lastName: "", zawodnik: "", pin: "", pinConfirm: "" },
+    schema: forgotSchema,
+  });
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!loginForm.validate()) return;
+    const { firstName, lastName, pin } = loginForm.values;
     setLoading(true);
     try {
       const res = await fetch("/api/auth/login", {
@@ -109,29 +123,19 @@ export function LoginForm({
   }
 
   async function submitForgotPin() {
-    if (!ffn.trim() || !fln.trim() || !fzaw) {
-      toast.error("Uzupełnij imię, nazwisko i wybierz piłkarza.");
-      return;
-    }
-    if (fpin !== fpin2) {
-      toast.error("PIN-y muszą być takie same.");
-      return;
-    }
-    if (isWeakPin(fpin)) {
-      toast.error(WEAK_PIN_MESSAGE);
-      return;
-    }
+    if (!forgotForm.validate()) return;
+    const { firstName, lastName, zawodnik, pin, pinConfirm } = forgotForm.values;
     setForgotSaving(true);
     try {
       const res = await fetch("/api/auth/forgot-pin-request", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          first_name: ffn.trim(),
-          last_name: fln.trim(),
-          zawodnik: fzaw,
-          pin: fpin,
-          pin_confirm: fpin2,
+          first_name: firstName.trim(),
+          last_name: lastName.trim(),
+          zawodnik,
+          pin,
+          pin_confirm: pinConfirm,
         }),
       });
       const data = (await res.json().catch(() => ({}))) as { error?: string };
@@ -140,8 +144,7 @@ export function LoginForm({
         return;
       }
       setForgotOpen(false);
-      setFpin("");
-      setFpin2("");
+      forgotForm.reset();
       setForgotDoneOpen(true);
     } finally {
       setForgotSaving(false);
@@ -152,47 +155,47 @@ export function LoginForm({
     <>
       {showGoalPreloader && <AuthGoalPreloader label="Czas coś pokopać" />}
       <form onSubmit={onSubmit} className={embedMode ? "space-y-4" : "mt-8 space-y-4"}>
-        <div>
-          <Label htmlFor="first_name">Imię</Label>
-          <Input
-            id="first_name"
-            required
-            value={firstName}
-            onChange={(e) => setFirstName(e.target.value)}
-            placeholder="Imię"
-            className="mt-1"
-            autoComplete="given-name"
-          />
-        </div>
-        <div>
-          <Label htmlFor="last_name">Nazwisko</Label>
-          <Input
-            id="last_name"
-            required
-            value={lastName}
-            onChange={(e) => setLastName(e.target.value)}
-            placeholder="Nazwisko"
-            className="mt-1"
-            autoComplete="family-name"
-          />
-        </div>
-        <div>
-          <Label htmlFor="pin">PIN (4–6 cyfr)</Label>
-          <Input
-            id="pin"
-            type="password"
-            inputMode="numeric"
-            pattern="[0-9]*"
-            autoComplete="off"
-            required
-            minLength={4}
-            maxLength={6}
-            value={pin}
-            onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
-            placeholder="4–6 cyfr"
-            className="mt-1"
-          />
-        </div>
+        <FormInput
+          id="first_name"
+          label="Imię"
+          required
+          showValidState
+          value={loginForm.values.firstName}
+          onChange={(e) => loginForm.setValue("firstName", e.target.value)}
+          onBlur={() => loginForm.setFieldTouched("firstName")}
+          error={loginForm.errors.firstName}
+          placeholder="Imię"
+          autoComplete="given-name"
+        />
+        <FormInput
+          id="last_name"
+          label="Nazwisko"
+          required
+          showValidState
+          value={loginForm.values.lastName}
+          onChange={(e) => loginForm.setValue("lastName", e.target.value)}
+          onBlur={() => loginForm.setFieldTouched("lastName")}
+          error={loginForm.errors.lastName}
+          placeholder="Nazwisko"
+          autoComplete="family-name"
+        />
+        <FormInput
+          id="pin"
+          label="PIN (4–6 cyfr)"
+          required
+          showValidState
+          type="password"
+          inputMode="numeric"
+          pattern="[0-9]*"
+          autoComplete="off"
+          minLength={4}
+          maxLength={6}
+          value={loginForm.values.pin}
+          onChange={(e) => loginForm.setValue("pin", e.target.value.replace(/\D/g, "").slice(0, 6))}
+          onBlur={() => loginForm.setFieldTouched("pin")}
+          error={loginForm.errors.pin}
+          placeholder="4–6 cyfr"
+        />
         <div className="flex items-start gap-3 pt-0.5">
           <input
             id="login_remember"
@@ -216,11 +219,13 @@ export function LoginForm({
             type="button"
             className="text-center text-sm font-medium text-emerald-700 hover:underline"
             onClick={() => {
-              setFfn(firstName.trim());
-              setFln(lastName.trim());
-              setFzaw("");
-              setFpin("");
-              setFpin2("");
+              forgotForm.reset({
+                firstName: loginForm.values.firstName.trim(),
+                lastName: loginForm.values.lastName.trim(),
+                zawodnik: "",
+                pin: "",
+                pinConfirm: "",
+              });
               setForgotOpen(true);
             }}
           >
@@ -229,95 +234,99 @@ export function LoginForm({
         </div>
       )}
 
-      <Dialog open={forgotOpen} onOpenChange={setForgotOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Nowy PIN — zapomniałem poprzedniego</DialogTitle>
-            <DialogDescription className="text-left text-zinc-600">
-              Potwierdź tożsamość (imię, nazwisko i ten sam piłkarz co przy rejestracji), potem wpisz nowy PIN
-              dwa razy. Administrator musi zatwierdzić zmianę w panelu — do tego czasu korzystasz ze strony jak
-              osoba niezalogowana. Jeśli administrator odrzuci prośbę, nadal obowiązuje poprzedni PIN.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3 py-1">
-            <div>
-              <Label htmlFor="fg-fn">Imię</Label>
-              <Input id="fg-fn" className="mt-1" value={ffn} onChange={(e) => setFfn(e.target.value)} />
-            </div>
-            <div>
-              <Label htmlFor="fg-ln">Nazwisko</Label>
-              <Input id="fg-ln" className="mt-1" value={fln} onChange={(e) => setFln(e.target.value)} />
-            </div>
-            <PlayerAliasPicker
-              label="Piłkarz"
-              value={fzaw}
-              onChange={setFzaw}
-              helperText="Ten sam pseudonim co przy rejestracji — wyszukaj lub wpisz ręcznie."
-            />
-            <div>
-              <Label htmlFor="fg-pin">Nowy PIN (4–6 cyfr)</Label>
-              <Input
-                id="fg-pin"
-                type="password"
-                inputMode="numeric"
-                className="mt-1"
-                autoComplete="new-password"
-                minLength={4}
-                maxLength={6}
-                value={fpin}
-                onChange={(e) => setFpin(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                placeholder="4–6 cyfr"
-              />
-            </div>
-            <div>
-              <Label htmlFor="fg-pin2">Powtórz nowy PIN</Label>
-              <Input
-                id="fg-pin2"
-                type="password"
-                inputMode="numeric"
-                className="mt-1"
-                autoComplete="new-password"
-                minLength={4}
-                maxLength={6}
-                value={fpin2}
-                onChange={(e) => setFpin2(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                placeholder="Powtórz PIN"
-              />
-            </div>
-          </div>
-          <DialogFooter className="gap-2 sm:gap-0">
+      <AppModal
+        open={forgotOpen}
+        onOpenChange={setForgotOpen}
+        size="sm"
+        title="Nowy PIN — zapomniałem poprzedniego"
+        description="Potwierdź tożsamość (imię, nazwisko i ten sam piłkarz co przy rejestracji), potem wpisz nowy PIN dwa razy. Administrator musi zatwierdzić zmianę w panelu — do tego czasu korzystasz ze strony jak osoba niezalogowana."
+        footer={
+          <>
             <Button type="button" variant="outline" onClick={() => setForgotOpen(false)}>
               Anuluj
             </Button>
             <Button type="button" disabled={forgotSaving} onClick={() => void submitForgotPin()}>
               {forgotSaving ? "Zapisywanie…" : "Nadaj PIN i wyślij"}
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </>
+        }
+      >
+        <FormInput
+          id="fg-fn"
+          label="Imię"
+          required
+          value={forgotForm.values.firstName}
+          onChange={(e) => forgotForm.setValue("firstName", e.target.value)}
+          onBlur={() => forgotForm.setFieldTouched("firstName")}
+          error={forgotForm.errors.firstName}
+        />
+        <FormInput
+          id="fg-ln"
+          label="Nazwisko"
+          required
+          value={forgotForm.values.lastName}
+          onChange={(e) => forgotForm.setValue("lastName", e.target.value)}
+          onBlur={() => forgotForm.setFieldTouched("lastName")}
+          error={forgotForm.errors.lastName}
+        />
+        <PlayerAliasPicker
+          label="Piłkarz"
+          required
+          value={forgotForm.values.zawodnik}
+          onChange={(v) => forgotForm.setValue("zawodnik", v)}
+          onBlur={() => forgotForm.setFieldTouched("zawodnik")}
+          error={forgotForm.errors.zawodnik}
+          helperText="Ten sam pseudonim co przy rejestracji — wyszukaj lub wpisz ręcznie."
+        />
+        <FormInput
+          id="fg-pin"
+          label="Nowy PIN (4–6 cyfr)"
+          required
+          type="password"
+          inputMode="numeric"
+          autoComplete="new-password"
+          minLength={4}
+          maxLength={6}
+          value={forgotForm.values.pin}
+          onChange={(e) => forgotForm.setValue("pin", e.target.value.replace(/\D/g, "").slice(0, 6))}
+          onBlur={() => forgotForm.setFieldTouched("pin")}
+          error={forgotForm.errors.pin}
+          placeholder="4–6 cyfr"
+        />
+        <FormInput
+          id="fg-pin2"
+          label="Powtórz nowy PIN"
+          required
+          type="password"
+          inputMode="numeric"
+          autoComplete="new-password"
+          minLength={4}
+          maxLength={6}
+          value={forgotForm.values.pinConfirm}
+          onChange={(e) => forgotForm.setValue("pinConfirm", e.target.value.replace(/\D/g, "").slice(0, 6))}
+          onBlur={() => forgotForm.setFieldTouched("pinConfirm")}
+          error={forgotForm.errors.pinConfirm}
+          placeholder="Powtórz PIN"
+        />
+      </AppModal>
 
-      <Dialog open={forgotDoneOpen} onOpenChange={setForgotDoneOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Oczekiwanie na administratora</DialogTitle>
-            <DialogDescription className="text-left text-zinc-600">
-              Twoja propozycja nowego PIN-u została zapisana. <strong>Administrator musi ją zatwierdzić</strong> w
-              panelu — dopiero wtedy obowiązuje nowy PIN (zalogujesz się nim jak dotychczas). Do czasu decyzji
-              masz dostęp tak jak osoba niezalogowana. Jeśli administrator odrzuci zmianę, nadal używasz
-              poprzedniego PIN-u.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button type="button" onClick={() => setForgotDoneOpen(false)}>
-              Rozumiem
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
+      <AppModal
+        open={forgotDoneOpen}
+        onOpenChange={setForgotDoneOpen}
+        size="sm"
+        title="Oczekiwanie na administratora"
+        description={
+          <>
+            Twoja propozycja nowego PIN-u została zapisana. <strong>Administrator musi ją zatwierdzić</strong> w panelu
+            — dopiero wtedy obowiązuje nowy PIN. Do czasu decyzji masz dostęp tak jak osoba niezalogowana.
+          </>
+        }
+        footer={
+          <Button type="button" onClick={() => setForgotDoneOpen(false)}>
+            Rozumiem
+          </Button>
+        }
+      />
     </>
-
   );
-
 }
-

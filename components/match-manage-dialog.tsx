@@ -3,19 +3,12 @@
 import { useState } from "react";
 import { Loader2, UserPlus } from "lucide-react";
 import { toast } from "sonner";
+import { z } from "zod";
 import type { MatchRow } from "@/lib/db";
 import { MATCH_CANCEL_REASONS } from "@/lib/match-cancel-reasons";
+import { AppModal } from "@/components/ui/app-modal";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { FormInput, FormSelectField } from "@/components/ui/form-field";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
@@ -24,6 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { formSchemas, useValidatedForm } from "@/lib/form-validation";
 
 type Props = {
   match: MatchRow | null;
@@ -31,6 +25,19 @@ type Props = {
   onOpenChange: (open: boolean) => void;
   onDone: () => void;
 };
+
+const editSchema = z.object({
+  date: formSchemas.matchDate,
+  time: formSchemas.matchTime,
+  location: formSchemas.matchLocation,
+  maxSlots: formSchemas.maxSlots,
+});
+
+const guestSchema = z.object({
+  guestFirst: formSchemas.requiredName("Imię"),
+  guestLast: formSchemas.requiredName("Nazwisko"),
+  guestAlias: formSchemas.playerAlias,
+});
 
 async function fetchJson<T>(
   url: string,
@@ -51,26 +58,29 @@ async function fetchJson<T>(
 
 export function MatchManageDialog({ match, open, onOpenChange, onDone }: Props) {
   const [tab, setTab] = useState("edit");
-  const [date, setDate] = useState("");
-  const [time, setTime] = useState("");
-  const [location, setLocation] = useState("");
-  const [maxSlots, setMaxSlots] = useState("");
   const [cancelReason, setCancelReason] = useState("weather");
-  const [guestFirst, setGuestFirst] = useState("");
-  const [guestLast, setGuestLast] = useState("");
-  const [guestAlias, setGuestAlias] = useState("");
   const [busy, setBusy] = useState(false);
 
+  const editForm = useValidatedForm({
+    initialValues: { date: "", time: "", location: "", maxSlots: 10 },
+    schema: editSchema,
+  });
+
+  const guestForm = useValidatedForm({
+    initialValues: { guestFirst: "", guestLast: "", guestAlias: "" },
+    schema: guestSchema,
+  });
+
   const resetForm = (m: MatchRow) => {
-    setDate(m.match_date);
-    setTime(m.match_time);
-    setLocation(m.location);
-    setMaxSlots(String(m.max_slots));
+    editForm.reset({
+      date: m.match_date,
+      time: m.match_time,
+      location: m.location,
+      maxSlots: m.max_slots,
+    });
+    guestForm.reset({ guestFirst: "", guestLast: "", guestAlias: "" });
     setTab("edit");
     setCancelReason("weather");
-    setGuestFirst("");
-    setGuestLast("");
-    setGuestAlias("");
   };
 
   const handleOpenChange = (next: boolean) => {
@@ -83,16 +93,8 @@ export function MatchManageDialog({ match, open, onOpenChange, onDone }: Props) 
   const isCancelled = match.cancelled === 1;
 
   async function saveEdit() {
-    if (!match) return;
-    const slots = Number(maxSlots);
-    if (!date || !time || !location.trim()) {
-      toast.error("Uzupełnij datę, godzinę i miejsce");
-      return;
-    }
-    if (!Number.isFinite(slots) || slots < 1) {
-      toast.error("Liczba miejsc musi być większa niż 0");
-      return;
-    }
+    if (!match || !editForm.validate()) return;
+    const { date, time, location, maxSlots } = editForm.values;
     setBusy(true);
     try {
       const r = await fetchJson<{ status: string }>(`/api/admin/match/${match.id}`, {
@@ -102,7 +104,7 @@ export function MatchManageDialog({ match, open, onOpenChange, onDone }: Props) 
           date,
           time,
           location: location.trim(),
-          max_slots: slots,
+          max_slots: maxSlots,
         }),
       });
       if (!r.ok) {
@@ -139,11 +141,8 @@ export function MatchManageDialog({ match, open, onOpenChange, onDone }: Props) 
   }
 
   async function addGuest() {
-    if (!match) return;
-    if (!guestFirst.trim() || !guestLast.trim() || !guestAlias.trim()) {
-      toast.error("Uzupełnij dane gościa");
-      return;
-    }
+    if (!match || !guestForm.validate()) return;
+    const { guestFirst, guestLast, guestAlias } = guestForm.values;
     setBusy(true);
     try {
       const r = await fetchJson<{ ok: true }>(`/api/admin/match/${match.id}/add-guest`, {
@@ -160,9 +159,7 @@ export function MatchManageDialog({ match, open, onOpenChange, onDone }: Props) 
         return;
       }
       toast.success("Gość zapisany na mecz");
-      setGuestFirst("");
-      setGuestLast("");
-      setGuestAlias("");
+      guestForm.reset({ guestFirst: "", guestLast: "", guestAlias: "" });
       onDone();
     } finally {
       setBusy(false);
@@ -170,130 +167,153 @@ export function MatchManageDialog({ match, open, onOpenChange, onDone }: Props) 
   }
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>Zarządzaj meczem</DialogTitle>
-          <DialogDescription>
-            {match.match_date} · {match.match_time} · {match.location}
-          </DialogDescription>
-        </DialogHeader>
+    <AppModal
+      open={open}
+      onOpenChange={handleOpenChange}
+      size="md"
+      scrollable
+      title="Zarządzaj meczem"
+      description={`${match.match_date} · ${match.match_time} · ${match.location}`}
+    >
+      {isCancelled ? (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900 dark:border-red-800 dark:bg-red-950/40 dark:text-red-100">
+          Ten mecz został anulowany
+          {match.cancellation_reason ? `: ${match.cancellation_reason}` : ""}.
+        </div>
+      ) : (
+        <Tabs value={tab} onValueChange={setTab}>
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="edit">Edycja</TabsTrigger>
+            <TabsTrigger value="guest">Gość</TabsTrigger>
+            <TabsTrigger value="cancel">Anuluj</TabsTrigger>
+          </TabsList>
 
-        {isCancelled ? (
-          <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900 dark:border-red-800 dark:bg-red-950/40 dark:text-red-100">
-            Ten mecz został anulowany
-            {match.cancellation_reason ? `: ${match.cancellation_reason}` : ""}.
-          </div>
-        ) : (
-          <Tabs value={tab} onValueChange={setTab}>
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="edit">Edycja</TabsTrigger>
-              <TabsTrigger value="guest">Gość</TabsTrigger>
-              <TabsTrigger value="cancel">Anuluj</TabsTrigger>
-            </TabsList>
+          <TabsContent value="edit" className="mt-4 space-y-3">
+            <FormInput
+              id="mm-date"
+              label="Data"
+              required
+              type="date"
+              value={editForm.values.date}
+              onChange={(e) => editForm.setValue("date", e.target.value)}
+              onBlur={() => editForm.setFieldTouched("date")}
+              error={editForm.errors.date}
+            />
+            <FormInput
+              id="mm-time"
+              label="Godzina"
+              required
+              type="time"
+              value={editForm.values.time}
+              onChange={(e) => editForm.setValue("time", e.target.value)}
+              onBlur={() => editForm.setFieldTouched("time")}
+              error={editForm.errors.time}
+            />
+            <FormInput
+              id="mm-location"
+              label="Miejsce"
+              required
+              value={editForm.values.location}
+              onChange={(e) => editForm.setValue("location", e.target.value)}
+              onBlur={() => editForm.setFieldTouched("location")}
+              error={editForm.errors.location}
+            />
+            <FormInput
+              id="mm-slots"
+              label="Liczba graczy (miejsc)"
+              required
+              type="number"
+              min={1}
+              value={String(editForm.values.maxSlots)}
+              onChange={(e) => editForm.setValue("maxSlots", Number(e.target.value) || 0)}
+              onBlur={() => editForm.setFieldTouched("maxSlots")}
+              error={editForm.errors.maxSlots}
+              hint={`Obecnie zapisanych: ${match.signed_up}`}
+            />
+            <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                Zamknij
+              </Button>
+              <Button type="button" disabled={busy} onClick={() => void saveEdit()}>
+                {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
+                Zapisz zmiany
+              </Button>
+            </div>
+          </TabsContent>
 
-            <TabsContent value="edit" className="mt-4 space-y-3">
-              <div>
-                <Label htmlFor="mm-date">Data</Label>
-                <Input id="mm-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} className="mt-1" />
-              </div>
-              <div>
-                <Label htmlFor="mm-time">Godzina</Label>
-                <Input id="mm-time" type="time" value={time} onChange={(e) => setTime(e.target.value)} className="mt-1" />
-              </div>
-              <div>
-                <Label htmlFor="mm-location">Miejsce</Label>
-                <Input
-                  id="mm-location"
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <Label htmlFor="mm-slots">Liczba graczy (miejsc)</Label>
-                <Input
-                  id="mm-slots"
-                  type="number"
-                  min={1}
-                  value={maxSlots}
-                  onChange={(e) => setMaxSlots(e.target.value)}
-                  className="mt-1"
-                />
-                <p className="mt-1 text-xs text-zinc-500">Obecnie zapisanych: {match.signed_up}</p>
-              </div>
-              <DialogFooter className="gap-2 pt-2">
-                <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                  Zamknij
-                </Button>
-                <Button type="button" disabled={busy} onClick={() => void saveEdit()}>
-                  {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
-                  Zapisz zmiany
-                </Button>
-              </DialogFooter>
-            </TabsContent>
+          <TabsContent value="guest" className="mt-4 space-y-3">
+            <p className="text-sm text-zinc-600 dark:text-zinc-400">
+              Zapisz osobę grającą jednorazowo. Po potwierdzeniu płatności za mecz gość zostanie automatycznie usunięty z bazy.
+            </p>
+            <FormInput
+              id="mm-gfirst"
+              label="Imię"
+              required
+              value={guestForm.values.guestFirst}
+              onChange={(e) => guestForm.setValue("guestFirst", e.target.value)}
+              onBlur={() => guestForm.setFieldTouched("guestFirst")}
+              error={guestForm.errors.guestFirst}
+            />
+            <FormInput
+              id="mm-glast"
+              label="Nazwisko"
+              required
+              value={guestForm.values.guestLast}
+              onChange={(e) => guestForm.setValue("guestLast", e.target.value)}
+              onBlur={() => guestForm.setFieldTouched("guestLast")}
+              error={guestForm.errors.guestLast}
+            />
+            <FormInput
+              id="mm-galias"
+              label="Pseudonim (unikalny)"
+              required
+              value={guestForm.values.guestAlias}
+              onChange={(e) => guestForm.setValue("guestAlias", e.target.value)}
+              onBlur={() => guestForm.setFieldTouched("guestAlias")}
+              error={guestForm.errors.guestAlias}
+            />
+            <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                Zamknij
+              </Button>
+              <Button type="button" disabled={busy} onClick={() => void addGuest()}>
+                {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
+                <UserPlus className="mr-2 h-4 w-4" aria-hidden />
+                Dodaj gościa
+              </Button>
+            </div>
+          </TabsContent>
 
-            <TabsContent value="guest" className="mt-4 space-y-3">
-              <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                Zapisz osobę grającą jednorazowo. Po potwierdzeniu płatności za mecz gość zostanie automatycznie usunięty
-                z bazy.
-              </p>
-              <div>
-                <Label htmlFor="mm-gfirst">Imię</Label>
-                <Input id="mm-gfirst" value={guestFirst} onChange={(e) => setGuestFirst(e.target.value)} className="mt-1" />
-              </div>
-              <div>
-                <Label htmlFor="mm-glast">Nazwisko</Label>
-                <Input id="mm-glast" value={guestLast} onChange={(e) => setGuestLast(e.target.value)} className="mt-1" />
-              </div>
-              <div>
-                <Label htmlFor="mm-galias">Pseudonim (unikalny)</Label>
-                <Input id="mm-galias" value={guestAlias} onChange={(e) => setGuestAlias(e.target.value)} className="mt-1" />
-              </div>
-              <DialogFooter className="gap-2 pt-2">
-                <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                  Zamknij
-                </Button>
-                <Button type="button" disabled={busy} onClick={() => void addGuest()}>
-                  {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
-                  <UserPlus className="mr-2 h-4 w-4" aria-hidden />
-                  Dodaj gościa
-                </Button>
-              </DialogFooter>
-            </TabsContent>
-
-            <TabsContent value="cancel" className="mt-4 space-y-3">
-              <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                Anulowanie meczu oznacza termin jako odwołany. Zapisani zawodnicy zostaną poinformowani o powodzie.
-              </p>
-              <div>
-                <Label htmlFor="mm-reason">Powód anulacji</Label>
-                <Select value={cancelReason} onValueChange={setCancelReason}>
-                  <SelectTrigger id="mm-reason" className="mt-1">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {MATCH_CANCEL_REASONS.map((r) => (
-                      <SelectItem key={r.value} value={r.value}>
-                        {r.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <DialogFooter className="gap-2 pt-2">
-                <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                  Zamknij
-                </Button>
-                <Button type="button" variant="destructive" disabled={busy} onClick={() => void cancelMatch()}>
-                  {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
-                  Anuluj mecz
-                </Button>
-              </DialogFooter>
-            </TabsContent>
-          </Tabs>
-        )}
-      </DialogContent>
-    </Dialog>
+          <TabsContent value="cancel" className="mt-4 space-y-3">
+            <p className="text-sm text-zinc-600 dark:text-zinc-400">
+              Anulowanie meczu oznacza termin jako odwołany. Zapisani zawodnicy zostaną poinformowani o powodzie.
+            </p>
+            <FormSelectField id="mm-reason" label="Powód anulacji" required>
+              <Select value={cancelReason} onValueChange={setCancelReason}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {MATCH_CANCEL_REASONS.map((r) => (
+                    <SelectItem key={r.value} value={r.value}>
+                      {r.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FormSelectField>
+            <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                Zamknij
+              </Button>
+              <Button type="button" variant="destructive" disabled={busy} onClick={() => void cancelMatch()}>
+                {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
+                Anuluj mecz
+              </Button>
+            </div>
+          </TabsContent>
+        </Tabs>
+      )}
+    </AppModal>
   );
 }

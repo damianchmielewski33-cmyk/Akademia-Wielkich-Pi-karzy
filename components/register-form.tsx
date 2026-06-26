@@ -3,41 +3,52 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { z } from "zod";
 import {
   AuthGoalPreloader,
   AUTH_SUCCESS_PRELOADER_DELAY_MS,
 } from "@/components/auth-goal-preloader";
-import { isWeakPin, WEAK_PIN_MESSAGE } from "@/lib/pin-policy";
-import { notifyPostLoginPromptsUpdated } from "@/lib/post-login-prompts";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { FormInput } from "@/components/ui/form-field";
 import { Label } from "@/components/ui/label";
 import { PlayerAliasPicker } from "@/components/player-alias-picker";
+import { formSchemas, useValidatedForm } from "@/lib/form-validation";
+import { notifyPostLoginPromptsUpdated } from "@/lib/post-login-prompts";
+
+const registerSchema = z
+  .object({
+    firstName: formSchemas.requiredName("Imię"),
+    lastName: formSchemas.requiredName("Nazwisko"),
+    zawodnik: formSchemas.requiredText("Piłkarz"),
+    pin: formSchemas.pin,
+    pinConfirm: z.string().trim().min(1, "Powtórz PIN"),
+  })
+  .refine((d) => d.pin === d.pinConfirm, {
+    message: "PIN-y muszą być takie same",
+    path: ["pinConfirm"],
+  });
 
 export function RegisterForm({
   nextPath,
 }: {
-  /** Po udanej rejestracji (z auto-logowaniem) lub na stronę logowania z `next`. */
   nextPath?: string;
 }) {
   const router = useRouter();
   const next = nextPath && nextPath.startsWith("/") ? nextPath : undefined;
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [zawodnik, setZawodnik] = useState("");
-  const [pin, setPin] = useState("");
-  const [pinConfirm, setPinConfirm] = useState("");
   const [autoLogin, setAutoLogin] = useState(true);
   const [loading, setLoading] = useState(false);
   const [showGoalPreloader, setShowGoalPreloader] = useState(false);
   const [goalPreloaderLabel, setGoalPreloaderLabel] = useState<string | undefined>(undefined);
 
+  const form = useValidatedForm({
+    initialValues: { firstName: "", lastName: "", zawodnik: "", pin: "", pinConfirm: "" },
+    schema: registerSchema,
+  });
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (isWeakPin(pin)) {
-      toast.error(WEAK_PIN_MESSAGE);
-      return;
-    }
+    if (!form.validate()) return;
+    const { firstName, lastName, zawodnik, pin, pinConfirm } = form.values;
     setLoading(true);
     try {
       const res = await fetch("/api/auth/register", {
@@ -82,89 +93,88 @@ export function RegisterForm({
     <>
       {showGoalPreloader && <AuthGoalPreloader label={goalPreloaderLabel} />}
       <form onSubmit={onSubmit} className="mt-8 space-y-4">
-      <div>
-        <Label htmlFor="reg_fn">Imię</Label>
-        <Input
+        <FormInput
           id="reg_fn"
+          label="Imię"
           required
-          value={firstName}
-          onChange={(e) => setFirstName(e.target.value)}
+          showValidState
+          value={form.values.firstName}
+          onChange={(e) => form.setValue("firstName", e.target.value)}
+          onBlur={() => form.setFieldTouched("firstName")}
+          error={form.errors.firstName}
           placeholder="Imię"
-          className="mt-1"
           autoComplete="given-name"
         />
-      </div>
-      <div>
-        <Label htmlFor="reg_ln">Nazwisko</Label>
-        <Input
+        <FormInput
           id="reg_ln"
+          label="Nazwisko"
           required
-          value={lastName}
-          onChange={(e) => setLastName(e.target.value)}
+          showValidState
+          value={form.values.lastName}
+          onChange={(e) => form.setValue("lastName", e.target.value)}
+          onBlur={() => form.setFieldTouched("lastName")}
+          error={form.errors.lastName}
           placeholder="Nazwisko"
-          className="mt-1"
           autoComplete="family-name"
         />
-      </div>
-      <PlayerAliasPicker
-        label="Piłkarz (awatar)"
-        required
-        value={zawodnik}
-        onChange={setZawodnik}
-      />
-      <div>
-        <Label htmlFor="reg_pin">PIN (4–6 cyfr)</Label>
-        <Input
+        <PlayerAliasPicker
+          label="Piłkarz (awatar)"
+          required
+          value={form.values.zawodnik}
+          onChange={(v) => form.setValue("zawodnik", v)}
+          onBlur={() => form.setFieldTouched("zawodnik")}
+          error={form.errors.zawodnik}
+        />
+        <FormInput
           id="reg_pin"
+          label="PIN (4–6 cyfr)"
+          required
+          showValidState
           type="password"
           inputMode="numeric"
           pattern="[0-9]*"
-          required
           minLength={4}
           maxLength={6}
-          value={pin}
-          onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
+          value={form.values.pin}
+          onChange={(e) => form.setValue("pin", e.target.value.replace(/\D/g, "").slice(0, 6))}
+          onBlur={() => form.setFieldTouched("pin")}
+          error={form.errors.pin}
           placeholder="4–6 cyfr"
-          className="mt-1"
           autoComplete="new-password"
+          hint="Unikaj oczywistych sekwencji (np. 1234). Logowanie wyłącznie imieniem, nazwiskiem i PIN-em."
         />
-        <p className="mt-1 text-xs text-zinc-500">
-          Unikaj oczywistych sekwencji (np. 1234). Logowanie wyłącznie imieniem, nazwiskiem i PIN-em.
-        </p>
-      </div>
-      <div>
-        <Label htmlFor="reg_pin2">Powtórz PIN</Label>
-        <Input
+        <FormInput
           id="reg_pin2"
+          label="Powtórz PIN"
+          required
           type="password"
           inputMode="numeric"
           pattern="[0-9]*"
-          required
           minLength={4}
           maxLength={6}
-          value={pinConfirm}
-          onChange={(e) => setPinConfirm(e.target.value.replace(/\D/g, "").slice(0, 6))}
+          value={form.values.pinConfirm}
+          onChange={(e) => form.setValue("pinConfirm", e.target.value.replace(/\D/g, "").slice(0, 6))}
+          onBlur={() => form.setFieldTouched("pinConfirm")}
+          error={form.errors.pinConfirm}
           placeholder="Powtórz PIN"
-          className="mt-1"
           autoComplete="new-password"
         />
-      </div>
-      <div className="flex items-start gap-3 pt-1">
-        <input
-          id="reg_auto_login"
-          type="checkbox"
-          checked={autoLogin}
-          onChange={(e) => setAutoLogin(e.target.checked)}
-          className="mt-1 h-4 w-4 rounded border border-zinc-300 text-emerald-600 focus:ring-2 focus:ring-emerald-500/30"
-        />
-        <Label htmlFor="reg_auto_login" className="cursor-pointer font-normal leading-snug text-zinc-700">
-          Zaloguj mnie automatycznie po rejestracji
-        </Label>
-      </div>
-      <Button type="submit" className="w-full" disabled={loading}>
-        {loading ? "Tworzenie…" : "Załóż konto"}
-      </Button>
-    </form>
+        <div className="flex items-start gap-3 pt-1">
+          <input
+            id="reg_auto_login"
+            type="checkbox"
+            checked={autoLogin}
+            onChange={(e) => setAutoLogin(e.target.checked)}
+            className="mt-1 h-4 w-4 rounded border border-zinc-300 text-emerald-600 focus:ring-2 focus:ring-emerald-500/30"
+          />
+          <Label htmlFor="reg_auto_login" className="cursor-pointer font-normal leading-snug text-zinc-700">
+            Zaloguj mnie automatycznie po rejestracji
+          </Label>
+        </div>
+        <Button type="submit" className="w-full" disabled={loading}>
+          {loading ? "Tworzenie…" : "Załóż konto"}
+        </Button>
+      </form>
     </>
   );
 }
