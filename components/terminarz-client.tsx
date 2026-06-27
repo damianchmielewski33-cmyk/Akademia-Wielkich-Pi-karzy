@@ -10,7 +10,6 @@ import {
   CalendarDays,
   ChevronLeft,
   ChevronRight,
-  Link2,
   List,
   Loader2,
   LogIn,
@@ -1160,24 +1159,6 @@ export function TerminarzClient({
         )}
 
         <div className="flex flex-col gap-2 border-t border-zinc-200/80 pt-2.5 dark:border-zinc-600/80 sm:flex-row sm:flex-wrap">
-          {!past && (
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              className={actionBtnSecondary}
-              title="Wyślij znajomemu — po wejściu zaloguje się i zapisze na ten mecz"
-              onClick={() => void copyInviteLink(m.id)}
-            >
-              <Link2 className="shrink-0 text-emerald-700" aria-hidden />
-              <span>
-                <span className="block leading-tight text-zinc-900 dark:text-zinc-100">Kopiuj link z zaproszeniem do meczu</span>
-                <span className="mt-1 block text-[11px] font-normal leading-snug text-zinc-500 dark:text-zinc-400">
-                  Dla udostępnienia poza aplikacją (np. komunikator)
-                </span>
-              </span>
-            </Button>
-          )}
           <Button
             size="sm"
             variant="ghost"
