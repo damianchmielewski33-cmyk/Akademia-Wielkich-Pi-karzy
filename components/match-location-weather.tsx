@@ -71,15 +71,71 @@ function forecastTitle(source: string): string {
   return `Prognoza ${FORECAST_DAYS} dni`;
 }
 
+function SingleMatchDayWeather({
+  day,
+  matchDate,
+  className,
+}: {
+  day: DayEntry;
+  matchDate: string;
+  className?: string;
+}) {
+  const icons = day.iconBaseUri ? iconUrls(day.iconBaseUri) : null;
+  const wmo = typeof day.weatherCode === "number" ? day.weatherCode : null;
+  const wd = weekdayShortPl(matchDate);
+
+  return (
+    <div
+      className={cn("mt-3 border-t border-white/15 pt-3", className)}
+      title={day.description || undefined}
+    >
+      <p className="mb-2 text-center text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--mundial-gold,#f5c518)]">
+        Pogoda na dzień meczu
+      </p>
+      <div className="flex items-center justify-center gap-3 rounded-xl border border-white/25 bg-black/10 px-3 py-2.5 shadow-sm shadow-emerald-950/15 backdrop-blur-sm">
+        {icons ? (
+          <span className="relative block shrink-0 rounded-lg bg-white/10 p-0.5 ring-1 ring-white/15">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={icons.light} alt="" className="h-8 w-8 dark:hidden" loading="lazy" decoding="async" />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={icons.dark} alt="" className="hidden h-8 w-8 dark:block" loading="lazy" decoding="async" />
+          </span>
+        ) : wmo != null ? (
+          <WmoWeatherIcon code={wmo} />
+        ) : null}
+        <div className="min-w-0 text-left text-sm text-emerald-50/95">
+          {day.description ? (
+            <p className="font-semibold leading-snug text-white">{day.description}</p>
+          ) : null}
+          <p className="text-xs text-emerald-100/85">
+            {wd ? <span className="capitalize">{wd}</span> : null}
+            {wd ? " · " : null}
+            <span className="tabular-nums">
+              {day.maxC != null ? `${Math.round(day.maxC)}°` : "—"}
+              {day.minC != null ? ` / ${Math.round(day.minC)}°` : ""}
+            </span>
+            {day.precipChance != null && day.precipChance > 0 ? (
+              <span> · {day.precipChance}% opady</span>
+            ) : null}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function MatchLocationWeather({
   location,
   className,
   layout = "default",
+  matchDate,
 }: {
   location: string;
   className?: string;
   /** W drugim wierszu tabeli: szeroki pas pogody przewija się poziomo, nie rozpycha kolumny „Opcje”. */
   layout?: "default" | "table-subrow";
+  /** Gdy podane — pokazuje prognozę tylko na ten dzień (np. karta „Najbliższy mecz”). */
+  matchDate?: string;
 }) {
   const [state, setState] = useState<"idle" | "loading" | { ok: ApiOk } | { err: string }>("idle");
 
@@ -132,12 +188,13 @@ export function MatchLocationWeather({
   }, [location]);
 
   const rootPad = layout === "table-subrow" ? "mt-0" : "mt-2";
+  const loadingLabel = matchDate ? "Pogoda na dzień meczu…" : `Prognoza na ${FORECAST_DAYS} dni…`;
 
   if (state === "idle" || state === "loading") {
     return (
       <div className={cn(rootPad, "flex items-center gap-2 text-[11px] text-emerald-100/80", className)}>
         <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-[var(--mundial-gold,#f5c518)]" aria-hidden />
-        <span>Prognoza na {FORECAST_DAYS} dni…</span>
+        <span>{loadingLabel}</span>
       </div>
     );
   }
@@ -161,6 +218,25 @@ export function MatchLocationWeather({
   const days = ok.days.slice(0, FORECAST_DAYS);
   if (!days.length) {
     return null;
+  }
+
+  if (matchDate) {
+    const day = days.find((d) => d.date === matchDate);
+    if (!day) {
+      return (
+        <div
+          className={cn(
+            rootPad,
+            "flex items-center gap-1.5 text-[11px] text-amber-100/95",
+            className
+          )}
+        >
+          <CloudOff className="h-3.5 w-3.5 shrink-0" aria-hidden />
+          <span>Prognoza dostępna na {FORECAST_DAYS} dni — mecz poza tym zakresem.</span>
+        </div>
+      );
+    }
+    return <SingleMatchDayWeather day={day} matchDate={matchDate} className={className} />;
   }
 
   return (

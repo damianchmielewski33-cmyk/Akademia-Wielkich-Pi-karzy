@@ -10,6 +10,7 @@ import {
   pitchPanelClass,
   pitchSecondaryBtnClass,
 } from "@/components/ui/pitch-card";
+import { MatchLocationWeather } from "@/components/match-location-weather";
 import { cn } from "@/lib/utils";
 import type { MatchRow } from "@/lib/db";
 
@@ -120,6 +121,11 @@ export function HomeNextMatchCard({
               </Link>
             </div>
           </div>
+          <MatchLocationWeather
+            location={match.location}
+            matchDate={match.match_date}
+            className="mx-auto max-w-sm"
+          />
         </div>
 
         <div className={cn(pitchPanelClass, "mx-auto mt-3 max-w-md px-3.5 py-3")}>
