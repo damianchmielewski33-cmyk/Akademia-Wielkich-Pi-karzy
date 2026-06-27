@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Loader2, UserPlus } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Loader2, Pencil, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 import type { MatchRow } from "@/lib/db";
@@ -10,6 +10,7 @@ import { AppModal } from "@/components/ui/app-modal";
 import { Button } from "@/components/ui/button";
 import { FormInput, FormSelectField } from "@/components/ui/form-field";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { cn } from "@/lib/utils";
 import {
   Select,
   SelectContent,
@@ -39,6 +40,18 @@ const guestSchema = z.object({
   guestAlias: formSchemas.playerAlias,
 });
 
+const readOnlyInputClass =
+  "cursor-default border-emerald-100/90 bg-zinc-50/80 text-emerald-950 dark:border-zinc-700 dark:bg-zinc-800/80 dark:text-emerald-100";
+
+function matchToFormValues(m: MatchRow) {
+  return {
+    date: m.match_date,
+    time: m.match_time.length >= 5 ? m.match_time.slice(0, 5) : m.match_time,
+    location: m.location,
+    maxSlots: m.max_slots,
+  };
+}
+
 async function fetchJson<T>(
   url: string,
   init?: RequestInit
@@ -60,6 +73,7 @@ export function MatchManageDialog({ match, open, onOpenChange, onDone }: Props) 
   const [tab, setTab] = useState("edit");
   const [cancelReason, setCancelReason] = useState("weather");
   const [busy, setBusy] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
 
   const editForm = useValidatedForm({
     initialValues: { date: "", time: "", location: "", maxSlots: 10 },
@@ -72,21 +86,26 @@ export function MatchManageDialog({ match, open, onOpenChange, onDone }: Props) 
   });
 
   const resetForm = (m: MatchRow) => {
-    editForm.reset({
-      date: m.match_date,
-      time: m.match_time,
-      location: m.location,
-      maxSlots: m.max_slots,
-    });
+    editForm.reset(matchToFormValues(m));
     guestForm.reset({ guestFirst: "", guestLast: "", guestAlias: "" });
     setTab("edit");
     setCancelReason("weather");
+    setIsEditing(false);
   };
 
+  useEffect(() => {
+    if (open && match) resetForm(match);
+  }, [open, match?.id]);
+
   const handleOpenChange = (next: boolean) => {
-    if (next && match) resetForm(match);
+    if (!next) setIsEditing(false);
     onOpenChange(next);
   };
+
+  function cancelEdit() {
+    if (match) editForm.reset(matchToFormValues(match));
+    setIsEditing(false);
+  }
 
   if (!match) return null;
 
@@ -112,7 +131,7 @@ export function MatchManageDialog({ match, open, onOpenChange, onDone }: Props) 
         return;
       }
       toast.success("Mecz zaktualizowany");
-      onOpenChange(false);
+      setIsEditing(false);
       onDone();
     } finally {
       setBusy(false);
@@ -133,7 +152,7 @@ export function MatchManageDialog({ match, open, onOpenChange, onDone }: Props) 
         return;
       }
       toast.success("Mecz anulowany");
-      onOpenChange(false);
+      handleOpenChange(false);
       onDone();
     } finally {
       setBusy(false);
@@ -194,29 +213,38 @@ export function MatchManageDialog({ match, open, onOpenChange, onDone }: Props) 
               label="Data"
               required
               type="date"
+              readOnly={!isEditing}
+              disabled={!isEditing || busy}
               value={editForm.values.date}
               onChange={(e) => editForm.setValue("date", e.target.value)}
               onBlur={() => editForm.setFieldTouched("date")}
               error={editForm.errors.date}
+              inputClassName={cn(!isEditing && readOnlyInputClass)}
             />
             <FormInput
               id="mm-time"
               label="Godzina"
               required
               type="time"
+              readOnly={!isEditing}
+              disabled={!isEditing || busy}
               value={editForm.values.time}
               onChange={(e) => editForm.setValue("time", e.target.value)}
               onBlur={() => editForm.setFieldTouched("time")}
               error={editForm.errors.time}
+              inputClassName={cn(!isEditing && readOnlyInputClass)}
             />
             <FormInput
               id="mm-location"
               label="Miejsce"
               required
+              readOnly={!isEditing}
+              disabled={!isEditing || busy}
               value={editForm.values.location}
               onChange={(e) => editForm.setValue("location", e.target.value)}
               onBlur={() => editForm.setFieldTouched("location")}
               error={editForm.errors.location}
+              inputClassName={cn(!isEditing && readOnlyInputClass)}
             />
             <FormInput
               id="mm-slots"
@@ -224,20 +252,35 @@ export function MatchManageDialog({ match, open, onOpenChange, onDone }: Props) 
               required
               type="number"
               min={1}
+              readOnly={!isEditing}
+              disabled={!isEditing || busy}
               value={String(editForm.values.maxSlots)}
               onChange={(e) => editForm.setValue("maxSlots", Number(e.target.value) || 0)}
               onBlur={() => editForm.setFieldTouched("maxSlots")}
               error={editForm.errors.maxSlots}
               hint={`Obecnie zapisanych: ${match.signed_up}`}
+              inputClassName={cn(!isEditing && readOnlyInputClass)}
             />
             <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
                 Zamknij
               </Button>
-              <Button type="button" disabled={busy} onClick={() => void saveEdit()}>
-                {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
-                Zapisz zmiany
-              </Button>
+              {isEditing ? (
+                <>
+                  <Button type="button" variant="outline" disabled={busy} onClick={cancelEdit}>
+                    Anuluj
+                  </Button>
+                  <Button type="button" disabled={busy} onClick={() => void saveEdit()}>
+                    {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
+                    Zapisz zmiany
+                  </Button>
+                </>
+              ) : (
+                <Button type="button" onClick={() => setIsEditing(true)}>
+                  <Pencil className="mr-2 h-4 w-4" aria-hidden />
+                  Edytuj
+                </Button>
+              )}
             </div>
           </TabsContent>
 
@@ -273,7 +316,7 @@ export function MatchManageDialog({ match, open, onOpenChange, onDone }: Props) 
               error={guestForm.errors.guestAlias}
             />
             <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
                 Zamknij
               </Button>
               <Button type="button" disabled={busy} onClick={() => void addGuest()}>
@@ -303,7 +346,7 @@ export function MatchManageDialog({ match, open, onOpenChange, onDone }: Props) 
               </Select>
             </FormSelectField>
             <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
                 Zamknij
               </Button>
               <Button type="button" variant="destructive" disabled={busy} onClick={() => void cancelMatch()}>
