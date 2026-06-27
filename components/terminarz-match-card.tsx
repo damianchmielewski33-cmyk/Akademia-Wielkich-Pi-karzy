@@ -20,7 +20,6 @@ type Props = {
   actions: ReactNode;
   isAdmin?: boolean;
   onManage?: () => void;
-  onManageSignups?: () => void;
   onCopyInvite?: () => void;
   onOpenPlayers?: () => void;
   archive?: boolean;
@@ -42,7 +41,6 @@ export function TerminarzMatchCard({
   actions,
   isAdmin,
   onManage,
-  onManageSignups,
   onCopyInvite,
   onOpenPlayers,
   archive,
@@ -170,30 +168,17 @@ export function TerminarzMatchCard({
               Zarządzaj
             </Button>
           )}
-          {isAdmin && onManageSignups && !cancelled && (
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              className={cn("awp-match-btn awp-match-btn--admin awp-match-btn--compact gap-1.5 font-semibold")}
-              title="Ręcznie dopisz / wypisz dowolnego piłkarza z bazy"
-              onClick={onManageSignups}
-            >
-              <UserPlus className="h-4 w-4" aria-hidden />
-              Zarządzaj zapisami
-            </Button>
-          )}
         </div>
 
         <div className="mt-4 flex flex-wrap gap-2 border-t border-white/20 pt-4">{actions}</div>
 
         {!archive && (
           <details className="pitch-panel mt-3">
-            <summary className="cursor-pointer list-none px-3 py-2 text-xs font-semibold text-emerald-100/90 [&::-webkit-details-marker]:hidden">
+            <summary className="cursor-pointer list-none px-3 py-2 text-xs font-semibold uppercase tracking-[0.1em] text-[var(--mundial-gold,#f5c518)] [&::-webkit-details-marker]:hidden">
               Pogoda — rozwiń
             </summary>
             <div className="border-t border-white/15 px-2 pb-2 pt-1">
-              <MatchLocationWeather location={m.location} className="mt-0 border-t-0 pt-2 text-emerald-50/95" />
+              <MatchLocationWeather location={m.location} className="mt-0 border-t-0 pt-2" />
             </div>
           </details>
         )}

@@ -291,15 +291,6 @@ export function TerminarzClient({
   const [settleAmounts, setSettleAmounts] = useState<Record<number, string>>({});
   const [settleSubmitting, setSettleSubmitting] = useState(false);
 
-  const [adminUsers, setAdminUsers] = useState<
-    { id: number; first_name: string; last_name: string; zawodnik: string; profile_photo_path: string | null }[]
-  >([]);
-  const [adminUsersLoaded, setAdminUsersLoaded] = useState(false);
-  const [manageSignupsOpen, setManageSignupsOpen] = useState(false);
-  const [manageSignupsMatch, setManageSignupsMatch] = useState<MatchRow | null>(null);
-  const [manageSignupsQuery, setManageSignupsQuery] = useState("");
-  const [manageSignupsBusy, setManageSignupsBusy] = useState(false);
-
   const [attendanceOpen, setAttendanceOpen] = useState(false);
   const [attendanceMatch, setAttendanceMatch] = useState<MatchRow | null>(null);
   const [attendanceRows, setAttendanceRows] = useState<AdminMatchSignupRow[]>([]);
@@ -308,7 +299,7 @@ export function TerminarzClient({
 
   const [manageMatchOpen, setManageMatchOpen] = useState(false);
   const [manageMatch, setManageMatch] = useState<MatchRow | null>(null);
-  const [manageInitialTab, setManageInitialTab] = useState<"edit" | "guest" | "cancel">("edit");
+  const [manageInitialTab, setManageInitialTab] = useState<"edit" | "guest" | "signups" | "cancel">("edit");
 
   const cancelledMatchShownRef = useRef(false);
 
@@ -742,107 +733,6 @@ export function TerminarzClient({
     // TODO: Implementacja powiadomienia o anulacji meczu
   }, [allMatches]);
 
-  async function ensureAdminUsersLoaded() {
-    if (!isAdmin) return;
-    if (adminUsersLoaded) return;
-    const r = await fetchJson<
-      { id: number; first_name: string; last_name: string; zawodnik: string; profile_photo_path: string | null }[]
-    >("/api/admin/users");
-    if (!r.ok) {
-      toast.error(r.error);
-      return;
-    }
-    setAdminUsers(
-      (r.data ?? []).map((u) => ({
-        id: u.id,
-        first_name: u.first_name,
-        last_name: u.last_name,
-        zawodnik: u.zawodnik,
-        profile_photo_path: u.profile_photo_path ?? null,
-      }))
-    );
-    setAdminUsersLoaded(true);
-  }
-
-  const manageSignupSet = useMemo(() => {
-    const set = new Set<number>();
-    for (const s of settleRows) set.add(s.user_id);
-    return set;
-  }, [settleRows]);
-
-  const filteredAdminUsers = useMemo(() => {
-    const q = manageSignupsQuery.trim().toLowerCase();
-    if (!q) return adminUsers.slice(0, 30);
-    const rows = adminUsers.filter((u) => {
-      const key = `${u.first_name} ${u.last_name} ${u.zawodnik}`.toLowerCase();
-      return key.includes(q);
-    });
-    return rows.slice(0, 50);
-  }, [adminUsers, manageSignupsQuery]);
-
-  async function openManageSignups(m: MatchRow) {
-    if (!isAdmin) return;
-    await ensureAdminUsersLoaded();
-    setManageSignupsMatch(m);
-    setManageSignupsQuery("");
-    setManageSignupsBusy(true);
-    try {
-      const r = await fetchJson<{ signups: AdminMatchSignupRow[] }>(`/api/admin/match/${m.id}/signups`);
-      if (!r.ok) {
-        toast.error(r.error);
-        return;
-      }
-      const confirmed = (r.data.signups ?? []).filter((s) => Number(s.commitment ?? 1) === 1);
-      setSettleRows(confirmed);
-      setManageSignupsOpen(true);
-    } finally {
-      setManageSignupsBusy(false);
-    }
-  }
-
-  async function adminAddToMatch(userId: number) {
-    if (!manageSignupsMatch) return;
-    setManageSignupsBusy(true);
-    try {
-      const r = await fetchJson<{ ok: true }>(`/api/admin/match/${manageSignupsMatch.id}/signups`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_id: userId }),
-      });
-      if (!r.ok) {
-        toast.error(r.error);
-        return;
-      }
-      toast.success("Zapisano zawodnika");
-      router.refresh();
-      await openManageSignups(manageSignupsMatch);
-    } finally {
-      setManageSignupsBusy(false);
-    }
-  }
-
-  async function adminRemoveFromMatch(userId: number) {
-    if (!manageSignupsMatch) return;
-    setManageSignupsBusy(true);
-    try {
-      const r = await fetchJson<{ ok: true }>(`/api/admin/match/${manageSignupsMatch.id}/signups`, {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_id: userId }),
-      });
-      if (!r.ok) {
-        toast.error(r.error);
-        return;
-      }
-      toast.success("Wypisano zawodnika");
-      router.refresh();
-      await openManageSignups(manageSignupsMatch);
-    } finally {
-      setManageSignupsBusy(false);
-    }
-  }
-
-
   async function saveAttendance() {
     if (!attendanceMatch) return;
     setAttendanceBusy(true);
@@ -906,7 +796,7 @@ export function TerminarzClient({
 
   const selectedData = selectedMatchId != null ? playersData[selectedMatchId] : null;
 
-  function openManageMatch(m: MatchRow, tab: "edit" | "guest" | "cancel" = "edit") {
+  function openManageMatch(m: MatchRow, tab: "edit" | "guest" | "signups" | "cancel" = "edit") {
     setManageMatch(m);
     setManageInitialTab(tab);
     setManageMatchOpen(true);
@@ -1508,7 +1398,6 @@ export function TerminarzClient({
                         playersData={playersData}
                         isAdmin={isAdmin}
                         onManage={() => openManageMatch(m)}
-                        onManageSignups={() => void openManageSignups(m)}
                         onCopyInvite={() => void copyInviteLink(m.id)}
                         onOpenPlayers={() => openPlayers(m.id)}
                         actions={activeActions(m)}
@@ -1783,113 +1672,6 @@ export function TerminarzClient({
           </>
         )}
       </AppModal>
-
-    <AppModal
-      open={manageSignupsOpen}
-      onOpenChange={(open) => {
-        setManageSignupsOpen(open);
-        if (!open) {
-          setManageSignupsMatch(null);
-          setManageSignupsQuery("");
-          setSettleRows([]);
-        }
-      }}
-      size="lg"
-      scrollable
-      title="Zarządzaj zapisami"
-      description={
-        manageSignupsMatch
-          ? "Wyszukaj piłkarza i dopisz albo wypisz z listy. Ta operacja dotyczy tylko potwierdzonych miejsc w składzie."
-          : undefined
-      }
-      footer={
-        <Button type="button" variant="outline" onClick={() => setManageSignupsOpen(false)}>
-          Zamknij
-        </Button>
-      }
-      contentClassName="space-y-3"
-    >
-      {manageSignupsMatch ? <ModalMatchSummary match={manageSignupsMatch} /> : null}
-
-      {manageSignupsBusy ? <ModalLoadingRow label="Przetwarzanie…" /> : null}
-
-      <div className={cn(modalPanelClass, "space-y-3")}>
-        <Label htmlFor="admin-signups-q">Szukaj piłkarza</Label>
-        <div className="mt-1 flex gap-2">
-          <Input
-            id="admin-signups-q"
-            type="text"
-            placeholder="np. Jan Kowalski, KOWAL"
-            value={manageSignupsQuery}
-            onChange={(e) => setManageSignupsQuery(e.target.value)}
-          />
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() => {
-              setAdminUsersLoaded(false);
-              void ensureAdminUsersLoaded();
-            }}
-          >
-            Odśwież bazę
-          </Button>
-        </div>
-        <p className="text-xs text-zinc-600 dark:text-zinc-400">
-          Zapisani (potwierdzeni): <strong className="tabular-nums">{settleRows.length}</strong>
-        </p>
-      </div>
-
-      {filteredAdminUsers.length === 0 ? (
-        <p className={modalEmptyStateClass}>Brak wyników.</p>
-      ) : (
-        <div className={cn(modalListClass, "max-h-[55vh] space-y-2 p-1")}>
-          {filteredAdminUsers.map((u) => {
-            const isSigned = manageSignupSet.has(u.id);
-            return (
-              <div
-                key={u.id}
-                className="flex items-center gap-3 rounded-xl border border-emerald-900/10 bg-white px-3 py-2 dark:bg-zinc-900"
-              >
-                <PlayerAvatar
-                  photoPath={u.profile_photo_path}
-                  firstName={u.first_name}
-                  lastName={u.last_name}
-                  size="sm"
-                  ringClassName={isSigned ? "ring-2 ring-emerald-200/90" : "ring-2 ring-zinc-200/80"}
-                />
-                <div className="min-w-0 flex-1">
-                  <PlayerNameStack firstName={u.first_name} lastName={u.last_name} nick={u.zawodnik} />
-                  <p className="mt-0.5 text-xs text-zinc-500">ID: {u.id}</p>
-                </div>
-                {isSigned ? (
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    disabled={manageSignupsBusy}
-                    onClick={() => void adminRemoveFromMatch(u.id)}
-                    title="Wypisz z meczu"
-                  >
-                    <UserMinus className="mr-2 h-4 w-4" aria-hidden />
-                    Wypisz
-                  </Button>
-                ) : (
-                  <Button
-                    type="button"
-                    variant="pitch"
-                    disabled={manageSignupsBusy}
-                    onClick={() => void adminAddToMatch(u.id)}
-                    title="Dopisz do meczu"
-                  >
-                    <UserPlus className="mr-2 h-4 w-4" aria-hidden />
-                    Zapisz
-                  </Button>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </AppModal>
 
     <AppModal
       open={attendanceOpen}

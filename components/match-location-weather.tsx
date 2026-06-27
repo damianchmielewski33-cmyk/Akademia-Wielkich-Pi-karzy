@@ -45,7 +45,7 @@ function iconUrls(iconBaseUri: string): { light: string; dark: string } {
 
 function WmoWeatherIcon({ code, compact }: { code: number; compact?: boolean }) {
   const cls = cn(
-    "mx-auto my-0.5 shrink-0 text-sky-600 dark:text-sky-300",
+    "mx-auto my-0.5 shrink-0 text-[var(--mundial-gold,#f5c518)] drop-shadow-sm",
     compact ? "h-7 w-7" : "h-8 w-8"
   );
   if (code === 0) return <Sun className={cls} aria-hidden />;
@@ -135,8 +135,8 @@ export function MatchLocationWeather({
 
   if (state === "idle" || state === "loading") {
     return (
-      <div className={cn(rootPad, "flex items-center gap-2 text-[11px] text-zinc-500 dark:text-zinc-400", className)}>
-        <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" aria-hidden />
+      <div className={cn(rootPad, "flex items-center gap-2 text-[11px] text-emerald-100/80", className)}>
+        <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-[var(--mundial-gold,#f5c518)]" aria-hidden />
         <span>Prognoza na {FORECAST_DAYS} dni…</span>
       </div>
     );
@@ -147,7 +147,7 @@ export function MatchLocationWeather({
       <div
         className={cn(
           rootPad,
-          "flex items-center gap-1.5 text-[11px] text-amber-800/90 dark:text-amber-200/90",
+          "flex items-center gap-1.5 text-[11px] text-amber-100/95",
           className
         )}
       >
@@ -167,17 +167,17 @@ export function MatchLocationWeather({
     <div
       className={cn(
         layout === "table-subrow"
-          ? "w-full min-w-0 max-w-full border-t border-zinc-200/70 pt-2 dark:border-zinc-600/50"
-          : "mt-2 border-t border-zinc-200/80 pt-2 dark:border-zinc-600/60",
+          ? "w-full min-w-0 max-w-full border-t border-white/15 pt-2"
+          : "mt-2 border-t border-white/15 pt-2",
         className
       )}
     >
-      <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+      <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--mundial-gold,#f5c518)]">
         {forecastTitle(ok.source)}
       </p>
       <div
         className={cn(
-          "-mx-0.5 flex gap-1.5 overflow-x-auto pb-0.5",
+          "-mx-0.5 flex gap-2 overflow-x-auto pb-1 [scrollbar-color:rgba(255,255,255,0.25)_transparent] [scrollbar-width:thin]",
           layout === "table-subrow" && "w-full min-w-0 max-w-full"
         )}
       >
@@ -190,23 +190,28 @@ export function MatchLocationWeather({
             <div
               key={day.date}
               className={cn(
-                "flex shrink-0 flex-col items-center rounded-lg border border-zinc-200/90 bg-white/90 px-1 py-1.5 text-center dark:border-zinc-600/80 dark:bg-zinc-800/80",
-                compact ? "min-w-[3.35rem]" : "min-w-[4.25rem] px-1.5"
+                "flex shrink-0 flex-col items-center rounded-xl border border-white/25 bg-black/10 px-1.5 py-2 text-center shadow-sm shadow-emerald-950/15 backdrop-blur-sm transition-colors hover:bg-white/5",
+                compact ? "min-w-[3.35rem]" : "min-w-[4.25rem] px-2 py-2.5"
               )}
               title={day.description || undefined}
             >
-              <span className="text-[9px] font-medium capitalize leading-tight text-zinc-500 dark:text-zinc-400">
+              <span className="text-[9px] font-semibold uppercase leading-tight tracking-wide text-emerald-100/80">
                 {wd}
               </span>
-              <span className="text-[9px] tabular-nums text-zinc-600 dark:text-zinc-300">{day.date.slice(5)}</span>
+              <span className="text-[9px] tabular-nums text-white/55">{day.date.slice(5).replace("-", ".")}</span>
               {icons ? (
-                <span className={cn("relative mx-auto my-0.5 block", compact ? "h-7 w-7" : "h-8 w-8")}>
+                <span
+                  className={cn(
+                    "relative mx-auto my-0.5 block rounded-lg bg-white/10 p-0.5 ring-1 ring-white/15",
+                    compact ? "h-7 w-7" : "h-8 w-8"
+                  )}
+                >
                   {/* Ikony z API Google — dynamiczne URL-e; next/image wymagałby listy domen. */}
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={icons.light}
                     alt=""
-                    className={cn("dark:hidden", compact ? "h-7 w-7" : "h-8 w-8")}
+                    className={cn("dark:hidden", compact ? "h-6 w-6" : "h-7 w-7")}
                     loading="lazy"
                     decoding="async"
                   />
@@ -214,7 +219,7 @@ export function MatchLocationWeather({
                   <img
                     src={icons.dark}
                     alt=""
-                    className={cn("hidden dark:block", compact ? "h-7 w-7" : "h-8 w-8")}
+                    className={cn("hidden dark:block", compact ? "h-6 w-6" : "h-7 w-7")}
                     loading="lazy"
                     decoding="async"
                   />
@@ -224,14 +229,14 @@ export function MatchLocationWeather({
               ) : (
                 <span className={cn("my-0.5 block", compact ? "h-7 w-7" : "h-8 w-8")} aria-hidden />
               )}
-              <span className="text-[10px] font-semibold tabular-nums text-emerald-900 dark:text-emerald-100">
+              <span className="text-[10px] font-bold tabular-nums text-white">
                 {day.maxC != null ? `${Math.round(day.maxC)}°` : "—"}
-                <span className="font-normal text-zinc-500 dark:text-zinc-400">
+                <span className="font-normal text-white/50">
                   {day.minC != null ? ` / ${Math.round(day.minC)}°` : ""}
                 </span>
               </span>
               {day.precipChance != null && day.precipChance > 0 ? (
-                <span className="text-[9px] text-sky-700 dark:text-sky-300">{day.precipChance}% opady</span>
+                <span className="text-[9px] text-sky-100/85">{day.precipChance}% opady</span>
               ) : null}
             </div>
           );
