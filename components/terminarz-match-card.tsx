@@ -20,6 +20,7 @@ type Props = {
   actions: ReactNode;
   isAdmin?: boolean;
   onManage?: () => void;
+  onManageSignups?: () => void;
   onCopyInvite?: () => void;
   onOpenPlayers?: () => void;
   archive?: boolean;
@@ -41,6 +42,7 @@ export function TerminarzMatchCard({
   actions,
   isAdmin,
   onManage,
+  onManageSignups,
   onCopyInvite,
   onOpenPlayers,
   archive,
@@ -166,6 +168,19 @@ export function TerminarzMatchCard({
             >
               <Settings className="h-4 w-4" aria-hidden />
               Zarządzaj
+            </Button>
+          )}
+          {isAdmin && onManageSignups && !cancelled && (
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className={cn("awp-match-btn awp-match-btn--admin awp-match-btn--compact gap-1.5 font-semibold")}
+              title="Ręcznie dopisz / wypisz dowolnego piłkarza z bazy"
+              onClick={onManageSignups}
+            >
+              <UserPlus className="h-4 w-4" aria-hidden />
+              Zarządzaj zapisami
             </Button>
           )}
         </div>

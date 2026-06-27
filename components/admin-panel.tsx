@@ -33,15 +33,16 @@ import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { LogoutConfirmModal } from "@/components/logout-confirm-modal";
 import { AppModal } from "@/components/ui/app-modal";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  ModalAlert,
+  ModalLoadingRow,
+  ModalMatchSummary,
+  modalEmptyStateClass,
+  modalListClass,
+  modalPanelClass,
+} from "@/components/ui/modal-shared";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -314,37 +315,61 @@ function MatchesView({
         </Table>
       </div>
 
-      <Dialog open={editOpen} onOpenChange={(o) => !o && setEditOpen(false)}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Edytuj mecz</DialogTitle>
-          </DialogHeader>
-          {selectedMatch && <MatchEditDialogContent match={selectedMatch} onEdited={() => { setEditOpen(false); onReload(); }} />}
-        </DialogContent>
-      </Dialog>
+      {selectedMatch ? (
+        <MatchEditDialogContent
+          open={editOpen}
+          onOpenChange={setEditOpen}
+          match={selectedMatch}
+          onEdited={() => {
+            setEditOpen(false);
+            onReload();
+          }}
+        />
+      ) : null}
 
-      <Dialog open={cancelOpen} onOpenChange={(o) => !o && setCancelOpen(false)}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Anulować mecz?</DialogTitle>
-          </DialogHeader>
-          {selectedMatch && <MatchCancelDialogContent match={selectedMatch} onCancelled={() => { setCancelOpen(false); onReload(); }} />}
-        </DialogContent>
-      </Dialog>
+      {selectedMatch ? (
+        <MatchCancelDialogContent
+          open={cancelOpen}
+          onOpenChange={setCancelOpen}
+          match={selectedMatch}
+          onCancelled={() => {
+            setCancelOpen(false);
+            onReload();
+          }}
+        />
+      ) : null}
 
-      <Dialog open={signupsOpen} onOpenChange={(o) => !o && setSignupsOpen(false)}>
-        <DialogContent className="sm:max-w-3xl">
-          {selectedMatch && <MatchSignupsDialogContent match={selectedMatch} onClose={() => setSignupsOpen(false)} onReload={onReload} />}
-        </DialogContent>
-      </Dialog>
+      {selectedMatch ? (
+        <MatchSignupsDialogContent
+          open={signupsOpen}
+          onOpenChange={setSignupsOpen}
+          match={selectedMatch}
+          onClose={() => setSignupsOpen(false)}
+          onReload={onReload}
+        />
+      ) : null}
     </div>
   );
 }
 
+function matchRowToSummary(match: MatchRow) {
+  return {
+    match_date: match.date,
+    match_time: match.time,
+    location: match.location,
+    signed_up: match.players_count,
+    max_slots: match.max_slots,
+  };
+}
+
 function MatchCancelDialogContent({
+  open,
+  onOpenChange,
   match,
   onCancelled,
 }: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   match: MatchRow;
   onCancelled: () => void;
 }) {
@@ -385,48 +410,56 @@ function MatchCancelDialogContent({
   };
 
   return (
-    <>
-      <div className="space-y-4 py-2">
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          Mecz <strong>{match.date}</strong> o <strong>{match.time}</strong>, <strong>{match.location}</strong> (id {match.id}).
-        </p>
-        <div>
-          <Label htmlFor="cancel-reason">Wybierz powód anulacji</Label>
-          <Select value={reason} onValueChange={setReason}>
-            <SelectTrigger id="cancel-reason" className="mt-1 border-zinc-200">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {reasons.map((r) => (
-                <SelectItem key={r.value} value={r.value}>
-                  {r.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
-            Wszyscy zapisani gracze otrzymają powiadomienie o anulacji.
-          </p>
-        </div>
+    <AppModal
+      open={open}
+      onOpenChange={onOpenChange}
+      size="sm"
+      title="Anulować mecz?"
+      description="Zapisani gracze otrzymają powiadomienie o anulacji."
+      footer={
+        <>
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
+            Zamknij
+          </Button>
+          <Button type="button" variant="destructive" onClick={() => void handleCancel()} disabled={saving}>
+            {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
+            Anuluj mecz
+          </Button>
+        </>
+      }
+    >
+      <ModalMatchSummary match={matchRowToSummary(match)} />
+      <div className={modalPanelClass}>
+        <Label htmlFor="cancel-reason">Wybierz powód anulacji</Label>
+        <Select value={reason} onValueChange={setReason}>
+          <SelectTrigger id="cancel-reason" className="mt-1.5">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {reasons.map((r) => (
+              <SelectItem key={r.value} value={r.value}>
+                {r.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
-      <DialogFooter className="gap-2 sm:gap-0">
-        <Button variant="outline" disabled={saving}>
-          Zamknij
-        </Button>
-        <Button variant="destructive" onClick={handleCancel} disabled={saving}>
-          {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
-          Anuluj mecz
-        </Button>
-      </DialogFooter>
-    </>
+      <ModalAlert tone="warning">
+        Ta operacja oznacza mecz jako odwołany (id {match.id}). Wszyscy zapisani gracze zostaną poinformowani.
+      </ModalAlert>
+    </AppModal>
   );
 }
 
 function MatchSignupsDialogContent({
+  open,
+  onOpenChange,
   match,
   onClose,
   onReload,
 }: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   match: MatchRow;
   onClose: () => void;
   onReload: () => void;
@@ -542,82 +575,93 @@ function MatchSignupsDialogContent({
 
   return (
     <>
-      <DialogHeader>
-        <DialogTitle>Zapisy i opłaty — {match.date} {match.time}</DialogTitle>
-        <DialogDescription>{match.location}</DialogDescription>
-      </DialogHeader>
-      {loading ? (
-        <div className="flex items-center justify-center py-8">
-          <Loader2 className="h-6 w-6 animate-spin" aria-hidden />
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {signups.length === 0 ? (
-            <p className="text-center text-sm text-zinc-500 dark:text-zinc-400 py-8">
-              Brak zapisów na ten mecz.
-            </p>
-          ) : (
-            <div className="space-y-2">
-              {signups.map((s) => (
-                <div key={s.user_id} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div className="flex items-center gap-3 flex-1">
-                    <PlayerAvatar
-                      photoPath={s.profile_photo_path}
-                      firstName={s.first_name}
-                      lastName={s.last_name}
-                      size="sm"
-                    />
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <p className="font-medium">{s.first_name} {s.last_name}</p>
-                        {s.is_temporary ? (
-                          <Badge className="bg-amber-100 text-amber-800">Gościnny</Badge>
-                        ) : null}
-                      </div>
-                      <p className="text-sm text-zinc-500">{s.zawodnik}</p>
+      <AppModal
+        open={open}
+        onOpenChange={onOpenChange}
+        size="xl"
+        scrollable
+        title={`Zapisy i opłaty — ${match.date} ${match.time}`}
+        description={match.location}
+        footer={
+          <>
+            <Button type="button" variant="outline" size="sm" onClick={() => setAddGuestOpen(true)}>
+              Dodaj gościa
+            </Button>
+            <Button type="button" variant="outline" onClick={onClose}>
+              Zamknij
+            </Button>
+          </>
+        }
+      >
+        <ModalMatchSummary match={matchRowToSummary(match)} />
+        {loading ? (
+          <ModalLoadingRow label="Wczytywanie zapisów…" />
+        ) : signups.length === 0 ? (
+          <p className={modalEmptyStateClass}>Brak zapisów na ten mecz.</p>
+        ) : (
+          <div className={modalListClass}>
+            {signups.map((s) => (
+              <div
+                key={s.user_id}
+                className="flex items-center justify-between gap-3 border-b border-emerald-900/8 px-4 py-3 last:border-b-0 dark:border-emerald-800/40"
+              >
+                <div className="flex min-w-0 flex-1 items-center gap-3">
+                  <PlayerAvatar
+                    photoPath={s.profile_photo_path}
+                    firstName={s.first_name}
+                    lastName={s.last_name}
+                    size="sm"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="font-medium">
+                        {s.first_name} {s.last_name}
+                      </p>
+                      {s.is_temporary ? (
+                        <Badge className="bg-amber-100 text-amber-800">Gościnny</Badge>
+                      ) : null}
                     </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {!s.is_temporary && (
-                      <Badge variant={s.commitment === 1 ? "default" : "secondary"}>
-                        {s.commitment === 1 ? "Potwierdzony" : "Niepewny"}
-                      </Badge>
-                    )}
-                    {!s.is_temporary && (
-                      <Button
-                        size="sm"
-                        variant={s.paid ? "default" : "outline"}
-                        onClick={() => togglePaid(s.user_id, s.paid)}
-                        disabled={saving === s.user_id}
-                      >
-                        {saving === s.user_id ? <Loader2 className="h-4 w-4 animate-spin" /> : s.paid ? "Opłacony" : "Nieopłacony"}
-                      </Button>
-                    )}
-                    {s.is_temporary && (
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => handleRemoveGuest(s.user_id)}
-                        disabled={saving === s.user_id}
-                      >
-                        {saving === s.user_id ? <Loader2 className="h-4 w-4 animate-spin" /> : "Usuń"}
-                      </Button>
-                    )}
+                    <p className="text-sm text-zinc-500 dark:text-zinc-400">{s.zawodnik}</p>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-      <DialogFooter className="gap-2 sm:gap-0">
-        <Button variant="outline" size="sm" onClick={() => setAddGuestOpen(true)}>
-          Dodaj gościa
-        </Button>
-        <Button variant="outline" onClick={onClose}>
-          Zamknij
-        </Button>
-      </DialogFooter>
+                <div className="flex shrink-0 items-center gap-2">
+                  {!s.is_temporary && (
+                    <Badge variant={s.commitment === 1 ? "default" : "secondary"}>
+                      {s.commitment === 1 ? "Potwierdzony" : "Niepewny"}
+                    </Badge>
+                  )}
+                  {!s.is_temporary && (
+                    <Button
+                      size="sm"
+                      variant={s.paid ? "default" : "outline"}
+                      onClick={() => togglePaid(s.user_id, s.paid)}
+                      disabled={saving === s.user_id}
+                    >
+                      {saving === s.user_id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : s.paid ? (
+                        "Opłacony"
+                      ) : (
+                        "Nieopłacony"
+                      )}
+                    </Button>
+                  )}
+                  {s.is_temporary && (
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => handleRemoveGuest(s.user_id)}
+                      disabled={saving === s.user_id}
+                    >
+                      {saving === s.user_id ? <Loader2 className="h-4 w-4 animate-spin" /> : "Usuń"}
+                    </Button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </AppModal>
 
       <AppModal
         open={addGuestOpen}
@@ -630,10 +674,10 @@ function MatchSignupsDialogContent({
         description="Piłkarz będzie dostępny tylko na ten mecz"
         footer={
           <>
-            <Button variant="outline" onClick={() => setAddGuestOpen(false)} disabled={addingGuest}>
+            <Button type="button" variant="outline" onClick={() => setAddGuestOpen(false)} disabled={addingGuest}>
               Anuluj
             </Button>
-            <Button onClick={() => void handleAddGuest()} disabled={addingGuest}>
+            <Button type="button" variant="pitch" onClick={() => void handleAddGuest()} disabled={addingGuest}>
               {addingGuest ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               Dodaj
             </Button>
@@ -1101,22 +1145,7 @@ export function AdminPanel() {
         </main>
       </div>
 
-      <Dialog open={logoutOpen} onOpenChange={setLogoutOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Wylogować się?</DialogTitle>
-            <DialogDescription>Czy na pewno chcesz zakończyć sesję?</DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setLogoutOpen(false)}>
-              Nie
-            </Button>
-            <Button variant="destructive" asChild>
-              <a href="/api/auth/logout">Tak</a>
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <LogoutConfirmModal open={logoutOpen} onOpenChange={setLogoutOpen} />
     </div>
   );
 }
@@ -2173,78 +2202,113 @@ function UsersView({
         </Table>
       </div>
 
-      <Dialog open={Boolean(edit)} onOpenChange={(o) => !o && setEdit(null)}>
-        <DialogContent className="sm:max-w-md">
-          {edit && (
-            <UserEditForm
-              user={edit}
-              onClose={() => setEdit(null)}
-              onSaved={() => {
-                setEdit(null);
-                onReload();
-              }}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
+      {edit ? (
+        <UserEditForm
+          open
+          onOpenChange={(o) => !o && setEdit(null)}
+          user={edit}
+          onClose={() => setEdit(null)}
+          onSaved={() => {
+            setEdit(null);
+            onReload();
+          }}
+        />
+      ) : null}
 
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="sm:max-w-md">
-          <UserCreateForm
-            onClose={() => setCreateOpen(false)}
-            onCreated={() => {
-              setCreateOpen(false);
-              onReload();
-            }}
-          />
-        </DialogContent>
-      </Dialog>
+      <UserCreateForm
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        onClose={() => setCreateOpen(false)}
+        onCreated={() => {
+          setCreateOpen(false);
+          onReload();
+        }}
+      />
 
-      <Dialog open={delUser != null} onOpenChange={(o) => !o && setDelUser(null)}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Usunąć użytkownika?</DialogTitle>
-          </DialogHeader>
-          {delUser && (
-            <p className="text-sm text-zinc-600 dark:text-zinc-400">
-              Konto{" "}
-              <strong>
-                {delUser.first_name} {delUser.last_name}
-              </strong>{" "}
-              ({delUser.zawodnik}, id {delUser.id}) zostanie trwale usunięte.
-            </p>
-          )}
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setDelUser(null)}>
-              Anuluj
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={async () => {
-                if (delUser == null) return;
-                const res = await fetch(API.user(delUser.id), { method: "DELETE" });
-                if (!res.ok) {
-                  toast.error("Nie udało się usunąć użytkownika");
-                  return;
-                }
-                toast.success("Użytkownik został usunięty");
-                setDelUser(null);
-                onReload();
-              }}
-            >
-              Usuń
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <DeleteUserModal
+        user={delUser}
+        onOpenChange={(o) => !o && setDelUser(null)}
+        onDeleted={() => {
+          setDelUser(null);
+          onReload();
+        }}
+      />
     </div>
   );
 }
 
+function DeleteUserModal({
+  user,
+  onOpenChange,
+  onDeleted,
+}: {
+  user: UserRow | null;
+  onOpenChange: (open: boolean) => void;
+  onDeleted: () => void;
+}) {
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDelete = async () => {
+    if (user == null) return;
+    setDeleting(true);
+    try {
+      const res = await fetch(API.user(user.id), { method: "DELETE" });
+      if (!res.ok) {
+        toast.error("Nie udało się usunąć użytkownika");
+        return;
+      }
+      toast.success("Użytkownik został usunięty");
+      onDeleted();
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  return (
+    <AppModal
+      open={user != null}
+      onOpenChange={onOpenChange}
+      size="sm"
+      title="Usunąć użytkownika?"
+      footer={
+        <>
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={deleting}>
+            Anuluj
+          </Button>
+          <Button type="button" variant="destructive" onClick={() => void handleDelete()} disabled={deleting}>
+            {deleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
+            Usuń
+          </Button>
+        </>
+      }
+    >
+      {user ? (
+        <>
+          <div className={modalPanelClass}>
+            <p className="text-sm text-zinc-700 dark:text-zinc-300">
+              <strong>
+                {user.first_name} {user.last_name}
+              </strong>
+            </p>
+            <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+              {user.zawodnik} · id {user.id}
+            </p>
+          </div>
+          <ModalAlert tone="danger">Konto zostanie trwale usunięte wraz z powiązanymi danymi.</ModalAlert>
+        </>
+      ) : null}
+    </AppModal>
+  );
+}
+
 function UserCreateForm({
+  open,
+  onOpenChange,
   onClose,
   onCreated,
 }: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   onClose: () => void;
   onCreated: () => void;
 }) {
@@ -2260,15 +2324,56 @@ function UserCreateForm({
   });
 
   return (
-    <>
-      <DialogHeader>
-        <DialogTitle>Nowy użytkownik</DialogTitle>
-      </DialogHeader>
-      <p className="text-sm text-zinc-600 dark:text-zinc-400">
-        Logowanie odbywa się imieniem, nazwiskiem i PIN-em. Piłkarz (awatar) jest przypisywany tutaj —
-        użytkownik ustawi PIN przy pierwszym logowaniu (jak przy rejestracji samodzielnej).
-      </p>
-      <div className="space-y-3 py-2">
+    <AppModal
+      open={open}
+      onOpenChange={onOpenChange}
+      size="sm"
+      scrollable
+      title="Nowy użytkownik"
+      description="Logowanie odbywa się imieniem, nazwiskiem i PIN-em. Piłkarz (awatar) jest przypisywany tutaj — użytkownik ustawi PIN przy pierwszym logowaniu (jak przy rejestracji samodzielnej)."
+      footer={
+        <>
+          <Button type="button" variant="outline" onClick={onClose} disabled={saving}>
+            Anuluj
+          </Button>
+          <Button
+            type="button"
+            variant="pitch"
+            disabled={saving}
+            onClick={async () => {
+              if (!form.validate()) return;
+              const { first_name, last_name, zawodnik } = form.values;
+              setSaving(true);
+              try {
+                const res = await fetch(API.users, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    first_name: first_name.trim(),
+                    last_name: last_name.trim(),
+                    zawodnik,
+                    role,
+                  }),
+                });
+                const data = (await res.json().catch(() => ({}))) as { error?: string };
+                if (!res.ok) {
+                  toast.error(data.error ?? "Nie udało się utworzyć konta");
+                  return;
+                }
+                toast.success("Utworzono konto użytkownika");
+                onCreated();
+              } finally {
+                setSaving(false);
+              }
+            }}
+          >
+            {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
+            Utwórz konto
+          </Button>
+        </>
+      }
+    >
+      <div className={`${modalPanelClass} space-y-3`}>
         <FormInput
           id="adm-new-fn"
           label="Imię"
@@ -2311,52 +2416,19 @@ function UserCreateForm({
           </Select>
         </div>
       </div>
-      <DialogFooter className="gap-2 sm:gap-0">
-        <Button variant="outline" onClick={onClose} disabled={saving}>
-          Anuluj
-        </Button>
-        <Button
-          disabled={saving}
-          onClick={async () => {
-            if (!form.validate()) return;
-            const { first_name, last_name, zawodnik } = form.values;
-            setSaving(true);
-            try {
-              const res = await fetch(API.users, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  first_name: first_name.trim(),
-                  last_name: last_name.trim(),
-                  zawodnik,
-                  role,
-                }),
-              });
-              const data = (await res.json().catch(() => ({}))) as { error?: string };
-              if (!res.ok) {
-                toast.error(data.error ?? "Nie udało się utworzyć konta");
-                return;
-              }
-              toast.success("Utworzono konto użytkownika");
-              onCreated();
-            } finally {
-              setSaving(false);
-            }
-          }}
-        >
-          {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
-          Utwórz konto
-        </Button>
-      </DialogFooter>
-    </>
+    </AppModal>
   );
 }
 
 function UserEditForm({
+  open,
+  onOpenChange,
   user,
   onClose,
   onSaved,
 }: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   user: UserRow;
   onClose: () => void;
   onSaved: () => void;
@@ -2368,11 +2440,46 @@ function UserEditForm({
   const [saving, setSaving] = useState(false);
 
   return (
-    <>
-      <DialogHeader>
-        <DialogTitle>Edytuj użytkownika</DialogTitle>
-      </DialogHeader>
-      <div className="space-y-3 py-2">
+    <AppModal
+      open={open}
+      onOpenChange={onOpenChange}
+      size="sm"
+      title="Edytuj użytkownika"
+      footer={
+        <>
+          <Button type="button" variant="outline" onClick={onClose} disabled={saving}>
+            Anuluj
+          </Button>
+          <Button
+            type="button"
+            variant="pitch"
+            disabled={saving}
+            onClick={async () => {
+              setSaving(true);
+              try {
+                const res = await fetch(API.user(user.id), {
+                  method: "PUT",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ first_name, last_name, zawodnik, role }),
+                });
+                if (!res.ok) {
+                  toast.error("Nie udało się zapisać zmian");
+                  return;
+                }
+                toast.success("Zapisano dane użytkownika");
+                onSaved();
+              } finally {
+                setSaving(false);
+              }
+            }}
+          >
+            {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
+            Zapisz
+          </Button>
+        </>
+      }
+    >
+      <div className={`${modalPanelClass} space-y-3`}>
         <div>
           <Label htmlFor="adm-fn">Imię</Label>
           <Input
@@ -2413,43 +2520,18 @@ function UserEditForm({
           </Select>
         </div>
       </div>
-      <DialogFooter className="gap-2 sm:gap-0">
-        <Button variant="outline" onClick={onClose} disabled={saving}>
-          Anuluj
-        </Button>
-        <Button
-          disabled={saving}
-          onClick={async () => {
-            setSaving(true);
-            try {
-              const res = await fetch(API.user(user.id), {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ first_name, last_name, zawodnik, role }),
-              });
-              if (!res.ok) {
-                toast.error("Nie udało się zapisać zmian");
-                return;
-              }
-              toast.success("Zapisano dane użytkownika");
-              onSaved();
-            } finally {
-              setSaving(false);
-            }
-          }}
-        >
-          {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
-          Zapisz
-        </Button>
-      </DialogFooter>
-    </>
+    </AppModal>
   );
 }
 
 function MatchEditDialogContent({
+  open,
+  onOpenChange,
   match,
   onEdited,
 }: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   match: MatchRow;
   onEdited: () => void;
 }) {
@@ -2493,11 +2575,25 @@ function MatchEditDialogContent({
   };
 
   return (
-    <>
-      <div className="space-y-4 py-2">
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          <strong>{match.date}</strong> o <strong>{match.time}</strong>, <strong>{match.location}</strong>
-        </p>
+    <AppModal
+      open={open}
+      onOpenChange={onOpenChange}
+      size="sm"
+      title="Edytuj mecz"
+      footer={
+        <>
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
+            Zamknij
+          </Button>
+          <Button type="button" variant="pitch" onClick={() => void handleSave()} disabled={saving}>
+            {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
+            Zapisz zmiany
+          </Button>
+        </>
+      }
+    >
+      <ModalMatchSummary match={matchRowToSummary(match)} />
+      <div className={modalPanelClass}>
         <FormInput
           id="max-slots"
           label="Maksymalna liczba miejsc"
@@ -2516,16 +2612,7 @@ function MatchEditDialogContent({
           }
         />
       </div>
-      <DialogFooter className="gap-2 sm:gap-0">
-        <Button variant="outline" disabled={saving}>
-          Zamknij
-        </Button>
-        <Button onClick={handleSave} disabled={saving}>
-          {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
-          Zapisz zmiany
-        </Button>
-      </DialogFooter>
-    </>
+    </AppModal>
   );
 }
 

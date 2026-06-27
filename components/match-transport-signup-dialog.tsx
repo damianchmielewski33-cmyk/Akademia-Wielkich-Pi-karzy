@@ -124,12 +124,7 @@ export function MatchTransportSignupDialog({
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={busy}>
             Anuluj
           </Button>
-          <Button
-            type="button"
-            className="bg-emerald-700 hover:bg-emerald-800"
-            onClick={() => void submit()}
-            disabled={busy}
-          >
+          <Button type="button" variant="pitch" onClick={() => void submit()} disabled={busy}>
             {intent === "edit" ? "Zapisz" : intent === "confirm" ? "Potwierdź zapis" : "Potwierdź zapis"}
           </Button>
         </>

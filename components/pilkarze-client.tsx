@@ -6,13 +6,9 @@ import { toast } from "sonner";
 import { StatsCrunchPreloader } from "@/components/preloaders";
 import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { AppModal } from "@/components/ui/app-modal";
+import { modalListClass } from "@/components/ui/modal-shared";
+import { cn } from "@/lib/utils";
 
 const PlayerStatsBarChart = dynamic(
   () => import("@/components/player-stats-bar-chart").then((m) => m.PlayerStatsBarChart),
@@ -146,65 +142,64 @@ export function PilkarzeClient({ players }: { players: PlayerListItem[] }) {
         ))}
       </div>
 
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto border-emerald-900/15 sm:max-w-xl">
-          <DialogHeader>
-            <DialogTitle>{loading ? "Ładowanie…" : data ? `${data.first_name} ${data.last_name}` : ""}</DialogTitle>
-            <DialogDescription asChild>
-              <div>
-                {data && (
-                  <div className="flex items-center gap-3 pt-2">
-                    <PlayerAvatar
-                      photoPath={data.profile_photo_path}
-                      firstName={data.first_name}
-                      lastName={data.last_name}
-                      size="lg"
-                      ringClassName="ring-2 ring-emerald-900/20"
-                    />
-                    <PlayerNameStack firstName={data.first_name} lastName={data.last_name} nick={data.zawodnik} />
-                  </div>
-                )}
-              </div>
-            </DialogDescription>
-          </DialogHeader>
-          {loading && <StatsCrunchPreloader />}
-          {data && !loading && (
-            <>
-              <div className="pitch-rule mb-3 w-full max-w-xs opacity-70" />
-              <div className="flex flex-wrap justify-center gap-2">
-                <PitchMiniStat label="Mecze" value={data.matches} />
-                <PitchMiniStat label="Gole" value={data.goals} variant="gold" />
-                <PitchMiniStat label="Asysty" value={data.assists} />
-                <PitchMiniStat label="Dystans" value={data.distance.toFixed(1)} />
-                <PitchMiniStat label="Obrony" value={data.saves} />
-              </div>
-              <PlayerStatsBarChart data={chartData ?? []} />
-              <h4 className="mt-5 font-bold tracking-tight text-emerald-950 dark:text-emerald-100">Historia meczów</h4>
-              <div className="pitch-rule mb-2 mt-2 w-20 opacity-60" />
-              <ul className="mt-1 max-h-48 space-y-0 overflow-y-auto rounded-xl border border-emerald-900/10 bg-white text-sm text-emerald-950 dark:border-emerald-800/30 dark:bg-zinc-800/90 dark:text-emerald-100">
-                {data.games.map((g, i) => (
-                  <li
-                    key={i}
-                    className={
-                      i % 2 === 0
-                        ? "border-b border-emerald-100/90 bg-emerald-50/40 px-3 py-2.5 last:border-b-0 dark:border-emerald-800/40 dark:bg-emerald-950/35"
-                        : "border-b border-emerald-100/90 px-3 py-2.5 last:border-b-0 dark:border-emerald-800/40"
-                    }
-                  >
-                    <span className="font-medium tabular-nums text-emerald-900 dark:text-emerald-200">
-                      {g.date} · {g.time}
-                    </span>
-                    <span className="mt-0.5 block text-emerald-800/90 dark:text-emerald-300/90">{g.location}</span>
-                    <span className="mt-1 block text-xs tabular-nums text-emerald-700 dark:text-emerald-400">
-                      G: {g.goals} · A: {g.assists} · D: {g.distance} · O: {g.saves ?? 0}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
+      <AppModal
+        open={open}
+        onOpenChange={setOpen}
+        size="lg"
+        scrollable
+        title={loading ? "Ładowanie…" : data ? `${data.first_name} ${data.last_name}` : "Statystyki piłkarza"}
+        description={
+          data ? (
+            <div className="flex items-center gap-3 pt-1">
+              <PlayerAvatar
+                photoPath={data.profile_photo_path}
+                firstName={data.first_name}
+                lastName={data.last_name}
+                size="lg"
+                ringClassName="ring-2 ring-emerald-900/20"
+              />
+              <PlayerNameStack firstName={data.first_name} lastName={data.last_name} nick={data.zawodnik} />
+            </div>
+          ) : undefined
+        }
+      >
+        {loading && <StatsCrunchPreloader />}
+        {data && !loading && (
+          <>
+            <div className="pitch-rule mb-1 w-full max-w-xs opacity-70" />
+            <div className="flex flex-wrap justify-center gap-2">
+              <PitchMiniStat label="Mecze" value={data.matches} />
+              <PitchMiniStat label="Gole" value={data.goals} variant="gold" />
+              <PitchMiniStat label="Asysty" value={data.assists} />
+              <PitchMiniStat label="Dystans" value={data.distance.toFixed(1)} />
+              <PitchMiniStat label="Obrony" value={data.saves} />
+            </div>
+            <PlayerStatsBarChart data={chartData ?? []} />
+            <h4 className="font-bold tracking-tight text-emerald-950 dark:text-emerald-100">Historia meczów</h4>
+            <div className="pitch-rule mb-2 mt-2 w-20 opacity-60" />
+            <ul className={cn(modalListClass, "mt-1 max-h-48 text-sm text-emerald-950 dark:text-emerald-100")}>
+              {data.games.map((g, i) => (
+                <li
+                  key={i}
+                  className={
+                    i % 2 === 0
+                      ? "border-b border-emerald-100/90 bg-emerald-50/40 px-3 py-2.5 last:border-b-0 dark:border-emerald-800/40 dark:bg-emerald-950/35"
+                      : "border-b border-emerald-100/90 px-3 py-2.5 last:border-b-0 dark:border-emerald-800/40"
+                  }
+                >
+                  <span className="font-medium tabular-nums text-emerald-900 dark:text-emerald-200">
+                    {g.date} · {g.time}
+                  </span>
+                  <span className="mt-0.5 block text-emerald-800/90 dark:text-emerald-300/90">{g.location}</span>
+                  <span className="mt-1 block text-xs tabular-nums text-emerald-700 dark:text-emerald-400">
+                    G: {g.goals} · A: {g.assists} · D: {g.distance} · O: {g.saves ?? 0}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+      </AppModal>
     </>
   );
 }

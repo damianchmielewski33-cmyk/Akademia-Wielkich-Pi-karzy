@@ -11,15 +11,7 @@ import { Menu, LogOut, Moon, Sun } from "lucide-react";
 import { AnalyticsTracker } from "@/components/analytics-tracker";
 import { NavigationLoadingOverlay } from "@/components/navigation-loading-overlay";
 import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { LogoutConfirmModal } from "@/components/logout-confirm-modal";
 import { cn } from "@/lib/utils";
 import { SITE_NAME, getPublicContactEmailWithFallback } from "@/lib/site";
 
@@ -314,22 +306,7 @@ export function SiteShell({ children, isLoggedIn, isAdmin, account = null }: Pro
         </div>
       </header>
 
-      <Dialog open={logoutOpen} onOpenChange={setLogoutOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Wylogować się?</DialogTitle>
-            <DialogDescription>Czy na pewno chcesz zakończyć sesję?</DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setLogoutOpen(false)}>
-              Nie
-            </Button>
-            <Button variant="destructive" asChild>
-              <a href="/api/auth/logout">Tak</a>
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <LogoutConfirmModal open={logoutOpen} onOpenChange={setLogoutOpen} />
 
       <main className="relative flex flex-1 flex-col">
         <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>

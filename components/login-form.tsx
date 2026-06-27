@@ -245,7 +245,7 @@ export function LoginForm({
             <Button type="button" variant="outline" onClick={() => setForgotOpen(false)}>
               Anuluj
             </Button>
-            <Button type="button" disabled={forgotSaving} onClick={() => void submitForgotPin()}>
+            <Button type="button" variant="pitch" disabled={forgotSaving} onClick={() => void submitForgotPin()}>
               {forgotSaving ? "Zapisywanie…" : "Nadaj PIN i wyślij"}
             </Button>
           </>
@@ -322,7 +322,7 @@ export function LoginForm({
           </>
         }
         footer={
-          <Button type="button" onClick={() => setForgotDoneOpen(false)}>
+          <Button type="button" variant="pitch" onClick={() => setForgotDoneOpen(false)}>
             Rozumiem
           </Button>
         }

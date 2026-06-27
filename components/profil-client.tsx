@@ -17,6 +17,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { AppModal } from "@/components/ui/app-modal";
+import { modalPanelClass } from "@/components/ui/modal-shared";
 import { Button } from "@/components/ui/button";
 import { FormInput } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
@@ -547,6 +548,7 @@ export function ProfilClient({ initial }: Props) {
       <AppModal
         open={statsOpen}
         onOpenChange={setStatsOpen}
+        size="lg"
         title="Statystyki meczu"
         description={statsCtx?.label}
         footer={
@@ -554,14 +556,14 @@ export function ProfilClient({ initial }: Props) {
             <Button type="button" variant="outline" onClick={() => setStatsOpen(false)}>
               Anuluj
             </Button>
-            <Button type="button" onClick={submitStats}>
+            <Button type="button" variant="pitch" onClick={submitStats}>
               Zapisz
             </Button>
           </>
         }
       >
         {statsCtx ? (
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className={cn(modalPanelClass, "grid gap-3 sm:grid-cols-2")}>
             <FormInput
               id="st_g"
               label="Gole"

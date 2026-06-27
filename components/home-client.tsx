@@ -21,18 +21,13 @@ import { HomeNextMatchCard } from "@/components/home-next-match-card";
 import { PitchPageHero } from "@/components/ui/pitch-card";
 import { PlayerAvatar } from "@/components/player-avatar";
 import { MatchTransportSignupDialog } from "@/components/match-transport-signup-dialog";
+import { LogoutConfirmModal } from "@/components/logout-confirm-modal";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { AppModal } from "@/components/ui/app-modal";
+import { FormInput } from "@/components/ui/form-field";
+import { ModalMatchSummary, modalPanelClass } from "@/components/ui/modal-shared";
 import type { MatchRow } from "@/lib/db";
+import { cn } from "@/lib/utils";
 
 type Props = {
   nextMatch: MatchRow | null;
@@ -331,99 +326,76 @@ export function HomeClient({
         />
       )}
 
-      <Dialog open={signupOpen} onOpenChange={setSignupOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Zostałeś zapisany na mecz</DialogTitle>
-            <DialogDescription asChild>
-              <div className="text-emerald-900 dark:text-emerald-100">
-                {nextMatch && (
-                  <>
-                    <p>
-                      📅 <strong>{nextMatch.match_date}</strong>
-                    </p>
-                    <p>🕒 {nextMatch.match_time}</p>
-                    <p>📍 {nextMatch.location}</p>
-                    <Link
-                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(nextMatch.location)}`}
-                      target="_blank"
-                      className="mt-2 inline-block text-emerald-700 underline dark:text-emerald-400"
-                    >
-                      Otwórz w Google Maps
-                    </Link>
-                  </>
-                )}
-              </div>
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button onClick={() => setSignupOpen(false)}>Zamknij</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <AppModal
+        open={signupOpen}
+        onOpenChange={setSignupOpen}
+        size="md"
+        title="Zostałeś zapisany na mecz"
+        description="Termin jest w terminarzu — możesz wrócić do szczegółów w każdej chwili."
+        footer={
+          <Button type="button" variant="pitch" onClick={() => setSignupOpen(false)}>
+            Zamknij
+          </Button>
+        }
+      >
+        {nextMatch ? (
+          <>
+            <ModalMatchSummary match={nextMatch} />
+            <a
+              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(nextMatch.location)}`}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-block text-sm font-medium text-emerald-700 underline underline-offset-2 hover:text-emerald-900 dark:text-emerald-400 dark:hover:text-emerald-300"
+            >
+              Otwórz miejsce w Mapach Google
+            </a>
+          </>
+        ) : null}
+      </AppModal>
 
-      <Dialog open={logoutOpen} onOpenChange={setLogoutOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Wylogować się?</DialogTitle>
-            <DialogDescription>Czy na pewno chcesz zakończyć sesję?</DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setLogoutOpen(false)}>
-              Nie
-            </Button>
-            <Button variant="destructive" asChild>
-              <a href="/api/auth/logout">Tak</a>
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <LogoutConfirmModal open={logoutOpen} onOpenChange={setLogoutOpen} />
 
-      <Dialog open={statsOpen} onOpenChange={setStatsOpen}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Uzupełnij statystyki</DialogTitle>
-            <DialogDescription asChild>
-              <div>
-                {pendingMatch && (
-                  <>
-                    <p>📅 {pendingMatch.date}</p>
-                    <p>🕒 {pendingMatch.time}</p>
-                    <p>📍 {pendingMatch.location}</p>
-                  </>
-                )}
-              </div>
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-3 py-2">
-            <div>
-              <Label>Gole</Label>
-              <Input type="number" min={0} value={goals} onChange={(e) => setGoals(e.target.value)} />
-            </div>
-            <div>
-              <Label>Asysty</Label>
-              <Input type="number" min={0} value={assists} onChange={(e) => setAssists(e.target.value)} />
-            </div>
-            <div>
-              <Label>Dystans (km)</Label>
-              <Input
-                type="number"
-                min={0}
-                step={0.1}
-                value={distance}
-                onChange={(e) => setDistance(e.target.value)}
-              />
-            </div>
-            <div>
-              <Label>Obronione strzały</Label>
-              <Input type="number" min={0} value={saves} onChange={(e) => setSaves(e.target.value)} />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button onClick={saveStats}>Zapisz statystyki</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <AppModal
+        open={statsOpen}
+        onOpenChange={setStatsOpen}
+        size="lg"
+        scrollable
+        title="Uzupełnij statystyki"
+        description={pendingMatch ? "Wpisz swoje liczby z ostatniego spotkania." : undefined}
+        footer={
+          <>
+            <Button type="button" variant="outline" onClick={() => setStatsOpen(false)}>
+              Anuluj
+            </Button>
+            <Button type="button" variant="pitch" onClick={saveStats}>
+              Zapisz statystyki
+            </Button>
+          </>
+        }
+      >
+        {pendingMatch ? (
+          <ModalMatchSummary
+            match={{
+              match_date: pendingMatch.date,
+              match_time: pendingMatch.time,
+              location: pendingMatch.location,
+            }}
+          />
+        ) : null}
+        <div className={cn(modalPanelClass, "grid gap-3 sm:grid-cols-2")}>
+          <FormInput label="Gole" type="number" min={0} value={goals} onChange={(e) => setGoals(e.target.value)} />
+          <FormInput label="Asysty" type="number" min={0} value={assists} onChange={(e) => setAssists(e.target.value)} />
+          <FormInput
+            label="Dystans (km)"
+            type="number"
+            min={0}
+            step={0.1}
+            value={distance}
+            onChange={(e) => setDistance(e.target.value)}
+          />
+          <FormInput label="Obronione strzały" type="number" min={0} value={saves} onChange={(e) => setSaves(e.target.value)} />
+        </div>
+      </AppModal>
     </div>
   );
 }

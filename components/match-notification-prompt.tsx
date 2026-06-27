@@ -4,18 +4,12 @@ import { useCallback, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { toast } from "sonner";
 import { Bell } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { z } from "zod";
+import { AppModal } from "@/components/ui/app-modal";
 import { Button } from "@/components/ui/button";
 import { FormInput } from "@/components/ui/form-field";
+import { ModalPromptHeader, modalPanelClass } from "@/components/ui/modal-shared";
 import { formSchemas } from "@/lib/form-validation";
-import { z } from "zod";
 
 type MeUser = {
   id: number;
@@ -134,93 +128,68 @@ export function MatchNotificationPrompt() {
   if (user === undefined) return null;
 
   return (
-    <Dialog open={open} onOpenChange={() => {}}>
-      <DialogContent
-        className="max-w-lg gap-0 border-emerald-200/80 p-0 pt-8 sm:max-w-lg [&>button]:hidden"
-        onPointerDownOutside={(e) => e.preventDefault()}
-        onEscapeKeyDown={(e) => e.preventDefault()}
-      >
-        <div className="border-b border-emerald-100 bg-emerald-50/80 px-6 py-5 dark:border-emerald-800/60 dark:bg-emerald-950/45 sm:px-8">
-          <DialogHeader className="space-y-3 text-left">
-            <div className="flex items-start gap-3">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-700 text-white shadow-sm">
-                <Bell className="h-5 w-5" aria-hidden />
-              </div>
-              <div>
-                <DialogTitle className="text-xl">Powiadomienia o meczach</DialogTitle>
-                <DialogDescription className="mt-1.5 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
-                  Czy chcesz otrzymywać powiadomienia o nowych terminach w terminarzu?
-                </DialogDescription>
-              </div>
-            </div>
-          </DialogHeader>
-        </div>
-
-        <div className="space-y-5 px-6 py-6 sm:px-8">
-          <p className="text-sm leading-relaxed text-zinc-700 dark:text-zinc-300">
-            Jeśli tak, podaj adres e-mail i zaznacz zgodę poniżej. Po dodaniu nowego meczu przez administratora
-            wyślemy Ci krótką wiadomość z datą, godziną, miejscem i linkiem do zapisu w aplikacji.
-          </p>
-
-          <FormInput
-            id="notif-email"
-            label="Adres e-mail"
-            required
-            type="email"
-            autoComplete="email"
-            value={email}
-            onChange={(e) => {
-              setEmail(e.target.value);
-              if (emailError) setEmailError(undefined);
-            }}
-            onBlur={() => {
-              const parsed = z.object({ email: formSchemas.email }).safeParse({ email });
-              setEmailError(parsed.success ? undefined : parsed.error.issues[0]?.message);
-            }}
-            error={emailError}
-            placeholder="np. jan@example.com"
-            disabled={busy}
-          />
-
-          <div className="space-y-3 rounded-xl border border-zinc-200 bg-zinc-50/80 p-4 dark:border-zinc-600 dark:bg-zinc-800/60">
-            <label className="flex cursor-pointer gap-3 text-sm leading-snug text-zinc-800 dark:text-zinc-200">
-              <input
-                type="checkbox"
-                checked={consent}
-                onChange={(e) => setConsent(e.target.checked)}
-                disabled={busy}
-                className="mt-0.5 h-4 w-4 shrink-0 rounded border-zinc-300 text-emerald-700 focus:ring-emerald-600"
-              />
-              <span>
-                Wyrażam dobrowolną zgodę na przetwarzanie podanego adresu e-mail w celu przesyłania informacji o
-                nowych terminach meczów w ramach serwisu Akademii Wielkich Piłkarzy. Wiem, że mogę wycofać zgodę w
-                dowolnym momencie (np. kontaktując się z administratorem strony); wycofanie zgody nie wpływa na
-                zgodność z prawem przetwarzania przed jej wycofaniem.
-              </span>
-            </label>
-          </div>
-        </div>
-
-        <DialogFooter className="flex-col gap-2 border-t border-zinc-100 bg-zinc-50/50 px-6 py-4 dark:border-zinc-800 dark:bg-zinc-900/60 sm:flex-row sm:justify-end sm:px-8">
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full border-zinc-200 dark:border-zinc-600 sm:w-auto"
-            onClick={() => void dismiss()}
-            disabled={busy}
-          >
+    <AppModal
+      open={open}
+      onOpenChange={() => {}}
+      preventDismiss
+      hideCloseButton
+      hideHeader
+      size="md"
+      title="Powiadomienia o meczach"
+      contentClassName="space-y-5"
+      footer={
+        <>
+          <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => void dismiss()} disabled={busy}>
             Nie, dziękuję
           </Button>
-          <Button
-            type="button"
-            className="w-full bg-emerald-700 hover:bg-emerald-800 dark:bg-emerald-600 dark:hover:bg-emerald-500 sm:w-auto"
-            onClick={() => void subscribe()}
-            disabled={busy}
-          >
+          <Button type="button" variant="pitch" className="w-full sm:w-auto" onClick={() => void subscribe()} disabled={busy}>
             Zapisz i włącz powiadomienia
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </>
+      }
+      footerClassName="flex-col sm:flex-row"
+    >
+      <ModalPromptHeader
+        icon={<Bell className="h-5 w-5" aria-hidden />}
+        title="Powiadomienia o meczach"
+        description="Czy chcesz otrzymywać powiadomienia o nowych terminach w terminarzu?"
+      />
+      <p className="text-sm leading-relaxed text-zinc-700 dark:text-zinc-300">
+        Jeśli tak, podaj adres e-mail i zaznacz zgodę poniżej. Po dodaniu nowego meczu przez administratora wyślemy Ci krótką wiadomość z datą, godziną, miejscem i linkiem do zapisu w aplikacji.
+      </p>
+      <FormInput
+        id="notif-email"
+        label="Adres e-mail"
+        required
+        type="email"
+        autoComplete="email"
+        value={email}
+        onChange={(e) => {
+          setEmail(e.target.value);
+          if (emailError) setEmailError(undefined);
+        }}
+        onBlur={() => {
+          const parsed = z.object({ email: formSchemas.email }).safeParse({ email });
+          setEmailError(parsed.success ? undefined : parsed.error.issues[0]?.message);
+        }}
+        error={emailError}
+        placeholder="np. jan@example.com"
+        disabled={busy}
+      />
+      <div className={modalPanelClass}>
+        <label className="flex cursor-pointer gap-3 text-sm leading-snug text-zinc-800 dark:text-zinc-200">
+          <input
+            type="checkbox"
+            checked={consent}
+            onChange={(e) => setConsent(e.target.checked)}
+            disabled={busy}
+            className="mt-0.5 h-4 w-4 shrink-0 rounded border-zinc-300 text-emerald-700 focus:ring-emerald-600"
+          />
+          <span>
+            Wyrażam dobrowolną zgodę na przetwarzanie podanego adresu e-mail w celu przesyłania informacji o nowych terminach meczów w ramach serwisu Akademii Wielkich Piłkarzy. Wiem, że mogę wycofać zgodę w dowolnym momencie (np. kontaktując się z administratorem strony); wycofanie zgody nie wpływa na zgodność z prawem przetwarzania przed jej wycofaniem.
+          </span>
+        </label>
+      </div>
+    </AppModal>
   );
 }

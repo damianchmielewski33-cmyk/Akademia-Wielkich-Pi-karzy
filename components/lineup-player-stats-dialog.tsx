@@ -4,13 +4,9 @@ import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState } from "react";
 import { StatsCrunchPreloader } from "@/components/preloaders";
 import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { AppModal } from "@/components/ui/app-modal";
+import { modalEmptyStateClass, modalListClass } from "@/components/ui/modal-shared";
+import { cn } from "@/lib/utils";
 
 const PlayerStatsBarChart = dynamic(
   () => import("@/components/player-stats-bar-chart").then((m) => m.PlayerStatsBarChart),
@@ -97,87 +93,83 @@ export function LineupPlayerStatsDialog({ userId, open, onOpenChange }: Props) {
     [data]
   );
 
+  const title = loading
+    ? "Ładowanie…"
+    : loadError
+      ? "Statystyki"
+      : data
+        ? `${data.first_name} ${data.last_name}`
+        : "Statystyki zawodnika";
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto border-emerald-900/15 sm:max-w-xl">
-        <DialogHeader>
-          <DialogTitle>
-            {loading
-              ? "Ładowanie…"
-              : loadError
-                ? "Statystyki"
-                : data
-                  ? `${data.first_name} ${data.last_name}`
-                  : ""}
-          </DialogTitle>
-          <DialogDescription asChild>
-            <div>
-              {loadError && !loading && (
-                <p className="pt-2 text-sm text-red-700 dark:text-red-400">
-                  {loadError === "unauthorized"
-                    ? "Zaloguj się, aby zobaczyć statystyki zawodnika."
-                    : "Nie udało się wczytać statystyk. Spróbuj ponownie później."}
-                </p>
-              )}
-              {data && !loading && (
-                <div className="flex items-center gap-3 pt-2">
-                  <PlayerAvatar
-                    photoPath={data.profile_photo_path}
-                    firstName={data.first_name}
-                    lastName={data.last_name}
-                    size="lg"
-                    ringClassName="ring-2 ring-emerald-900/20"
-                  />
-                  <PlayerNameStack firstName={data.first_name} lastName={data.last_name} nick={data.zawodnik} />
-                </div>
-              )}
-            </div>
-          </DialogDescription>
-        </DialogHeader>
-        {loading && !loadError && <StatsCrunchPreloader />}
-        {data && !loading && !loadError && (
-          <>
-            <div className="pitch-rule mb-3 w-full max-w-xs opacity-70" />
-            <div className="flex flex-wrap justify-center gap-2">
-              <PitchMiniStat label="Mecze" value={data.matches} />
-              <PitchMiniStat label="Gole" value={data.goals} variant="gold" />
-              <PitchMiniStat label="Asysty" value={data.assists} />
-              <PitchMiniStat label="Dystans" value={data.distance.toFixed(1)} />
-              <PitchMiniStat label="Obrony" value={data.saves} />
-            </div>
-            <PlayerStatsBarChart data={chartData ?? []} />
-            <h4 className="mt-5 font-bold tracking-tight text-emerald-950 dark:text-emerald-100">Historia meczów</h4>
-            <div className="pitch-rule mb-2 mt-2 w-20 opacity-60" />
-            {data.games.length === 0 ? (
-              <p className="rounded-xl border border-emerald-900/10 bg-emerald-50/40 px-3 py-4 text-center text-sm text-emerald-800 dark:border-emerald-800/40 dark:bg-emerald-950/35 dark:text-emerald-200">
-                Brak zapisanych statystyk z rozegranych meczów.
-              </p>
-            ) : (
-              <ul className="mt-1 max-h-48 space-y-0 overflow-y-auto rounded-xl border border-emerald-900/10 bg-white text-sm text-emerald-950 dark:border-emerald-800/30 dark:bg-zinc-800/90 dark:text-emerald-100">
-                {data.games.map((g, i) => (
-                  <li
-                    key={`${g.date}-${g.time}-${i}`}
-                    className={
-                      i % 2 === 0
-                        ? "border-b border-emerald-100/90 bg-emerald-50/40 px-3 py-2.5 last:border-b-0 dark:border-emerald-800/40 dark:bg-emerald-950/35"
-                        : "border-b border-emerald-100/90 px-3 py-2.5 last:border-b-0 dark:border-emerald-800/40"
-                    }
-                  >
-                    <span className="font-medium tabular-nums text-emerald-900 dark:text-emerald-200">
-                      {g.date} · {g.time}
-                    </span>
-                    <span className="mt-0.5 block text-emerald-800/90 dark:text-emerald-300/90">{g.location}</span>
-                    <span className="mt-1 block text-xs tabular-nums text-emerald-700 dark:text-emerald-400">
-                      G: {g.goals} · A: {g.assists} · D: {g.distance} · O: {g.saves ?? 0}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </>
-        )}
-      </DialogContent>
-    </Dialog>
+    <AppModal
+      open={open}
+      onOpenChange={onOpenChange}
+      size="lg"
+      scrollable
+      title={title}
+      description={
+        loadError && !loading ? (
+          <p className="pt-1 text-sm text-red-700 dark:text-red-400">
+            {loadError === "unauthorized"
+              ? "Zaloguj się, aby zobaczyć statystyki zawodnika."
+              : "Nie udało się wczytać statystyk. Spróbuj ponownie później."}
+          </p>
+        ) : data && !loading ? (
+          <div className="flex items-center gap-3 pt-1">
+            <PlayerAvatar
+              photoPath={data.profile_photo_path}
+              firstName={data.first_name}
+              lastName={data.last_name}
+              size="lg"
+              ringClassName="ring-2 ring-emerald-900/20"
+            />
+            <PlayerNameStack firstName={data.first_name} lastName={data.last_name} nick={data.zawodnik} />
+          </div>
+        ) : undefined
+      }
+    >
+      {loading && !loadError && <StatsCrunchPreloader />}
+      {data && !loading && !loadError && (
+        <>
+          <div className="pitch-rule mb-1 w-full max-w-xs opacity-70" />
+          <div className="flex flex-wrap justify-center gap-2">
+            <PitchMiniStat label="Mecze" value={data.matches} />
+            <PitchMiniStat label="Gole" value={data.goals} variant="gold" />
+            <PitchMiniStat label="Asysty" value={data.assists} />
+            <PitchMiniStat label="Dystans" value={data.distance.toFixed(1)} />
+            <PitchMiniStat label="Obrony" value={data.saves} />
+          </div>
+          <PlayerStatsBarChart data={chartData ?? []} />
+          <h4 className="font-bold tracking-tight text-emerald-950 dark:text-emerald-100">Historia meczów</h4>
+          <div className="pitch-rule mb-2 mt-2 w-20 opacity-60" />
+          {data.games.length === 0 ? (
+            <p className={modalEmptyStateClass}>Brak zapisanych statystyk z rozegranych meczów.</p>
+          ) : (
+            <ul className={cn(modalListClass, "mt-1 max-h-48 text-sm text-emerald-950 dark:text-emerald-100")}>
+              {data.games.map((g, i) => (
+                <li
+                  key={`${g.date}-${g.time}-${i}`}
+                  className={
+                    i % 2 === 0
+                      ? "border-b border-emerald-100/90 bg-emerald-50/40 px-3 py-2.5 last:border-b-0 dark:border-emerald-800/40 dark:bg-emerald-950/35"
+                      : "border-b border-emerald-100/90 px-3 py-2.5 last:border-b-0 dark:border-emerald-800/40"
+                  }
+                >
+                  <span className="font-medium tabular-nums text-emerald-900 dark:text-emerald-200">
+                    {g.date} · {g.time}
+                  </span>
+                  <span className="mt-0.5 block text-emerald-800/90 dark:text-emerald-300/90">{g.location}</span>
+                  <span className="mt-1 block text-xs tabular-nums text-emerald-700 dark:text-emerald-400">
+                    G: {g.goals} · A: {g.assists} · D: {g.distance} · O: {g.saves ?? 0}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
+      )}
+    </AppModal>
   );
 }
 

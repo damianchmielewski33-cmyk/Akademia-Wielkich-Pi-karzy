@@ -31,14 +31,6 @@ import { formatPonderingPlayersPolish, tentativeSignupCount } from "@/lib/termin
 import { cn } from "@/lib/utils";
 import { nativeSelectClasses } from "@/lib/field-styles";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -47,6 +39,14 @@ import { LoginForm } from "@/components/login-form";
 import { MatchTransportSignupDialog } from "@/components/match-transport-signup-dialog";
 import { MatchManageDialog } from "@/components/match-manage-dialog";
 import { AppModal } from "@/components/ui/app-modal";
+import {
+  ModalAlert,
+  ModalLoadingRow,
+  ModalMatchSummary,
+  modalEmptyStateClass,
+  modalListClass,
+  modalPanelClass,
+} from "@/components/ui/modal-shared";
 import { FormInput } from "@/components/ui/form-field";
 import { formSchemas, useValidatedForm } from "@/lib/form-validation";
 import { z } from "zod";
@@ -1158,40 +1158,9 @@ export function TerminarzClient({
           </Button>
         )}
 
+        {isAdmin && m.cancelled !== 1 && (
         <div className="flex flex-col gap-2 border-t border-zinc-200/80 pt-2.5 dark:border-zinc-600/80 sm:flex-row sm:flex-wrap">
-          <Button
-            size="sm"
-            variant="ghost"
-            className={actionBtnSecondary}
-            title="Pełna lista: imiona, pseudonimy, informacja o opłacie"
-            onClick={() => openPlayers(m.id)}
-          >
-            <Users className="shrink-0 text-emerald-700" aria-hidden />
-            <span>
-              <span className="block leading-tight text-zinc-900 dark:text-zinc-100">Kto jest zapisany?</span>
-              <span className="mt-1 block text-[11px] font-normal leading-snug text-zinc-500 dark:text-zinc-400">
-                Otwórz listę zawodników na ten termin
-              </span>
-            </span>
-          </Button>
-          {isAdmin && (
-            <Button
-              size="sm"
-              variant="ghost"
-              className={actionBtnSecondary}
-              title="Ręcznie dopisz / wypisz dowolnego piłkarza z bazy"
-              onClick={() => void openManageSignups(m)}
-            >
-              <UserPlus className="shrink-0 text-emerald-700" aria-hidden />
-              <span>
-                <span className="block leading-tight text-zinc-900 dark:text-zinc-100">Zarządzaj zapisami</span>
-                <span className="mt-1 block text-[11px] font-normal leading-snug text-zinc-500 dark:text-zinc-400">
-                  Dopisz lub wypisz zawodnika z meczu
-                </span>
-              </span>
-            </Button>
-          )}
-          {isAdmin && m.cancelled !== 1 && hasMatchTimePassed(m) && (
+          {hasMatchTimePassed(m) && (
             <Button
               size="sm"
               variant="ghost"
@@ -1208,7 +1177,7 @@ export function TerminarzClient({
               </span>
             </Button>
           )}
-          {isAdmin && m.cancelled !== 1 && !hasMatchTimePassed(m) && (
+          {!hasMatchTimePassed(m) && (
             <Button
               size="sm"
               variant="ghost"
@@ -1226,6 +1195,7 @@ export function TerminarzClient({
             </Button>
           )}
         </div>
+        )}
       </div>
     );
   }
@@ -1251,21 +1221,6 @@ export function TerminarzClient({
             </span>
           </Button>
         )}
-        <Button
-          size="sm"
-          variant="ghost"
-          className={actionBtnSecondary}
-          title="Zawodnicy zapisani przed meczem — imiona i status opłaty"
-          onClick={() => openPlayers(m.id)}
-        >
-          <Users className="shrink-0 text-emerald-700" aria-hidden />
-          <span>
-            <span className="block leading-tight text-zinc-900 dark:text-zinc-100">Kto był zapisany?</span>
-            <span className="mt-1 block text-[11px] font-normal leading-snug text-zinc-500 dark:text-zinc-400">
-              Lista z dnia meczu (archiwum)
-            </span>
-          </span>
-        </Button>
         {isAdmin && (
           <Button
             size="sm"
@@ -1553,6 +1508,7 @@ export function TerminarzClient({
                         playersData={playersData}
                         isAdmin={isAdmin}
                         onManage={() => openManageMatch(m)}
+                        onManageSignups={() => void openManageSignups(m)}
                         onCopyInvite={() => void copyInviteLink(m.id)}
                         onOpenPlayers={() => openPlayers(m.id)}
                         actions={activeActions(m)}
@@ -1617,116 +1573,124 @@ export function TerminarzClient({
         )}
       </div>
 
-      <Dialog open={Boolean(calPopup)} onOpenChange={(o) => !o && setCalPopup(null)}>
-        <DialogContent className="border-emerald-900/15">
-          {calPopup && (
+      <AppModal
+        open={Boolean(calPopup)}
+        onOpenChange={(o) => !o && setCalPopup(null)}
+        size="md"
+        title="Podgląd meczu"
+        footer={
+          calPopup ? (
             <>
-              <DialogHeader>
-                <DialogTitle>
-                  {calPopup.match_date} · {calPopup.match_time}
-                </DialogTitle>
-              </DialogHeader>
-              <div className="space-y-2 text-sm text-zinc-800 dark:text-zinc-200">
-                <p className="flex items-start gap-2">
-                  <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700 dark:text-emerald-400" />
-                  <span>{calPopup.location}</span>
-                </p>
-                <div>
-                  <MatchSignupCountsBlock
-                    matchId={calPopup.id}
-                    signedUp={calPopup.signed_up}
-                    maxSlots={calPopup.max_slots}
-                    playersData={playersData}
-                  />
-                </div>
-                <p>Status: {calPopup.played ? "Rozegrany" : "Nierozegrany"}</p>
-                <a
-                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(calPopup.location)}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-block font-medium text-emerald-700 underline dark:text-emerald-400"
-                >
-                  Google Maps
-                </a>
-              </div>
-              <DialogFooter className="flex-col gap-2 border-t border-zinc-100 pt-4 dark:border-zinc-700 sm:flex-row sm:flex-wrap sm:justify-end">
-                {isLoggedIn && calPopup.played === 1 && missingStatsSet.has(calPopup.id) && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    className={cn(actionBtnPrimary, "w-full sm:w-auto")}
-                    onClick={() => {
-                      const m = calPopup;
-                      setCalPopup(null);
-                      openStatsForMatch(m);
-                    }}
-                  >
-                    <Activity className="shrink-0" aria-hidden />
-                    <span className="text-left">
-                      <span className="block leading-tight">Dodaj statystyki z tego meczu</span>
-                      <span className="mt-0.5 block text-[11px] font-normal text-emerald-100/95">
-                        Gole, asysty, dystans, obrony
-                      </span>
-                    </span>
-                  </Button>
-                )}
+              {isLoggedIn && calPopup.played === 1 && missingStatsSet.has(calPopup.id) && (
                 <Button
                   type="button"
-                  variant="ghost"
-                  className={cn(actionBtnSecondary, "w-full sm:w-auto")}
-                  onClick={() => openPlayers(calPopup.id)}
+                  variant="pitch"
+                  className="h-auto min-h-9 w-full gap-2 whitespace-normal py-2 text-left sm:w-auto"
+                  onClick={() => {
+                    const m = calPopup;
+                    setCalPopup(null);
+                    openStatsForMatch(m);
+                  }}
                 >
-                  <Users className="shrink-0 text-emerald-700" aria-hidden />
+                  <Activity className="shrink-0" aria-hidden />
                   <span className="text-left">
-                    <span className="block leading-tight">Kto jest zapisany?</span>
-                    <span className="mt-0.5 block text-[11px] font-normal text-zinc-500 dark:text-zinc-400">
-                      Ta sama lista co w terminarzu
+                    <span className="block leading-tight">Dodaj statystyki z tego meczu</span>
+                    <span className="mt-0.5 block text-[11px] font-normal text-emerald-100/95">
+                      Gole, asysty, dystans, obrony
                     </span>
                   </span>
                 </Button>
-                <Button
-                  type="button"
-                  variant="default"
-                  className="h-auto min-h-9 w-full gap-2 rounded-lg bg-zinc-800 py-2 font-semibold shadow-sm hover:bg-zinc-900 sm:w-auto"
-                  onClick={() => setCalPopup(null)}
-                >
-                  <X className="shrink-0" aria-hidden />
-                  Zamknij podgląd
-                </Button>
-              </DialogFooter>
+              )}
+              <Button
+                type="button"
+                variant="outline"
+                className="h-auto min-h-9 w-full gap-2 whitespace-normal py-2 text-left sm:w-auto"
+                onClick={() => openPlayers(calPopup.id)}
+              >
+                <Users className="shrink-0 text-emerald-700 dark:text-emerald-400" aria-hidden />
+                <span className="text-left">
+                  <span className="block leading-tight">Kto jest zapisany?</span>
+                  <span className="mt-0.5 block text-[11px] font-normal text-zinc-500 dark:text-zinc-400">
+                    Ta sama lista co w terminarzu
+                  </span>
+                </span>
+              </Button>
+              <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => setCalPopup(null)}>
+                <X className="shrink-0" aria-hidden />
+                Zamknij podgląd
+              </Button>
             </>
-          )}
-        </DialogContent>
-      </Dialog>
+          ) : null
+        }
+        footerClassName="flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-end"
+      >
+        {calPopup ? (
+          <>
+            <ModalMatchSummary match={calPopup} />
+            <div>
+              <MatchSignupCountsBlock
+                matchId={calPopup.id}
+                signedUp={calPopup.signed_up}
+                maxSlots={calPopup.max_slots}
+                playersData={playersData}
+              />
+            </div>
+            <p className="text-sm text-zinc-700 dark:text-zinc-300">
+              Status: {calPopup.played ? "Rozegrany" : "Nierozegrany"}
+            </p>
+            <a
+              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(calPopup.location)}`}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-block text-sm font-medium text-emerald-700 underline underline-offset-2 hover:text-emerald-900 dark:text-emerald-400 dark:hover:text-emerald-300"
+            >
+              Otwórz miejsce w Mapach Google
+            </a>
+          </>
+        ) : null}
+      </AppModal>
 
-      <Dialog open={playersOpen} onOpenChange={setPlayersOpen}>
-        <DialogContent className="max-h-[85vh] overflow-y-auto border-emerald-900/15">
-          <DialogHeader>
-            <DialogTitle>
-              {selectedData
-                ? `Zawodnicy – ${selectedData.date} ${selectedData.time}`
-                : "Zawodnicy"}
-            </DialogTitle>
-          </DialogHeader>
-          {selectedData && (
-            <>
-              <div className="pitch-rule mb-3 w-32 opacity-70" />
+      <AppModal
+        open={playersOpen}
+        onOpenChange={setPlayersOpen}
+        size="lg"
+        scrollable
+        title={
+          selectedData ? `Zawodnicy – ${selectedData.date} ${selectedData.time}` : "Zawodnicy"
+        }
+        contentClassName="space-y-3"
+      >
+        {selectedData && (
+          <>
+            {selectedMatchId != null ? (
+              <ModalMatchSummary
+                match={{
+                  match_date: selectedData.date,
+                  match_time: selectedData.time,
+                  location: selectedData.location,
+                  signed_up:
+                    allMatches.find((x) => x.id === selectedMatchId)?.signed_up ?? selectedData.players.length,
+                  max_slots: selectedData.max,
+                }}
+              />
+            ) : (
               <p className="text-sm font-medium text-emerald-900 dark:text-emerald-200">{selectedData.location}</p>
-              {selectedMatchId != null ? (
-                <div className="mt-1">
-                  <MatchSignupCountsBlock
-                    matchId={selectedMatchId}
-                    signedUp={allMatches.find((x) => x.id === selectedMatchId)?.signed_up ?? selectedData.players.length}
-                    maxSlots={selectedData.max}
-                    playersData={playersData}
-                  />
-                  <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">
-                    Pełna lista zawodników poniżej — «jeszcze nie wiem» i «nie biorę udziału» nie zajmują miejsca w
-                    składzie.
-                  </p>
-                </div>
-              ) : null}
-              <ul className="mt-3 max-h-[min(24rem,55vh)] space-y-0 overflow-y-auto rounded-xl border border-emerald-900/10 bg-emerald-50/30 dark:border-emerald-800/40 dark:bg-emerald-950/25">
+            )}
+            {selectedMatchId != null ? (
+              <div>
+                <MatchSignupCountsBlock
+                  matchId={selectedMatchId}
+                  signedUp={allMatches.find((x) => x.id === selectedMatchId)?.signed_up ?? selectedData.players.length}
+                  maxSlots={selectedData.max}
+                  playersData={playersData}
+                />
+                <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">
+                  Pełna lista zawodników poniżej — «jeszcze nie wiem» i «nie biorę udziału» nie zajmują miejsca w
+                  składzie.
+                </p>
+              </div>
+            ) : null}
+            <ul className={cn(modalListClass, "max-h-[min(24rem,55vh)]")}>
                 {selectedData.players.map((p, i) => (
                   <li
                     key={`c-${p.userId}-${i}`}
@@ -1815,13 +1779,12 @@ export function TerminarzClient({
                     </Badge>
                   </li>
                 ))}
-              </ul>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
+            </ul>
+          </>
+        )}
+      </AppModal>
 
-    <Dialog
+    <AppModal
       open={manageSignupsOpen}
       onOpenChange={(open) => {
         setManageSignupsOpen(open);
@@ -1831,127 +1794,104 @@ export function TerminarzClient({
           setSettleRows([]);
         }
       }}
+      size="lg"
+      scrollable
+      title="Zarządzaj zapisami"
+      description={
+        manageSignupsMatch
+          ? "Wyszukaj piłkarza i dopisz albo wypisz z listy. Ta operacja dotyczy tylko potwierdzonych miejsc w składzie."
+          : undefined
+      }
+      footer={
+        <Button type="button" variant="outline" onClick={() => setManageSignupsOpen(false)}>
+          Zamknij
+        </Button>
+      }
+      contentClassName="space-y-3"
     >
-      <DialogContent className="max-h-[90vh] overflow-y-auto border-emerald-900/15 sm:max-w-xl">
-        <DialogHeader>
-          <DialogTitle>Zarządzaj zapisami</DialogTitle>
-          {manageSignupsMatch ? (
-            <DialogDescription asChild>
-              <div className="space-y-1 pt-1 text-sm text-zinc-600">
-                <p>
-                  <span className="font-medium text-zinc-800">
-                    {manageSignupsMatch.match_date} · {manageSignupsMatch.match_time}
-                  </span>
-                </p>
-                <p className="flex items-start gap-2 text-sm">
-                  <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700" aria-hidden />
-                  {manageSignupsMatch.location}
-                </p>
-                <p className="text-xs text-zinc-500">
-                  Wyszukaj piłkarza i dopisz albo wypisz z listy. Ta operacja dotyczy tylko potwierdzonych miejsc w składzie.
-                </p>
-              </div>
-            </DialogDescription>
-          ) : null}
-        </DialogHeader>
+      {manageSignupsMatch ? <ModalMatchSummary match={manageSignupsMatch} /> : null}
 
-        {manageSignupsBusy ? (
-          <div className="flex items-center gap-2 py-4 text-sm text-zinc-600">
-            <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-            Przetwarzanie…
-          </div>
-        ) : null}
+      {manageSignupsBusy ? <ModalLoadingRow label="Przetwarzanie…" /> : null}
 
-        <div className="space-y-3">
-          <div className="rounded-xl border border-emerald-900/10 bg-emerald-50/30 px-4 py-3">
-            <Label htmlFor="admin-signups-q">Szukaj piłkarza</Label>
-            <div className="mt-1 flex gap-2">
-              <Input
-                id="admin-signups-q"
-                type="text"
-                placeholder="np. Jan Kowalski, KOWAL"
-                value={manageSignupsQuery}
-                onChange={(e) => setManageSignupsQuery(e.target.value)}
-              />
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => {
-                  setAdminUsersLoaded(false);
-                  void ensureAdminUsersLoaded();
-                }}
-              >
-                Odśwież bazę
-              </Button>
-            </div>
-            <p className="mt-2 text-xs text-zinc-600">
-              Zapisani (potwierdzeni): <strong className="tabular-nums">{settleRows.length}</strong>
-            </p>
-          </div>
-
-          {filteredAdminUsers.length === 0 ? (
-            <p className="rounded-xl border border-dashed border-zinc-200 bg-zinc-50/80 px-4 py-10 text-center text-sm text-zinc-600 dark:border-zinc-600 dark:bg-zinc-800/50 dark:text-zinc-400">
-              Brak wyników.
-            </p>
-          ) : (
-            <div className="max-h-[55vh] space-y-2 overflow-y-auto pr-1">
-              {filteredAdminUsers.map((u) => {
-                const isSigned = manageSignupSet.has(u.id);
-                return (
-                  <div
-                    key={u.id}
-                    className="flex items-center gap-3 rounded-xl border border-emerald-900/10 bg-white px-3 py-2 dark:bg-zinc-900"
-                  >
-                    <PlayerAvatar
-                      photoPath={u.profile_photo_path}
-                      firstName={u.first_name}
-                      lastName={u.last_name}
-                      size="sm"
-                      ringClassName={isSigned ? "ring-2 ring-emerald-200/90" : "ring-2 ring-zinc-200/80"}
-                    />
-                    <div className="min-w-0 flex-1">
-                      <PlayerNameStack firstName={u.first_name} lastName={u.last_name} nick={u.zawodnik} />
-                      <p className="mt-0.5 text-xs text-zinc-500">ID: {u.id}</p>
-                    </div>
-                    {isSigned ? (
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        disabled={manageSignupsBusy}
-                        onClick={() => void adminRemoveFromMatch(u.id)}
-                        title="Wypisz z meczu"
-                      >
-                        <UserMinus className="mr-2 h-4 w-4" aria-hidden />
-                        Wypisz
-                      </Button>
-                    ) : (
-                      <Button
-                        type="button"
-                        variant="default"
-                        disabled={manageSignupsBusy}
-                        onClick={() => void adminAddToMatch(u.id)}
-                        title="Dopisz do meczu"
-                      >
-                        <UserPlus className="mr-2 h-4 w-4" aria-hidden />
-                        Zapisz
-                      </Button>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        <DialogFooter className="gap-2 sm:justify-end">
-          <Button type="button" variant="outline" onClick={() => setManageSignupsOpen(false)}>
-            Zamknij
+      <div className={cn(modalPanelClass, "space-y-3")}>
+        <Label htmlFor="admin-signups-q">Szukaj piłkarza</Label>
+        <div className="mt-1 flex gap-2">
+          <Input
+            id="admin-signups-q"
+            type="text"
+            placeholder="np. Jan Kowalski, KOWAL"
+            value={manageSignupsQuery}
+            onChange={(e) => setManageSignupsQuery(e.target.value)}
+          />
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => {
+              setAdminUsersLoaded(false);
+              void ensureAdminUsersLoaded();
+            }}
+          >
+            Odśwież bazę
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </div>
+        <p className="text-xs text-zinc-600 dark:text-zinc-400">
+          Zapisani (potwierdzeni): <strong className="tabular-nums">{settleRows.length}</strong>
+        </p>
+      </div>
 
-    <Dialog
+      {filteredAdminUsers.length === 0 ? (
+        <p className={modalEmptyStateClass}>Brak wyników.</p>
+      ) : (
+        <div className={cn(modalListClass, "max-h-[55vh] space-y-2 p-1")}>
+          {filteredAdminUsers.map((u) => {
+            const isSigned = manageSignupSet.has(u.id);
+            return (
+              <div
+                key={u.id}
+                className="flex items-center gap-3 rounded-xl border border-emerald-900/10 bg-white px-3 py-2 dark:bg-zinc-900"
+              >
+                <PlayerAvatar
+                  photoPath={u.profile_photo_path}
+                  firstName={u.first_name}
+                  lastName={u.last_name}
+                  size="sm"
+                  ringClassName={isSigned ? "ring-2 ring-emerald-200/90" : "ring-2 ring-zinc-200/80"}
+                />
+                <div className="min-w-0 flex-1">
+                  <PlayerNameStack firstName={u.first_name} lastName={u.last_name} nick={u.zawodnik} />
+                  <p className="mt-0.5 text-xs text-zinc-500">ID: {u.id}</p>
+                </div>
+                {isSigned ? (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    disabled={manageSignupsBusy}
+                    onClick={() => void adminRemoveFromMatch(u.id)}
+                    title="Wypisz z meczu"
+                  >
+                    <UserMinus className="mr-2 h-4 w-4" aria-hidden />
+                    Wypisz
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="pitch"
+                    disabled={manageSignupsBusy}
+                    onClick={() => void adminAddToMatch(u.id)}
+                    title="Dopisz do meczu"
+                  >
+                    <UserPlus className="mr-2 h-4 w-4" aria-hidden />
+                    Zapisz
+                  </Button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </AppModal>
+
+    <AppModal
       open={attendanceOpen}
       onOpenChange={(open) => {
         setAttendanceOpen(open);
@@ -1961,98 +1901,86 @@ export function TerminarzClient({
           setAttendancePresent(new Set());
         }
       }}
-    >
-      <DialogContent className="max-h-[90vh] overflow-y-auto border-emerald-900/15 sm:max-w-xl">
-        <DialogHeader>
-          <DialogTitle>Obecność na meczu</DialogTitle>
-          {attendanceMatch ? (
-            <DialogDescription asChild>
-              <div className="space-y-1 pt-1 text-sm text-zinc-600">
-                <p>
-                  <span className="font-medium text-zinc-800">
-                    {attendanceMatch.match_date} · {attendanceMatch.match_time}
-                  </span>
-                </p>
-                <p className="flex items-start gap-2 text-sm">
-                  <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700" aria-hidden />
-                  {attendanceMatch.location}
-                </p>
-                <p className="text-xs text-zinc-500">Zaznacz osoby, które faktycznie brały udział w meczu.</p>
-              </div>
-            </DialogDescription>
-          ) : null}
-        </DialogHeader>
-
-        {attendanceBusy ? (
-          <div className="flex items-center gap-2 py-4 text-sm text-zinc-600">
-            <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-            Wczytywanie…
-          </div>
-        ) : null}
-
-        {attendanceRows.length === 0 ? (
-          <p className="rounded-xl border border-dashed border-zinc-200 bg-zinc-50/80 px-4 py-10 text-center text-sm text-zinc-600 dark:border-zinc-600 dark:bg-zinc-800/50 dark:text-zinc-400">
-            Brak zapisanych (potwierdzonych) zawodników do zaznaczenia.
-          </p>
-        ) : (
-          <div className="max-h-[55vh] space-y-2 overflow-y-auto pr-1">
-            {attendanceRows.map((p) => {
-              const checked = attendancePresent.has(p.user_id);
-              return (
-                <label
-                  key={p.user_id}
-                  className="flex cursor-pointer items-center gap-3 rounded-xl border border-emerald-900/10 bg-white px-3 py-2 dark:bg-zinc-900"
-                >
-                  <input
-                    type="checkbox"
-                    className="h-4 w-4 accent-emerald-700"
-                    checked={checked}
-                    onChange={(e) => {
-                      const on = e.target.checked;
-                      setAttendancePresent((prev) => {
-                        const next = new Set(prev);
-                        if (on) next.add(p.user_id);
-                        else next.delete(p.user_id);
-                        return next;
-                      });
-                    }}
-                  />
-                  <PlayerAvatar
-                    photoPath={p.profile_photo_path}
-                    firstName={p.first_name}
-                    lastName={p.last_name}
-                    size="sm"
-                    ringClassName={checked ? "ring-2 ring-emerald-200/90" : "ring-2 ring-zinc-200/80"}
-                  />
-                  <div className="min-w-0 flex-1">
-                    <PlayerNameStack firstName={p.first_name} lastName={p.last_name} nick={p.zawodnik} />
-                    <p className="mt-0.5 text-xs text-zinc-500">ID: {p.user_id}</p>
-                  </div>
-                  <Badge
-                    variant="outline"
-                    className={checked ? "border-emerald-300 bg-emerald-50 text-emerald-950" : "border-zinc-200 bg-zinc-50 text-zinc-700"}
-                  >
-                    {checked ? "Obecny" : "Nieobecny"}
-                  </Badge>
-                </label>
-              );
-            })}
-          </div>
-        )}
-
-        <DialogFooter className="gap-2 sm:justify-end">
+      size="lg"
+      scrollable
+      title="Obecność na meczu"
+      description="Zaznacz osoby, które faktycznie brały udział w meczu."
+      footer={
+        <>
           <Button type="button" variant="outline" disabled={attendanceBusy} onClick={() => setAttendanceOpen(false)}>
             Anuluj
           </Button>
-          <Button type="button" disabled={attendanceBusy || !attendanceMatch} onClick={() => void saveAttendance()}>
+          <Button
+            type="button"
+            variant="pitch"
+            disabled={attendanceBusy || !attendanceMatch}
+            onClick={() => void saveAttendance()}
+          >
             {attendanceBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
             Zapisz obecność
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </>
+      }
+      contentClassName="space-y-3"
+    >
+      {attendanceMatch ? <ModalMatchSummary match={attendanceMatch} /> : null}
 
-      <Dialog
+      {attendanceBusy ? <ModalLoadingRow /> : null}
+
+      {attendanceRows.length === 0 ? (
+        <p className={modalEmptyStateClass}>Brak zapisanych (potwierdzonych) zawodników do zaznaczenia.</p>
+      ) : (
+        <div className={cn(modalListClass, "max-h-[55vh] space-y-2 p-1")}>
+          {attendanceRows.map((p) => {
+            const checked = attendancePresent.has(p.user_id);
+            return (
+              <label
+                key={p.user_id}
+                className="flex cursor-pointer items-center gap-3 rounded-xl border border-emerald-900/10 bg-white px-3 py-2 dark:bg-zinc-900"
+              >
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 accent-emerald-700"
+                  checked={checked}
+                  onChange={(e) => {
+                    const on = e.target.checked;
+                    setAttendancePresent((prev) => {
+                      const next = new Set(prev);
+                      if (on) next.add(p.user_id);
+                      else next.delete(p.user_id);
+                      return next;
+                    });
+                  }}
+                />
+                <PlayerAvatar
+                  photoPath={p.profile_photo_path}
+                  firstName={p.first_name}
+                  lastName={p.last_name}
+                  size="sm"
+                  ringClassName={checked ? "ring-2 ring-emerald-200/90" : "ring-2 ring-zinc-200/80"}
+                />
+                <div className="min-w-0 flex-1">
+                  <PlayerNameStack firstName={p.first_name} lastName={p.last_name} nick={p.zawodnik} />
+                  <p className="mt-0.5 text-xs text-zinc-500">ID: {p.user_id}</p>
+                </div>
+                <Badge
+                  variant="outline"
+                  className={
+                    checked
+                      ? "border-emerald-300 bg-emerald-50 text-emerald-950 dark:border-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-100"
+                      : "border-zinc-200 bg-zinc-50 text-zinc-700 dark:border-zinc-600 dark:bg-zinc-800/50 dark:text-zinc-300"
+                  }
+                >
+                  {checked ? "Obecny" : "Nieobecny"}
+                </Badge>
+              </label>
+            );
+          })}
+        </div>
+      )}
+    </AppModal>
+
+      <AppModal
         open={settleOpen}
         onOpenChange={(open) => {
           setSettleOpen(open);
@@ -2063,126 +1991,114 @@ export function TerminarzClient({
             setSettleDefaultAmount("");
           }
         }}
-      >
-        <DialogContent className="max-h-[90vh] overflow-y-auto border-emerald-900/15 sm:max-w-xl">
-          <DialogHeader>
-            <DialogTitle>Rozlicz mecz</DialogTitle>
-            {settleMatch ? (
-              <DialogDescription asChild>
-                <div className="space-y-1 pt-1 text-sm text-zinc-600">
-                  <p>
-                    <span className="font-medium text-zinc-800">
-                      {settleMatch.match_date} · {settleMatch.match_time}
-                    </span>
-                  </p>
-                  <p className="text-xs text-zinc-500">
-                    Domyślnie wpisuje równą kwotę dla wszystkich (z pola „Kwota domyślna”, zwykle `fee_pln`).
-                  </p>
-                </div>
-              </DialogDescription>
-            ) : null}
-          </DialogHeader>
-
-          {settleLoading ? (
-            <div className="flex items-center gap-2 py-4 text-sm text-zinc-600">
-              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-              Wczytywanie zapisanych zawodników…
-            </div>
-          ) : (
-            <>
-              <div className="rounded-xl border border-emerald-900/10 bg-emerald-50/30 px-4 py-3">
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-                  <div className="flex-1">
-                    <Label htmlFor="settle-default">Kwota domyślna (PLN)</Label>
-                    <Input
-                      id="settle-default"
-                      type="text"
-                      inputMode="decimal"
-                      placeholder="np. 25"
-                      value={settleDefaultAmount}
-                      onChange={(e) => setSettleDefaultAmount(e.target.value)}
-                      className="mt-1"
-                    />
-                  </div>
-                  <Button type="button" variant="secondary" onClick={applyDefaultToAll}>
-                    Ustaw wszystkim
-                  </Button>
-                </div>
-                <p className="mt-2 text-xs text-zinc-600">
-                  Możesz edytować kwotę dla pojedynczych osób poniżej przed zapisaniem.
-                </p>
-              </div>
-
-              {settleRows.length === 0 ? (
-                <p className="rounded-xl border border-dashed border-zinc-200 bg-zinc-50/80 px-4 py-10 text-center text-sm text-zinc-600 dark:border-zinc-600 dark:bg-zinc-800/50 dark:text-zinc-400">
-                  Brak zapisanych (potwierdzonych) zawodników do rozliczenia.
-                </p>
-              ) : (
-                <div className="max-h-[50vh] space-y-2 overflow-y-auto pr-1">
-                  {settleRows.map((p) => (
-                    <div
-                      key={p.user_id}
-                      className="flex items-center gap-3 rounded-xl border border-emerald-900/10 bg-white px-3 py-2"
-                    >
-                      <PlayerAvatar
-                        photoPath={p.profile_photo_path}
-                        firstName={p.first_name}
-                        lastName={p.last_name}
-                        size="sm"
-                        ringClassName="ring-2 ring-emerald-200/90"
-                      />
-                      <div className="min-w-0 flex-1">
-                        <PlayerNameStack firstName={p.first_name} lastName={p.last_name} nick={p.zawodnik} />
-                        <p className="mt-0.5 text-xs text-zinc-500">ID: {p.user_id}</p>
-                      </div>
-                      <div className="w-32">
-                        <Label className="sr-only" htmlFor={`settle-${p.user_id}`}>
-                          Kwota
-                        </Label>
-                        <Input
-                          id={`settle-${p.user_id}`}
-                          type="text"
-                          inputMode="decimal"
-                          placeholder="0"
-                          value={settleAmounts[p.user_id] ?? ""}
-                          onChange={(e) =>
-                            setSettleAmounts((prev) => ({ ...prev, [p.user_id]: e.target.value }))
-                          }
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              <div className="rounded-xl border border-amber-200/70 bg-amber-50/70 px-4 py-3 text-xs text-amber-950">
-                <p className="font-semibold">Uwaga</p>
-                <p className="mt-1">
-                  Rozliczenie odejmuje kwoty z portfeli. Jeśli mecz był już częściowo rozliczony, API pominie osoby już
-                  rozliczone dla tego meczu.
-                </p>
-                {settleDefaultAmount.trim() ? (
-                  <p className="mt-1">
-                    Domyślna kwota: <strong className="tabular-nums">{formatPln(Number(settleDefaultAmount.replace(",", ".")) || 0)}</strong>
-                  </p>
-                ) : null}
-              </div>
-            </>
-          )}
-
-          <DialogFooter className="gap-2 sm:justify-end">
+        size="lg"
+        scrollable
+        title="Rozlicz mecz"
+        description="Domyślnie wpisuje równą kwotę dla wszystkich (z pola „Kwota domyślna”, zwykle `fee_pln`)."
+        footer={
+          <>
             <Button type="button" variant="outline" onClick={() => setSettleOpen(false)}>
               Anuluj
             </Button>
-            <Button type="button" disabled={settleSubmitting || settleLoading} onClick={() => void submitSettlement()}>
+            <Button
+              type="button"
+              variant="pitch"
+              disabled={settleSubmitting || settleLoading}
+              onClick={() => void submitSettlement()}
+            >
               {settleSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
               Zapisz rozliczenie
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </>
+        }
+        contentClassName="space-y-3"
+      >
+        {settleMatch ? <ModalMatchSummary match={settleMatch} /> : null}
 
-      <Dialog
+        {settleLoading ? (
+          <ModalLoadingRow label="Wczytywanie zapisanych zawodników…" />
+        ) : (
+          <>
+            <div className={cn(modalPanelClass, "space-y-3")}>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+                <div className="flex-1">
+                  <Label htmlFor="settle-default">Kwota domyślna (PLN)</Label>
+                  <Input
+                    id="settle-default"
+                    type="text"
+                    inputMode="decimal"
+                    placeholder="np. 25"
+                    value={settleDefaultAmount}
+                    onChange={(e) => setSettleDefaultAmount(e.target.value)}
+                    className="mt-1"
+                  />
+                </div>
+                <Button type="button" variant="secondary" onClick={applyDefaultToAll}>
+                  Ustaw wszystkim
+                </Button>
+              </div>
+              <p className="text-xs text-zinc-600 dark:text-zinc-400">
+                Możesz edytować kwotę dla pojedynczych osób poniżej przed zapisaniem.
+              </p>
+            </div>
+
+            {settleRows.length === 0 ? (
+              <p className={modalEmptyStateClass}>Brak zapisanych (potwierdzonych) zawodników do rozliczenia.</p>
+            ) : (
+              <div className={cn(modalListClass, "max-h-[50vh] space-y-2 p-1")}>
+                {settleRows.map((p) => (
+                  <div
+                    key={p.user_id}
+                    className="flex items-center gap-3 rounded-xl border border-emerald-900/10 bg-white px-3 py-2 dark:bg-zinc-900"
+                  >
+                    <PlayerAvatar
+                      photoPath={p.profile_photo_path}
+                      firstName={p.first_name}
+                      lastName={p.last_name}
+                      size="sm"
+                      ringClassName="ring-2 ring-emerald-200/90"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <PlayerNameStack firstName={p.first_name} lastName={p.last_name} nick={p.zawodnik} />
+                      <p className="mt-0.5 text-xs text-zinc-500">ID: {p.user_id}</p>
+                    </div>
+                    <div className="w-32">
+                      <Label className="sr-only" htmlFor={`settle-${p.user_id}`}>
+                        Kwota
+                      </Label>
+                      <Input
+                        id={`settle-${p.user_id}`}
+                        type="text"
+                        inputMode="decimal"
+                        placeholder="0"
+                        value={settleAmounts[p.user_id] ?? ""}
+                        onChange={(e) =>
+                          setSettleAmounts((prev) => ({ ...prev, [p.user_id]: e.target.value }))
+                        }
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <ModalAlert tone="warning" title="Uwaga">
+              Rozliczenie odejmuje kwoty z portfeli. Jeśli mecz był już częściowo rozliczony, API pominie osoby już
+              rozliczone dla tego meczu.
+              {settleDefaultAmount.trim() ? (
+                <p className="mt-1">
+                  Domyślna kwota:{" "}
+                  <strong className="tabular-nums">
+                    {formatPln(Number(settleDefaultAmount.replace(",", ".")) || 0)}
+                  </strong>
+                </p>
+              ) : null}
+            </ModalAlert>
+          </>
+        )}
+      </AppModal>
+
+      <AppModal
         open={Boolean(statsMatch)}
         onOpenChange={(open) => {
           if (!open) {
@@ -2190,96 +2106,65 @@ export function TerminarzClient({
             setStatsStandaloneSurveyKey(null);
           }
         }}
-      >
-        <DialogContent className="max-h-[90vh] overflow-y-auto border-emerald-900/15">
-          <DialogHeader>
-            <DialogTitle>Statystyki z meczu</DialogTitle>
-            {statsMatch && (
-              <DialogDescription asChild>
-                <div className="space-y-1 pt-1 text-sm text-zinc-600">
-                  <p>
-                    <span className="font-medium text-zinc-800">{statsMatch.match_date}</span>
-                    <span className="text-zinc-400"> · </span>
-                    <span>{statsMatch.match_time}</span>
-                  </p>
-                  <p className="flex items-start gap-2">
-                    <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700" aria-hidden />
-                    {statsMatch.location}
-                  </p>
-                  <p className="text-xs text-zinc-500">
-                    {statsStandaloneSurveyKey ? (
-                      <>
-                        Wpisz swoje liczby z tego spotkania (mecz spoza terminarza). Możesz zapisać lub później
-                        zmienić dane tutaj albo w profilu — bez limitu 7 dni od daty meczu.
-                      </>
-                    ) : (
-                      <>
-                        Wpisz swoje liczby z tego spotkania. Możesz to zrobić tylko raz — później zmiany wykona
-                        administrator.
-                      </>
-                    )}
-                  </p>
-                </div>
-              </DialogDescription>
-            )}
-          </DialogHeader>
-          <div className="grid gap-3 py-2">
-            <div>
-              <Label htmlFor="ts-goals">Gole</Label>
-              <Input
-                id="ts-goals"
-                type="number"
-                min={0}
-                value={statsGoals}
-                onChange={(e) => setStatsGoals(e.target.value)}
-                className="mt-1"
-              />
-            </div>
-            <div>
-              <Label htmlFor="ts-assists">Asysty</Label>
-              <Input
-                id="ts-assists"
-                type="number"
-                min={0}
-                value={statsAssists}
-                onChange={(e) => setStatsAssists(e.target.value)}
-                className="mt-1"
-              />
-            </div>
-            <div>
-              <Label htmlFor="ts-distance">Dystans (km)</Label>
-              <Input
-                id="ts-distance"
-                type="number"
-                min={0}
-                step={0.1}
-                value={statsDistance}
-                onChange={(e) => setStatsDistance(e.target.value)}
-                className="mt-1"
-              />
-            </div>
-            <div>
-              <Label htmlFor="ts-saves">Obronione strzały</Label>
-              <Input
-                id="ts-saves"
-                type="number"
-                min={0}
-                value={statsSaves}
-                onChange={(e) => setStatsSaves(e.target.value)}
-                className="mt-1"
-              />
-            </div>
-          </div>
-          <DialogFooter className="gap-2 sm:justify-end">
+        size="lg"
+        scrollable
+        title="Statystyki z meczu"
+        description={
+          statsMatch
+            ? statsStandaloneSurveyKey
+              ? "Wpisz swoje liczby z tego spotkania (mecz spoza terminarza). Możesz zapisać lub później zmienić dane tutaj albo w profilu — bez limitu 7 dni od daty meczu."
+              : "Wpisz swoje liczby z tego spotkania. Możesz to zrobić tylko raz — później zmiany wykona administrator."
+            : undefined
+        }
+        footer={
+          <>
             <Button type="button" variant="outline" onClick={() => setStatsMatch(null)}>
               Anuluj
             </Button>
-            <Button type="button" className="bg-emerald-700 hover:bg-emerald-800" onClick={() => void saveMatchStats()}>
+            <Button type="button" variant="pitch" onClick={() => void saveMatchStats()}>
               Zapisz statystyki
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </>
+        }
+        contentClassName="space-y-3"
+      >
+        {statsMatch ? <ModalMatchSummary match={statsMatch} /> : null}
+        <div className={cn(modalPanelClass, "grid gap-3 sm:grid-cols-2")}>
+          <FormInput
+            id="ts-goals"
+            label="Gole"
+            type="number"
+            min={0}
+            value={statsGoals}
+            onChange={(e) => setStatsGoals(e.target.value)}
+          />
+          <FormInput
+            id="ts-assists"
+            label="Asysty"
+            type="number"
+            min={0}
+            value={statsAssists}
+            onChange={(e) => setStatsAssists(e.target.value)}
+          />
+          <FormInput
+            id="ts-distance"
+            label="Dystans (km)"
+            type="number"
+            min={0}
+            step={0.1}
+            value={statsDistance}
+            onChange={(e) => setStatsDistance(e.target.value)}
+          />
+          <FormInput
+            id="ts-saves"
+            label="Obronione strzały"
+            type="number"
+            min={0}
+            value={statsSaves}
+            onChange={(e) => setStatsSaves(e.target.value)}
+          />
+        </div>
+      </AppModal>
 
       <AddMatchDialog open={addOpen} onOpenChange={setAddOpen} onDone={() => router.refresh()} />
 
@@ -2306,101 +2191,92 @@ export function TerminarzClient({
         />
       )}
 
-      <Dialog
+      <AppModal
         open={inviteGateOpen}
         onOpenChange={(open) => {
           setInviteGateOpen(open);
           if (!open) setInviteLoginInline(false);
         }}
-      >
-        <DialogContent className="max-h-[90dvh] overflow-y-auto border-emerald-900/15 sm:max-w-md">
-          <InviteMatchCard
-            match={highlightMatch ?? null}
-            playersData={playersData}
-            title="Zaproszenie na mecz"
-            subtitle={null}
-          />
-          {!inviteLoginInline ? (
+        size="md"
+        scrollable
+        hideHeader
+        title={inviteLoginInline ? "Logowanie" : "Czy grasz w tym terminie?"}
+        footer={
+          !inviteLoginInline ? (
             <>
-              <DialogHeader>
-                <DialogTitle>Czy grasz w tym terminie?</DialogTitle>
-                <DialogDescription className="text-left text-zinc-600 dark:text-zinc-400">
-                  Zaloguj się lub załóż konto, żeby odpowiedzieć: <strong>tak</strong>, <strong>jeszcze nie wiem</strong> albo{" "}
-                  <strong>nie biorę udziału</strong>.
-                </DialogDescription>
-              </DialogHeader>
-              <DialogFooter className="flex-col gap-2 sm:flex-col sm:justify-start sm:gap-2">
-                <Button
-                  type="button"
-                  className="w-full bg-emerald-700 hover:bg-emerald-800 dark:bg-emerald-600 dark:hover:bg-emerald-500"
-                  onClick={() => setInviteLoginInline(true)}
+              <Button type="button" variant="pitch" className="w-full" onClick={() => setInviteLoginInline(true)}>
+                Zaloguj się
+              </Button>
+              <Button variant="outline" className="w-full" asChild>
+                <Link
+                  href={
+                    highlightMatchId != null
+                      ? `/register?next=${encodeURIComponent(terminarzInviteRelativePath(highlightMatchId))}`
+                      : "/register"
+                  }
                 >
-                  Zaloguj się
-                </Button>
-                <Button variant="outline" className="w-full" asChild>
-                  <Link
-                    href={
-                      highlightMatchId != null
-                        ? `/register?next=${encodeURIComponent(terminarzInviteRelativePath(highlightMatchId))}`
-                        : "/register"
-                    }
-                  >
-                    Utwórz konto
-                  </Link>
-                </Button>
-              </DialogFooter>
+                  Utwórz konto
+                </Link>
+              </Button>
             </>
-          ) : (
-            <>
-              <DialogHeader>
-                <DialogTitle>Logowanie</DialogTitle>
-                <DialogDescription className="text-left text-zinc-600 dark:text-zinc-400">
-                  Wpisz imię, nazwisko i PIN (4–6 cyfr) — tak jak na stronie logowania.
-                </DialogDescription>
-              </DialogHeader>
-              <button
-                type="button"
-                className="mb-2 text-left text-sm font-medium text-emerald-800 underline-offset-2 hover:underline dark:text-emerald-300"
-                onClick={() => setInviteLoginInline(false)}
-              >
-                ← Wróć
-              </button>
-              <LoginForm
-                nextPath={
-                  highlightMatchId != null ? terminarzInviteRelativePath(highlightMatchId) : "/terminarz"
-                }
-                embedMode
-                onAuthenticated={() => {
-                  setInviteGateOpen(false);
-                  setInviteLoginInline(false);
-                }}
-              />
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={inviteParticipationOpen} onOpenChange={setInviteParticipationOpen}>
-        <DialogContent className="max-h-[90dvh] overflow-y-auto border-emerald-900/15 sm:max-w-md">
-          <InviteMatchCard
-            match={highlightMatch ?? null}
-            playersData={playersData}
-            title="Twój termin"
-            subtitle={null}
-            showMapsLink={false}
-          />
-          <DialogHeader>
-            <DialogTitle>Czy bierzesz udział?</DialogTitle>
-            <DialogDescription className="text-left text-zinc-600 dark:text-zinc-400">
-              Wybierz jedną opcję. Przy odpowiedzi <strong>tak</strong> (gdy są wolne miejsca) wybierzesz też transport.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="flex-col gap-2 sm:flex-col sm:justify-start sm:gap-2">
-            <Button
+          ) : undefined
+        }
+        footerClassName={!inviteLoginInline ? "flex-col sm:flex-col" : undefined}
+        contentClassName="space-y-4"
+      >
+        <InviteMatchCard
+          match={highlightMatch ?? null}
+          playersData={playersData}
+          title="Zaproszenie na mecz"
+          subtitle={null}
+        />
+        {!inviteLoginInline ? (
+          <div className="space-y-1">
+            <h2 className="text-lg font-semibold leading-snug text-emerald-950 dark:text-emerald-100">
+              Czy grasz w tym terminie?
+            </h2>
+            <p className="text-sm text-zinc-600 dark:text-zinc-400">
+              Zaloguj się lub załóż konto, żeby odpowiedzieć: <strong>tak</strong>, <strong>jeszcze nie wiem</strong>{" "}
+              albo <strong>nie biorę udziału</strong>.
+            </p>
+          </div>
+        ) : (
+          <>
+            <div className="space-y-1">
+              <h2 className="text-lg font-semibold leading-snug text-emerald-950 dark:text-emerald-100">Logowanie</h2>
+              <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                Wpisz imię, nazwisko i PIN (4–6 cyfr) — tak jak na stronie logowania.
+              </p>
+            </div>
+            <button
               type="button"
-              className="w-full bg-emerald-700 hover:bg-emerald-800 dark:bg-emerald-600 dark:hover:bg-emerald-700"
-              onClick={onInviteParticipationTak}
+              className="text-left text-sm font-medium text-emerald-800 underline-offset-2 hover:underline dark:text-emerald-300"
+              onClick={() => setInviteLoginInline(false)}
             >
+              ← Wróć
+            </button>
+            <LoginForm
+              nextPath={highlightMatchId != null ? terminarzInviteRelativePath(highlightMatchId) : "/terminarz"}
+              embedMode
+              onAuthenticated={() => {
+                setInviteGateOpen(false);
+                setInviteLoginInline(false);
+              }}
+            />
+          </>
+        )}
+      </AppModal>
+
+      <AppModal
+        open={inviteParticipationOpen}
+        onOpenChange={setInviteParticipationOpen}
+        size="md"
+        scrollable
+        hideHeader
+        title="Czy bierzesz udział?"
+        footer={
+          <>
+            <Button type="button" variant="pitch" className="w-full" onClick={onInviteParticipationTak}>
               Tak, biorę udział
             </Button>
             <Button
@@ -2422,9 +2298,25 @@ export function TerminarzClient({
             >
               Nie, nie biorę udziału
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </>
+        }
+        footerClassName="flex-col sm:flex-col"
+        contentClassName="space-y-4"
+      >
+        <InviteMatchCard
+          match={highlightMatch ?? null}
+          playersData={playersData}
+          title="Twój termin"
+          subtitle={null}
+          showMapsLink={false}
+        />
+        <div className="space-y-1">
+          <h2 className="text-lg font-semibold leading-snug text-emerald-950 dark:text-emerald-100">Czy bierzesz udział?</h2>
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+            Wybierz jedną opcję. Przy odpowiedzi <strong>tak</strong> (gdy są wolne miejsca) wybierzesz też transport.
+          </p>
+        </div>
+      </AppModal>
     </>
   );
 }
