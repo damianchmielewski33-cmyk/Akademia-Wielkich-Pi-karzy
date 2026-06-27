@@ -58,6 +58,7 @@ import {
   getStandaloneSurveyMatchRow,
   PARTICIPATION_SURVEY_KEY,
 } from "@/lib/match-participation-survey";
+import { hasMatchTimePassed } from "@/lib/transport";
 
 type Props = {
   upcoming: MatchRow[];
@@ -308,6 +309,7 @@ export function TerminarzClient({
 
   const [manageMatchOpen, setManageMatchOpen] = useState(false);
   const [manageMatch, setManageMatch] = useState<MatchRow | null>(null);
+  const [manageInitialTab, setManageInitialTab] = useState<"edit" | "guest" | "cancel">("edit");
 
   const cancelledMatchShownRef = useRef(false);
 
@@ -905,8 +907,9 @@ export function TerminarzClient({
 
   const selectedData = selectedMatchId != null ? playersData[selectedMatchId] : null;
 
-  function openManageMatch(m: MatchRow) {
+  function openManageMatch(m: MatchRow, tab: "edit" | "guest" | "cancel" = "edit") {
     setManageMatch(m);
+    setManageInitialTab(tab);
     setManageMatchOpen(true);
   }
 
@@ -1207,7 +1210,7 @@ export function TerminarzClient({
               </span>
             </Button>
           )}
-          {isAdmin && (
+          {isAdmin && m.cancelled !== 1 && hasMatchTimePassed(m) && (
             <Button
               size="sm"
               variant="ghost"
@@ -1220,6 +1223,23 @@ export function TerminarzClient({
                 <span className="block leading-tight">Potwierdź: mecz się odbył</span>
                 <span className="mt-1 block text-[11px] font-normal leading-snug text-amber-900/85 dark:text-amber-200/90">
                   Tylko dla administratora — zamyka ten termin
+                </span>
+              </span>
+            </Button>
+          )}
+          {isAdmin && m.cancelled !== 1 && !hasMatchTimePassed(m) && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className={actionBtnDanger}
+              title="Odwołaj termin przed rozpoczęciem meczu — zapisani zawodnicy dostaną powiadomienie"
+              onClick={() => openManageMatch(m, "cancel")}
+            >
+              <X className="shrink-0" aria-hidden />
+              <span>
+                <span className="block leading-tight">Anuluj</span>
+                <span className="mt-1 block text-[11px] font-normal leading-snug text-red-700/90 dark:text-red-300">
+                  Odwołaj mecz przed jego rozpoczęciem
                 </span>
               </span>
             </Button>
@@ -2287,6 +2307,7 @@ export function TerminarzClient({
         open={manageMatchOpen}
         onOpenChange={setManageMatchOpen}
         onDone={() => router.refresh()}
+        initialTab={manageInitialTab}
       />
 
       {transportSignupMatchId != null && (

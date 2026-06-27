@@ -19,6 +19,11 @@ export function matchStartDate(m: { match_date: string; match_time: string }): D
   return new Date(`${m.match_date}T${timePart}`);
 }
 
+/** True gdy minął planowany start meczu (data + godzina w strefie przeglądarki). */
+export function hasMatchTimePassed(m: { match_date: string; match_time: string }): boolean {
+  return Date.now() >= matchStartDate(m).getTime();
+}
+
 /** Przycisk „Transport na mecz” — aktywny w lokalny kalendarzowy dzień meczu (data z bazy). */
 export function isLocalMatchDay(m: { match_date: string }): boolean {
   const d = new Date();

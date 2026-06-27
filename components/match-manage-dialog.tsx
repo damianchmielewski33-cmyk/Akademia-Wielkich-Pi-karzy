@@ -20,11 +20,14 @@ import {
 } from "@/components/ui/select";
 import { formSchemas, useValidatedForm } from "@/lib/form-validation";
 
+type ManageTab = "edit" | "guest" | "cancel";
+
 type Props = {
   match: MatchRow | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onDone: () => void;
+  initialTab?: ManageTab;
 };
 
 const editSchema = z.object({
@@ -69,8 +72,8 @@ async function fetchJson<T>(
   }
 }
 
-export function MatchManageDialog({ match, open, onOpenChange, onDone }: Props) {
-  const [tab, setTab] = useState("edit");
+export function MatchManageDialog({ match, open, onOpenChange, onDone, initialTab = "edit" }: Props) {
+  const [tab, setTab] = useState<ManageTab>("edit");
   const [cancelReason, setCancelReason] = useState("weather");
   const [busy, setBusy] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -85,17 +88,17 @@ export function MatchManageDialog({ match, open, onOpenChange, onDone }: Props) 
     schema: guestSchema,
   });
 
-  const resetForm = (m: MatchRow) => {
+  const resetForm = (m: MatchRow, tab: ManageTab) => {
     editForm.reset(matchToFormValues(m));
     guestForm.reset({ guestFirst: "", guestLast: "", guestAlias: "" });
-    setTab("edit");
+    setTab(tab);
     setCancelReason("weather");
     setIsEditing(false);
   };
 
   useEffect(() => {
-    if (open && match) resetForm(match);
-  }, [open, match?.id]);
+    if (open && match) resetForm(match, initialTab);
+  }, [open, match?.id, initialTab]);
 
   const handleOpenChange = (next: boolean) => {
     if (!next) setIsEditing(false);
