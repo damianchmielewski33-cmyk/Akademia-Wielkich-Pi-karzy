@@ -1,8 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { Check, ClipboardCopy, Loader2 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Check, ClipboardCopy, Loader2, Search } from "lucide-react";
 import { toast } from "sonner";
 import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { PlatnosciUserLite } from "@/components/platnosci-client";
 import { cn } from "@/lib/utils";
-import { nativeSelectClasses } from "@/lib/field-styles";
 
 type AdminWalletPlayerRow = PlatnosciUserLite & { balance_pln: number };
 
@@ -58,6 +57,7 @@ export function AdminWalletsSaldoSection({ embedded = false, showPublicLinks = f
   const [adminOverview, setAdminOverview] = useState<AdminWalletOverview | null>(null);
   const [adminLoading, setAdminLoading] = useState(false);
   const [adminBalanceUserId, setAdminBalanceUserId] = useState<number | null>(null);
+  const [adminBalanceUserQuery, setAdminBalanceUserQuery] = useState("");
   const [adminBalanceTarget, setAdminBalanceTarget] = useState("");
   const [adminBalanceNote, setAdminBalanceNote] = useState("");
   const [adminBalanceSubmitting, setAdminBalanceSubmitting] = useState(false);
@@ -74,7 +74,9 @@ export function AdminWalletsSaldoSection({ embedded = false, showPublicLinks = f
       }
       setAdminOverview(r.data);
       if (adminBalanceUserId === null && r.data.players?.length) {
-        setAdminBalanceUserId(r.data.players[0]!.id);
+        const first = r.data.players[0]!;
+        setAdminBalanceUserId(first.id);
+        setAdminBalanceUserQuery(`${first.first_name} ${first.last_name}`);
       }
     } finally {
       setAdminLoading(false);
@@ -85,6 +87,24 @@ export function AdminWalletsSaldoSection({ embedded = false, showPublicLinks = f
     void refresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const balancePlayerList = adminOverview?.walletUsers ?? adminOverview?.players ?? [];
+
+  const filteredBalancePlayers = useMemo(() => {
+    const q = adminBalanceUserQuery.trim().toLowerCase();
+    if (!q) return balancePlayerList.slice(0, 12);
+    return balancePlayerList
+      .filter((p) => {
+        const key = `${p.first_name} ${p.last_name} ${p.zawodnik}`.toLowerCase();
+        return key.includes(q);
+      })
+      .slice(0, 20);
+  }, [balancePlayerList, adminBalanceUserQuery]);
+
+  const selectedBalancePlayer = useMemo(
+    () => (adminBalanceUserId != null ? balancePlayerList.find((p) => p.id === adminBalanceUserId) : undefined),
+    [balancePlayerList, adminBalanceUserId]
+  );
 
   async function generatePublicLink(kind: "last_match_wallets" | "all_wallets") {
     setPublicLinkBusy(true);
@@ -193,29 +213,89 @@ export function AdminWalletsSaldoSection({ embedded = false, showPublicLinks = f
             <div className="mt-3 grid gap-3 sm:grid-cols-3">
               <div className="sm:col-span-1">
                 <Label htmlFor="admin-balance-user">Zawodnik</Label>
-                <select
-                  id="admin-balance-user"
-                  className={cn(nativeSelectClasses, "mt-1 w-full")}
-                  value={adminBalanceUserId ?? ""}
-                  onChange={(e) => setAdminBalanceUserId(e.target.value ? Number(e.target.value) : null)}
-                >
-                  <option value="" disabled>
-                    Wybierz zawodnika…
-                  </option>
-                  {(adminOverview?.walletUsers ?? adminOverview?.players ?? []).map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.first_name} {p.last_name}
-                      {"is_admin" in p && Number((p as { is_admin?: number }).is_admin ?? 0) ? " (admin)" : ""}
-                    </option>
-                  ))}
-                </select>
-                {adminBalanceUserId && adminOverview?.players?.length ? (() => {
-                  const b = Number(
-                    (
-                      (adminOverview.walletUsers ?? adminOverview.players).find((p) => p.id === adminBalanceUserId)
-                        ?.balance_pln ?? 0
-                    ) as number
-                  );
+                <div className="relative mt-1">
+                  <Search
+                    className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400"
+                    aria-hidden
+                  />
+                  <Input
+                    id="admin-balance-user"
+                    type="text"
+                    placeholder="Szukaj po imieniu i nazwisku…"
+                    value={adminBalanceUserQuery}
+                    onChange={(e) => setAdminBalanceUserQuery(e.target.value)}
+                    autoComplete="off"
+                  />
+                </div>
+                {selectedBalancePlayer ? (
+                  <div className="mt-2 flex items-center gap-2 rounded-lg border border-emerald-900/10 bg-emerald-50/50 px-2 py-1.5 dark:border-emerald-100/10 dark:bg-emerald-950/30">
+                    <PlayerAvatar
+                      photoPath={selectedBalancePlayer.profile_photo_path}
+                      firstName={selectedBalancePlayer.first_name}
+                      lastName={selectedBalancePlayer.last_name}
+                      size="sm"
+                      ringClassName="ring-2 ring-emerald-200/90"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <PlayerNameStack
+                        firstName={selectedBalancePlayer.first_name}
+                        lastName={selectedBalancePlayer.last_name}
+                        nick={selectedBalancePlayer.zawodnik}
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 shrink-0 px-2 text-xs"
+                      onClick={() => {
+                        setAdminBalanceUserId(null);
+                        setAdminBalanceUserQuery("");
+                      }}
+                    >
+                      Zmień
+                    </Button>
+                  </div>
+                ) : null}
+                {!selectedBalancePlayer && balancePlayerList.length ? (
+                  <ul className="mt-2 max-h-40 space-y-0 overflow-y-auto rounded-xl border border-emerald-900/10 bg-white dark:border-emerald-100/10 dark:bg-zinc-950/40">
+                    {filteredBalancePlayers.length ? (
+                      filteredBalancePlayers.map((p) => (
+                        <li key={p.id}>
+                          <button
+                            type="button"
+                            className="flex w-full items-center gap-2 border-b border-emerald-900/5 px-2 py-2 text-left text-sm last:border-b-0 hover:bg-emerald-50 dark:border-emerald-100/5 dark:hover:bg-emerald-950/40"
+                            onClick={() => {
+                              setAdminBalanceUserId(p.id);
+                              setAdminBalanceUserQuery(`${p.first_name} ${p.last_name}`);
+                            }}
+                          >
+                            <PlayerAvatar
+                              photoPath={p.profile_photo_path}
+                              firstName={p.first_name}
+                              lastName={p.last_name}
+                              size="sm"
+                              ringClassName="ring-2 ring-emerald-200/90"
+                            />
+                            <span className="min-w-0 flex-1 truncate">
+                              {p.first_name} {p.last_name}
+                              {p.zawodnik ? (
+                                <span className="ml-1 text-xs text-zinc-500">({p.zawodnik})</span>
+                              ) : null}
+                            </span>
+                            {"is_admin" in p && Number((p as { is_admin?: number }).is_admin ?? 0) ? (
+                              <span className="shrink-0 text-[10px] font-bold uppercase text-zinc-500">Admin</span>
+                            ) : null}
+                          </button>
+                        </li>
+                      ))
+                    ) : (
+                      <li className="px-3 py-4 text-center text-xs text-zinc-500">Brak wyników wyszukiwania.</li>
+                    )}
+                  </ul>
+                ) : null}
+                {selectedBalancePlayer ? (() => {
+                  const b = Number(selectedBalancePlayer.balance_pln ?? 0);
                   const neg = b < 0;
                   const pos = b > 0;
                   return (
