@@ -88,7 +88,10 @@ export function AdminWalletsSaldoSection({ embedded = false, showPublicLinks = f
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const balancePlayerList = adminOverview?.walletUsers ?? adminOverview?.players ?? [];
+  const balancePlayerList = useMemo(
+    () => adminOverview?.walletUsers ?? adminOverview?.players ?? [],
+    [adminOverview]
+  );
 
   const filteredBalancePlayers = useMemo(() => {
     const q = adminBalanceUserQuery.trim().toLowerCase();

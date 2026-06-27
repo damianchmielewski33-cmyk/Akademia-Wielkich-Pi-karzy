@@ -88,16 +88,14 @@ export function MatchManageDialog({ match, open, onOpenChange, onDone, initialTa
     schema: guestSchema,
   });
 
-  const resetForm = (m: MatchRow, tab: ManageTab) => {
-    editForm.reset(matchToFormValues(m));
+  useEffect(() => {
+    if (!open || !match) return;
+    editForm.reset(matchToFormValues(match));
     guestForm.reset({ guestFirst: "", guestLast: "", guestAlias: "" });
-    setTab(tab);
+    setTab(initialTab);
     setCancelReason("weather");
     setIsEditing(false);
-  };
-
-  useEffect(() => {
-    if (open && match) resetForm(match, initialTab);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- form reset only when dialog opens or match/tab changes
   }, [open, match?.id, initialTab]);
 
   const handleOpenChange = (next: boolean) => {
@@ -203,7 +201,7 @@ export function MatchManageDialog({ match, open, onOpenChange, onDone, initialTa
           {match.cancellation_reason ? `: ${match.cancellation_reason}` : ""}.
         </div>
       ) : (
-        <Tabs value={tab} onValueChange={setTab}>
+        <Tabs value={tab} onValueChange={(value) => setTab(value as ManageTab)}>
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="edit">Edycja</TabsTrigger>
             <TabsTrigger value="guest">Gość</TabsTrigger>
