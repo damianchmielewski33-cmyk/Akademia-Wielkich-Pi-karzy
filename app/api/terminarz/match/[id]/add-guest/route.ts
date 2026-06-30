@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { requireAdmin } from "@/lib/api-helpers";
+import { requireUser } from "@/lib/api-helpers";
 import { addMatchGuest } from "@/lib/add-match-guest";
 
 export const runtime = "nodejs";
@@ -10,11 +10,15 @@ type RouteContext = { params: Promise<{ id: string }> };
 const bodySchema = z.object({
   first_name: z.string().min(1).max(100),
   last_name: z.string().min(1).max(100),
-  player_alias: z.string().min(1).max(100),
+  player_alias: z.string().min(1).max(120),
 });
 
+function todayISO() {
+  return new Date().toISOString().slice(0, 10);
+}
+
 export async function POST(req: Request, context: RouteContext) {
-  const gate = await requireAdmin();
+  const gate = await requireUser();
   if (!gate.ok) return gate.response;
 
   const { id } = await context.params;
@@ -33,6 +37,27 @@ export async function POST(req: Request, context: RouteContext) {
   const parsed = bodySchema.safeParse(json);
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+  }
+
+  const { getDb } = await import("@/lib/db");
+  const db = await getDb();
+  const match = (await db
+    .prepare("SELECT id, match_date, played, cancelled FROM matches WHERE id = ?")
+    .get(mid)) as { id: number; match_date: string; played: number; cancelled: number } | undefined;
+
+  if (!match) {
+    return NextResponse.json({ error: "Mecz nie został znaleziony" }, { status: 404 });
+  }
+
+  if (match.cancelled === 1) {
+    return NextResponse.json({ error: "Nie można dodać gościa do anulowanego meczu." }, { status: 400 });
+  }
+
+  if (match.match_date < todayISO() || match.played === 1) {
+    return NextResponse.json(
+      { error: "Nie można dodać gościa do meczu po terminie lub rozegranego." },
+      { status: 400 }
+    );
   }
 
   const result = await addMatchGuest({

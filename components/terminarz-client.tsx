@@ -38,6 +38,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LoginForm } from "@/components/login-form";
 import { MatchTransportSignupDialog } from "@/components/match-transport-signup-dialog";
 import { MatchManageDialog } from "@/components/match-manage-dialog";
+import { MatchAddGuestDialog } from "@/components/match-add-guest-dialog";
 import { AppModal } from "@/components/ui/app-modal";
 import {
   ModalAlert,
@@ -300,6 +301,8 @@ export function TerminarzClient({
   const [manageMatchOpen, setManageMatchOpen] = useState(false);
   const [manageMatch, setManageMatch] = useState<MatchRow | null>(null);
   const [manageInitialTab, setManageInitialTab] = useState<"edit" | "guest" | "signups" | "cancel">("edit");
+  const [addGuestMatch, setAddGuestMatch] = useState<MatchRow | null>(null);
+  const [addGuestOpen, setAddGuestOpen] = useState(false);
 
   const cancelledMatchShownRef = useRef(false);
 
@@ -802,6 +805,11 @@ export function TerminarzClient({
     setManageMatchOpen(true);
   }
 
+  function openAddGuestDialog(m: MatchRow) {
+    setAddGuestMatch(m);
+    setAddGuestOpen(true);
+  }
+
   async function copyInviteLink(matchId: number) {
     const rel = appendShareSessionQuery(terminarzInviteRelativePath(matchId));
     const url = `${window.location.origin}${rel}`;
@@ -828,7 +836,8 @@ export function TerminarzClient({
     return (
       <div className={actionBarClass}>
         {isLoggedIn ? (
-          kind === "confirmed" ? (
+          <>
+          {kind === "confirmed" ? (
             past ? (
               <ActionNotice tone="muted">
                 <strong className="font-semibold text-zinc-800 dark:text-zinc-100">Jesteś na liście zapisanych.</strong>{" "}
@@ -1019,7 +1028,25 @@ export function TerminarzClient({
                 </span>
               </Button>
             </>
-          )
+          )}
+          {!past && m.cancelled !== 1 && free > 0 && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className={actionBtnSecondary}
+              title="Dopisz osobę grającą jednorazowo — zajmuje miejsce w składzie"
+              onClick={() => openAddGuestDialog(m)}
+            >
+              <UserPlus className="shrink-0 text-amber-700 dark:text-amber-300" aria-hidden />
+              <span>
+                <span className="block leading-tight text-zinc-900 dark:text-zinc-100">Dodaj gościa na mecz</span>
+                <span className="mt-1 block text-[11px] font-normal leading-snug text-zinc-500 dark:text-zinc-400">
+                  Tymczasowe konto — po rozliczeniu płatności znika z bazy
+                </span>
+              </span>
+            </Button>
+          )}
+          </>
         ) : past ? (
           <ActionNotice tone="info">
             Na ten dzień zapisu już nie będzie.{" "}
@@ -1490,6 +1517,30 @@ export function TerminarzClient({
                   </span>
                 </Button>
               )}
+              {isLoggedIn &&
+                calPopup.played !== 1 &&
+                calPopup.cancelled !== 1 &&
+                calPopup.match_date >= todayISO() &&
+                calPopup.signed_up < calPopup.max_slots && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-auto min-h-9 w-full gap-2 whitespace-normal py-2 text-left sm:w-auto"
+                    onClick={() => {
+                      const m = calPopup;
+                      setCalPopup(null);
+                      openAddGuestDialog(m);
+                    }}
+                  >
+                    <UserPlus className="shrink-0 text-amber-700 dark:text-amber-300" aria-hidden />
+                    <span className="text-left">
+                      <span className="block leading-tight">Dodaj gościa na mecz</span>
+                      <span className="mt-0.5 block text-[11px] font-normal text-zinc-500 dark:text-zinc-400">
+                        Tymczasowe konto jednorazowe
+                      </span>
+                    </span>
+                  </Button>
+                )}
               <Button
                 type="button"
                 variant="outline"
@@ -1956,6 +2007,13 @@ export function TerminarzClient({
         onOpenChange={setManageMatchOpen}
         onDone={() => router.refresh()}
         initialTab={manageInitialTab}
+      />
+
+      <MatchAddGuestDialog
+        match={addGuestMatch}
+        open={addGuestOpen}
+        onOpenChange={setAddGuestOpen}
+        onDone={() => router.refresh()}
       />
 
       {transportSignupMatchId != null && (
