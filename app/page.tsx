@@ -5,6 +5,7 @@ import { getDb, type MatchRow } from "@/lib/db";
 import { HomeClient } from "@/components/home-client";
 import { isLocalMatchDay } from "@/lib/transport";
 import { formatPonderingPlayersPolish } from "@/lib/terminarz-shared";
+import { getUserWalletBalancePln } from "@/lib/wallet";
 import { getSiteUrl, parseYoutubeVideoIdFromUserInput } from "@/lib/site";
 
 export const metadata: Metadata = {
@@ -68,6 +69,8 @@ export default async function HomePage() {
     ? parseYoutubeVideoIdFromUserInput(settingsRow.home_youtube_url)
     : null;
 
+  const walletBalancePln = session ? await getUserWalletBalancePln(session.userId) : null;
+
   return (
     <HomeClient
       nextMatch={nextMatch ?? null}
@@ -82,6 +85,7 @@ export default async function HomePage() {
       zawodnik={zawodnik}
       profilePhotoPath={profilePhotoPath}
       youtubeLiveVideoId={youtubeLiveVideoId}
+      walletBalancePln={walletBalancePln}
     />
   );
 }

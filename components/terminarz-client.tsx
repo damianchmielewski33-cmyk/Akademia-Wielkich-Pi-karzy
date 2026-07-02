@@ -13,7 +13,6 @@ import {
   List,
   Loader2,
   LogIn,
-  MapPin,
   HelpCircle,
   Plus,
   RotateCcw,
@@ -35,7 +34,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LoginForm } from "@/components/login-form";
+import { InviteShareLanding } from "@/components/invite-share-landing";
 import { MatchTransportSignupDialog } from "@/components/match-transport-signup-dialog";
 import { MatchManageDialog } from "@/components/match-manage-dialog";
 import { MatchAddGuestDialog } from "@/components/match-add-guest-dialog";
@@ -123,90 +122,6 @@ function addDaysISO(isoDate: string, days: number): string {
   return d.toISOString().slice(0, 10);
 }
 
-function InviteMatchCard({
-  match,
-  playersData,
-  title,
-  subtitle,
-  tone = "emerald",
-  showMapsLink = true,
-}: {
-  match: MatchRow | null;
-  playersData: Record<number, PlayersDataEntry>;
-  title: string;
-  subtitle?: ReactNode;
-  tone?: "emerald" | "zinc";
-  showMapsLink?: boolean;
-}) {
-  const border =
-    tone === "zinc"
-      ? "border-zinc-200/80 dark:border-zinc-700/70"
-      : "border-emerald-900/15 dark:border-emerald-800/35 mundial-card-header";
-  return (
-    <div className={cn("relative overflow-hidden rounded-2xl border shadow-sm", border)}>
-      <div className="terminarz-stadium-layers pointer-events-none absolute inset-0 opacity-95" aria-hidden />
-      <div
-        className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/35 via-black/10 to-black/45"
-        aria-hidden
-      />
-      <div
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_70%_60%_at_50%_-10%,rgba(255,255,255,0.22),transparent_55%)]"
-        aria-hidden
-      />
-
-      <div className="relative p-4 text-white">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/80">{title}</p>
-        <h3 className="mt-1 text-lg font-bold tracking-tight">{match ? "Mecz w terminarzu" : "Zaproszenie"}</h3>
-        {subtitle ? <div className="mt-1 text-sm text-white/85">{subtitle}</div> : null}
-
-        {match ? (
-          <div className="mt-4 grid gap-2 rounded-xl border border-white/15 bg-black/20 p-3 backdrop-blur-sm">
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm">
-              <span className="inline-flex items-center gap-2">
-                <CalendarDays className="h-4 w-4 text-emerald-200" aria-hidden />
-                <span className="font-semibold tabular-nums">
-                  {match.match_date} · {match.match_time}
-                </span>
-              </span>
-              <span className="inline-flex items-start gap-2">
-                <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-emerald-200" aria-hidden />
-                <span className="font-semibold leading-snug">{match.location}</span>
-              </span>
-            </div>
-
-            <div className="flex items-end justify-between gap-3">
-              <MatchSignupCountsBlock
-                matchId={match.id}
-                signedUp={match.signed_up}
-                maxSlots={match.max_slots}
-                playersData={playersData}
-                variant="card"
-                tone="zinc"
-              />
-              <Badge className="bg-white/15 text-white hover:bg-white/20">
-                {match.max_slots - match.signed_up > 0
-                  ? `${match.max_slots - match.signed_up} wolnych`
-                  : "Skład pełny"}
-              </Badge>
-            </div>
-
-            {showMapsLink ? (
-              <a
-                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(match.location)}`}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex w-fit items-center gap-1.5 text-sm font-semibold text-white underline decoration-white/35 underline-offset-4 hover:decoration-white/70"
-              >
-                Otwórz miejsce w Mapach Google
-              </a>
-            ) : null}
-          </div>
-        ) : null}
-      </div>
-    </div>
-  );
-}
-
 const actionBarClass =
   "awp-match-action-bar flex flex-col gap-2.5 rounded-2xl p-3";
 
@@ -276,11 +191,7 @@ export function TerminarzClient({
   const [transportSignupMatchId, setTransportSignupMatchId] = useState<number | null>(null);
   const [transportSignupIntent, setTransportSignupIntent] = useState<"signup" | "confirm">("signup");
   const [tentativeBusyId, setTentativeBusyId] = useState<number | null>(null);
-  const [inviteGateOpen, setInviteGateOpen] = useState(false);
   const [inviteLoginInline, setInviteLoginInline] = useState(false);
-  const [inviteParticipationOpen, setInviteParticipationOpen] = useState(false);
-  const inviteGateOpenedRef = useRef(false);
-  const inviteParticipationShownRef = useRef(false);
   const statsOpenedFromUrlRef = useRef(false);
   const standaloneStatsOpenedFromUrlRef = useRef(false);
   const attendanceOpenedFromUrlRef = useRef(false);
@@ -401,16 +312,6 @@ export function TerminarzClient({
     return () => window.clearTimeout(t);
   }, [highlightMatchId, view, listTab, filteredActive, filteredArchive]);
 
-  useEffect(() => {
-    if (!inviteFromShare || isLoggedIn) return;
-    if (inviteGateOpenedRef.current) return;
-    if (highlightMatchId == null) return;
-    const m = allMatches.find((x) => x.id === highlightMatchId);
-    if (!m || m.match_date < todayISO()) return;
-    inviteGateOpenedRef.current = true;
-    setInviteGateOpen(true);
-  }, [inviteFromShare, isLoggedIn, highlightMatchId, allMatches]);
-
   const openTransportSignup = useCallback((id: number) => {
     setTransportSignupIntent("signup");
     setTransportSignupMatchId(id);
@@ -422,29 +323,6 @@ export function TerminarzClient({
     setTransportSignupMatchId(id);
     setTransportSignupOpen(true);
   }, []);
-
-  useEffect(() => {
-    if (!inviteFromShare || !isLoggedIn) return;
-    if (inviteParticipationShownRef.current) return;
-    if (highlightMatchId == null) return;
-    const m = allMatches.find((x) => x.id === highlightMatchId);
-    if (!m || m.match_date < todayISO()) return;
-    inviteParticipationShownRef.current = true;
-    const hk = userSignupKind[highlightMatchId];
-    if (hk === "confirmed") {
-      toast.info("Jesteś już zapisany na ten mecz.");
-      return;
-    }
-    if (hk === "tentative") {
-      toast.info("Masz już status «jeszcze nie wiem». Potwierdź udział przy tym meczu w terminarzu.");
-      return;
-    }
-    if (hk === "declined") {
-      toast.info("Masz już zaznaczone «nie biorę udziału». Zmień to w terminarzu, jeśli chcesz grać.");
-      return;
-    }
-    setInviteParticipationOpen(true);
-  }, [inviteFromShare, isLoggedIn, highlightMatchId, allMatches, userSignupKind]);
 
   const statsActive = useMemo(() => {
     let total = 0,
@@ -530,20 +408,17 @@ export function TerminarzClient({
       );
       return;
     }
-    setInviteParticipationOpen(false);
     openTransportSignup(highlightMatchId);
   }
 
   async function onInviteParticipationTentativeFromDialog() {
     if (highlightMatchId == null) return;
-    const ok = await signupTentative(highlightMatchId);
-    if (ok) setInviteParticipationOpen(false);
+    await signupTentative(highlightMatchId);
   }
 
   async function onInviteParticipationNie() {
     if (highlightMatchId == null) return;
-    const ok = await signupDeclined(highlightMatchId);
-    if (ok) setInviteParticipationOpen(false);
+    await signupDeclined(highlightMatchId);
   }
 
   async function unsubscribe(id: number) {
@@ -1180,6 +1055,41 @@ export function TerminarzClient({
           </Button>
         )}
       </div>
+    );
+  }
+
+  if (inviteFromShare && highlightMatchId != null) {
+    return (
+      <>
+        <InviteShareLanding
+          highlightMatchId={highlightMatchId}
+          match={highlightMatch ?? null}
+          playersData={playersData}
+          isLoggedIn={isLoggedIn}
+          userSignupKind={userSignupKind}
+          inviteLoginInline={inviteLoginInline}
+          setInviteLoginInline={setInviteLoginInline}
+          tentativeBusy={tentativeBusyId === highlightMatchId}
+          onParticipationTak={onInviteParticipationTak}
+          onParticipationTentative={onInviteParticipationTentativeFromDialog}
+          onParticipationNie={onInviteParticipationNie}
+          onAuthenticated={() => setInviteLoginInline(false)}
+        />
+        {transportSignupMatchId != null && (
+          <MatchTransportSignupDialog
+            open={transportSignupOpen}
+            onOpenChange={(v) => {
+              setTransportSignupOpen(v);
+              if (!v) setTransportSignupMatchId(null);
+            }}
+            matchId={transportSignupMatchId}
+            intent={transportSignupIntent === "confirm" ? "confirm" : "signup"}
+            onCompleted={() => {
+              router.refresh();
+            }}
+          />
+        )}
+      </>
     );
   }
 
@@ -2031,132 +1941,6 @@ export function TerminarzClient({
         />
       )}
 
-      <AppModal
-        open={inviteGateOpen}
-        onOpenChange={(open) => {
-          setInviteGateOpen(open);
-          if (!open) setInviteLoginInline(false);
-        }}
-        size="md"
-        scrollable
-        hideHeader
-        title={inviteLoginInline ? "Logowanie" : "Czy grasz w tym terminie?"}
-        footer={
-          !inviteLoginInline ? (
-            <>
-              <Button type="button" variant="pitch" className="w-full" onClick={() => setInviteLoginInline(true)}>
-                Zaloguj się
-              </Button>
-              <Button variant="outline" className="w-full" asChild>
-                <Link
-                  href={
-                    highlightMatchId != null
-                      ? `/register?next=${encodeURIComponent(terminarzInviteRelativePath(highlightMatchId))}`
-                      : "/register"
-                  }
-                >
-                  Utwórz konto
-                </Link>
-              </Button>
-            </>
-          ) : undefined
-        }
-        footerClassName={!inviteLoginInline ? "flex-col sm:flex-col" : undefined}
-        contentClassName="space-y-4"
-      >
-        <InviteMatchCard
-          match={highlightMatch ?? null}
-          playersData={playersData}
-          title="Zaproszenie na mecz"
-          subtitle={null}
-        />
-        {!inviteLoginInline ? (
-          <div className="space-y-1">
-            <h2 className="text-lg font-semibold leading-snug text-emerald-950 dark:text-emerald-100">
-              Czy grasz w tym terminie?
-            </h2>
-            <p className="text-sm text-zinc-600 dark:text-zinc-400">
-              Zaloguj się lub załóż konto, żeby odpowiedzieć: <strong>tak</strong>, <strong>jeszcze nie wiem</strong>{" "}
-              albo <strong>nie biorę udziału</strong>.
-            </p>
-          </div>
-        ) : (
-          <>
-            <div className="space-y-1">
-              <h2 className="text-lg font-semibold leading-snug text-emerald-950 dark:text-emerald-100">Logowanie</h2>
-              <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                Wpisz imię, nazwisko i PIN (4–6 cyfr) — tak jak na stronie logowania.
-              </p>
-            </div>
-            <button
-              type="button"
-              className="text-left text-sm font-medium text-emerald-800 underline-offset-2 hover:underline dark:text-emerald-300"
-              onClick={() => setInviteLoginInline(false)}
-            >
-              ← Wróć
-            </button>
-            <LoginForm
-              nextPath={highlightMatchId != null ? terminarzInviteRelativePath(highlightMatchId) : "/terminarz"}
-              embedMode
-              onAuthenticated={() => {
-                setInviteGateOpen(false);
-                setInviteLoginInline(false);
-              }}
-            />
-          </>
-        )}
-      </AppModal>
-
-      <AppModal
-        open={inviteParticipationOpen}
-        onOpenChange={setInviteParticipationOpen}
-        size="md"
-        scrollable
-        hideHeader
-        title="Czy bierzesz udział?"
-        footer={
-          <>
-            <Button type="button" variant="pitch" className="w-full" onClick={onInviteParticipationTak}>
-              Tak, biorę udział
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full"
-              disabled={highlightMatchId != null && tentativeBusyId === highlightMatchId}
-              onClick={() => void onInviteParticipationTentativeFromDialog()}
-            >
-              <HelpCircle className="mr-2 h-4 w-4 shrink-0" aria-hidden />
-              Jeszcze nie wiem
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              className="w-full text-zinc-700 dark:text-zinc-300"
-              disabled={highlightMatchId != null && tentativeBusyId === highlightMatchId}
-              onClick={() => void onInviteParticipationNie()}
-            >
-              Nie, nie biorę udziału
-            </Button>
-          </>
-        }
-        footerClassName="flex-col sm:flex-col"
-        contentClassName="space-y-4"
-      >
-        <InviteMatchCard
-          match={highlightMatch ?? null}
-          playersData={playersData}
-          title="Twój termin"
-          subtitle={null}
-          showMapsLink={false}
-        />
-        <div className="space-y-1">
-          <h2 className="text-lg font-semibold leading-snug text-emerald-950 dark:text-emerald-100">Czy bierzesz udział?</h2>
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">
-            Wybierz jedną opcję. Przy odpowiedzi <strong>tak</strong> (gdy są wolne miejsca) wybierzesz też transport.
-          </p>
-        </div>
-      </AppModal>
     </>
   );
 }
@@ -2313,6 +2097,7 @@ const addMatchSchema = z.object({
   date: formSchemas.matchDate,
   time: formSchemas.matchTime,
   maxSlots: formSchemas.maxSlots,
+  gatePin: formSchemas.gatePin,
 });
 
 function AddMatchDialog({
@@ -2325,14 +2110,14 @@ function AddMatchDialog({
   onDone: () => void;
 }) {
   const form = useValidatedForm({
-    initialValues: { location: "", date: "", time: "", maxSlots: 10 },
+    initialValues: { location: "", date: "", time: "", maxSlots: 10, gatePin: "" },
     schema: addMatchSchema,
   });
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!form.validate()) return;
-    const { location, date, time, maxSlots } = form.values;
+    const { location, date, time, maxSlots, gatePin } = form.values;
     const res = await fetch("/api/terminarz/add", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -2341,6 +2126,7 @@ function AddMatchDialog({
         date,
         time,
         max_slots: maxSlots,
+        gate_pin: gatePin.trim(),
       }),
     });
     if (!res.ok) {
@@ -2408,6 +2194,19 @@ function AddMatchDialog({
           onChange={(e) => form.setValue("maxSlots", Number(e.target.value) || 0)}
           onBlur={() => form.setFieldTouched("maxSlots")}
           error={form.errors.maxSlots}
+        />
+        <FormInput
+          label="PIN do bramy"
+          required
+          type="text"
+          inputMode="numeric"
+          autoComplete="off"
+          placeholder="4–6 cyfr"
+          value={form.values.gatePin}
+          onChange={(e) => form.setValue("gatePin", e.target.value.replace(/\D/g, "").slice(0, 6))}
+          onBlur={() => form.setFieldTouched("gatePin")}
+          error={form.errors.gatePin}
+          hint="Kod na bramę boiska — gracze zobaczą go na stronie głównej przy najbliższym meczu."
         />
       </form>
     </AppModal>

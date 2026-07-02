@@ -178,6 +178,9 @@ export async function initLibsqlSchema(client: Client) {
    if (!names.includes("cancellation_reason")) {
      await client.execute("ALTER TABLE matches ADD COLUMN cancellation_reason TEXT");
    }
+   if (!names.includes("gate_pin")) {
+     await client.execute("ALTER TABLE matches ADD COLUMN gate_pin TEXT");
+   }
 
   names = await pragmaColumnNames(client, "users");
   if (!names.includes("profile_photo_path")) {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ComponentType } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -45,7 +46,60 @@ type Props = {
   profilePhotoPath: string | null;
   /** ID filmu / transmisji YouTube (osadzenie). Brak = brak sekcji na stronie. */
   youtubeLiveVideoId: string | null;
+  /** Saldo portfela zalogowanego użytkownika (null gdy niezalogowany). */
+  walletBalancePln: number | null;
 };
+
+function formatPln(n: number) {
+  const v = Math.round(n * 100) / 100;
+  return new Intl.NumberFormat("pl-PL", { style: "currency", currency: "PLN" }).format(v);
+}
+
+function HomeWalletBalanceFloat({ balancePln }: { balancePln: number }) {
+  const negative = balancePln < 0;
+  const positive = balancePln > 0;
+
+  return (
+    <Link
+      href="/platnosci"
+      className="group fixed right-3 top-[4.25rem] z-40 flex max-w-[min(100%,14rem)] items-center gap-2 overflow-hidden rounded-2xl border-2 border-white/35 px-3 py-2 shadow-lg shadow-emerald-950/25 ring-1 ring-emerald-950/15 transition-[transform,box-shadow] motion-safe:hover:-translate-y-0.5 hover:shadow-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 sm:right-5 sm:top-[4.75rem] sm:max-w-none sm:gap-2.5 sm:px-3.5 sm:py-2.5"
+      aria-label={`Twoje saldo: ${formatPln(balancePln)}. Przejdź do płatności.`}
+    >
+      <div className="home-pitch-tile absolute inset-0" aria-hidden />
+      <div
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-0.5 bg-white/45"
+        aria-hidden
+      />
+      <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/15 ring-2 ring-white/35 backdrop-blur-[2px] sm:h-11 sm:w-11">
+        <Image
+          src="/soccer-ball.svg"
+          alt=""
+          width={44}
+          height={44}
+          className="h-7 w-7 object-contain drop-shadow sm:h-8 sm:w-8"
+          unoptimized
+        />
+      </div>
+      <div className="relative min-w-0 text-left">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-100/85">Saldo</p>
+        <p
+          className={cn(
+            "truncate text-sm font-bold tabular-nums text-white drop-shadow-sm sm:text-base",
+            negative && "text-red-200",
+            positive && "text-emerald-100"
+          )}
+        >
+          {formatPln(balancePln)}
+        </p>
+      </div>
+      <ChevronRight
+        className="relative h-4 w-4 shrink-0 text-white/50 transition-all group-hover:translate-x-0.5 group-hover:text-white/90"
+        strokeWidth={2.5}
+        aria-hidden
+      />
+    </Link>
+  );
+}
 
 export function HomeClient({
   nextMatch,
@@ -60,6 +114,7 @@ export function HomeClient({
   zawodnik,
   profilePhotoPath,
   youtubeLiveVideoId,
+  walletBalancePln,
 }: Props) {
   const router = useRouter();
   const [transportSignupOpen, setTransportSignupOpen] = useState(false);
@@ -216,6 +271,9 @@ export function HomeClient({
 
   return (
     <div className="flex flex-1 flex-col">
+      {isLoggedIn && walletBalancePln != null ? (
+        <HomeWalletBalanceFloat balancePln={walletBalancePln} />
+      ) : null}
       <div className="container mx-auto max-w-5xl flex-1 px-4 py-8 text-center sm:py-10">
         {isLoggedIn && (
           <div className="mb-8 flex items-center justify-center gap-4">

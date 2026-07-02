@@ -11,6 +11,10 @@ const bodySchema = z.object({
   time: z.string().min(1),
   location: z.string().min(1),
   max_slots: z.coerce.number().int().min(1),
+  gate_pin: z
+    .string()
+    .trim()
+    .regex(/^[0-9]{4,6}$/, "PIN do bramy musi mieć 4–6 cyfr"),
 });
 
 export async function POST(req: Request) {
@@ -26,13 +30,13 @@ export async function POST(req: Request) {
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
-  const { date, time, location, max_slots } = parsed.data;
+  const { date, time, location, max_slots, gate_pin } = parsed.data;
   const db = await getDb();
   const ins = db.prepare(
-    `INSERT INTO matches (match_date, match_time, location, max_slots, signed_up, played)
-     VALUES (?, ?, ?, ?, 0, 0)`
+    `INSERT INTO matches (match_date, match_time, location, max_slots, signed_up, played, gate_pin)
+     VALUES (?, ?, ?, ?, 0, 0, ?)`
   );
-  const r = await ins.run(date, time, location, max_slots);
+  const r = await ins.run(date, time, location, max_slots, gate_pin);
   const newId = Number(r.lastInsertRowid);
   await logActivity(
     gate.session.userId,

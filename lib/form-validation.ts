@@ -37,6 +37,12 @@ export const formSchemas = {
     .min(1, "Liczba miejsc musi być większa niż 0")
     .max(99, "Maksymalnie 99 miejsc"),
 
+  /** PIN do bramy na boisku — 4–6 cyfr (bez walidacji „słabego” PIN-u jak przy logowaniu). */
+  gatePin: z
+    .string()
+    .trim()
+    .refine(isValidPinFormat, "PIN do bramy musi mieć 4–6 cyfr"),
+
   urlOptional: z
     .string()
     .trim()

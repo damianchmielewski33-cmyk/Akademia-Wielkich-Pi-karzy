@@ -312,6 +312,9 @@ function initSchemaSync(db: Database.Database) {
    if (!matchCols.some((c) => c.name === "cancellation_reason")) {
      db.exec("ALTER TABLE matches ADD COLUMN cancellation_reason TEXT");
    }
+   if (!matchCols.some((c) => c.name === "gate_pin")) {
+     db.exec("ALTER TABLE matches ADD COLUMN gate_pin TEXT");
+   }
 
   const userCols = db.prepare("PRAGMA table_info(users)").all() as { name: string }[];
   if (!userCols.some((c) => c.name === "profile_photo_path")) {
@@ -538,4 +541,6 @@ export type MatchRow = {
   cancelled?: number;
   /** Powód anulacji meczu. */
   cancellation_reason?: string | null;
+  /** PIN do bramy / wejścia na boisko (4–6 cyfr). */
+  gate_pin?: string | null;
 };

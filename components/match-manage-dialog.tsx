@@ -68,6 +68,7 @@ const editSchema = z.object({
   time: formSchemas.matchTime,
   location: formSchemas.matchLocation,
   maxSlots: formSchemas.maxSlots,
+  gatePin: formSchemas.gatePin,
 });
 
 const guestSchema = z.object({
@@ -89,6 +90,7 @@ function matchToFormValues(m: MatchRow) {
     time: m.match_time.length >= 5 ? m.match_time.slice(0, 5) : m.match_time,
     location: m.location,
     maxSlots: m.max_slots,
+    gatePin: m.gate_pin?.trim() ?? "",
   };
 }
 
@@ -126,7 +128,7 @@ export function MatchManageDialog({ match, open, onOpenChange, onDone, initialTa
   const [signupsLoading, setSignupsLoading] = useState(false);
 
   const editForm = useValidatedForm({
-    initialValues: { date: "", time: "", location: "", maxSlots: 10 },
+    initialValues: { date: "", time: "", location: "", maxSlots: 10, gatePin: "" },
     schema: editSchema,
   });
 
@@ -234,7 +236,7 @@ export function MatchManageDialog({ match, open, onOpenChange, onDone, initialTa
 
   async function saveEdit() {
     if (!match || !editForm.validate()) return;
-    const { date, time, location, maxSlots } = editForm.values;
+    const { date, time, location, maxSlots, gatePin } = editForm.values;
     setBusy(true);
     try {
       const r = await fetchJson<{ status: string }>(`/api/admin/match/${match.id}`, {
@@ -245,6 +247,7 @@ export function MatchManageDialog({ match, open, onOpenChange, onDone, initialTa
           time,
           location: location.trim(),
           max_slots: maxSlots,
+          gate_pin: gatePin.trim(),
         }),
       });
       if (!r.ok) {
@@ -551,6 +554,25 @@ export function MatchManageDialog({ match, open, onOpenChange, onDone, initialTa
                 onBlur={() => editForm.setFieldTouched("maxSlots")}
                 error={editForm.errors.maxSlots}
                 hint={`Obecnie zapisanych: ${match.signed_up}`}
+                inputClassName={cn(!isEditing && readOnlyInputClass)}
+              />
+              <FormInput
+                id="mm-gate-pin"
+                label="PIN do bramy"
+                required
+                type="text"
+                inputMode="numeric"
+                autoComplete="off"
+                placeholder="4–6 cyfr"
+                readOnly={!isEditing}
+                disabled={!isEditing || busy}
+                value={editForm.values.gatePin}
+                onChange={(e) =>
+                  editForm.setValue("gatePin", e.target.value.replace(/\D/g, "").slice(0, 6))
+                }
+                onBlur={() => editForm.setFieldTouched("gatePin")}
+                error={editForm.errors.gatePin}
+                hint="Kod na bramę boiska — widoczny na stronie głównej przy najbliższym meczu."
                 inputClassName={cn(!isEditing && readOnlyInputClass)}
               />
             </div>

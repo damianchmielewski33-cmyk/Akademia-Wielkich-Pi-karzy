@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Calendar, Car, Clock, HelpCircle, LayoutGrid, MapPin } from "lucide-react";
+import { Calendar, Car, Clock, HelpCircle, KeyRound, LayoutGrid, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   PitchCard,
@@ -66,6 +66,7 @@ export function HomeNextMatchCard({
   const when = formatMatchWhen(match.match_date, match.match_time);
   const slots = slotMeta(match.signed_up, match.max_slots);
   const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(match.location)}`;
+  const gatePin = match.gate_pin?.trim() ?? "";
 
   const barClass =
     slots.tone === "full" ? "bg-red-400/90" : slots.tone === "warn" ? "bg-amber-400/90" : "bg-emerald-100";
@@ -127,6 +128,24 @@ export function HomeNextMatchCard({
             className="mx-auto max-w-sm"
           />
         </div>
+
+        {gatePin ? (
+          <div className={cn(pitchPanelClass, "mx-auto mt-3 max-w-md px-3.5 py-3")}>
+            <span className={cn(pitchLabelClass, "mb-2 block text-center")}>Wejście na boisko</span>
+            <div className="flex items-center justify-center gap-3">
+              <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/15 ring-2 ring-white/35">
+                <KeyRound className="h-5 w-5 text-[var(--mundial-gold,#f5c518)]" strokeWidth={2.25} aria-hidden />
+              </span>
+              <div className="text-left">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-100/85">PIN do bramy</p>
+                <p className="text-2xl font-bold tabular-nums tracking-[0.2em] text-white drop-shadow-sm">{gatePin}</p>
+              </div>
+            </div>
+            <p className="mt-2 text-center text-[11px] leading-snug text-emerald-100/85">
+              Wpisz ten kod na bramie, aby wejść na boisko.
+            </p>
+          </div>
+        ) : null}
 
         <div className={cn(pitchPanelClass, "mx-auto mt-3 max-w-md px-3.5 py-3")}>
           <span className={cn(pitchLabelClass, "mb-2 block")}>Skład</span>

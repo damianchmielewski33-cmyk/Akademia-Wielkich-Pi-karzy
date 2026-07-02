@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { getDb, type MatchRow } from "@/lib/db";
 import { getServerSession } from "@/lib/auth";
+import { cn } from "@/lib/utils";
 import {
   buildPlayersData,
   categorizeMatches,
@@ -78,8 +79,15 @@ export default async function TerminarzPage({ searchParams }: PageProps) {
     playedMissingStatsMatchIds = missingRows.map((r) => r.id);
   }
 
+  const isInviteLanding = inviteFromShare && highlightMatchId != null;
+
   return (
-    <div className="container mx-auto max-w-7xl flex-1 px-4 py-8 sm:py-10">
+    <div
+      className={cn(
+        "container mx-auto flex-1 px-4 py-8 sm:py-10",
+        isInviteLanding ? "max-w-5xl" : "max-w-7xl"
+      )}
+    >
       <TerminarzClient
         upcoming={upcoming}
         playedConfirmed={playedConfirmed}

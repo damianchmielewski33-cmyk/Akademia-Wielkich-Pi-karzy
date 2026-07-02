@@ -31,6 +31,11 @@ const putSchema = z.object({
   location: z.string().min(1),
   fee_pln: z.union([z.number().nonnegative(), z.null()]).optional(),
   max_slots: z.coerce.number().int().min(1).optional(),
+  gate_pin: z
+    .string()
+    .trim()
+    .regex(/^[0-9]{4,6}$/, "PIN do bramy musi mieć 4–6 cyfr")
+    .optional(),
 });
 
 export async function PUT(req: Request, context: RouteContext) {
@@ -54,6 +59,7 @@ export async function PUT(req: Request, context: RouteContext) {
   const db = await getDb();
   const fee = parsed.data.fee_pln;
   const maxSlots = parsed.data.max_slots;
+  const gatePin = parsed.data.gate_pin;
 
   let query = "UPDATE matches SET match_date = ?, match_time = ?, location = ?";
   const params: (string | number | null | undefined)[] = [parsed.data.date, parsed.data.time, parsed.data.location];
@@ -66,6 +72,11 @@ export async function PUT(req: Request, context: RouteContext) {
   if (maxSlots !== undefined) {
     query += ", max_slots = ?";
     params.push(maxSlots);
+  }
+
+  if (gatePin !== undefined) {
+    query += ", gate_pin = ?";
+    params.push(gatePin);
   }
 
   query += " WHERE id = ?";
