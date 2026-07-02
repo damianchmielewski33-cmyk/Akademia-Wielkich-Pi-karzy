@@ -580,7 +580,7 @@ export function MatchManageDialog({ match, open, onOpenChange, onDone, initialTa
 
           <TabsContent value="guest" className="mt-4 space-y-3">
             <p className="text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
-              Zapisz osobę grającą jednorazowo. Po potwierdzeniu płatności za mecz gość zostanie automatycznie usunięty z bazy.
+              Zapisz osobę grającą jednorazowo. Gość zostanie automatycznie usunięty dopiero, gdy saldo jego portfela wyniesie 0.
             </p>
 
             {guestsLoading ? (

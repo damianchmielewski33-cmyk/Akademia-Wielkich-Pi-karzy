@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getDb, logActivity } from "@/lib/db";
 import { requireAdmin } from "@/lib/api-helpers";
-import { removeTemporaryGuestIfPaid } from "@/lib/guest-cleanup";
+import { tryRemoveTemporaryGuestIfBalanceZero } from "@/lib/guest-cleanup";
 
 export const runtime = "nodejs";
 
@@ -94,7 +94,7 @@ export async function PATCH(req: Request, context: RouteContext) {
   );
 
   if (paid === 1) {
-    await removeTemporaryGuestIfPaid({
+    await tryRemoveTemporaryGuestIfBalanceZero({
       userId: parsed.data.user_id,
       matchId: mid,
       actorUserId: gate.session.userId,

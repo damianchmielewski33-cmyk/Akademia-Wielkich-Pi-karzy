@@ -65,13 +65,14 @@ export async function POST(req: Request, context: RouteContext) {
     .get(userId) as BalanceRow | undefined;
 
   const balance = balanceRow?.balance ?? 0;
+  const balanceIsZero = Math.abs(balance) < 0.005;
 
   if (parsed.data.check_balance) {
-    return NextResponse.json({ balance, can_delete: balance >= 0 });
+    return NextResponse.json({ balance, can_delete: balanceIsZero });
   }
 
-  if (balance < 0) {
-    return NextResponse.json({ error: "Gracz ma należność" }, { status: 400 });
+  if (!balanceIsZero) {
+    return NextResponse.json({ error: "Gość może zostać usunięty dopiero gdy saldo portfela wynosi 0" }, { status: 400 });
   }
 
 

@@ -1,5 +1,5 @@
 import { getDb } from "@/lib/db";
-import { removeTemporaryGuestIfPaid } from "@/lib/guest-cleanup";
+import { tryRemoveTemporaryGuestIfBalanceZero } from "@/lib/guest-cleanup";
 
 export type WalletBalanceRow = { balance_pln: number };
 
@@ -85,6 +85,11 @@ export async function completeDepositRequest(depositId: number, completedByUserI
      VALUES (?, 'deposit', ?, ?, ?)`
   ).run(dep.user_id, Number(dep.amount_pln), dep.id, `Wpłata zaksięgowana (zakończone przez user ${completedByUserId})`);
 
+  await tryRemoveTemporaryGuestIfBalanceZero({
+    userId: dep.user_id,
+    actorUserId: completedByUserId,
+  });
+
   return { ok: true as const };
 }
 
@@ -106,7 +111,7 @@ export async function createMatchCharge(args: {
      VALUES (?, 'match_charge', ?, ?, ?)`
   ).run(args.userId, -Math.abs(args.amountPln), args.matchId, args.note ?? `Rozliczenie meczu id ${args.matchId}`);
 
-  await removeTemporaryGuestIfPaid({
+  await tryRemoveTemporaryGuestIfBalanceZero({
     userId: args.userId,
     matchId: args.matchId,
     actorUserId: args.adminId,

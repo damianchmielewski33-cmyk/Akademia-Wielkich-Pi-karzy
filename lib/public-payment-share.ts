@@ -58,6 +58,29 @@ export type PublicWalletView = {
   }>;
 };
 
+async function loadMatchWalletParticipantRows(matchId: number): Promise<PublicWalletPlayerRow[]> {
+  const db = await getDb();
+  return (await db
+    .prepare(
+      `SELECT u.id, u.first_name, u.last_name, u.player_alias AS zawodnik, u.profile_photo_path,
+              COALESCE(ROUND(SUM(t.amount_pln), 2), 0) AS balance_pln,
+              c.amount_pln AS match_charge_pln
+       FROM (
+         SELECT user_id FROM match_signups WHERE match_id = ? AND COALESCE(commitment, 1) = 1
+         UNION
+         SELECT user_id FROM match_wallet_charges WHERE match_id = ?
+         UNION
+         SELECT id AS user_id FROM users WHERE temporary_guest_match_id = ? AND COALESCE(is_temporary, 0) = 1
+       ) participants
+       JOIN users u ON u.id = participants.user_id
+       LEFT JOIN wallet_transactions t ON t.user_id = u.id
+       LEFT JOIN match_wallet_charges c ON c.match_id = ? AND c.user_id = u.id
+       GROUP BY u.id
+       ORDER BY COALESCE(u.is_temporary, 0) DESC, u.first_name, u.last_name`
+    )
+    .all(matchId, matchId, matchId, matchId)) as PublicWalletPlayerRow[];
+}
+
 export async function loadPublicWalletRows(link: PublicShareLinkRow): Promise<PublicWalletView> {
   const db = await getDb();
 
@@ -88,20 +111,7 @@ export async function loadPublicWalletRows(link: PublicShareLinkRow): Promise<Pu
       | undefined;
     if (!match) return { title: "Mecz nie znaleziony", subtitle: "", match: null, rows: [] };
 
-    const rows = (await db
-      .prepare(
-        `SELECT u.id, u.first_name, u.last_name, u.player_alias AS zawodnik, u.profile_photo_path,
-                COALESCE(ROUND(SUM(t.amount_pln), 2), 0) AS balance_pln,
-                c.amount_pln AS match_charge_pln
-         FROM match_signups ms
-         JOIN users u ON u.id = ms.user_id
-         LEFT JOIN wallet_transactions t ON t.user_id = u.id
-         LEFT JOIN match_wallet_charges c ON c.match_id = ms.match_id AND c.user_id = u.id
-         WHERE ms.match_id = ? AND COALESCE(ms.commitment, 1) = 1
-         GROUP BY u.id
-         ORDER BY u.first_name, u.last_name`
-      )
-      .all(link.match_id)) as PublicWalletPlayerRow[];
+    const rows = await loadMatchWalletParticipantRows(link.match_id);
 
     return {
       title: "Podsumowanie płatności — mecz",
@@ -169,18 +179,7 @@ export async function loadPublicWalletRows(link: PublicShareLinkRow): Promise<Pu
     return { title: "Brak rozegranego meczu", subtitle: "", match: null, rows: [] };
   }
 
-  const rows = (await db
-    .prepare(
-      `SELECT u.id, u.first_name, u.last_name, u.player_alias AS zawodnik, u.profile_photo_path,
-              COALESCE(ROUND(SUM(t.amount_pln), 2), 0) AS balance_pln
-       FROM match_signups ms
-       JOIN users u ON u.id = ms.user_id
-       LEFT JOIN wallet_transactions t ON t.user_id = u.id
-       WHERE ms.match_id = ? AND COALESCE(ms.commitment, 1) = 1
-       GROUP BY u.id
-       ORDER BY u.first_name, u.last_name`
-    )
-    .all(lastMatch.id)) as PublicWalletPlayerRow[];
+  const rows = await loadMatchWalletParticipantRows(lastMatch.id);
 
   return {
     title: "Portfele po ostatnim meczu",

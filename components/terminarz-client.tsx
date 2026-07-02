@@ -175,6 +175,7 @@ export function TerminarzClient({
   const [onlyMine, setOnlyMine] = useState(false);
   const [period, setPeriod] = useState<"all" | "7d" | "month">("all");
   const [search, setSearch] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
   const [calYear, setCalYear] = useState(() => new Date().getFullYear());
   const [calMonth, setCalMonth] = useState(() => new Date().getMonth());
   const [addOpen, setAddOpen] = useState(false);
@@ -1209,8 +1210,25 @@ export function TerminarzClient({
               </div>
             )}
             <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-900/80 sm:p-5">
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-12 lg:items-end">
-                <div className="lg:col-span-4">
+              <Button
+                type="button"
+                variant={searchOpen || search.trim() ? "secondary" : "outline"}
+                className="gap-2"
+                onClick={() => setSearchOpen((open) => !open)}
+                aria-expanded={searchOpen}
+                aria-controls="terminarz-search-panel"
+              >
+                <Search className="h-4 w-4 shrink-0" aria-hidden />
+                Wyszukaj mecz
+                {search.trim() ? (
+                  <span className="max-w-[12rem] truncate text-xs font-normal text-zinc-600 dark:text-zinc-400">
+                    · {search.trim()}
+                  </span>
+                ) : null}
+              </Button>
+
+              {searchOpen ? (
+                <div id="terminarz-search-panel" className="mt-3 max-w-md">
                   <Label htmlFor="terminarz-search" className="text-xs text-zinc-600 dark:text-zinc-400">
                     Szukaj miejsca
                   </Label>
@@ -1218,14 +1236,19 @@ export function TerminarzClient({
                     <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
                     <Input
                       id="terminarz-search"
+                      type="search"
                       value={search}
                       onChange={(e) => setSearch(e.target.value)}
                       placeholder="np. boisko, adres…"
                       className="pl-9"
+                      autoFocus
                     />
                   </div>
                 </div>
-                <div className="lg:col-span-3">
+              ) : null}
+
+              <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 lg:items-end">
+                <div>
                   <Label className="text-xs text-zinc-600 dark:text-zinc-400">Zakres dat (lista aktywna)</Label>
                   <select
                     className={cn(nativeSelectClasses, "mt-1 w-full")}
@@ -1237,7 +1260,7 @@ export function TerminarzClient({
                     <option value="month">Bieżący miesiąc</option>
                   </select>
                 </div>
-                <div className="lg:col-span-3">
+                <div>
                   <Label className="text-xs text-zinc-600 dark:text-zinc-400">Miejsca</Label>
                   <select
                     className={cn(nativeSelectClasses, "mt-1 w-full")}
@@ -1251,7 +1274,7 @@ export function TerminarzClient({
                     <option value="past">Data już minęła</option>
                   </select>
                 </div>
-                <div className="flex flex-wrap gap-2 lg:col-span-2">
+                <div className="flex flex-wrap gap-2">
                   <select
                     className={cn(nativeSelectClasses, "min-w-[10rem] flex-1")}
                     value={sortDir}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ComponentType } from "react";
+import { createPortal } from "react-dom";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -56,13 +57,18 @@ function formatPln(n: number) {
 }
 
 function HomeWalletBalanceFloat({ balancePln }: { balancePln: number }) {
+  const [mounted, setMounted] = useState(false);
   const negative = balancePln < 0;
   const positive = balancePln > 0;
 
-  return (
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const tile = (
     <Link
       href="/platnosci"
-      className="group fixed right-3 top-[4.25rem] z-40 flex max-w-[min(100%,14rem)] items-center gap-2 overflow-hidden rounded-2xl border-2 border-white/35 px-3 py-2 shadow-lg shadow-emerald-950/25 ring-1 ring-emerald-950/15 transition-[transform,box-shadow] motion-safe:hover:-translate-y-0.5 hover:shadow-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 sm:right-5 sm:top-[4.75rem] sm:max-w-none sm:gap-2.5 sm:px-3.5 sm:py-2.5"
+      className="group fixed right-3 top-[4.25rem] z-[45] flex max-w-[min(100%,14rem)] items-center gap-2 overflow-hidden rounded-2xl border-2 border-white/35 px-3 py-2 shadow-lg shadow-emerald-950/25 ring-1 ring-emerald-950/15 transition-[transform,box-shadow] motion-safe:hover:-translate-y-0.5 hover:shadow-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 sm:right-5 sm:top-[4.75rem] sm:max-w-none sm:gap-2.5 sm:px-3.5 sm:py-2.5"
       aria-label={`Twoje saldo: ${formatPln(balancePln)}. Przejdź do płatności.`}
     >
       <div className="home-pitch-tile absolute inset-0" aria-hidden />
@@ -99,6 +105,9 @@ function HomeWalletBalanceFloat({ balancePln }: { balancePln: number }) {
       />
     </Link>
   );
+
+  if (!mounted) return null;
+  return createPortal(tile, document.body);
 }
 
 export function HomeClient({

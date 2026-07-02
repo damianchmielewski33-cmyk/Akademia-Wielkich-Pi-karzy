@@ -97,7 +97,7 @@ export function MatchAddGuestDialog({
       size="md"
       scrollable
       title="Dodaj gościa na mecz"
-      description="Zapisz osobę grającą jednorazowo. Po potwierdzeniu płatności za mecz gość zostanie automatycznie usunięty z bazy."
+      description="Zapisz osobę grającą jednorazowo. Gość zostanie automatycznie usunięty dopiero, gdy saldo jego portfela wyniesie 0."
       footer={
         <>
           <Button type="button" variant="outline" onClick={() => handleOpenChange(false)} disabled={busy}>

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getDb, logActivity } from "@/lib/db";
 import { requireAdmin } from "@/lib/api-helpers";
+import { tryRemoveTemporaryGuestIfBalanceZero } from "@/lib/guest-cleanup";
 
 export const runtime = "nodejs";
 
@@ -82,6 +83,11 @@ export async function POST(req: Request) {
     gate.session.userId,
     `Ustawił saldo portfela user ${user_id} na ${target} PLN (delta ${delta} PLN), tx ${txId}`
   );
+
+  await tryRemoveTemporaryGuestIfBalanceZero({
+    userId: user_id,
+    actorUserId: gate.session.userId,
+  });
 
   return NextResponse.json({
     ok: true,

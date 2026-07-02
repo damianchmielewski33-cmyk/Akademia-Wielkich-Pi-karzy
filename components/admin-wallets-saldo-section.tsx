@@ -121,7 +121,7 @@ export function AdminWalletsSaldoSection({
       if (adminBalanceUserId === null && r.data.players?.length) {
         const first = r.data.players[0]!;
         setAdminBalanceUserId(first.id);
-        setAdminBalanceUserQuery(`${first.first_name} ${first.last_name}`);
+        setAdminBalanceUserQuery("");
       }
       if (topUpUserId === null) {
         const list = r.data.walletUsers ?? r.data.players ?? [];
@@ -352,150 +352,197 @@ export function AdminWalletsSaldoSection({
           })() : null}
 
           {(() => {
+            const balanceFormPanelClass =
+              "rounded-xl border border-amber-200/90 bg-amber-50/60 p-4 dark:border-amber-800/50 dark:bg-amber-950/25";
+            const playerReadonlyCardClass =
+              "rounded-xl border border-emerald-200 bg-emerald-50/80 p-3 dark:border-emerald-800/50 dark:bg-emerald-950/35";
+
             const balanceEditBody = (
-              <>
-            <div className={cn("grid gap-3 sm:grid-cols-3", embedded ? "mt-1" : "mt-3")}>
-              <div className="sm:col-span-1">
-                <Label htmlFor="admin-balance-user">Zawodnik</Label>
-                <div className="relative mt-1">
-                  <Search
-                    className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400"
-                    aria-hidden
-                  />
-                  <Input
-                    id="admin-balance-user"
-                    type="text"
-                    placeholder="Szukaj po imieniu i nazwisku…"
-                    value={adminBalanceUserQuery}
-                    onChange={(e) => setAdminBalanceUserQuery(e.target.value)}
-                    autoComplete="off"
-                  />
-                </div>
-                {selectedBalancePlayer ? (
-                  <div className="mt-2 flex items-center gap-2 rounded-lg border border-emerald-900/10 bg-emerald-50/50 px-2 py-1.5 dark:border-emerald-100/10 dark:bg-emerald-950/30">
-                    <PlayerAvatar
-                      photoPath={selectedBalancePlayer.profile_photo_path}
-                      firstName={selectedBalancePlayer.first_name}
-                      lastName={selectedBalancePlayer.last_name}
-                      size="sm"
-                      ringClassName="ring-2 ring-emerald-200/90"
-                    />
-                    <div className="min-w-0 flex-1">
-                      <PlayerNameStack
-                        firstName={selectedBalancePlayer.first_name}
-                        lastName={selectedBalancePlayer.last_name}
-                        nick={selectedBalancePlayer.zawodnik}
-                      />
+              <div className={cn("space-y-4", embedded ? "mt-1" : "mt-3")}>
+                <section aria-labelledby="admin-balance-player-heading">
+                  <p
+                    id="admin-balance-player-heading"
+                    className="text-xs font-semibold uppercase tracking-[0.12em] text-zinc-600 dark:text-zinc-400"
+                  >
+                    Zawodnik
+                  </p>
+
+                  {selectedBalancePlayer ? (
+                    <div className={cn(playerReadonlyCardClass, "mt-2")}>
+                      <div className="flex flex-wrap items-center gap-3">
+                        <PlayerAvatar
+                          photoPath={selectedBalancePlayer.profile_photo_path}
+                          firstName={selectedBalancePlayer.first_name}
+                          lastName={selectedBalancePlayer.last_name}
+                          size="md"
+                          ringClassName="ring-2 ring-emerald-300/90 dark:ring-emerald-600/70"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <PlayerNameStack
+                            firstName={selectedBalancePlayer.first_name}
+                            lastName={selectedBalancePlayer.last_name}
+                            nick={selectedBalancePlayer.zawodnik}
+                            primaryClassName="text-base font-semibold text-emerald-950 dark:text-emerald-50"
+                            secondaryClassName="text-sm text-emerald-800/90 dark:text-emerald-200/80"
+                          />
+                          {(() => {
+                            const b = Number(selectedBalancePlayer.balance_pln ?? 0);
+                            const neg = b < 0;
+                            const pos = b > 0;
+                            return (
+                              <p
+                                className={cn(
+                                  "mt-1.5 text-sm font-semibold tabular-nums",
+                                  neg
+                                    ? "text-red-700 dark:text-red-300"
+                                    : pos
+                                      ? "text-emerald-800 dark:text-emerald-200"
+                                      : "text-zinc-700 dark:text-zinc-300"
+                                )}
+                              >
+                                Obecne saldo: {formatPln(b)}
+                                {neg ? (
+                                  <span className="ml-2 inline-block rounded border border-red-200 bg-red-100 px-1.5 py-0.5 text-[10px] font-bold uppercase text-red-900 dark:border-red-800 dark:bg-red-900/50 dark:text-red-200">
+                                    Niedopłata
+                                  </span>
+                                ) : pos ? (
+                                  <span className="ml-2 inline-block rounded border border-emerald-300 bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold uppercase text-emerald-900 dark:border-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-100">
+                                    Nadwyżka
+                                  </span>
+                                ) : null}
+                              </p>
+                            );
+                          })()}
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="shrink-0"
+                          onClick={() => {
+                            setAdminBalanceUserId(null);
+                            setAdminBalanceUserQuery("");
+                          }}
+                        >
+                          Zmień zawodnika
+                        </Button>
+                      </div>
                     </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 shrink-0 px-2 text-xs"
-                      onClick={() => {
-                        setAdminBalanceUserId(null);
-                        setAdminBalanceUserQuery("");
-                      }}
-                    >
-                      Zmień
-                    </Button>
-                  </div>
-                ) : null}
-                {!selectedBalancePlayer && balancePlayerList.length ? (
-                  <ul className="mt-2 max-h-40 space-y-0 overflow-y-auto rounded-xl border border-emerald-900/10 bg-white dark:border-emerald-100/10 dark:bg-zinc-950/40">
-                    {filteredBalancePlayers.length ? (
-                      filteredBalancePlayers.map((p) => (
-                        <li key={p.id}>
-                          <button
-                            type="button"
-                            className="flex w-full items-center gap-2 border-b border-emerald-900/5 px-2 py-2 text-left text-sm last:border-b-0 hover:bg-emerald-50 dark:border-emerald-100/5 dark:hover:bg-emerald-950/40"
-                            onClick={() => {
-                              setAdminBalanceUserId(p.id);
-                              setAdminBalanceUserQuery(`${p.first_name} ${p.last_name}`);
-                            }}
-                          >
-                            <PlayerAvatar
-                              photoPath={p.profile_photo_path}
-                              firstName={p.first_name}
-                              lastName={p.last_name}
-                              size="sm"
-                              ringClassName="ring-2 ring-emerald-200/90"
-                            />
-                            <span className="min-w-0 flex-1 truncate">
-                              {p.first_name} {p.last_name}
-                              {p.zawodnik ? (
-                                <span className="ml-1 text-xs text-zinc-500">({p.zawodnik})</span>
-                              ) : null}
-                            </span>
-                            {"is_admin" in p && Number((p as { is_admin?: number }).is_admin ?? 0) ? (
-                              <span className="shrink-0 text-[10px] font-bold uppercase text-zinc-500">Admin</span>
-                            ) : null}
-                          </button>
-                        </li>
-                      ))
-                    ) : (
-                      <li className="px-3 py-4 text-center text-xs text-zinc-500">Brak wyników wyszukiwania.</li>
-                    )}
-                  </ul>
-                ) : null}
-                {selectedBalancePlayer ? (() => {
-                  const b = Number(selectedBalancePlayer.balance_pln ?? 0);
-                  const neg = b < 0;
-                  const pos = b > 0;
-                  return (
-                    <p
-                      className={cn(
-                        "mt-1 text-xs",
-                        neg
-                          ? "font-semibold text-red-700 dark:text-red-300"
-                          : pos
-                            ? "font-semibold text-emerald-800 dark:text-emerald-200"
-                            : "text-zinc-600 dark:text-zinc-400"
-                      )}
-                    >
-                      Obecne saldo: {formatPln(b)}
-                      {neg ? (
-                        <span className="ml-2 inline-block rounded border border-red-200 bg-red-100 px-1.5 py-0.5 text-[10px] font-bold uppercase text-red-900 dark:border-red-800 dark:bg-red-900/50 dark:text-red-200">
-                          Niedopłata
-                        </span>
-                      ) : pos ? (
-                        <span className="ml-2 inline-block rounded border border-emerald-300 bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold uppercase text-emerald-900 dark:border-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-100">
-                          Nadwyżka
-                        </span>
+                  ) : (
+                    <div className="mt-2 space-y-2">
+                      <Label htmlFor="admin-balance-user" className="sr-only">
+                        Szukaj zawodnika
+                      </Label>
+                      <div className="relative">
+                        <Search
+                          className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400"
+                          aria-hidden
+                        />
+                        <Input
+                          id="admin-balance-user"
+                          type="search"
+                          placeholder="Szukaj po imieniu, nazwisku lub pseudonimie…"
+                          value={adminBalanceUserQuery}
+                          onChange={(e) => setAdminBalanceUserQuery(e.target.value)}
+                          autoComplete="off"
+                          className="pl-9"
+                        />
+                      </div>
+                      {balancePlayerList.length ? (
+                        <ul className="max-h-44 space-y-0 overflow-y-auto rounded-xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-700 dark:bg-zinc-950/50">
+                          {filteredBalancePlayers.length ? (
+                            filteredBalancePlayers.map((p) => (
+                              <li key={p.id}>
+                                <button
+                                  type="button"
+                                  className="flex w-full items-center gap-2 border-b border-zinc-100 px-3 py-2.5 text-left text-sm last:border-b-0 hover:bg-emerald-50 dark:border-zinc-800 dark:hover:bg-emerald-950/40"
+                                  onClick={() => {
+                                    setAdminBalanceUserId(p.id);
+                                    setAdminBalanceUserQuery("");
+                                  }}
+                                >
+                                  <PlayerAvatar
+                                    photoPath={p.profile_photo_path}
+                                    firstName={p.first_name}
+                                    lastName={p.last_name}
+                                    size="sm"
+                                    ringClassName="ring-2 ring-emerald-200/90"
+                                  />
+                                  <span className="min-w-0 flex-1 truncate font-medium text-zinc-900 dark:text-zinc-100">
+                                    {p.first_name} {p.last_name}
+                                    {p.zawodnik ? (
+                                      <span className="ml-1 font-normal text-zinc-500 dark:text-zinc-400">
+                                        ({p.zawodnik})
+                                      </span>
+                                    ) : null}
+                                  </span>
+                                  <span className="shrink-0 text-xs font-semibold tabular-nums text-emerald-800 dark:text-emerald-200">
+                                    {formatPln(Number(p.balance_pln ?? 0))}
+                                  </span>
+                                  {"is_admin" in p && Number((p as { is_admin?: number }).is_admin ?? 0) ? (
+                                    <span className="shrink-0 text-[10px] font-bold uppercase text-zinc-500">Admin</span>
+                                  ) : null}
+                                </button>
+                              </li>
+                            ))
+                          ) : (
+                            <li className="px-3 py-4 text-center text-xs text-zinc-500">Brak wyników wyszukiwania.</li>
+                          )}
+                        </ul>
                       ) : null}
+                    </div>
+                  )}
+                </section>
+
+                {selectedBalancePlayer ? (
+                  <section aria-labelledby="admin-balance-form-heading" className={balanceFormPanelClass}>
+                    <p
+                      id="admin-balance-form-heading"
+                      className="text-xs font-semibold uppercase tracking-[0.12em] text-amber-900/80 dark:text-amber-200/90"
+                    >
+                      Docelowe saldo
                     </p>
-                  );
-                })() : null}
+                    <p className="mt-1 text-xs text-amber-950/75 dark:text-amber-100/75">
+                      Wpisz kwotę, na jaką ma zostać ustawione saldo — różnica trafi do historii jako korekta.
+                    </p>
+                    <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                      <div>
+                        <Label htmlFor="admin-balance-target">Nowe saldo (PLN)</Label>
+                        <Input
+                          id="admin-balance-target"
+                          type="text"
+                          inputMode="decimal"
+                          placeholder="np. 120,00"
+                          value={adminBalanceTarget}
+                          onChange={(e) => setAdminBalanceTarget(e.target.value)}
+                          className="mt-1 border-amber-300/80 bg-white font-semibold tabular-nums dark:border-amber-700/60 dark:bg-zinc-950"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="admin-balance-note">Opis korekty (opcjonalnie)</Label>
+                        <Input
+                          id="admin-balance-note"
+                          type="text"
+                          placeholder="np. korekta po gotówce"
+                          value={adminBalanceNote}
+                          onChange={(e) => setAdminBalanceNote(e.target.value)}
+                          className="mt-1 bg-white dark:bg-zinc-950"
+                        />
+                      </div>
+                    </div>
+                    <div className="mt-4">
+                      <Button type="button" disabled={adminBalanceSubmitting} onClick={() => void adminSetWalletBalance()}>
+                        {adminBalanceSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
+                        Ustaw saldo
+                      </Button>
+                    </div>
+                  </section>
+                ) : (
+                  <p className="rounded-lg border border-dashed border-zinc-200 bg-zinc-50/80 px-3 py-2.5 text-xs text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900/40 dark:text-zinc-400">
+                    Wybierz zawodnika z listy, aby ustawić docelowe saldo.
+                  </p>
+                )}
               </div>
-              <div className="sm:col-span-1">
-                <Label htmlFor="admin-balance-target">Saldo (PLN)</Label>
-                <Input
-                  id="admin-balance-target"
-                  type="text"
-                  inputMode="decimal"
-                  placeholder="np. 120"
-                  value={adminBalanceTarget}
-                  onChange={(e) => setAdminBalanceTarget(e.target.value)}
-                />
-              </div>
-              <div className="sm:col-span-1">
-                <Label htmlFor="admin-balance-note">Opis (opcjonalnie)</Label>
-                <Input
-                  id="admin-balance-note"
-                  type="text"
-                  placeholder="np. korekta po gotówce"
-                  value={adminBalanceNote}
-                  onChange={(e) => setAdminBalanceNote(e.target.value)}
-                />
-              </div>
-            </div>
-            <div className="mt-3">
-              <Button type="button" disabled={adminBalanceSubmitting} onClick={() => void adminSetWalletBalance()}>
-                {adminBalanceSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
-                Ustaw saldo
-              </Button>
-            </div>
-              </>
             );
 
             if (embedded) {
