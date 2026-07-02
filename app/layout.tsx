@@ -13,6 +13,7 @@ import { normalizeUiTheme } from "@/lib/ui-theme";
 import { getDb } from "@/lib/db";
 import { getUserWalletBalancePln } from "@/lib/wallet";
 import { WalletBalanceFloat } from "@/components/wallet-balance-float";
+import { SiteJsonLd } from "@/components/site-json-ld";
 import { getGoogleSiteVerification, getSiteUrl, SITE_DESCRIPTION, SITE_NAME } from "@/lib/site";
 import "./globals.css";
 

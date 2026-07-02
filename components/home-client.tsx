@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState, type ComponentType } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -16,6 +15,7 @@ import {
   Trophy,
   UserPlus,
   Users,
+  Wallet,
 } from "lucide-react";
 import { HomeNextMatchCard } from "@/components/home-next-match-card";
 import { PitchPageHero } from "@/components/ui/pitch-card";
