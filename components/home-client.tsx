@@ -214,6 +214,23 @@ export function HomeClient({
     </div>
   );
 
+  const nextMatchCard = nextMatch ? (
+    <HomeNextMatchCard
+      match={nextMatch}
+      tentativeLine={nextMatchTentativeLine}
+      lineupPublic={lineupPublicNextMatch}
+      signup={nextMatchSignup}
+      transportActive={transportHomeActive}
+      isLoggedIn={isLoggedIn}
+      tentativeBusy={tentativeBusy}
+      className={youtubeLiveVideoId ? "mt-0 h-full max-w-none" : undefined}
+      onSignup={openTransportSignup}
+      onTentative={() => void signupTentativeHome()}
+      onDeclined={() => void signupDeclinedHome()}
+      onConfirmFromTentative={openConfirmFromTentative}
+    />
+  ) : null;
+
   return (
     <div className="flex flex-1 flex-col">
       <div className="container mx-auto max-w-5xl flex-1 px-4 py-8 text-center sm:py-10">
@@ -247,70 +264,60 @@ export function HomeClient({
           }
         />
 
-        {youtubeLiveVideoId ? (
+        {youtubeLiveVideoId || nextMatchCard ? (
           <section
-            className="mx-auto mt-10 max-w-3xl text-left"
-            aria-labelledby="home-live-heading"
+            className={cn(
+              "mx-auto mt-10 grid max-w-5xl grid-cols-1 gap-5 text-left",
+              youtubeLiveVideoId && nextMatchCard ? "lg:grid-cols-[minmax(0,1.15fr)_minmax(22rem,0.85fr)] lg:items-stretch" : "max-w-3xl"
+            )}
+            aria-label="Najważniejsze informacje"
           >
-            <div className="overflow-hidden rounded-2xl border-2 border-emerald-200/80 bg-emerald-950/[0.03] shadow-lg shadow-emerald-950/10 ring-1 ring-emerald-900/10 dark:border-emerald-800/60 dark:bg-emerald-950/30 dark:ring-emerald-500/10">
-              <div className="border-b border-emerald-200/60 bg-gradient-to-r from-emerald-800/10 to-emerald-600/5 px-4 py-3 dark:border-emerald-800/50 dark:from-emerald-900/40 dark:to-emerald-950/20 sm:px-5">
-                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                  <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-red-600 text-white shadow-sm ring-2 ring-red-500/30">
-                    <Radio className="h-4 w-4" strokeWidth={2.5} aria-hidden />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <h2
-                      id="home-live-heading"
-                      className="text-lg font-bold tracking-tight text-emerald-950 dark:text-emerald-100 sm:text-xl"
+            {youtubeLiveVideoId ? (
+              <div className="overflow-hidden rounded-2xl border-2 border-emerald-200/80 bg-emerald-950/[0.03] shadow-lg shadow-emerald-950/10 ring-1 ring-emerald-900/10 dark:border-emerald-800/60 dark:bg-emerald-950/30 dark:ring-emerald-500/10">
+                <div className="border-b border-emerald-200/60 bg-gradient-to-r from-emerald-800/10 to-emerald-600/5 px-4 py-3 dark:border-emerald-800/50 dark:from-emerald-900/40 dark:to-emerald-950/20 sm:px-5">
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                    <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-red-600 text-white shadow-sm ring-2 ring-red-500/30">
+                      <Radio className="h-4 w-4" strokeWidth={2.5} aria-hidden />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <h2
+                        id="home-live-heading"
+                        className="text-lg font-bold tracking-tight text-emerald-950 dark:text-emerald-100 sm:text-xl"
+                      >
+                        Mecz na żywo
+                      </h2>
+                      <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                        Transmisja z YouTube — oglądaj prosto z Akademii Wielkich Piłkarzy
+                      </p>
+                    </div>
+                    <Link
+                      href={`https://www.youtube.com/watch?v=${encodeURIComponent(youtubeLiveVideoId)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="shrink-0 text-sm font-semibold text-emerald-800 underline decoration-emerald-800/30 underline-offset-2 hover:text-emerald-950 dark:text-emerald-300 dark:decoration-emerald-400/40 dark:hover:text-emerald-200"
                     >
-                      Mecz na żywo
-                    </h2>
-                    <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                      Transmisja z YouTube — oglądaj prosto z Akademii Wielkich Piłkarzy
-                    </p>
+                      Otwórz w YouTube
+                    </Link>
                   </div>
-                  <Link
-                    href={`https://www.youtube.com/watch?v=${encodeURIComponent(youtubeLiveVideoId)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="shrink-0 text-sm font-semibold text-emerald-800 underline decoration-emerald-800/30 underline-offset-2 hover:text-emerald-950 dark:text-emerald-300 dark:decoration-emerald-400/40 dark:hover:text-emerald-200"
-                  >
-                    Otwórz w YouTube
-                  </Link>
+                </div>
+                <div className="relative aspect-video w-full bg-black">
+                  <iframe
+                    title="Transmisja meczu na żywo — YouTube"
+                    className="absolute inset-0 h-full w-full"
+                    src={`https://www.youtube.com/embed/${encodeURIComponent(youtubeLiveVideoId)}?rel=0`}
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    allowFullScreen
+                    loading="lazy"
+                    referrerPolicy="strict-origin-when-cross-origin"
+                  />
                 </div>
               </div>
-              <div className="relative aspect-video w-full bg-black">
-                <iframe
-                  title="Transmisja meczu na żywo — YouTube"
-                  className="absolute inset-0 h-full w-full"
-                  src={`https://www.youtube.com/embed/${encodeURIComponent(youtubeLiveVideoId)}?rel=0`}
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                  allowFullScreen
-                  loading="lazy"
-                  referrerPolicy="strict-origin-when-cross-origin"
-                />
-              </div>
-            </div>
+            ) : null}
+            {nextMatchCard}
           </section>
         ) : null}
 
         <div className="mt-8">{tiles}</div>
-
-        {nextMatch ? (
-          <HomeNextMatchCard
-            match={nextMatch}
-            tentativeLine={nextMatchTentativeLine}
-            lineupPublic={lineupPublicNextMatch}
-            signup={nextMatchSignup}
-            transportActive={transportHomeActive}
-            isLoggedIn={isLoggedIn}
-            tentativeBusy={tentativeBusy}
-            onSignup={openTransportSignup}
-            onTentative={() => void signupTentativeHome()}
-            onDeclined={() => void signupDeclinedHome()}
-            onConfirmFromTentative={openConfirmFromTentative}
-          />
-        ) : null}
       </div>
 
       {nextMatch && (

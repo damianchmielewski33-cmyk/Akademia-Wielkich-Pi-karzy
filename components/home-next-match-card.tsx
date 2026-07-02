@@ -24,6 +24,7 @@ type Props = {
   transportActive: boolean;
   isLoggedIn: boolean;
   tentativeBusy: boolean;
+  className?: string;
   onSignup: () => void;
   onTentative: () => void;
   onDeclined: () => void;
@@ -58,6 +59,7 @@ export function HomeNextMatchCard({
   transportActive,
   isLoggedIn,
   tentativeBusy,
+  className,
   onSignup,
   onTentative,
   onDeclined,
@@ -74,7 +76,7 @@ export function HomeNextMatchCard({
   return (
     <PitchCard
       as="section"
-      className="mx-auto mt-8 max-w-2xl"
+      className={cn("mx-auto mt-8 max-w-2xl", className)}
       contentClassName="px-5 py-5 sm:px-6 sm:py-6"
       aria-labelledby="home-next-match-heading"
     >
