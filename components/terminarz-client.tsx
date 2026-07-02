@@ -26,7 +26,7 @@ import {
 import type { MatchRow } from "@/lib/db";
 import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
 import type { PlayersDataEntry } from "@/lib/terminarz-shared";
-import { formatPonderingPlayersPolish, tentativeSignupCount } from "@/lib/terminarz-shared";
+import { formatPonderingPlayersPolish, isMatchCancelled, tentativeSignupCount } from "@/lib/terminarz-shared";
 import { cn } from "@/lib/utils";
 import { nativeSelectClasses } from "@/lib/field-styles";
 import { Button } from "@/components/ui/button";
@@ -175,7 +175,6 @@ export function TerminarzClient({
   const [onlyMine, setOnlyMine] = useState(false);
   const [period, setPeriod] = useState<"all" | "7d" | "month">("all");
   const [search, setSearch] = useState("");
-  const [searchOpen, setSearchOpen] = useState(false);
   const [calYear, setCalYear] = useState(() => new Date().getFullYear());
   const [calMonth, setCalMonth] = useState(() => new Date().getMonth());
   const [addOpen, setAddOpen] = useState(false);
@@ -1210,93 +1209,95 @@ export function TerminarzClient({
               </div>
             )}
             <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-900/80 sm:p-5">
-              <Button
-                type="button"
-                variant={searchOpen || search.trim() ? "secondary" : "outline"}
-                className="gap-2"
-                onClick={() => setSearchOpen((open) => !open)}
-                aria-expanded={searchOpen}
-                aria-controls="terminarz-search-panel"
-              >
-                <Search className="h-4 w-4 shrink-0" aria-hidden />
-                Wyszukaj mecz
-                {search.trim() ? (
-                  <span className="max-w-[12rem] truncate text-xs font-normal text-zinc-600 dark:text-zinc-400">
-                    · {search.trim()}
+              <details className="group rounded-xl border border-zinc-200 dark:border-zinc-600">
+                <summary className="awp-focus-ring flex cursor-pointer list-none items-center gap-2 px-3 py-2.5 text-xs font-semibold uppercase tracking-[0.1em] text-emerald-800 dark:text-[var(--mundial-gold,#f5c518)] [&::-webkit-details-marker]:hidden">
+                  <Search className="h-4 w-4 shrink-0" aria-hidden />
+                  <span className="min-w-0 flex-1">
+                    Wyszukaj mecz
+                    {search.trim() || filter !== "all" || period !== "all" || onlyMine ? (
+                      <span className="ml-1.5 text-[10px] font-normal normal-case tracking-normal text-zinc-500 dark:text-zinc-400">
+                        · filtry aktywne
+                      </span>
+                    ) : null}
                   </span>
-                ) : null}
-              </Button>
+                  <span className="shrink-0 text-[10px] font-medium normal-case tracking-normal text-zinc-500 group-open:hidden dark:text-zinc-400">
+                    Rozwiń
+                  </span>
+                  <span className="hidden shrink-0 text-[10px] font-medium normal-case tracking-normal text-zinc-500 group-open:inline dark:text-zinc-400">
+                    Zwiń
+                  </span>
+                </summary>
 
-              {searchOpen ? (
-                <div id="terminarz-search-panel" className="mt-3 max-w-md">
-                  <Label htmlFor="terminarz-search" className="text-xs text-zinc-600 dark:text-zinc-400">
-                    Szukaj miejsca
-                  </Label>
-                  <div className="relative mt-1">
-                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
-                    <Input
-                      id="terminarz-search"
-                      type="search"
-                      value={search}
-                      onChange={(e) => setSearch(e.target.value)}
-                      placeholder="np. boisko, adres…"
-                      className="pl-9"
-                      autoFocus
-                    />
+                <div id="terminarz-search-panel" className="space-y-4 border-t border-zinc-200 px-3 pb-3 pt-3 dark:border-zinc-600">
+                  <div className="max-w-md">
+                    <Label htmlFor="terminarz-search" className="text-xs text-zinc-600 dark:text-zinc-400">
+                      Szukaj miejsca
+                    </Label>
+                    <div className="relative mt-1">
+                      <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+                      <Input
+                        id="terminarz-search"
+                        type="search"
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        placeholder="np. boisko, adres…"
+                        className="pl-9"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 lg:items-end">
+                    <div>
+                      <Label className="text-xs text-zinc-600 dark:text-zinc-400">Zakres dat (lista aktywna)</Label>
+                      <select
+                        className={cn(nativeSelectClasses, "mt-1 w-full")}
+                        value={period}
+                        onChange={(e) => setPeriod(e.target.value as "all" | "7d" | "month")}
+                      >
+                        <option value="all">Cały terminarz</option>
+                        <option value="7d">Najbliższe 7 dni</option>
+                        <option value="month">Bieżący miesiąc</option>
+                      </select>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-zinc-600 dark:text-zinc-400">Miejsca</Label>
+                      <select
+                        className={cn(nativeSelectClasses, "mt-1 w-full")}
+                        value={filter}
+                        onChange={(e) => setFilter(e.target.value)}
+                      >
+                        <option value="all">Wszystkie</option>
+                        <option value="free">Są wolne miejsca</option>
+                        <option value="full">Pełny skład</option>
+                        <option value="future">Data jeszcze nie minęła</option>
+                        <option value="past">Data już minęła</option>
+                      </select>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <select
+                        className={cn(nativeSelectClasses, "min-w-[10rem] flex-1")}
+                        value={sortDir}
+                        onChange={(e) => setSortDir(e.target.value as "asc" | "desc")}
+                      >
+                        <option value="asc">Od najbliższych</option>
+                        <option value="desc">Od najdalszych</option>
+                      </select>
+                      <Button
+                        type="button"
+                        variant={onlyMine ? "default" : "outline"}
+                        size="sm"
+                        className={cn(
+                          onlyMine && "bg-emerald-700 hover:bg-emerald-800",
+                          "h-10 shrink-0 px-3"
+                        )}
+                        onClick={() => setOnlyMine((v) => !v)}
+                      >
+                        Tylko moje
+                      </Button>
+                    </div>
                   </div>
                 </div>
-              ) : null}
-
-              <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 lg:items-end">
-                <div>
-                  <Label className="text-xs text-zinc-600 dark:text-zinc-400">Zakres dat (lista aktywna)</Label>
-                  <select
-                    className={cn(nativeSelectClasses, "mt-1 w-full")}
-                    value={period}
-                    onChange={(e) => setPeriod(e.target.value as "all" | "7d" | "month")}
-                  >
-                    <option value="all">Cały terminarz</option>
-                    <option value="7d">Najbliższe 7 dni</option>
-                    <option value="month">Bieżący miesiąc</option>
-                  </select>
-                </div>
-                <div>
-                  <Label className="text-xs text-zinc-600 dark:text-zinc-400">Miejsca</Label>
-                  <select
-                    className={cn(nativeSelectClasses, "mt-1 w-full")}
-                    value={filter}
-                    onChange={(e) => setFilter(e.target.value)}
-                  >
-                    <option value="all">Wszystkie</option>
-                    <option value="free">Są wolne miejsca</option>
-                    <option value="full">Pełny skład</option>
-                    <option value="future">Data jeszcze nie minęła</option>
-                    <option value="past">Data już minęła</option>
-                  </select>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <select
-                    className={cn(nativeSelectClasses, "min-w-[10rem] flex-1")}
-                    value={sortDir}
-                    onChange={(e) => setSortDir(e.target.value as "asc" | "desc")}
-                  >
-                    <option value="asc">Od najbliższych</option>
-                    <option value="desc">Od najdalszych</option>
-                  </select>
-                  <Button
-                    type="button"
-                    variant={onlyMine ? "default" : "outline"}
-                    size="sm"
-                    className={cn(
-                      onlyMine && "bg-emerald-700 hover:bg-emerald-800",
-                      "h-10 shrink-0 px-3"
-                    )}
-                    onClick={() => setOnlyMine((v) => !v)}
-                  >
-                    Tylko moje
-                  </Button>
-                </div>
-              </div>
+              </details>
             </div>
 
             <div className="flex flex-wrap gap-3 rounded-xl border border-emerald-100 bg-emerald-50/50 px-4 py-3 text-sm dark:border-emerald-900/40 dark:bg-emerald-950/30">
@@ -1402,7 +1403,7 @@ export function TerminarzClient({
           <CalendarView
             year={calYear}
             month={calMonth}
-            matches={allMatches}
+            matches={allMatches.filter((m) => !isMatchCancelled(m))}
             tentativeByMatchId={tentativeByMatchId}
             onPrev={() => {
               if (calMonth === 0) {

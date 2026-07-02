@@ -11,7 +11,8 @@ import { getAccountNavFields } from "@/lib/account-server";
 import { getServerSession } from "@/lib/auth";
 import { normalizeUiTheme } from "@/lib/ui-theme";
 import { getDb } from "@/lib/db";
-import { SiteJsonLd } from "@/components/site-json-ld";
+import { getUserWalletBalancePln } from "@/lib/wallet";
+import { WalletBalanceFloat } from "@/components/wallet-balance-float";
 import { getGoogleSiteVerification, getSiteUrl, SITE_DESCRIPTION, SITE_NAME } from "@/lib/site";
 import "./globals.css";
 
@@ -100,6 +101,9 @@ export default async function RootLayout({
     .get()) as { match_notification_prompt_enabled: number } | undefined;
   const matchNotificationPromptEnabled = (settingsRow?.match_notification_prompt_enabled ?? 0) === 1;
 
+  const walletBalancePln =
+    loggedInFull && session ? await getUserWalletBalancePln(session.userId) : null;
+
   return (
     <html lang="pl" className={htmlThemeClass}>
       <body
@@ -124,6 +128,7 @@ export default async function RootLayout({
             {children}
           </SiteShell>
         </PinSetupGate>
+        {walletBalancePln != null ? <WalletBalanceFloat balancePln={walletBalancePln} /> : null}
         <MatchParticipationSurveyPrompt />
         {matchNotificationPromptEnabled ? <MatchNotificationPrompt /> : null}
         <Toaster

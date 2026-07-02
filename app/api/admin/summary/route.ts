@@ -16,7 +16,7 @@ export async function GET() {
   const upcoming_matches = (
     (await db
       .prepare(
-        "SELECT COUNT(*) AS c FROM matches WHERE match_date >= date('now') AND played = 0"
+        "SELECT COUNT(*) AS c FROM matches WHERE match_date >= date('now') AND played = 0 AND COALESCE(cancelled, 0) = 0"
       )
       .get()) as { c: number }
   ).c;

@@ -111,13 +111,17 @@ export function buildPlayersData(
   return playersData;
 }
 
+export function isMatchCancelled(m: Pick<MatchRow, "cancelled">): boolean {
+  return Number(m.cancelled ?? 0) === 1;
+}
+
 export function categorizeMatches(matches: MatchRow[]) {
   const upcoming: MatchRow[] = [];
   const playedConfirmed: MatchRow[] = [];
   for (const m of matches) {
     if (m.played === 1) {
       playedConfirmed.push(m);
-    } else {
+    } else if (!isMatchCancelled(m)) {
       upcoming.push(m);
     }
   }

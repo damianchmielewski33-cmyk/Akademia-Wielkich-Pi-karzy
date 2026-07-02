@@ -28,7 +28,7 @@ export default async function StatystykiPage() {
   ).c;
   const upcomingMatches = (
     (await db
-      .prepare("SELECT COUNT(*) AS c FROM matches WHERE match_date >= date('now') AND played = 0")
+      .prepare("SELECT COUNT(*) AS c FROM matches WHERE match_date >= date('now') AND played = 0 AND COALESCE(cancelled, 0) = 0")
       .get()) as { c: number }
   ).c;
   const playersCount = (await db.prepare("SELECT COUNT(*) AS c FROM users").get() as { c: number }).c;

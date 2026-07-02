@@ -5,7 +5,6 @@ import { getDb, type MatchRow } from "@/lib/db";
 import { HomeClient } from "@/components/home-client";
 import { isLocalMatchDay } from "@/lib/transport";
 import { formatPonderingPlayersPolish } from "@/lib/terminarz-shared";
-import { getUserWalletBalancePln } from "@/lib/wallet";
 import { getSiteUrl, parseYoutubeVideoIdFromUserInput } from "@/lib/site";
 
 export const metadata: Metadata = {
@@ -22,7 +21,7 @@ export default async function HomePage() {
 
   const nextMatch = (await db
     .prepare(
-      "SELECT * FROM matches WHERE played = 0 AND datetime(match_date || ' ' || match_time) > datetime('now', 'localtime') ORDER BY match_date, match_time LIMIT 1"
+      "SELECT * FROM matches WHERE played = 0 AND COALESCE(cancelled, 0) = 0 AND datetime(match_date || ' ' || match_time) > datetime('now', 'localtime') ORDER BY match_date, match_time LIMIT 1"
     )
     .get()) as MatchRow | undefined;
 
@@ -69,8 +68,6 @@ export default async function HomePage() {
     ? parseYoutubeVideoIdFromUserInput(settingsRow.home_youtube_url)
     : null;
 
-  const walletBalancePln = session ? await getUserWalletBalancePln(session.userId) : null;
-
   return (
     <HomeClient
       nextMatch={nextMatch ?? null}
@@ -85,7 +82,6 @@ export default async function HomePage() {
       zawodnik={zawodnik}
       profilePhotoPath={profilePhotoPath}
       youtubeLiveVideoId={youtubeLiveVideoId}
-      walletBalancePln={walletBalancePln}
     />
   );
 }

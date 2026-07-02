@@ -36,7 +36,7 @@ export async function POST(req: Request) {
   const match = await db
     .prepare(
       `SELECT id, match_date, match_time, location FROM matches
-       WHERE id = ? AND played = 0 AND match_date >= ?`
+       WHERE id = ? AND played = 0 AND COALESCE(cancelled, 0) = 0 AND match_date >= ?`
     )
     .get(match_id, today) as { id: number; match_date: string; match_time: string; location: string } | undefined;
 
