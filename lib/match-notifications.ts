@@ -1,7 +1,7 @@
 import { getAppBaseUrl } from "@/lib/app-url";
 import { getDb, type MatchRow } from "@/lib/db";
 import { isMailConfigured, sendMail } from "@/lib/mail";
-import { appendShareSessionQuery } from "@/lib/share-link";
+import { appendShareSessionQuery, terminarzInviteRelativePath } from "@/lib/share-link";
 
 /**
  * Po dodaniu meczu: e-mail do użytkowników z podanym adresem i zgodą.
@@ -33,7 +33,7 @@ export async function notifySubscribersAboutNewMatch(match: MatchRow): Promise<v
   }
 
   const base = getAppBaseUrl();
-  const link = `${base}${appendShareSessionQuery(`/terminarz?mecz=${match.id}`)}`;
+  const link = `${base}${appendShareSessionQuery(terminarzInviteRelativePath(match.id))}`;
   const subject = `Nowy termin meczu — ${match.match_date} ${match.match_time}`;
 
   let sent = 0;
@@ -46,7 +46,7 @@ export async function notifySubscribersAboutNewMatch(match: MatchRow): Promise<v
       `• Godzina: ${match.match_time}`,
       `• Miejsce: ${match.location}`,
       "",
-      `Zapisz się na mecz (link prowadzi do terminarza z wyróżnionym terminem):`,
+      `Zapisz się na mecz (link prowadzi do wizytówki zaproszenia):`,
       link,
       "",
       `— Akademia Wielkich Piłkarzy`,

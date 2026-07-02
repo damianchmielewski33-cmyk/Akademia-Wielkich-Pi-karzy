@@ -46,9 +46,11 @@ function slotMeta(signed: number, max: number) {
 export function InviteMatchCard({
   match,
   playersData,
+  showGatePin = false,
 }: {
   match: MatchRow;
   playersData: Record<number, PlayersDataEntry>;
+  showGatePin?: boolean;
 }) {
   const when = formatMatchWhen(match.match_date, match.match_time);
   const slots = slotMeta(match.signed_up, match.max_slots);
@@ -115,7 +117,7 @@ export function InviteMatchCard({
         </a>
       </div>
 
-      {gatePin ? (
+      {gatePin && showGatePin ? (
         <div className={cn(pitchPanelClass, "mt-3 flex items-start gap-3 p-4")}>
           <KeyRound className="mt-0.5 h-5 w-5 shrink-0 text-[var(--mundial-gold,#f5c518)]" aria-hidden />
           <div className="min-w-0 text-left">
@@ -203,7 +205,11 @@ export function InviteShareLanding({
         </div>
       ) : (
         <>
-          <InviteMatchCard match={match} playersData={playersData} />
+          <InviteMatchCard
+            match={match}
+            playersData={playersData}
+            showGatePin={signupKind === "confirmed"}
+          />
 
           <div className={cn(contentPanelClass, "mx-auto max-w-2xl space-y-4")}>
             {!isLoggedIn ? (
@@ -308,7 +314,7 @@ export function InviteShareLanding({
                       : "Zaznaczyłeś «nie biorę udziału». Możesz to zmienić w terminarzu."}
                 </p>
                 <Button variant="outline" className="w-full sm:w-auto" asChild>
-                  <Link href={`/terminarz?mecz=${highlightMatchId}`}>Otwórz mecz w terminarzu</Link>
+                  <Link href={`/zaproszenie/${highlightMatchId}`}>Wróć do wizytówki meczu</Link>
                 </Button>
               </div>
             )}

@@ -68,9 +68,16 @@ export default async function HomePage() {
     ? parseYoutubeVideoIdFromUserInput(settingsRow.home_youtube_url)
     : null;
 
+  const nextMatchForClient =
+    nextMatch && nextMatchSignup === "confirmed"
+      ? nextMatch
+      : nextMatch
+        ? { ...nextMatch, gate_pin: null }
+        : null;
+
   return (
     <HomeClient
-      nextMatch={nextMatch ?? null}
+      nextMatch={nextMatchForClient}
       nextMatchTentativeLine={nextMatchTentativeLine}
       lineupPublicNextMatch={lineupPublicNextMatch}
       nextMatchSignup={nextMatchSignup}

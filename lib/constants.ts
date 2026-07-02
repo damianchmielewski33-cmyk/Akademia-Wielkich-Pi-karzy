@@ -12,7 +12,7 @@ export const SESSION_COOKIE =
  */
 export const SHARE_LINK_QUERY_PARAM = "awp_share";
 
-/** Link z terminarza „zaproszenie na mecz” — razem z `mecz` uruchamia przepływ zapisu po zalogowaniu. */
+/** Stary parametr zapytania w linkach terminarza — przekierowanie na `/zaproszenie/[id]`. */
 export const INVITE_MATCH_QUERY_PARAM = "zaproszenie";
 
 /** Krótkotrwałe ciasteczko (nie httpOnly): sygnał dla klienta, żeby wyczyścić sessionStorage / localStorage po wejściu z udostępnionego linku. */

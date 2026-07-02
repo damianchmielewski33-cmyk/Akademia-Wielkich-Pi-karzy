@@ -34,7 +34,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { InviteShareLanding } from "@/components/invite-share-landing";
 import { MatchTransportSignupDialog } from "@/components/match-transport-signup-dialog";
 import { MatchManageDialog } from "@/components/match-manage-dialog";
 import { MatchAddGuestDialog } from "@/components/match-add-guest-dialog";
@@ -72,8 +71,6 @@ type Props = {
   isAdmin: boolean;
   /** Z URL (?mecz=) — wyróżnienie wiersza po wejściu z maila. */
   highlightMatchId?: number | null;
-  /** Z URL (?zaproszenie=1) — link skopiowany z przycisku zaproszenia; uruchamia zapis po logowaniu. */
-  inviteFromShare?: boolean;
   /** Z URL (?statystyki=1 wraz z ?mecz=) — otwiera dialog statystyk po wejściu (mecz z bazy). */
   openStatsFromUrl?: boolean;
   /** Z URL (?statystyki_ankiety=1) — mecz spoza bazy (ankieta 27.03). */
@@ -162,7 +159,6 @@ export function TerminarzClient({
   isLoggedIn,
   isAdmin,
   highlightMatchId = null,
-  inviteFromShare = false,
   openStatsFromUrl = false,
   openStandaloneSurveyStats = false,
   openAttendanceFromUrl = false,
@@ -191,7 +187,6 @@ export function TerminarzClient({
   const [transportSignupMatchId, setTransportSignupMatchId] = useState<number | null>(null);
   const [transportSignupIntent, setTransportSignupIntent] = useState<"signup" | "confirm">("signup");
   const [tentativeBusyId, setTentativeBusyId] = useState<number | null>(null);
-  const [inviteLoginInline, setInviteLoginInline] = useState(false);
   const statsOpenedFromUrlRef = useRef(false);
   const standaloneStatsOpenedFromUrlRef = useRef(false);
   const attendanceOpenedFromUrlRef = useRef(false);
@@ -396,29 +391,6 @@ export function TerminarzClient({
     } finally {
       setTentativeBusyId(null);
     }
-  }
-
-  function onInviteParticipationTak() {
-    if (highlightMatchId == null) return;
-    const m = allMatches.find((x) => x.id === highlightMatchId);
-    const free = m ? m.max_slots - m.signed_up : 0;
-    if (free <= 0) {
-      toast.warning(
-        "Skład jest pełny — nie możesz teraz zająć miejsca. Wybierz „Jeszcze nie wiem” (bez miejsca w składzie) albo „Nie, nie biorę udziału”."
-      );
-      return;
-    }
-    openTransportSignup(highlightMatchId);
-  }
-
-  async function onInviteParticipationTentativeFromDialog() {
-    if (highlightMatchId == null) return;
-    await signupTentative(highlightMatchId);
-  }
-
-  async function onInviteParticipationNie() {
-    if (highlightMatchId == null) return;
-    await signupDeclined(highlightMatchId);
   }
 
   async function unsubscribe(id: number) {
@@ -1058,41 +1030,6 @@ export function TerminarzClient({
     );
   }
 
-  if (inviteFromShare && highlightMatchId != null) {
-    return (
-      <>
-        <InviteShareLanding
-          highlightMatchId={highlightMatchId}
-          match={highlightMatch ?? null}
-          playersData={playersData}
-          isLoggedIn={isLoggedIn}
-          userSignupKind={userSignupKind}
-          inviteLoginInline={inviteLoginInline}
-          setInviteLoginInline={setInviteLoginInline}
-          tentativeBusy={tentativeBusyId === highlightMatchId}
-          onParticipationTak={onInviteParticipationTak}
-          onParticipationTentative={onInviteParticipationTentativeFromDialog}
-          onParticipationNie={onInviteParticipationNie}
-          onAuthenticated={() => setInviteLoginInline(false)}
-        />
-        {transportSignupMatchId != null && (
-          <MatchTransportSignupDialog
-            open={transportSignupOpen}
-            onOpenChange={(v) => {
-              setTransportSignupOpen(v);
-              if (!v) setTransportSignupMatchId(null);
-            }}
-            matchId={transportSignupMatchId}
-            intent={transportSignupIntent === "confirm" ? "confirm" : "signup"}
-            onCompleted={() => {
-              router.refresh();
-            }}
-          />
-        )}
-      </>
-    );
-  }
-
   return (
     <>
       <div className="awp-card-surface mundial-page-accent px-4 py-8 sm:px-8">
@@ -1190,7 +1127,7 @@ export function TerminarzClient({
 
         {view === "list" && (
           <div className="mx-auto mt-5 max-w-4xl space-y-4">
-            {highlightMatch && !inviteFromShare && (
+            {highlightMatch && (
               <div
                 role="status"
                 className="rounded-xl border-2 border-emerald-500 bg-emerald-50/95 px-4 py-3 text-sm leading-relaxed text-emerald-950 shadow-sm dark:border-emerald-500 dark:bg-emerald-950/40 dark:text-emerald-50"

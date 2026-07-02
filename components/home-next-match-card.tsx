@@ -24,7 +24,6 @@ type Props = {
   transportActive: boolean;
   isLoggedIn: boolean;
   tentativeBusy: boolean;
-  className?: string;
   onSignup: () => void;
   onTentative: () => void;
   onDeclined: () => void;
@@ -59,7 +58,6 @@ export function HomeNextMatchCard({
   transportActive,
   isLoggedIn,
   tentativeBusy,
-  className,
   onSignup,
   onTentative,
   onDeclined,
@@ -76,7 +74,7 @@ export function HomeNextMatchCard({
   return (
     <PitchCard
       as="section"
-      className={cn("mx-auto mt-8 max-w-2xl", className)}
+      className="mx-auto mt-8 max-w-2xl"
       contentClassName="px-5 py-5 sm:px-6 sm:py-6"
       aria-labelledby="home-next-match-heading"
     >
@@ -131,7 +129,7 @@ export function HomeNextMatchCard({
           />
         </div>
 
-        {gatePin ? (
+        {gatePin && signup === "confirmed" ? (
           <div className={cn(pitchPanelClass, "mx-auto mt-3 max-w-md px-3.5 py-3")}>
             <span className={cn(pitchLabelClass, "mb-2 block text-center")}>Wejście na boisko</span>
             <div className="flex items-center justify-center gap-3">

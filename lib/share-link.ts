@@ -1,4 +1,4 @@
-import { INVITE_MATCH_QUERY_PARAM, SHARE_LINK_QUERY_PARAM } from "@/lib/constants";
+import { SHARE_LINK_QUERY_PARAM } from "@/lib/constants";
 
 /**
  * Dodaje parametr `awp_share=1` do względnego URL (ścieżka + opcjonalnie query).
@@ -14,7 +14,7 @@ export function appendShareSessionQuery(relativePathWithQuery: string): string {
   return s ? `${path}?${s}` : path;
 }
 
-/** Ścieżka terminarza z meczem i flagą zaproszenia (przed dodaniem `awp_share`). */
+/** Ścieżka wizytówki zaproszenia na mecz (przed dodaniem `awp_share`). */
 export function terminarzInviteRelativePath(matchId: number): string {
-  return `/terminarz?mecz=${matchId}&${INVITE_MATCH_QUERY_PARAM}=1`;
+  return `/zaproszenie/${matchId}`;
 }

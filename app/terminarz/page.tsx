@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { getDb, type MatchRow } from "@/lib/db";
 import { getServerSession } from "@/lib/auth";
-import { cn } from "@/lib/utils";
 import {
   buildPlayersData,
   categorizeMatches,
@@ -34,6 +34,10 @@ export default async function TerminarzPage({ searchParams }: PageProps) {
     if (Number.isFinite(n) && n > 0) highlightMatchId = n;
   }
   const inviteFromShare = sp.zaproszenie === "1";
+  if (inviteFromShare && highlightMatchId != null) {
+    redirect(`/zaproszenie/${highlightMatchId}`);
+  }
+
   const statystyki = sp.statystyki;
   const openStatsFromUrl =
     Boolean(highlightMatchId) && (statystyki === "1" || statystyki === "true");
@@ -79,15 +83,8 @@ export default async function TerminarzPage({ searchParams }: PageProps) {
     playedMissingStatsMatchIds = missingRows.map((r) => r.id);
   }
 
-  const isInviteLanding = inviteFromShare && highlightMatchId != null;
-
   return (
-    <div
-      className={cn(
-        "container mx-auto flex-1 px-4 py-8 sm:py-10",
-        isInviteLanding ? "max-w-5xl" : "max-w-7xl"
-      )}
-    >
+    <div className="container mx-auto max-w-7xl flex-1 px-4 py-8 sm:py-10">
       <TerminarzClient
         upcoming={upcoming}
         playedConfirmed={playedConfirmed}
@@ -98,7 +95,6 @@ export default async function TerminarzPage({ searchParams }: PageProps) {
         isLoggedIn={Boolean(session)}
         isAdmin={session?.isAdmin ?? false}
         highlightMatchId={highlightMatchId}
-        inviteFromShare={inviteFromShare}
         openStatsFromUrl={openStatsFromUrl}
         openStandaloneSurveyStats={openStandaloneSurveyStats}
         openAttendanceFromUrl={openAttendanceFromUrl}

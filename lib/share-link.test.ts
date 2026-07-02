@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { appendShareSessionQuery, terminarzInviteRelativePath } from "@/lib/share-link";
-import { INVITE_MATCH_QUERY_PARAM, SHARE_LINK_QUERY_PARAM } from "@/lib/constants";
+import { SHARE_LINK_QUERY_PARAM } from "@/lib/constants";
 
 describe("appendShareSessionQuery", () => {
   it("dodaje awp_share=1 do ścieżki z query", () => {
@@ -14,7 +14,7 @@ describe("appendShareSessionQuery", () => {
     expect(out).toBe(`/sklady?${SHARE_LINK_QUERY_PARAM}=1`);
   });
 
-  it("zaproszenie: mecz + flaga przed udostępnieniem", () => {
-    expect(terminarzInviteRelativePath(7)).toBe(`/terminarz?mecz=7&${INVITE_MATCH_QUERY_PARAM}=1`);
+  it("zaproszenie: dedykowana wizytówka meczu", () => {
+    expect(terminarzInviteRelativePath(7)).toBe("/zaproszenie/7");
   });
 });
