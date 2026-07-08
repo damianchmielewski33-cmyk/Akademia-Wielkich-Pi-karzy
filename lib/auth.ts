@@ -73,14 +73,24 @@ export const getServerSession = cache(async (): Promise<AppSession | null> => {
     const session = await verifySessionToken(token);
     const db = await getDb();
     const row = (await db
-      .prepare("SELECT auth_version, pin_hash, pin_hash_pending FROM users WHERE id = ?")
+      .prepare("SELECT auth_version, pin_hash, pin_hash_pending, is_admin FROM users WHERE id = ?")
       .get(session.userId)) as
-      | { auth_version: number; pin_hash: string | null; pin_hash_pending: string | null }
+      | {
+          auth_version: number;
+          pin_hash: string | null;
+          pin_hash_pending: string | null;
+          is_admin: number;
+        }
       | undefined;
     if (!row || row.auth_version !== session.authVersion) return null;
     const needsPinSetup = !row.pin_hash;
     const pinChangePending = Boolean(row.pin_hash_pending);
-    return { ...session, needsPinSetup, pinChangePending };
+    return {
+      ...session,
+      isAdmin: row.is_admin === 1,
+      needsPinSetup,
+      pinChangePending,
+    };
   } catch {
     return null;
   }

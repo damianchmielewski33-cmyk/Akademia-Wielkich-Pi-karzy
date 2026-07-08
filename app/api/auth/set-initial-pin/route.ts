@@ -71,7 +71,7 @@ export async function POST(req: Request) {
     | undefined;
 
   if (!user) {
-    return NextResponse.json({ error: "Nie znaleziono konta dla podanych danych." }, { status: 401 });
+    return NextResponse.json({ error: "Nieprawidłowe dane. Sprawdź imię, nazwisko i pseudonim piłkarza." }, { status: 401 });
   }
 
   if (user.pin_hash) {

@@ -3,12 +3,9 @@ import { redirect } from "next/navigation";
 import type { ComponentType } from "react";
 import { Route, Share2, Shield, Target, Trophy } from "lucide-react";
 import { getDb } from "@/lib/db";
+import { getAppSettings } from "@/lib/app-settings";
 import { getServerSession } from "@/lib/auth";
 import {
-  PT_ASSIST,
-  PT_GOAL,
-  PT_KM,
-  PT_SAVE,
   rankPlayers,
   type RankablePlayer,
 } from "@/lib/rankings";
@@ -26,6 +23,12 @@ export default async function RankingiPage() {
   if (!session) redirect("/login");
 
   const db = await getDb();
+  const appSettings = await getAppSettings(db);
+  const PT_GOAL = appSettings.ranking_pt_goal;
+  const PT_ASSIST = appSettings.ranking_pt_assist;
+  const PT_KM = appSettings.ranking_pt_km;
+  const PT_SAVE = appSettings.ranking_pt_save;
+
   const rows = await db
     .prepare(
       `SELECT u.id AS user_id,

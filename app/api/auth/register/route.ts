@@ -5,6 +5,7 @@ import { normalizePlayerAlias } from "@/lib/player-alias";
 import { isUniqueConstraintError } from "@/lib/sql-errors";
 import { createSessionToken, setSessionCookie } from "@/lib/auth";
 import { checkRateLimit, rateLimitKey, rateLimitedResponse, RATE } from "@/lib/rate-limit";
+import { isSelfRegistrationAllowed } from "@/lib/registration-gate";
 import { hashPin, isValidPinFormat, isWeakPin, WEAK_PIN_MESSAGE } from "@/lib/pin";
 
 export const runtime = "nodejs";
@@ -54,6 +55,13 @@ export async function POST(req: Request) {
   }
 
   const db = await getDb();
+  if (!(await isSelfRegistrationAllowed(db))) {
+    return NextResponse.json(
+      { error: "Rejestracja nowych kont jest wyłączona. Skontaktuj się z administratorem." },
+      { status: 403 }
+    );
+  }
+
   const count = (
     (await db.prepare("SELECT COUNT(*) AS c FROM users").get()) as { c: number } | undefined
   )?.c ?? 0;

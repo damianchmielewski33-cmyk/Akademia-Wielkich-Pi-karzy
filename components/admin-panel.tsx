@@ -15,9 +15,9 @@ import {
   LayoutGrid,
   Loader2,
   LogOut,
-  MonitorPlay,
   RefreshCw,
   Search,
+  Settings2,
   Shield,
   Table2,
   UserPlus,
@@ -58,6 +58,7 @@ import {
   type AnalyticsHourlyPayload,
 } from "@/components/admin-analytics-hourly-charts";
 import { AdminWalletsSaldoSection } from "@/components/admin-wallets-saldo-section";
+import { AdminSettingsTab } from "@/components/admin-settings-tab";
 import { MatchLineupAdmin } from "@/components/match-lineup-admin";
 import {
   cn,
@@ -190,9 +191,7 @@ type Summary = {
 };
 
 type AppSettings = {
-  match_notification_prompt_enabled: boolean;
-  /** Link lub ID YouTube — transmisja na stronie głównej. NULL = w razie braku w bazie może obowiązywać env. */
-  home_youtube_url: string | null;
+  default_match_max_slots?: number;
 };
 
 const tabs = [
@@ -203,6 +202,7 @@ const tabs = [
   { id: "matches", label: "Mecze", icon: Calendar },
   { id: "lineups", label: "Składy na mecz", icon: LayoutGrid },
   { id: "stats", label: "Statystyki", icon: Table2 },
+  { id: "settings", label: "Ustawienia", icon: Settings2 },
 ] as const;
 
 type TabId = (typeof tabs)[number]["id"];
@@ -222,10 +222,12 @@ function MatchesView({
   matches,
   loading,
   onReload,
+  defaultMaxSlots,
 }: {
   matches: MatchRow[];
   loading: boolean;
   onReload: () => void;
+  defaultMaxSlots: number;
 }) {
   const [cancelOpen, setCancelOpen] = useState(false);
   const [signupsOpen, setSignupsOpen] = useState(false);
@@ -320,6 +322,7 @@ function MatchesView({
           open={editOpen}
           onOpenChange={setEditOpen}
           match={selectedMatch}
+          defaultMaxSlots={defaultMaxSlots}
           onEdited={() => {
             setEditOpen(false);
             onReload();
@@ -826,8 +829,7 @@ export function AdminPanel() {
   const [tab, setTab] = useState<TabId>("dashboard");
   const [loading, setLoading] = useState(true);
   const [summary, setSummary] = useState<Summary | null>(null);
-  const [appSettings, setAppSettings] = useState<AppSettings | null>(null);
-  const [savingAppSettings, setSavingAppSettings] = useState(false);
+  const [matchDefaults, setMatchDefaults] = useState<AppSettings | null>(null);
   const [activity, setActivity] = useState<
     {
       text: string;
@@ -871,49 +873,14 @@ export function AdminPanel() {
       if (!s.ok || !a.ok || !st.ok) throw new Error();
       setSummary(await s.json());
       setActivity(await a.json());
-      setAppSettings(await st.json());
+      const settings = await st.json();
+      setMatchDefaults({ default_match_max_slots: settings.default_match_max_slots });
     } catch {
       toast.error("Nie udało się wczytać przeglądu");
     } finally {
       setLoading(false);
     }
   }, []);
-
-  const saveAppSetting = useCallback(
-    async (next: Partial<AppSettings>) => {
-      setSavingAppSettings(true);
-      try {
-        const res = await fetch(API.appSettings, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(next),
-        });
-        const j = (await res.json().catch(() => ({}))) as AppSettings & { error?: string };
-        if (!res.ok) {
-          throw new Error(j.error ?? "Nie udało się zapisać ustawienia");
-        }
-        if (typeof j.match_notification_prompt_enabled === "boolean" && "home_youtube_url" in j) {
-          setAppSettings({
-            match_notification_prompt_enabled: j.match_notification_prompt_enabled,
-            home_youtube_url: j.home_youtube_url ?? null,
-          });
-        } else {
-          setAppSettings((prev) => (prev ? { ...prev, ...next } : (next as AppSettings)));
-        }
-        toast.success("Zapisano ustawienia");
-      } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Nie udało się zapisać ustawienia");
-        // odśwież z serwera, jeśli zapis nie wyszedł
-        void fetch(API.appSettings)
-          .then((r) => (r.ok ? (r.json() as Promise<AppSettings>) : null))
-          .then((data) => data && setAppSettings(data))
-          .catch(() => {});
-      } finally {
-        setSavingAppSettings(false);
-      }
-    },
-    []
-  );
 
   const loadUsers = useCallback(async () => {
     setLoading(true);
@@ -1093,7 +1060,7 @@ export function AdminPanel() {
         </aside>
 
         <main className="relative flex-1 overflow-x-hidden p-4 sm:p-6 lg:p-8">
-          {(tab === "lineups" || tab === "wallets"
+          {(tab === "lineups" || tab === "wallets" || tab === "settings"
             ? false
             : tab === "analytics"
               ? analyticsLoading
@@ -1111,12 +1078,6 @@ export function AdminPanel() {
             {tab === "dashboard" && (
               <DashboardView
                 summary={summary}
-                appSettings={appSettings}
-                savingAppSettings={savingAppSettings}
-                onToggleMatchNotificationPrompt={(enabled) =>
-                  void saveAppSetting({ match_notification_prompt_enabled: enabled })
-                }
-                onSaveHomeYoutubeUrl={(url) => void saveAppSetting({ home_youtube_url: url })}
                 activity={activity}
                 loading={loading}
                 onReload={loadDashboard}
@@ -1125,7 +1086,14 @@ export function AdminPanel() {
             )}
             {tab === "users" && <UsersView users={users} loading={loading} onReload={loadUsers} />}
             {tab === "wallets" && <AdminWalletsSaldoSection />}
-            {tab === "matches" && <MatchesView matches={matches} loading={loading} onReload={loadMatches} />}
+            {tab === "matches" && (
+              <MatchesView
+                matches={matches}
+                loading={loading}
+                onReload={loadMatches}
+                defaultMaxSlots={matchDefaults?.default_match_max_slots ?? 14}
+              />
+            )}
             {tab === "lineups" && <MatchLineupAdmin />}
             {tab === "analytics" && (
               <AnalyticsView
@@ -1141,6 +1109,7 @@ export function AdminPanel() {
               />
             )}
             {tab === "stats" && <StatsView stats={stats} loading={loading} onReload={loadStats} />}
+            {tab === "settings" && <AdminSettingsTab loading={loading} onReload={loadDashboard} />}
           </div>
         </main>
       </div>
@@ -1740,20 +1709,12 @@ function AnalyticsView({
 
 function DashboardView({
   summary,
-  appSettings,
-  savingAppSettings,
-  onToggleMatchNotificationPrompt,
-  onSaveHomeYoutubeUrl,
   activity,
   loading,
   onReload,
   onGoToTab,
 }: {
   summary: Summary | null;
-  appSettings: AppSettings | null;
-  savingAppSettings: boolean;
-  onToggleMatchNotificationPrompt: (enabled: boolean) => void;
-  onSaveHomeYoutubeUrl: (url: string) => void;
   activity: {
     text: string;
     time: string;
@@ -1765,13 +1726,6 @@ function DashboardView({
   onReload: () => void;
   onGoToTab: (t: TabId) => void;
 }) {
-  const [youtubeDraft, setYoutubeDraft] = useState("");
-
-  useEffect(() => {
-    if (appSettings) {
-      setYoutubeDraft(appSettings.home_youtube_url ?? "");
-    }
-  }, [appSettings]);
 
   const metrics = [
     {
@@ -1871,83 +1825,16 @@ function DashboardView({
 
       <Card className="mt-8 border-zinc-200/80 bg-white shadow-sm dark:border-zinc-700/80 dark:bg-zinc-900/90 dark:shadow-black/30">
         <CardHeader>
-          <CardTitle className="text-lg">Ustawienia aplikacji</CardTitle>
-          <CardDescription>Funkcje sterowane przez administratora.</CardDescription>
+          <CardTitle className="text-lg">Konfiguracja aplikacji</CardTitle>
+          <CardDescription>
+            Branding, kontakt, rejestracja, rankingi, domyślne mecze i więcej — w dedykowanej zakładce.
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <label className="flex flex-wrap items-start justify-between gap-4 rounded-xl border border-zinc-200 bg-zinc-50/60 px-4 py-3">
-            <span className="min-w-0">
-              <span className="block text-sm font-semibold text-zinc-900">
-                Pop-up: powiadomienia o meczach
-              </span>
-              <span className="mt-1 block text-sm text-zinc-600 dark:text-zinc-400">
-                Włącza/wyłącza okno z adresem e-mail i zgodą do powiadomień o nowych terminach w terminarzu.
-              </span>
-            </span>
-            <span className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                className="mt-0.5 h-4 w-4 rounded border-zinc-300 text-emerald-700 focus:ring-emerald-600"
-                checked={Boolean(appSettings?.match_notification_prompt_enabled)}
-                disabled={loading || savingAppSettings || appSettings == null}
-                onChange={(e) => onToggleMatchNotificationPrompt(e.target.checked)}
-                aria-label="Pop-up powiadomień o meczach"
-              />
-              <span className="text-sm font-medium text-zinc-700">
-                {appSettings?.match_notification_prompt_enabled ? "Włączony" : "Wyłączony"}
-              </span>
-            </span>
-          </label>
-
-          <div className="mt-6 rounded-xl border border-zinc-200 bg-zinc-50/60 px-4 py-3">
-            <div className="mb-2 flex items-start gap-2">
-              <MonitorPlay
-                className="mt-0.5 h-4 w-4 shrink-0 text-red-600"
-                strokeWidth={2.25}
-                aria-hidden
-              />
-              <div className="min-w-0">
-                <p className="text-sm font-semibold text-zinc-900">Transmisja na stronie głównej (YouTube)</p>
-                <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-                  Wklej pełny link do filmu lub transmisji na żywo (albo same 11 znaków ID). Wyczyść pole i zapisz, aby
-                  usunąć — wtedy, jeśli masz ustawione zmienne środowiskowe, zadziałają one jako zapas.
-                </p>
-              </div>
-            </div>
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <Input
-                type="url"
-                placeholder="https://www.youtube.com/watch?v=…"
-                value={youtubeDraft}
-                onChange={(e) => setYoutubeDraft(e.target.value)}
-                disabled={loading || appSettings == null}
-                className="font-mono text-sm"
-                autoComplete="off"
-                spellCheck={false}
-                aria-label="Adres YouTube na stronę główną"
-              />
-              <div className="flex shrink-0 gap-2">
-                <Button
-                  type="button"
-                  disabled={loading || savingAppSettings || appSettings == null}
-                  onClick={() => onSaveHomeYoutubeUrl(youtubeDraft.trim())}
-                >
-                  Zapisz transmisję
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={loading || savingAppSettings || appSettings == null || !youtubeDraft.trim()}
-                  onClick={() => {
-                    setYoutubeDraft("");
-                    onSaveHomeYoutubeUrl("");
-                  }}
-                >
-                  Wyczyść
-                </Button>
-              </div>
-            </div>
-          </div>
+          <Button type="button" variant="outline" onClick={() => onGoToTab("settings")}>
+            <Settings2 className="mr-2 h-4 w-4" aria-hidden />
+            Otwórz ustawienia
+          </Button>
         </CardContent>
       </Card>
 
@@ -2528,16 +2415,18 @@ function MatchEditDialogContent({
   open,
   onOpenChange,
   match,
+  defaultMaxSlots,
   onEdited,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   match: MatchRow;
+  defaultMaxSlots: number;
   onEdited: () => void;
 }) {
   const [saving, setSaving] = useState(false);
   const form = useValidatedForm({
-    initialValues: { maxSlots: match.max_slots || 14 },
+    initialValues: { maxSlots: match.max_slots || defaultMaxSlots },
     schema: z.object({ maxSlots: formSchemas.maxSlots }),
   });
 

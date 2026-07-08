@@ -4,6 +4,11 @@ export async function register() {
   if (process.env.NODE_ENV !== "production") return;
   const { getAuthSecretKey } = await import("./lib/auth-secret");
   getAuthSecretKey();
+  if (!process.env.PIN_PEPPER?.trim()) {
+    console.warn(
+      "[security] PIN_PEPPER nie jest ustawione w produkcji — rozważ dodanie losowego sekretu (≥16 znaków) dla lepszej ochrony PIN-ów."
+    );
+  }
   /** Zapewnia tabele w Turso zanim trafi pierwsze żądanie (bez importu lib/db — unika better-sqlite3 w bundlu). */
   const tursoUrl = process.env.TURSO_DATABASE_URL?.trim();
   if (tursoUrl) {

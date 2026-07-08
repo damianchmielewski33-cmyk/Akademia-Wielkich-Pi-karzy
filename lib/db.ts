@@ -4,6 +4,7 @@ import fs from "fs";
 import * as path from "path";
 import { isVercel, resolveDatabaseFilePath } from "@/lib/runtime-paths";
 import { initLibsqlSchema } from "@/lib/turso-init-schema";
+import { migrateAppSettingsColumnsSqlite } from "@/lib/app-settings";
 import { withTransientNetworkRetries } from "@/lib/transient-network-retry";
 
 /** Lokalny plik SQLite (dev) lub Turso (gdy TURSO_DATABASE_URL). */
@@ -435,9 +436,10 @@ function initSchemaSync(db: Database.Database) {
   `);
 
   const appSettingsCols = db.prepare("PRAGMA table_info(app_settings)").all() as { name: string }[];
-  if (!appSettingsCols.some((c) => c.name === "home_youtube_url")) {
-    db.exec("ALTER TABLE app_settings ADD COLUMN home_youtube_url TEXT");
-  }
+  migrateAppSettingsColumnsSqlite(
+    appSettingsCols.map((c) => c.name),
+    (sql) => db.exec(sql)
+  );
 
   // Upewnij się, że istnieje pojedynczy wiersz z ustawieniami (id=1).
   const hasSettings = db.prepare("SELECT 1 AS ok FROM app_settings WHERE id = 1").get() as

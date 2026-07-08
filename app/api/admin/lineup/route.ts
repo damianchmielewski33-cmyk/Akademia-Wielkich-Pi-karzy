@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getDb, logActivity } from "@/lib/db";
+import { getAppSettings } from "@/lib/app-settings";
 import { requireAdmin } from "@/lib/api-helpers";
 import { pitchHalfSlotCounts, pitchSlotTotalFromSignupCount } from "@/lib/lineup-pitch-slots";
 
@@ -34,14 +35,17 @@ type MatchListRow = {
   lineup_public: number;
 };
 
-function emptyLineupArrays(signupCount: number): {
+function emptyLineupArrays(
+  signupCount: number,
+  limits?: { min?: number; max?: number }
+): {
   pitchSlotTotal: number;
   homeSlotCount: number;
   awaySlotCount: number;
   home: (number | null)[];
   away: (number | null)[];
 } {
-  const pitchSlotTotal = pitchSlotTotalFromSignupCount(signupCount);
+  const pitchSlotTotal = pitchSlotTotalFromSignupCount(signupCount, limits);
   const { home: homeSlotCount, away: awaySlotCount } = pitchHalfSlotCounts(pitchSlotTotal);
   return {
     pitchSlotTotal,
@@ -61,6 +65,11 @@ export async function GET(req: Request) {
   const parsedWanted = wantedId != null && wantedId !== "" ? Number(wantedId) : NaN;
 
   const db = await getDb();
+  const appSettings = await getAppSettings(db);
+  const pitchLimits = {
+    min: appSettings.lineup_pitch_slots_min,
+    max: appSettings.lineup_pitch_slots_max,
+  };
   const today = todayIso();
 
   const matchList = (await db
@@ -78,7 +87,7 @@ export async function GET(req: Request) {
       : matchList[0] ?? null;
 
   if (!selected) {
-    const empty = emptyLineupArrays(0);
+    const empty = emptyLineupArrays(0, pitchLimits);
     return NextResponse.json({
       matches: matchList.map((m) => ({
         id: m.id,
@@ -124,7 +133,7 @@ export async function GET(req: Request) {
   }[];
 
   const signupCount = playersRaw.length;
-  const pitchSlotTotal = pitchSlotTotalFromSignupCount(signupCount);
+  const pitchSlotTotal = pitchSlotTotalFromSignupCount(signupCount, pitchLimits);
   const { home: homeSlotCount, away: awaySlotCount } = pitchHalfSlotCounts(pitchSlotTotal);
 
   const players = playersRaw.map((p) => {
@@ -214,6 +223,11 @@ export async function PUT(req: Request) {
   const { match_id, home, away } = parsed.data;
 
   const db = await getDb();
+  const appSettings = await getAppSettings(db);
+  const pitchLimits = {
+    min: appSettings.lineup_pitch_slots_min,
+    max: appSettings.lineup_pitch_slots_max,
+  };
   const today = todayIso();
 
   const match = (await db
@@ -232,7 +246,7 @@ export async function PUT(req: Request) {
     .all(match_id)) as { user_id: unknown }[];
 
   const signupCount = signupRows.length;
-  const pitchSlotTotal = pitchSlotTotalFromSignupCount(signupCount);
+  const pitchSlotTotal = pitchSlotTotalFromSignupCount(signupCount, pitchLimits);
   const { home: expectedHome, away: expectedAway } = pitchHalfSlotCounts(pitchSlotTotal);
 
   if (home.length !== expectedHome || away.length !== expectedAway) {

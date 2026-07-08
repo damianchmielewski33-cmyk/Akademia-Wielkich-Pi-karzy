@@ -61,10 +61,7 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(u);
     }
     try {
-      const { payload } = await jwtVerify(token, getAuthSecretKey());
-      if (payload.adm !== 1) {
-        return new NextResponse("Brak dostępu", { status: 403 });
-      }
+      await jwtVerify(token, getAuthSecretKey());
     } catch {
       const u = new URL("/login", request.url);
       u.searchParams.set("next", "/panel-admina");

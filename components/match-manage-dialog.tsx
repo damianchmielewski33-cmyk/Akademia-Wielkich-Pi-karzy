@@ -61,6 +61,7 @@ type Props = {
   onOpenChange: (open: boolean) => void;
   onDone: () => void;
   initialTab?: ManageTab;
+  cancelReasons?: ReadonlyArray<{ value: string; label: string }>;
 };
 
 const editSchema = z.object({
@@ -111,7 +112,14 @@ async function fetchJson<T>(
   }
 }
 
-export function MatchManageDialog({ match, open, onOpenChange, onDone, initialTab = "edit" }: Props) {
+export function MatchManageDialog({
+  match,
+  open,
+  onOpenChange,
+  onDone,
+  initialTab = "edit",
+  cancelReasons = MATCH_CANCEL_REASONS,
+}: Props) {
   const [tab, setTab] = useState<ManageTab>("edit");
   const [cancelReason, setCancelReason] = useState("weather");
   const [busy, setBusy] = useState(false);
@@ -758,7 +766,7 @@ export function MatchManageDialog({ match, open, onOpenChange, onDone, initialTa
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {MATCH_CANCEL_REASONS.map((r) => (
+                    {cancelReasons.map((r) => (
                       <SelectItem key={r.value} value={r.value}>
                         {r.label}
                       </SelectItem>

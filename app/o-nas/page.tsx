@@ -1,15 +1,23 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PitchCard, PitchPageHero, pitchLabelClass } from "@/components/ui/pitch-card";
-import { SITE_NAME, getPublicContactEmailWithFallback } from "@/lib/site";
+import { getAppSettings } from "@/lib/app-settings";
+import { getDb } from "@/lib/db";
 
-export const metadata: Metadata = {
-  title: "O nas",
-  description: "Zasady zapisów, statystyki i kontakt — Akademia Wielkich Piłkarzy.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const db = await getDb();
+  const settings = await getAppSettings(db);
+  return {
+    title: "O nas",
+    description: `Zasady zapisów, statystyki i kontakt — ${settings.site_name}.`,
+  };
+}
 
-export default function ONasPage() {
-  const email = getPublicContactEmailWithFallback();
+export default async function ONasPage() {
+  const db = await getDb();
+  const settings = await getAppSettings(db);
+  const email = settings.contact_email;
+  const siteName = settings.site_name;
 
   return (
     <div className="container mx-auto max-w-2xl flex-1 px-4 py-8 sm:py-10">
@@ -18,7 +26,7 @@ export default function ONasPage() {
         subtitle={
           <>
             Krótki przewodnik po tym, jak działa strona{" "}
-            <strong className="font-semibold text-white">{SITE_NAME}</strong>.
+            <strong className="font-semibold text-white">{siteName}</strong>.
           </>
         }
       />

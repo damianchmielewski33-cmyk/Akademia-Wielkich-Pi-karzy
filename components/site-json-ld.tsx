@@ -1,39 +1,41 @@
-import {
-  getPublicContactEmailWithFallback,
-  getSiteUrl,
-  MATCH_BLIK_PHONE_E164,
-  SITE_DESCRIPTION,
-  SITE_NAME,
-} from "@/lib/site";
+import { getSiteUrl } from "@/lib/site";
+import { blikPhoneToE164 } from "@/lib/app-settings";
 
-export function SiteJsonLd() {
+type Props = {
+  siteName: string;
+  siteDescription: string;
+  contactEmail: string;
+  blikPhone: string;
+};
+
+export function SiteJsonLd({ siteName, siteDescription, contactEmail, blikPhone }: Props) {
   const url = getSiteUrl();
   const logoUrl = `${url}/logo-akademia.svg`;
-  const email = getPublicContactEmailWithFallback();
+  const phoneE164 = blikPhoneToE164(blikPhone);
 
   const graph: Record<string, unknown>[] = [
     {
       "@type": "WebSite",
       "@id": `${url}/#website`,
       url,
-      name: SITE_NAME,
-      description: SITE_DESCRIPTION,
+      name: siteName,
+      description: siteDescription,
       inLanguage: "pl-PL",
       publisher: { "@id": `${url}/#organization` },
     },
     {
       "@type": "SportsOrganization",
       "@id": `${url}/#organization`,
-      name: SITE_NAME,
+      name: siteName,
       url,
       logo: { "@type": "ImageObject", url: logoUrl },
-      description: SITE_DESCRIPTION,
-      email,
+      description: siteDescription,
+      email: contactEmail,
       contactPoint: {
         "@type": "ContactPoint",
         contactType: "customer support",
-        email,
-        telephone: MATCH_BLIK_PHONE_E164,
+        email: contactEmail,
+        telephone: phoneE164,
         areaServed: "PL",
         availableLanguage: "pl",
       },

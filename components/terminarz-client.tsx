@@ -77,6 +77,11 @@ type Props = {
   openStandaloneSurveyStats?: boolean;
   /** Z URL (?obecnosc=1 wraz z ?mecz=) — otwiera dialog obecności (admin). */
   openAttendanceFromUrl?: boolean;
+  matchDefaults?: {
+    maxSlots: number;
+    location: string;
+  };
+  cancelReasons?: { value: string; label: string }[];
 };
 
 const todayISO = () => new Date().toISOString().slice(0, 10);
@@ -162,6 +167,8 @@ export function TerminarzClient({
   openStatsFromUrl = false,
   openStandaloneSurveyStats = false,
   openAttendanceFromUrl = false,
+  matchDefaults = { maxSlots: 14, location: "" },
+  cancelReasons,
 }: Props) {
   const router = useRouter();
   const [view, setView] = useState<"list" | "cal">("list");
@@ -1870,7 +1877,12 @@ export function TerminarzClient({
         </div>
       </AppModal>
 
-      <AddMatchDialog open={addOpen} onOpenChange={setAddOpen} onDone={() => router.refresh()} />
+      <AddMatchDialog
+        open={addOpen}
+        onOpenChange={setAddOpen}
+        onDone={() => router.refresh()}
+        defaults={matchDefaults}
+      />
 
       <MatchManageDialog
         match={manageMatch}
@@ -1878,6 +1890,7 @@ export function TerminarzClient({
         onOpenChange={setManageMatchOpen}
         onDone={() => router.refresh()}
         initialTab={manageInitialTab}
+        cancelReasons={cancelReasons}
       />
 
       <MatchAddGuestDialog
@@ -2065,13 +2078,21 @@ function AddMatchDialog({
   open,
   onOpenChange,
   onDone,
+  defaults,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   onDone: () => void;
+  defaults: { maxSlots: number; location: string };
 }) {
   const form = useValidatedForm({
-    initialValues: { location: "", date: "", time: "", maxSlots: 10, gatePin: "" },
+    initialValues: {
+      location: defaults.location,
+      date: "",
+      time: "",
+      maxSlots: defaults.maxSlots,
+      gatePin: "",
+    },
     schema: addMatchSchema,
   });
 

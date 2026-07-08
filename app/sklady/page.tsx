@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { getDb, type MatchRow } from "@/lib/db";
+import { getAppSettings } from "@/lib/app-settings";
 import { MatchLineupView, type LineupPlayer } from "@/components/match-lineup-view";
 import { pitchHalfSlotCounts, pitchSlotTotalFromSignupCount } from "@/lib/lineup-pitch-slots";
 
@@ -136,6 +137,11 @@ export default async function SkladyPage({ searchParams }: PageProps) {
 
 async function SkladyContent({ matchId }: { matchId: number }) {
   const db = await getDb();
+  const appSettings = await getAppSettings(db);
+  const pitchLimits = {
+    min: appSettings.lineup_pitch_slots_min,
+    max: appSettings.lineup_pitch_slots_max,
+  };
 
   const row = await db
     .prepare(
@@ -201,7 +207,7 @@ async function SkladyContent({ matchId }: { matchId: number }) {
     .all(matchId) as { team: string; slot_index: number; user_id: number }[];
 
   const signupCount = playersRaw.length;
-  const pitchTotal = pitchSlotTotalFromSignupCount(signupCount);
+  const pitchTotal = pitchSlotTotalFromSignupCount(signupCount, pitchLimits);
   const { home: homeSlots, away: awaySlots } = pitchHalfSlotCounts(pitchTotal);
 
   const home: (number | null)[] = Array(homeSlots).fill(null);

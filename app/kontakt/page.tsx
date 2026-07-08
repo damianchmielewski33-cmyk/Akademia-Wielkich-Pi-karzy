@@ -3,23 +3,21 @@ import Link from "next/link";
 import { Mail, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PitchCard, PitchPageHero, pitchLabelClass } from "@/components/ui/pitch-card";
-import {
-  MATCH_BLIK_PHONE_DISPLAY,
-  SITE_NAME,
-  getFacebookDamianUrl,
-  getFacebookMateuszUrl,
-  getPublicContactEmailWithFallback,
-} from "@/lib/site";
+import { getAppSettings } from "@/lib/app-settings";
+import { getDb } from "@/lib/db";
 
-export const metadata: Metadata = {
-  title: "Kontakt",
-  description: `Dane kontaktowe organizatorów — ${SITE_NAME}.`,
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const db = await getDb();
+  const settings = await getAppSettings(db);
+  return {
+    title: "Kontakt",
+    description: `Dane kontaktowe organizatorów — ${settings.site_name}.`,
+  };
+}
 
-export default function KontaktPage() {
-  const email = getPublicContactEmailWithFallback();
-  const fbDamian = getFacebookDamianUrl();
-  const fbMateusz = getFacebookMateuszUrl();
+export default async function KontaktPage() {
+  const db = await getDb();
+  const settings = await getAppSettings(db);
 
   return (
     <div className="container mx-auto max-w-5xl flex-1 px-4 py-8 text-center sm:py-10">
@@ -33,16 +31,16 @@ export default function KontaktPage() {
 
           <div className="mt-6 grid gap-3">
             <OrganizerCard
-              name="Damian Chmielewski"
-              phone={MATCH_BLIK_PHONE_DISPLAY}
-              email={email}
-              facebookUrl={fbDamian}
+              name={settings.organizer_damian_name}
+              phone={settings.organizer_damian_phone}
+              email={settings.organizer_damian_email}
+              facebookUrl={settings.facebook_damian_url}
             />
             <OrganizerCard
-              name="Mateusz Wierzbicki"
-              phone="797 233 615"
-              email="mateusz.wierzbicki@opoczta.pl"
-              facebookUrl={fbMateusz}
+              name={settings.organizer_mateusz_name}
+              phone={settings.organizer_mateusz_phone}
+              email={settings.organizer_mateusz_email}
+              facebookUrl={settings.facebook_mateusz_url}
             />
           </div>
         </PitchCard>
@@ -135,4 +133,3 @@ function OrganizerCard({
     </PitchCard>
   );
 }
-

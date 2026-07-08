@@ -1,4 +1,5 @@
 import type { Client } from "@libsql/client";
+import { migrateAppSettingsColumnsLibsql } from "@/lib/app-settings";
 
 async function pragmaColumnNames(
   client: Client,
@@ -233,9 +234,7 @@ export async function initLibsqlSchema(client: Client) {
   }
 
   names = await pragmaColumnNames(client, "app_settings");
-  if (!names.includes("home_youtube_url")) {
-    await client.execute("ALTER TABLE app_settings ADD COLUMN home_youtube_url TEXT");
-  }
+  await migrateAppSettingsColumnsLibsql(names, (sql) => client.execute(sql));
 
   await client.executeMultiple(`
     CREATE TABLE IF NOT EXISTS match_transport_messages (

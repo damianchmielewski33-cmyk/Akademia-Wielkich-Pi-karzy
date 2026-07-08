@@ -25,6 +25,8 @@ type Props = {
     zawodnik: string;
     profilePhotoPath: string | null;
   } | null;
+  siteName?: string;
+  contactEmail?: string;
 };
 
 function NavButton({
@@ -51,10 +53,17 @@ function NavButton({
   );
 }
 
-export function SiteShell({ children, isLoggedIn, isAdmin, account = null }: Props) {
+export function SiteShell({
+  children,
+  isLoggedIn,
+  isAdmin,
+  account = null,
+  siteName = SITE_NAME,
+  contactEmail: contactEmailProp,
+}: Props) {
   const router = useRouter();
   const pathname = usePathname();
-  const contactEmail = getPublicContactEmailWithFallback();
+  const contactEmail = contactEmailProp ?? getPublicContactEmailWithFallback();
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [themeBusy, setThemeBusy] = useState(false);
   if (pathname === "/panel-admina" || pathname?.startsWith("/panel-admina")) {
@@ -352,14 +361,14 @@ export function SiteShell({ children, isLoggedIn, isAdmin, account = null }: Pro
           <div className="flex items-center gap-3">
             <Image
               src="/logo-akademia-crest.png"
-              alt={SITE_NAME}
+              alt={siteName}
               width={144}
               height={144}
               className="h-9 w-9 object-contain opacity-90"
               sizes="36px"
             />
             <div>
-              <p className="text-sm font-semibold text-white">{SITE_NAME}</p>
+              <p className="text-sm font-semibold text-white">{siteName}</p>
               <p className="text-xs text-emerald-200/80">Terminarz, statystyki i społeczność na boisku</p>
               <p className="mt-2 text-xs text-emerald-200/85">
                 <Link href="/o-nas" className="font-medium underline-offset-2 hover:underline">

@@ -4,6 +4,7 @@ import fs from "fs";
 import path from "path";
 import { getDb, logActivity } from "@/lib/db";
 import { requireUser } from "@/lib/api-helpers";
+import { imageMimeMatchesMagicBytes } from "@/lib/image-magic";
 import { deleteProfileBlobIfAny, isProfileBlobStorageEnabled, isVercelBlobUrl } from "@/lib/profile-blob";
 import {
   profilePhotoPublicUrl,
@@ -72,6 +73,9 @@ export async function POST(req: Request) {
   const buf = Buffer.from(await file.arrayBuffer());
   if (buf.length > MAX_BYTES) {
     return NextResponse.json({ error: "Plik jest za duży (max 2 MB)." }, { status: 400 });
+  }
+  if (!imageMimeMatchesMagicBytes(buf, mime)) {
+    return NextResponse.json({ error: "Zawartość pliku nie odpowiada dozwolonym formatom obrazu." }, { status: 400 });
   }
 
   const db = await getDb();

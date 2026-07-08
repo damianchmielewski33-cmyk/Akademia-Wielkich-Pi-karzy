@@ -1,4 +1,5 @@
 import { getAppBaseUrl } from "@/lib/app-url";
+import { getAppSettings } from "@/lib/app-settings";
 import { getDb, type MatchRow } from "@/lib/db";
 import { isMailConfigured, sendMail } from "@/lib/mail";
 import { appendShareSessionQuery, terminarzInviteRelativePath } from "@/lib/share-link";
@@ -16,6 +17,11 @@ export async function notifySubscribersAboutNewMatch(match: MatchRow): Promise<v
   }
 
   const db = await getDb();
+  const settings = await getAppSettings(db);
+  if (!settings.match_email_notifications_enabled) {
+    console.log("[match-notifications] Wysyłka wyłączona w ustawieniach aplikacji.");
+    return;
+  }
   const rows = (await db
     .prepare(
       `SELECT id, email, first_name FROM users
@@ -49,7 +55,7 @@ export async function notifySubscribersAboutNewMatch(match: MatchRow): Promise<v
       `Zapisz się na mecz (link prowadzi do wizytówki zaproszenia):`,
       link,
       "",
-      `— Akademia Wielkich Piłkarzy`,
+      `— ${settings.site_name}`,
     ].join("\n");
     try {
       await sendMail({

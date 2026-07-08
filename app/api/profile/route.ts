@@ -103,13 +103,13 @@ export async function PATCH(req: Request) {
   );
 
   const verRow = (await db
-    .prepare("SELECT auth_version FROM users WHERE id = ?")
-    .get(session.userId)) as { auth_version: number } | undefined;
+    .prepare("SELECT auth_version, is_admin FROM users WHERE id = ?")
+    .get(session.userId)) as { auth_version: number; is_admin: number } | undefined;
   const authVersion = verRow?.auth_version ?? session.authVersion;
 
   const token = await createSessionToken({
     userId: session.userId,
-    isAdmin: session.isAdmin,
+    isAdmin: verRow?.is_admin === 1,
     firstName: nextFirst,
     lastName: nextLast,
     zawodnik: nextAlias,

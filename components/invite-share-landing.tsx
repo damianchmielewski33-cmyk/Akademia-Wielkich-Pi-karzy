@@ -11,11 +11,8 @@ import { LoginForm } from "@/components/login-form";
 import { MatchSignupCountsBlock } from "@/components/terminarz-match-counts";
 import { Button } from "@/components/ui/button";
 import {
-  PitchCard,
   PitchPageHero,
   pitchLabelClass,
-  pitchPanelClass,
-  pitchSecondaryBtnClass,
 } from "@/components/ui/pitch-card";
 import { terminarzInviteRelativePath } from "@/lib/share-link";
 import { cn } from "@/lib/utils";
@@ -23,15 +20,24 @@ import { cn } from "@/lib/utils";
 const contentPanelClass =
   "rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-900/80 sm:p-6";
 
+const STAMP_MONTHS = ["STY", "LUT", "MAR", "KWI", "MAJ", "CZE", "LIP", "SIE", "WRZ", "PAŹ", "LIS", "GRU"] as const;
+
 function formatMatchWhen(isoDate: string, time: string) {
   const [y, m, d] = isoDate.split("-").map(Number);
   if (!y || !m || !d) {
-    return { label: `${isoDate} · ${time}`, weekday: "" };
+    return { label: `${isoDate} · ${time}`, weekday: "", stampDay: "", stampMonth: "", stampYear: "" };
   }
   const dt = new Date(y, m - 1, d);
   const weekday = dt.toLocaleDateString("pl-PL", { weekday: "long" });
   const label = `${String(d).padStart(2, "0")}.${String(m).padStart(2, "0")}.${y}`;
-  return { label, weekday, time };
+  return {
+    label,
+    weekday,
+    time,
+    stampDay: String(d).padStart(2, "0"),
+    stampMonth: STAMP_MONTHS[m - 1] ?? "",
+    stampYear: String(y).slice(-2),
+  };
 }
 
 function slotMeta(signed: number, max: number) {
@@ -61,73 +67,110 @@ export function InviteMatchCard({
     slots.tone === "full" ? "bg-red-400/90" : slots.tone === "warn" ? "bg-amber-400/90" : "bg-emerald-100";
 
   return (
-    <PitchCard
-      as="section"
-      className="mx-auto max-w-2xl"
-      contentClassName="px-5 py-5 sm:px-6 sm:py-6"
-      aria-labelledby="invite-match-heading"
-    >
-      <p className={pitchLabelClass}>Zaproszenie na mecz</p>
-      <h2 id="invite-match-heading" className="mt-2 text-xl font-bold tracking-tight text-white sm:text-2xl">
-        {when.weekday ? (
-          <>
-            <span className="capitalize">{when.weekday}</span>
-            <span className="mt-0.5 block text-lg font-semibold text-emerald-100/95 sm:text-xl">
-              {when.label} · {when.time}
+    <section className="awp-postcard mx-auto max-w-2xl" aria-labelledby="invite-match-heading">
+      <div className="awp-postcard__hero">
+        <div className="awp-postcard__stamp" aria-label={`Znaczek: ${when.label}`}>
+          <div className="awp-postcard__stampFace">
+            <span className="awp-postcard__stampDay">{when.stampDay || "—"}</span>
+            <span className="awp-postcard__stampMonth">
+              {when.stampMonth || "—"} {when.stampYear || ""}
             </span>
-          </>
-        ) : (
-          <span>
-            {when.label} · {when.time}
+            <Image
+              src="/mundial-2026-logo.svg"
+              alt=""
+              width={22}
+              height={22}
+              className="awp-postcard__stampLogo"
+              unoptimized
+            />
+          </div>
+        </div>
+        <div className="awp-postcard__postmark" aria-hidden>
+          <span className="awp-postcard__postmarkRing">
+            <span className="awp-postcard__postmarkTop">AKADEMIA WIELKICH PIŁKARZY</span>
+            <span className="awp-postcard__postmarkDate">{when.label || match.match_date}</span>
+            <span className="awp-postcard__postmarkBottom">{when.time || match.match_time}</span>
           </span>
-        )}
-      </h2>
-
-      <div className={cn(pitchPanelClass, "mt-4 space-y-3 p-4")}>
-        <div className="flex items-start gap-2.5 text-sm text-white/95">
-          <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[var(--mundial-gold,#f5c518)]" aria-hidden />
-          <span className="font-semibold leading-snug">{match.location}</span>
         </div>
-
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between gap-2 text-xs font-medium text-white/80">
-            <span>Skład</span>
-            <span className="tabular-nums">
-              {match.signed_up}/{match.max_slots}
-              {slots.free > 0 ? ` · ${slots.free} wolnych` : " · pełny skład"}
-            </span>
-          </div>
-          <div className="h-2 overflow-hidden rounded-full bg-black/25">
-            <div className={cn("h-full rounded-full transition-all", barClass)} style={{ width: `${slots.pct}%` }} />
+        <div className="awp-postcard__heroInner">
+          <p className={cn(pitchLabelClass, "awp-postcard__kicker")}>Zaproszenie na mecz</p>
+          <h2 id="invite-match-heading" className="awp-postcard__title">
+            {when.weekday ? (
+              <>
+                <span className="capitalize">{when.weekday}</span>
+                <span className="awp-postcard__subtitle">
+                  {when.label} · {when.time}
+                </span>
+              </>
+            ) : (
+              <span>
+                {when.label} · {when.time}
+              </span>
+            )}
+          </h2>
+          <div className="awp-postcard__heroRule" aria-hidden />
+          <div className="awp-postcard__location">
+            <MapPin className="h-4 w-4 shrink-0" aria-hidden />
+            <span className="font-semibold leading-snug">{match.location}</span>
           </div>
         </div>
-
-        <MatchSignupCountsBlock
-          matchId={match.id}
-          signedUp={match.signed_up}
-          maxSlots={match.max_slots}
-          playersData={playersData}
-          variant="card"
-          tone="zinc"
-        />
-
-        <a href={mapsUrl} target="_blank" rel="noreferrer" className={pitchSecondaryBtnClass}>
-          <MapPin className="h-4 w-4 shrink-0" aria-hidden />
-          Otwórz miejsce w Mapach Google
-        </a>
       </div>
 
-      {gatePin && showGatePin ? (
-        <div className={cn(pitchPanelClass, "mt-3 flex items-start gap-3 p-4")}>
-          <KeyRound className="mt-0.5 h-5 w-5 shrink-0 text-[var(--mundial-gold,#f5c518)]" aria-hidden />
-          <div className="min-w-0 text-left">
-            <p className={cn(pitchLabelClass, "text-[0.65rem]")}>Wejście na boisko</p>
-            <p className="mt-1 font-mono text-2xl font-bold tracking-[0.2em] text-white tabular-nums">{gatePin}</p>
-            <p className="mt-1 text-xs text-white/75">PIN do bramy przy tym meczu.</p>
+      <div className="awp-postcard__body">
+        <div className="awp-postcard__content">
+          <div className="awp-postcard__section">
+            <p className="awp-postcard__label">Skład</p>
+            <div className="mt-1 space-y-1.5">
+              <div className="flex items-center justify-between gap-2 text-xs font-medium text-zinc-600 dark:text-zinc-300">
+                <span className="tabular-nums">
+                  {match.signed_up}/{match.max_slots}
+                </span>
+                <span>{slots.free > 0 ? `${slots.free} wolnych` : "pełny skład"}</span>
+              </div>
+              <div className="h-2 overflow-hidden rounded-full bg-zinc-200/70 dark:bg-zinc-700/60">
+                <div className={cn("h-full rounded-full transition-all", barClass)} style={{ width: `${slots.pct}%` }} />
+              </div>
+            </div>
           </div>
+
+          <div className="awp-postcard__section">
+            <MatchSignupCountsBlock
+              matchId={match.id}
+              signedUp={match.signed_up}
+              maxSlots={match.max_slots}
+              playersData={playersData}
+              variant="card"
+              tone="zinc"
+            />
+          </div>
+
+          <a href={mapsUrl} target="_blank" rel="noreferrer" className="awp-postcard__cta">
+            <MapPin className="h-4 w-4 shrink-0" aria-hidden />
+            Otwórz miejsce w Mapach Google
+          </a>
         </div>
-      ) : null}
-    </PitchCard>
+
+        {gatePin && showGatePin ? (
+          <div className="awp-postcard__pin">
+            <KeyRound className="mt-0.5 h-5 w-5 shrink-0 text-[var(--mundial-navy,#1a2d5a)] dark:text-emerald-100" aria-hidden />
+            <div className="min-w-0 text-left">
+              <p className="awp-postcard__label">Wejście na boisko</p>
+              <p className="mt-1 font-mono text-2xl font-bold tracking-[0.2em] text-[var(--mundial-navy,#1a2d5a)] tabular-nums dark:text-white">
+                {gatePin}
+              </p>
+              <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-300">PIN do bramy przy tym meczu.</p>
+            </div>
+          </div>
+        ) : (
+          <div className="awp-postcard__backnote" aria-hidden>
+            <p className="awp-postcard__label">Do zobaczenia na boisku</p>
+            <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-300">
+              Zapisz się, żeby potwierdzić udział i ogarnąć transport.
+            </p>
+          </div>
+        )}
+      </div>
+    </section>
   );
 }
 

@@ -14,7 +14,8 @@ import { getDb } from "@/lib/db";
 import { getUserWalletBalancePln } from "@/lib/wallet";
 import { WalletBalanceFloat } from "@/components/wallet-balance-float";
 import { SiteJsonLd } from "@/components/site-json-ld";
-import { getGoogleSiteVerification, getSiteUrl, SITE_DESCRIPTION, SITE_NAME } from "@/lib/site";
+import { getGoogleSiteVerification, getSiteUrl } from "@/lib/site";
+import { getAppSettings } from "@/lib/app-settings";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -33,38 +34,44 @@ const displayFont = Teko({
   weight: ["400", "500", "600", "700"],
 });
 
-export const metadata: Metadata = {
-  metadataBase: new URL(getSiteUrl()),
-  applicationName: SITE_NAME,
-  title: {
-    default: SITE_NAME,
-    template: `%s · ${SITE_NAME}`,
-  },
-  description: SITE_DESCRIPTION,
-  icons: {
-    icon: [{ url: "/logo-akademia.svg", type: "image/svg+xml" }],
-    apple: [{ url: "/logo-akademia.svg", type: "image/svg+xml" }],
-  },
-  robots: {
-    index: true,
-    follow: true,
-  },
-  openGraph: {
-    type: "website",
-    locale: "pl_PL",
-    siteName: SITE_NAME,
-    title: SITE_NAME,
-    description: SITE_DESCRIPTION,
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: SITE_NAME,
-    description: SITE_DESCRIPTION,
-  },
-  verification: {
-    google: getGoogleSiteVerification(),
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const db = await getDb();
+  const settings = await getAppSettings(db);
+  const siteName = settings.site_name;
+  const siteDescription = settings.site_description;
+  return {
+    metadataBase: new URL(getSiteUrl()),
+    applicationName: siteName,
+    title: {
+      default: siteName,
+      template: `%s · ${siteName}`,
+    },
+    description: siteDescription,
+    icons: {
+      icon: [{ url: "/logo-akademia.svg", type: "image/svg+xml" }],
+      apple: [{ url: "/logo-akademia.svg", type: "image/svg+xml" }],
+    },
+    robots: {
+      index: true,
+      follow: true,
+    },
+    openGraph: {
+      type: "website",
+      locale: "pl_PL",
+      siteName,
+      title: siteName,
+      description: siteDescription,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: siteName,
+      description: siteDescription,
+    },
+    verification: {
+      google: getGoogleSiteVerification(),
+    },
+  };
+}
 
 export default async function RootLayout({
   children,
@@ -97,6 +104,7 @@ export default async function RootLayout({
   const sessionIdleLogout = Boolean(session && !session.rememberMe);
 
   const db = await getDb();
+  const appSettings = await getAppSettings(db);
   const settingsRow = (await db
     .prepare("SELECT match_notification_prompt_enabled FROM app_settings WHERE id = 1")
     .get()) as { match_notification_prompt_enabled: number } | undefined;
@@ -117,7 +125,12 @@ export default async function RootLayout({
               "(function(){try{var t=localStorage.getItem('awp-ui-theme');if(t==='light'){document.documentElement.classList.remove('dark');}else if(t==='dark'){document.documentElement.classList.add('dark');}}catch(e){}})();",
           }}
         />
-        <SiteJsonLd />
+        <SiteJsonLd
+          siteName={appSettings.site_name}
+          siteDescription={appSettings.site_description}
+          contactEmail={appSettings.contact_email}
+          blikPhone={appSettings.blik_phone}
+        />
         <SessionIdleMonitor enabled={sessionIdleLogout} />
         <ShareLinkClientCleanup />
         <PinSetupGate>
@@ -125,6 +138,8 @@ export default async function RootLayout({
             isLoggedIn={loggedInFull}
             isAdmin={session?.isAdmin && loggedInFull ? true : false}
             account={accountNav}
+            siteName={appSettings.site_name}
+            contactEmail={appSettings.contact_email}
           >
             {children}
           </SiteShell>

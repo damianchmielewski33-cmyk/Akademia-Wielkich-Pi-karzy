@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getDb, logActivity } from "@/lib/db";
 import { requireAdmin } from "@/lib/api-helpers";
+import { adminDemotionBlockedReason, bumpAuthVersion } from "@/lib/admin-role";
 
 export const runtime = "nodejs";
 
@@ -31,13 +32,26 @@ export async function POST(req: Request, ctx: Ctx) {
   }
   const db = await getDb();
   const target = await db
-    .prepare("SELECT first_name, last_name FROM users WHERE id = ?")
-    .get(userId) as { first_name: string; last_name: string } | undefined;
+    .prepare("SELECT first_name, last_name, is_admin FROM users WHERE id = ?")
+    .get(userId) as { first_name: string; last_name: string; is_admin: number } | undefined;
   if (!target) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  await db.prepare("UPDATE users SET is_admin = ? WHERE id = ?").run(
-    parsed.data.role === "admin" ? 1 : 0,
-    userId
+
+  const demotionBlock = await adminDemotionBlockedReason(
+    db,
+    userId,
+    gate.session.userId,
+    parsed.data.role
   );
+  if (demotionBlock) {
+    return NextResponse.json({ error: demotionBlock }, { status: 400 });
+  }
+
+  const nextIsAdmin = parsed.data.role === "admin" ? 1 : 0;
+  if (target.is_admin === 1 && nextIsAdmin === 0) {
+    await bumpAuthVersion(db, userId);
+  }
+
+  await db.prepare("UPDATE users SET is_admin = ? WHERE id = ?").run(nextIsAdmin, userId);
   logActivity(
     gate.session.userId,
     `Zmienił rolę użytkownika ${target.first_name} ${target.last_name} (id ${userId}) na: ${parsed.data.role === "admin" ? "administrator" : "zawodnik"}`

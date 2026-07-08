@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getDb, logActivity } from "@/lib/db";
 import { requireAdmin } from "@/lib/api-helpers";
+import { adminDemotionBlockedReason, bumpAuthVersion } from "@/lib/admin-role";
 import { normalizePlayerAlias } from "@/lib/player-alias";
 
 export const runtime = "nodejs";
@@ -61,17 +62,32 @@ export async function PUT(req: Request, ctx: Ctx) {
     return NextResponse.json({ error: "Nieprawidłowy pseudonim piłkarza (2–120 znaków)." }, { status: 400 });
   }
   const db = await getDb();
+  const existing = (await db
+    .prepare("SELECT is_admin FROM users WHERE id = ?")
+    .get(userId)) as { is_admin: number } | undefined;
+  if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  const demotionBlock = await adminDemotionBlockedReason(db, userId, gate.session.userId, data.role);
+  if (demotionBlock) {
+    return NextResponse.json({ error: demotionBlock }, { status: 400 });
+  }
+
   const clash = (await db
     .prepare("SELECT id FROM users WHERE player_alias = ? AND id != ?")
     .get(canonical, userId)) as { id: number } | undefined;
   if (clash) {
     return NextResponse.json({ error: "Ten pseudonim piłkarza jest już zajęty." }, { status: 409 });
   }
+  const nextIsAdmin = data.role === "admin" ? 1 : 0;
+  if (existing.is_admin === 1 && nextIsAdmin === 0) {
+    await bumpAuthVersion(db, userId);
+  }
+
   await db
     .prepare(
       `UPDATE users SET first_name = ?, last_name = ?, player_alias = ?, is_admin = ? WHERE id = ?`
     )
-    .run(data.first_name, data.last_name, canonical, data.role === "admin" ? 1 : 0, userId);
+    .run(data.first_name, data.last_name, canonical, nextIsAdmin, userId);
   await logActivity(
     gate.session.userId,
     `Zaktualizował profil użytkownika id ${userId}: ${data.first_name} ${data.last_name} (${canonical}), rola: ${data.role === "admin" ? "admin" : "zawodnik"}`

@@ -3,9 +3,14 @@
 export const LINEUP_PITCH_SLOTS_MIN = 12;
 export const LINEUP_PITCH_SLOTS_MAX = 16;
 
-/** Liczba pól = liczba zapisanych (commitment=1), ograniczona do [12, 16]. */
-export function pitchSlotTotalFromSignupCount(signupCount: number): number {
-  return Math.min(Math.max(signupCount, LINEUP_PITCH_SLOTS_MIN), LINEUP_PITCH_SLOTS_MAX);
+/** Liczba pól = liczba zapisanych (commitment=1), ograniczona do [min, max]. */
+export function pitchSlotTotalFromSignupCount(
+  signupCount: number,
+  limits?: { min?: number; max?: number }
+): number {
+  const min = limits?.min ?? LINEUP_PITCH_SLOTS_MIN;
+  const max = limits?.max ?? LINEUP_PITCH_SLOTS_MAX;
+  return Math.min(Math.max(signupCount, min), max);
 }
 
 /** Drużyna A (home) — dolna połowa: więcej pól przy nieparzystej sumie. */

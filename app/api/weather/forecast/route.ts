@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { geocodeMatchLocation } from "@/lib/match-address-geocode";
+import { checkRateLimit, rateLimitKey, rateLimitedResponse, RATE } from "@/lib/rate-limit";
 import { wmoWeatherCodeToPolish } from "@/lib/wmo-weather-pl";
 
 export const dynamic = "force-dynamic";
@@ -161,6 +162,9 @@ async function forecastOpenMeteo(lat: number, lng: number): Promise<
 }
 
 export async function GET(req: NextRequest) {
+  const rl = checkRateLimit(rateLimitKey("weather_forecast", req), RATE.weatherForecast.limit, RATE.weatherForecast.windowMs);
+  if (!rl.ok) return rateLimitedResponse(rl.retryAfterSec);
+
   const q = req.nextUrl.searchParams.get("q")?.trim();
   if (!q) {
     return NextResponse.json({ error: "bad_request", message: "Brak parametru q (adres / miejsce)." }, { status: 400 });

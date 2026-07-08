@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getDb, type MatchRow } from "@/lib/db";
+import { getAppSettings } from "@/lib/app-settings";
 import { getServerSession } from "@/lib/auth";
 import {
   buildPlayersData,
@@ -46,6 +47,7 @@ export default async function TerminarzPage({ searchParams }: PageProps) {
   const openAttendanceFromUrl =
     Boolean(highlightMatchId) && (sp.obecnosc === "1" || sp.obecnosc === "true");
   const db = await getDb();
+  const appSettings = await getAppSettings(db);
   const session = await getServerSession();
   const matches = await db
     .prepare("SELECT * FROM matches ORDER BY match_date ASC, match_time ASC")
@@ -98,6 +100,11 @@ export default async function TerminarzPage({ searchParams }: PageProps) {
         openStatsFromUrl={openStatsFromUrl}
         openStandaloneSurveyStats={openStandaloneSurveyStats}
         openAttendanceFromUrl={openAttendanceFromUrl}
+        matchDefaults={{
+          maxSlots: appSettings.default_match_max_slots,
+          location: appSettings.default_match_location,
+        }}
+        cancelReasons={appSettings.match_cancel_reasons}
       />
     </div>
   );
