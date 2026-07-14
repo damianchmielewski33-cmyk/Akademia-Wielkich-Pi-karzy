@@ -42,6 +42,36 @@ export function profilePhotoPublicUrl(filename: string): string {
 }
 
 /** Rozwiązuje ścieżkę z bazy do pliku na dysku (usuwanie starego pliku). */
+export function siteUploadsDir(): string {
+  if (isVercel()) {
+    return path.join(os.tmpdir(), TMP_APP, "public", "uploads", "site");
+  }
+  return path.join(process.cwd(), "public", "uploads", "site");
+}
+
+/** Wartość URL grafiki witryny w bazie — widoczna w `<img src>` / CSS. */
+export function siteAssetPublicUrl(filename: string): string {
+  if (isVercel()) {
+    return `/api/uploads/site/${filename}`;
+  }
+  return `/uploads/site/${filename}`;
+}
+
+export function resolveSiteAssetAbsolute(dbPath: string): string | null {
+  const trimmed = dbPath.trim();
+  if (trimmed.startsWith("/api/uploads/site/")) {
+    const name = trimmed.slice("/api/uploads/site/".length);
+    if (!name || name.includes("..") || name.includes("/") || name.includes("\\")) return null;
+    return path.join(siteUploadsDir(), name);
+  }
+  if (trimmed.startsWith("/uploads/site/")) {
+    const name = trimmed.slice("/uploads/site/".length);
+    if (!name || name.includes("..") || name.includes("/") || name.includes("\\")) return null;
+    return path.join(siteUploadsDir(), name);
+  }
+  return null;
+}
+
 export function resolveProfilePhotoAbsolute(dbPath: string): string | null {
   const trimmed = dbPath.trim();
   if (trimmed.startsWith("/api/uploads/profiles/")) {

@@ -1,15 +1,19 @@
 "use client";
 
-import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { SiteAssetImage } from "@/components/site-asset-image";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Check, ClipboardCopy, Loader2, Search } from "lucide-react";
 import { toast } from "sonner";
 import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  AdminCard,
+  AdminToolbar,
+  adminPanelInnerClass,
+} from "@/components/admin-ui";
 import { PitchCardDecorations, pitchLabelClass } from "@/components/ui/pitch-card";
 import type { PlatnosciUserLite } from "@/components/platnosci-client";
 import { nativeSelectClasses } from "@/lib/field-styles";
@@ -41,32 +45,43 @@ function formatPln(n: number) {
   return new Intl.NumberFormat("pl-PL", { style: "currency", currency: "PLN" }).format(v);
 }
 
-const platnosciPanelClass =
-  "rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-900/80 sm:p-5";
+function platnosciPanelClass(embedded: boolean) {
+  return embedded
+    ? "rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-900/80 sm:p-5"
+    : adminPanelInnerClass;
+}
 
-const platnosciCollapsibleClass =
-  "group overflow-hidden rounded-2xl border border-zinc-200/90 bg-zinc-50/90 dark:border-zinc-700 dark:bg-zinc-950/50";
+function platnosciCollapsibleClass(embedded: boolean) {
+  return embedded
+    ? "group overflow-hidden rounded-2xl border border-zinc-200/90 bg-zinc-50/90 dark:border-zinc-700 dark:bg-zinc-950/50"
+    : "group overflow-hidden rounded-2xl border border-white/25 bg-black/10 backdrop-blur-sm";
+}
 
 function PlatnosciCollapsible({
   title,
   description,
   children,
   className,
+  embedded = false,
 }: {
   title: string;
   description: string;
   children: ReactNode;
   className?: string;
+  embedded?: boolean;
 }) {
   return (
-    <details className={cn(platnosciCollapsibleClass, className)}>
-      <summary className="awp-focus-ring cursor-pointer list-none px-4 py-3 text-sm font-semibold text-emerald-950 dark:text-emerald-100 [&::-webkit-details-marker]:hidden">
+    <details className={cn(platnosciCollapsibleClass(embedded), className)}>
+      <summary className={cn(
+        "awp-focus-ring cursor-pointer list-none px-4 py-3 text-sm font-semibold [&::-webkit-details-marker]:hidden",
+        embedded ? "text-emerald-950 dark:text-emerald-100" : "text-white"
+      )}>
         <span className="flex items-center justify-between gap-3">
           <span>{title}</span>
-          <span className="text-xs font-medium text-zinc-600 group-open:hidden dark:text-zinc-400">Rozwiń</span>
-          <span className="hidden text-xs font-medium text-zinc-600 group-open:inline dark:text-zinc-400">Zwiń</span>
+          <span className={cn("text-xs font-medium group-open:hidden", embedded ? "text-zinc-600 dark:text-zinc-400" : "text-emerald-100/70")}>Rozwiń</span>
+          <span className={cn("hidden text-xs font-medium group-open:inline", embedded ? "text-zinc-600 dark:text-zinc-400" : "text-emerald-100/70")}>Zwiń</span>
         </span>
-        <span className="mt-1 block text-xs font-normal text-zinc-600 dark:text-zinc-400">{description}</span>
+        <span className={cn("mt-1 block text-xs font-normal", embedded ? "text-zinc-600 dark:text-zinc-400" : "pitch-muted")}>{description}</span>
       </summary>
       <div className="px-4 pb-4">{children}</div>
     </details>
@@ -331,6 +346,7 @@ export function AdminWalletsSaldoSection({
             if (embedded) {
               return (
                 <PlatnosciCollapsible
+                  embedded={embedded}
                   className="mb-0"
                   title="Doładuj saldo"
                   description="Po otrzymaniu przelewu wpisz kwotę — zostanie dodana do salda zawodnika jako wpłata."
@@ -548,6 +564,7 @@ export function AdminWalletsSaldoSection({
             if (embedded) {
               return (
                 <PlatnosciCollapsible
+                  embedded={embedded}
                   className="mb-0"
                   title="Ustaw saldo zawodnika"
                   description='Wpisujesz docelowe saldo. System zapisze różnicę jako „Korekta” w historii portfela.'
@@ -672,6 +689,7 @@ export function AdminWalletsSaldoSection({
           {showPublicLinks ? (
             embedded ? (
               <PlatnosciCollapsible
+                embedded={embedded}
                 className="mt-0"
                 title="Linki do podsumowania płatności"
                 description="Wyślij zawodnikom link z podglądem sald — ostatni mecz lub zbiorcze salda wszystkich graczy."
@@ -756,13 +774,12 @@ export function AdminWalletsSaldoSection({
   return (
     <div>
       {!embedded ? (
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">Portfele graczy</h1>
-          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-            Salda zarejestrowanych użytkowników i ręczne korekty — docelowe saldo zapisuje się jako transakcja korygująca
-            w historii portfela.
-          </p>
-        </div>
+        <AdminToolbar
+          title="Portfele graczy"
+          description="Salda zarejestrowanych użytkowników i ręczne korekty — docelowe saldo zapisuje się jako transakcja korygująca w historii portfela."
+          onReload={() => void refresh()}
+          loading={adminLoading}
+        />
       ) : (
         <div className="mx-auto max-w-4xl">
           <div className="relative overflow-hidden rounded-2xl border-2 border-white/35 text-white shadow-lg shadow-emerald-950/20 ring-1 ring-emerald-950/15">
@@ -770,13 +787,12 @@ export function AdminWalletsSaldoSection({
             <PitchCardDecorations />
             <div className="relative p-4 sm:p-5">
               <div className="flex flex-wrap items-center gap-3 sm:gap-4">
-                <Image
-                  src="/mundial-2026-logo.svg"
+                <SiteAssetImage
+                  asset="logo_header"
                   alt=""
                   width={56}
                   height={56}
                   className="h-12 w-12 drop-shadow-md sm:h-14 sm:w-14"
-                  unoptimized
                 />
                 <div className="min-w-0 text-left">
                   <span className={pitchLabelClass}>Administrator</span>
@@ -795,16 +811,12 @@ export function AdminWalletsSaldoSection({
 
       {embedded ? (
         <div className="mx-auto max-w-4xl">
-          <div className={cn(platnosciPanelClass, "mt-4 space-y-4")}>{walletPanels}</div>
+          <div className={cn(platnosciPanelClass(true), "mt-4 space-y-4")}>{walletPanels}</div>
         </div>
       ) : (
-        <Card className="border-zinc-200/80 bg-white shadow-sm dark:border-zinc-700/80 dark:bg-zinc-900/90 dark:shadow-black/30">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg">Portfele graczy — saldo</CardTitle>
-            <CardDescription>Najważniejszy podgląd sald i korekty ręczne.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">{walletPanels}</CardContent>
-        </Card>
+        <AdminCard title="Portfele graczy — saldo" description="Najważniejszy podgląd sald i korekty ręczne.">
+          <div className="space-y-4">{walletPanels}</div>
+        </AdminCard>
       )}
     </div>
   );

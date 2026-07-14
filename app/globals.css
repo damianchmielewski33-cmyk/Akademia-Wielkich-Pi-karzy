@@ -36,7 +36,7 @@
   background-image:
     linear-gradient(180deg, rgba(6, 20, 16, 0.55) 0%, rgba(2, 10, 8, 0.82) 100%),
     linear-gradient(90deg, rgba(0, 0, 0, 0.4) 0%, transparent 22%, transparent 78%, rgba(0, 0, 0, 0.4) 100%),
-    url("/stadium-bg.svg");
+    var(--awp-bg-stadium, url("/stadium-bg.svg"));
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -78,6 +78,35 @@
     @apply inline-flex items-center gap-1.5 rounded-lg bg-emerald-100 px-3 py-2 text-sm font-semibold tabular-nums text-emerald-950 shadow-md shadow-emerald-950/20;
   }
 
+  /* ========== Panel admina — tabele i powierzchnie na murawie ========== */
+  .admin-table-shell {
+    @apply overflow-hidden rounded-xl border border-white/25 bg-black/10 backdrop-blur-sm;
+  }
+
+  .admin-table-shell :where(thead tr) {
+    @apply border-white/15 hover:bg-transparent;
+  }
+
+  .admin-table-shell :where(th) {
+    @apply text-xs font-semibold uppercase tracking-wide text-[var(--mundial-gold,#f5c518)];
+  }
+
+  .admin-table-shell :where(tbody tr) {
+    @apply border-white/10 transition-colors hover:bg-white/5;
+  }
+
+  .admin-table-shell :where(td) {
+    @apply align-middle text-emerald-50/95;
+  }
+
+  .admin-table-shell :where(.admin-table-sort-btn) {
+    @apply inline-flex items-center gap-1.5 font-medium text-emerald-50/95 hover:text-white;
+  }
+
+  .admin-table-shell :where(.admin-table-muted) {
+    @apply font-mono text-xs text-emerald-100/50;
+  }
+
   .awp-surface {
     @apply relative overflow-hidden rounded-2xl border-2 border-white/35 text-white shadow-lg shadow-emerald-950/20 ring-1 ring-emerald-950/15;
   }
@@ -111,6 +140,116 @@
 
   .awp-card-surface a:not([class*="bg-"]):not(.text-inherit) {
     @apply text-white/85 underline decoration-white/30 underline-offset-2 hover:text-white;
+  }
+
+  /* ========== Zaproszenie: strona wizytówki (inny motyw niż murawa terminarza) ========== */
+  .awp-invite-page {
+    @apply relative overflow-hidden rounded-[1.75rem] border border-zinc-200/85 bg-[#f0ebe3] p-5 text-zinc-900 shadow-[0_20px_60px_-40px_rgba(2,6,23,0.5)] ring-1 ring-zinc-900/5 sm:p-6;
+  }
+
+  .dark .awp-invite-page {
+    border-color: rgba(148, 163, 184, 0.14);
+    background-color: #0f141c;
+    color: #e8edf4;
+    box-shadow: 0 24px 70px -42px rgba(0, 0, 0, 0.8);
+  }
+
+  .awp-invite-page::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.85;
+    background-image:
+      radial-gradient(circle at 15% 12%, rgba(26, 45, 90, 0.04), transparent 52%),
+      radial-gradient(circle at 88% 78%, rgba(228, 0, 43, 0.03), transparent 48%),
+      repeating-linear-gradient(
+        0deg,
+        rgba(2, 6, 23, 0.012),
+        rgba(2, 6, 23, 0.012) 1px,
+        transparent 1px,
+        transparent 8px
+      );
+    mix-blend-mode: multiply;
+  }
+
+  .dark .awp-invite-page::before {
+    opacity: 0.6;
+    mix-blend-mode: soft-light;
+    background-image:
+      radial-gradient(circle at 20% 15%, rgba(245, 197, 24, 0.06), transparent 50%),
+      repeating-linear-gradient(
+        0deg,
+        rgba(226, 232, 240, 0.02),
+        rgba(226, 232, 240, 0.02) 1px,
+        transparent 1px,
+        transparent 8px
+      );
+  }
+
+  .awp-invite-hero {
+    @apply relative z-10 mx-auto max-w-2xl rounded-2xl border border-zinc-200/75 bg-[#faf8f4] px-5 py-7 text-center shadow-sm sm:px-8 sm:py-8;
+  }
+
+  .dark .awp-invite-hero {
+    border-color: rgba(148, 163, 184, 0.14);
+    background: linear-gradient(180deg, rgba(20, 28, 40, 0.92) 0%, rgba(15, 23, 42, 0.72) 100%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  }
+
+  .awp-invite-hero__kicker {
+    @apply text-xs font-semibold uppercase tracking-[0.16em] text-[var(--mundial-navy,#1a2d5a)]/80;
+  }
+
+  .dark .awp-invite-hero__kicker {
+    color: rgba(245, 197, 24, 0.82);
+  }
+
+  .awp-invite-hero__title {
+    @apply mt-3 text-3xl font-bold tracking-tight text-[var(--mundial-navy,#1a2d5a)] sm:text-4xl;
+  }
+
+  .dark .awp-invite-hero__title {
+    color: #f1f5f9;
+  }
+
+  .awp-invite-hero__subtitle {
+    @apply mt-2 text-base text-zinc-600 sm:text-lg;
+  }
+
+  .dark .awp-invite-hero__subtitle {
+    color: rgba(203, 213, 225, 0.88);
+  }
+
+  .awp-invite-hero__crest {
+    @apply mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full border-2 border-[var(--mundial-navy,#1a2d5a)]/12 bg-white shadow-sm;
+  }
+
+  .dark .awp-invite-hero__crest {
+    border-color: rgba(245, 197, 24, 0.28);
+    background: rgba(15, 23, 42, 0.55);
+    box-shadow: 0 8px 24px -16px rgba(0, 0, 0, 0.55);
+  }
+
+  .awp-invite-hero__rule {
+    @apply mx-auto mt-4 h-[3px] w-28 rounded-full;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      var(--mundial-gold) 18%,
+      rgba(228, 0, 43, 0.55) 50%,
+      var(--mundial-gold) 82%,
+      transparent
+    );
+    opacity: 0.88;
+  }
+
+  .awp-invite-panel {
+    @apply relative z-10 rounded-2xl border border-zinc-200/75 bg-white/90 p-4 shadow-sm shadow-zinc-950/5 backdrop-blur-sm dark:border-zinc-700/80 dark:bg-zinc-900/55 sm:p-6;
+  }
+
+  .awp-invite-footer-link {
+    @apply inline-flex items-center gap-1.5 font-medium text-[var(--mundial-navy,#1a2d5a)] underline-offset-2 hover:underline dark:text-amber-200/90;
   }
 
   /* ========== Zaproszenie: styl pocztówki ========== */
@@ -159,24 +298,32 @@
 
   .awp-postcard__hero {
     @apply relative grid gap-0 border-b border-zinc-200/70 sm:grid-cols-[1.1fr_0.9fr];
-    background-color: #f8fafc;
+    background-color: #fffbf5;
     background-image:
-      linear-gradient(180deg, rgba(255, 255, 255, 0.86) 0%, rgba(255, 255, 255, 0.78) 100%),
-      url("/stadium-bg.svg");
-    background-size: auto, cover;
-    background-position: center, center;
-    background-repeat: repeat, no-repeat;
+      linear-gradient(135deg, rgba(26, 45, 90, 0.045) 0%, transparent 58%),
+      radial-gradient(ellipse 80% 60% at 100% 0%, rgba(245, 197, 24, 0.1), transparent 58%),
+      repeating-linear-gradient(
+        90deg,
+        transparent,
+        transparent 24px,
+        rgba(26, 45, 90, 0.016) 24px,
+        rgba(26, 45, 90, 0.016) 25px
+      );
   }
 
   .dark .awp-postcard__hero {
     border-bottom-color: rgba(148, 163, 184, 0.12);
-    background-color: #0f1728;
+    background-color: #121a28;
     background-image:
-      radial-gradient(ellipse 90% 70% at 18% 0%, rgba(52, 211, 153, 0.12), transparent 58%),
-      linear-gradient(180deg, rgba(15, 23, 42, 0.35) 0%, rgba(8, 14, 24, 0.82) 100%),
-      url("/stadium-bg.svg");
-    background-size: auto, auto, cover;
-    background-position: center, center, center;
+      radial-gradient(ellipse 85% 65% at 12% 0%, rgba(245, 197, 24, 0.11), transparent 55%),
+      linear-gradient(180deg, rgba(26, 45, 90, 0.42) 0%, rgba(8, 14, 24, 0.9) 100%),
+      repeating-linear-gradient(
+        90deg,
+        transparent,
+        transparent 24px,
+        rgba(255, 255, 255, 0.02) 24px,
+        rgba(255, 255, 255, 0.02) 25px
+      );
   }
 
   .awp-postcard__heroInner {
@@ -184,11 +331,11 @@
   }
 
   .awp-postcard__kicker {
-    @apply text-[0.7rem] text-zinc-800/85;
+    @apply text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-[var(--mundial-navy,#1a2d5a)]/75;
   }
 
   .dark .awp-postcard__kicker {
-    color: rgba(167, 243, 208, 0.82);
+    color: rgba(245, 197, 24, 0.78);
   }
 
   .awp-postcard__title {
@@ -256,7 +403,7 @@
   }
 
   .dark .awp-postcard__stamp::after {
-    border-color: rgba(167, 243, 208, 0.2);
+    border-color: rgba(245, 197, 24, 0.22);
   }
 
   .awp-postcard__stampFace {
@@ -276,7 +423,7 @@
   }
 
   .dark .awp-postcard__stampMonth {
-    color: rgba(167, 243, 208, 0.78);
+    color: rgba(245, 197, 24, 0.72);
   }
 
   .awp-postcard__stampLogo {
@@ -381,7 +528,7 @@
   }
 
   .dark .awp-postcard__label {
-    color: rgba(167, 243, 208, 0.78);
+    color: rgba(245, 197, 24, 0.72);
   }
 
   .awp-postcard__cta {
@@ -407,8 +554,8 @@
 
   .dark .awp-postcard__pin {
     background:
-      radial-gradient(circle at 18px 18px, rgba(245, 197, 24, 0.1), transparent 60%),
-      linear-gradient(180deg, rgba(16, 185, 129, 0.1) 0%, rgba(15, 23, 42, 0.2) 65%);
+      radial-gradient(circle at 18px 18px, rgba(245, 197, 24, 0.12), transparent 60%),
+      linear-gradient(180deg, rgba(26, 45, 90, 0.18) 0%, rgba(15, 23, 42, 0.28) 65%);
   }
 
   .awp-postcard__backnote {
@@ -546,7 +693,7 @@ body {
   background-image:
     linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0%, rgba(220, 252, 231, 0.7) 100%),
     linear-gradient(90deg, rgba(0, 0, 0, 0.1) 0%, transparent 20%, transparent 80%, rgba(0, 0, 0, 0.1) 100%),
-    url("/stadium-bg.svg");
+    var(--awp-bg-stadium, url("/stadium-bg.svg"));
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -618,7 +765,7 @@ body {
     linear-gradient(180deg, rgba(8, 18, 16, 0.78) 0%, rgba(8, 22, 18, 0.22) 18%, transparent 42%),
     linear-gradient(0deg, rgba(5, 22, 18, 0.62) 0%, transparent 32%),
     radial-gradient(ellipse 90% 55% at 50% 108%, rgba(0, 0, 0, 0.28), transparent 58%),
-    url("/pitch-lines.svg"),
+    var(--awp-bg-pitch-lines, url("/pitch-lines.svg")),
     linear-gradient(180deg, rgba(255, 255, 255, 0.09) 0%, transparent 36%),
     repeating-linear-gradient(
       94deg,
@@ -747,7 +894,7 @@ body {
       rgba(255, 255, 255, 0.055) 9px,
       rgba(255, 255, 255, 0.055) 18px
     ),
-    url("/pitch-lines.svg");
+    var(--awp-bg-pitch-lines, url("/pitch-lines.svg"));
   background-size: auto, auto, 100% 2.75rem;
   background-position: center, center, center bottom;
   background-repeat: no-repeat, repeat, no-repeat;

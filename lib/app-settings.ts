@@ -8,6 +8,12 @@ import {
   SITE_NAME,
 } from "@/lib/site";
 import { MATCH_CANCEL_REASONS } from "@/lib/match-cancel-reasons";
+import {
+  resolveSiteAssets,
+  type ResolvedSiteAssets,
+  type SiteAssetKey,
+  type SiteAssetUrls,
+} from "@/lib/site-assets";
 
 export type MatchCancelReasonEntry = { value: string; label: string };
 
@@ -39,6 +45,15 @@ export type AppSettings = {
   lineup_pitch_slots_min: number;
   lineup_pitch_slots_max: number;
   match_cancel_reasons: MatchCancelReasonEntry[];
+  /** Niestandardowe URL grafik — null = domyślny plik z `public/`. */
+  asset_logo_header_url: string | null;
+  asset_logo_crest_url: string | null;
+  asset_logo_favicon_url: string | null;
+  asset_bg_soccer_ball_url: string | null;
+  asset_bg_stadium_url: string | null;
+  asset_bg_pitch_lines_url: string | null;
+  /** Rozwiązane URL (z fallbackiem do domyślnych). */
+  site_assets: ResolvedSiteAssets;
 };
 
 export const APP_SETTINGS_DEFAULTS: AppSettings = {
@@ -68,6 +83,20 @@ export const APP_SETTINGS_DEFAULTS: AppSettings = {
   lineup_pitch_slots_min: 12,
   lineup_pitch_slots_max: 16,
   match_cancel_reasons: [...MATCH_CANCEL_REASONS],
+  asset_logo_header_url: null,
+  asset_logo_crest_url: null,
+  asset_logo_favicon_url: null,
+  asset_bg_soccer_ball_url: null,
+  asset_bg_stadium_url: null,
+  asset_bg_pitch_lines_url: null,
+  site_assets: resolveSiteAssets({
+    logo_header: null,
+    logo_crest: null,
+    logo_favicon: null,
+    bg_soccer_ball: null,
+    bg_stadium: null,
+    bg_pitch_lines: null,
+  }),
 };
 
 type DbLike = {
@@ -103,6 +132,12 @@ type AppSettingsRow = {
   lineup_pitch_slots_min?: number | null;
   lineup_pitch_slots_max?: number | null;
   match_cancel_reasons_json?: string | null;
+  asset_logo_header_url?: string | null;
+  asset_logo_crest_url?: string | null;
+  asset_logo_favicon_url?: string | null;
+  asset_bg_soccer_ball_url?: string | null;
+  asset_bg_stadium_url?: string | null;
+  asset_bg_pitch_lines_url?: string | null;
 };
 
 const APP_SETTINGS_SELECT = `
@@ -132,7 +167,13 @@ const APP_SETTINGS_SELECT = `
     match_email_notifications_enabled,
     lineup_pitch_slots_min,
     lineup_pitch_slots_max,
-    match_cancel_reasons_json
+    match_cancel_reasons_json,
+    asset_logo_header_url,
+    asset_logo_crest_url,
+    asset_logo_favicon_url,
+    asset_bg_soccer_ball_url,
+    asset_bg_stadium_url,
+    asset_bg_pitch_lines_url
   FROM app_settings WHERE id = 1
 `;
 
@@ -170,9 +211,30 @@ export function serializeMatchCancelReasons(reasons: MatchCancelReasonEntry[]): 
   return JSON.stringify(reasons);
 }
 
+function nullableAssetUrl(v: string | null | undefined): string | null {
+  const t = v?.trim();
+  return t ? t : null;
+}
+
+function siteAssetUrlsFromRow(row: AppSettingsRow | null | undefined): SiteAssetUrls {
+  return {
+    logo_header: nullableAssetUrl(row?.asset_logo_header_url),
+    logo_crest: nullableAssetUrl(row?.asset_logo_crest_url),
+    logo_favicon: nullableAssetUrl(row?.asset_logo_favicon_url),
+    bg_soccer_ball: nullableAssetUrl(row?.asset_bg_soccer_ball_url),
+    bg_stadium: nullableAssetUrl(row?.asset_bg_stadium_url),
+    bg_pitch_lines: nullableAssetUrl(row?.asset_bg_pitch_lines_url),
+  };
+}
+
+export function appSettingsSiteAssetUrl(settings: AppSettings, key: SiteAssetKey): string {
+  return settings.site_assets[key];
+}
+
 export function resolveAppSettings(row: AppSettingsRow | null | undefined): AppSettings {
   const d = APP_SETTINGS_DEFAULTS;
   const allowRaw = row?.allow_self_registration;
+  const assetUrls = siteAssetUrlsFromRow(row);
   return {
     match_notification_prompt_enabled: (row?.match_notification_prompt_enabled ?? 0) === 1,
     home_youtube_url: row?.home_youtube_url?.trim() || null,
@@ -223,6 +285,13 @@ export function resolveAppSettings(row: AppSettingsRow | null | undefined): AppS
         ? row.lineup_pitch_slots_max
         : d.lineup_pitch_slots_max,
     match_cancel_reasons: parseCancelReasonsJson(row?.match_cancel_reasons_json),
+    asset_logo_header_url: assetUrls.logo_header,
+    asset_logo_crest_url: assetUrls.logo_crest,
+    asset_logo_favicon_url: assetUrls.logo_favicon,
+    asset_bg_soccer_ball_url: assetUrls.bg_soccer_ball,
+    asset_bg_stadium_url: assetUrls.bg_stadium,
+    asset_bg_pitch_lines_url: assetUrls.bg_pitch_lines,
+    site_assets: resolveSiteAssets(assetUrls),
   };
 }
 
@@ -281,6 +350,12 @@ const APP_SETTINGS_MIGRATION_COLUMNS: { name: string; ddl: string }[] = [
   { name: "lineup_pitch_slots_min", ddl: "ALTER TABLE app_settings ADD COLUMN lineup_pitch_slots_min INTEGER" },
   { name: "lineup_pitch_slots_max", ddl: "ALTER TABLE app_settings ADD COLUMN lineup_pitch_slots_max INTEGER" },
   { name: "match_cancel_reasons_json", ddl: "ALTER TABLE app_settings ADD COLUMN match_cancel_reasons_json TEXT" },
+  { name: "asset_logo_header_url", ddl: "ALTER TABLE app_settings ADD COLUMN asset_logo_header_url TEXT" },
+  { name: "asset_logo_crest_url", ddl: "ALTER TABLE app_settings ADD COLUMN asset_logo_crest_url TEXT" },
+  { name: "asset_logo_favicon_url", ddl: "ALTER TABLE app_settings ADD COLUMN asset_logo_favicon_url TEXT" },
+  { name: "asset_bg_soccer_ball_url", ddl: "ALTER TABLE app_settings ADD COLUMN asset_bg_soccer_ball_url TEXT" },
+  { name: "asset_bg_stadium_url", ddl: "ALTER TABLE app_settings ADD COLUMN asset_bg_stadium_url TEXT" },
+  { name: "asset_bg_pitch_lines_url", ddl: "ALTER TABLE app_settings ADD COLUMN asset_bg_pitch_lines_url TEXT" },
 ];
 
 /** Migracja kolumn `app_settings` — SQLite (sync exec). */

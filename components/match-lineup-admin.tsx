@@ -2,11 +2,17 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { LayoutGrid, Loader2, X } from "lucide-react";
+import { Loader2, X } from "lucide-react";
 import { LineupBoardPreloader } from "@/components/preloaders";
 import { toast } from "sonner";
+import {
+  AdminCard,
+  AdminToolbar,
+  adminFieldClass,
+  adminInnerPanelClass,
+} from "@/components/admin-ui";
+import { pitchLabelClass } from "@/components/ui/pitch-card";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -30,37 +36,6 @@ type Player = {
 };
 
 type LineupState = { home: (number | null)[]; away: (number | null)[] };
-
-function Toolbar({
-  title,
-  description,
-  onReload,
-  loading,
-  children,
-}: {
-  title: string;
-  description?: string;
-  onReload: () => void;
-  loading: boolean;
-  children?: ReactNode;
-}) {
-  return (
-    <div className="mb-5 flex flex-col gap-4 sm:mb-6">
-      <div className="min-w-0">
-        <h1 className="text-xl font-bold tracking-tight text-zinc-900 sm:text-2xl">{title}</h1>
-        {description ? (
-          <p className="mt-1 text-xs leading-relaxed text-zinc-600 sm:text-sm">{description}</p>
-        ) : null}
-      </div>
-      <div className="flex w-full flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
-        {children}
-        <Button type="button" variant="outline" size="sm" className="w-full sm:w-auto" onClick={onReload} disabled={loading}>
-          Odśwież
-        </Button>
-      </div>
-    </div>
-  );
-}
 
 /** Przeciąganie palcem/myszą — HTML5 DnD na telefonach jest zawodne; Pointer Events działają wszędzie. */
 function usePointerLineupDrag({
@@ -340,7 +315,7 @@ export function MatchLineupAdmin() {
 
   return (
     <div className="min-w-0 overflow-x-hidden pb-4">
-      <Toolbar
+      <AdminToolbar
         title="Składy na mecz"
         description="Liczba pól na boisku zależy od zapisów (12–16). Przeciągnij zawodników (telefon lub komputer). Pusto = rezerwa."
         onReload={() => void load(selectedId)}
@@ -349,6 +324,7 @@ export function MatchLineupAdmin() {
         <Button
           type="button"
           size="sm"
+          variant="pitch"
           className="w-full sm:w-auto"
           onClick={() => void save()}
           disabled={saving || selectedId == null || loading}
@@ -356,7 +332,7 @@ export function MatchLineupAdmin() {
           {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
           Zapisz składy
         </Button>
-      </Toolbar>
+      </AdminToolbar>
 
       {mounted &&
         ghost &&
@@ -384,26 +360,22 @@ export function MatchLineupAdmin() {
       {showInitialSpinner ? (
         <LineupBoardPreloader />
       ) : matches.length === 0 ? (
-        <Card className="border-zinc-200/80 bg-white shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-lg">Brak meczów do ułożenia składu</CardTitle>
-            <CardDescription>
-              Pojawią się nadchodzące mecze (od dzisiejszej daty), które nie są oznaczone jako rozegrane.
-            </CardDescription>
-          </CardHeader>
-        </Card>
+        <AdminCard
+          title="Brak meczów do ułożenia składu"
+          description="Pojawią się nadchodzące mecze (od dzisiejszej daty), które nie są oznaczone jako rozegrane."
+        />
       ) : (
         <div className="space-y-4 sm:space-y-6">
-          <div className="flex flex-col gap-3 rounded-xl border border-zinc-200 bg-white p-3 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-4">
+          <div className={cn(adminInnerPanelClass, "flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between")}>
             <div className="min-w-0">
-              <p className="text-sm font-semibold text-zinc-900">Widoczność na stronie głównej</p>
-              <p className="mt-0.5 text-xs leading-snug text-zinc-600">
+              <p className="text-sm font-semibold text-white">Widoczność na stronie głównej</p>
+              <p className="mt-0.5 text-xs leading-snug pitch-muted">
                 Przycisk „Zobacz składy na mecz” jest aktywny dopiero po udostępnieniu.
               </p>
             </div>
             <Button
               type="button"
-              variant={lineupPublic ? "outline" : "default"}
+              variant={lineupPublic ? "stadium" : "pitch"}
               className="h-auto min-h-11 w-full shrink-0 whitespace-normal px-3 py-2.5 text-center text-sm leading-snug sm:w-auto sm:min-h-10 sm:max-w-[280px]"
               disabled={publishSaving || selectedId == null}
               onClick={() => void togglePublish(!lineupPublic)}
@@ -415,9 +387,9 @@ export function MatchLineupAdmin() {
 
           <div className="flex flex-col gap-3">
             <div className="space-y-2">
-              <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">Mecz</p>
+              <p className={pitchLabelClass}>Mecz</p>
               <Select value={selectedId != null ? String(selectedId) : undefined} onValueChange={onSelectMatch}>
-                <SelectTrigger className="h-11 w-full max-w-full min-w-0" aria-label="Wybierz mecz">
+                <SelectTrigger className={cn("h-11 w-full max-w-full min-w-0", adminFieldClass)} aria-label="Wybierz mecz">
                   <SelectValue placeholder="Wybierz mecz" className="truncate text-left" />
                 </SelectTrigger>
                 <SelectContent position="popper" className="max-h-[min(70vh,320px)] w-[var(--radix-select-trigger-width)]">
@@ -433,45 +405,38 @@ export function MatchLineupAdmin() {
               </Select>
             </div>
             {matchInfo ? (
-              <p className="text-xs leading-relaxed text-zinc-600 sm:text-sm">
-                Domyślnie: <strong className="text-zinc-800">najbliższy termin</strong> z terminarza.
+              <p className="text-xs leading-relaxed pitch-muted sm:text-sm">
+                Domyślnie: <strong className="text-white">najbliższy termin</strong> z terminarza.
               </p>
             ) : null}
           </div>
 
           <div className="grid min-w-0 gap-4 lg:gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
-            <Card className="min-w-0 border-zinc-200/80 bg-white shadow-sm">
-              <CardHeader className="space-y-1 pb-3">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <LayoutGrid className="h-4 w-4 shrink-0 text-emerald-700" aria-hidden />
-                  Zapisani na mecz
-                </CardTitle>
-                <CardDescription className="text-xs sm:text-sm">
-                  Przeciągnij chip na boisko. Zawodnicy bez pozycji = rezerwa.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="px-3 sm:px-6">
-                <BenchDropZone disabled={selectedId == null} className="min-h-[100px] sm:min-h-[120px]">
-                  {players.length === 0 ? (
-                    <p className="text-sm text-zinc-500">Brak zapisów na wybrany mecz.</p>
-                  ) : bench.length === 0 ? (
-                    <p className="text-sm text-zinc-500">Wszyscy zawodnicy są na boisku.</p>
-                  ) : (
-                    <ul className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
-                      {bench.map((p) => (
-                        <li key={p.userId} className="min-w-0">
-                          <PlayerChip
-                            player={p}
-                            variant="list"
-                            dragBind={() => dragBind(p.userId)}
-                          />
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </BenchDropZone>
-              </CardContent>
-            </Card>
+            <AdminCard
+              className="min-w-0"
+              title="Zapisani na mecz"
+              description="Przeciągnij chip na boisko. Zawodnicy bez pozycji = rezerwa."
+            >
+              <BenchDropZone disabled={selectedId == null} className="min-h-[100px] sm:min-h-[120px]">
+                {players.length === 0 ? (
+                  <p className="text-sm pitch-muted">Brak zapisów na wybrany mecz.</p>
+                ) : bench.length === 0 ? (
+                  <p className="text-sm pitch-muted">Wszyscy zawodnicy są na boisku.</p>
+                ) : (
+                  <ul className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+                    {bench.map((p) => (
+                      <li key={p.userId} className="min-w-0">
+                        <PlayerChip
+                          player={p}
+                          variant="list"
+                          dragBind={() => dragBind(p.userId)}
+                        />
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </BenchDropZone>
+            </AdminCard>
 
             <PitchCard
               lineup={lineup}
@@ -596,18 +561,12 @@ function PitchCard({
   };
 }) {
   return (
-    <Card className="min-w-0 overflow-hidden border-zinc-200/80 bg-white shadow-sm">
-      <CardHeader className="space-y-1 pb-2">
-        <CardTitle className="text-base">
-          Boisko ({pitchSlotTotal} pól: A {homeSlotCount} · B {awaySlotCount})
-        </CardTitle>
-        <CardDescription className="text-xs leading-relaxed sm:text-sm">
-          Drużyna B — góra, drużyna A — dół. Przeciągnij z listy lub między polami. Dwuklik na polu (mysz) =
-          opróżnij.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="min-w-0 px-2 pb-3 pt-0 sm:px-4 sm:pb-4">
-        <div
+    <AdminCard
+      className="min-w-0 overflow-hidden"
+      title={`Boisko (${pitchSlotTotal} pól: A ${homeSlotCount} · B ${awaySlotCount})`}
+      description="Drużyna B — góra, drużyna A — dół. Przeciągnij z listy lub między polami. Dwuklik na polu (mysz) = opróżnij."
+    >
+      <div
           className={cn(
             "relative mx-auto aspect-[3/4] w-full max-w-[min(100%,24rem)] overflow-hidden rounded-2xl border-2 border-white/40 shadow-inner sm:max-w-lg",
             disabled && "pointer-events-none opacity-60"
@@ -650,8 +609,7 @@ function PitchCard({
             </div>
           </div>
         </div>
-      </CardContent>
-    </Card>
+    </AdminCard>
   );
 }
 

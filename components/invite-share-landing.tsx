@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import Image from "next/image";
 import Link from "next/link";
+import { SiteAssetImage } from "@/components/site-asset-image";
 import { CalendarDays, HelpCircle, KeyRound, Loader2, LogIn, MapPin, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import type { MatchRow } from "@/lib/db";
@@ -10,15 +10,10 @@ import type { PlayersDataEntry } from "@/lib/terminarz-shared";
 import { LoginForm } from "@/components/login-form";
 import { MatchSignupCountsBlock } from "@/components/terminarz-match-counts";
 import { Button } from "@/components/ui/button";
-import {
-  PitchPageHero,
-  pitchLabelClass,
-} from "@/components/ui/pitch-card";
 import { terminarzInviteRelativePath } from "@/lib/share-link";
 import { cn } from "@/lib/utils";
 
-const contentPanelClass =
-  "rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-900/80 sm:p-6";
+const invitePanelClass = "awp-invite-panel mx-auto max-w-2xl space-y-4";
 
 const STAMP_MONTHS = ["STY", "LUT", "MAR", "KWI", "MAJ", "CZE", "LIP", "SIE", "WRZ", "PAŹ", "LIS", "GRU"] as const;
 
@@ -67,7 +62,7 @@ export function InviteMatchCard({
     slots.tone === "full" ? "bg-red-400/90" : slots.tone === "warn" ? "bg-amber-400/90" : "bg-emerald-100";
 
   return (
-    <section className="awp-postcard mx-auto max-w-2xl" aria-labelledby="invite-match-heading">
+    <section className="awp-postcard relative z-10 mx-auto max-w-2xl" aria-labelledby="invite-match-heading">
       <div className="awp-postcard__hero">
         <div className="awp-postcard__stamp" aria-label={`Znaczek: ${when.label}`}>
           <div className="awp-postcard__stampFace">
@@ -75,13 +70,12 @@ export function InviteMatchCard({
             <span className="awp-postcard__stampMonth">
               {when.stampMonth || "—"} {when.stampYear || ""}
             </span>
-            <Image
-              src="/mundial-2026-logo.svg"
+            <SiteAssetImage
+              asset="logo_header"
               alt=""
               width={22}
               height={22}
               className="awp-postcard__stampLogo"
-              unoptimized
             />
           </div>
         </div>
@@ -93,7 +87,7 @@ export function InviteMatchCard({
           </span>
         </div>
         <div className="awp-postcard__heroInner">
-          <p className={cn(pitchLabelClass, "awp-postcard__kicker")}>Zaproszenie na mecz</p>
+          <p className="awp-postcard__kicker">Zaproszenie na mecz</p>
           <h2 id="invite-match-heading" className="awp-postcard__title">
             {when.weekday ? (
               <>
@@ -226,11 +220,25 @@ export function InviteShareLanding({
       : "/register";
 
   return (
-    <div className="awp-card-surface mundial-page-accent space-y-6 pb-2">
-      <PitchPageHero
-        title="Zaproszenie na mecz"
-        subtitle="Akademia Wielkich Piłkarzy — zapisz się na boisko w kilku krokach."
-      />
+    <div className="awp-invite-page space-y-6 pb-2">
+      <header className="awp-invite-hero">
+        <div className="awp-invite-hero__crest">
+          <SiteAssetImage
+            asset="logo_crest"
+            alt=""
+            width={128}
+            height={128}
+            className="h-9 w-9"
+            sizes="36px"
+          />
+        </div>
+        <p className="awp-invite-hero__kicker">Wizytówka meczu</p>
+        <h1 className="awp-invite-hero__title">Zaproszenie na mecz</h1>
+        <p className="awp-invite-hero__subtitle">
+          Akademia Wielkich Piłkarzy — zapisz się na boisko w kilku krokach.
+        </p>
+        <div className="awp-invite-hero__rule" aria-hidden />
+      </header>
 
       {!match ? (
         <div
@@ -254,12 +262,12 @@ export function InviteShareLanding({
             showGatePin={signupKind === "confirmed"}
           />
 
-          <div className={cn(contentPanelClass, "mx-auto max-w-2xl space-y-4")}>
+          <div className={invitePanelClass}>
             {!isLoggedIn ? (
               inviteLoginInline ? (
                 <>
                   <div className="space-y-1 text-center sm:text-left">
-                    <h2 className="text-lg font-semibold text-[var(--mundial-navy,#1a2d5a)] dark:text-emerald-100">
+                    <h2 className="text-lg font-semibold text-[var(--mundial-navy,#1a2d5a)] dark:text-zinc-100">
                       Logowanie
                     </h2>
                     <p className="text-sm text-zinc-600 dark:text-zinc-400">
@@ -268,7 +276,7 @@ export function InviteShareLanding({
                   </div>
                   <button
                     type="button"
-                    className="text-left text-sm font-medium text-emerald-800 underline-offset-2 hover:underline dark:text-emerald-300"
+                    className="text-left text-sm font-medium text-[var(--mundial-navy,#1a2d5a)] underline-offset-2 hover:underline dark:text-amber-200/90"
                     onClick={() => setInviteLoginInline(false)}
                   >
                     ← Wróć
@@ -282,7 +290,7 @@ export function InviteShareLanding({
               ) : (
                 <>
                   <div className="space-y-1 text-center sm:text-left">
-                    <h2 className="text-lg font-semibold text-[var(--mundial-navy,#1a2d5a)] dark:text-emerald-100">
+                    <h2 className="text-lg font-semibold text-[var(--mundial-navy,#1a2d5a)] dark:text-zinc-100">
                       Czy grasz w tym terminie?
                     </h2>
                     <p className="text-sm text-zinc-600 dark:text-zinc-400">
@@ -291,7 +299,7 @@ export function InviteShareLanding({
                     </p>
                   </div>
                   <div className="flex flex-col gap-2 sm:flex-row">
-                    <Button type="button" variant="pitch" className="flex-1 gap-2" onClick={() => setInviteLoginInline(true)}>
+                    <Button type="button" className="flex-1 gap-2" onClick={() => setInviteLoginInline(true)}>
                       <LogIn className="h-4 w-4 shrink-0" aria-hidden />
                       Zaloguj się
                     </Button>
@@ -307,7 +315,7 @@ export function InviteShareLanding({
             ) : signupKind == null ? (
               <>
                 <div className="space-y-1 text-center sm:text-left">
-                  <h2 className="text-lg font-semibold text-[var(--mundial-navy,#1a2d5a)] dark:text-emerald-100">
+                  <h2 className="text-lg font-semibold text-[var(--mundial-navy,#1a2d5a)] dark:text-zinc-100">
                     Czy bierzesz udział?
                   </h2>
                   <p className="text-sm text-zinc-600 dark:text-zinc-400">
@@ -316,7 +324,7 @@ export function InviteShareLanding({
                   </p>
                 </div>
                 <div className="flex flex-col gap-2">
-                  <Button type="button" variant="pitch" className="w-full" onClick={onParticipationTak}>
+                  <Button type="button" className="w-full" onClick={onParticipationTak}>
                     Tak, biorę udział
                   </Button>
                   <Button
@@ -346,7 +354,7 @@ export function InviteShareLanding({
               </>
             ) : (
               <div className="space-y-3 text-center sm:text-left">
-                <h2 className="text-lg font-semibold text-[var(--mundial-navy,#1a2d5a)] dark:text-emerald-100">
+                <h2 className="text-lg font-semibold text-[var(--mundial-navy,#1a2d5a)] dark:text-zinc-100">
                   Twój status na ten mecz
                 </h2>
                 <p className="text-sm text-zinc-600 dark:text-zinc-400">
@@ -365,25 +373,20 @@ export function InviteShareLanding({
         </>
       )}
 
-      <p className="text-center text-sm text-zinc-600 dark:text-zinc-400">
-        <Link
-          href="/terminarz"
-          className="inline-flex items-center gap-1.5 font-medium text-emerald-800 underline-offset-2 hover:underline dark:text-emerald-300"
-        >
+      <p className="relative z-10 text-center text-sm text-zinc-600 dark:text-zinc-400">
+        <Link href="/terminarz" className="awp-invite-footer-link">
           <CalendarDays className="h-4 w-4 shrink-0" aria-hidden />
           Pełny terminarz Akademii
         </Link>
       </p>
 
-      <div className="flex justify-center pb-2">
-        <Image
-          src="/mundial-2026-logo.svg"
-          alt=""
+      <div className="relative z-10 flex justify-center pb-2">
+        <SiteAssetImage
+          asset="logo_header"
+          decorative
           width={40}
           height={40}
           className="h-10 w-10 opacity-80"
-          unoptimized
-          aria-hidden
         />
       </div>
     </div>

@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import Image from "next/image";
 import Link from "next/link";
+import { SiteAssetImage } from "@/components/site-asset-image";
 import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -46,13 +46,12 @@ export function WalletBalanceFloat({ balancePln }: Props) {
         />
       ) : null}
       <div className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white/20 ring-2 ring-white/45 backdrop-blur-[2px] sm:h-14 sm:w-14">
-        <Image
-          src="/soccer-ball.svg"
-          alt=""
+        <SiteAssetImage
+          asset="bg_soccer_ball"
+          decorative
           width={56}
           height={56}
-          className="h-9 w-9 object-contain drop-shadow sm:h-10 sm:w-10"
-          unoptimized
+          className="h-9 w-9 drop-shadow sm:h-10 sm:w-10"
         />
       </div>
       <div className="relative min-w-0 flex-1 text-left">

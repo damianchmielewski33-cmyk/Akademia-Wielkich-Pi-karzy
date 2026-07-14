@@ -1,11 +1,17 @@
 import type { MetadataRoute } from "next";
-import { SITE_DESCRIPTION, SITE_NAME } from "@/lib/site";
+import { getAppSettings } from "@/lib/app-settings";
+import { getDb } from "@/lib/db";
 
-export default function manifest(): MetadataRoute.Manifest {
+export default async function manifest(): Promise<MetadataRoute.Manifest> {
+  const db = await getDb();
+  const settings = await getAppSettings(db);
+  const icon = settings.site_assets.logo_favicon;
+  const iconType = icon.toLowerCase().endsWith(".svg") ? "image/svg+xml" : "image/png";
+
   return {
-    name: SITE_NAME,
+    name: settings.site_name,
     short_name: "AWP",
-    description: SITE_DESCRIPTION,
+    description: settings.site_description,
     start_url: "/",
     display: "standalone",
     background_color: "#f4faf7",
@@ -13,9 +19,9 @@ export default function manifest(): MetadataRoute.Manifest {
     lang: "pl",
     icons: [
       {
-        src: "/logo-akademia.svg",
+        src: icon,
         sizes: "any",
-        type: "image/svg+xml",
+        type: iconType,
         purpose: "any",
       },
     ],

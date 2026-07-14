@@ -1,14 +1,26 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Loader2, Settings2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import {
+  AdminCard,
+  AdminToolbar,
+  adminEmptyStateClass,
+  adminFieldClass,
+  adminInnerPanelClass,
+  adminStatusChipClass,
+  adminTextareaClass,
+  adminToggleRowClass,
+} from "@/components/admin-ui";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 import type { AppSettingsApiResponse } from "@/app/api/admin/app-settings/route";
 import type { MatchCancelReasonEntry } from "@/lib/app-settings";
+import { AdminSiteAssetField } from "@/components/admin-site-asset-field";
+import { SITE_ASSET_KEYS } from "@/lib/site-assets";
 
 type Props = {
   loading: boolean;
@@ -25,21 +37,17 @@ function SettingsSection({
   children: React.ReactNode;
 }) {
   return (
-    <Card className="border-zinc-200/80 bg-white shadow-sm dark:border-zinc-700/80 dark:bg-zinc-900/90">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-base">{title}</CardTitle>
-        {description ? <CardDescription>{description}</CardDescription> : null}
-      </CardHeader>
-      <CardContent className="space-y-4">{children}</CardContent>
-    </Card>
+    <AdminCard title={title} description={description}>
+      <div className="space-y-4">{children}</div>
+    </AdminCard>
   );
 }
 
 function FieldRow({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
     <div className="grid gap-1.5">
-      <Label className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">{label}</Label>
-      {hint ? <p className="text-xs text-zinc-500 dark:text-zinc-400">{hint}</p> : null}
+      <Label className="text-sm font-semibold text-white">{label}</Label>
+      {hint ? <p className="text-xs pitch-muted">{hint}</p> : null}
       {children}
     </div>
   );
@@ -59,20 +67,20 @@ function ToggleRow({
   onChange: (v: boolean) => void;
 }) {
   return (
-    <label className="flex flex-wrap items-start justify-between gap-4 rounded-xl border border-zinc-200 bg-zinc-50/60 px-4 py-3 dark:border-zinc-700 dark:bg-zinc-800/40">
+    <label className={adminToggleRowClass}>
       <span className="min-w-0">
-        <span className="block text-sm font-semibold text-zinc-900 dark:text-zinc-100">{label}</span>
-        {hint ? <span className="mt-1 block text-sm text-zinc-600 dark:text-zinc-400">{hint}</span> : null}
+        <span className="block text-sm font-semibold text-white">{label}</span>
+        {hint ? <span className="mt-1 block text-sm pitch-muted">{hint}</span> : null}
       </span>
       <span className="flex items-center gap-2">
         <input
           type="checkbox"
-          className="h-4 w-4 rounded border-zinc-300 text-emerald-700 focus:ring-emerald-600"
+          className="h-4 w-4 rounded border-white/30 bg-black/20 text-emerald-500 focus:ring-emerald-400"
           checked={checked}
           disabled={disabled}
           onChange={(e) => onChange(e.target.checked)}
         />
-        <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+        <span className="text-sm font-medium text-emerald-100/90">
           {checked ? "Włączony" : "Wyłączony"}
         </span>
       </span>
@@ -135,7 +143,7 @@ export function AdminSettingsTab({ loading, onReload }: Props) {
 
   if (fetching && !settings) {
     return (
-      <div className="flex items-center justify-center gap-2 py-16 text-sm text-zinc-600">
+      <div className="flex items-center justify-center gap-2 py-16 text-sm pitch-muted">
         <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
         Wczytywanie ustawień…
       </div>
@@ -144,9 +152,9 @@ export function AdminSettingsTab({ loading, onReload }: Props) {
 
   if (!settings) {
     return (
-      <div className="rounded-xl border border-dashed border-zinc-300 px-4 py-12 text-center text-sm text-zinc-600">
+      <div className={adminEmptyStateClass}>
         Nie udało się wczytać ustawień.{" "}
-        <button type="button" className="font-semibold text-emerald-700 underline" onClick={() => void load()}>
+        <button type="button" className="font-semibold text-[var(--mundial-gold)] underline" onClick={() => void load()}>
           Spróbuj ponownie
         </button>
       </div>
@@ -162,42 +170,40 @@ export function AdminSettingsTab({ loading, onReload }: Props) {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 className="flex items-center gap-2 text-xl font-bold text-zinc-900 dark:text-zinc-100">
-            <Settings2 className="h-5 w-5 text-emerald-700" aria-hidden />
-            Konfiguracja aplikacji
-          </h2>
-          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-            Pełna konfiguracja strony, kontaktów, meczów, rankingów i powiadomień — bez zmiany kodu.
-          </p>
-        </div>
-        <Button type="button" variant="outline" size="sm" disabled={busy} onClick={() => { onReload(); void load(); }}>
-          Odśwież
-        </Button>
-      </div>
+      <AdminToolbar
+        title="Konfiguracja aplikacji"
+        description="Pełna konfiguracja strony, kontaktów, meczów, rankingów i powiadomień — bez zmiany kodu."
+        onReload={() => {
+          onReload();
+          void load();
+        }}
+        loading={busy}
+      />
 
       <SettingsSection
         title="Status systemu"
         description="Informacje tylko do odczytu — wymagają zmiennych środowiskowych na serwerze."
       >
         <ul className="grid gap-2 text-sm sm:grid-cols-2">
-          <li className="rounded-lg border border-zinc-200 bg-zinc-50/80 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-800/50">
-            <span className="text-zinc-500">SMTP (e-mail):</span>{" "}
-            <strong className={settings.system.smtp_configured ? "text-emerald-700" : "text-amber-700"}>
+          <li className={adminStatusChipClass}>
+            <span className="text-emerald-100/70">SMTP (e-mail):</span>{" "}
+            <strong className={settings.system.smtp_configured ? "text-emerald-300" : "text-amber-300"}>
               {settings.system.smtp_configured ? "Skonfigurowany" : "Brak — powiadomienia e-mail nie wyjdą"}
             </strong>
           </li>
-          <li className="rounded-lg border border-zinc-200 bg-zinc-50/80 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-800/50">
-            <span className="text-zinc-500">Środowisko:</span>{" "}
-            <strong>{settings.system.is_production ? "Produkcja" : "Development"}</strong>
+          <li className={adminStatusChipClass}>
+            <span className="text-emerald-100/70">Środowisko:</span>{" "}
+            <strong className="text-white">{settings.system.is_production ? "Produkcja" : "Development"}</strong>
           </li>
-          <li className="rounded-lg border border-zinc-200 bg-zinc-50/80 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-800/50">
-            <span className="text-zinc-500">Env ALLOW_SELF_REGISTRATION:</span>{" "}
-            <strong>{settings.system.self_registration_env_override ? "włączone (=1)" : "nie ustawione"}</strong>
+          <li className={adminStatusChipClass}>
+            <span className="text-emerald-100/70">Env ALLOW_SELF_REGISTRATION:</span>{" "}
+            <strong className="text-white">
+              {settings.system.self_registration_env_override ? "włączone (=1)" : "nie ustawione"}
+            </strong>
           </li>
-          <li className="rounded-lg border border-zinc-200 bg-zinc-50/80 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-800/50">
-            <span className="text-zinc-500">Rejestracja (panel):</span> <strong>{regModeLabel}</strong>
+          <li className={adminStatusChipClass}>
+            <span className="text-emerald-100/70">Rejestracja (panel):</span>{" "}
+            <strong className="text-white">{regModeLabel}</strong>
           </li>
         </ul>
       </SettingsSection>
@@ -205,6 +211,7 @@ export function AdminSettingsTab({ loading, onReload }: Props) {
       <SettingsSection title="Strona i branding" description="Nazwa i opis widoczne w nagłówku, SEO i meta tagach.">
         <FieldRow label="Nazwa strony">
           <Input
+            className={adminFieldClass}
             defaultValue={settings.site_name}
             disabled={busy}
             key={`site_name-${settings.site_name}`}
@@ -216,7 +223,7 @@ export function AdminSettingsTab({ loading, onReload }: Props) {
         </FieldRow>
         <FieldRow label="Opis strony (SEO)">
           <textarea
-            className="min-h-[80px] w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-900"
+            className={adminTextareaClass}
             defaultValue={settings.site_description}
             disabled={busy}
             key={`site_desc-${settings.site_description}`}
@@ -229,10 +236,39 @@ export function AdminSettingsTab({ loading, onReload }: Props) {
         </FieldRow>
       </SettingsSection>
 
+      <SettingsSection
+        title="Grafiki i banery"
+        description="Logo, favicon, tła i dekoracje — wgraj własne pliki lub przywróć domyślne. Obrazy są automatycznie skalowane (object-contain / cover)."
+      >
+        <div className="grid gap-4 lg:grid-cols-2">
+          {SITE_ASSET_KEYS.map((key) => {
+            const customMap: Record<(typeof SITE_ASSET_KEYS)[number], string | null> = {
+              logo_header: settings.asset_logo_header_url,
+              logo_crest: settings.asset_logo_crest_url,
+              logo_favicon: settings.asset_logo_favicon_url,
+              bg_soccer_ball: settings.asset_bg_soccer_ball_url,
+              bg_stadium: settings.asset_bg_stadium_url,
+              bg_pitch_lines: settings.asset_bg_pitch_lines_url,
+            };
+            return (
+              <AdminSiteAssetField
+                key={key}
+                assetKey={key}
+                currentUrl={settings.site_assets[key]}
+                customUrl={customMap[key]}
+                disabled={busy}
+                onUpdated={(next) => setSettings((prev) => (prev ? { ...next, system: prev.system } : prev))}
+              />
+            );
+          })}
+        </div>
+      </SettingsSection>
+
       <SettingsSection title="Kontakt i organizatorzy" description="Dane na stronie Kontakt i w stopce.">
         <FieldRow label="Główny e-mail kontaktowy">
           <Input
             type="email"
+            className={adminFieldClass}
             defaultValue={settings.contact_email}
             disabled={busy}
             key={`contact-${settings.contact_email}`}
@@ -244,6 +280,7 @@ export function AdminSettingsTab({ loading, onReload }: Props) {
         </FieldRow>
         <FieldRow label="Numer BLIK (wpisowe)" hint="Wyświetlany przy płatnościach.">
           <Input
+            className={adminFieldClass}
             defaultValue={settings.blik_phone}
             disabled={busy}
             key={`blik-${settings.blik_phone}`}
@@ -254,12 +291,13 @@ export function AdminSettingsTab({ loading, onReload }: Props) {
           />
         </FieldRow>
         <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-3 rounded-xl border border-zinc-200 p-4 dark:border-zinc-700">
-            <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">Organizator 1</p>
+          <div className={cn(adminInnerPanelClass, "space-y-3")}>
+            <p className="text-sm font-semibold text-white">Organizator 1</p>
             {(["organizer_damian_name", "organizer_damian_phone", "organizer_damian_email"] as const).map((key) => (
               <FieldRow key={key} label={key.includes("name") ? "Imię i nazwisko" : key.includes("phone") ? "Telefon" : "E-mail"}>
                 <Input
                   type={key.includes("email") ? "email" : "text"}
+                  className={adminFieldClass}
                   defaultValue={settings[key]}
                   disabled={busy}
                   onBlur={(e) => {
@@ -272,6 +310,7 @@ export function AdminSettingsTab({ loading, onReload }: Props) {
             <FieldRow label="Facebook">
               <Input
                 type="url"
+                className={adminFieldClass}
                 defaultValue={settings.facebook_damian_url}
                 disabled={busy}
                 onBlur={(e) => {
@@ -281,12 +320,13 @@ export function AdminSettingsTab({ loading, onReload }: Props) {
               />
             </FieldRow>
           </div>
-          <div className="space-y-3 rounded-xl border border-zinc-200 p-4 dark:border-zinc-700">
-            <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">Organizator 2</p>
+          <div className={cn(adminInnerPanelClass, "space-y-3")}>
+            <p className="text-sm font-semibold text-white">Organizator 2</p>
             {(["organizer_mateusz_name", "organizer_mateusz_phone", "organizer_mateusz_email"] as const).map((key) => (
               <FieldRow key={key} label={key.includes("name") ? "Imię i nazwisko" : key.includes("phone") ? "Telefon" : "E-mail"}>
                 <Input
                   type={key.includes("email") ? "email" : "text"}
+                  className={adminFieldClass}
                   defaultValue={settings[key]}
                   disabled={busy}
                   onBlur={(e) => {
@@ -299,6 +339,7 @@ export function AdminSettingsTab({ loading, onReload }: Props) {
             <FieldRow label="Facebook">
               <Input
                 type="url"
+                className={adminFieldClass}
                 defaultValue={settings.facebook_mateusz_url}
                 disabled={busy}
                 onBlur={(e) => {
@@ -313,21 +354,19 @@ export function AdminSettingsTab({ loading, onReload }: Props) {
 
       <SettingsSection title="Transmisja YouTube" description="Film lub transmisja na stronie głównej.">
         <FieldRow label="Link lub ID YouTube" hint="Wyczyść pole i zapisz, aby usunąć.">
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <Input
-              type="url"
-              placeholder="https://www.youtube.com/watch?v=…"
-              defaultValue={settings.home_youtube_url ?? ""}
-              disabled={busy}
-              key={`yt-${settings.home_youtube_url ?? ""}`}
-              className="font-mono text-sm"
-              onBlur={(e) => {
-                const v = e.target.value.trim();
-                const cur = settings.home_youtube_url ?? "";
-                if (v !== cur) void save({ home_youtube_url: v });
-              }}
-            />
-          </div>
+          <Input
+            type="url"
+            placeholder="https://www.youtube.com/watch?v=…"
+            className={cn(adminFieldClass, "font-mono text-sm")}
+            defaultValue={settings.home_youtube_url ?? ""}
+            disabled={busy}
+            key={`yt-${settings.home_youtube_url ?? ""}`}
+            onBlur={(e) => {
+              const v = e.target.value.trim();
+              const cur = settings.home_youtube_url ?? "";
+              if (v !== cur) void save({ home_youtube_url: v });
+            }}
+          />
         </FieldRow>
       </SettingsSection>
 
@@ -337,7 +376,7 @@ export function AdminSettingsTab({ loading, onReload }: Props) {
           hint="„Automatycznie” = pierwszy użytkownik zawsze może się zarejestrować; potem env/dev. Wymuszenie omija env."
         >
           <select
-            className="h-10 w-full rounded-xl border border-zinc-200 bg-white px-3 text-sm dark:border-zinc-600 dark:bg-zinc-900"
+            className={cn("awp-native-select h-10 w-full rounded-xl px-3 text-sm", adminFieldClass)}
             value={
               settings.allow_self_registration === null
                 ? "auto"
@@ -381,6 +420,7 @@ export function AdminSettingsTab({ loading, onReload }: Props) {
               type="number"
               min={1}
               max={99}
+              className={adminFieldClass}
               defaultValue={settings.default_match_max_slots}
               disabled={busy}
               onBlur={(e) => {
@@ -396,6 +436,7 @@ export function AdminSettingsTab({ loading, onReload }: Props) {
               type="number"
               min={0}
               step={0.01}
+              className={adminFieldClass}
               defaultValue={settings.default_match_fee_pln ?? ""}
               disabled={busy}
               placeholder="—"
@@ -409,6 +450,7 @@ export function AdminSettingsTab({ loading, onReload }: Props) {
           </FieldRow>
           <FieldRow label="Domyślna lokalizacja">
             <Input
+              className={adminFieldClass}
               defaultValue={settings.default_match_location}
               disabled={busy}
               placeholder="np. boisko przy szkole"
@@ -436,6 +478,7 @@ export function AdminSettingsTab({ loading, onReload }: Props) {
                 type="number"
                 min={0}
                 step={0.1}
+                className={adminFieldClass}
                 defaultValue={settings[key]}
                 disabled={busy}
                 onBlur={(e) => {
@@ -455,6 +498,7 @@ export function AdminSettingsTab({ loading, onReload }: Props) {
               type="number"
               min={1}
               max={32}
+              className={adminFieldClass}
               defaultValue={settings.lineup_pitch_slots_min}
               disabled={busy}
               onBlur={(e) => {
@@ -470,6 +514,7 @@ export function AdminSettingsTab({ loading, onReload }: Props) {
               type="number"
               min={1}
               max={32}
+              className={adminFieldClass}
               defaultValue={settings.lineup_pitch_slots_max}
               disabled={busy}
               onBlur={(e) => {
@@ -484,14 +529,14 @@ export function AdminSettingsTab({ loading, onReload }: Props) {
       </SettingsSection>
 
       <SettingsSection title="Powody anulowania meczu">
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+        <p className="text-sm pitch-muted">
           Lista opcji w dialogu anulowania. Wartość (klucz) — bez spacji; etykieta — tekst widoczny dla admina.
         </p>
         <div className="space-y-2">
           {cancelReasonsDraft.map((r, i) => (
             <div key={i} className="flex flex-wrap gap-2">
               <Input
-                className="min-w-[8rem] flex-1 font-mono text-xs"
+                className={cn(adminFieldClass, "min-w-[8rem] flex-1 font-mono text-xs")}
                 value={r.value}
                 disabled={busy}
                 placeholder="klucz"
@@ -502,7 +547,7 @@ export function AdminSettingsTab({ loading, onReload }: Props) {
                 }}
               />
               <Input
-                className="min-w-[10rem] flex-[2]"
+                className={cn(adminFieldClass, "min-w-[10rem] flex-[2]")}
                 value={r.label}
                 disabled={busy}
                 placeholder="Etykieta"
@@ -514,7 +559,7 @@ export function AdminSettingsTab({ loading, onReload }: Props) {
               />
               <Button
                 type="button"
-                variant="outline"
+                variant="stadium"
                 size="sm"
                 disabled={busy || cancelReasonsDraft.length <= 1}
                 onClick={() => setCancelReasonsDraft(cancelReasonsDraft.filter((_, j) => j !== i))}
@@ -527,7 +572,7 @@ export function AdminSettingsTab({ loading, onReload }: Props) {
         <div className="flex flex-wrap gap-2 pt-2">
           <Button
             type="button"
-            variant="outline"
+            variant="stadium"
             size="sm"
             disabled={busy || cancelReasonsDraft.length >= 20}
             onClick={() =>
@@ -536,18 +581,13 @@ export function AdminSettingsTab({ loading, onReload }: Props) {
           >
             Dodaj powód
           </Button>
-          <Button
-            type="button"
-            size="sm"
-            disabled={busy}
-            onClick={() => void save({ match_cancel_reasons: cancelReasonsDraft })}
-          >
+          <Button type="button" variant="pitch" size="sm" disabled={busy} onClick={() => void save({ match_cancel_reasons: cancelReasonsDraft })}>
             Zapisz powody
           </Button>
         </div>
       </SettingsSection>
 
-      <p className="text-center text-xs text-zinc-500 dark:text-zinc-400">
+      <p className="text-center text-xs text-emerald-100/70">
         Ustawienia zapisują się automatycznie po opuszczeniu pola (onBlur) lub po kliknięciu przycisku Zapisz.
         Sekrety (AUTH_SECRET, Turso, SMTP) pozostają w zmiennych środowiskowych serwera.
       </p>

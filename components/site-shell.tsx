@@ -2,7 +2,6 @@
 
 import type { ReactNode } from "react";
 import { useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { usePathname } from "next/navigation";
@@ -12,6 +11,8 @@ import { AnalyticsTracker } from "@/components/analytics-tracker";
 import { NavigationLoadingOverlay } from "@/components/navigation-loading-overlay";
 import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
 import { LogoutConfirmModal } from "@/components/logout-confirm-modal";
+import { SiteAssetImage } from "@/components/site-asset-image";
+import { useSiteAsset } from "@/components/site-assets-provider";
 import { cn } from "@/lib/utils";
 import { SITE_NAME, getPublicContactEmailWithFallback } from "@/lib/site";
 
@@ -64,6 +65,7 @@ export function SiteShell({
   const router = useRouter();
   const pathname = usePathname();
   const contactEmail = contactEmailProp ?? getPublicContactEmailWithFallback();
+  const pitchLinesBg = useSiteAsset("bg_pitch_lines");
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [themeBusy, setThemeBusy] = useState(false);
   if (pathname === "/panel-admina" || pathname?.startsWith("/panel-admina")) {
@@ -131,15 +133,15 @@ export function SiteShell({
         <div className="relative mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-3 sm:py-3.5">
           <Link href="/" className="awp-focus-ring flex items-center gap-3 rounded-xl pr-2">
             <span className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/10 shadow-inner ring-1 ring-[var(--mundial-gold)]/40">
-              <Image
-              src="/mundial-2026-logo.svg"
-              alt="Mundial 2026"
-              width={160}
-              height={160}
-              className="h-9 w-9 object-contain"
-              priority
-              sizes="40px"
-            />
+              <SiteAssetImage
+                asset="logo_header"
+                alt="Logo"
+                width={160}
+                height={160}
+                className="h-9 w-9"
+                priority
+                sizes="40px"
+              />
             </span>
             <span className="text-left">
               <span className="block text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-[var(--mundial-gold)]">
@@ -319,29 +321,26 @@ export function SiteShell({
 
       <main className="relative flex flex-1 flex-col">
         <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
-          <Image
-            src="/soccer-ball.svg"
-            alt=""
+          <SiteAssetImage
+            asset="bg_soccer_ball"
+            decorative
             width={220}
             height={220}
-            className="absolute -right-16 top-8 opacity-[0.14] sm:top-12 dark:opacity-[0.12]"
-            unoptimized
+            className="absolute -right-16 top-8 h-auto w-[220px] max-w-none opacity-[0.14] sm:top-12 dark:opacity-[0.12]"
           />
-          <Image
-            src="/soccer-ball.svg"
-            alt=""
+          <SiteAssetImage
+            asset="bg_soccer_ball"
+            decorative
             width={160}
             height={160}
-            className="absolute -left-10 bottom-24 opacity-[0.12] sm:bottom-32 dark:opacity-[0.1]"
-            unoptimized
+            className="absolute -left-10 bottom-24 h-auto w-[160px] max-w-none opacity-[0.12] sm:bottom-32 dark:opacity-[0.1]"
           />
-          <Image
-            src="/soccer-ball.svg"
-            alt=""
+          <SiteAssetImage
+            asset="bg_soccer_ball"
+            decorative
             width={120}
             height={120}
-            className="absolute bottom-8 right-[18%] opacity-[0.1] max-sm:hidden dark:opacity-[0.08]"
-            unoptimized
+            className="absolute bottom-8 right-[18%] h-auto w-[120px] max-w-none opacity-[0.1] max-sm:hidden dark:opacity-[0.08]"
           />
         </div>
         <div className="relative z-10 flex flex-1 flex-col">{children}</div>
@@ -351,7 +350,7 @@ export function SiteShell({
         <div
           className="pointer-events-none absolute inset-x-0 top-0 h-16 opacity-40"
           style={{
-            backgroundImage: "url(/pitch-lines.svg)",
+            backgroundImage: `url("${pitchLinesBg.replace(/"/g, "%22")}")`,
             backgroundSize: "cover",
             backgroundPosition: "center top",
           }}
@@ -359,12 +358,12 @@ export function SiteShell({
         />
         <div className="relative mx-auto flex max-w-6xl flex-col items-center gap-2 px-4 py-8 text-center sm:flex-row sm:justify-between sm:text-left">
           <div className="flex items-center gap-3">
-            <Image
-              src="/logo-akademia-crest.png"
+            <SiteAssetImage
+              asset="logo_crest"
               alt={siteName}
               width={144}
               height={144}
-              className="h-9 w-9 object-contain opacity-90"
+              className="h-9 w-9 opacity-90"
               sizes="36px"
             />
             <div>

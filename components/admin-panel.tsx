@@ -4,18 +4,14 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   Activity,
-  ArrowLeft,
   ArrowDownAZ,
   ArrowUpAZ,
   BarChart3,
   Calendar,
-  ClipboardList,
   Download,
   LayoutDashboard,
   LayoutGrid,
   Loader2,
-  LogOut,
-  RefreshCw,
   Search,
   Settings2,
   Shield,
@@ -32,7 +28,17 @@ import { z } from "zod";
 import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  AdminCard,
+  AdminMetricTile,
+  AdminShell,
+  AdminTableShell,
+  AdminToolbar,
+  adminAlertDangerClass,
+  adminEmptyStateClass,
+  adminOutlineBtnClass,
+  adminSearchInputClass,
+} from "@/components/admin-ui";
 import { LogoutConfirmModal } from "@/components/logout-confirm-modal";
 import { AppModal } from "@/components/ui/app-modal";
 import {
@@ -251,36 +257,36 @@ function MatchesView({
 
   return (
     <div>
-      <Toolbar
+      <AdminToolbar
         title="Mecze"
         description="Zarządzanie terminami, opłatami, miejscami i anulacjami meczów."
         onReload={onReload}
         loading={loading}
       />
 
-      <div className="overflow-hidden rounded-xl border border-zinc-200/80 bg-white shadow-sm dark:border-zinc-700/80 dark:bg-zinc-900/90 dark:shadow-black/30">
+      <AdminTableShell>
         <Table>
           <TableHeader>
-            <TableRow className="border-zinc-200 hover:bg-transparent">
-              <TableHead className="text-zinc-700">Data</TableHead>
-              <TableHead className="text-zinc-700">Godzina</TableHead>
-              <TableHead className="text-zinc-700">Lokalizacja</TableHead>
-              <TableHead className="text-right text-zinc-700">Miejsca</TableHead>
-              <TableHead className="text-right text-zinc-700">Rozegrane</TableHead>
-              <TableHead className="text-right text-zinc-700">Opłata</TableHead>
-              <TableHead className="text-right text-zinc-700">Akcje</TableHead>
+            <TableRow>
+              <TableHead>Data</TableHead>
+              <TableHead>Godzina</TableHead>
+              <TableHead>Lokalizacja</TableHead>
+              <TableHead className="text-right">Miejsca</TableHead>
+              <TableHead className="text-right">Rozegrane</TableHead>
+              <TableHead className="text-right">Opłata</TableHead>
+              <TableHead className="text-right">Akcje</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {matches.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="h-24 text-center text-sm text-zinc-500 dark:text-zinc-400">
+                <TableCell colSpan={7} className="h-24 text-center text-sm text-emerald-100/70">
                   Brak meczów w bazie.
                 </TableCell>
               </TableRow>
             ) : (
               matches.map((m) => (
-                <TableRow key={m.id} className="border-zinc-100">
+                <TableRow key={m.id}>
                   <TableCell className="align-middle">{m.date}</TableCell>
                   <TableCell className="align-middle">{m.time}</TableCell>
                   <TableCell className="align-middle">{m.location}</TableCell>
@@ -297,13 +303,13 @@ function MatchesView({
                         <Badge className="bg-red-600 text-white">Anulowany</Badge>
                       ) : (
                         <>
-                          <Button size="sm" variant="outline" onClick={() => handleEditClick(m)}>
+                          <Button size="sm" variant="stadium" onClick={() => handleEditClick(m)}>
                             Edytuj
                           </Button>
-                          <Button size="sm" variant="outline" onClick={() => handleSignupsClick(m)}>
+                          <Button size="sm" variant="stadium" onClick={() => handleSignupsClick(m)}>
                             Zapisy
                           </Button>
-                          <Button size="sm" variant="outline" onClick={() => handleCancelClick(m)}>
+                          <Button size="sm" variant="stadium" onClick={() => handleCancelClick(m)}>
                             Anuluj
                           </Button>
                         </>
@@ -315,7 +321,7 @@ function MatchesView({
             )}
           </TableBody>
         </Table>
-      </div>
+      </AdminTableShell>
 
       {selectedMatch ? (
         <MatchEditDialogContent
@@ -624,7 +630,7 @@ function MatchSignupsDialogContent({
                         <Badge className="bg-amber-100 text-amber-800">Gościnny</Badge>
                       ) : null}
                     </div>
-                    <p className="text-sm text-zinc-500 dark:text-zinc-400">{s.zawodnik}</p>
+                    <p className="text-sm pitch-muted">{s.zawodnik}</p>
                   </div>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
@@ -746,7 +752,7 @@ function StatsView({
 
   return (
     <div>
-      <Toolbar
+      <AdminToolbar
         title="Statystyki"
         description="Wpisy statystyk mecze — gole, asysty, dystans, interwencje."
         onReload={onReload}
@@ -754,49 +760,49 @@ function StatsView({
       >
         <div className="relative w-full min-w-[200px] sm:w-64">
           <Search
-            className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400"
+            className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-emerald-100/50"
             aria-hidden
           />
           <Input
-            className="border-zinc-200 bg-white dark:border-zinc-600 dark:bg-zinc-800 pl-9"
+            className={adminSearchInputClass}
             placeholder="Szukaj…"
             value={q}
             onChange={(e) => setQ(e.target.value)}
             aria-label="Filtruj statystyki"
           />
         </div>
-      </Toolbar>
+      </AdminToolbar>
 
-      <div className="overflow-hidden rounded-xl border border-zinc-200/80 bg-white shadow-sm dark:border-zinc-700/80 dark:bg-zinc-900/90 dark:shadow-black/30">
+      <AdminTableShell>
         <Table>
           <TableHeader>
-            <TableRow className="border-zinc-200 hover:bg-transparent">
-              <TableHead className="w-12 text-zinc-700" />
-              <TableHead className="text-zinc-700">Zawodnik</TableHead>
-              <TableHead className="text-right text-zinc-700">Gole</TableHead>
-              <TableHead className="text-right text-zinc-700">Asysty</TableHead>
-              <TableHead className="text-right text-zinc-700">Dystans (m)</TableHead>
-              <TableHead className="text-right text-zinc-700">Interwencje</TableHead>
-              <TableHead className="text-right text-zinc-700">Mecz ID</TableHead>
+            <TableRow>
+              <TableHead className="w-12" />
+              <TableHead>Zawodnik</TableHead>
+              <TableHead className="text-right">Gole</TableHead>
+              <TableHead className="text-right">Asysty</TableHead>
+              <TableHead className="text-right">Dystans (m)</TableHead>
+              <TableHead className="text-right">Interwencje</TableHead>
+              <TableHead className="text-right">Mecz ID</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="h-24 text-center text-sm text-zinc-500 dark:text-zinc-400">
+                <TableCell colSpan={7} className="h-24 text-center text-sm text-emerald-100/70">
                   {stats.length === 0 ? "Brak statystyk w bazie." : "Brak wyników dla podanego filtra."}
                 </TableCell>
               </TableRow>
             ) : (
               filtered.map((s) => (
-                <TableRow key={s.id} className="border-zinc-100">
+                <TableRow key={s.id}>
                   <TableCell className="align-middle">
                     <PlayerAvatar
                       photoPath={s.profile_photo_path}
                       firstName={s.first_name}
                       lastName={s.last_name}
                       size="sm"
-                      ringClassName="ring-2 ring-zinc-200"
+                      ringClassName="ring-2 ring-white/35"
                     />
                   </TableCell>
                   <TableCell className="align-middle">
@@ -811,7 +817,7 @@ function StatsView({
                   <TableCell className="text-right align-middle tabular-nums">{s.distance}</TableCell>
                   <TableCell className="text-right align-middle tabular-nums">{s.saves}</TableCell>
                   <TableCell className="text-right align-middle tabular-nums">
-                    <Link href={`/panel-admina?match=${s.match_id}`} className="text-emerald-600 hover:underline">
+                    <Link href={`/panel-admina?match=${s.match_id}`} className="text-[var(--mundial-gold)] hover:underline">
                       {s.match_id}
                     </Link>
                   </TableCell>
@@ -820,7 +826,7 @@ function StatsView({
             )}
           </TableBody>
         </Table>
-      </div>
+      </AdminTableShell>
     </div>
   );
 }
@@ -974,178 +980,68 @@ export function AdminPanel() {
     };
   }, [tab, analyticsRange, analyticsFetchNonce]);
 
+  const shellLoading =
+    tab === "lineups" || tab === "wallets" || tab === "settings"
+      ? false
+      : tab === "analytics"
+        ? analyticsLoading
+        : loading;
+
+  const pinBadge =
+    (summary?.pin_reset_requests ?? 0) > 0 ||
+    users.some((u) => (u.pin_reset_requested ?? 0) === 1);
+
   return (
-    <div className="min-h-screen bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
-      <div className="flex min-h-screen flex-col lg:flex-row">
-        <aside
-          className={cn(
-            "border-zinc-200/80 bg-gradient-to-br from-emerald-950 via-emerald-900 to-emerald-950 text-white",
-            "lg:w-60 lg:shrink-0 lg:border-r"
-          )}
-        >
-          <div className="flex flex-col gap-6 p-4 lg:sticky lg:top-0 lg:max-h-screen lg:overflow-y-auto">
-            <div className="flex items-center gap-3 border-b border-white/10 pb-4">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 text-lg shadow-inner">
-                ⚽
-              </div>
-              <div>
-                <p className="text-xs font-medium uppercase tracking-wider text-emerald-300/90">
-                  Akademia
-                </p>
-                <p className="font-semibold leading-tight">Panel administratora</p>
-              </div>
-            </div>
-
-            <nav className="flex flex-wrap gap-2 lg:flex-col lg:gap-1">
-              {tabs.map((t) => {
-                const Icon = t.icon;
-                const active = tab === t.id;
-                const pinBadge =
-                  t.id === "users" &&
-                  ((summary?.pin_reset_requests ?? 0) > 0 ||
-                    users.some((u) => (u.pin_reset_requested ?? 0) === 1));
-                return (
-                  <button
-                    key={t.id}
-                    type="button"
-                    onClick={() => setTab(t.id)}
-                    className={cn(
-                      "flex items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors",
-                      active
-                        ? "bg-white/15 text-white shadow-sm"
-                        : "text-emerald-100/80 hover:bg-white/10 hover:text-white"
-                    )}
-                  >
-                    <Icon className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
-                    <span className="flex min-w-0 flex-1 items-center justify-between gap-2">
-                      {t.label}
-                      {pinBadge ? (
-                        <span
-                          className="inline-flex min-h-[1.25rem] min-w-[1.25rem] shrink-0 items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white"
-                          title="Zgłoszenia zmiany PIN-u"
-                          aria-label="Zgłoszenia zmiany PIN-u"
-                        />
-                      ) : null}
-                    </span>
-                  </button>
-                );
-              })}
-            </nav>
-
-            <div className="mt-auto flex flex-col gap-2 border-t border-white/10 pt-4">
-              <Link
-                href="/terminarz"
-                className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-emerald-100/90 transition-colors hover:bg-white/10 hover:text-white"
-              >
-                <Calendar className="h-4 w-4" aria-hidden />
-                Terminarz (edycja)
-              </Link>
-              <Link
-                href="/"
-                className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-emerald-100/90 transition-colors hover:bg-white/10 hover:text-white"
-              >
-                <ArrowLeft className="h-4 w-4" aria-hidden />
-                Strona główna
-              </Link>
-              <button
-                type="button"
-                onClick={() => setLogoutOpen(true)}
-                className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-emerald-100/90 transition-colors hover:bg-white/10 hover:text-white"
-              >
-                <LogOut className="h-4 w-4" aria-hidden />
-                Wyloguj
-              </button>
-            </div>
-          </div>
-        </aside>
-
-        <main className="relative flex-1 overflow-x-hidden p-4 sm:p-6 lg:p-8">
-          {(tab === "lineups" || tab === "wallets" || tab === "settings"
-            ? false
-            : tab === "analytics"
-              ? analyticsLoading
-              : loading) && (
-            <div
-              className="pointer-events-none absolute right-6 top-6 flex items-center gap-2 text-sm text-zinc-500 dark:text-zinc-400"
-              aria-live="polite"
-            >
-              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-              Wczytywanie…
-            </div>
-          )}
-
-          <div className="mx-auto max-w-6xl">
-            {tab === "dashboard" && (
-              <DashboardView
-                summary={summary}
-                activity={activity}
-                loading={loading}
-                onReload={loadDashboard}
-                onGoToTab={setTab}
-              />
-            )}
-            {tab === "users" && <UsersView users={users} loading={loading} onReload={loadUsers} />}
-            {tab === "wallets" && <AdminWalletsSaldoSection />}
-            {tab === "matches" && (
-              <MatchesView
-                matches={matches}
-                loading={loading}
-                onReload={loadMatches}
-                defaultMaxSlots={matchDefaults?.default_match_max_slots ?? 14}
-              />
-            )}
-            {tab === "lineups" && <MatchLineupAdmin />}
-            {tab === "analytics" && (
-              <AnalyticsView
-                data={analytics}
-                hourlyData={analyticsHourly}
-                loading={analyticsLoading}
-                dateFrom={analyticsRange.from}
-                dateTo={analyticsRange.to}
-                onDateFromChange={onAnalyticsFromChange}
-                onDateToChange={onAnalyticsToChange}
-                onReload={() => setAnalyticsFetchNonce((n) => n + 1)}
-                onPresetRange={(from, to) => setAnalyticsRange({ from, to })}
-              />
-            )}
-            {tab === "stats" && <StatsView stats={stats} loading={loading} onReload={loadStats} />}
-            {tab === "settings" && <AdminSettingsTab loading={loading} onReload={loadDashboard} />}
-          </div>
-        </main>
-      </div>
+    <>
+      <AdminShell
+        tabs={tabs.map((t) => ({
+          ...t,
+          badge: t.id === "users" && pinBadge,
+        }))}
+        activeTab={tab}
+        onTabChange={(id) => setTab(id as TabId)}
+        onLogout={() => setLogoutOpen(true)}
+        loading={shellLoading}
+      >
+        {tab === "dashboard" && (
+          <DashboardView
+            summary={summary}
+            activity={activity}
+            loading={loading}
+            onReload={loadDashboard}
+            onGoToTab={setTab}
+          />
+        )}
+        {tab === "users" && <UsersView users={users} loading={loading} onReload={loadUsers} />}
+        {tab === "wallets" && <AdminWalletsSaldoSection />}
+        {tab === "matches" && (
+          <MatchesView
+            matches={matches}
+            loading={loading}
+            onReload={loadMatches}
+            defaultMaxSlots={matchDefaults?.default_match_max_slots ?? 14}
+          />
+        )}
+        {tab === "lineups" && <MatchLineupAdmin />}
+        {tab === "analytics" && (
+          <AnalyticsView
+            data={analytics}
+            hourlyData={analyticsHourly}
+            loading={analyticsLoading}
+            dateFrom={analyticsRange.from}
+            dateTo={analyticsRange.to}
+            onDateFromChange={onAnalyticsFromChange}
+            onDateToChange={onAnalyticsToChange}
+            onReload={() => setAnalyticsFetchNonce((n) => n + 1)}
+            onPresetRange={(from, to) => setAnalyticsRange({ from, to })}
+          />
+        )}
+        {tab === "stats" && <StatsView stats={stats} loading={loading} onReload={loadStats} />}
+        {tab === "settings" && <AdminSettingsTab loading={loading} onReload={loadDashboard} />}
+      </AdminShell>
 
       <LogoutConfirmModal open={logoutOpen} onOpenChange={setLogoutOpen} />
-    </div>
-  );
-}
-
-function Toolbar({
-  title,
-  description,
-  onReload,
-  loading,
-  children,
-}: {
-  title: string;
-  description?: string;
-  onReload: () => void;
-  loading: boolean;
-  children?: React.ReactNode;
-}) {
-  return (
-    <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-zinc-900">{title}</h1>
-        {description ? <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">{description}</p> : null}
-      </div>
-      <div className="flex flex-wrap items-center gap-2">
-        {children}
-        <Button type="button" variant="outline" size="sm" onClick={onReload} disabled={loading}>
-          <RefreshCw className={cn("mr-2 h-4 w-4", loading && "animate-spin")} aria-hidden />
-          Odśwież
-        </Button>
-      </div>
-    </div>
+    </>
   );
 }
 
@@ -1264,7 +1160,7 @@ function AnalyticsView({
 
   return (
     <div aria-busy={loading}>
-      <Toolbar
+      <AdminToolbar
         title="Analityka wejść"
         description="Dane zbierane przy otwarciu stron przez użytkowników (bez panelu admina). Zakres dat to dni kalendarzowe w strefie Polski (Europe/Warsaw). Zmiana dat wczytuje raport ponownie."
         onReload={onReload}
@@ -1274,9 +1170,9 @@ function AnalyticsView({
           <div className="flex flex-wrap items-end gap-2">
             <Button
               type="button"
-              variant="outline"
+              variant="stadium"
               size="sm"
-              className="border-zinc-200 bg-white dark:border-zinc-600 dark:bg-zinc-800"
+              className={adminOutlineBtnClass}
               disabled={loading}
               onClick={() => {
                 const r = analyticsPresetLastNDaysInclusive(7);
@@ -1287,9 +1183,9 @@ function AnalyticsView({
             </Button>
             <Button
               type="button"
-              variant="outline"
+              variant="stadium"
               size="sm"
-              className="border-zinc-200 bg-white dark:border-zinc-600 dark:bg-zinc-800"
+              className={adminOutlineBtnClass}
               disabled={loading}
               onClick={() => {
                 const r = analyticsPresetLastNDaysInclusive(30);
@@ -1300,9 +1196,9 @@ function AnalyticsView({
             </Button>
             <Button
               type="button"
-              variant="outline"
+              variant="stadium"
               size="sm"
-              className="border-zinc-200 bg-white dark:border-zinc-600 dark:bg-zinc-800"
+              className={adminOutlineBtnClass}
               disabled={loading}
               onClick={() => {
                 const r = analyticsPresetMonthToDate();
@@ -1313,9 +1209,9 @@ function AnalyticsView({
             </Button>
             <Button
               type="button"
-              variant="outline"
+              variant="stadium"
               size="sm"
-              className="border-zinc-200 bg-white dark:border-zinc-600 dark:bg-zinc-800"
+              className={adminOutlineBtnClass}
               disabled={loading}
               onClick={() => {
                 const r = defaultAnalyticsDateRange();
@@ -1327,52 +1223,49 @@ function AnalyticsView({
           </div>
           <div className="flex flex-wrap items-end gap-3">
             <div>
-              <Label htmlFor="adm-an-from" className="text-xs text-zinc-600 dark:text-zinc-400">
+              <Label htmlFor="adm-an-from" className="text-xs pitch-muted">
                 Od
               </Label>
               <Input
                 id="adm-an-from"
                 type="date"
                 max={maxDate}
-                className="mt-1 w-[11rem] border-zinc-200 bg-white dark:border-zinc-600 dark:bg-zinc-800"
+                className="mt-1 w-[11rem] border-white/25 bg-black/15 text-white"
                 value={dateFrom}
                 onChange={(e) => onDateFromChange(e.target.value)}
               />
             </div>
             <div>
-              <Label htmlFor="adm-an-to" className="text-xs text-zinc-600 dark:text-zinc-400">
+              <Label htmlFor="adm-an-to" className="text-xs pitch-muted">
                 Do
               </Label>
               <Input
                 id="adm-an-to"
                 type="date"
                 max={maxDate}
-                className="mt-1 w-[11rem] border-zinc-200 bg-white dark:border-zinc-600 dark:bg-zinc-800"
+                className="mt-1 w-[11rem] border-white/25 bg-black/15 text-white"
                 value={dateTo}
                 onChange={(e) => onDateToChange(e.target.value)}
               />
             </div>
           </div>
         </div>
-      </Toolbar>
+      </AdminToolbar>
 
       <AdminAnalyticsHourlyCharts data={hourlyData} loading={loading && hourlyData === null} />
 
       {rangeSummary && data ? (
-        <p className="mb-4 text-sm text-zinc-600 dark:text-zinc-400">
-          <span className="font-medium text-zinc-800">Zakres raportu (dni kalendarzowe, PL):</span>{" "}
+        <p className="mb-4 text-sm pitch-muted">
+          <span className="font-medium text-white">Zakres raportu (dni kalendarzowe, PL):</span>{" "}
           {rangeSummary}{" "}
-          <span className="text-zinc-500 dark:text-zinc-400">
+          <span className="text-emerald-100/70">
             ({data.range.from} — {data.range.to})
           </span>
         </p>
       ) : null}
 
-      <Card className="mb-6 border-amber-200/80 bg-amber-50/50 shadow-sm">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base text-amber-950">Jak czytać te liczby</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2 text-sm text-amber-950/90">
+      <AdminCard className="mb-6 home-pitch-tile-gold" title="Jak czytać te liczby">
+        <div className="space-y-2 text-sm text-amber-50/95">
           <p>
             <strong>Gracze zalogowani vs bez aktywności</strong> — spośród kont z rolą gracza (bez
             administratorów), ilu miało co najmniej jedno odsłonięcie strony zalogowane w wybranym
@@ -1397,310 +1290,259 @@ function AnalyticsView({
             mylić z samym otwarciem stron). Dla każdego wpisu widać kto (imię, nazwisko, pseudonim),
             opis akcji oraz znacznik czasu w Europe/Warsaw.
           </p>
-        </CardContent>
-      </Card>
+        </div>
+      </AdminCard>
 
       {!data && !loading ? (
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">Brak danych do wyświetlenia.</p>
+        <p className="text-sm pitch-muted">Brak danych do wyświetlenia.</p>
       ) : null}
 
       {data ? (
         <>
-          <Card className="mb-6 border-zinc-200/80 bg-white shadow-sm dark:border-zinc-700/80 dark:bg-zinc-900/90 dark:shadow-black/30">
-            <CardHeader className="space-y-4">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                <div>
-                  <CardTitle className="flex items-center gap-2 text-lg">
-                    <ClipboardList className="h-5 w-5 text-emerald-700" aria-hidden />
-                    Dziennik akcji użytkowników
-                  </CardTitle>
-                  <CardDescription className="mt-1">
-                    Zdarzenia z serwera w wybranym zakresie dat (np. logowanie, zapisy na mecze, edycje
-                    profilu). Najnowsze na górze. Do 400 wpisów na jedno wczytanie.
-                  </CardDescription>
-                </div>
-              </div>
-              <div className="relative w-full min-w-[200px] sm:max-w-md">
-                <Search
-                  className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400"
-                  aria-hidden
-                />
-                <Input
-                  className="border-zinc-200 bg-white dark:border-zinc-600 dark:bg-zinc-800 pl-9"
-                  placeholder="Szukaj po osobie, treści akcji lub czasie…"
-                  value={activityQuery}
-                  onChange={(e) => setActivityQuery(e.target.value)}
-                  aria-label="Filtruj dziennik akcji"
-                />
-              </div>
-            </CardHeader>
-            <CardContent className="overflow-x-auto">
-              <div className="max-h-[min(28rem,70vh)] overflow-y-auto overflow-x-auto rounded-xl border border-zinc-200/80">
+          <AdminCard
+            className="mb-6"
+            title="Dziennik akcji użytkowników"
+            description="Zdarzenia z serwera w wybranym zakresie dat (np. logowanie, zapisy na mecze, edycje profilu). Najnowsze na górze. Do 400 wpisów na jedno wczytanie."
+          >
+            <div className="relative mb-4 w-full min-w-[200px] sm:max-w-md">
+              <Search
+                className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-emerald-100/50"
+                aria-hidden
+              />
+              <Input
+                className={adminSearchInputClass}
+                placeholder="Szukaj po osobie, treści akcji lub czasie…"
+                value={activityQuery}
+                onChange={(e) => setActivityQuery(e.target.value)}
+                aria-label="Filtruj dziennik akcji"
+              />
+            </div>
+            <div className="max-h-[min(28rem,70vh)] overflow-y-auto overflow-x-auto">
+              <AdminTableShell>
                 <Table>
                   <TableHeader>
-                    <TableRow className="border-zinc-200 hover:bg-transparent">
-                      <TableHead className="whitespace-nowrap text-zinc-700">Czas (PL)</TableHead>
-                      <TableHead className="min-w-[10rem] text-zinc-700">Kto</TableHead>
-                      <TableHead className="text-zinc-700">Czynność</TableHead>
+                    <TableRow>
+                      <TableHead className="whitespace-nowrap">Czas (PL)</TableHead>
+                      <TableHead className="min-w-[10rem]">Kto</TableHead>
+                      <TableHead>Czynność</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {(data.activity_events?.length ?? 0) === 0 ? (
                       <TableRow>
-                        <TableCell
-                          colSpan={3}
-                          className="text-center text-sm text-zinc-500 dark:text-zinc-400"
-                        >
+                        <TableCell colSpan={3} className="text-center text-sm text-emerald-100/70">
                           Brak wpisów dziennika dla tego zakresu dat.
                         </TableCell>
                       </TableRow>
                     ) : eventsPrepared.length === 0 ? (
                       <TableRow>
-                        <TableCell
-                          colSpan={3}
-                          className="text-center text-sm text-zinc-500 dark:text-zinc-400"
-                        >
+                        <TableCell colSpan={3} className="text-center text-sm text-emerald-100/70">
                           Brak wyników dla podanego filtra.
                         </TableCell>
                       </TableRow>
                     ) : (
                       eventsPrepared.map((row) => (
-                        <TableRow key={row.id} className="border-zinc-100">
-                          <TableCell className="whitespace-nowrap align-top text-xs tabular-nums text-zinc-600 dark:text-zinc-400">
+                        <TableRow key={row.id}>
+                          <TableCell className="whitespace-nowrap align-top text-xs tabular-nums text-emerald-100/80">
                             <time dateTime={row.timestamp} title={row.timestamp}>
                               {row.time_display}
                             </time>
                           </TableCell>
-                          <TableCell className="align-top text-sm font-medium text-zinc-900">
+                          <TableCell className="align-top text-sm font-medium text-white">
                             {row.actor_label}
                           </TableCell>
-                          <TableCell className="align-top text-sm text-zinc-700 dark:text-zinc-300">
-                            {row.action}
-                          </TableCell>
+                          <TableCell className="align-top text-sm pitch-muted">{row.action}</TableCell>
                         </TableRow>
                       ))
                     )}
                   </TableBody>
                 </Table>
-              </div>
-            </CardContent>
-          </Card>
+              </AdminTableShell>
+            </div>
+          </AdminCard>
 
           <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <Card className="border-zinc-200/80 bg-white shadow-sm dark:border-zinc-700/80 dark:bg-zinc-900/90 dark:shadow-black/30">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-zinc-800">Wszystkie odsłony</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-2xl font-bold tabular-nums text-emerald-950 dark:text-emerald-100">
-                  {data.totals.total_views}
-                </p>
-                <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-                  Unikalni odbiorcy (gość lub id gracza): {data.totals.unique_visitors}
-                </p>
-              </CardContent>
-            </Card>
-            <Card className="border-zinc-200/80 bg-white shadow-sm dark:border-zinc-700/80 dark:bg-zinc-900/90 dark:shadow-black/30">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-zinc-800">
-                  Odsłony: anonim / zalogowany
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {viewSplit ? (
-                  <>
-                    <p className="text-sm text-zinc-700">
-                      Anonimowe: <strong>{data.totals.anonymous_views}</strong> (
-                      {viewSplit.anonPct}%)
-                    </p>
-                    <p className="text-sm text-zinc-700">
-                      Zalogowane: <strong>{data.totals.authenticated_views}</strong> (
-                      {viewSplit.authPct}%)
-                    </p>
-                  </>
-                ) : (
-                  <p className="text-sm text-zinc-500 dark:text-zinc-400">Brak odsłon w okresie.</p>
-                )}
-              </CardContent>
-            </Card>
-            <Card className="border-zinc-200/80 bg-white shadow-sm dark:border-zinc-700/80 dark:bg-zinc-900/90 dark:shadow-black/30">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-zinc-800">Gracze w bazie</CardTitle>
-                <CardDescription className="text-xs">Konta nie-admin</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-1 text-sm">
+            <AdminCard title="Wszystkie odsłony">
+              <p className="text-2xl font-bold tabular-nums text-[var(--mundial-gold,#f5c518)]">
+                {data.totals.total_views}
+              </p>
+              <p className="mt-1 text-xs pitch-muted">
+                Unikalni odbiorcy (gość lub id gracza): {data.totals.unique_visitors}
+              </p>
+            </AdminCard>
+            <AdminCard title="Odsłony: anonim / zalogowany">
+              {viewSplit ? (
+                <div className="space-y-1 text-sm pitch-muted">
+                  <p>
+                    Anonimowe: <strong className="text-white">{data.totals.anonymous_views}</strong> (
+                    {viewSplit.anonPct}%)
+                  </p>
+                  <p>
+                    Zalogowane: <strong className="text-white">{data.totals.authenticated_views}</strong> (
+                    {viewSplit.authPct}%)
+                  </p>
+                </div>
+              ) : (
+                <p className="text-sm pitch-muted">Brak odsłon w okresie.</p>
+              )}
+            </AdminCard>
+            <AdminCard title="Gracze w bazie" description="Konta nie-admin">
+              <div className="space-y-1 text-sm pitch-muted">
                 <p>
                   Z aktywnością w okresie:{" "}
-                  <strong className="tabular-nums">{data.players.visited_in_range}</strong>
+                  <strong className="text-white tabular-nums">{data.players.visited_in_range}</strong>
                   {data.players.pct_visited != null ? (
-                    <span className="text-zinc-600 dark:text-zinc-400"> ({data.players.pct_visited}%)</span>
+                    <span> ({data.players.pct_visited}%)</span>
                   ) : null}
                 </p>
                 <p>
                   Bez wejść zalogowanych w okresie:{" "}
-                  <strong className="tabular-nums">{data.players.not_visited_in_range}</strong>
+                  <strong className="text-white tabular-nums">{data.players.not_visited_in_range}</strong>
                   {data.players.pct_not_visited != null ? (
-                    <span className="text-zinc-600 dark:text-zinc-400"> ({data.players.pct_not_visited}%)</span>
+                    <span> ({data.players.pct_not_visited}%)</span>
                   ) : null}
                 </p>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                <p className="text-xs text-emerald-100/70">
                   Nowe konta (rejestracja): {data.players.self_service_registrations_in_range}
                 </p>
-              </CardContent>
-            </Card>
-            <Card className="border-zinc-200/80 bg-white shadow-sm dark:border-zinc-700/80 dark:bg-zinc-900/90 dark:shadow-black/30">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-zinc-800">Terminarz → mecz</CardTitle>
-                <CardDescription className="text-xs">Gracze (nie-admin)</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-1 text-sm">
+              </div>
+            </AdminCard>
+            <AdminCard title="Terminarz → mecz" description="Gracze (nie-admin)">
+              <div className="space-y-1 text-sm pitch-muted">
                 <p>
                   Oglądali terminarz:{" "}
-                  <strong className="tabular-nums">
+                  <strong className="text-white tabular-nums">
                     {data.terminarz_funnel.distinct_players_viewed}
                   </strong>
                 </p>
                 <p>
                   Zapis na mecz w okresie:{" "}
-                  <strong className="tabular-nums">
+                  <strong className="text-white tabular-nums">
                     {data.terminarz_funnel.distinct_players_viewed_and_signed_match_in_range}
                   </strong>
                   {data.terminarz_funnel.pct_signed_after_view != null ? (
-                    <span className="text-zinc-600 dark:text-zinc-400">
-                      {" "}
-                      ({data.terminarz_funnel.pct_signed_after_view}%)
-                    </span>
+                    <span> ({data.terminarz_funnel.pct_signed_after_view}%)</span>
                   ) : data.terminarz_funnel.distinct_players_viewed === 0 ? (
-                    <span className="text-zinc-500 dark:text-zinc-400"> (–)</span>
+                    <span className="text-emerald-100/70"> (–)</span>
                   ) : null}
                 </p>
-              </CardContent>
-            </Card>
+              </div>
+            </AdminCard>
           </div>
 
-          <Card className="border-zinc-200/80 bg-white shadow-sm dark:border-zinc-700/80 dark:bg-zinc-900/90 dark:shadow-black/30">
-            <CardHeader className="space-y-4">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                <div>
-                  <CardTitle className="text-lg">Wejścia wg ekranu</CardTitle>
-                  <CardDescription className="mt-1">
-                    Liczba odsłon i szacunek unikalnych odbiorców (gość lub zalogowany gracz) w wybranym
-                    zakresie. Kliknij nagłówek kolumny, aby sortować.
-                  </CardDescription>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="border-zinc-200 bg-white dark:border-zinc-600 dark:bg-zinc-800"
-                    disabled={loading || screensPrepared.length === 0}
-                    onClick={() => downloadAnalyticsScreensCsv(screensPrepared, data.range)}
-                  >
-                    <Download className="mr-2 h-4 w-4" aria-hidden />
-                    CSV (widok)
-                  </Button>
-                </div>
-              </div>
-              <div className="relative w-full min-w-[200px] sm:max-w-xs">
-                <Search
-                  className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400"
-                  aria-hidden
-                />
-                <Input
-                  className="border-zinc-200 bg-white dark:border-zinc-600 dark:bg-zinc-800 pl-9"
-                  placeholder="Filtruj ekran lub klucz…"
-                  value={screenQuery}
-                  onChange={(e) => setScreenQuery(e.target.value)}
-                  aria-label="Filtruj listę ekranów"
-                />
-              </div>
-            </CardHeader>
-            <CardContent className="overflow-x-auto">
-              <div className="overflow-hidden rounded-xl border border-zinc-200/80">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="border-zinc-200 hover:bg-transparent">
-                      <TableHead className="text-zinc-700">
-                        <button
-                          type="button"
-                          className="inline-flex items-center gap-1.5 font-medium text-zinc-800 hover:text-emerald-900 dark:text-zinc-200 dark:hover:text-emerald-300"
-                          onClick={() => toggleSort("label")}
-                        >
-                          Ekran
-                          {sortKey === "label" ? (
-                            sortDir === "asc" ? (
-                              <ArrowUpAZ className="h-3.5 w-3.5 opacity-70" aria-hidden />
-                            ) : (
-                              <ArrowDownAZ className="h-3.5 w-3.5 opacity-70" aria-hidden />
-                            )
-                          ) : null}
-                        </button>
-                      </TableHead>
-                      <TableHead className="text-right text-zinc-700">
-                        <button
-                          type="button"
-                          className="inline-flex w-full items-center justify-end gap-1.5 font-medium text-zinc-800 hover:text-emerald-900 dark:text-zinc-200 dark:hover:text-emerald-300"
-                          onClick={() => toggleSort("views")}
-                        >
-                          Odsłony
-                          {sortKey === "views" ? (
-                            sortDir === "asc" ? (
-                              <ArrowUpAZ className="h-3.5 w-3.5 opacity-70" aria-hidden />
-                            ) : (
-                              <ArrowDownAZ className="h-3.5 w-3.5 opacity-70" aria-hidden />
-                            )
-                          ) : null}
-                        </button>
-                      </TableHead>
-                      <TableHead className="text-right text-zinc-700">
-                        <button
-                          type="button"
-                          className="inline-flex w-full items-center justify-end gap-1.5 font-medium text-zinc-800 hover:text-emerald-900 dark:text-zinc-200 dark:hover:text-emerald-300"
-                          onClick={() => toggleSort("unique")}
-                        >
-                          Unikalni
-                          {sortKey === "unique" ? (
-                            sortDir === "asc" ? (
-                              <ArrowUpAZ className="h-3.5 w-3.5 opacity-70" aria-hidden />
-                            ) : (
-                              <ArrowDownAZ className="h-3.5 w-3.5 opacity-70" aria-hidden />
-                            )
-                          ) : null}
-                        </button>
-                      </TableHead>
+          <AdminCard
+            title="Wejścia wg ekranu"
+            description="Liczba odsłon i szacunek unikalnych odbiorców (gość lub zalogowany gracz) w wybranym zakresie. Kliknij nagłówek kolumny, aby sortować."
+            headerExtra={
+              <Button
+                type="button"
+                variant="stadium"
+                size="sm"
+                className={adminOutlineBtnClass}
+                disabled={loading || screensPrepared.length === 0}
+                onClick={() => downloadAnalyticsScreensCsv(screensPrepared, data.range)}
+              >
+                <Download className="mr-2 h-4 w-4" aria-hidden />
+                CSV (widok)
+              </Button>
+            }
+          >
+            <div className="relative mb-4 w-full min-w-[200px] sm:max-w-xs">
+              <Search
+                className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-emerald-100/50"
+                aria-hidden
+              />
+              <Input
+                className={adminSearchInputClass}
+                placeholder="Filtruj ekran lub klucz…"
+                value={screenQuery}
+                onChange={(e) => setScreenQuery(e.target.value)}
+                aria-label="Filtruj listę ekranów"
+              />
+            </div>
+            <AdminTableShell>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>
+                      <button
+                        type="button"
+                        className="admin-table-sort-btn"
+                        onClick={() => toggleSort("label")}
+                      >
+                        Ekran
+                        {sortKey === "label" ? (
+                          sortDir === "asc" ? (
+                            <ArrowUpAZ className="h-3.5 w-3.5 opacity-70" aria-hidden />
+                          ) : (
+                            <ArrowDownAZ className="h-3.5 w-3.5 opacity-70" aria-hidden />
+                          )
+                        ) : null}
+                      </button>
+                    </TableHead>
+                    <TableHead className="text-right">
+                      <button
+                        type="button"
+                        className="admin-table-sort-btn w-full justify-end"
+                        onClick={() => toggleSort("views")}
+                      >
+                        Odsłony
+                        {sortKey === "views" ? (
+                          sortDir === "asc" ? (
+                            <ArrowUpAZ className="h-3.5 w-3.5 opacity-70" aria-hidden />
+                          ) : (
+                            <ArrowDownAZ className="h-3.5 w-3.5 opacity-70" aria-hidden />
+                          )
+                        ) : null}
+                      </button>
+                    </TableHead>
+                    <TableHead className="text-right">
+                      <button
+                        type="button"
+                        className="admin-table-sort-btn w-full justify-end"
+                        onClick={() => toggleSort("unique")}
+                      >
+                        Unikalni
+                        {sortKey === "unique" ? (
+                          sortDir === "asc" ? (
+                            <ArrowUpAZ className="h-3.5 w-3.5 opacity-70" aria-hidden />
+                          ) : (
+                            <ArrowDownAZ className="h-3.5 w-3.5 opacity-70" aria-hidden />
+                          )
+                        ) : null}
+                      </button>
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {data.screens.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={3} className="text-center text-sm text-emerald-100/70">
+                        Brak zapisanych wejść w tym okresie (dane pojawią się po pierwszych wizytach).
+                      </TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {data.screens.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={3} className="text-center text-sm text-zinc-500 dark:text-zinc-400">
-                          Brak zapisanych wejść w tym okresie (dane pojawią się po pierwszych wizytach).
+                  ) : screensPrepared.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={3} className="text-center text-sm text-emerald-100/70">
+                        Brak wyników dla podanego filtra.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    screensPrepared.map((row) => (
+                      <TableRow key={row.screen_key}>
+                        <TableCell>
+                          <span className="font-medium text-white">{row.label}</span>
+                          <span className="admin-table-muted ml-2">{row.screen_key}</span>
                         </TableCell>
+                        <TableCell className="text-right tabular-nums">{row.total_views}</TableCell>
+                        <TableCell className="text-right tabular-nums">{row.unique_visitors}</TableCell>
                       </TableRow>
-                    ) : screensPrepared.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={3} className="text-center text-sm text-zinc-500 dark:text-zinc-400">
-                          Brak wyników dla podanego filtra.
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      screensPrepared.map((row) => (
-                        <TableRow key={row.screen_key} className="border-zinc-100">
-                          <TableCell>
-                            <span className="font-medium text-zinc-900">{row.label}</span>
-                            <span className="ml-2 font-mono text-xs text-zinc-400">{row.screen_key}</span>
-                          </TableCell>
-                          <TableCell className="text-right tabular-nums">{row.total_views}</TableCell>
-                          <TableCell className="text-right tabular-nums">{row.unique_visitors}</TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </AdminTableShell>
+          </AdminCard>
         </>
       ) : null}
     </div>
@@ -1772,7 +1614,7 @@ function DashboardView({
 
   return (
     <div>
-      <Toolbar
+      <AdminToolbar
         title="Przegląd"
         description="Skrót organizacji — kliknij kafelek, aby przejść do szczegółów."
         onReload={onReload}
@@ -1780,9 +1622,9 @@ function DashboardView({
       />
 
       {(summary?.pin_reset_requests ?? 0) > 0 ? (
-        <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-950 shadow-sm">
+        <div className={cn("mb-6", adminAlertDangerClass)}>
           <p className="font-semibold">Zgłoszenia zmiany PIN-u</p>
-          <p className="mt-1 text-red-900/90">
+          <p className="mt-1 text-red-100/90">
             Oczekujące sprawy (nowy PIN lub prośba o reset):{" "}
             <strong className="tabular-nums">{summary?.pin_reset_requests}</strong>. W zakładce{" "}
             <strong>Użytkownicy</strong> możesz <strong>zatwierdzić</strong> nowy PIN,{" "}
@@ -1793,91 +1635,64 @@ function DashboardView({
       ) : null}
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {metrics.map((m) => {
-          const Icon = m.icon;
-          return (
-            <button
-              key={m.key}
-              type="button"
-              onClick={() => onGoToTab(m.tab)}
-              className="group text-left transition-transform hover:scale-[1.01] focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2"
-            >
-              <Card className="h-full border-zinc-200/80 bg-white shadow-sm dark:border-zinc-700/80 dark:bg-zinc-900/90 dark:shadow-black/30 transition-shadow group-hover:shadow-md">
-                <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
-                  <div>
-                    <CardTitle className="text-base font-semibold text-zinc-800">{m.label}</CardTitle>
-                    <CardDescription className="text-xs">{m.hint}</CardDescription>
-                  </div>
-                  <div className="rounded-lg bg-emerald-50 p-2 text-emerald-700">
-                    <Icon className="h-5 w-5" aria-hidden />
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-3xl font-bold tabular-nums tracking-tight text-emerald-950 dark:text-emerald-100">
-                    {m.value ?? "–"}
-                  </p>
-                </CardContent>
-              </Card>
-            </button>
-          );
-        })}
+        {metrics.map((m) => (
+          <AdminMetricTile
+            key={m.key}
+            label={m.label}
+            hint={m.hint}
+            value={m.value}
+            icon={m.icon}
+            onClick={() => onGoToTab(m.tab)}
+          />
+        ))}
       </div>
 
-      <Card className="mt-8 border-zinc-200/80 bg-white shadow-sm dark:border-zinc-700/80 dark:bg-zinc-900/90 dark:shadow-black/30">
-        <CardHeader>
-          <CardTitle className="text-lg">Konfiguracja aplikacji</CardTitle>
-          <CardDescription>
-            Branding, kontakt, rejestracja, rankingi, domyślne mecze i więcej — w dedykowanej zakładce.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Button type="button" variant="outline" onClick={() => onGoToTab("settings")}>
-            <Settings2 className="mr-2 h-4 w-4" aria-hidden />
-            Otwórz ustawienia
-          </Button>
-        </CardContent>
-      </Card>
+      <AdminCard
+        className="mt-8"
+        title="Konfiguracja aplikacji"
+        description="Branding, kontakt, rejestracja, rankingi, domyślne mecze i więcej — w dedykowanej zakładce."
+      >
+        <Button type="button" variant="stadium" onClick={() => onGoToTab("settings")}>
+          <Settings2 className="mr-2 h-4 w-4" aria-hidden />
+          Otwórz ustawienia
+        </Button>
+      </AdminCard>
 
-      <Card className="mt-8 border-zinc-200/80 bg-white shadow-sm dark:border-zinc-700/80 dark:bg-zinc-900/90 dark:shadow-black/30">
-        <CardHeader>
-          <CardTitle className="text-lg">Ostatnia aktywność</CardTitle>
-          <CardDescription>
-            Do 25 ostatnich wpisów z serwera: kto (imię, nazwisko i pseudonim), co zrobił, kiedy — strefa
-            Europe/Warsaw
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {activity.length === 0 ? (
-            <p className="rounded-lg border border-dashed border-zinc-200 bg-zinc-50/80 px-4 py-8 text-center text-sm text-zinc-600 dark:text-zinc-400">
-              Brak zapisów w dzienniku — pojawią się po logowaniu, zapisach na mecze, statystykach i
-              innych operacjach w aplikacji.
-            </p>
-          ) : (
-            <ul className="space-y-3">
-              {activity.map((item, i) => (
-                <li
-                  key={`${item.time}-${i}`}
-                  className="flex flex-col gap-1 border-l-2 border-emerald-200 pl-4 sm:flex-row sm:items-start sm:justify-between sm:gap-4"
+      <AdminCard
+        className="mt-8"
+        title="Ostatnia aktywność"
+        description="Do 25 ostatnich wpisów z serwera: kto (imię, nazwisko i pseudonim), co zrobił, kiedy — strefa Europe/Warsaw"
+      >
+        {activity.length === 0 ? (
+          <p className={adminEmptyStateClass}>
+            Brak zapisów w dzienniku — pojawią się po logowaniu, zapisach na mecze, statystykach i
+            innych operacjach w aplikacji.
+          </p>
+        ) : (
+          <ul className="space-y-3">
+            {activity.map((item, i) => (
+              <li
+                key={`${item.time}-${i}`}
+                className="flex flex-col gap-1 border-l-2 border-[var(--mundial-gold)]/50 pl-4 sm:flex-row sm:items-start sm:justify-between sm:gap-4"
+              >
+                <div className="min-w-0 flex-1 space-y-0.5">
+                  <p className="text-sm font-medium text-white">
+                    {item.actorLabel ?? item.actorName ?? "—"}
+                  </p>
+                  <p className="text-sm pitch-muted">{item.text}</p>
+                </div>
+                <time
+                  className="shrink-0 text-xs tabular-nums text-emerald-100/70 sm:pt-0.5"
+                  dateTime={item.time}
+                  title={item.time}
                 >
-                  <div className="min-w-0 flex-1 space-y-0.5">
-                    <p className="text-sm font-medium text-zinc-900">
-                      {item.actorLabel ?? item.actorName ?? "—"}
-                    </p>
-                    <p className="text-sm text-zinc-600 dark:text-zinc-400">{item.text}</p>
-                  </div>
-                  <time
-                    className="shrink-0 text-xs tabular-nums text-zinc-500 dark:text-zinc-400 sm:pt-0.5"
-                    dateTime={item.time}
-                    title={item.time}
-                  >
-                    {item.timeDisplay ?? item.time}
-                  </time>
-                </li>
-              ))}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
+                  {item.timeDisplay ?? item.time}
+                </time>
+              </li>
+            ))}
+          </ul>
+        )}
+      </AdminCard>
     </div>
   );
 }
@@ -1910,7 +1725,7 @@ function UsersView({
 
   return (
     <div>
-      <Toolbar
+      <AdminToolbar
         title="Użytkownicy"
         description="Dodawanie kont, edycja danych, rola administratora oraz usuwanie."
         onReload={onReload}
@@ -1922,34 +1737,34 @@ function UsersView({
         </Button>
         <div className="relative w-full min-w-[200px] sm:w-64">
           <Search
-            className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400"
+            className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-emerald-100/50"
             aria-hidden
           />
           <Input
-            className="border-zinc-200 bg-white dark:border-zinc-600 dark:bg-zinc-800 pl-9"
+            className={adminSearchInputClass}
             placeholder="Szukaj…"
             value={q}
             onChange={(e) => setQ(e.target.value)}
             aria-label="Filtruj użytkowników"
           />
         </div>
-      </Toolbar>
+      </AdminToolbar>
 
-      <div className="overflow-hidden rounded-xl border border-zinc-200/80 bg-white shadow-sm dark:border-zinc-700/80 dark:bg-zinc-900/90 dark:shadow-black/30">
+      <AdminTableShell>
         <Table>
           <TableHeader>
-            <TableRow className="border-zinc-200 hover:bg-transparent">
-              <TableHead className="w-12 text-zinc-700" />
-              <TableHead className="text-zinc-700">Zawodnik</TableHead>
-              <TableHead className="text-zinc-700">PIN</TableHead>
-              <TableHead className="text-zinc-700">Rola</TableHead>
-              <TableHead className="text-right text-zinc-700">Akcje</TableHead>
+            <TableRow>
+              <TableHead className="w-12" />
+              <TableHead>Zawodnik</TableHead>
+              <TableHead>PIN</TableHead>
+              <TableHead>Rola</TableHead>
+              <TableHead className="text-right">Akcje</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center text-sm text-zinc-500 dark:text-zinc-400">
+                <TableCell colSpan={5} className="h-24 text-center text-sm text-emerald-100/70">
                   {users.length === 0
                     ? "Brak użytkowników w bazie."
                     : "Brak wyników dla podanego filtra."}
@@ -1957,14 +1772,14 @@ function UsersView({
               </TableRow>
             ) : (
               filtered.map((u) => (
-                <TableRow key={u.id} className="border-zinc-100">
+                <TableRow key={u.id}>
                   <TableCell className="align-middle">
                     <PlayerAvatar
                       photoPath={u.profile_photo_path}
                       firstName={u.first_name}
                       lastName={u.last_name}
                       size="sm"
-                      ringClassName="ring-2 ring-zinc-200"
+                      ringClassName="ring-2 ring-white/35"
                     />
                   </TableCell>
                   <TableCell className="align-middle">
@@ -2087,7 +1902,7 @@ function UsersView({
             )}
           </TableBody>
         </Table>
-      </div>
+      </AdminTableShell>
 
       {edit ? (
         <UserEditForm

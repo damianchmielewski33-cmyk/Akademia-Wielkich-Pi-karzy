@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import type { CSSProperties } from "react";
 import { Geist, Geist_Mono, Teko } from "next/font/google";
 import { Toaster } from "sonner";
 import { SiteShell } from "@/components/site-shell";
@@ -14,8 +15,10 @@ import { getDb } from "@/lib/db";
 import { getUserWalletBalancePln } from "@/lib/wallet";
 import { WalletBalanceFloat } from "@/components/wallet-balance-float";
 import { SiteJsonLd } from "@/components/site-json-ld";
+import { SiteAssetsProvider } from "@/components/site-assets-provider";
 import { getGoogleSiteVerification, getSiteUrl } from "@/lib/site";
 import { getAppSettings } from "@/lib/app-settings";
+import { siteAssetCssUrl } from "@/lib/site-assets";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -39,6 +42,8 @@ export async function generateMetadata(): Promise<Metadata> {
   const settings = await getAppSettings(db);
   const siteName = settings.site_name;
   const siteDescription = settings.site_description;
+  const favicon = settings.site_assets.logo_favicon;
+  const faviconType = favicon.toLowerCase().endsWith(".svg") ? "image/svg+xml" : "image/png";
   return {
     metadataBase: new URL(getSiteUrl()),
     applicationName: siteName,
@@ -48,8 +53,8 @@ export async function generateMetadata(): Promise<Metadata> {
     },
     description: siteDescription,
     icons: {
-      icon: [{ url: "/logo-akademia.svg", type: "image/svg+xml" }],
-      apple: [{ url: "/logo-akademia.svg", type: "image/svg+xml" }],
+      icon: [{ url: favicon, type: faviconType }],
+      apple: [{ url: favicon, type: faviconType }],
     },
     robots: {
       index: true,
@@ -113,8 +118,14 @@ export default async function RootLayout({
   const walletBalancePln =
     loggedInFull && session ? await getUserWalletBalancePln(session.userId) : null;
 
+  const siteAssets = appSettings.site_assets;
+  const assetCssVars = {
+    "--awp-bg-stadium": siteAssetCssUrl(siteAssets.bg_stadium),
+    "--awp-bg-pitch-lines": siteAssetCssUrl(siteAssets.bg_pitch_lines),
+  } as CSSProperties;
+
   return (
-    <html lang="pl" className={htmlThemeClass}>
+    <html lang="pl" className={htmlThemeClass} style={assetCssVars}>
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${displayFont.variable} murawa-bg min-h-screen antialiased font-sans`}
       >
@@ -130,11 +141,13 @@ export default async function RootLayout({
           siteDescription={appSettings.site_description}
           contactEmail={appSettings.contact_email}
           blikPhone={appSettings.blik_phone}
+          logoUrl={siteAssets.logo_favicon}
         />
         <SessionIdleMonitor enabled={sessionIdleLogout} />
         <ShareLinkClientCleanup />
         <PinSetupGate>
-          <SiteShell
+          <SiteAssetsProvider assets={siteAssets}>
+            <SiteShell
             isLoggedIn={loggedInFull}
             isAdmin={session?.isAdmin && loggedInFull ? true : false}
             account={accountNav}
@@ -143,6 +156,7 @@ export default async function RootLayout({
           >
             {children}
           </SiteShell>
+          </SiteAssetsProvider>
         </PinSetupGate>
         {walletBalancePln != null ? <WalletBalanceFloat balancePln={walletBalancePln} /> : null}
         <MatchParticipationSurveyPrompt />

@@ -37,6 +37,10 @@ export function imageMimeMatchesMagicBytes(buf: Buffer, mime: string): boolean {
         buf[10] === 0x42 &&
         buf[11] === 0x50
       );
+    case "image/svg+xml": {
+      const head = buf.subarray(0, Math.min(buf.length, 256)).toString("utf8").trimStart();
+      return head.startsWith("<svg") || head.startsWith("<?xml");
+    }
     default:
       return false;
   }

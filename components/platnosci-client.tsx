@@ -1,7 +1,7 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
+import { SiteAssetImage } from "@/components/site-asset-image";
 import { useEffect, useState } from "react";
 import { ArrowDownLeft, ArrowUpRight, Loader2, LogIn, SlidersHorizontal, UserPlus, Wallet } from "lucide-react";
 import { toast } from "sonner";
@@ -279,12 +279,12 @@ export function PlatnosciClient({ isLoggedIn, isAdmin }: Props) {
               <div className="mb-4 flex flex-col items-center gap-2 text-center">
                 <span className={pitchLabelClass}>Twój portfel</span>
                 <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/15 ring-2 ring-white/30 backdrop-blur-[2px]">
-                  <Image
-                    src="/logo-akademia-crest.png"
+                  <SiteAssetImage
+                    asset="logo_crest"
                     alt=""
                     width={128}
                     height={128}
-                    className="h-8 w-8 object-contain drop-shadow"
+                    className="h-8 w-8 drop-shadow"
                     sizes="32px"
                   />
                 </div>

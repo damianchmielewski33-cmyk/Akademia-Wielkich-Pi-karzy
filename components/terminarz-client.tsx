@@ -1,8 +1,8 @@
 "use client";
 
-import Image from "next/image";
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
+import { SiteAssetImage } from "@/components/site-asset-image";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -1043,13 +1043,12 @@ export function TerminarzClient({
         <div className="flex flex-col items-center text-center">
           <div className="pitch-rule mx-auto mb-4 w-40 sm:w-48" />
           <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4">
-            <Image
-              src="/mundial-2026-logo.svg"
-              alt="Mundial 2026"
+            <SiteAssetImage
+              asset="logo_header"
+              alt="Logo"
               width={56}
               height={56}
               className="h-14 w-14 drop-shadow-md sm:h-16 sm:w-16"
-              unoptimized
             />
             <h1
               id="terminarz-page-title"

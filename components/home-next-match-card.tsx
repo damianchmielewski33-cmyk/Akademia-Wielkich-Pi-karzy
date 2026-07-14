@@ -1,8 +1,8 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { Calendar, Car, Clock, HelpCircle, KeyRound, LayoutGrid, MapPin } from "lucide-react";
+import { SiteAssetImage } from "@/components/site-asset-image";
 import { Button } from "@/components/ui/button";
 import {
   PitchCard,
@@ -81,12 +81,12 @@ export function HomeNextMatchCard({
         <div className="mb-4 flex flex-col items-center gap-2 text-center">
           <span className={pitchLabelClass}>Kolejny termin</span>
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/15 ring-2 ring-white/30 backdrop-blur-[2px]">
-            <Image
-              src="/logo-akademia-crest.png"
+            <SiteAssetImage
+              asset="logo_crest"
               alt=""
               width={128}
               height={128}
-              className="h-8 w-8 object-contain drop-shadow"
+              className="h-8 w-8 drop-shadow"
               sizes="32px"
             />
           </div>

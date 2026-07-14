@@ -6,11 +6,12 @@ type Props = {
   siteDescription: string;
   contactEmail: string;
   blikPhone: string;
+  logoUrl: string;
 };
 
-export function SiteJsonLd({ siteName, siteDescription, contactEmail, blikPhone }: Props) {
+export function SiteJsonLd({ siteName, siteDescription, contactEmail, blikPhone, logoUrl }: Props) {
   const url = getSiteUrl();
-  const logoUrl = `${url}/logo-akademia.svg`;
+  const logoAbsolute = logoUrl.startsWith("http") ? logoUrl : `${url}${logoUrl.startsWith("/") ? "" : "/"}${logoUrl}`;
   const phoneE164 = blikPhoneToE164(blikPhone);
 
   const graph: Record<string, unknown>[] = [
@@ -28,7 +29,7 @@ export function SiteJsonLd({ siteName, siteDescription, contactEmail, blikPhone 
       "@id": `${url}/#organization`,
       name: siteName,
       url,
-      logo: { "@type": "ImageObject", url: logoUrl },
+      logo: { "@type": "ImageObject", url: logoAbsolute },
       description: siteDescription,
       email: contactEmail,
       contactPoint: {
