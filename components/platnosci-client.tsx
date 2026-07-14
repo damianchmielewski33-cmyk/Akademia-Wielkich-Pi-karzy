@@ -217,7 +217,7 @@ export function PlatnosciClient({
   const [walletLoading, setWalletLoading] = useState(false);
 
   async function refreshWallet() {
-    if (!isLoggedIn || isAdmin) return;
+    if (!isLoggedIn) return;
     setWalletLoading(true);
     try {
       const res = await fetch("/api/wallet/me");
@@ -282,7 +282,15 @@ export function PlatnosciClient({
             </div>
           </PitchCard>
         ) : isAdmin ? (
-          <AdminWalletsSaldoSection embedded showPublicLinks showTopUp />
+          <div className="mx-auto max-w-4xl space-y-4">
+            <PayMatchButton
+              blikPhoneDisplay={blikPhoneDisplay}
+              defaultMatchFeePln={defaultMatchFeePln}
+              balancePln={walletBalancePln}
+              playerLabel={playerLabel}
+            />
+            <AdminWalletsSaldoSection embedded showPublicLinks showTopUp />
+          </div>
         ) : (
           <div className="mx-auto max-w-4xl space-y-4">
             <PitchCard contentClassName="px-5 py-5 sm:px-6 sm:py-6">
