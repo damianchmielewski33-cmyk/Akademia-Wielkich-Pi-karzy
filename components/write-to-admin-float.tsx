@@ -7,24 +7,25 @@ import { Loader2, MessageCircle, Send } from "lucide-react";
 import { toast } from "sonner";
 import { AppModal } from "@/components/ui/app-modal";
 import { FormInput, FormTextarea } from "@/components/ui/form-field";
+import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-
-type Defaults = {
-  senderName: string;
-  senderEmail: string;
-};
+import { nativeSelectClasses } from "@/lib/field-styles";
+import type { ContactAdminRecipientKey, ContactAdminRecipientOption } from "@/lib/contact-admin-recipients";
 
 type Props = {
-  defaults?: Defaults | null;
+  defaults?: { senderName: string } | null;
+  recipients: ContactAdminRecipientOption[];
 };
 
-export function WriteToAdminFloat({ defaults }: Props) {
+export function WriteToAdminFloat({ defaults, recipients }: Props) {
   const pathname = usePathname();
   const [mounted, setMounted] = useState(false);
   const [open, setOpen] = useState(false);
   const [senderName, setSenderName] = useState(defaults?.senderName ?? "");
-  const [senderEmail, setSenderEmail] = useState(defaults?.senderEmail ?? "");
+  const [recipientKey, setRecipientKey] = useState<ContactAdminRecipientKey>(
+    recipients[0]?.key ?? "damian"
+  );
   const [body, setBody] = useState("");
   const [sending, setSending] = useState(false);
 
@@ -33,24 +34,28 @@ export function WriteToAdminFloat({ defaults }: Props) {
   }, []);
 
   useEffect(() => {
-    if (defaults) {
+    if (defaults?.senderName) {
       setSenderName(defaults.senderName);
-      setSenderEmail(defaults.senderEmail);
     }
   }, [defaults]);
+
+  useEffect(() => {
+    if (recipients.length > 0 && !recipients.some((r) => r.key === recipientKey)) {
+      setRecipientKey(recipients[0].key);
+    }
+  }, [recipients, recipientKey]);
 
   const hidden = pathname.startsWith("/panel-admina");
 
   function resetForm() {
     setSenderName(defaults?.senderName ?? "");
-    setSenderEmail(defaults?.senderEmail ?? "");
+    setRecipientKey(recipients[0]?.key ?? "damian");
     setBody("");
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const name = senderName.trim();
-    const email = senderEmail.trim();
     const text = body.trim();
 
     if (name.length < 2) {
@@ -61,8 +66,8 @@ export function WriteToAdminFloat({ defaults }: Props) {
       toast.error("Wiadomość musi mieć co najmniej 10 znaków.");
       return;
     }
-    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      toast.error("Nieprawidłowy adres e-mail.");
+    if (!recipients.some((r) => r.key === recipientKey)) {
+      toast.error("Wybierz odbiorcę wiadomości.");
       return;
     }
 
@@ -73,7 +78,7 @@ export function WriteToAdminFloat({ defaults }: Props) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           sender_name: name,
-          sender_email: email || null,
+          recipient_key: recipientKey,
           body: text,
         }),
       });
@@ -82,7 +87,8 @@ export function WriteToAdminFloat({ defaults }: Props) {
         toast.error(typeof data.error === "string" ? data.error : "Nie udało się wysłać wiadomości.");
         return;
       }
-      toast.success("Wiadomość wysłana. Administrator odpowie, gdy będzie mógł.");
+      const recipientLabel = recipients.find((r) => r.key === recipientKey)?.label ?? "organizatora";
+      toast.success(`Wiadomość wysłana do ${recipientLabel}.`);
       resetForm();
       setOpen(false);
     } catch {
@@ -92,7 +98,7 @@ export function WriteToAdminFloat({ defaults }: Props) {
     }
   }
 
-  if (!mounted || hidden) return null;
+  if (!mounted || hidden || recipients.length === 0) return null;
 
   const floatButton = (
     <>
@@ -120,7 +126,7 @@ export function WriteToAdminFloat({ defaults }: Props) {
           if (!sending) setOpen(next);
         }}
         title="Napis do admina"
-        description="Wyślij wiadomość do administratora Akademii. Odpowiemy tak szybko, jak to możliwe."
+        description="Wybierz organizatora i wyślij wiadomość — odpowiemy tak szybko, jak to możliwe."
         icon={<MessageCircle className="h-6 w-6 text-[var(--mundial-gold)]" aria-hidden />}
         headerKicker="Wiadomość"
         size="md"
@@ -147,6 +153,25 @@ export function WriteToAdminFloat({ defaults }: Props) {
         }
       >
         <form id="write-to-admin-form" className="space-y-4" onSubmit={handleSubmit}>
+          <div className="grid gap-1.5">
+            <Label htmlFor="contact-admin-recipient">
+              Do kogo piszesz? <span className="text-red-400">*</span>
+            </Label>
+            <select
+              id="contact-admin-recipient"
+              className={cn(nativeSelectClasses, "w-full")}
+              value={recipientKey}
+              disabled={sending}
+              required
+              onChange={(e) => setRecipientKey(e.target.value as ContactAdminRecipientKey)}
+            >
+              {recipients.map((r) => (
+                <option key={r.key} value={r.key}>
+                  {r.label}
+                </option>
+              ))}
+            </select>
+          </div>
           <FormInput
             id="contact-admin-name"
             label="Imię i nazwisko"
@@ -155,17 +180,6 @@ export function WriteToAdminFloat({ defaults }: Props) {
             onChange={(e) => setSenderName(e.target.value)}
             placeholder="Jan Kowalski"
             autoComplete="name"
-            disabled={sending}
-          />
-          <FormInput
-            id="contact-admin-email"
-            label="E-mail (opcjonalnie)"
-            type="email"
-            value={senderEmail}
-            onChange={(e) => setSenderEmail(e.target.value)}
-            placeholder="jan@example.com"
-            autoComplete="email"
-            hint="Podaj e-mail, jeśli chcesz dostać odpowiedź."
             disabled={sending}
           />
           <FormTextarea

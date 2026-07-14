@@ -5,6 +5,7 @@ import * as path from "path";
 import { isVercel, resolveDatabaseFilePath } from "@/lib/runtime-paths";
 import { initLibsqlSchema } from "@/lib/turso-init-schema";
 import { migrateAppSettingsColumnsSqlite } from "@/lib/app-settings";
+import { migrateRealmSchemaSqlite } from "@/lib/realm-migration";
 import { withTransientNetworkRetries } from "@/lib/transient-network-retry";
 
 /** Lokalny plik SQLite (dev) lub Turso (gdy TURSO_DATABASE_URL). */
@@ -492,12 +493,20 @@ function initSchemaSync(db: Database.Database) {
     (sql) => db.exec(sql)
   );
 
-  // Upewnij się, że istnieje pojedynczy wiersz z ustawieniami (id=1).
-  const hasSettings = db.prepare("SELECT 1 AS ok FROM app_settings WHERE id = 1").get() as
+  migrateRealmSchemaSqlite(db);
+
+  const adminMsgCols = db.prepare("PRAGMA table_info(admin_messages)").all() as { name: string }[];
+  if (!adminMsgCols.some((c) => c.name === "recipient_key")) {
+    db.exec("ALTER TABLE admin_messages ADD COLUMN recipient_key TEXT");
+  }
+
+  const hasAcademySettings = db.prepare("SELECT 1 AS ok FROM app_settings WHERE realm = 'academy'").get() as
     | { ok: 1 }
     | undefined;
-  if (!hasSettings) {
-    db.prepare("INSERT INTO app_settings (id, match_notification_prompt_enabled) VALUES (1, 0)").run();
+  if (!hasAcademySettings) {
+    db.prepare(
+      "INSERT INTO app_settings (realm, match_notification_prompt_enabled) VALUES ('academy', 0)"
+    ).run();
   }
 }
 

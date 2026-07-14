@@ -7,6 +7,7 @@ import { createSessionToken, setSessionCookie } from "@/lib/auth";
 import { checkRateLimit, rateLimitKey, rateLimitedResponse, RATE } from "@/lib/rate-limit";
 import { isSelfRegistrationAllowed } from "@/lib/registration-gate";
 import { hashPin, isValidPinFormat, isWeakPin, WEAK_PIN_MESSAGE } from "@/lib/pin";
+import { parseRealm, REALMS } from "@/lib/realm";
 
 export const runtime = "nodejs";
 
@@ -17,6 +18,7 @@ const bodySchema = z.object({
   pin: z.string().min(1).trim(),
   pin_confirm: z.string().min(1).trim(),
   auto_login: z.boolean().optional(),
+  realm: z.enum([REALMS.ACADEMY, REALMS.PZU_CUP]).optional(),
 });
 
 export async function POST(req: Request) {
@@ -34,7 +36,8 @@ export async function POST(req: Request) {
   if (!parsed.success) {
     return NextResponse.json({ error: "Wszystkie pola są wymagane." }, { status: 400 });
   }
-  const { first_name, last_name, zawodnik, pin, pin_confirm, auto_login } = parsed.data;
+  const { first_name, last_name, zawodnik, pin, pin_confirm, auto_login, realm: realmRaw } = parsed.data;
+  const realm = parseRealm(realmRaw, REALMS.ACADEMY);
 
   if (pin !== pin_confirm) {
     return NextResponse.json({ error: "PIN-y muszą być takie same." }, { status: 400 });
@@ -55,7 +58,7 @@ export async function POST(req: Request) {
   }
 
   const db = await getDb();
-  if (!(await isSelfRegistrationAllowed(db))) {
+  if (!(await isSelfRegistrationAllowed(db, undefined, realm))) {
     return NextResponse.json(
       { error: "Rejestracja nowych kont jest wyłączona. Skontaktuj się z administratorem." },
       { status: 403 }
@@ -63,14 +66,18 @@ export async function POST(req: Request) {
   }
 
   const count = (
-    (await db.prepare("SELECT COUNT(*) AS c FROM users").get()) as { c: number } | undefined
+    (await db
+      .prepare("SELECT COUNT(*) AS c FROM users WHERE COALESCE(realm, ?) = ?")
+      .get(REALMS.ACADEMY, realm)) as { c: number } | undefined
   )?.c ?? 0;
-  const isAdmin = count === 0 ? 1 : 0;
+  const isAdmin = realm === REALMS.ACADEMY && count === 0 ? 1 : 0;
 
   const taken = new Set(
-    ((await db.prepare("SELECT player_alias FROM users").all()) as { player_alias: string }[]).map(
-      (r) => r.player_alias
-    )
+    (
+      (await db
+        .prepare("SELECT player_alias FROM users WHERE COALESCE(realm, ?) = ?")
+        .all(REALMS.ACADEMY, realm)) as { player_alias: string }[]
+    ).map((r) => r.player_alias)
   );
   if (taken.has(canonical)) {
     return NextResponse.json({ error: "Ten pseudonim piłkarza jest już zajęty." }, { status: 409 });
@@ -81,10 +88,10 @@ export async function POST(req: Request) {
   try {
     const r = await db
       .prepare(
-        `INSERT INTO users (first_name, last_name, player_alias, is_admin, pin_hash, auth_version)
-         VALUES (?, ?, ?, ?, ?, 0)`
+        `INSERT INTO users (first_name, last_name, player_alias, is_admin, pin_hash, auth_version, realm)
+         VALUES (?, ?, ?, ?, ?, 0, ?)`
       )
-      .run(first_name, last_name, canonical, isAdmin, pinHash);
+      .run(first_name, last_name, canonical, isAdmin, pinHash, realm);
     userId = Number(r.lastInsertRowid);
   } catch (e) {
     if (isUniqueConstraintError(e)) {

@@ -7,6 +7,7 @@ export type AdminMessageRow = {
   user_id: number | null;
   sender_name: string;
   sender_email: string | null;
+  recipient_key: string | null;
   body: string;
   status: AdminMessageStatus;
   read_at: string | null;

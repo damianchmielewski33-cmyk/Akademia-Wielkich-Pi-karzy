@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { userHasPzuCupAccess } from "@/lib/pzu-cup-access";
+import { matchBelongsToRealm } from "@/lib/realm-db";
+import { getApiRealm } from "@/lib/request-realm";
+import type { Realm } from "@/lib/realm";
 
 export async function requireUser() {
   const session = await getServerSession();
@@ -91,4 +94,16 @@ export async function requirePzuCupAccess() {
     };
   }
   return { ok: true as const, session: r.session };
+}
+
+export async function requireMatchInApiRealm(req: Request, matchId: number) {
+  const realm = getApiRealm(req);
+  const db = await getDb();
+  if (!(await matchBelongsToRealm(db, matchId, realm))) {
+    return {
+      ok: false as const,
+      response: NextResponse.json({ error: "Nie znaleziono meczu" }, { status: 404 }),
+    };
+  }
+  return { ok: true as const, realm: realm as Realm };
 }

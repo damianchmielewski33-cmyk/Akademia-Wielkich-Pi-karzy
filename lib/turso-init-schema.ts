@@ -1,5 +1,6 @@
 import type { Client } from "@libsql/client";
 import { migrateAppSettingsColumnsLibsql } from "@/lib/app-settings";
+import { migrateRealmSchemaLibsql } from "@/lib/realm-migration";
 
 async function pragmaColumnNames(
   client: Client,
@@ -261,6 +262,8 @@ export async function initLibsqlSchema(client: Client) {
   names = await pragmaColumnNames(client, "app_settings");
   await migrateAppSettingsColumnsLibsql(names, (sql) => client.execute(sql));
 
+  await migrateRealmSchemaLibsql(client);
+
   await client.executeMultiple(`
     CREATE TABLE IF NOT EXISTS match_transport_messages (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -428,11 +431,20 @@ export async function initLibsqlSchema(client: Client) {
     }
   }
 
-  // Upewnij się, że istnieje pojedynczy wiersz z ustawieniami (id=1).
-  const rs = await client.execute("SELECT 1 AS ok FROM app_settings WHERE id = 1");
+  await migrateRealmSchemaLibsql(client);
+
+  const adminMsgRs = await client.execute("PRAGMA table_info(admin_messages)");
+  const adminMsgNames = adminMsgRs.rows.map((row) =>
+    String((row as Record<string, unknown>).name ?? row[1] ?? "")
+  );
+  if (!adminMsgNames.includes("recipient_key")) {
+    await client.execute("ALTER TABLE admin_messages ADD COLUMN recipient_key TEXT");
+  }
+
+  const rs = await client.execute("SELECT 1 AS ok FROM app_settings WHERE realm = 'academy'");
   if (rs.rows.length === 0) {
     await client.execute(
-      "INSERT INTO app_settings (id, match_notification_prompt_enabled) VALUES (1, 0)"
+      "INSERT INTO app_settings (realm, match_notification_prompt_enabled) VALUES ('academy', 0)"
     );
   }
 }

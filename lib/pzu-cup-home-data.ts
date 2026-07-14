@@ -1,13 +1,13 @@
 import { getAccountNavFields } from "@/lib/account-server";
 import type { AppSession } from "@/lib/auth";
 import { getDb, type MatchRow } from "@/lib/db";
-import { getHomeTopPlayers, type HomeTopPlayer } from "@/lib/rankings-data";
+import { getAppSettings } from "@/lib/app-settings";
 import { REALMS } from "@/lib/realm";
 import { formatPonderingPlayersPolish } from "@/lib/terminarz-shared";
 import { parseYoutubeVideoIdFromUserInput } from "@/lib/site";
 import { isLocalMatchDay } from "@/lib/transport";
 
-export type HomePageClientProps = {
+export type PzuCupHomeClientProps = {
   nextMatch: MatchRow | null;
   nextMatchTentativeLine: string;
   lineupPublicNextMatch: boolean;
@@ -20,15 +20,13 @@ export type HomePageClientProps = {
   zawodnik: string;
   profilePhotoPath: string | null;
   youtubeLiveVideoId: string | null;
-  showPzuCupTile: boolean;
-  pageVariant: "home" | "pzu-cup";
-  topRankedPlayers: HomeTopPlayer[];
+  siteName: string;
+  siteDescription: string;
 };
-export async function getHomePageClientProps(
-  session: AppSession | null,
-  options?: { showPzuCupTile?: boolean; pageVariant?: "home" | "pzu-cup" }
-): Promise<HomePageClientProps> {
+
+export async function getPzuCupHomeClientProps(session: AppSession | null): Promise<PzuCupHomeClientProps> {
   const db = await getDb();
+  const settings = await getAppSettings(db, REALMS.PZU_CUP);
 
   const nextMatch = (await db
     .prepare(
@@ -37,7 +35,7 @@ export async function getHomePageClientProps(
          AND datetime(match_date || ' ' || match_time) > datetime('now', 'localtime')
        ORDER BY match_date, match_time LIMIT 1`
     )
-    .get(REALMS.ACADEMY)) as MatchRow | undefined;
+    .get(REALMS.PZU_CUP)) as MatchRow | undefined;
 
   let nextMatchSignup: "none" | "tentative" | "confirmed" | "declined" = "none";
   if (nextMatch && session) {
@@ -74,11 +72,8 @@ export async function getHomePageClientProps(
     zawodnik = nav?.zawodnik ?? session.zawodnik;
   }
 
-  const settingsRow = (await db
-    .prepare("SELECT home_youtube_url FROM app_settings WHERE realm = ?")
-    .get(REALMS.ACADEMY)) as { home_youtube_url: string | null } | undefined;
-  const youtubeLiveVideoId = settingsRow?.home_youtube_url
-    ? parseYoutubeVideoIdFromUserInput(settingsRow.home_youtube_url)
+  const youtubeLiveVideoId = settings.home_youtube_url
+    ? parseYoutubeVideoIdFromUserInput(settings.home_youtube_url)
     : null;
 
   const nextMatchForClient =
@@ -87,9 +82,6 @@ export async function getHomePageClientProps(
       : nextMatch
         ? { ...nextMatch, gate_pin: null }
         : null;
-
-  const topRankedPlayers =
-    options?.pageVariant === "pzu-cup" ? [] : await getHomeTopPlayers(3);
 
   return {
     nextMatch: nextMatchForClient,
@@ -104,8 +96,7 @@ export async function getHomePageClientProps(
     zawodnik,
     profilePhotoPath,
     youtubeLiveVideoId,
-    showPzuCupTile: options?.showPzuCupTile ?? false,
-    pageVariant: options?.pageVariant ?? "home",
-    topRankedPlayers,
+    siteName: settings.site_name,
+    siteDescription: settings.site_description,
   };
 }

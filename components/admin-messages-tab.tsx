@@ -18,6 +18,8 @@ type MessageItem = {
   user_id: number | null;
   sender_name: string;
   sender_email: string | null;
+  recipient_key: string | null;
+  recipient_label: string | null;
   body: string;
   status: "unread" | "read";
   created_at_display: string;
@@ -147,6 +149,9 @@ export function AdminMessagesTab({ onUnreadChange }: Props) {
                               {m.created_at_display}
                             </time>
                           </div>
+                          {m.recipient_label ? (
+                            <p className="truncate text-xs text-emerald-100/55">Do: {m.recipient_label}</p>
+                          ) : null}
                           {m.user_alias ? (
                             <p className="truncate text-xs text-emerald-100/55">Konto: {m.user_alias}</p>
                           ) : null}
@@ -171,17 +176,11 @@ export function AdminMessagesTab({ onUnreadChange }: Props) {
                     <h3 className="truncate text-lg font-bold text-white">{selected.sender_name}</h3>
                   </div>
                   <p className="mt-1 text-sm text-emerald-100/70">{selected.created_at_display}</p>
-                  {selected.sender_email ? (
-                    <a
-                      href={`mailto:${encodeURIComponent(selected.sender_email)}`}
-                      className="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-emerald-200 underline-offset-2 hover:underline"
-                    >
-                      <Mail className="h-4 w-4" aria-hidden />
-                      {selected.sender_email}
-                    </a>
-                  ) : (
-                    <p className="mt-2 text-sm text-emerald-100/50">Brak adresu e-mail</p>
-                  )}
+                  {selected.recipient_label ? (
+                    <p className="mt-2 text-sm font-medium text-[var(--mundial-gold)]">
+                      Adresat: {selected.recipient_label}
+                    </p>
+                  ) : null}
                   {selected.user_alias ? (
                     <p className="mt-1 text-xs text-emerald-100/55">Powiązane konto: {selected.user_alias}</p>
                   ) : (
@@ -205,7 +204,10 @@ export function AdminMessagesTab({ onUnreadChange }: Props) {
 
               {selected.sender_email ? (
                 <Button asChild variant="stadium" className="w-full sm:w-auto">
-                  <a href={`mailto:${encodeURIComponent(selected.sender_email)}?subject=${encodeURIComponent("Odpowiedź — Akademia Wielkich Piłkarzy")}`}>
+                  <a
+                    href={`mailto:${encodeURIComponent(selected.sender_email)}?subject=${encodeURIComponent("Odpowiedź — Akademia Wielkich Piłkarzy")}`}
+                  >
+                    <Mail className="mr-2 h-4 w-4" aria-hidden />
                     Odpowiedz e-mailem
                   </a>
                 </Button>

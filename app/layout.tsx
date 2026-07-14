@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import type { CSSProperties } from "react";
+import { headers } from "next/headers";
 import { Geist, Geist_Mono, Teko } from "next/font/google";
 import { Toaster } from "sonner";
 import { SiteShell } from "@/components/site-shell";
@@ -19,6 +20,8 @@ import { SiteJsonLd } from "@/components/site-json-ld";
 import { SiteAssetsProvider } from "@/components/site-assets-provider";
 import { getGoogleSiteVerification, getSiteUrl } from "@/lib/site";
 import { getAppSettings } from "@/lib/app-settings";
+import { getUnreadAdminMessageCount } from "@/lib/admin-messages";
+import { contactAdminRecipientsFromSettings } from "@/lib/contact-admin-recipients";
 import { siteAssetCssUrl } from "@/lib/site-assets";
 import "./globals.css";
 
@@ -85,6 +88,8 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const session = await getServerSession();
+  const pathname = (await headers()).get("x-pathname") ?? "";
+  const isPzuCupSection = pathname.startsWith("/pzu-cup");
   const loggedInFull = Boolean(
     session && !session.needsPinSetup && !session.pinChangePending
   );
@@ -112,28 +117,27 @@ export default async function RootLayout({
   const db = await getDb();
   const appSettings = await getAppSettings(db);
   const settingsRow = (await db
-    .prepare("SELECT match_notification_prompt_enabled FROM app_settings WHERE id = 1")
+    .prepare("SELECT match_notification_prompt_enabled FROM app_settings WHERE realm = 'academy'")
     .get()) as { match_notification_prompt_enabled: number } | undefined;
   const matchNotificationPromptEnabled = (settingsRow?.match_notification_prompt_enabled ?? 0) === 1;
 
   const walletBalancePln =
     loggedInFull && session ? await getUserWalletBalancePln(session.userId) : null;
 
-  let writeToAdminDefaults: { senderName: string; senderEmail: string } | null = null;
+  let writeToAdminDefaults: { senderName: string } | null = null;
   if (session) {
-    const emailRow = (await db
-      .prepare("SELECT email FROM users WHERE id = ?")
-      .get(session.userId)) as { email?: string | null } | undefined;
     const senderName =
       [accountRow?.firstName ?? session.firstName, accountRow?.lastName ?? session.lastName]
         .filter(Boolean)
         .join(" ")
         .trim() || session.zawodnik;
-    writeToAdminDefaults = {
-      senderName,
-      senderEmail: emailRow?.email?.trim() ?? "",
-    };
+    writeToAdminDefaults = { senderName };
   }
+
+  const contactAdminRecipients = contactAdminRecipientsFromSettings(appSettings);
+
+  const isAdmin = Boolean(session?.isAdmin && loggedInFull);
+  const adminUnreadMessages = isAdmin ? await getUnreadAdminMessageCount(db) : 0;
 
   const siteAssets = appSettings.site_assets;
   const assetCssVars = {
@@ -166,8 +170,9 @@ export default async function RootLayout({
           <SiteAssetsProvider assets={siteAssets}>
             <SiteShell
             isLoggedIn={loggedInFull}
-            isAdmin={session?.isAdmin && loggedInFull ? true : false}
+            isAdmin={isAdmin}
             account={accountNav}
+            adminUnreadMessages={adminUnreadMessages}
             siteName={appSettings.site_name}
             contactEmail={appSettings.contact_email}
           >
@@ -175,10 +180,14 @@ export default async function RootLayout({
           </SiteShell>
           </SiteAssetsProvider>
         </PinSetupGate>
-        {walletBalancePln != null ? <WalletBalanceFloat balancePln={walletBalancePln} /> : null}
-        <WriteToAdminFloat defaults={writeToAdminDefaults} />
-        <MatchParticipationSurveyPrompt />
-        {matchNotificationPromptEnabled ? <MatchNotificationPrompt /> : null}
+        {walletBalancePln != null && !isPzuCupSection ? (
+          <WalletBalanceFloat balancePln={walletBalancePln} />
+        ) : null}
+        {!isPzuCupSection ? (
+          <WriteToAdminFloat defaults={writeToAdminDefaults} recipients={contactAdminRecipients} />
+        ) : null}
+        {!isPzuCupSection ? <MatchParticipationSurveyPrompt /> : null}
+        {!isPzuCupSection && matchNotificationPromptEnabled ? <MatchNotificationPrompt /> : null}
         <Toaster
           position="top-center"
           richColors

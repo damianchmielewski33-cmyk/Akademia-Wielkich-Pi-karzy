@@ -20,12 +20,19 @@ import { cn } from "@/lib/utils";
 import type { AppSettingsApiResponse } from "@/app/api/admin/app-settings/route";
 import type { MatchCancelReasonEntry } from "@/lib/app-settings";
 import { AdminSiteAssetField } from "@/components/admin-site-asset-field";
+import { AdminImageSpecsTable, ImageUploadSpecDetails } from "@/components/admin-image-specs";
+import { ALL_ADMIN_IMAGE_SPECS, PROFILE_PHOTO_SPEC } from "@/lib/image-upload-specs";
 import { SITE_ASSET_KEYS } from "@/lib/site-assets";
 
 type Props = {
   loading: boolean;
   onReload: () => void;
+  settingsRealm?: "academy" | "pzu_cup";
 };
+
+function settingsApiUrl(realm: "academy" | "pzu_cup") {
+  return realm === "pzu_cup" ? "/api/admin/app-settings?realm=pzu_cup" : "/api/admin/app-settings";
+}
 
 function SettingsSection({
   title,
@@ -94,7 +101,7 @@ function ToggleRow({
   );
 }
 
-export function AdminSettingsTab({ loading, onReload }: Props) {
+export function AdminSettingsTab({ loading, onReload, settingsRealm = "academy" }: Props) {
   const [settings, setSettings] = useState<AppSettingsApiResponse | null>(null);
   const [saving, setSaving] = useState(false);
   const [fetching, setFetching] = useState(true);
@@ -103,7 +110,7 @@ export function AdminSettingsTab({ loading, onReload }: Props) {
   const load = useCallback(async () => {
     setFetching(true);
     try {
-      const res = await fetch("/api/admin/app-settings");
+      const res = await fetch(settingsApiUrl(settingsRealm));
       if (!res.ok) throw new Error("Nie udało się wczytać ustawień");
       const data = (await res.json()) as AppSettingsApiResponse;
       setSettings(data);
@@ -113,7 +120,7 @@ export function AdminSettingsTab({ loading, onReload }: Props) {
     } finally {
       setFetching(false);
     }
-  }, []);
+  }, [settingsRealm]);
 
   useEffect(() => {
     void load();
@@ -123,7 +130,7 @@ export function AdminSettingsTab({ loading, onReload }: Props) {
     async (patch: Record<string, unknown>) => {
       setSaving(true);
       try {
-        const res = await fetch("/api/admin/app-settings", {
+        const res = await fetch(settingsApiUrl(settingsRealm), {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(patch),
@@ -142,7 +149,7 @@ export function AdminSettingsTab({ loading, onReload }: Props) {
         setSaving(false);
       }
     },
-    []
+    [settingsRealm]
   );
 
   const busy = loading || fetching || saving;
@@ -257,9 +264,17 @@ export function AdminSettingsTab({ loading, onReload }: Props) {
 
       <SettingsSection
         title="Logo i tła"
-        description="Wgraj własne grafiki albo zostaw domyślne. Zalecane formaty podane przy każdym polu."
+        description="Wgraj własne grafiki albo zostaw domyślne. Poniżej tabela zalecanych rozmiarów — każde pole ma też szczegóły przy wgrywaniu."
       >
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="space-y-3">
+          <p className="text-sm leading-relaxed text-emerald-100/80">
+            Aby grafika dobrze wypełniła dane miejsce na stronie, trzymaj się podanych wymiarów i proporcji. Zbyt mały
+            plik będzie rozmyty; zły kadr może zostać przycięty (np. tło stadionu na telefonie).
+          </p>
+          <AdminImageSpecsTable specs={ALL_ADMIN_IMAGE_SPECS} />
+        </div>
+
+        <div className="mt-6 grid gap-4 lg:grid-cols-2">
           {SITE_ASSET_KEYS.map((key) => {
             const customMap: Record<(typeof SITE_ASSET_KEYS)[number], string | null> = {
               logo_header: settings.asset_logo_header_url,
@@ -280,6 +295,11 @@ export function AdminSettingsTab({ loading, onReload }: Props) {
               />
             );
           })}
+        </div>
+
+        <div className="mt-6">
+          <p className="mb-2 text-sm font-semibold text-white">Zdjęcia profilowe graczy</p>
+          <ImageUploadSpecDetails spec={PROFILE_PHOTO_SPEC} />
         </div>
       </SettingsSection>
 

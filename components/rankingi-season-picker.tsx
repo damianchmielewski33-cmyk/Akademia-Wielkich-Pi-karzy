@@ -19,9 +19,10 @@ type SeasonOption = {
 type Props = {
   seasons: SeasonOption[];
   selectedSeasonId: number;
+  basePath?: string;
 };
 
-export function RankingiSeasonPicker({ seasons, selectedSeasonId }: Props) {
+export function RankingiSeasonPicker({ seasons, selectedSeasonId, basePath = "/rankingi" }: Props) {
   const router = useRouter();
 
   return (
@@ -32,7 +33,7 @@ export function RankingiSeasonPicker({ seasons, selectedSeasonId }: Props) {
       <Select
         value={String(selectedSeasonId)}
         onValueChange={(value) => {
-          router.push(`/rankingi?season=${encodeURIComponent(value)}`);
+          router.push(`${basePath}?season=${encodeURIComponent(value)}`);
         }}
       >
         <SelectTrigger id="ranking-season" className="mt-2 border-white/25 bg-black/15 text-white">

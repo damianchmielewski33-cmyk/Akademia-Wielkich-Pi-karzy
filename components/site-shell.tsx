@@ -8,6 +8,7 @@ import { usePathname } from "next/navigation";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { Menu, LogOut, Moon, Sun } from "lucide-react";
 import { AnalyticsTracker } from "@/components/analytics-tracker";
+import { AdminHeaderMessagesButton } from "@/components/admin-header-messages-button";
 import { NavigationLoadingOverlay } from "@/components/navigation-loading-overlay";
 import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
 import { LogoutConfirmModal } from "@/components/logout-confirm-modal";
@@ -26,6 +27,7 @@ type Props = {
     zawodnik: string;
     profilePhotoPath: string | null;
   } | null;
+  adminUnreadMessages?: number;
   siteName?: string;
   contactEmail?: string;
 };
@@ -59,6 +61,7 @@ export function SiteShell({
   isLoggedIn,
   isAdmin,
   account = null,
+  adminUnreadMessages = 0,
   siteName = SITE_NAME,
   contactEmail: contactEmailProp,
 }: Props) {
@@ -69,6 +72,9 @@ export function SiteShell({
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [themeBusy, setThemeBusy] = useState(false);
   if (pathname === "/panel-admina" || pathname?.startsWith("/panel-admina")) {
+    return <>{children}</>;
+  }
+  if (pathname === "/pzu-cup" || pathname?.startsWith("/pzu-cup")) {
     return <>{children}</>;
   }
 
@@ -155,6 +161,8 @@ export function SiteShell({
           <nav className="flex items-center justify-end gap-2" aria-label="Główna nawigacja">
             {/* Desktop / tablet */}
             <div className="hidden flex-wrap items-center justify-end gap-1 sm:flex sm:gap-1.5">
+              {isAdmin ? <AdminHeaderMessagesButton initialUnreadCount={adminUnreadMessages} /> : null}
+
               <button
                 type="button"
                 onClick={() => void toggleTheme()}
@@ -222,6 +230,8 @@ export function SiteShell({
 
             {/* Mobile */}
             <div className="flex items-center gap-2 sm:hidden">
+              {isAdmin ? <AdminHeaderMessagesButton initialUnreadCount={adminUnreadMessages} /> : null}
+
               <button
                 type="button"
                 onClick={() => void toggleTheme()}

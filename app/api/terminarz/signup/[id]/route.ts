@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getDb, logActivity } from "@/lib/db";
-import { requireUser } from "@/lib/api-helpers";
+import { requireUser, requireMatchInApiRealm } from "@/lib/api-helpers";
 import { normalizeTransportFromBody, validateTransportBody, type SignupTransportRow } from "@/lib/transport";
 
 export const runtime = "nodejs";
@@ -48,6 +48,8 @@ export async function POST(req: Request, ctx: Ctx) {
   if (!Number.isFinite(mid)) {
     return NextResponse.json({ error: "Invalid match" }, { status: 400 });
   }
+  const realmGate = await requireMatchInApiRealm(req, mid);
+  if (!realmGate.ok) return realmGate.response;
   const db = await getDb();
   const match = await db.prepare("SELECT * FROM matches WHERE id = ?").get(mid) as
     | {

@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { formatActivityTimePl } from "@/lib/activity-display";
+import { getAppSettings } from "@/lib/app-settings";
+import { contactAdminRecipientLabel } from "@/lib/contact-admin-recipients";
 import { getUnreadAdminMessageCount, type AdminMessageRow } from "@/lib/admin-messages";
 import { requireAdmin } from "@/lib/api-helpers";
 import { getDb } from "@/lib/db";
@@ -11,9 +13,10 @@ export async function GET() {
   if (!gate.ok) return gate.response;
 
   const db = await getDb();
+  const appSettings = await getAppSettings(db);
   const rows = (await db
     .prepare(
-      `SELECT m.id, m.user_id, m.sender_name, m.sender_email, m.body, m.status,
+      `SELECT m.id, m.user_id, m.sender_name, m.sender_email, m.recipient_key, m.body, m.status,
               m.read_at, m.read_by_admin_id, m.created_at,
               u.player_alias AS user_alias
        FROM admin_messages m
@@ -30,6 +33,8 @@ export async function GET() {
     user_id: r.user_id,
     sender_name: r.sender_name,
     sender_email: r.sender_email,
+    recipient_key: r.recipient_key,
+    recipient_label: contactAdminRecipientLabel(r.recipient_key, appSettings),
     body: r.body,
     status: r.status,
     read_at: r.read_at,

@@ -30,8 +30,10 @@ const registerSchema = z
 
 export function RegisterForm({
   nextPath,
+  realm = "academy",
 }: {
   nextPath?: string;
+  realm?: "academy" | "pzu_cup";
 }) {
   const router = useRouter();
   const next = nextPath && nextPath.startsWith("/") ? nextPath : undefined;
@@ -61,6 +63,7 @@ export function RegisterForm({
           pin,
           pin_confirm: pinConfirm,
           auto_login: autoLogin,
+          realm,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -69,11 +72,11 @@ export function RegisterForm({
         return;
       }
       if (data.logged_in) {
-        setGoalPreloaderLabel("Gol! Witamy w akademii…");
+        setGoalPreloaderLabel(realm === "pzu_cup" ? "Gol! Witamy w turnieju…" : "Gol! Witamy w akademii…");
         setShowGoalPreloader(true);
         toast.success("Konto utworzone — jesteś zalogowany");
         await new Promise((r) => setTimeout(r, AUTH_SUCCESS_PRELOADER_DELAY_MS));
-        await router.push(next ?? "/");
+        await router.push(next ?? (realm === "pzu_cup" ? "/pzu-cup" : "/"));
         router.refresh();
         notifyPostLoginPromptsUpdated();
       } else {
@@ -81,7 +84,14 @@ export function RegisterForm({
         setShowGoalPreloader(true);
         toast.success("Konto utworzone — zaloguj się");
         await new Promise((r) => setTimeout(r, AUTH_SUCCESS_PRELOADER_DELAY_MS));
-        const loginUrl = next ? `/login?next=${encodeURIComponent(next)}` : "/login";
+        const loginUrl =
+          realm === "pzu_cup"
+            ? next
+              ? `/pzu-cup/login?next=${encodeURIComponent(next)}`
+              : "/pzu-cup/login"
+            : next
+              ? `/login?next=${encodeURIComponent(next)}`
+              : "/login";
         router.push(loginUrl);
       }
     } finally {

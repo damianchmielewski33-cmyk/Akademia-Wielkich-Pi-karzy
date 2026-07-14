@@ -4,13 +4,14 @@ import { requireAdmin } from "@/lib/api-helpers";
 import {
   APP_SETTINGS_DEFAULTS,
   getAppSettings,
-  serializeMatchCancelReasons,
+  saveAppSettings,
   type AppSettings,
   type MatchCancelReasonEntry,
 } from "@/lib/app-settings";
 import { getDb } from "@/lib/db";
 import { isMailConfigured } from "@/lib/mail";
 import { parseYoutubeVideoIdFromUserInput } from "@/lib/site";
+import { parseRealm, REALMS } from "@/lib/realm";
 
 export const runtime = "nodejs";
 
@@ -73,11 +74,13 @@ function toApiResponse(settings: AppSettings): AppSettingsApiResponse {
   };
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   const gate = await requireAdmin();
   if (!gate.ok) return gate.response;
+  const url = new URL(req.url);
+  const realm = parseRealm(url.searchParams.get("realm"), REALMS.ACADEMY);
   const db = await getDb();
-  const settings = await getAppSettings(db);
+  const settings = await getAppSettings(db, realm);
   return NextResponse.json(toApiResponse(settings));
 }
 
@@ -121,7 +124,9 @@ export async function PUT(req: Request) {
   const body = parsed.data;
 
   const db = await getDb();
-  const current = await getAppSettings(db);
+  const url = new URL(req.url);
+  const realm = parseRealm(url.searchParams.get("realm"), REALMS.ACADEMY);
+  const current = await getAppSettings(db, realm);
   const next: AppSettings = { ...current };
 
   if (body.match_notification_prompt_enabled !== undefined) {
@@ -212,65 +217,7 @@ export async function PUT(req: Request) {
     next.match_cancel_reasons = cleaned;
   }
 
-  await db
-    .prepare(
-      `UPDATE app_settings SET
-        match_notification_prompt_enabled = ?,
-        home_youtube_url = ?,
-        site_name = ?,
-        site_description = ?,
-        contact_email = ?,
-        blik_phone = ?,
-        organizer_damian_name = ?,
-        organizer_damian_phone = ?,
-        organizer_damian_email = ?,
-        organizer_mateusz_name = ?,
-        organizer_mateusz_phone = ?,
-        organizer_mateusz_email = ?,
-        facebook_damian_url = ?,
-        facebook_mateusz_url = ?,
-        allow_self_registration = ?,
-        default_match_max_slots = ?,
-        default_match_fee_pln = ?,
-        default_match_location = ?,
-        ranking_pt_goal = ?,
-        ranking_pt_assist = ?,
-        ranking_pt_km = ?,
-        ranking_pt_save = ?,
-        match_email_notifications_enabled = ?,
-        lineup_pitch_slots_min = ?,
-        lineup_pitch_slots_max = ?,
-        match_cancel_reasons_json = ?
-      WHERE id = 1`
-    )
-    .run(
-      next.match_notification_prompt_enabled ? 1 : 0,
-      next.home_youtube_url,
-      next.site_name,
-      next.site_description,
-      next.contact_email,
-      next.blik_phone,
-      next.organizer_damian_name,
-      next.organizer_damian_phone,
-      next.organizer_damian_email,
-      next.organizer_mateusz_name,
-      next.organizer_mateusz_phone,
-      next.organizer_mateusz_email,
-      next.facebook_damian_url,
-      next.facebook_mateusz_url,
-      next.allow_self_registration === null ? null : next.allow_self_registration ? 1 : 0,
-      next.default_match_max_slots,
-      next.default_match_fee_pln,
-      next.default_match_location || null,
-      next.ranking_pt_goal,
-      next.ranking_pt_assist,
-      next.ranking_pt_km,
-      next.ranking_pt_save,
-      next.match_email_notifications_enabled ? 1 : 0,
-      next.lineup_pitch_slots_min,
-      next.lineup_pitch_slots_max,
-      serializeMatchCancelReasons(next.match_cancel_reasons)
-    );
+  await saveAppSettings(db, realm, next);
 
   return NextResponse.json(toApiResponse(next));
 }

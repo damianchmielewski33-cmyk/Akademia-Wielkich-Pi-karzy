@@ -35,14 +35,18 @@ const forgotSchema = z
     path: ["pinConfirm"],
   });
 
+import { REALMS, type Realm } from "@/lib/realm";
+
 export function LoginForm({
   nextPath,
   embedMode,
   onAuthenticated,
+  realm = REALMS.ACADEMY,
 }: {
   nextPath: string;
   embedMode?: boolean;
   onAuthenticated?: () => void;
+  realm?: Realm;
 }) {
   const router = useRouter();
   const next = nextPath || "/";
@@ -78,6 +82,7 @@ export function LoginForm({
           last_name: lastName,
           pin,
           remember_me: rememberMe,
+          realm,
         }),
       });
       const data = (await res.json().catch(() => ({}))) as {

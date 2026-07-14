@@ -4,6 +4,7 @@ import { getDb, logActivity } from "@/lib/db";
 import { createSessionToken, setSessionCookie } from "@/lib/auth";
 import { checkRateLimit, rateLimitKey, rateLimitedResponse, RATE } from "@/lib/rate-limit";
 import { hashPin, isValidPinFormat, verifyPin } from "@/lib/pin";
+import { parseRealm, REALMS } from "@/lib/realm";
 
 export const runtime = "nodejs";
 
@@ -13,6 +14,7 @@ const bodySchema = z.object({
   pin: z.string().min(1).trim(),
   /** Zaznaczone „Nie wylogowuj mnie” — brak wymuszonego wylogowania po bezczynności. */
   remember_me: z.boolean().optional(),
+  realm: z.enum([REALMS.ACADEMY, REALMS.PZU_CUP]).optional(),
 });
 
 type LoginUserRow = {
@@ -41,8 +43,9 @@ export async function POST(req: Request) {
   if (!parsed.success) {
     return NextResponse.json({ error: "Walidacja nie powiodła się", details: parsed.error.flatten() }, { status: 400 });
   }
-  const { first_name, last_name, pin, remember_me } = parsed.data;
+  const { first_name, last_name, pin, remember_me, realm: realmRaw } = parsed.data;
   const rememberMe = remember_me === true;
+  const realm = parseRealm(realmRaw, REALMS.ACADEMY);
 
   if (!isValidPinFormat(pin)) {
     return NextResponse.json({ error: "PIN musi mieć 4–6 cyfr." }, { status: 400 });
@@ -52,9 +55,11 @@ export async function POST(req: Request) {
   const users = (await db
     .prepare(
       `SELECT id, first_name, last_name, player_alias, is_admin, pin_hash, pin_hash_pending, auth_version
-       FROM users WHERE lower(first_name) = lower(?) AND lower(last_name) = lower(?)`
+       FROM users
+       WHERE lower(first_name) = lower(?) AND lower(last_name) = lower(?)
+         AND COALESCE(realm, ?) = ?`
     )
-    .all(first_name, last_name)) as LoginUserRow[];
+    .all(first_name, last_name, REALMS.ACADEMY, realm)) as LoginUserRow[];
 
   if (users.length === 0) {
     return NextResponse.json({ error: "Nieprawidłowe dane logowania." }, { status: 401 });

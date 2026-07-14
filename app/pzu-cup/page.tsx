@@ -1,31 +1,31 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getServerSession } from "@/lib/auth";
-import { HomeClient } from "@/components/home-client";
-import { getHomePageClientProps } from "@/lib/home-page-data";
-import { getPzuCupAccessForUser } from "@/lib/pzu-cup-access";
+import { PzuCupHomeClient } from "@/components/pzu-cup-shell";
+import { getPzuCupHomeClientProps } from "@/lib/pzu-cup-home-data";
+import { canAccessPzuCup } from "@/lib/pzu-cup-access";
 
 export const metadata: Metadata = {
-  title: "PZU Cup 2026",
-  description: "Organizacja turnieju PZU Cup 2026.",
-  robots: { index: false, follow: false },
+  title: "Start",
 };
 
 export default async function PzuCupPage() {
   const session = await getServerSession();
-  if (!session) {
-    redirect("/login?next=/pzu-cup");
-  }
-
-  const allowed = await getPzuCupAccessForUser(session.userId, session.isAdmin);
-  if (!allowed) {
+  if (session && !(await canAccessPzuCup(session))) {
     redirect("/");
   }
 
-  const props = await getHomePageClientProps(session, {
-    showPzuCupTile: false,
-    pageVariant: "pzu-cup",
-  });
+  const props = await getPzuCupHomeClientProps(session);
 
-  return <HomeClient {...props} />;
+  return (
+    <PzuCupHomeClient
+      siteName={props.siteName}
+      siteDescription={props.siteDescription}
+      isLoggedIn={props.isLoggedIn}
+      firstName={props.firstName}
+      lastName={props.lastName}
+      zawodnik={props.zawodnik}
+      profilePhotoPath={props.profilePhotoPath}
+    />
+  );
 }

@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
-import { getDb } from "@/lib/db";
 import { PilkarzeClient } from "@/components/pilkarze-client";
 import { PitchPageHero } from "@/components/ui/pitch-card";
+import { REALMS } from "@/lib/realm";
+import { getPilkarzePageData } from "@/lib/realm-page-data";
 
 export const metadata: Metadata = {
   title: "Piłkarze",
@@ -9,18 +10,7 @@ export const metadata: Metadata = {
 };
 
 export default async function PilkarzePage() {
-  const db = await getDb();
-  const gracze = await db
-    .prepare(
-      "SELECT id, first_name, last_name, player_alias AS zawodnik, profile_photo_path FROM users ORDER BY first_name ASC"
-    )
-    .all() as {
-    id: number;
-    first_name: string;
-    last_name: string;
-    zawodnik: string;
-    profile_photo_path: string | null;
-  }[];
+  const gracze = await getPilkarzePageData(REALMS.ACADEMY);
 
   return (
     <div className="container mx-auto max-w-5xl flex-1 px-4 py-8 text-center sm:py-10">

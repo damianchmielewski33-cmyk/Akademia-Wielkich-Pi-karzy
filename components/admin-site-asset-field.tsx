@@ -13,6 +13,8 @@ import {
   siteAssetNeedsUnoptimized,
   type SiteAssetKey,
 } from "@/lib/site-assets";
+import { SITE_ASSET_UPLOAD_SPECS } from "@/lib/image-upload-specs";
+import { ImageUploadSpecDetails } from "@/components/admin-image-specs";
 import type { AppSettings } from "@/lib/app-settings";
 import { adminInnerPanelClass } from "@/components/admin-ui";
 
@@ -26,6 +28,7 @@ type Props = {
 
 export function AdminSiteAssetField({ assetKey, currentUrl, customUrl, disabled, onUpdated }: Props) {
   const meta = SITE_ASSET_META[assetKey];
+  const spec = SITE_ASSET_UPLOAD_SPECS[assetKey];
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const router = useRouter();
@@ -86,8 +89,9 @@ export function AdminSiteAssetField({ assetKey, currentUrl, customUrl, disabled,
       <div>
         <p className="text-sm font-semibold text-white">{meta.label}</p>
         <p className="mt-0.5 text-xs pitch-muted">{meta.hint}</p>
-        <p className="mt-1 text-[0.65rem] text-emerald-100/60">{meta.recommended}</p>
       </div>
+
+      <ImageUploadSpecDetails spec={spec} compact />
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
         <div
@@ -150,7 +154,9 @@ export function AdminSiteAssetField({ assetKey, currentUrl, customUrl, disabled,
               Przywróć domyślną
             </Button>
           </div>
-          <p className="text-xs text-emerald-100/60">Akceptowane: JPG, PNG, WebP, GIF, SVG · maks. 4 MB</p>
+          <p className="text-xs text-emerald-100/60">
+            Akceptowane: {spec.formats} · maks. {spec.maxFileSize}
+          </p>
         </div>
       </div>
     </div>

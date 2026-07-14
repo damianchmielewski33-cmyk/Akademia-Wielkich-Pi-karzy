@@ -1,6 +1,9 @@
 import { cache } from "react";
+import type { AppSession } from "@/lib/auth";
 import type { AppDb } from "@/lib/db";
 import { getDb } from "@/lib/db";
+import { getUserRealm } from "@/lib/realm-db";
+import { REALMS } from "@/lib/realm";
 
 /** Administratorzy mają dostęp do sekcji PZU Cup bez osobnego przełącznika. */
 export async function userHasPzuCupAccess(db: AppDb, userId: number, isAdmin?: boolean): Promise<boolean> {
@@ -16,3 +19,12 @@ export const getPzuCupAccessForUser = cache(async (userId: number, isAdmin?: boo
   const db = await getDb();
   return userHasPzuCupAccess(db, userId, isAdmin);
 });
+
+/** Dostęp do sekcji PZU Cup: gracz turnieju lub organizator z Akademii. */
+export async function canAccessPzuCup(session: AppSession | null): Promise<boolean> {
+  if (!session) return false;
+  const db = await getDb();
+  const userRealm = await getUserRealm(db, session.userId);
+  if (userRealm === REALMS.PZU_CUP) return true;
+  return userHasPzuCupAccess(db, session.userId, session.isAdmin);
+}

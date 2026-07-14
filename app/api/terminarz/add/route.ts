@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getDb, logActivity, type MatchRow } from "@/lib/db";
 import { requireAdmin } from "@/lib/api-helpers";
+import { getApiRealm } from "@/lib/request-realm";
 import { notifySubscribersAboutNewMatch } from "@/lib/match-notifications";
 
 export const runtime = "nodejs";
@@ -32,25 +33,26 @@ export async function POST(req: Request) {
   }
   const { date, time, location, max_slots, gate_pin } = parsed.data;
   const db = await getDb();
+  const realm = getApiRealm(req);
 
   const existing = (await db
     .prepare(
       `SELECT id FROM matches
-       WHERE match_date = ? AND match_time = ? AND TRIM(location) = TRIM(?)
+       WHERE realm = ? AND match_date = ? AND match_time = ? AND TRIM(location) = TRIM(?)
          AND COALESCE(cancelled, 0) = 0
        LIMIT 1`
     )
-    .get(date, time, location)) as { id: number } | undefined;
+    .get(realm, date, time, location)) as { id: number } | undefined;
 
   if (existing) {
     return NextResponse.json({ status: "ok", id: existing.id, duplicate: true });
   }
 
   const ins = db.prepare(
-    `INSERT INTO matches (match_date, match_time, location, max_slots, signed_up, played, gate_pin)
-     VALUES (?, ?, ?, ?, 0, 0, ?)`
+    `INSERT INTO matches (match_date, match_time, location, max_slots, signed_up, played, gate_pin, realm)
+     VALUES (?, ?, ?, ?, 0, 0, ?, ?)`
   );
-  const r = await ins.run(date, time, location, max_slots, gate_pin);
+  const r = await ins.run(date, time, location, max_slots, gate_pin, realm);
   const newId = Number(r.lastInsertRowid);
   await logActivity(
     gate.session.userId,

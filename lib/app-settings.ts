@@ -7,6 +7,7 @@ import {
   SITE_DESCRIPTION,
   SITE_NAME,
 } from "@/lib/site";
+import { REALMS, type Realm } from "@/lib/realm";
 import { MATCH_CANCEL_REASONS } from "@/lib/match-cancel-reasons";
 import {
   resolveSiteAssets,
@@ -56,6 +57,14 @@ export type AppSettings = {
   site_assets: ResolvedSiteAssets;
 };
 
+export const PZU_CUP_APP_SETTINGS_DEFAULTS: Partial<AppSettings> = {
+  site_name: "PZU Cup 2026",
+  site_description: "Turniej PZU Cup — osobna baza zawodników, meczów i ustawień.",
+  home_youtube_url: null,
+  default_match_location: "",
+  match_notification_prompt_enabled: false,
+};
+
 export const APP_SETTINGS_DEFAULTS: AppSettings = {
   match_notification_prompt_enabled: false,
   home_youtube_url: null,
@@ -99,9 +108,15 @@ export const APP_SETTINGS_DEFAULTS: AppSettings = {
   }),
 };
 
-type DbLike = {
+type DbReadLike = {
   prepare: (sql: string) => {
     get: (...args: unknown[]) => Promise<unknown> | unknown;
+  };
+};
+
+type DbWriteLike = {
+  prepare: (sql: string) => {
+    run: (...args: unknown[]) => Promise<unknown> | unknown;
   };
 };
 
@@ -140,7 +155,8 @@ type AppSettingsRow = {
   asset_bg_pitch_lines_url?: string | null;
 };
 
-const APP_SETTINGS_SELECT = `
+function appSettingsSelectSql(): string {
+  return `
   SELECT
     match_notification_prompt_enabled,
     home_youtube_url,
@@ -174,8 +190,9 @@ const APP_SETTINGS_SELECT = `
     asset_bg_soccer_ball_url,
     asset_bg_stadium_url,
     asset_bg_pitch_lines_url
-  FROM app_settings WHERE id = 1
+  FROM app_settings WHERE realm = ?
 `;
+}
 
 function nonEmptyString(v: string | null | undefined, fallback: string): string {
   const t = v?.trim();
@@ -231,8 +248,15 @@ export function appSettingsSiteAssetUrl(settings: AppSettings, key: SiteAssetKey
   return settings.site_assets[key];
 }
 
-export function resolveAppSettings(row: AppSettingsRow | null | undefined): AppSettings {
-  const d = APP_SETTINGS_DEFAULTS;
+export function resolveAppSettings(
+  row: AppSettingsRow | null | undefined,
+  realm: Realm = REALMS.ACADEMY
+): AppSettings {
+  const baseDefaults =
+    realm === REALMS.PZU_CUP
+      ? { ...APP_SETTINGS_DEFAULTS, ...PZU_CUP_APP_SETTINGS_DEFAULTS }
+      : APP_SETTINGS_DEFAULTS;
+  const d = baseDefaults;
   const allowRaw = row?.allow_self_registration;
   const assetUrls = siteAssetUrlsFromRow(row);
   return {
@@ -295,9 +319,93 @@ export function resolveAppSettings(row: AppSettingsRow | null | undefined): AppS
   };
 }
 
-export async function getAppSettings(db: DbLike): Promise<AppSettings> {
-  const row = (await db.prepare(APP_SETTINGS_SELECT).get()) as AppSettingsRow | undefined;
-  return resolveAppSettings(row);
+export async function getAppSettings(db: DbReadLike, realm: Realm = REALMS.ACADEMY): Promise<AppSettings> {
+  const row = (await db.prepare(appSettingsSelectSql()).get(realm)) as AppSettingsRow | undefined;
+  return resolveAppSettings(row, realm);
+}
+
+export async function saveAppSettings(db: DbWriteLike, realm: Realm, settings: AppSettings): Promise<void> {
+  const assetUrls = {
+    logo_header: settings.asset_logo_header_url,
+    logo_crest: settings.asset_logo_crest_url,
+    logo_favicon: settings.asset_logo_favicon_url,
+    bg_soccer_ball: settings.asset_bg_soccer_ball_url,
+    bg_stadium: settings.asset_bg_stadium_url,
+    bg_pitch_lines: settings.asset_bg_pitch_lines_url,
+  };
+
+  await db
+    .prepare(
+      `UPDATE app_settings SET
+        match_notification_prompt_enabled = ?,
+        home_youtube_url = ?,
+        site_name = ?,
+        site_description = ?,
+        contact_email = ?,
+        blik_phone = ?,
+        organizer_damian_name = ?,
+        organizer_damian_phone = ?,
+        organizer_damian_email = ?,
+        organizer_mateusz_name = ?,
+        organizer_mateusz_phone = ?,
+        organizer_mateusz_email = ?,
+        facebook_damian_url = ?,
+        facebook_mateusz_url = ?,
+        allow_self_registration = ?,
+        default_match_max_slots = ?,
+        default_match_fee_pln = ?,
+        default_match_location = ?,
+        ranking_pt_goal = ?,
+        ranking_pt_assist = ?,
+        ranking_pt_km = ?,
+        ranking_pt_save = ?,
+        match_email_notifications_enabled = ?,
+        lineup_pitch_slots_min = ?,
+        lineup_pitch_slots_max = ?,
+        match_cancel_reasons_json = ?,
+        asset_logo_header_url = ?,
+        asset_logo_crest_url = ?,
+        asset_logo_favicon_url = ?,
+        asset_bg_soccer_ball_url = ?,
+        asset_bg_stadium_url = ?,
+        asset_bg_pitch_lines_url = ?
+      WHERE realm = ?`
+    )
+    .run(
+      settings.match_notification_prompt_enabled ? 1 : 0,
+      settings.home_youtube_url,
+      settings.site_name,
+      settings.site_description,
+      settings.contact_email,
+      settings.blik_phone,
+      settings.organizer_damian_name,
+      settings.organizer_damian_phone,
+      settings.organizer_damian_email,
+      settings.organizer_mateusz_name,
+      settings.organizer_mateusz_phone,
+      settings.organizer_mateusz_email,
+      settings.facebook_damian_url,
+      settings.facebook_mateusz_url,
+      settings.allow_self_registration === null ? null : settings.allow_self_registration ? 1 : 0,
+      settings.default_match_max_slots,
+      settings.default_match_fee_pln,
+      settings.default_match_location || null,
+      settings.ranking_pt_goal,
+      settings.ranking_pt_assist,
+      settings.ranking_pt_km,
+      settings.ranking_pt_save,
+      settings.match_email_notifications_enabled ? 1 : 0,
+      settings.lineup_pitch_slots_min,
+      settings.lineup_pitch_slots_max,
+      serializeMatchCancelReasons(settings.match_cancel_reasons),
+      assetUrls.logo_header,
+      assetUrls.logo_crest,
+      assetUrls.logo_favicon,
+      assetUrls.bg_soccer_ball,
+      assetUrls.bg_stadium,
+      assetUrls.bg_pitch_lines,
+      realm
+    );
 }
 
 export function blikPhoneToCopy(display: string): string {

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   Activity,
   ArrowDownAZ,
@@ -13,6 +14,7 @@ import {
   LayoutDashboard,
   LayoutGrid,
   Loader2,
+  Medal,
   MessageCircle,
   Search,
   Settings2,
@@ -69,6 +71,7 @@ import {
 } from "@/components/admin-analytics-hourly-charts";
 import { AdminWalletsSaldoSection } from "@/components/admin-wallets-saldo-section";
 import { AdminSettingsTab } from "@/components/admin-settings-tab";
+import { AdminPzuCupTab } from "@/components/admin-pzu-cup-tab";
 import { AdminGalleryTab } from "@/components/admin-gallery-tab";
 import { AdminMessagesTab } from "@/components/admin-messages-tab";
 import { AdminRankingSeasonsTab } from "@/components/admin-ranking-seasons-tab";
@@ -219,6 +222,7 @@ const tabs = [
   { id: "lineups", label: "Składy na mecz", icon: LayoutGrid },
   { id: "stats", label: "Statystyki", icon: Table2 },
   { id: "rankings", label: "Rankingi", icon: Trophy },
+  { id: "pzu-cup", label: "PZU Cup", icon: Medal },
   { id: "gallery", label: "Galeria", icon: Film },
   { id: "settings", label: "Ustawienia", icon: Settings2 },
 ] as const;
@@ -844,7 +848,14 @@ function StatsView({
 }
 
 export function AdminPanel() {
-  const [tab, setTab] = useState<TabId>("dashboard");
+  const searchParams = useSearchParams();
+  const initialTab = useMemo((): TabId => {
+    const t = searchParams.get("tab");
+    if (t && tabs.some((x) => x.id === t)) return t as TabId;
+    return "dashboard";
+  }, [searchParams]);
+
+  const [tab, setTab] = useState<TabId>(initialTab);
   const [loading, setLoading] = useState(true);
   const [summary, setSummary] = useState<Summary | null>(null);
   const [matchDefaults, setMatchDefaults] = useState<AppSettings | null>(null);
@@ -867,6 +878,10 @@ export function AdminPanel() {
   const [analyticsFetchNonce, setAnalyticsFetchNonce] = useState(0);
   const [analyticsHourly, setAnalyticsHourly] = useState<AnalyticsHourlyPayload | null>(null);
   const [logoutOpen, setLogoutOpen] = useState(false);
+
+  useEffect(() => {
+    setTab(initialTab);
+  }, [initialTab]);
 
   const onAnalyticsFromChange = useCallback((v: string) => {
     setAnalyticsRange((prev) => {
@@ -964,7 +979,7 @@ export function AdminPanel() {
     if (tab === "users") void loadUsers();
     if (tab === "matches") void loadMatches();
     if (tab === "stats") void loadStats();
-    if (tab === "lineups" || tab === "wallets" || tab === "settings" || tab === "gallery" || tab === "messages" || tab === "rankings")
+    if (tab === "lineups" || tab === "wallets" || tab === "settings" || tab === "gallery" || tab === "messages" || tab === "rankings" || tab === "pzu-cup")
       setLoading(false);
   }, [tab, loadDashboard, loadUsers, loadMatches, loadStats]);
 
@@ -1007,7 +1022,7 @@ export function AdminPanel() {
   }, [tab, analyticsRange, analyticsFetchNonce]);
 
   const shellLoading =
-    tab === "lineups" || tab === "wallets" || tab === "settings" || tab === "gallery" || tab === "messages" || tab === "rankings"
+    tab === "lineups" || tab === "wallets" || tab === "settings" || tab === "gallery" || tab === "messages" || tab === "rankings" || tab === "pzu-cup"
       ? false
       : tab === "analytics"
         ? analyticsLoading
@@ -1070,6 +1085,7 @@ export function AdminPanel() {
         {tab === "rankings" && <AdminRankingSeasonsTab />}
         {tab === "gallery" && <AdminGalleryTab />}
         {tab === "settings" && <AdminSettingsTab loading={loading} onReload={loadDashboard} />}
+        {tab === "pzu-cup" && <AdminPzuCupTab loading={loading} onReload={loadDashboard} />}
       </AdminShell>
 
       <LogoutConfirmModal open={logoutOpen} onOpenChange={setLogoutOpen} />

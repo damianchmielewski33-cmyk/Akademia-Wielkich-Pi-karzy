@@ -3,17 +3,13 @@ import { z } from "zod";
 import { getServerSession } from "@/lib/auth";
 import { getDb, logActivity } from "@/lib/db";
 import { checkRateLimit, rateLimitKey, rateLimitedResponse, RATE } from "@/lib/rate-limit";
+import { CONTACT_ADMIN_RECIPIENT_KEYS, isContactAdminRecipientKey } from "@/lib/contact-admin-recipients";
 
 export const runtime = "nodejs";
 
 const bodySchema = z.object({
   sender_name: z.string().trim().min(2, "Podaj imię i nazwisko (min. 2 znaki).").max(120),
-  sender_email: z
-    .string()
-    .trim()
-    .max(200)
-    .optional()
-    .transform((v) => (v && v.length > 0 ? v : null)),
+  recipient_key: z.enum(CONTACT_ADMIN_RECIPIENT_KEYS),
   body: z.string().trim().min(10, "Wiadomość musi mieć co najmniej 10 znaków.").max(4000),
 });
 
@@ -33,27 +29,37 @@ export async function POST(req: Request) {
   if (!parsed.success) {
     const msg = parsed.error.flatten().fieldErrors;
     const first =
-      msg.sender_name?.[0] ?? msg.body?.[0] ?? msg.sender_email?.[0] ?? "Sprawdź wprowadzone dane.";
+      msg.sender_name?.[0] ?? msg.recipient_key?.[0] ?? msg.body?.[0] ?? "Sprawdź wprowadzone dane.";
     return NextResponse.json({ error: first }, { status: 400 });
   }
 
-  const { sender_name, sender_email, body } = parsed.data;
-  if (sender_email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(sender_email)) {
-    return NextResponse.json({ error: "Nieprawidłowy adres e-mail." }, { status: 400 });
+  const { sender_name, recipient_key, body } = parsed.data;
+  if (!isContactAdminRecipientKey(recipient_key)) {
+    return NextResponse.json({ error: "Nieprawidłowy odbiorca wiadomości." }, { status: 400 });
   }
 
   const session = await getServerSession();
   const userId = session?.userId ?? null;
 
+  let senderEmail: string | null = null;
+  if (userId) {
+    const db = await getDb();
+    const row = (await db.prepare("SELECT email FROM users WHERE id = ?").get(userId)) as
+      | { email?: string | null }
+      | undefined;
+    const email = row?.email?.trim();
+    senderEmail = email || null;
+  }
+
   const db = await getDb();
   await db
     .prepare(
-      `INSERT INTO admin_messages (user_id, sender_name, sender_email, body, status)
-       VALUES (?, ?, ?, ?, 'unread')`
+      `INSERT INTO admin_messages (user_id, sender_name, sender_email, recipient_key, body, status)
+       VALUES (?, ?, ?, ?, ?, 'unread')`
     )
-    .run(userId, sender_name, sender_email, body);
+    .run(userId, sender_name, senderEmail, recipient_key, body);
 
-  await logActivity(userId, `Wiadomość do admina od ${sender_name}`);
+  await logActivity(userId, `Wiadomość do admina (${recipient_key}) od ${sender_name}`);
 
   return NextResponse.json({ ok: true });
 }
