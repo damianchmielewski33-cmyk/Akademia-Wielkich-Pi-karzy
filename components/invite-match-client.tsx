@@ -28,6 +28,7 @@ export function InviteMatchClient({
   const [transportSignupIntent, setTransportSignupIntent] = useState<"signup" | "confirm">("signup");
   const [tentativeBusy, setTentativeBusy] = useState(false);
   const [inviteLoginInline, setInviteLoginInline] = useState(false);
+  const [inviteGuestInline, setInviteGuestInline] = useState(false);
 
   const openTransportSignup = useCallback(() => {
     setTransportSignupIntent("signup");
@@ -104,6 +105,9 @@ export function InviteMatchClient({
         userSignupKind={userSignupKind}
         inviteLoginInline={inviteLoginInline}
         setInviteLoginInline={setInviteLoginInline}
+        inviteGuestInline={inviteGuestInline}
+        setInviteGuestInline={setInviteGuestInline}
+        onGuestSignedUp={() => router.refresh()}
         tentativeBusy={tentativeBusy}
         onParticipationTak={onParticipationTak}
         onParticipationTentative={() => void signupTentative()}

@@ -32,6 +32,20 @@ export async function POST(req: Request) {
   }
   const { date, time, location, max_slots, gate_pin } = parsed.data;
   const db = await getDb();
+
+  const existing = (await db
+    .prepare(
+      `SELECT id FROM matches
+       WHERE match_date = ? AND match_time = ? AND TRIM(location) = TRIM(?)
+         AND COALESCE(cancelled, 0) = 0
+       LIMIT 1`
+    )
+    .get(date, time, location)) as { id: number } | undefined;
+
+  if (existing) {
+    return NextResponse.json({ status: "ok", id: existing.id, duplicate: true });
+  }
+
   const ins = db.prepare(
     `INSERT INTO matches (match_date, match_time, location, max_slots, signed_up, played, gate_pin)
      VALUES (?, ?, ?, ?, 0, 0, ?)`

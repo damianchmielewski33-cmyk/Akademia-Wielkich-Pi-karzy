@@ -352,6 +352,18 @@ function initSchemaSync(db: Database.Database) {
   if (!userCols.some((c) => c.name === "temporary_guest_match_id")) {
     db.exec("ALTER TABLE users ADD COLUMN temporary_guest_match_id INTEGER");
   }
+  if (!userCols.some((c) => c.name === "can_pzu_cup")) {
+    db.exec("ALTER TABLE users ADD COLUMN can_pzu_cup INTEGER NOT NULL DEFAULT 0");
+  }
+
+  const matchStatsCols = db.prepare("PRAGMA table_info(match_stats)").all() as { name: string }[];
+  if (!matchStatsCols.some((c) => c.name === "season_id")) {
+    db.exec("ALTER TABLE match_stats ADD COLUMN season_id INTEGER REFERENCES ranking_seasons(id)");
+  }
+  const standaloneStatsCols = db.prepare("PRAGMA table_info(standalone_match_stats)").all() as { name: string }[];
+  if (!standaloneStatsCols.some((c) => c.name === "season_id")) {
+    db.exec("ALTER TABLE standalone_match_stats ADD COLUMN season_id INTEGER REFERENCES ranking_seasons(id)");
+  }
 
   const signupCols = db.prepare("PRAGMA table_info(match_signups)").all() as { name: string }[];
   if (!signupCols.some((c) => c.name === "drives_car")) {
@@ -433,6 +445,45 @@ function initSchemaSync(db: Database.Database) {
       PRIMARY KEY (user_id, survey_key),
       FOREIGN KEY (user_id) REFERENCES users(id)
     );
+
+    CREATE TABLE IF NOT EXISTS gallery_videos (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT NOT NULL,
+      youtube_url TEXT NOT NULL,
+      match_date TEXT,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      published INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS admin_messages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER,
+      sender_name TEXT NOT NULL,
+      sender_email TEXT,
+      body TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'unread' CHECK (status IN ('unread', 'read')),
+      read_at TEXT,
+      read_by_admin_id INTEGER,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (user_id) REFERENCES users(id),
+      FOREIGN KEY (read_by_admin_id) REFERENCES users(id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_admin_messages_status_created ON admin_messages(status, created_at DESC);
+
+    CREATE TABLE IF NOT EXISTS ranking_seasons (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      started_at TEXT NOT NULL DEFAULT (datetime('now')),
+      ended_at TEXT,
+      started_by_admin_id INTEGER NOT NULL,
+      ended_by_admin_id INTEGER,
+      FOREIGN KEY (started_by_admin_id) REFERENCES users(id),
+      FOREIGN KEY (ended_by_admin_id) REFERENCES users(id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_ranking_seasons_active ON ranking_seasons(ended_at, started_at DESC);
   `);
 
   const appSettingsCols = db.prepare("PRAGMA table_info(app_settings)").all() as { name: string }[];

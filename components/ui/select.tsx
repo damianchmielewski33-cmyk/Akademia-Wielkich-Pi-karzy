@@ -20,7 +20,7 @@ const SelectTrigger = React.forwardRef<
   <SelectPrimitive.Trigger
     ref={ref}
     className={cn(
-      fieldControlClasses({ invalid, valid, height: "h-11" }),
+      fieldControlClasses({ invalid, valid, height: "h-12" }),
       "items-center justify-between [&>span]:line-clamp-1",
       className
     )}

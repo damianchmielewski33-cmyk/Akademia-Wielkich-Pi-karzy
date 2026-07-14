@@ -1,19 +1,30 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { SiteAssetImage } from "@/components/site-asset-image";
-import { CalendarDays, HelpCircle, KeyRound, Loader2, LogIn, MapPin, UserPlus } from "lucide-react";
+import { CalendarDays, HelpCircle, KeyRound, Loader2, LogIn, MapPin, UserPlus, Users } from "lucide-react";
 import { toast } from "sonner";
+import { z } from "zod";
 import type { MatchRow } from "@/lib/db";
 import type { PlayersDataEntry } from "@/lib/terminarz-shared";
 import { LoginForm } from "@/components/login-form";
+import { MatchSignupsRosterModal } from "@/components/match-signups-roster-modal";
 import { MatchSignupCountsBlock } from "@/components/terminarz-match-counts";
+import { SiteSectionHero } from "@/components/site-section-hero";
 import { Button } from "@/components/ui/button";
+import { FormInput } from "@/components/ui/form-field";
+import { formSchemas, useValidatedForm } from "@/lib/form-validation";
 import { terminarzInviteRelativePath } from "@/lib/share-link";
 import { cn } from "@/lib/utils";
 
 const invitePanelClass = "awp-invite-panel mx-auto max-w-2xl space-y-4";
+
+const guestSchema = z.object({
+  guestFirst: formSchemas.requiredName("Imię"),
+  guestLast: formSchemas.requiredName("Nazwisko"),
+  guestAlias: formSchemas.playerAlias,
+});
 
 const STAMP_MONTHS = ["STY", "LUT", "MAR", "KWI", "MAJ", "CZE", "LIP", "SIE", "WRZ", "PAŹ", "LIS", "GRU"] as const;
 
@@ -48,10 +59,12 @@ export function InviteMatchCard({
   match,
   playersData,
   showGatePin = false,
+  onViewRoster,
 }: {
   match: MatchRow;
   playersData: Record<number, PlayersDataEntry>;
   showGatePin?: boolean;
+  onViewRoster?: () => void;
 }) {
   const when = formatMatchWhen(match.match_date, match.match_time);
   const slots = slotMeta(match.signed_up, match.max_slots);
@@ -136,6 +149,18 @@ export function InviteMatchCard({
               variant="card"
               tone="zinc"
             />
+            {onViewRoster ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="mt-2 w-full gap-2 border-zinc-300/80 bg-white/70 text-zinc-800 hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900/50 dark:text-zinc-100 dark:hover:bg-zinc-800/60"
+                onClick={onViewRoster}
+              >
+                <Users className="h-4 w-4 shrink-0" aria-hidden />
+                Zobacz kto jest zapisany
+              </Button>
+            ) : null}
           </div>
 
           <a href={mapsUrl} target="_blank" rel="noreferrer" className="awp-postcard__cta">
@@ -176,6 +201,9 @@ type InviteShareLandingProps = {
   userSignupKind: Record<number, "tentative" | "confirmed" | "declined">;
   inviteLoginInline: boolean;
   setInviteLoginInline: (v: boolean) => void;
+  inviteGuestInline: boolean;
+  setInviteGuestInline: (v: boolean) => void;
+  onGuestSignedUp?: () => void;
   tentativeBusy: boolean;
   onParticipationTak: () => void;
   onParticipationTentative: () => void | Promise<void>;
@@ -191,6 +219,9 @@ export function InviteShareLanding({
   userSignupKind,
   inviteLoginInline,
   setInviteLoginInline,
+  inviteGuestInline,
+  setInviteGuestInline,
+  onGuestSignedUp,
   tentativeBusy,
   onParticipationTak,
   onParticipationTentative,
@@ -198,9 +229,65 @@ export function InviteShareLanding({
   onAuthenticated,
 }: InviteShareLandingProps) {
   const signupToastShownRef = useRef(false);
+  const [rosterOpen, setRosterOpen] = useState(false);
+  const [guestBusy, setGuestBusy] = useState(false);
+  const guestForm = useValidatedForm({
+    initialValues: { guestFirst: "", guestLast: "", guestAlias: "" },
+    schema: guestSchema,
+  });
   const today = new Date().toISOString().slice(0, 10);
   const matchFuture = match != null && match.match_date >= today;
   const signupKind = userSignupKind[highlightMatchId];
+  const matchFull = match != null && match.signed_up >= match.max_slots;
+
+  function resetGuestForm() {
+    guestForm.reset({ guestFirst: "", guestLast: "", guestAlias: "" });
+  }
+
+  function showLoginInline() {
+    setInviteGuestInline(false);
+    resetGuestForm();
+    setInviteLoginInline(true);
+  }
+
+  function showGuestInline() {
+    setInviteLoginInline(false);
+    setInviteGuestInline(true);
+  }
+
+  function backToAuthChoices() {
+    setInviteLoginInline(false);
+    setInviteGuestInline(false);
+    resetGuestForm();
+  }
+
+  async function submitGuestSignup() {
+    if (!match || !guestForm.validate()) return;
+    const { guestFirst, guestLast, guestAlias } = guestForm.values;
+    setGuestBusy(true);
+    try {
+      const res = await fetch(`/api/zaproszenie/${highlightMatchId}/guest-signup`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          first_name: guestFirst.trim(),
+          last_name: guestLast.trim(),
+          player_alias: guestAlias.trim(),
+        }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) {
+        toast.error(typeof data.error === "string" ? data.error : "Nie udało się zapisać gościa");
+        return;
+      }
+      toast.success("Gość zapisany na mecz");
+      resetGuestForm();
+      setInviteGuestInline(false);
+      onGuestSignedUp?.();
+    } finally {
+      setGuestBusy(false);
+    }
+  }
 
   useEffect(() => {
     if (!isLoggedIn || signupToastShownRef.current || !matchFuture) return;
@@ -221,24 +308,13 @@ export function InviteShareLanding({
 
   return (
     <div className="awp-invite-page space-y-6 pb-2">
-      <header className="awp-invite-hero">
-        <div className="awp-invite-hero__crest">
-          <SiteAssetImage
-            asset="logo_crest"
-            alt=""
-            width={128}
-            height={128}
-            className="h-9 w-9"
-            sizes="36px"
-          />
-        </div>
-        <p className="awp-invite-hero__kicker">Wizytówka meczu</p>
-        <h1 className="awp-invite-hero__title">Zaproszenie na mecz</h1>
-        <p className="awp-invite-hero__subtitle">
-          Akademia Wielkich Piłkarzy — zapisz się na boisko w kilku krokach.
-        </p>
-        <div className="awp-invite-hero__rule" aria-hidden />
-      </header>
+      <SiteSectionHero
+        className="relative z-10 max-w-2xl"
+        kicker="Zaproszenie"
+        title="Zapis na mecz"
+        subtitle="Potwierdź udział, zaloguj się lub zapisz się jednorazowo jako gość."
+        align="center"
+      />
 
       {!match ? (
         <div
@@ -260,6 +336,15 @@ export function InviteShareLanding({
             match={match}
             playersData={playersData}
             showGatePin={signupKind === "confirmed"}
+            onViewRoster={() => setRosterOpen(true)}
+          />
+
+          <MatchSignupsRosterModal
+            open={rosterOpen}
+            onOpenChange={setRosterOpen}
+            match={match}
+            matchId={highlightMatchId}
+            playersData={playersData}
           />
 
           <div className={invitePanelClass}>
@@ -277,7 +362,7 @@ export function InviteShareLanding({
                   <button
                     type="button"
                     className="text-left text-sm font-medium text-[var(--mundial-navy,#1a2d5a)] underline-offset-2 hover:underline dark:text-amber-200/90"
-                    onClick={() => setInviteLoginInline(false)}
+                    onClick={backToAuthChoices}
                   >
                     ← Wróć
                   </button>
@@ -287,6 +372,75 @@ export function InviteShareLanding({
                     onAuthenticated={onAuthenticated}
                   />
                 </>
+              ) : inviteGuestInline ? (
+                <>
+                  <div className="space-y-1 text-center sm:text-left">
+                    <h2 className="text-lg font-semibold text-[var(--mundial-navy,#1a2d5a)] dark:text-zinc-100">
+                      Zapis gościa na mecz
+                    </h2>
+                    <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                      Gram jednorazowo — podaj dane i unikalny pseudonim. Gość nie loguje się do systemu; zapis dotyczy
+                      tylko tego terminu.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    className="text-left text-sm font-medium text-[var(--mundial-navy,#1a2d5a)] underline-offset-2 hover:underline dark:text-amber-200/90"
+                    onClick={backToAuthChoices}
+                  >
+                    ← Wróć
+                  </button>
+                  <div className="space-y-3">
+                    <FormInput
+                      id="invite-gfirst"
+                      label="Imię"
+                      required
+                      value={guestForm.values.guestFirst}
+                      onChange={(e) => guestForm.setValue("guestFirst", e.target.value)}
+                      onBlur={() => guestForm.setFieldTouched("guestFirst")}
+                      error={guestForm.errors.guestFirst}
+                      disabled={guestBusy}
+                    />
+                    <FormInput
+                      id="invite-glast"
+                      label="Nazwisko"
+                      required
+                      value={guestForm.values.guestLast}
+                      onChange={(e) => guestForm.setValue("guestLast", e.target.value)}
+                      onBlur={() => guestForm.setFieldTouched("guestLast")}
+                      error={guestForm.errors.guestLast}
+                      disabled={guestBusy}
+                    />
+                    <FormInput
+                      id="invite-galias"
+                      label="Pseudonim (unikalny)"
+                      required
+                      value={guestForm.values.guestAlias}
+                      onChange={(e) => guestForm.setValue("guestAlias", e.target.value)}
+                      onBlur={() => guestForm.setFieldTouched("guestAlias")}
+                      error={guestForm.errors.guestAlias}
+                      disabled={guestBusy}
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    className="w-full gap-2"
+                    disabled={guestBusy || matchFull}
+                    onClick={() => void submitGuestSignup()}
+                  >
+                    {guestBusy ? (
+                      <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
+                    ) : (
+                      <UserPlus className="h-4 w-4 shrink-0" aria-hidden />
+                    )}
+                    Zapisz się jako gość
+                  </Button>
+                  {matchFull ? (
+                    <p className="text-center text-sm text-amber-800 dark:text-amber-200">
+                      Skład jest pełny — nie można dodać kolejnego gościa.
+                    </p>
+                  ) : null}
+                </>
               ) : (
                 <>
                   <div className="space-y-1 text-center sm:text-left">
@@ -295,11 +449,12 @@ export function InviteShareLanding({
                     </h2>
                     <p className="text-sm text-zinc-600 dark:text-zinc-400">
                       Zaloguj się lub załóż konto, żeby odpowiedzieć: <strong>tak</strong>,{" "}
-                      <strong>jeszcze nie wiem</strong> albo <strong>nie biorę udziału</strong>.
+                      <strong>jeszcze nie wiem</strong> albo <strong>nie biorę udziału</strong>. Możesz też zapisać się
+                      jednorazowo jako gość.
                     </p>
                   </div>
                   <div className="flex flex-col gap-2 sm:flex-row">
-                    <Button type="button" className="flex-1 gap-2" onClick={() => setInviteLoginInline(true)}>
+                    <Button type="button" className="flex-1 gap-2" onClick={showLoginInline}>
                       <LogIn className="h-4 w-4 shrink-0" aria-hidden />
                       Zaloguj się
                     </Button>
@@ -310,6 +465,21 @@ export function InviteShareLanding({
                       </Link>
                     </Button>
                   </div>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="w-full gap-2"
+                    disabled={matchFull}
+                    onClick={showGuestInline}
+                  >
+                    <UserPlus className="h-4 w-4 shrink-0" aria-hidden />
+                    Zapisz się jako gość (jednorazowo)
+                  </Button>
+                  {matchFull ? (
+                    <p className="text-center text-sm text-amber-800 dark:text-amber-200">
+                      Skład jest pełny — zapis gościa nie jest możliwy.
+                    </p>
+                  ) : null}
                 </>
               )
             ) : signupKind == null ? (

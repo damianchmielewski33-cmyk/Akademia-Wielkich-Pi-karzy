@@ -10,6 +10,7 @@ import {
   ChevronRight,
   LogIn,
   LogOut,
+  Medal,
   Radio,
   Shield,
   Trophy,
@@ -18,7 +19,8 @@ import {
   Wallet,
 } from "lucide-react";
 import { HomeNextMatchCard } from "@/components/home-next-match-card";
-import { PitchPageHero } from "@/components/ui/pitch-card";
+import { HomeTopRankings } from "@/components/home-top-rankings";
+import { SiteSectionHero } from "@/components/site-section-hero";
 import { PlayerAvatar } from "@/components/player-avatar";
 import { MatchTransportSignupDialog } from "@/components/match-transport-signup-dialog";
 import { LogoutConfirmModal } from "@/components/logout-confirm-modal";
@@ -27,6 +29,7 @@ import { AppModal } from "@/components/ui/app-modal";
 import { FormInput } from "@/components/ui/form-field";
 import { ModalMatchSummary, modalPanelClass } from "@/components/ui/modal-shared";
 import type { MatchRow } from "@/lib/db";
+import type { HomeTopPlayer } from "@/lib/rankings-data";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -45,6 +48,10 @@ type Props = {
   profilePhotoPath: string | null;
   /** ID filmu / transmisji YouTube (osadzenie). Brak = brak sekcji na stronie. */
   youtubeLiveVideoId: string | null;
+  /** Kafelek wejścia do sekcji PZU Cup (tylko na stronie startowej). */
+  showPzuCupTile?: boolean;
+  pageVariant?: "home" | "pzu-cup";
+  topRankedPlayers?: HomeTopPlayer[];
 };
 
 export function HomeClient({
@@ -60,6 +67,9 @@ export function HomeClient({
   zawodnik,
   profilePhotoPath,
   youtubeLiveVideoId,
+  showPzuCupTile = false,
+  pageVariant = "home",
+  topRankedPlayers = [],
 }: Props) {
   const router = useRouter();
   const [transportSignupOpen, setTransportSignupOpen] = useState(false);
@@ -195,6 +205,15 @@ export function HomeClient({
           <PitchTile href="/platnosci" icon={Wallet} title="Płatności" desc="BLIK i status wpłaty za mecz" />
           <PitchTile href="/statystyki" icon={Activity} title="Statystyki" desc="Twoje liczby z boiska" />
           <PitchTile href="/rankingi" icon={Trophy} title="Rankingi" desc="Gole, asysty, punkty" variant="gold" />
+          {showPzuCupTile ? (
+            <PitchTile
+              href="/pzu-cup"
+              icon={Medal}
+              title="PZU Cup"
+              desc="Organizacja turnieju PZU Cup 2026"
+              variant="gold"
+            />
+          ) : null}
         </>
       )}
       {!isLoggedIn && (
@@ -238,14 +257,34 @@ export function HomeClient({
           </div>
         )}
 
-        <PitchPageHero
-          title="Zostań gwiazdą boiska"
-          subtitle={
-            isLoggedIn
-              ? "Wybierz, co chcesz zrobić"
-              : "Zaloguj się lub załóż konto — zapisy na mecze, statystyki, rankingi i komunikacja w drużynie"
-          }
-        />
+        {pageVariant === "pzu-cup" ? (
+          <SiteSectionHero
+            kicker="PZU Cup 2026"
+            title="Organizacja turnieju"
+            subtitle="Panel roboczy turnieju — ta strona startuje jako kopia ekranu głównego; będzie dostosowana do potrzeb PZU Cup."
+            showCrest={false}
+            align="left"
+          />
+        ) : isLoggedIn ? (
+          <SiteSectionHero
+            kicker="Start"
+            title="Co dziś na boisku?"
+            subtitle="Wybierz sekcję poniżej — terminarz, składy, statystyki i portfel."
+            showCrest={false}
+            align="left"
+          />
+        ) : (
+          <SiteSectionHero
+            kicker="Mundial 2026"
+            title="Akademia Wielkich Piłkarzy"
+            subtitle="Terminarz meczów, zapisy na boisko, statystyki i rankingi — dołącz do drużyny lub zaloguj się."
+            align="center"
+          />
+        )}
+
+        {pageVariant === "home" ? (
+          <HomeTopRankings players={topRankedPlayers} isLoggedIn={isLoggedIn} />
+        ) : null}
 
         {youtubeLiveVideoId ? (
           <section

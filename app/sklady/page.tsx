@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { SiteSectionHero } from "@/components/site-section-hero";
 import { cn } from "@/lib/utils";
 import { getDb, type MatchRow } from "@/lib/db";
 import { getAppSettings } from "@/lib/app-settings";
@@ -97,8 +98,15 @@ export default async function SkladyPage({ searchParams }: PageProps) {
   });
 
   return (
-    <div className="container mx-auto max-w-6xl flex-1 px-2 py-6 xs:px-3 sm:px-4 sm:py-10">
-      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <div className="container mx-auto max-w-6xl flex-1 space-y-6 px-2 py-6 xs:px-3 sm:px-4 sm:py-10">
+      <SiteSectionHero
+        kicker="Boisko"
+        title="Składy"
+        subtitle="Publiczne ustawienia drużyn na mecze — wybierz termin poniżej."
+        align="center"
+      />
+
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <Link href="/" className="text-sm font-medium text-emerald-800 hover:underline">
           ← Strona główna
         </Link>

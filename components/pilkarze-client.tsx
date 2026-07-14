@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import { useState } from "react";
 import { toast } from "sonner";
-import { StatsCrunchPreloader } from "@/components/preloaders";
+import { InlinePreloader } from "@/components/preloaders";
 import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
 import { Button } from "@/components/ui/button";
 import { AppModal } from "@/components/ui/app-modal";
@@ -163,7 +163,7 @@ export function PilkarzeClient({ players }: { players: PlayerListItem[] }) {
           ) : undefined
         }
       >
-        {loading && <StatsCrunchPreloader />}
+        {loading && <InlinePreloader label="Wczytywanie statystyk zawodnika…" />}
         {data && !loading && (
           <>
             <div className="pitch-rule mb-1 w-full max-w-xs opacity-70" />

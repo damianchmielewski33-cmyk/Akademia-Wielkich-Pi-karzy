@@ -14,6 +14,7 @@ import { normalizeUiTheme } from "@/lib/ui-theme";
 import { getDb } from "@/lib/db";
 import { getUserWalletBalancePln } from "@/lib/wallet";
 import { WalletBalanceFloat } from "@/components/wallet-balance-float";
+import { WriteToAdminFloat } from "@/components/write-to-admin-float";
 import { SiteJsonLd } from "@/components/site-json-ld";
 import { SiteAssetsProvider } from "@/components/site-assets-provider";
 import { getGoogleSiteVerification, getSiteUrl } from "@/lib/site";
@@ -118,6 +119,22 @@ export default async function RootLayout({
   const walletBalancePln =
     loggedInFull && session ? await getUserWalletBalancePln(session.userId) : null;
 
+  let writeToAdminDefaults: { senderName: string; senderEmail: string } | null = null;
+  if (session) {
+    const emailRow = (await db
+      .prepare("SELECT email FROM users WHERE id = ?")
+      .get(session.userId)) as { email?: string | null } | undefined;
+    const senderName =
+      [accountRow?.firstName ?? session.firstName, accountRow?.lastName ?? session.lastName]
+        .filter(Boolean)
+        .join(" ")
+        .trim() || session.zawodnik;
+    writeToAdminDefaults = {
+      senderName,
+      senderEmail: emailRow?.email?.trim() ?? "",
+    };
+  }
+
   const siteAssets = appSettings.site_assets;
   const assetCssVars = {
     "--awp-bg-stadium": siteAssetCssUrl(siteAssets.bg_stadium),
@@ -159,6 +176,7 @@ export default async function RootLayout({
           </SiteAssetsProvider>
         </PinSetupGate>
         {walletBalancePln != null ? <WalletBalanceFloat balancePln={walletBalancePln} /> : null}
+        <WriteToAdminFloat defaults={writeToAdminDefaults} />
         <MatchParticipationSurveyPrompt />
         {matchNotificationPromptEnabled ? <MatchNotificationPrompt /> : null}
         <Toaster

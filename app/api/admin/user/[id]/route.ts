@@ -22,7 +22,8 @@ export async function GET(_req: Request, ctx: Ctx) {
     .prepare(
       `
       SELECT id, first_name, last_name, player_alias AS zawodnik,
-             CASE WHEN is_admin = 1 THEN 'admin' ELSE 'player' END AS role
+             CASE WHEN is_admin = 1 THEN 'admin' ELSE 'player' END AS role,
+             COALESCE(can_pzu_cup, 0) AS can_pzu_cup
       FROM users WHERE id = ?
     `
     )
@@ -36,6 +37,7 @@ const putSchema = z.object({
   last_name: z.string().min(1),
   zawodnik: z.string().min(1),
   role: z.enum(["admin", "player"]),
+  can_pzu_cup: z.boolean().optional(),
 });
 
 export async function PUT(req: Request, ctx: Ctx) {
@@ -63,8 +65,8 @@ export async function PUT(req: Request, ctx: Ctx) {
   }
   const db = await getDb();
   const existing = (await db
-    .prepare("SELECT is_admin FROM users WHERE id = ?")
-    .get(userId)) as { is_admin: number } | undefined;
+    .prepare("SELECT is_admin, COALESCE(can_pzu_cup, 0) AS can_pzu_cup FROM users WHERE id = ?")
+    .get(userId)) as { is_admin: number; can_pzu_cup: number } | undefined;
   if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const demotionBlock = await adminDemotionBlockedReason(db, userId, gate.session.userId, data.role);
@@ -79,18 +81,21 @@ export async function PUT(req: Request, ctx: Ctx) {
     return NextResponse.json({ error: "Ten pseudonim piłkarza jest już zajęty." }, { status: 409 });
   }
   const nextIsAdmin = data.role === "admin" ? 1 : 0;
+  const nextPzuCup = data.can_pzu_cup === undefined ? existing.can_pzu_cup : data.can_pzu_cup ? 1 : 0;
   if (existing.is_admin === 1 && nextIsAdmin === 0) {
     await bumpAuthVersion(db, userId);
   }
 
   await db
     .prepare(
-      `UPDATE users SET first_name = ?, last_name = ?, player_alias = ?, is_admin = ? WHERE id = ?`
+      `UPDATE users SET first_name = ?, last_name = ?, player_alias = ?, is_admin = ?, can_pzu_cup = ? WHERE id = ?`
     )
-    .run(data.first_name, data.last_name, canonical, nextIsAdmin, userId);
+    .run(data.first_name, data.last_name, canonical, nextIsAdmin, nextPzuCup, userId);
+  const pzuNote =
+    nextPzuCup !== existing.can_pzu_cup ? `, PZU Cup: ${nextPzuCup ? "tak" : "nie"}` : "";
   await logActivity(
     gate.session.userId,
-    `Zaktualizował profil użytkownika id ${userId}: ${data.first_name} ${data.last_name} (${canonical}), rola: ${data.role === "admin" ? "admin" : "zawodnik"}`
+    `Zaktualizował profil użytkownika id ${userId}: ${data.first_name} ${data.last_name} (${canonical}), rola: ${data.role === "admin" ? "admin" : "zawodnik"}${pzuNote}`
   );
   return NextResponse.json({ status: "ok" });
 }

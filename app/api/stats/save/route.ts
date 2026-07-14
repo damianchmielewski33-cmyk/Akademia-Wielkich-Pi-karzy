@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getDb, logActivity } from "@/lib/db";
 import { requireUser } from "@/lib/api-helpers";
+import { getActiveRankingSeasonId } from "@/lib/ranking-seasons";
 import { isWithinStatsEditWindow, utcTodayYmd } from "@/lib/match-stats-rules";
 import { PARTICIPATION_SURVEY_KEY, participationSurveyPlayedYes } from "@/lib/match-participation-survey";
 
@@ -80,6 +81,16 @@ export async function POST(req: Request) {
   const data = parsed.data;
   const { goals, assists, distance, saves } = data;
   const db = await getDb();
+  const seasonId = await getActiveRankingSeasonId(db);
+  if (seasonId == null) {
+    return NextResponse.json(
+      {
+        error:
+          "Brak aktywnego sezonu rankingu. Administrator musi rozpocząć nowy sezon, zanim będzie można zapisywać statystyki.",
+      },
+      { status: 403 }
+    );
+  }
 
   if (data.survey_key === PARTICIPATION_SURVEY_KEY) {
     const okPlay = await participationSurveyPlayedYes(db, session.userId, PARTICIPATION_SURVEY_KEY);
@@ -105,9 +116,9 @@ export async function POST(req: Request) {
     } else {
       await db
         .prepare(
-          `INSERT INTO standalone_match_stats (user_id, survey_key, goals, assists, distance, saves) VALUES (?, ?, ?, ?, ?, ?)`
+          `INSERT INTO standalone_match_stats (user_id, survey_key, goals, assists, distance, saves, season_id) VALUES (?, ?, ?, ?, ?, ?, ?)`
         )
-        .run(session.userId, PARTICIPATION_SURVEY_KEY, goals, assists, distance, saves);
+        .run(session.userId, PARTICIPATION_SURVEY_KEY, goals, assists, distance, saves, seasonId);
     }
     logActivity(
       session.userId,
@@ -172,8 +183,8 @@ export async function POST(req: Request) {
   }
 
   await db.prepare(
-    "INSERT INTO match_stats (user_id, match_id, goals, assists, distance, saves) VALUES (?, ?, ?, ?, ?, ?)"
-  ).run(session.userId, match_id, goals, assists, distance, saves);
+    "INSERT INTO match_stats (user_id, match_id, goals, assists, distance, saves, season_id) VALUES (?, ?, ?, ?, ?, ?, ?)"
+  ).run(session.userId, match_id, goals, assists, distance, saves, seasonId);
   logActivity(
     session.userId,
     `Uzupełnił własne statystyki za mecz id ${match_id} (bramki: ${goals}, asysty: ${assists}, km: ${distance}, obrony: ${saves})`

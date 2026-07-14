@@ -6,7 +6,7 @@ export type AddMatchGuestInput = {
   firstName: string;
   lastName: string;
   playerAlias: string;
-  actorUserId: number;
+  actorUserId: number | null;
   /** Tekst do `logActivity` — domyślnie opis dodania gościa. */
   activityMessage?: string;
 };

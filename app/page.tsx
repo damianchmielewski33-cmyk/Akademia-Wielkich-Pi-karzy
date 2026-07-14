@@ -1,11 +1,9 @@
 import type { Metadata } from "next";
-import { getAccountNavFields } from "@/lib/account-server";
 import { getServerSession } from "@/lib/auth";
-import { getDb, type MatchRow } from "@/lib/db";
 import { HomeClient } from "@/components/home-client";
-import { isLocalMatchDay } from "@/lib/transport";
-import { formatPonderingPlayersPolish } from "@/lib/terminarz-shared";
-import { getSiteUrl, parseYoutubeVideoIdFromUserInput } from "@/lib/site";
+import { getHomePageClientProps } from "@/lib/home-page-data";
+import { getPzuCupAccessForUser } from "@/lib/pzu-cup-access";
+import { getSiteUrl } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Start",
@@ -16,79 +14,12 @@ export const metadata: Metadata = {
 };
 
 export default async function HomePage() {
-  const db = await getDb();
   const session = await getServerSession();
+  const canPzuCup = session ? await getPzuCupAccessForUser(session.userId, session.isAdmin) : false;
+  const props = await getHomePageClientProps(session, {
+    showPzuCupTile: canPzuCup,
+    pageVariant: "home",
+  });
 
-  const nextMatch = (await db
-    .prepare(
-      "SELECT * FROM matches WHERE played = 0 AND COALESCE(cancelled, 0) = 0 AND datetime(match_date || ' ' || match_time) > datetime('now', 'localtime') ORDER BY match_date, match_time LIMIT 1"
-    )
-    .get()) as MatchRow | undefined;
-
-  let nextMatchSignup: "none" | "tentative" | "confirmed" | "declined" = "none";
-  if (nextMatch && session) {
-    const signup = (await db
-      .prepare(
-        `SELECT COALESCE(commitment, 1) AS commitment FROM match_signups WHERE user_id = ? AND match_id = ?`
-      )
-      .get(session.userId, nextMatch.id)) as { commitment: number } | undefined;
-    if (signup) {
-      nextMatchSignup =
-        signup.commitment === 0 ? "tentative" : signup.commitment === 2 ? "declined" : "confirmed";
-    }
-  }
-
-  const transportHomeActive = Boolean(nextMatch && isLocalMatchDay(nextMatch));
-
-  let nextMatchTentativeLine = "";
-  if (nextMatch) {
-    const row = (await db
-      .prepare(
-        `SELECT COUNT(*) AS c FROM match_signups WHERE match_id = ? AND COALESCE(commitment, 1) = 0`
-      )
-      .get(nextMatch.id)) as { c: number } | undefined;
-    const c = Number(row?.c ?? 0);
-    nextMatchTentativeLine = formatPonderingPlayersPolish(c);
-  }
-
-  const lineupPublicNextMatch = Boolean(nextMatch && nextMatch.lineup_public === 1);
-
-  let profilePhotoPath: string | null = null;
-  let zawodnik = "";
-  if (session) {
-    const nav = await getAccountNavFields(session.userId);
-    profilePhotoPath = nav?.profilePhotoPath ?? null;
-    zawodnik = nav?.zawodnik ?? session.zawodnik;
-  }
-
-  const settingsRow = (await db
-    .prepare("SELECT home_youtube_url FROM app_settings WHERE id = 1")
-    .get()) as { home_youtube_url: string | null } | undefined;
-  const youtubeLiveVideoId = settingsRow?.home_youtube_url
-    ? parseYoutubeVideoIdFromUserInput(settingsRow.home_youtube_url)
-    : null;
-
-  const nextMatchForClient =
-    nextMatch && nextMatchSignup === "confirmed"
-      ? nextMatch
-      : nextMatch
-        ? { ...nextMatch, gate_pin: null }
-        : null;
-
-  return (
-    <HomeClient
-      nextMatch={nextMatchForClient}
-      nextMatchTentativeLine={nextMatchTentativeLine}
-      lineupPublicNextMatch={lineupPublicNextMatch}
-      nextMatchSignup={nextMatchSignup}
-      transportHomeActive={transportHomeActive}
-      isLoggedIn={Boolean(session)}
-      isAdmin={session?.isAdmin ?? false}
-      firstName={session?.firstName ?? ""}
-      lastName={session?.lastName ?? ""}
-      zawodnik={zawodnik}
-      profilePhotoPath={profilePhotoPath}
-      youtubeLiveVideoId={youtubeLiveVideoId}
-    />
-  );
+  return <HomeClient {...props} />;
 }

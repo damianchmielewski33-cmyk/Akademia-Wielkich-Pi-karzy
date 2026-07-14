@@ -12,6 +12,7 @@ const postSchema = z.object({
   last_name: z.string().min(1).trim(),
   zawodnik: z.string().min(1).trim(),
   role: z.enum(["admin", "player"]),
+  can_pzu_cup: z.boolean().optional(),
 });
 
 export async function GET() {
@@ -23,6 +24,7 @@ export async function GET() {
       SELECT id, first_name, last_name, player_alias AS zawodnik,
              profile_photo_path,
              CASE WHEN is_admin = 1 THEN 'admin' ELSE 'player' END AS role,
+             COALESCE(can_pzu_cup, 0) AS can_pzu_cup,
              pin_reset_requested,
              CASE WHEN pin_hash IS NOT NULL THEN 1 ELSE 0 END AS pin_set,
              CASE WHEN pin_hash_pending IS NOT NULL THEN 1 ELSE 0 END AS pin_change_pending
@@ -46,7 +48,7 @@ export async function POST(req: Request) {
   if (!parsed.success) {
     return NextResponse.json({ error: "Wszystkie pola są wymagane." }, { status: 400 });
   }
-  const { first_name, last_name, zawodnik, role } = parsed.data;
+  const { first_name, last_name, zawodnik, role, can_pzu_cup } = parsed.data;
 
   const canonical = normalizePlayerAlias(zawodnik);
   if (!canonical) {
@@ -63,13 +65,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Ten pseudonim piłkarza jest już zajęty." }, { status: 409 });
   }
   const isAdmin = role === "admin" ? 1 : 0;
+  const pzuCup = can_pzu_cup ? 1 : 0;
   try {
     const r = await db
       .prepare(
-        `INSERT INTO users (first_name, last_name, player_alias, is_admin, pin_hash, auth_version)
-         VALUES (?, ?, ?, ?, NULL, 0)`
+        `INSERT INTO users (first_name, last_name, player_alias, is_admin, can_pzu_cup, pin_hash, auth_version)
+         VALUES (?, ?, ?, ?, ?, NULL, 0)`
       )
-      .run(first_name, last_name, canonical, isAdmin);
+      .run(first_name, last_name, canonical, isAdmin, pzuCup);
     const userId = Number(r.lastInsertRowid);
     await logActivity(
       gate.session.userId,

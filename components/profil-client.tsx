@@ -30,7 +30,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { PhotoDevelopPreloader } from "@/components/preloaders";
+import { InlinePreloader } from "@/components/preloaders";
 import { PlayerAliasPicker } from "@/components/player-alias-picker";
 import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
 import { PitchPageHero } from "@/components/ui/pitch-card";
@@ -236,7 +236,9 @@ export function ProfilClient({ initial }: Props) {
                 size="profile"
                 ringClassName="ring-0"
               />
-              {uploadingPhoto ? <PhotoDevelopPreloader /> : null}
+              {uploadingPhoto ? (
+                <InlinePreloader layout="overlay" label="Zapisywanie zdjęcia…" />
+              ) : null}
             </div>
             <div className="mt-3 w-full max-w-[240px]">
               <PlayerNameStack

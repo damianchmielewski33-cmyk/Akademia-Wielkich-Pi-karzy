@@ -16,7 +16,6 @@ import {
 } from "@/components/admin-ui";
 import { PitchCardDecorations, pitchLabelClass } from "@/components/ui/pitch-card";
 import type { PlatnosciUserLite } from "@/components/platnosci-client";
-import { nativeSelectClasses } from "@/lib/field-styles";
 import { cn } from "@/lib/utils";
 
 type AdminWalletPlayerRow = PlatnosciUserLite & { balance_pln: number };
@@ -88,6 +87,145 @@ function PlatnosciCollapsible({
   );
 }
 
+function filterWalletPlayers(players: AdminWalletPlayerRow[], query: string) {
+  const q = query.trim().toLowerCase();
+  if (!q) return players.slice(0, 12);
+  return players
+    .filter((p) => {
+      const key = `${p.first_name} ${p.last_name} ${p.zawodnik}`.toLowerCase();
+      return key.includes(q);
+    })
+    .slice(0, 20);
+}
+
+function WalletPlayerPicker({
+  players,
+  selectedId,
+  query,
+  onQueryChange,
+  onSelectId,
+  onClearSelection,
+  searchInputId,
+  emptyHint,
+}: {
+  players: AdminWalletPlayerRow[];
+  selectedId: number | null;
+  query: string;
+  onQueryChange: (q: string) => void;
+  onSelectId: (id: number) => void;
+  onClearSelection: () => void;
+  searchInputId: string;
+  emptyHint?: string;
+}) {
+  const selected = selectedId != null ? players.find((p) => p.id === selectedId) : undefined;
+  const filtered = useMemo(() => filterWalletPlayers(players, query), [players, query]);
+  const playerCardClass =
+    "rounded-xl border border-emerald-200 bg-emerald-50/80 p-3 dark:border-emerald-800/50 dark:bg-emerald-950/35";
+
+  if (selected) {
+    const b = Number(selected.balance_pln ?? 0);
+    const neg = b < 0;
+    const pos = b > 0;
+    return (
+      <div className={playerCardClass}>
+        <div className="flex flex-wrap items-center gap-3">
+          <PlayerAvatar
+            photoPath={selected.profile_photo_path}
+            firstName={selected.first_name}
+            lastName={selected.last_name}
+            size="md"
+            ringClassName="ring-2 ring-emerald-300/90 dark:ring-emerald-600/70"
+          />
+          <div className="min-w-0 flex-1">
+            <PlayerNameStack
+              firstName={selected.first_name}
+              lastName={selected.last_name}
+              nick={selected.zawodnik}
+              primaryClassName="text-base font-semibold text-emerald-950 dark:text-emerald-50"
+              secondaryClassName="text-sm text-emerald-800/90 dark:text-emerald-200/80"
+            />
+            <p
+              className={cn(
+                "mt-1.5 text-sm font-semibold tabular-nums",
+                neg ? "text-red-700 dark:text-red-300" : pos ? "text-emerald-800 dark:text-emerald-200" : "text-zinc-700 dark:text-zinc-300"
+              )}
+            >
+              Obecne saldo: {formatPln(b)}
+            </p>
+          </div>
+          <Button type="button" variant="outline" size="sm" className="shrink-0" onClick={onClearSelection}>
+            Zmień zawodnika
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={searchInputId} className="sr-only">
+        Szukaj zawodnika
+      </Label>
+      <div className="relative">
+        <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" aria-hidden />
+        <Input
+          id={searchInputId}
+          type="search"
+          placeholder="Szukaj po imieniu, nazwisku lub pseudonimie…"
+          value={query}
+          onChange={(e) => onQueryChange(e.target.value)}
+          autoComplete="off"
+          className="pl-9"
+        />
+      </div>
+      {players.length ? (
+        <ul className="max-h-44 space-y-0 overflow-y-auto rounded-xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-700 dark:bg-zinc-950/50">
+          {filtered.length ? (
+            filtered.map((p) => (
+              <li key={p.id}>
+                <button
+                  type="button"
+                  className="flex w-full items-center gap-2 border-b border-zinc-100 px-3 py-2.5 text-left text-sm last:border-b-0 hover:bg-emerald-50 dark:border-zinc-800 dark:hover:bg-emerald-950/40"
+                  onClick={() => {
+                    onSelectId(p.id);
+                    onQueryChange("");
+                  }}
+                >
+                  <PlayerAvatar
+                    photoPath={p.profile_photo_path}
+                    firstName={p.first_name}
+                    lastName={p.last_name}
+                    size="sm"
+                    ringClassName="ring-2 ring-emerald-200/90"
+                  />
+                  <span className="min-w-0 flex-1 truncate font-medium text-zinc-900 dark:text-zinc-100">
+                    {p.first_name} {p.last_name}
+                    {p.zawodnik ? (
+                      <span className="ml-1 font-normal text-zinc-500 dark:text-zinc-400">({p.zawodnik})</span>
+                    ) : null}
+                  </span>
+                  <span className="shrink-0 text-xs font-semibold tabular-nums text-emerald-800 dark:text-emerald-200">
+                    {formatPln(Number(p.balance_pln ?? 0))}
+                  </span>
+                  {"is_admin" in p && Number((p as { is_admin?: number }).is_admin ?? 0) ? (
+                    <span className="shrink-0 text-[10px] font-bold uppercase text-zinc-500">Admin</span>
+                  ) : null}
+                </button>
+              </li>
+            ))
+          ) : (
+            <li className="px-3 py-4 text-center text-xs text-zinc-500">Brak wyników wyszukiwania.</li>
+          )}
+        </ul>
+      ) : (
+        <p className="rounded-lg border border-dashed border-zinc-200 bg-zinc-50/80 px-3 py-2.5 text-xs text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900/40 dark:text-zinc-400">
+          {emptyHint ?? "Brak zawodników na liście."}
+        </p>
+      )}
+    </div>
+  );
+}
+
 type AdminWalletsSaldoSectionProps = {
   /**
    * true: bez osobnego H1 — do osadzenia w /platnosci (obok innych kart).
@@ -118,6 +256,7 @@ export function AdminWalletsSaldoSection({
   const [adminBalanceNote, setAdminBalanceNote] = useState("");
   const [adminBalanceSubmitting, setAdminBalanceSubmitting] = useState(false);
   const [topUpUserId, setTopUpUserId] = useState<number | null>(null);
+  const [topUpUserQuery, setTopUpUserQuery] = useState("");
   const [topUpAmount, setTopUpAmount] = useState("");
   const [topUpNote, setTopUpNote] = useState("");
   const [topUpSubmitting, setTopUpSubmitting] = useState(false);
@@ -138,10 +277,6 @@ export function AdminWalletsSaldoSection({
         setAdminBalanceUserId(first.id);
         setAdminBalanceUserQuery("");
       }
-      if (topUpUserId === null) {
-        const list = r.data.walletUsers ?? r.data.players ?? [];
-        if (list.length) setTopUpUserId(list[0]!.id);
-      }
     } finally {
       setAdminLoading(false);
     }
@@ -157,20 +292,14 @@ export function AdminWalletsSaldoSection({
     [adminOverview]
   );
 
-  const filteredBalancePlayers = useMemo(() => {
-    const q = adminBalanceUserQuery.trim().toLowerCase();
-    if (!q) return balancePlayerList.slice(0, 12);
-    return balancePlayerList
-      .filter((p) => {
-        const key = `${p.first_name} ${p.last_name} ${p.zawodnik}`.toLowerCase();
-        return key.includes(q);
-      })
-      .slice(0, 20);
-  }, [balancePlayerList, adminBalanceUserQuery]);
-
   const selectedBalancePlayer = useMemo(
     () => (adminBalanceUserId != null ? balancePlayerList.find((p) => p.id === adminBalanceUserId) : undefined),
     [balancePlayerList, adminBalanceUserId]
+  );
+
+  const selectedTopUpPlayer = useMemo(
+    () => (topUpUserId != null ? balancePlayerList.find((p) => p.id === topUpUserId) : undefined),
+    [balancePlayerList, topUpUserId]
   );
 
   async function generatePublicLink(kind: "last_match_wallets" | "all_wallets") {
@@ -282,64 +411,68 @@ export function AdminWalletsSaldoSection({
           {showTopUp ? (() => {
             const topUpBody = (
               <>
-                <div className={cn("grid gap-3 sm:grid-cols-3", embedded ? "mt-1" : "mt-3")}>
-                  <div className="sm:col-span-1">
-                    <Label htmlFor="admin-topup-user">Zawodnik</Label>
-                    <select
-                      id="admin-topup-user"
-                      className={cn(nativeSelectClasses, "mt-1 w-full")}
-                      value={topUpUserId ?? ""}
-                      onChange={(e) => setTopUpUserId(e.target.value ? Number(e.target.value) : null)}
-                    >
-                      <option value="" disabled>
-                        Wybierz zawodnika…
-                      </option>
-                      {balancePlayerList.map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.first_name} {p.last_name}
-                          {p.zawodnik ? ` (${p.zawodnik})` : ""}
-                        </option>
-                      ))}
-                    </select>
-                    {topUpUserId != null ? (() => {
-                      const p = balancePlayerList.find((x) => x.id === topUpUserId);
-                      if (!p) return null;
-                      const b = Number(p.balance_pln ?? 0);
-                      return (
-                        <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">
-                          Obecne saldo: {formatPln(b)}
-                        </p>
-                      );
-                    })() : null}
-                  </div>
-                  <div className="sm:col-span-1">
-                    <Label htmlFor="admin-topup-amount">Kwota przelewu (PLN)</Label>
-                    <Input
-                      id="admin-topup-amount"
-                      type="text"
-                      inputMode="decimal"
-                      placeholder="np. 50"
-                      value={topUpAmount}
-                      onChange={(e) => setTopUpAmount(e.target.value)}
+                <section aria-labelledby="admin-topup-player-heading" className={cn(embedded ? "mt-1" : "mt-3")}>
+                  <p
+                    id="admin-topup-player-heading"
+                    className="text-xs font-semibold uppercase tracking-[0.12em] text-zinc-600 dark:text-zinc-400"
+                  >
+                    Zawodnik
+                  </p>
+                  <div className="mt-2">
+                    <WalletPlayerPicker
+                      players={balancePlayerList}
+                      selectedId={topUpUserId}
+                      query={topUpUserQuery}
+                      onQueryChange={setTopUpUserQuery}
+                      onSelectId={setTopUpUserId}
+                      onClearSelection={() => {
+                        setTopUpUserId(null);
+                        setTopUpUserQuery("");
+                      }}
+                      searchInputId="admin-topup-user-search"
                     />
                   </div>
-                  <div className="sm:col-span-1">
-                    <Label htmlFor="admin-topup-note">Opis (opcjonalnie)</Label>
-                    <Input
-                      id="admin-topup-note"
-                      type="text"
-                      placeholder="np. BLIK od Jana"
-                      value={topUpNote}
-                      onChange={(e) => setTopUpNote(e.target.value)}
-                    />
-                  </div>
-                </div>
-                <div className="mt-3">
-                  <Button type="button" disabled={topUpSubmitting} onClick={() => void adminTopUpWallet()}>
-                    {topUpSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
-                    Dodaj do salda
-                  </Button>
-                </div>
+                </section>
+
+                {selectedTopUpPlayer ? (
+                  <>
+                    <div className={cn("mt-4 grid gap-3 sm:grid-cols-2")}>
+                      <div>
+                        <Label htmlFor="admin-topup-amount">Kwota przelewu (PLN)</Label>
+                        <Input
+                          id="admin-topup-amount"
+                          type="text"
+                          inputMode="decimal"
+                          placeholder="np. 50"
+                          value={topUpAmount}
+                          onChange={(e) => setTopUpAmount(e.target.value)}
+                          className="mt-1"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="admin-topup-note">Opis (opcjonalnie)</Label>
+                        <Input
+                          id="admin-topup-note"
+                          type="text"
+                          placeholder="np. BLIK od Jana"
+                          value={topUpNote}
+                          onChange={(e) => setTopUpNote(e.target.value)}
+                          className="mt-1"
+                        />
+                      </div>
+                    </div>
+                    <div className="mt-3">
+                      <Button type="button" disabled={topUpSubmitting} onClick={() => void adminTopUpWallet()}>
+                        {topUpSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
+                        Dodaj do salda
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  <p className="mt-3 rounded-lg border border-dashed border-zinc-200 bg-zinc-50/80 px-3 py-2.5 text-xs text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900/40 dark:text-zinc-400">
+                    Wyszukaj i wybierz zawodnika, aby dodać wpłatę do salda.
+                  </p>
+                )}
               </>
             );
 
@@ -368,11 +501,6 @@ export function AdminWalletsSaldoSection({
           })() : null}
 
           {(() => {
-            const balanceFormPanelClass =
-              "rounded-xl border border-amber-200/90 bg-amber-50/60 p-4 dark:border-amber-800/50 dark:bg-amber-950/25";
-            const playerReadonlyCardClass =
-              "rounded-xl border border-emerald-200 bg-emerald-50/80 p-3 dark:border-emerald-800/50 dark:bg-emerald-950/35";
-
             const balanceEditBody = (
               <div className={cn("space-y-4", embedded ? "mt-1" : "mt-3")}>
                 <section aria-labelledby="admin-balance-player-heading">
@@ -383,135 +511,27 @@ export function AdminWalletsSaldoSection({
                     Zawodnik
                   </p>
 
-                  {selectedBalancePlayer ? (
-                    <div className={cn(playerReadonlyCardClass, "mt-2")}>
-                      <div className="flex flex-wrap items-center gap-3">
-                        <PlayerAvatar
-                          photoPath={selectedBalancePlayer.profile_photo_path}
-                          firstName={selectedBalancePlayer.first_name}
-                          lastName={selectedBalancePlayer.last_name}
-                          size="md"
-                          ringClassName="ring-2 ring-emerald-300/90 dark:ring-emerald-600/70"
-                        />
-                        <div className="min-w-0 flex-1">
-                          <PlayerNameStack
-                            firstName={selectedBalancePlayer.first_name}
-                            lastName={selectedBalancePlayer.last_name}
-                            nick={selectedBalancePlayer.zawodnik}
-                            primaryClassName="text-base font-semibold text-emerald-950 dark:text-emerald-50"
-                            secondaryClassName="text-sm text-emerald-800/90 dark:text-emerald-200/80"
-                          />
-                          {(() => {
-                            const b = Number(selectedBalancePlayer.balance_pln ?? 0);
-                            const neg = b < 0;
-                            const pos = b > 0;
-                            return (
-                              <p
-                                className={cn(
-                                  "mt-1.5 text-sm font-semibold tabular-nums",
-                                  neg
-                                    ? "text-red-700 dark:text-red-300"
-                                    : pos
-                                      ? "text-emerald-800 dark:text-emerald-200"
-                                      : "text-zinc-700 dark:text-zinc-300"
-                                )}
-                              >
-                                Obecne saldo: {formatPln(b)}
-                                {neg ? (
-                                  <span className="ml-2 inline-block rounded border border-red-200 bg-red-100 px-1.5 py-0.5 text-[10px] font-bold uppercase text-red-900 dark:border-red-800 dark:bg-red-900/50 dark:text-red-200">
-                                    Niedopłata
-                                  </span>
-                                ) : pos ? (
-                                  <span className="ml-2 inline-block rounded border border-emerald-300 bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold uppercase text-emerald-900 dark:border-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-100">
-                                    Nadwyżka
-                                  </span>
-                                ) : null}
-                              </p>
-                            );
-                          })()}
-                        </div>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="shrink-0"
-                          onClick={() => {
-                            setAdminBalanceUserId(null);
-                            setAdminBalanceUserQuery("");
-                          }}
-                        >
-                          Zmień zawodnika
-                        </Button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="mt-2 space-y-2">
-                      <Label htmlFor="admin-balance-user" className="sr-only">
-                        Szukaj zawodnika
-                      </Label>
-                      <div className="relative">
-                        <Search
-                          className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400"
-                          aria-hidden
-                        />
-                        <Input
-                          id="admin-balance-user"
-                          type="search"
-                          placeholder="Szukaj po imieniu, nazwisku lub pseudonimie…"
-                          value={adminBalanceUserQuery}
-                          onChange={(e) => setAdminBalanceUserQuery(e.target.value)}
-                          autoComplete="off"
-                          className="pl-9"
-                        />
-                      </div>
-                      {balancePlayerList.length ? (
-                        <ul className="max-h-44 space-y-0 overflow-y-auto rounded-xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-700 dark:bg-zinc-950/50">
-                          {filteredBalancePlayers.length ? (
-                            filteredBalancePlayers.map((p) => (
-                              <li key={p.id}>
-                                <button
-                                  type="button"
-                                  className="flex w-full items-center gap-2 border-b border-zinc-100 px-3 py-2.5 text-left text-sm last:border-b-0 hover:bg-emerald-50 dark:border-zinc-800 dark:hover:bg-emerald-950/40"
-                                  onClick={() => {
-                                    setAdminBalanceUserId(p.id);
-                                    setAdminBalanceUserQuery("");
-                                  }}
-                                >
-                                  <PlayerAvatar
-                                    photoPath={p.profile_photo_path}
-                                    firstName={p.first_name}
-                                    lastName={p.last_name}
-                                    size="sm"
-                                    ringClassName="ring-2 ring-emerald-200/90"
-                                  />
-                                  <span className="min-w-0 flex-1 truncate font-medium text-zinc-900 dark:text-zinc-100">
-                                    {p.first_name} {p.last_name}
-                                    {p.zawodnik ? (
-                                      <span className="ml-1 font-normal text-zinc-500 dark:text-zinc-400">
-                                        ({p.zawodnik})
-                                      </span>
-                                    ) : null}
-                                  </span>
-                                  <span className="shrink-0 text-xs font-semibold tabular-nums text-emerald-800 dark:text-emerald-200">
-                                    {formatPln(Number(p.balance_pln ?? 0))}
-                                  </span>
-                                  {"is_admin" in p && Number((p as { is_admin?: number }).is_admin ?? 0) ? (
-                                    <span className="shrink-0 text-[10px] font-bold uppercase text-zinc-500">Admin</span>
-                                  ) : null}
-                                </button>
-                              </li>
-                            ))
-                          ) : (
-                            <li className="px-3 py-4 text-center text-xs text-zinc-500">Brak wyników wyszukiwania.</li>
-                          )}
-                        </ul>
-                      ) : null}
-                    </div>
-                  )}
+                  <div className="mt-2">
+                    <WalletPlayerPicker
+                      players={balancePlayerList}
+                      selectedId={adminBalanceUserId}
+                      query={adminBalanceUserQuery}
+                      onQueryChange={setAdminBalanceUserQuery}
+                      onSelectId={setAdminBalanceUserId}
+                      onClearSelection={() => {
+                        setAdminBalanceUserId(null);
+                        setAdminBalanceUserQuery("");
+                      }}
+                      searchInputId="admin-balance-user"
+                    />
+                  </div>
                 </section>
 
                 {selectedBalancePlayer ? (
-                  <section aria-labelledby="admin-balance-form-heading" className={balanceFormPanelClass}>
+                  <section
+                    aria-labelledby="admin-balance-form-heading"
+                    className="rounded-xl border border-amber-200/90 bg-amber-50/60 p-4 dark:border-amber-800/50 dark:bg-amber-950/25"
+                  >
                     <p
                       id="admin-balance-form-heading"
                       className="text-xs font-semibold uppercase tracking-[0.12em] text-amber-900/80 dark:text-amber-200/90"

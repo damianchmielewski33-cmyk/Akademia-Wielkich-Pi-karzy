@@ -2,13 +2,12 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import type { ComponentType } from "react";
 import { Route, Share2, Shield, Target, Trophy } from "lucide-react";
-import { getDb } from "@/lib/db";
 import { getAppSettings } from "@/lib/app-settings";
+import { getDb } from "@/lib/db";
 import { getServerSession } from "@/lib/auth";
-import {
-  rankPlayers,
-  type RankablePlayer,
-} from "@/lib/rankings";
+import { getRankingsPageData } from "@/lib/rankings-data";
+import { rankPlayers, type RankablePlayer } from "@/lib/rankings";
+import { RankingiSeasonPicker } from "@/components/rankingi-season-picker";
 import { PitchCard, PitchPageHero, pitchLabelClass } from "@/components/ui/pitch-card";
 import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -18,9 +17,31 @@ export const metadata: Metadata = {
   description: "Porównanie zawodników według goli, asyst i punktów.",
 };
 
-export default async function RankingiPage() {
+type Props = {
+  searchParams: Promise<{ season?: string }>;
+};
+
+export default async function RankingiPage({ searchParams }: Props) {
   const session = await getServerSession();
   if (!session) redirect("/login");
+
+  const params = await searchParams;
+  const requestedSeasonId = params.season ? Number(params.season) : null;
+  const { season, seasons, players } = await getRankingsPageData(
+    requestedSeasonId != null && Number.isFinite(requestedSeasonId) ? requestedSeasonId : null
+  );
+
+  if (params.season && !season) {
+    redirect("/rankingi");
+  }
+
+  if (!season) {
+    return (
+      <div className="container mx-auto max-w-6xl flex-1 px-4 py-8 text-center sm:py-10">
+        <PitchPageHero title="Rankingi" subtitle="Brak sezonów rankingu do wyświetlenia." />
+      </div>
+    );
+  }
 
   const db = await getDb();
   const appSettings = await getAppSettings(db);
@@ -29,130 +50,59 @@ export default async function RankingiPage() {
   const PT_KM = appSettings.ranking_pt_km;
   const PT_SAVE = appSettings.ranking_pt_save;
 
-  const rows = await db
-    .prepare(
-      `SELECT u.id AS user_id,
-              u.first_name, u.last_name,
-              u.player_alias AS zawodnik,
-              u.profile_photo_path,
-              COALESCE(ms.goals, 0) + COALESCE(sms.goals, 0) AS goals,
-              COALESCE(ms.assists, 0) + COALESCE(sms.assists, 0) AS assists,
-              COALESCE(ms.distance, 0) + COALESCE(sms.distance, 0) AS distance,
-              COALESCE(ms.saves, 0) + COALESCE(sms.saves, 0) AS saves,
-              COALESCE(ms.mecze, 0) + COALESCE(sms.mecze, 0) AS mecze
-       FROM users u
-       LEFT JOIN (
-         SELECT user_id,
-                SUM(goals) AS goals,
-                SUM(assists) AS assists,
-                SUM(distance) AS distance,
-                SUM(saves) AS saves,
-                COUNT(*) AS mecze
-         FROM match_stats
-         GROUP BY user_id
-       ) ms ON ms.user_id = u.id
-       LEFT JOIN (
-         SELECT user_id,
-                SUM(goals) AS goals,
-                SUM(assists) AS assists,
-                SUM(distance) AS distance,
-                SUM(saves) AS saves,
-                COUNT(*) AS mecze
-         FROM standalone_match_stats
-         GROUP BY user_id
-       ) sms ON sms.user_id = u.id`
-    )
-    .all() as {
-    user_id: number;
-    first_name: string;
-    last_name: string;
-    zawodnik: string;
-    profile_photo_path: string | null;
-    goals: number;
-    assists: number;
-    distance: number;
-    saves: number;
-    mecze: number;
-  }[];
-
-  const players: RankablePlayer[] = rows.map((r) => {
-    const g = Number(r.goals) || 0;
-    const a = Number(r.assists) || 0;
-    const d = Number(r.distance) || 0;
-    const sv = Number(r.saves) || 0;
-    const mecze = Number(r.mecze) || 0;
-    const punkty = PT_GOAL * g + PT_ASSIST * a + PT_KM * d + PT_SAVE * sv;
-    return {
-      userId: r.user_id,
-      first_name: r.first_name,
-      last_name: r.last_name,
-      zawodnik: r.zawodnik,
-      profile_photo_path: r.profile_photo_path ?? null,
-      goals: g,
-      assists: a,
-      distance: d,
-      saves: sv,
-      mecze,
-      punkty: Math.round(punkty * 100) / 100,
-    };
-  });
-
   const rankingGole = rankPlayers(players, "goals");
   const rankingAsysty = rankPlayers(players, "assists");
   const rankingDystans = rankPlayers(players, "distance");
   const rankingObrony = rankPlayers(players, "saves");
   const rankingOgolny = rankPlayers(players, "punkty");
 
+  const seasonSubtitle = season.is_active
+    ? `${season.name} — sezon aktywny`
+    : `${season.name} — sezon zakończony`;
+
   return (
     <div className="container mx-auto max-w-6xl flex-1 px-4 py-8 text-center sm:py-10">
-      <PitchPageHero title="Rankingi" subtitle="Tabele goli, asyst, dystansu, obron i punktów łącznie" />
+      <PitchPageHero title="Rankingi" subtitle={seasonSubtitle} />
+
+      {seasons.length > 1 ? (
+        <RankingiSeasonPicker
+          seasons={seasons.map((s) => ({ id: s.id, name: s.name, is_active: s.is_active }))}
+          selectedSeasonId={season.id}
+        />
+      ) : (
+        <p className="mx-auto mt-4 max-w-md text-sm text-emerald-100/75">{season.name}</p>
+      )}
 
       <div className="mt-10 text-left">
         <PitchCard className="mx-auto max-w-2xl lg:max-w-none" contentClassName="px-5 py-4 sm:px-6 sm:py-5">
-            <span className={pitchLabelClass}>Punktacja</span>
-            <div className="mt-2 flex items-center gap-2">
-              <Trophy className="h-6 w-6 shrink-0 text-white drop-shadow-sm" strokeWidth={2.25} aria-hidden />
-              <h2 className="text-lg font-bold tracking-tight text-white drop-shadow-sm sm:text-xl">Punktacja ogólna</h2>
-            </div>
-            <p className="mt-3 text-sm leading-relaxed text-emerald-50/95 sm:text-base">
-              Punkty łącznie to suma ze wszystkich zapisanych meczów: gole, asysty, przebiegnięty dystans (km) i obrony
-              bramkarza. Pozostałe tabele pokazują tylko jedną kategorię — kolejność i tak samo liczy się od największej
-              wartości w dół.
-            </p>
-            <p className="mt-2 text-sm font-semibold text-white drop-shadow-sm sm:text-base">Wartość punktów za akcję</p>
-            <ul className="mt-1.5 space-y-1.5 text-sm text-emerald-50/95 sm:text-base">
-              <li>
-                Gol: <strong className="text-white">{PT_GOAL}</strong> pkt
-              </li>
-              <li>
-                Asysta: <strong className="text-white">{PT_ASSIST}</strong> pkt
-              </li>
-              <li>
-                Kilometr: <strong className="text-white">{PT_KM}</strong> pkt
-              </li>
-              <li>
-                Obrona: <strong className="text-white">{PT_SAVE}</strong> pkt
-              </li>
-            </ul>
-            <p className="mt-3 text-sm font-semibold text-white drop-shadow-sm sm:text-base">Wzór na punkty łącznie</p>
-            <p className="mt-1 font-mono text-xs leading-relaxed text-emerald-50/95 sm:text-sm">
-              {PT_GOAL}×gole + {PT_ASSIST}×asysty + {PT_KM}×km + {PT_SAVE}×obrony
-            </p>
-            <p className="mt-3 text-sm font-semibold text-white drop-shadow-sm sm:text-base">Miejsca w rankingu</p>
-            <ul className="mt-1.5 list-disc space-y-1.5 pl-5 text-sm leading-relaxed text-emerald-50/95 sm:text-base">
-              <li>
-                Przy <strong className="text-white">tej samej wartości</strong> zawodnicy dzielą miejsce (ex aequo); kolejne
-                pozycje są pomijane (np. dwoje na 1. miejscu, następny jest 3.).
-              </li>
-              <li>
-                Przy remisie kolejność alfabetyczna według{" "}
-                <strong className="text-white">imienia i nazwiska</strong>, a przy identycznych — według pseudonimu.
-              </li>
-              <li>
-                Wynik zaokrąglany jest do <strong className="text-white">dwóch miejsc po przecinku</strong> przy wyświetlaniu
-                punktów łącznie.
-              </li>
-            </ul>
+          <span className={pitchLabelClass}>Punktacja</span>
+          <div className="mt-2 flex items-center gap-2">
+            <Trophy className="h-6 w-6 shrink-0 text-white drop-shadow-sm" strokeWidth={2.25} aria-hidden />
+            <h2 className="text-lg font-bold tracking-tight text-white drop-shadow-sm sm:text-xl">Punktacja ogólna</h2>
+          </div>
+          <p className="mt-3 text-sm leading-relaxed text-emerald-50/95 sm:text-base">
+            Punkty w tym widoku liczone są tylko ze statystyk przypisanych do wybranego sezonu: gole, asysty, dystans
+            (km) i obrony bramkarza.
+          </p>
+          <p className="mt-2 text-sm font-semibold text-white drop-shadow-sm sm:text-base">Wartość punktów za akcję</p>
+          <ul className="mt-1.5 space-y-1.5 text-sm text-emerald-50/95 sm:text-base">
+            <li>
+              Gol: <strong className="text-white">{PT_GOAL}</strong> pkt
+            </li>
+            <li>
+              Asysta: <strong className="text-white">{PT_ASSIST}</strong> pkt
+            </li>
+            <li>
+              Kilometr: <strong className="text-white">{PT_KM}</strong> pkt
+            </li>
+            <li>
+              Obrona: <strong className="text-white">{PT_SAVE}</strong> pkt
+            </li>
+          </ul>
+          <p className="mt-3 text-sm font-semibold text-white drop-shadow-sm sm:text-base">Wzór na punkty łącznie</p>
+          <p className="mt-1 font-mono text-xs leading-relaxed text-emerald-50/95 sm:text-sm">
+            {PT_GOAL}×gole + {PT_ASSIST}×asysty + {PT_KM}×km + {PT_SAVE}×obrony
+          </p>
         </PitchCard>
 
         <div className="mt-10 grid gap-6 lg:grid-cols-2">
@@ -241,11 +191,7 @@ function RankBlock({
                         size="sm"
                         ringClassName="ring-2 ring-emerald-200/80"
                       />
-                      <PlayerNameStack
-                        firstName={r.first_name}
-                        lastName={r.last_name}
-                        nick={r.zawodnik}
-                      />
+                      <PlayerNameStack firstName={r.first_name} lastName={r.last_name} nick={r.zawodnik} />
                     </div>
                   </TableCell>
                   <TableCell className="text-right font-semibold tabular-nums text-emerald-900 dark:text-emerald-200">

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Calendar, Loader2, LogOut, Moon, RefreshCw, Sun } from "lucide-react";
 import { PitchCard, PitchCardDecorations, pitchLabelClass } from "@/components/ui/pitch-card";
+import { SiteSectionHero } from "@/components/site-section-hero";
 import { SiteAssetImage } from "@/components/site-asset-image";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -47,7 +48,10 @@ type AdminTab = {
   id: string;
   label: string;
   icon: ComponentType<{ className?: string; "aria-hidden"?: boolean }>;
+  /** Czerwona kropka bez liczby (np. zgłoszenia PIN). */
   badge?: boolean;
+  /** Liczba na czerwonym badge (np. nieprzeczytane wiadomości). */
+  badgeCount?: number;
 };
 
 type AdminShellProps = {
@@ -135,7 +139,15 @@ export function AdminShell({
                   <Icon className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
                   <span className="flex min-w-0 flex-1 items-center justify-between gap-2">
                     {t.label}
-                    {t.badge ? (
+                    {t.badgeCount != null && t.badgeCount > 0 ? (
+                      <span
+                        className="inline-flex min-h-[1.25rem] min-w-[1.25rem] shrink-0 items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold tabular-nums text-white"
+                        title={`${t.badgeCount} nieprzeczytanych`}
+                        aria-label={`${t.badgeCount} nieprzeczytanych`}
+                      >
+                        {t.badgeCount > 99 ? "99+" : t.badgeCount}
+                      </span>
+                    ) : t.badge ? (
                       <span
                         className="inline-flex min-h-[1.25rem] min-w-[1.25rem] shrink-0 items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white"
                         title="Zgłoszenia zmiany PIN-u"
@@ -235,14 +247,17 @@ export function AdminToolbar({
   children?: ReactNode;
 }) {
   return (
-    <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-      <div className="min-w-0">
-        <p className={pitchLabelClass}>Panel admina</p>
-        <h1 className="pitch-heading mt-1 text-2xl font-bold tracking-tight sm:text-3xl">{title}</h1>
-        {description ? <p className="mt-1.5 text-sm pitch-muted">{description}</p> : null}
-        <div className="pitch-rule mt-3 max-w-xs" aria-hidden />
-      </div>
-      <div className="flex flex-wrap items-center gap-2">
+    <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+      <SiteSectionHero
+        kicker="Panel admina"
+        title={title}
+        subtitle={description}
+        showCrest={false}
+        size="compact"
+        align="left"
+        className="min-w-0 flex-1 lg:max-w-2xl"
+      />
+      <div className="flex shrink-0 flex-wrap items-center gap-2 lg:pt-2">
         {children}
         <Button
           type="button"

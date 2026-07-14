@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { MapPin } from "lucide-react";
+import { SiteSectionHero } from "@/components/site-section-hero";
 import type { SignupTransportRow, TransportParticipantDTO } from "@/lib/transport";
 import { MatchTransportSignupDialog } from "@/components/match-transport-signup-dialog";
 import { TransportChatClient, type TransportMessageDTO } from "@/components/transport-chat-client";
@@ -41,18 +42,25 @@ export function TransportMatchClient({
   const [editOpen, setEditOpen] = useState(false);
 
   return (
-    <div className="container mx-auto max-w-2xl flex-1 px-4 py-8 sm:py-10">
-      <div className="mb-6 text-center">
-        <p className="text-xs font-semibold uppercase tracking-wider text-emerald-800/75">Transport</p>
-        <h1 className="mt-1 text-2xl font-bold tracking-tight text-emerald-950 dark:text-emerald-100 sm:text-3xl">Transport na mecz</h1>
-        <p className="mt-2 text-sm text-zinc-600">
+    <div className="container mx-auto max-w-2xl flex-1 space-y-6 px-4 py-8 sm:py-10">
+      <SiteSectionHero
+        kicker="Dojazd"
+        title="Transport na mecz"
+        subtitle="Ustal wspólny dojazd z innymi zawodnikami."
+        align="center"
+        size="compact"
+      >
+        <p className="text-sm text-white/80">
           {matchDate} · {matchTime}
         </p>
-        <p className="mt-1 flex items-center justify-center gap-1.5 text-sm text-zinc-700">
-          <MapPin className="h-4 w-4 shrink-0 text-emerald-700" aria-hidden />
+        <p className="mt-1 flex items-center justify-center gap-1.5 text-sm text-white/75">
+          <MapPin className="h-4 w-4 shrink-0 text-[var(--mundial-gold)]" aria-hidden />
           {location}
         </p>
-        <Button variant="link" className="mt-1 h-auto p-0 text-emerald-700" asChild>
+      </SiteSectionHero>
+
+      <div className="text-center">
+        <Button variant="link" className="h-auto p-0 text-emerald-700 dark:text-emerald-400" asChild>
           <Link
             href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location)}`}
             target="_blank"

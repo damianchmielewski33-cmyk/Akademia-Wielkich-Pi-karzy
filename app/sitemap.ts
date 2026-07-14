@@ -10,6 +10,7 @@ const PUBLIC_PATHS = [
   "/o-nas",
   "/kontakt",
   "/sklady",
+  "/galeria",
   "/login",
   "/register",
 ] as const;

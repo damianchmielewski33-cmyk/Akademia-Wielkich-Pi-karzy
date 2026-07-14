@@ -36,9 +36,12 @@ function FieldShell({
   const isValid = Boolean(showValidState && valid && !error);
 
   return (
-    <div className={cn("space-y-1.5", className)}>
+    <div className={cn("space-y-2", className)}>
       <div className="flex items-center justify-between gap-2">
-        <Label htmlFor={id} className="text-[0.8125rem] font-semibold tracking-tight text-emerald-950/90 dark:text-emerald-100/90">
+        <Label
+          htmlFor={id}
+          className="text-[0.6875rem] font-bold uppercase tracking-[0.12em] text-zinc-500 dark:text-zinc-400"
+        >
           {label}
           {required ? <span className="ml-0.5 text-red-500" aria-hidden>*</span> : null}
         </Label>

@@ -3,7 +3,7 @@ import { migrateAppSettingsColumnsLibsql } from "@/lib/app-settings";
 
 async function pragmaColumnNames(
   client: Client,
-  table: "users" | "matches" | "match_stats" | "match_signups" | "app_settings" | "public_share_links"
+  table: "users" | "matches" | "match_stats" | "match_signups" | "app_settings" | "public_share_links" | "standalone_match_stats"
 ): Promise<string[]> {
   const rs = await client.execute(`PRAGMA table_info(${table})`);
   let nameIdx = rs.columns.indexOf("name");
@@ -229,6 +229,20 @@ export async function initLibsqlSchema(client: Client) {
   if (!names.includes("temporary_guest_match_id")) {
     await client.execute("ALTER TABLE users ADD COLUMN temporary_guest_match_id INTEGER");
   }
+  if (!names.includes("can_pzu_cup")) {
+    await client.execute("ALTER TABLE users ADD COLUMN can_pzu_cup INTEGER NOT NULL DEFAULT 0");
+  }
+
+  names = await pragmaColumnNames(client, "match_stats");
+  if (!names.includes("season_id")) {
+    await client.execute("ALTER TABLE match_stats ADD COLUMN season_id INTEGER REFERENCES ranking_seasons(id)");
+  }
+  names = await pragmaColumnNames(client, "standalone_match_stats");
+  if (!names.includes("season_id")) {
+    await client.execute(
+      "ALTER TABLE standalone_match_stats ADD COLUMN season_id INTEGER REFERENCES ranking_seasons(id)"
+    );
+  }
 
   names = await pragmaColumnNames(client, "match_signups");
   if (!names.includes("drives_car")) {
@@ -313,6 +327,45 @@ export async function initLibsqlSchema(client: Client) {
       PRIMARY KEY (user_id, survey_key),
       FOREIGN KEY (user_id) REFERENCES users(id)
     );
+
+    CREATE TABLE IF NOT EXISTS gallery_videos (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT NOT NULL,
+      youtube_url TEXT NOT NULL,
+      match_date TEXT,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      published INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS admin_messages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER,
+      sender_name TEXT NOT NULL,
+      sender_email TEXT,
+      body TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'unread' CHECK (status IN ('unread', 'read')),
+      read_at TEXT,
+      read_by_admin_id INTEGER,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (user_id) REFERENCES users(id),
+      FOREIGN KEY (read_by_admin_id) REFERENCES users(id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_admin_messages_status_created ON admin_messages(status, created_at DESC);
+
+    CREATE TABLE IF NOT EXISTS ranking_seasons (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      started_at TEXT NOT NULL DEFAULT (datetime('now')),
+      ended_at TEXT,
+      started_by_admin_id INTEGER NOT NULL,
+      ended_by_admin_id INTEGER,
+      FOREIGN KEY (started_by_admin_id) REFERENCES users(id),
+      FOREIGN KEY (ended_by_admin_id) REFERENCES users(id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_ranking_seasons_active ON ranking_seasons(ended_at, started_at DESC);
   `);
 
   names = await pragmaColumnNames(client, "public_share_links");

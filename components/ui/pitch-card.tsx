@@ -1,8 +1,8 @@
 "use client";
 
 import type { ComponentPropsWithoutRef, ElementType, ReactNode } from "react";
+import { SiteSectionHero, PAGE_HERO_KICKER } from "@/components/site-section-hero";
 import { cn } from "@/lib/utils";
-import { SiteAssetImage } from "@/components/site-asset-image";
 
 export const pitchLabelClass =
   "text-xs font-semibold uppercase tracking-[0.14em] text-[var(--mundial-gold,#f5c518)]";
@@ -60,33 +60,33 @@ export function PitchCardDecorations({ className }: { className?: string }) {
 type PitchPageHeroProps = {
   title: string;
   subtitle?: ReactNode;
+  kicker?: string;
   className?: string;
+  align?: "left" | "center";
+  showCrest?: boolean;
   children?: ReactNode;
 };
 
-export function PitchPageHero({ title, subtitle, className, children }: PitchPageHeroProps) {
+/** Nagłówek podstrony — ten sam styl co na stronie głównej i zaproszeniu. */
+export function PitchPageHero({
+  title,
+  subtitle,
+  kicker = PAGE_HERO_KICKER,
+  className,
+  align = "center",
+  showCrest = true,
+  children,
+}: PitchPageHeroProps) {
   return (
-    <PitchCard
-      as="div"
-      className={cn("mx-auto max-w-2xl", className)}
-      contentClassName="px-5 py-8 text-center sm:px-8 sm:py-9"
+    <SiteSectionHero
+      kicker={kicker}
+      title={title}
+      subtitle={subtitle}
+      align={align}
+      showCrest={showCrest}
+      className={cn("mx-auto w-full max-w-3xl", className)}
     >
-      <div className="mb-4 flex flex-col items-center gap-2">
-        <span className={pitchLabelClass}>Akademia</span>
-        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/15 ring-2 ring-white/30 backdrop-blur-[2px]">
-          <SiteAssetImage
-            asset="logo_crest"
-            alt=""
-            width={128}
-            height={128}
-            className="h-8 w-8 drop-shadow"
-            sizes="32px"
-          />
-        </div>
-        <h1 className="text-3xl font-bold tracking-tight text-white drop-shadow-sm sm:text-4xl">{title}</h1>
-        {subtitle ? <p className="text-base text-emerald-100/90 sm:text-lg">{subtitle}</p> : null}
-        {children}
-      </div>
-    </PitchCard>
+      {children}
+    </SiteSectionHero>
   );
 }

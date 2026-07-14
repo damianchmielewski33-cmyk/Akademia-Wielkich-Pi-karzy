@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getUnreadAdminMessageCount } from "@/lib/admin-messages";
 import { getDb } from "@/lib/db";
 import { requireAdmin } from "@/lib/api-helpers";
 
@@ -25,5 +26,14 @@ export async function GET() {
       c: number;
     }
   ).c;
-  return NextResponse.json({ players, admins, matches, stats, upcoming_matches, pin_reset_requests });
+  const unread_messages = await getUnreadAdminMessageCount(db);
+  return NextResponse.json({
+    players,
+    admins,
+    matches,
+    stats,
+    upcoming_matches,
+    pin_reset_requests,
+    unread_messages,
+  });
 }

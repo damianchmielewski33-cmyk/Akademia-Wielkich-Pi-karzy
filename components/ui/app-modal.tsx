@@ -9,6 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { ModalFormHeader } from "@/components/ui/modal-shared";
 import { cn } from "@/lib/utils";
 
 const sizeClasses = {
@@ -26,6 +27,10 @@ export type AppModalProps = {
   description?: React.ReactNode;
   children?: React.ReactNode;
   footer?: React.ReactNode;
+  /** Ikona w nagłówku formularza (Mundial). */
+  icon?: React.ReactNode;
+  /** Etykieta nad tytułem przy nagłówku formularza. */
+  headerKicker?: string;
   /** Domyślnie `md`. */
   size?: keyof typeof sizeClasses;
   className?: string;
@@ -51,6 +56,8 @@ export function AppModal({
   description,
   children,
   footer,
+  icon,
+  headerKicker,
   size = "md",
   className,
   contentClassName,
@@ -60,6 +67,8 @@ export function AppModal({
   hideCloseButton = false,
   hideHeader = false,
 }: AppModalProps) {
+  const formHeader = Boolean(icon) && !hideHeader;
+
   return (
     <Dialog
       open={open}
@@ -70,9 +79,10 @@ export function AppModal({
     >
       <DialogContent
         className={cn(
-          "border-emerald-900/12",
           sizeClasses[size],
-          scrollable && "max-h-[90dvh] overflow-y-auto",
+          formHeader && "awp-modal-content--form gap-0 p-0 pt-0",
+          scrollable && !formHeader && "max-h-[90dvh] overflow-y-auto",
+          scrollable && formHeader && "max-h-[90dvh] grid-rows-[auto_1fr_auto] overflow-hidden",
           hideCloseButton && "[&>button]:hidden",
           className
         )}
@@ -83,23 +93,50 @@ export function AppModal({
           <DialogHeader className="sr-only">
             <DialogTitle>{title}</DialogTitle>
           </DialogHeader>
+        ) : formHeader ? (
+          <>
+            <ModalFormHeader
+              icon={icon}
+              title={title}
+              description={description}
+              kicker={headerKicker ?? "Formularz"}
+            />
+            <DialogHeader className="sr-only">
+              <DialogTitle>{title}</DialogTitle>
+              {description ? <DialogDescription>{description}</DialogDescription> : null}
+            </DialogHeader>
+          </>
         ) : (
-          <DialogHeader className={cn(description ? undefined : "pb-0.5")}>
+          <DialogHeader className={cn("relative", description ? undefined : "pb-0.5")}>
             <DialogTitle>{title}</DialogTitle>
             {description ? (
               typeof description === "string" ? (
-                <DialogDescription className="text-left">{description}</DialogDescription>
+                <DialogDescription>{description}</DialogDescription>
               ) : (
                 <DialogDescription asChild>{description}</DialogDescription>
               )
             ) : null}
           </DialogHeader>
         )}
-        {children ? <div className={cn("space-y-4 py-0.5", contentClassName)}>{children}</div> : null}
+
+        {children ? (
+          <div
+            className={cn(
+              "space-y-4",
+              formHeader ? "overflow-y-auto px-6 py-5" : "py-0.5",
+              scrollable && formHeader && "min-h-0",
+              contentClassName
+            )}
+          >
+            {children}
+          </div>
+        ) : null}
+
         {footer ? (
           <DialogFooter
             className={cn(
-              "gap-2 border-t border-emerald-950/6 pt-4 dark:border-emerald-100/8 sm:justify-end",
+              "gap-2 border-t border-zinc-200/90 bg-zinc-50/50 pt-4 dark:border-zinc-700/60 dark:bg-zinc-900/40 sm:justify-end",
+              formHeader && "px-6 pb-6",
               footerClassName
             )}
           >

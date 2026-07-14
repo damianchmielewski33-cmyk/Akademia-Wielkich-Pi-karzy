@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Loader2, X } from "lucide-react";
-import { LineupBoardPreloader } from "@/components/preloaders";
+import { InlinePreloader } from "@/components/preloaders";
 import { toast } from "sonner";
 import {
   AdminCard,
@@ -358,7 +358,7 @@ export function MatchLineupAdmin() {
         )}
 
       {showInitialSpinner ? (
-        <LineupBoardPreloader />
+        <InlinePreloader label="Ładujemy mecze i składy…" />
       ) : matches.length === 0 ? (
         <AdminCard
           title="Brak meczów do ułożenia składu"

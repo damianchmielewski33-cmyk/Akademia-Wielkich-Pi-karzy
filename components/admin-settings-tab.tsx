@@ -43,11 +43,19 @@ function SettingsSection({
   );
 }
 
-function FieldRow({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
+function FieldRow({
+  label,
+  hint,
+  children,
+}: {
+  label: string;
+  hint?: string;
+  children: React.ReactNode;
+}) {
   return (
     <div className="grid gap-1.5">
       <Label className="text-sm font-semibold text-white">{label}</Label>
-      {hint ? <p className="text-xs pitch-muted">{hint}</p> : null}
+      {hint ? <p className="text-sm leading-relaxed pitch-muted">{hint}</p> : null}
       {children}
     </div>
   );
@@ -80,9 +88,7 @@ function ToggleRow({
           disabled={disabled}
           onChange={(e) => onChange(e.target.checked)}
         />
-        <span className="text-sm font-medium text-emerald-100/90">
-          {checked ? "Włączony" : "Wyłączony"}
-        </span>
+        <span className="text-sm font-medium text-emerald-100/90">{checked ? "Tak" : "Nie"}</span>
       </span>
     </label>
   );
@@ -161,18 +167,27 @@ export function AdminSettingsTab({ loading, onReload }: Props) {
     );
   }
 
-  const regModeLabel =
-    settings.allow_self_registration === null
-      ? "Automatycznie (env / środowisko dev)"
-      : settings.allow_self_registration
-        ? "Wymuszone: otwarta"
-        : "Wymuszone: zamknięta";
+  const registrationStatusLabel = (() => {
+    if (settings.allow_self_registration === true) {
+      return "Włączona — każdy może założyć konto";
+    }
+    if (settings.allow_self_registration === false) {
+      return "Wyłączona — nowe konta zakłada administrator";
+    }
+    if (settings.system.self_registration_env_override) {
+      return "Włączona dodatkowo na serwerze";
+    }
+    if (!settings.system.is_production) {
+      return "Włączona (serwer testowy)";
+    }
+    return "Domyślnie wyłączona po utworzeniu pierwszego konta";
+  })();
 
   return (
     <div className="space-y-6">
       <AdminToolbar
-        title="Konfiguracja aplikacji"
-        description="Pełna konfiguracja strony, kontaktów, meczów, rankingów i powiadomień — bez zmiany kodu."
+        title="Ustawienia strony"
+        description="Zmieniasz treści, kontakty, mecze i powiadomienia — bez edycji kodu. Po wyjściu z pola zmiany zapisują się same."
         onReload={() => {
           onReload();
           void load();
@@ -181,35 +196,36 @@ export function AdminSettingsTab({ loading, onReload }: Props) {
       />
 
       <SettingsSection
-        title="Status systemu"
-        description="Informacje tylko do odczytu — wymagają zmiennych środowiskowych na serwerze."
+        title="Co działa na serwerze"
+        description="Tylko podgląd — tych rzeczy nie zmienisz tutaj. Gdy coś jest wyłączone, poproś osobę od hostingu o konfigurację."
       >
         <ul className="grid gap-2 text-sm sm:grid-cols-2">
           <li className={adminStatusChipClass}>
-            <span className="text-emerald-100/70">SMTP (e-mail):</span>{" "}
+            <span className="text-emerald-100/70">Wysyłka e-maili:</span>{" "}
             <strong className={settings.system.smtp_configured ? "text-emerald-300" : "text-amber-300"}>
-              {settings.system.smtp_configured ? "Skonfigurowany" : "Brak — powiadomienia e-mail nie wyjdą"}
+              {settings.system.smtp_configured
+                ? "Gotowa — maile o meczach mogą wychodzić"
+                : "Nieskonfigurowana — maile nie wyjdą"}
             </strong>
           </li>
           <li className={adminStatusChipClass}>
-            <span className="text-emerald-100/70">Środowisko:</span>{" "}
-            <strong className="text-white">{settings.system.is_production ? "Produkcja" : "Development"}</strong>
-          </li>
-          <li className={adminStatusChipClass}>
-            <span className="text-emerald-100/70">Env ALLOW_SELF_REGISTRATION:</span>{" "}
+            <span className="text-emerald-100/70">Serwer:</span>{" "}
             <strong className="text-white">
-              {settings.system.self_registration_env_override ? "włączone (=1)" : "nie ustawione"}
+              {settings.system.is_production ? "Produkcyjny (prawdziwa strona)" : "Testowy (developerski)"}
             </strong>
           </li>
-          <li className={adminStatusChipClass}>
-            <span className="text-emerald-100/70">Rejestracja (panel):</span>{" "}
-            <strong className="text-white">{regModeLabel}</strong>
+          <li className={cn(adminStatusChipClass, "sm:col-span-2")}>
+            <span className="text-emerald-100/70">Rejestracja nowych graczy:</span>{" "}
+            <strong className="text-white">{registrationStatusLabel}</strong>
           </li>
         </ul>
       </SettingsSection>
 
-      <SettingsSection title="Strona i branding" description="Nazwa i opis widoczne w nagłówku, SEO i meta tagach.">
-        <FieldRow label="Nazwa strony">
+      <SettingsSection
+        title="Nazwa i opis strony"
+        description="Widoczne w nagłówku, w wynikach Google i przy udostępnianiu linku."
+      >
+        <FieldRow label="Nazwa strony" hint="Np. Akademia Wielkich Piłkarzy — pojawia się obok logo.">
           <Input
             className={adminFieldClass}
             defaultValue={settings.site_name}
@@ -221,7 +237,10 @@ export function AdminSettingsTab({ loading, onReload }: Props) {
             }}
           />
         </FieldRow>
-        <FieldRow label="Opis strony (SEO)">
+        <FieldRow
+          label="Krótki opis strony"
+          hint="1–2 zdania o akademii — trafiają też do wyszukiwarek (SEO)."
+        >
           <textarea
             className={adminTextareaClass}
             defaultValue={settings.site_description}
@@ -237,8 +256,8 @@ export function AdminSettingsTab({ loading, onReload }: Props) {
       </SettingsSection>
 
       <SettingsSection
-        title="Grafiki i banery"
-        description="Logo, favicon, tła i dekoracje — wgraj własne pliki lub przywróć domyślne. Obrazy są automatycznie skalowane (object-contain / cover)."
+        title="Logo i tła"
+        description="Wgraj własne grafiki albo zostaw domyślne. Zalecane formaty podane przy każdym polu."
       >
         <div className="grid gap-4 lg:grid-cols-2">
           {SITE_ASSET_KEYS.map((key) => {
@@ -264,8 +283,14 @@ export function AdminSettingsTab({ loading, onReload }: Props) {
         </div>
       </SettingsSection>
 
-      <SettingsSection title="Kontakt i organizatorzy" description="Dane na stronie Kontakt i w stopce.">
-        <FieldRow label="Główny e-mail kontaktowy">
+      <SettingsSection
+        title="Kontakt i organizatorzy"
+        description="Dane na stronie Kontakt, w stopce i przy płatnościach BLIK."
+      >
+        <FieldRow
+          label="Główny adres e-mail"
+          hint="Do ogólnych wiadomości od graczy i odwiedzających stronę."
+        >
           <Input
             type="email"
             className={adminFieldClass}
@@ -278,7 +303,10 @@ export function AdminSettingsTab({ loading, onReload }: Props) {
             }}
           />
         </FieldRow>
-        <FieldRow label="Numer BLIK (wpisowe)" hint="Wyświetlany przy płatnościach.">
+        <FieldRow
+          label="Numer telefonu do wpłat BLIK"
+          hint="Gracze widzą go przy płatności za mecz — przelew BLIK na ten numer."
+        >
           <Input
             className={adminFieldClass}
             defaultValue={settings.blik_phone}
@@ -292,7 +320,8 @@ export function AdminSettingsTab({ loading, onReload }: Props) {
         </FieldRow>
         <div className="grid gap-4 sm:grid-cols-2">
           <div className={cn(adminInnerPanelClass, "space-y-3")}>
-            <p className="text-sm font-semibold text-white">Organizator 1</p>
+            <p className="text-sm font-semibold text-white">Organizator — Damian</p>
+            <p className="text-xs pitch-muted">Dane osoby kontaktowej wyświetlane na stronie Kontakt.</p>
             {(["organizer_damian_name", "organizer_damian_phone", "organizer_damian_email"] as const).map((key) => (
               <FieldRow key={key} label={key.includes("name") ? "Imię i nazwisko" : key.includes("phone") ? "Telefon" : "E-mail"}>
                 <Input
@@ -307,7 +336,7 @@ export function AdminSettingsTab({ loading, onReload }: Props) {
                 />
               </FieldRow>
             ))}
-            <FieldRow label="Facebook">
+            <FieldRow label="Profil Facebook">
               <Input
                 type="url"
                 className={adminFieldClass}
@@ -321,7 +350,8 @@ export function AdminSettingsTab({ loading, onReload }: Props) {
             </FieldRow>
           </div>
           <div className={cn(adminInnerPanelClass, "space-y-3")}>
-            <p className="text-sm font-semibold text-white">Organizator 2</p>
+            <p className="text-sm font-semibold text-white">Organizator — Mateusz</p>
+            <p className="text-xs pitch-muted">Druga osoba kontaktowa na stronie Kontakt.</p>
             {(["organizer_mateusz_name", "organizer_mateusz_phone", "organizer_mateusz_email"] as const).map((key) => (
               <FieldRow key={key} label={key.includes("name") ? "Imię i nazwisko" : key.includes("phone") ? "Telefon" : "E-mail"}>
                 <Input
@@ -336,7 +366,7 @@ export function AdminSettingsTab({ loading, onReload }: Props) {
                 />
               </FieldRow>
             ))}
-            <FieldRow label="Facebook">
+            <FieldRow label="Profil Facebook">
               <Input
                 type="url"
                 className={adminFieldClass}
@@ -352,8 +382,14 @@ export function AdminSettingsTab({ loading, onReload }: Props) {
         </div>
       </SettingsSection>
 
-      <SettingsSection title="Transmisja YouTube" description="Film lub transmisja na stronie głównej.">
-        <FieldRow label="Link lub ID YouTube" hint="Wyczyść pole i zapisz, aby usunąć.">
+      <SettingsSection
+        title="Film na stronie głównej"
+        description="Opcjonalny embed YouTube — np. skrót meczu lub zapowiedź."
+      >
+        <FieldRow
+          label="Link do filmu YouTube"
+          hint="Wklej pełny adres lub samo ID filmu. Wyczyść pole i kliknij poza nim, aby usunąć film ze strony głównej."
+        >
           <Input
             type="url"
             placeholder="https://www.youtube.com/watch?v=…"
@@ -370,10 +406,13 @@ export function AdminSettingsTab({ loading, onReload }: Props) {
         </FieldRow>
       </SettingsSection>
 
-      <SettingsSection title="Rejestracja i powiadomienia">
+      <SettingsSection
+        title="Rejestracja i powiadomienia"
+        description="Kto może założyć konto samodzielnie oraz czy gracze dostają e-maile o nowych terminach."
+      >
         <FieldRow
-          label="Tryb rejestracji samoobsługowej"
-          hint="„Automatycznie” = pierwszy użytkownik zawsze może się zarejestrować; potem env/dev. Wymuszenie omija env."
+          label="Czy nowi gracze mogą sami zakładać konta?"
+          hint="Standardowo: pierwszy użytkownik może się zarejestrować, potem rejestracja jest zamknięta. Możesz to wymusić włączeniem lub wyłączeniem poniżej."
         >
           <select
             className={cn("awp-native-select h-10 w-full rounded-xl px-3 text-sm", adminFieldClass)}
@@ -392,30 +431,33 @@ export function AdminSettingsTab({ loading, onReload }: Props) {
               });
             }}
           >
-            <option value="auto">Automatycznie (domyślne)</option>
-            <option value="open">Wymuś: otwarta rejestracja</option>
-            <option value="closed">Wymuś: zamknięta rejestracja</option>
+            <option value="auto">Standardowo (zalecane)</option>
+            <option value="open">Tak — zawsze pozwól na rejestrację</option>
+            <option value="closed">Nie — tylko administrator dodaje graczy</option>
           </select>
         </FieldRow>
         <ToggleRow
-          label="Pop-up: zgoda na powiadomienia e-mail"
-          hint="Okno z adresem e-mail przy logowaniu."
+          label="Pytaj gracza o e-mail po logowaniu"
+          hint="Okno z prośbą o adres i zgodę na powiadomienia o nowych meczach."
           checked={settings.match_notification_prompt_enabled}
           disabled={busy}
           onChange={(v) => void save({ match_notification_prompt_enabled: v })}
         />
         <ToggleRow
-          label="E-maile o nowych meczach"
-          hint="Wysyłka do użytkowników ze zgodą po dodaniu terminu (wymaga SMTP)."
+          label="Wysyłaj e-maile o nowych meczach"
+          hint="Do graczy, którzy zgodzili się na powiadomienia. Wymaga skonfigurowanej wysyłki e-mail na serwerze."
           checked={settings.match_email_notifications_enabled}
           disabled={busy}
           onChange={(v) => void save({ match_email_notifications_enabled: v })}
         />
       </SettingsSection>
 
-      <SettingsSection title="Domyślne parametry meczów" description="Wartości startowe przy dodawaniu nowego terminu.">
+      <SettingsSection
+        title="Domyślne ustawienia nowego meczu"
+        description="Te wartości podpowiadają się przy dodawaniu terminu — dla każdego meczu możesz je nadpisać."
+      >
         <div className="grid gap-4 sm:grid-cols-3">
-          <FieldRow label="Miejsca (max_slots)">
+          <FieldRow label="Liczba miejsc na liście" hint="Ile osób może się zapisać na mecz.">
             <Input
               type="number"
               min={1}
@@ -431,7 +473,7 @@ export function AdminSettingsTab({ loading, onReload }: Props) {
               }}
             />
           </FieldRow>
-          <FieldRow label="Wpisowe (zł)" hint="Puste = brak domyślnej kwoty.">
+          <FieldRow label="Wpisowe (zł)" hint="Zostaw puste, jeśli kwota ustalana jest osobno dla każdego meczu.">
             <Input
               type="number"
               min={0}
@@ -448,7 +490,7 @@ export function AdminSettingsTab({ loading, onReload }: Props) {
               }}
             />
           </FieldRow>
-          <FieldRow label="Domyślna lokalizacja">
+          <FieldRow label="Miejsce rozgrywki" hint="Np. boisko przy szkole — podpowie się w formularzu dodawania meczu.">
             <Input
               className={adminFieldClass}
               defaultValue={settings.default_match_location}
@@ -463,17 +505,20 @@ export function AdminSettingsTab({ loading, onReload }: Props) {
         </div>
       </SettingsSection>
 
-      <SettingsSection title="Rankingi — punkty za statystyki">
+      <SettingsSection
+        title="Rankingi — punkty za statystyki"
+        description="Ile punktów do rankingu dostaje zawodnik za gol, asystę, kilometr biegu lub obroniony strzał."
+      >
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {(
             [
               ["ranking_pt_goal", "Gol"],
               ["ranking_pt_assist", "Asysta"],
-              ["ranking_pt_km", "Kilometr"],
-              ["ranking_pt_save", "Obrona"],
+              ["ranking_pt_km", "1 km biegu"],
+              ["ranking_pt_save", "Obroniony strzał"],
             ] as const
           ).map(([key, label]) => (
-            <FieldRow key={key} label={label}>
+            <FieldRow key={key} label={`Punkty za: ${label}`}>
               <Input
                 type="number"
                 min={0}
@@ -491,9 +536,12 @@ export function AdminSettingsTab({ loading, onReload }: Props) {
         </div>
       </SettingsSection>
 
-      <SettingsSection title="Składy na boisku" description="Liczba pól zależna od zapisów (min–max).">
+      <SettingsSection
+        title="Plan boiska (składy)"
+        description="Przy układaniu składu na boisku pokazujemy kafelki zawodników — liczba kafelków zależy od zapisanych, w podanym zakresie."
+      >
         <div className="grid gap-4 sm:grid-cols-2">
-          <FieldRow label="Minimum pól">
+          <FieldRow label="Minimum kafelków na boisku" hint="Gdy zapisanych jest mało osób.">
             <Input
               type="number"
               min={1}
@@ -509,7 +557,7 @@ export function AdminSettingsTab({ loading, onReload }: Props) {
               }}
             />
           </FieldRow>
-          <FieldRow label="Maksimum pól">
+          <FieldRow label="Maksimum kafelków na boisku" hint="Górny limit niezależnie od liczby zapisanych.">
             <Input
               type="number"
               min={1}
@@ -528,10 +576,18 @@ export function AdminSettingsTab({ loading, onReload }: Props) {
         </div>
       </SettingsSection>
 
-      <SettingsSection title="Powody anulowania meczu">
-        <p className="text-sm pitch-muted">
-          Lista opcji w dialogu anulowania. Wartość (klucz) — bez spacji; etykieta — tekst widoczny dla admina.
+      <SettingsSection
+        title="Powody anulowania meczu"
+        description="Lista wyboru, gdy anulujesz termin w terminarzu."
+      >
+        <p className="text-sm leading-relaxed pitch-muted">
+          W pierwszej kolumnie krótki kod (bez spacji, tylko dla systemu). W drugiej — tekst, który zobaczysz na liście
+          przy anulowaniu.
         </p>
+        <div className="flex flex-wrap gap-2 px-0.5 text-xs font-semibold uppercase tracking-wide text-emerald-100/55">
+          <span className="min-w-[8rem] flex-1">Kod</span>
+          <span className="min-w-[10rem] flex-[2]">Opis powodu</span>
+        </div>
         <div className="space-y-2">
           {cancelReasonsDraft.map((r, i) => (
             <div key={i} className="flex flex-wrap gap-2">
@@ -539,7 +595,8 @@ export function AdminSettingsTab({ loading, onReload }: Props) {
                 className={cn(adminFieldClass, "min-w-[8rem] flex-1 font-mono text-xs")}
                 value={r.value}
                 disabled={busy}
-                placeholder="klucz"
+                placeholder="np. pogoda"
+                aria-label={`Kod powodu ${i + 1}`}
                 onChange={(e) => {
                   const next = [...cancelReasonsDraft];
                   next[i] = { ...next[i], value: e.target.value };
@@ -550,7 +607,8 @@ export function AdminSettingsTab({ loading, onReload }: Props) {
                 className={cn(adminFieldClass, "min-w-[10rem] flex-[2]")}
                 value={r.label}
                 disabled={busy}
-                placeholder="Etykieta"
+                placeholder="np. Zła pogoda"
+                aria-label={`Opis powodu ${i + 1}`}
                 onChange={(e) => {
                   const next = [...cancelReasonsDraft];
                   next[i] = { ...next[i], label: e.target.value };
@@ -587,9 +645,9 @@ export function AdminSettingsTab({ loading, onReload }: Props) {
         </div>
       </SettingsSection>
 
-      <p className="text-center text-xs text-emerald-100/70">
-        Ustawienia zapisują się automatycznie po opuszczeniu pola (onBlur) lub po kliknięciu przycisku Zapisz.
-        Sekrety (AUTH_SECRET, Turso, SMTP) pozostają w zmiennych środowiskowych serwera.
+      <p className="text-center text-sm leading-relaxed text-emerald-100/75">
+        Większość pól zapisuje się sama po kliknięciu poza pole. Powody anulowania zapisz przyciskiem „Zapisz powody”.
+        Hasła do bazy i serwera e-mail ustawia się u hostingu — nie w tym panelu.
       </p>
     </div>
   );

@@ -2,12 +2,13 @@
 
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { SiteAssetImage } from "@/components/site-asset-image";
+import { SiteSectionHero } from "@/components/site-section-hero";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
   Activity,
   CalendarDays,
+  CalendarPlus,
   ChevronLeft,
   ChevronRight,
   List,
@@ -40,9 +41,11 @@ import { MatchAddGuestDialog } from "@/components/match-add-guest-dialog";
 import { AppModal } from "@/components/ui/app-modal";
 import {
   ModalAlert,
+  ModalFormSection,
   ModalLoadingRow,
   ModalMatchSummary,
   modalEmptyStateClass,
+  modalFormGridClass,
   modalListClass,
   modalPanelClass,
 } from "@/components/ui/modal-shared";
@@ -52,6 +55,7 @@ import { z } from "zod";
 import { TerminarzMatchCard } from "@/components/terminarz-match-card";
 import { MatchSignupCountsBlock } from "@/components/terminarz-match-counts";
 import { appendShareSessionQuery, terminarzInviteRelativePath } from "@/lib/share-link";
+import { useAsyncAction } from "@/lib/use-async-action";
 import {
   getStandaloneSurveyMatchRow,
   PARTICIPATION_SURVEY_KEY,
@@ -185,6 +189,7 @@ export function TerminarzClient({
   const [selectedMatchId, setSelectedMatchId] = useState<number | null>(null);
   const [calPopup, setCalPopup] = useState<MatchRow | null>(null);
   const [statsMatch, setStatsMatch] = useState<MatchRow | null>(null);
+  const [statsBusy, setStatsBusy] = useState(false);
   const [statsGoals, setStatsGoals] = useState("");
   const [statsAssists, setStatsAssists] = useState("");
   const [statsDistance, setStatsDistance] = useState("");
@@ -618,36 +623,41 @@ export function TerminarzClient({
   }
 
   async function saveMatchStats() {
-    if (!statsMatch) return;
-    const fd = new FormData();
-    if (statsStandaloneSurveyKey) {
-      fd.set("survey_key", statsStandaloneSurveyKey);
-    } else {
-      fd.set("match_id", String(statsMatch.id));
-    }
-    const nz = (s: string) => (s.trim() === "" ? "0" : s);
-    fd.set("goals", nz(statsGoals));
-    fd.set("assists", nz(statsAssists));
-    fd.set("distance", nz(statsDistance));
-    fd.set("saves", nz(statsSaves));
-    const res = await fetch("/api/stats/save", { method: "POST", body: fd });
-    const text = await res.text();
-    if (res.ok && text === "OK") {
-      toast.success("Statystyki zapisane");
-      setStatsMatch(null);
-      setStatsStandaloneSurveyKey(null);
-      router.refresh();
-      return;
-    }
-    if (res.status === 401) {
-      window.location.href = "/login";
-      return;
-    }
+    if (!statsMatch || statsBusy) return;
+    setStatsBusy(true);
     try {
-      const j = JSON.parse(text) as { error?: string };
-      toast.error(typeof j.error === "string" ? j.error : "Nie udało się zapisać statystyk.");
-    } catch {
-      toast.error("Nie udało się zapisać statystyk.");
+      const fd = new FormData();
+      if (statsStandaloneSurveyKey) {
+        fd.set("survey_key", statsStandaloneSurveyKey);
+      } else {
+        fd.set("match_id", String(statsMatch.id));
+      }
+      const nz = (s: string) => (s.trim() === "" ? "0" : s);
+      fd.set("goals", nz(statsGoals));
+      fd.set("assists", nz(statsAssists));
+      fd.set("distance", nz(statsDistance));
+      fd.set("saves", nz(statsSaves));
+      const res = await fetch("/api/stats/save", { method: "POST", body: fd });
+      const text = await res.text();
+      if (res.ok && text === "OK") {
+        toast.success("Statystyki zapisane");
+        setStatsMatch(null);
+        setStatsStandaloneSurveyKey(null);
+        router.refresh();
+        return;
+      }
+      if (res.status === 401) {
+        window.location.href = "/login";
+        return;
+      }
+      try {
+        const j = JSON.parse(text) as { error?: string };
+        toast.error(typeof j.error === "string" ? j.error : "Nie udało się zapisać statystyk.");
+      } catch {
+        toast.error("Nie udało się zapisać statystyk.");
+      }
+    } finally {
+      setStatsBusy(false);
     }
   }
 
@@ -1039,30 +1049,16 @@ export function TerminarzClient({
 
   return (
     <>
-      <div className="awp-card-surface mundial-page-accent px-4 py-8 sm:px-8">
-        <div className="flex flex-col items-center text-center">
-          <div className="pitch-rule mx-auto mb-4 w-40 sm:w-48" />
-          <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4">
-            <SiteAssetImage
-              asset="logo_header"
-              alt="Logo"
-              width={56}
-              height={56}
-              className="h-14 w-14 drop-shadow-md sm:h-16 sm:w-16"
-            />
-            <h1
-              id="terminarz-page-title"
-              className="whitespace-nowrap text-3xl font-bold tracking-tight text-[var(--mundial-navy,#1a2d5a)] dark:text-[var(--mundial-gold,#f5c518)] sm:text-4xl"
-            >
-              Terminarz
-            </h1>
-          </div>
-          <p className="mt-3 max-w-xl text-sm text-zinc-600 dark:text-zinc-400 sm:text-base">
-            Mecze Akademii — zapisz się na boisko, sprawdź skład i terminy w stylu Mundialu 2026.
-          </p>
-        </div>
+      <div className="container mx-auto max-w-5xl flex-1 space-y-6 px-4 py-8 sm:py-10">
+        <SiteSectionHero
+          kicker="Mecze"
+          title="Terminarz"
+          titleId="terminarz-page-title"
+          subtitle="Zapisz się na boisko, sprawdź terminy meczów i skład drużyn."
+          align="center"
+        />
 
-        <div className="mx-auto mt-8 max-w-4xl">
+        <div className="mx-auto max-w-4xl">
           <div className="relative overflow-hidden rounded-2xl border-2 border-white/35 text-white shadow-lg shadow-emerald-950/20 ring-1 ring-emerald-950/15">
             <div className="home-pitch-tile absolute inset-0" aria-hidden />
             <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-white/40" aria-hidden />
@@ -1828,10 +1824,11 @@ export function TerminarzClient({
         }
         footer={
           <>
-            <Button type="button" variant="outline" onClick={() => setStatsMatch(null)}>
+            <Button type="button" variant="outline" disabled={statsBusy} onClick={() => setStatsMatch(null)}>
               Anuluj
             </Button>
-            <Button type="button" variant="pitch" onClick={() => void saveMatchStats()}>
+            <Button type="button" variant="pitch" disabled={statsBusy} onClick={() => void saveMatchStats()}>
+              {statsBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
               Zapisz statystyki
             </Button>
           </>
@@ -2084,6 +2081,7 @@ function AddMatchDialog({
   onDone: () => void;
   defaults: { maxSlots: number; location: string };
 }) {
+  const { busy, run } = useAsyncAction();
   const form = useValidatedForm({
     initialValues: {
       location: defaults.location,
@@ -2098,97 +2096,126 @@ function AddMatchDialog({
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!form.validate()) return;
-    const { location, date, time, maxSlots, gatePin } = form.values;
-    const res = await fetch("/api/terminarz/add", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        location: location.trim(),
-        date,
-        time,
-        max_slots: maxSlots,
-        gate_pin: gatePin.trim(),
-      }),
+    await run(async () => {
+      const { location, date, time, maxSlots, gatePin } = form.values;
+      const res = await fetch("/api/terminarz/add", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          location: location.trim(),
+          date,
+          time,
+          max_slots: maxSlots,
+          gate_pin: gatePin.trim(),
+        }),
+      });
+      if (!res.ok) {
+        toast.error("Nie dodano meczu");
+        return;
+      }
+      form.reset();
+      onOpenChange(false);
+      onDone();
+      toast.success("Mecz dodany");
     });
-    if (!res.ok) {
-      toast.error("Nie dodano meczu");
-      return;
-    }
-    form.reset();
-    onOpenChange(false);
-    onDone();
-    toast.success("Mecz dodany");
   }
 
   return (
     <AppModal
       open={open}
       onOpenChange={(v) => {
+        if (busy) return;
         if (!v) form.reset();
         onOpenChange(v);
       }}
+      size="lg"
       title="Dodaj mecz"
+      headerKicker="Terminarz"
+      description="Uzupełnij termin, lokalizację i kod bramy — mecz pojawi się na stronie głównej i w terminarzu."
+      icon={<CalendarPlus className="h-5 w-5 text-[var(--mundial-gold)]" strokeWidth={2.25} aria-hidden />}
       footer={
         <>
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          <Button type="button" variant="outline" disabled={busy} onClick={() => onOpenChange(false)}>
             Anuluj
           </Button>
-          <Button type="submit" form="add-match-form" variant="pitch">
+          <Button type="submit" form="add-match-form" variant="pitch" disabled={busy}>
+            {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
             Zapisz mecz
           </Button>
         </>
       }
+      contentClassName="space-y-4"
     >
-      <form id="add-match-form" onSubmit={onSubmit} className="space-y-3">
-        <FormInput
-          label="Lokalizacja"
-          required
-          value={form.values.location}
-          onChange={(e) => form.setValue("location", e.target.value)}
-          onBlur={() => form.setFieldTouched("location")}
-          error={form.errors.location}
-        />
-        <FormInput
-          label="Data"
-          required
-          type="date"
-          value={form.values.date}
-          onChange={(e) => form.setValue("date", e.target.value)}
-          onBlur={() => form.setFieldTouched("date")}
-          error={form.errors.date}
-        />
-        <FormInput
-          label="Godzina"
-          required
-          type="time"
-          value={form.values.time}
-          onChange={(e) => form.setValue("time", e.target.value)}
-          onBlur={() => form.setFieldTouched("time")}
-          error={form.errors.time}
-        />
-        <FormInput
-          label="Ilość miejsc"
-          required
-          type="number"
-          min={1}
-          value={String(form.values.maxSlots)}
-          onChange={(e) => form.setValue("maxSlots", Number(e.target.value) || 0)}
-          onBlur={() => form.setFieldTouched("maxSlots")}
-          error={form.errors.maxSlots}
-        />
-        <FormInput
-          label="PIN do bramy"
-          required
-          type="text"
-          inputMode="numeric"
-          autoComplete="off"
-          placeholder="4–6 cyfr"
-          value={form.values.gatePin}
-          onChange={(e) => form.setValue("gatePin", e.target.value.replace(/\D/g, "").slice(0, 6))}
-          onBlur={() => form.setFieldTouched("gatePin")}
-          error={form.errors.gatePin}
-          hint="Kod na bramę boiska — gracze zobaczą go na stronie głównej przy najbliższym meczu."
-        />
+      <form id="add-match-form" onSubmit={onSubmit} className="space-y-4">
+        <ModalFormSection title="Miejsce" description="Boisko, hala lub adres spotkania zespołu.">
+          <FormInput
+            label="Lokalizacja"
+            required
+            value={form.values.location}
+            onChange={(e) => form.setValue("location", e.target.value)}
+            onBlur={() => form.setFieldTouched("location")}
+            error={form.errors.location}
+            disabled={busy}
+            placeholder="np. Orlik Centrum"
+          />
+        </ModalFormSection>
+
+        <ModalFormSection title="Termin" description="Data i godzina rozpoczęcia meczu.">
+          <div className={modalFormGridClass}>
+            <FormInput
+              label="Data"
+              required
+              type="date"
+              value={form.values.date}
+              onChange={(e) => form.setValue("date", e.target.value)}
+              onBlur={() => form.setFieldTouched("date")}
+              error={form.errors.date}
+              disabled={busy}
+            />
+            <FormInput
+              label="Godzina"
+              required
+              type="time"
+              value={form.values.time}
+              onChange={(e) => form.setValue("time", e.target.value)}
+              onBlur={() => form.setFieldTouched("time")}
+              error={form.errors.time}
+              disabled={busy}
+            />
+          </div>
+        </ModalFormSection>
+
+        <ModalFormSection title="Szczegóły" description="Limit miejsc i kod dostępu na bramę.">
+          <div className={modalFormGridClass}>
+            <FormInput
+              label="Ilość miejsc"
+              required
+              type="number"
+              min={1}
+              value={String(form.values.maxSlots)}
+              onChange={(e) => form.setValue("maxSlots", Number(e.target.value) || 0)}
+              onBlur={() => form.setFieldTouched("maxSlots")}
+              error={form.errors.maxSlots}
+              disabled={busy}
+            />
+            <FormInput
+              label="PIN do bramy"
+              required
+              type="text"
+              inputMode="numeric"
+              autoComplete="off"
+              placeholder="4–6 cyfr"
+              value={form.values.gatePin}
+              onChange={(e) => form.setValue("gatePin", e.target.value.replace(/\D/g, "").slice(0, 6))}
+              onBlur={() => form.setFieldTouched("gatePin")}
+              error={form.errors.gatePin}
+              disabled={busy}
+            />
+          </div>
+          <p className="mt-3 text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
+            Kod bramy gracze zobaczą na stronie głównej przy najbliższym meczu.
+          </p>
+        </ModalFormSection>
       </form>
     </AppModal>
   );

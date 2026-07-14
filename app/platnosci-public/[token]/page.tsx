@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { SiteSectionHero } from "@/components/site-section-hero";
 import { loadPublicShareLink, loadPublicWalletRows } from "@/lib/public-payment-share";
 import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -49,14 +50,13 @@ export default async function PlatnosciPublicPage(ctx: Ctx) {
   const view = await loadPublicWalletRows(link);
 
   return (
-    <div className="container mx-auto max-w-2xl flex-1 px-4 py-10">
-      <div className="mb-6 text-center">
-        <div className="pitch-rule mx-auto mb-4 w-40 opacity-80" />
-        <h1 className="text-3xl font-bold tracking-tight text-[var(--mundial-navy)] dark:text-[var(--mundial-gold)]">
-          {view.title}
-        </h1>
-        {view.subtitle ? <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">{view.subtitle}</p> : null}
-      </div>
+    <div className="container mx-auto max-w-2xl flex-1 space-y-6 px-4 py-10">
+      <SiteSectionHero
+        kicker="Portfel"
+        title={view.title}
+        subtitle={view.subtitle ?? "Publiczny podgląd sald zawodników."}
+        align="center"
+      />
 
       {view.match ? (
         <Card className="mb-6 overflow-hidden border-emerald-900/10 shadow-sm">

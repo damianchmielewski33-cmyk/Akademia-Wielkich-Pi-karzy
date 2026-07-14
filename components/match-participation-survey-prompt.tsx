@@ -6,7 +6,6 @@ import { toast } from "sonner";
 import { MapPin } from "lucide-react";
 import { AppModal } from "@/components/ui/app-modal";
 import { Button } from "@/components/ui/button";
-import { ModalPromptHeader } from "@/components/ui/modal-shared";
 import { PARTICIPATION_SURVEY_QUESTION } from "@/lib/match-participation-survey";
 import { notifyPostLoginPromptsUpdated } from "@/lib/post-login-prompts";
 
@@ -97,16 +96,13 @@ export function MatchParticipationSurveyPrompt() {
       onOpenChange={() => {}}
       preventDismiss
       hideCloseButton
-      hideHeader
       size="md"
       title="Mecz 27.03"
+      headerKicker="Ankieta"
+      description={PARTICIPATION_SURVEY_QUESTION}
+      icon={<MapPin className="h-5 w-5 text-[var(--mundial-gold)]" aria-hidden />}
       contentClassName="space-y-5"
     >
-      <ModalPromptHeader
-        icon={<MapPin className="h-5 w-5" aria-hidden />}
-        title="Mecz 27.03"
-        description={PARTICIPATION_SURVEY_QUESTION}
-      />
       <p className="text-sm leading-relaxed text-zinc-700 dark:text-zinc-300">
         Odpowiedź zapisujemy jednorazowo. Jeśli wylogujesz się lub zamkniesz kartę bez wyboru Tak/Nie, zapytanie zobaczysz przy następnym logowaniu.
       </p>

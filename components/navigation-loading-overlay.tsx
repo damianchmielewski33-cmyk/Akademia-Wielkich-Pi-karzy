@@ -3,12 +3,7 @@
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import {
-  getRoutePreloaderSpec,
-  isFullBleedRoute,
-  PagePreloaderLayout,
-  RankingNightPreloader,
-} from "@/components/preloaders";
+import { getRoutePreloaderSpec, PagePreloaderLayout } from "@/components/preloaders";
 
 /** Krótszy niż wcześniej — pełna nawigacja nie powinna sztucznie blokować UI przez kilka sekund. */
 const MIN_VISIBLE_MS = 550;
@@ -31,9 +26,7 @@ function stripQuery(p: string): string {
 }
 
 /**
- * Next.js usuwa `loading.tsx` natychmiast po zakończeniu segmentu — animacje znikają po ułamku sekundy.
- * Nakładka włącza się po `click` na linku (capture na `document`, przed `<Link>`) i zostaje min. MIN_VISIBLE_MS po dojściu do `pendingPath`.
- * Scena SVG i teksty są takie jak dla docelowej trasy (`getRoutePreloaderSpec`).
+ * Nakładka włącza się po kliknięciu linku wewnętrznego i zostaje min. MIN_VISIBLE_MS po dojściu do docelowej ścieżki.
  */
 export function NavigationLoadingOverlay() {
   const pathname = usePathname();
@@ -93,13 +86,9 @@ export function NavigationLoadingOverlay() {
         return;
       }
       if (path === null) return;
-      /** Powrót na start — bez nakładki ładowania. */
       if (path === "/") return;
       if (path.startsWith("/api/auth/logout")) return;
       if (path === "/panel-admina" || path.startsWith("/panel-admina/")) return;
-      /** Transport ma własny preloader w layoucie — bez nakładki nawigacji (unikamy podwójnego loadera). */
-      if (path.startsWith("/transport")) return;
-      /** Logowanie i rejestracja — bez pełnoekranowego loadera przy wejściu. */
       if (path.startsWith("/login") || path.startsWith("/register")) return;
 
       const current = pathname ?? "";
@@ -110,14 +99,10 @@ export function NavigationLoadingOverlay() {
       setVisible(true);
     };
 
-    /** Capture: przed obsługą `<Link>` — pathname może się zmienić wcześniej niż bubble do `document`, wtedy stary efekt zostawiał nakładkę na stałe. */
     document.addEventListener("click", onClick, true);
     return () => document.removeEventListener("click", onClick, true);
   }, [pathname]);
 
-  /**
-   * Zdejmij nakładkę po dojściu do docelowej ścieżki (także gdy `pathname` zaktualizował się przed `visible` / `navStartRef`).
-   */
   useEffect(() => {
     if (!visible || !pendingPath) return;
     const cur = stripQuery(pathname ?? "");
@@ -145,7 +130,6 @@ export function NavigationLoadingOverlay() {
     };
   }, []);
 
-  /** Jedna oś przewijania: bez tego `overflow-y-auto` na overlayu + scroll `body` dają podwójny suwak. */
   useEffect(() => {
     if (!visible) return;
     const html = document.documentElement;
@@ -168,42 +152,22 @@ export function NavigationLoadingOverlay() {
 
   if (!mounted || !visible || !pendingPath) return null;
 
-  if (isFullBleedRoute(pendingPath)) {
-    return createPortal(
-      <div
-        className="fixed inset-0 z-[100] overflow-hidden bg-[#0b1220]"
-        aria-busy="true"
-        aria-live="polite"
-        aria-label="Rankingi"
-      >
-        <RankingNightPreloader />
-      </div>,
-      document.body
-    );
-  }
-
-  const { title, subtitle, Preloader, surface } = getRoutePreloaderSpec(pendingPath);
+  const { title, subtitle, kicker } = getRoutePreloaderSpec(pendingPath);
 
   return createPortal(
     <div
-      className={
-        surface === "crest"
-          ? "fixed inset-0 z-[100] overflow-y-auto bg-black"
-          : "fixed inset-0 z-[100] overflow-y-auto bg-[var(--background)]/95 backdrop-blur-[2px]"
-      }
+      className="fixed inset-0 z-[100] overflow-y-auto bg-[var(--background)]/95 backdrop-blur-[2px]"
       aria-busy="true"
       aria-live="polite"
       aria-label={title}
     >
       <PagePreloaderLayout
         variant="full"
-        surface={surface}
+        kicker={kicker}
         title={title}
         subtitle={subtitle}
         className="min-h-[100dvh]"
-      >
-        <Preloader />
-      </PagePreloaderLayout>
+      />
     </div>,
     document.body
   );

@@ -9,13 +9,16 @@ import {
   BarChart3,
   Calendar,
   Download,
+  Film,
   LayoutDashboard,
   LayoutGrid,
   Loader2,
+  MessageCircle,
   Search,
   Settings2,
   Shield,
   Table2,
+  Trophy,
   UserPlus,
   Users,
   Wallet,
@@ -38,6 +41,7 @@ import {
   adminEmptyStateClass,
   adminOutlineBtnClass,
   adminSearchInputClass,
+  adminToggleRowClass,
 } from "@/components/admin-ui";
 import { LogoutConfirmModal } from "@/components/logout-confirm-modal";
 import { AppModal } from "@/components/ui/app-modal";
@@ -65,6 +69,9 @@ import {
 } from "@/components/admin-analytics-hourly-charts";
 import { AdminWalletsSaldoSection } from "@/components/admin-wallets-saldo-section";
 import { AdminSettingsTab } from "@/components/admin-settings-tab";
+import { AdminGalleryTab } from "@/components/admin-gallery-tab";
+import { AdminMessagesTab } from "@/components/admin-messages-tab";
+import { AdminRankingSeasonsTab } from "@/components/admin-ranking-seasons-tab";
 import { MatchLineupAdmin } from "@/components/match-lineup-admin";
 import {
   cn,
@@ -100,6 +107,7 @@ type UserRow = {
   zawodnik: string;
   profile_photo_path: string | null;
   role: string;
+  can_pzu_cup?: number;
   pin_reset_requested?: number;
   pin_set?: number;
   pin_change_pending?: number;
@@ -194,6 +202,7 @@ type Summary = {
   stats: number;
   upcoming_matches: number;
   pin_reset_requests?: number;
+  unread_messages?: number;
 };
 
 type AppSettings = {
@@ -204,10 +213,13 @@ const tabs = [
   { id: "dashboard", label: "Przegląd", icon: LayoutDashboard },
   { id: "analytics", label: "Analityka", icon: BarChart3 },
   { id: "users", label: "Użytkownicy", icon: Users },
+  { id: "messages", label: "Wiadomości", icon: MessageCircle },
   { id: "wallets", label: "Portfele", icon: Wallet },
   { id: "matches", label: "Mecze", icon: Calendar },
   { id: "lineups", label: "Składy na mecz", icon: LayoutGrid },
   { id: "stats", label: "Statystyki", icon: Table2 },
+  { id: "rankings", label: "Rankingi", icon: Trophy },
+  { id: "gallery", label: "Galeria", icon: Film },
   { id: "settings", label: "Ustawienia", icon: Settings2 },
 ] as const;
 
@@ -888,6 +900,15 @@ export function AdminPanel() {
     }
   }, []);
 
+  const loadSummaryOnly = useCallback(async () => {
+    try {
+      const s = await fetch(API.summary);
+      if (s.ok) setSummary(await s.json());
+    } catch {
+      /* badge opcjonalny */
+    }
+  }, []);
+
   const loadUsers = useCallback(async () => {
     setLoading(true);
     try {
@@ -935,11 +956,16 @@ export function AdminPanel() {
   }, []);
 
   useEffect(() => {
+    void loadSummaryOnly();
+  }, [loadSummaryOnly]);
+
+  useEffect(() => {
     if (tab === "dashboard") void loadDashboard();
     if (tab === "users") void loadUsers();
     if (tab === "matches") void loadMatches();
     if (tab === "stats") void loadStats();
-    if (tab === "lineups" || tab === "wallets") setLoading(false);
+    if (tab === "lineups" || tab === "wallets" || tab === "settings" || tab === "gallery" || tab === "messages" || tab === "rankings")
+      setLoading(false);
   }, [tab, loadDashboard, loadUsers, loadMatches, loadStats]);
 
   useEffect(() => {
@@ -981,7 +1007,7 @@ export function AdminPanel() {
   }, [tab, analyticsRange, analyticsFetchNonce]);
 
   const shellLoading =
-    tab === "lineups" || tab === "wallets" || tab === "settings"
+    tab === "lineups" || tab === "wallets" || tab === "settings" || tab === "gallery" || tab === "messages" || tab === "rankings"
       ? false
       : tab === "analytics"
         ? analyticsLoading
@@ -991,12 +1017,15 @@ export function AdminPanel() {
     (summary?.pin_reset_requests ?? 0) > 0 ||
     users.some((u) => (u.pin_reset_requested ?? 0) === 1);
 
+  const unreadMessages = summary?.unread_messages ?? 0;
+
   return (
     <>
       <AdminShell
         tabs={tabs.map((t) => ({
           ...t,
           badge: t.id === "users" && pinBadge,
+          badgeCount: t.id === "messages" ? unreadMessages : undefined,
         }))}
         activeTab={tab}
         onTabChange={(id) => setTab(id as TabId)}
@@ -1013,6 +1042,7 @@ export function AdminPanel() {
           />
         )}
         {tab === "users" && <UsersView users={users} loading={loading} onReload={loadUsers} />}
+        {tab === "messages" && <AdminMessagesTab onUnreadChange={loadSummaryOnly} />}
         {tab === "wallets" && <AdminWalletsSaldoSection />}
         {tab === "matches" && (
           <MatchesView
@@ -1037,6 +1067,8 @@ export function AdminPanel() {
           />
         )}
         {tab === "stats" && <StatsView stats={stats} loading={loading} onReload={loadStats} />}
+        {tab === "rankings" && <AdminRankingSeasonsTab />}
+        {tab === "gallery" && <AdminGalleryTab />}
         {tab === "settings" && <AdminSettingsTab loading={loading} onReload={loadDashboard} />}
       </AdminShell>
 
@@ -1810,11 +1842,18 @@ function UsersView({
                     </div>
                   </TableCell>
                   <TableCell>
-                    {u.role === "admin" ? (
-                      <Badge>Administrator</Badge>
-                    ) : (
-                      <Badge variant="secondary">Gracz</Badge>
-                    )}
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {u.role === "admin" ? (
+                        <Badge>Administrator</Badge>
+                      ) : (
+                        <Badge variant="secondary">Gracz</Badge>
+                      )}
+                      {(u.can_pzu_cup ?? 0) === 1 ? (
+                        <Badge className="border-amber-300/50 bg-amber-500/20 font-normal text-amber-50">
+                          PZU Cup
+                        </Badge>
+                      ) : null}
+                    </div>
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex flex-wrap justify-end gap-2">
@@ -2015,6 +2054,7 @@ function UserCreateForm({
   onCreated: () => void;
 }) {
   const [role, setRole] = useState<"admin" | "player">("player");
+  const [canPzuCup, setCanPzuCup] = useState(false);
   const [saving, setSaving] = useState(false);
   const form = useValidatedForm({
     initialValues: { first_name: "", last_name: "", zawodnik: "" },
@@ -2055,6 +2095,7 @@ function UserCreateForm({
                     last_name: last_name.trim(),
                     zawodnik,
                     role,
+                    can_pzu_cup: canPzuCup,
                   }),
                 });
                 const data = (await res.json().catch(() => ({}))) as { error?: string };
@@ -2117,6 +2158,26 @@ function UserCreateForm({
             </SelectContent>
           </Select>
         </div>
+        <label className={`${adminToggleRowClass} mt-1`}>
+          <span className="min-w-0">
+            <span className="block text-sm font-semibold text-zinc-900 dark:text-white">Dostęp do PZU Cup</span>
+            <span className="mt-1 block text-sm text-zinc-600 dark:text-zinc-400">
+              Użytkownik zobaczy ukryty kafelek „PZU Cup” na stronie startowej i wejdzie do panelu turnieju.
+            </span>
+          </span>
+          <span className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              className="h-4 w-4 rounded border-zinc-300 text-emerald-600 focus:ring-emerald-500"
+              checked={canPzuCup}
+              disabled={saving}
+              onChange={(e) => setCanPzuCup(e.target.checked)}
+            />
+            <span className="text-sm font-medium text-zinc-700 dark:text-emerald-100/90">
+              {canPzuCup ? "Tak" : "Nie"}
+            </span>
+          </span>
+        </label>
       </div>
     </AppModal>
   );
@@ -2139,7 +2200,16 @@ function UserEditForm({
   const [last_name, setLn] = useState(user.last_name);
   const [zawodnik, setZ] = useState(user.zawodnik);
   const [role, setRole] = useState(user.role);
+  const [canPzuCup, setCanPzuCup] = useState((user.can_pzu_cup ?? 0) === 1);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setFn(user.first_name);
+    setLn(user.last_name);
+    setZ(user.zawodnik);
+    setRole(user.role);
+    setCanPzuCup((user.can_pzu_cup ?? 0) === 1);
+  }, [user]);
 
   return (
     <AppModal
@@ -2162,7 +2232,7 @@ function UserEditForm({
                 const res = await fetch(API.user(user.id), {
                   method: "PUT",
                   headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ first_name, last_name, zawodnik, role }),
+                  body: JSON.stringify({ first_name, last_name, zawodnik, role, can_pzu_cup: canPzuCup }),
                 });
                 if (!res.ok) {
                   toast.error("Nie udało się zapisać zmian");
@@ -2221,6 +2291,26 @@ function UserEditForm({
             </SelectContent>
           </Select>
         </div>
+        <label className="flex flex-wrap items-start justify-between gap-4 rounded-xl border border-zinc-200 bg-zinc-50/80 px-4 py-3 dark:border-zinc-700 dark:bg-zinc-900/40">
+          <span className="min-w-0">
+            <span className="block text-sm font-semibold text-zinc-900 dark:text-white">Dostęp do PZU Cup</span>
+            <span className="mt-1 block text-sm text-zinc-600 dark:text-zinc-400">
+              Widoczny kafelek turnieju na stronie startowej i dostęp do /pzu-cup.
+            </span>
+          </span>
+          <span className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              className="h-4 w-4 rounded border-zinc-300 text-emerald-600 focus:ring-emerald-500"
+              checked={canPzuCup}
+              disabled={saving}
+              onChange={(e) => setCanPzuCup(e.target.checked)}
+            />
+            <span className="text-sm font-medium text-zinc-700 dark:text-emerald-100/90">
+              {canPzuCup ? "Tak" : "Nie"}
+            </span>
+          </span>
+        </label>
       </div>
     </AppModal>
   );

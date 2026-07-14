@@ -29,33 +29,33 @@ export type SiteAssetMeta = {
 
 export const SITE_ASSET_META: Record<SiteAssetKey, SiteAssetMeta> = {
   logo_header: {
-    label: "Logo w nagłówku",
-    hint: "Ikona obok nazwy strony (np. logo turnieju).",
-    recommended: "Kwadrat, SVG lub PNG z przezroczystością, min. 160×160 px",
+    label: "Logo obok nazwy strony",
+    hint: "Mała ikona w górnym pasku nawigacji.",
+    recommended: "Kwadrat, PNG lub SVG, min. 160×160 px",
   },
   logo_crest: {
-    label: "Herb / logo akademii",
-    hint: "Stopka, hero stron, preloader, panel admina.",
-    recommended: "Kwadrat, SVG lub PNG, min. 256×256 px",
+    label: "Herb akademii",
+    hint: "Większe logo na stronie głównej, w stopce i przy ładowaniu.",
+    recommended: "Kwadrat, PNG lub SVG, min. 256×256 px",
   },
   logo_favicon: {
-    label: "Favicon i ikona PWA",
-    hint: "Ikona w karcie przeglądarki i manifestcie.",
-    recommended: "SVG lub PNG 512×512 px",
+    label: "Ikona w karcie przeglądarki",
+    hint: "Mała ikonka obok tytułu zakładki oraz na telefonie po dodaniu strony do ekranu.",
+    recommended: "PNG lub SVG, ok. 512×512 px",
   },
   bg_soccer_ball: {
-    label: "Dekoracja — piłka",
-    hint: "Półprzezroczyste piłki w tle strony i panelu admina.",
-    recommended: "SVG lub PNG z przezroczystością",
+    label: "Dekoracja — piłki w tle",
+    hint: "Delikatne piłki w tle strony (nie przesłaniają treści).",
+    recommended: "PNG lub SVG z przezroczystym tłem",
   },
   bg_stadium: {
     label: "Tło — murawa / stadion",
-    hint: "Główne tło strony (tryb jasny i ciemny).",
-    recommended: "Szeroki baner, min. 1920×1080 px lub SVG",
+    hint: "Główne tło całej strony.",
+    recommended: "Szeroki obraz min. 1920×1080 px lub SVG",
   },
   bg_pitch_lines: {
     label: "Tło — linie boiska",
-    hint: "Dekoracja w stopce i na kartach „boiskowych”.",
+    hint: "Dekoracja na zielonych kartach i w stopce.",
     recommended: "Szeroki wzór, SVG lub PNG",
   },
 };

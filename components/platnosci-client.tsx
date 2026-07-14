@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { ArrowDownLeft, ArrowUpRight, Loader2, LogIn, SlidersHorizontal, UserPlus, Wallet } from "lucide-react";
 import { toast } from "sonner";
 import { AdminWalletsSaldoSection } from "@/components/admin-wallets-saldo-section";
+import { PayMatchButton } from "@/components/pay-match-button";
 import { PitchCard, PitchPageHero, pitchLabelClass, pitchPanelClass } from "@/components/ui/pitch-card";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -24,6 +25,9 @@ type WalletMeTransaction = WalletTransactionRow & { balance_after_pln: number };
 type Props = {
   isLoggedIn: boolean;
   isAdmin: boolean;
+  blikPhoneDisplay: string;
+  defaultMatchFeePln: number | null;
+  playerLabel: string;
 };
 
 const contentPanelClass =
@@ -201,7 +205,13 @@ function WalletBalanceHistory({
   );
 }
 
-export function PlatnosciClient({ isLoggedIn, isAdmin }: Props) {
+export function PlatnosciClient({
+  isLoggedIn,
+  isAdmin,
+  blikPhoneDisplay,
+  defaultMatchFeePln,
+  playerLabel,
+}: Props) {
   const [walletBalancePln, setWalletBalancePln] = useState<number | null>(null);
   const [walletTransactions, setWalletTransactions] = useState<WalletMeTransaction[]>([]);
   const [walletLoading, setWalletLoading] = useState(false);
@@ -324,6 +334,13 @@ export function PlatnosciClient({ isLoggedIn, isAdmin }: Props) {
                 </Button>
               </div>
             </PitchCard>
+
+            <PayMatchButton
+              blikPhoneDisplay={blikPhoneDisplay}
+              defaultMatchFeePln={defaultMatchFeePln}
+              balancePln={walletBalancePln}
+              playerLabel={playerLabel}
+            />
 
             <div className={contentPanelClass}>
               <div className="flex items-start gap-3">

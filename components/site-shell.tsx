@@ -78,6 +78,7 @@ export function SiteShell({
     { href: "/platnosci", label: "Płatności", visible: isLoggedIn },
     { href: "/pilkarze", label: "Piłkarze", visible: true },
     { href: "/sklady", label: "Składy", visible: true },
+    { href: "/galeria", label: "Galeria", visible: true },
     { href: "/statystyki", label: "Statystyki", visible: isLoggedIn },
     { href: "/rankingi", label: "Rankingi", visible: isLoggedIn },
     { href: "/o-nas", label: "O nas", visible: true },

@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "@/lib/auth";
+import { getDb } from "@/lib/db";
+import { userHasPzuCupAccess } from "@/lib/pzu-cup-access";
 
 export async function requireUser() {
   const session = await getServerSession();
@@ -72,6 +74,20 @@ export async function requireAdmin() {
     return {
       ok: false as const,
       response: NextResponse.json({ error: "Brak uprawnień administratora" }, { status: 403 }),
+    };
+  }
+  return { ok: true as const, session: r.session };
+}
+
+export async function requirePzuCupAccess() {
+  const r = await requireUser();
+  if (!r.ok) return r;
+  const db = await getDb();
+  const allowed = await userHasPzuCupAccess(db, r.session.userId, r.session.isAdmin);
+  if (!allowed) {
+    return {
+      ok: false as const,
+      response: NextResponse.json({ error: "Brak dostępu do sekcji PZU Cup" }, { status: 403 }),
     };
   }
   return { ok: true as const, session: r.session };

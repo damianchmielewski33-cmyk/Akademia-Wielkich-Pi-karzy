@@ -397,9 +397,9 @@ export function MatchLineupView({ matchDate, matchTime, location, players, home,
   return (
     <div className="min-w-0 space-y-3 overflow-x-hidden sm:space-y-4">
       <div className="text-center sm:text-left">
-        <h1 className="text-xl font-bold tracking-tight text-emerald-950 dark:text-emerald-100 xs:text-2xl sm:text-3xl">
-          Składy na mecz
-        </h1>
+        <h2 className="font-[family-name:var(--font-display)] text-xl font-semibold uppercase tracking-wide text-emerald-950 dark:text-emerald-100 xs:text-2xl sm:text-3xl">
+          Ten mecz
+        </h2>
         <p className="mt-1 text-xs leading-snug text-zinc-600 xs:text-sm sm:text-base">
           <span className="whitespace-nowrap">{matchDate} · {matchTime}</span>
           <span className="mx-1 hidden sm:inline">·</span>

@@ -8,7 +8,7 @@ import { z } from "zod";
 import { AppModal } from "@/components/ui/app-modal";
 import { Button } from "@/components/ui/button";
 import { FormInput } from "@/components/ui/form-field";
-import { ModalPromptHeader, modalPanelClass } from "@/components/ui/modal-shared";
+import { modalPanelClass } from "@/components/ui/modal-shared";
 import { formSchemas } from "@/lib/form-validation";
 
 type MeUser = {
@@ -133,9 +133,11 @@ export function MatchNotificationPrompt() {
       onOpenChange={() => {}}
       preventDismiss
       hideCloseButton
-      hideHeader
       size="md"
       title="Powiadomienia o meczach"
+      headerKicker="Powiadomienie"
+      description="Czy chcesz otrzymywać powiadomienia o nowych terminach w terminarzu?"
+      icon={<Bell className="h-5 w-5 text-[var(--mundial-gold)]" aria-hidden />}
       contentClassName="space-y-5"
       footer={
         <>
@@ -149,11 +151,6 @@ export function MatchNotificationPrompt() {
       }
       footerClassName="flex-col sm:flex-row"
     >
-      <ModalPromptHeader
-        icon={<Bell className="h-5 w-5" aria-hidden />}
-        title="Powiadomienia o meczach"
-        description="Czy chcesz otrzymywać powiadomienia o nowych terminach w terminarzu?"
-      />
       <p className="text-sm leading-relaxed text-zinc-700 dark:text-zinc-300">
         Jeśli tak, podaj adres e-mail i zaznacz zgodę poniżej. Po dodaniu nowego meczu przez administratora wyślemy Ci krótką wiadomość z datą, godziną, miejscem i linkiem do zapisu w aplikacji.
       </p>

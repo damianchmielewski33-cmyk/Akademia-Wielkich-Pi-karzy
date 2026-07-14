@@ -110,8 +110,8 @@ export function AdminSiteAssetField({ assetKey, currentUrl, customUrl, disabled,
         </div>
 
         <div className="flex min-w-0 flex-1 flex-col gap-2">
-          <p className="truncate font-mono text-[0.65rem] text-emerald-100/75" title={previewSrc}>
-            {isCustom ? "Wgrana grafika" : "Domyślna"} · {previewSrc}
+          <p className="text-sm text-emerald-100/85">
+            {isCustom ? "Używasz własnej grafiki" : "Używana jest grafika domyślna"}
           </p>
           <input
             ref={inputRef}
@@ -137,7 +137,7 @@ export function AdminSiteAssetField({ assetKey, currentUrl, customUrl, disabled,
               ) : (
                 <Upload className="h-4 w-4" aria-hidden />
               )}
-              Wgraj plik
+              Wgraj nową grafikę
             </Button>
             <Button
               type="button"
@@ -147,10 +147,10 @@ export function AdminSiteAssetField({ assetKey, currentUrl, customUrl, disabled,
               onClick={() => void resetToDefault()}
             >
               <RotateCcw className="h-4 w-4" aria-hidden />
-              Domyślna
+              Przywróć domyślną
             </Button>
           </div>
-          <p className="text-[0.65rem] text-emerald-100/55">JPG, PNG, WebP, GIF lub SVG · max 4 MB</p>
+          <p className="text-xs text-emerald-100/60">Akceptowane: JPG, PNG, WebP, GIF, SVG · maks. 4 MB</p>
         </div>
       </div>
     </div>

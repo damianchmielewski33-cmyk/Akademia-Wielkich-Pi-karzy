@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState } from "react";
-import { StatsCrunchPreloader } from "@/components/preloaders";
+import { InlinePreloader } from "@/components/preloaders";
 import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
 import { AppModal } from "@/components/ui/app-modal";
 import { modalEmptyStateClass, modalListClass } from "@/components/ui/modal-shared";
@@ -129,7 +129,7 @@ export function LineupPlayerStatsDialog({ userId, open, onOpenChange }: Props) {
         ) : undefined
       }
     >
-      {loading && !loadError && <StatsCrunchPreloader />}
+      {loading && !loadError && <InlinePreloader label="Wczytywanie statystyk…" />}
       {data && !loading && !loadError && (
         <>
           <div className="pitch-rule mb-1 w-full max-w-xs opacity-70" />

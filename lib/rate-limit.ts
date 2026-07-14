@@ -62,4 +62,6 @@ export const RATE = {
   pageView: { limit: 200, windowMs: 60 * 1000 },
   /** Prognoza pogody — ogranicza nadużycia klucza Google Maps / zewnętrznych API. */
   weatherForecast: { limit: 30, windowMs: 60 * 1000 },
+  /** Wiadomości do admina — limit na IP. */
+  contactAdmin: { limit: 8, windowMs: 60 * 60 * 1000 },
 } as const;
