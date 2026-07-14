@@ -6,9 +6,20 @@ async function pragmaColumnNames(
   table: "users" | "matches" | "match_stats" | "match_signups" | "app_settings" | "public_share_links"
 ): Promise<string[]> {
   const rs = await client.execute(`PRAGMA table_info(${table})`);
-  const nameIdx = rs.columns.indexOf("name");
-  if (nameIdx === -1) return [];
-  return rs.rows.map((row) => String(row[nameIdx]));
+  let nameIdx = rs.columns.indexOf("name");
+  if (nameIdx === -1) {
+    // libSQL: standard PRAGMA table_info — kolumna `name` jest druga (indeks 1).
+    nameIdx = 1;
+  }
+  return rs.rows
+    .map((row) => {
+      const rec = row as unknown as Record<string | number, unknown>;
+      if (typeof rec.name === "string" || typeof rec.name === "number") {
+        return String(rec.name);
+      }
+      return String(rec[nameIdx] ?? "");
+    })
+    .filter(Boolean);
 }
 
 /** Tworzy / aktualizuje schemat w zdalnej bazie libSQL (Turso). Wywoływane z getDb() i skryptu db:init-turso. */

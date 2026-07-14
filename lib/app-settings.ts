@@ -358,14 +358,45 @@ const APP_SETTINGS_MIGRATION_COLUMNS: { name: string; ddl: string }[] = [
   { name: "asset_bg_pitch_lines_url", ddl: "ALTER TABLE app_settings ADD COLUMN asset_bg_pitch_lines_url TEXT" },
 ];
 
+function isDuplicateColumnError(err: unknown): boolean {
+  const parts: string[] = [];
+  if (err instanceof Error) {
+    parts.push(err.message);
+    if (err.cause instanceof Error) parts.push(err.cause.message);
+  } else if (typeof err === "string") {
+    parts.push(err);
+  } else if (err && typeof err === "object") {
+    const o = err as { message?: unknown; cause?: unknown };
+    if (typeof o.message === "string") parts.push(o.message);
+    if (o.cause instanceof Error) parts.push(o.cause.message);
+    else if (typeof o.cause === "object" && o.cause && "message" in o.cause) {
+      const m = (o.cause as { message?: unknown }).message;
+      if (typeof m === "string") parts.push(m);
+    }
+  }
+  return parts.some((m) => {
+    const lower = m.toLowerCase();
+    return lower.includes("duplicate column") || lower.includes("zduplikowana nazwa kolumny");
+  });
+}
+
 /** Migracja kolumn `app_settings` — SQLite (sync exec). */
 export function migrateAppSettingsColumnsSqlite(
   existingColumnNames: string[],
   exec: (sql: string) => void
 ): void {
+  const names = new Set(existingColumnNames);
   for (const col of APP_SETTINGS_MIGRATION_COLUMNS) {
-    if (!existingColumnNames.includes(col.name)) {
+    if (names.has(col.name)) continue;
+    try {
       exec(col.ddl);
+      names.add(col.name);
+    } catch (err) {
+      if (isDuplicateColumnError(err)) {
+        names.add(col.name);
+        continue;
+      }
+      throw err;
     }
   }
 }
@@ -375,9 +406,18 @@ export async function migrateAppSettingsColumnsLibsql(
   existingColumnNames: string[],
   execute: (sql: string) => Promise<unknown>
 ): Promise<void> {
+  const names = new Set(existingColumnNames);
   for (const col of APP_SETTINGS_MIGRATION_COLUMNS) {
-    if (!existingColumnNames.includes(col.name)) {
+    if (names.has(col.name)) continue;
+    try {
       await execute(col.ddl);
+      names.add(col.name);
+    } catch (err) {
+      if (isDuplicateColumnError(err)) {
+        names.add(col.name);
+        continue;
+      }
+      throw err;
     }
   }
 }
