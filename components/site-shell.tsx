@@ -184,21 +184,24 @@ export function SiteShell({
           }}
           aria-hidden
         />
-        <div className="relative mx-auto flex max-w-6xl items-center justify-between gap-3 px-3 py-3 xs:px-4 sm:py-3.5">
-          <Link href="/" className="awp-focus-ring flex min-w-0 items-center gap-2.5 rounded-xl pr-1 xs:gap-3 xs:pr-2">
-            <span className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/10 shadow-inner ring-1 ring-[var(--mundial-gold)]/40 xs:h-11 xs:w-11">
+        <div className="relative mx-auto flex max-w-6xl items-center justify-between gap-2 overflow-hidden px-3 py-3 xs:gap-3 xs:px-4 sm:py-3.5">
+          <Link
+            href="/"
+            className="awp-focus-ring flex min-w-0 max-w-[calc(100%-9.75rem)] flex-1 items-center gap-2 rounded-xl pr-1 xs:max-w-[calc(100%-11rem)] xs:gap-2.5 sm:max-w-none sm:flex-none sm:gap-3 sm:pr-2"
+          >
+            <span className="relative z-[1] flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 shadow-inner ring-1 ring-[var(--mundial-gold)]/40 xs:h-10 xs:w-10 sm:h-11 sm:w-11">
               <SiteAssetImage
                 asset="logo_header"
                 alt="Logo"
                 width={160}
                 height={160}
-                className="h-8 w-8 xs:h-9 xs:w-9"
+                className="h-7 w-7 xs:h-8 xs:w-8 sm:h-9 sm:w-9"
                 priority
                 sizes="40px"
               />
             </span>
-            <span className="min-w-0 text-left">
-              <span className="block text-[0.6rem] font-semibold uppercase tracking-[0.18em] text-[var(--mundial-gold)] xs:text-[0.65rem] xs:tracking-[0.2em]">
+            <span className="min-w-0 flex-1 overflow-hidden text-left">
+              <span className="hidden text-[0.6rem] font-semibold uppercase tracking-[0.18em] text-[var(--mundial-gold)] xs:block xs:text-[0.65rem] xs:tracking-[0.2em]">
                 Mundial 2026
               </span>
               <span className="block truncate text-sm font-semibold leading-snug xs:text-[0.95rem] sm:text-base">
@@ -208,7 +211,7 @@ export function SiteShell({
             </span>
           </Link>
 
-          <nav className="flex shrink-0 items-center justify-end gap-1.5 xs:gap-2" aria-label="Główna nawigacja">
+          <nav className="relative z-[2] flex shrink-0 items-center justify-end gap-1 xs:gap-1.5 sm:gap-2" aria-label="Główna nawigacja">
             {/* Desktop / duży tablet */}
             <div className="hidden flex-wrap items-center justify-end gap-1 lg:flex lg:gap-1.5">
               {isAdmin ? <AdminHeaderMessagesButton initialUnreadCount={adminUnreadMessages} /> : null}
@@ -277,29 +280,31 @@ export function SiteShell({
               ) : null}
             </div>
 
-            {/* Mobile / tablet */}
-            <div className="flex items-center gap-1.5 xs:gap-2 lg:hidden">
-              {isAdmin ? <AdminHeaderMessagesButton initialUnreadCount={adminUnreadMessages} /> : null}
+            {/* Mobile / tablet — kompaktowe przyciski, żeby nie nachodziły na logo */}
+            <div className="flex items-center gap-1 xs:gap-1.5 lg:hidden">
+              {isAdmin ? (
+                <AdminHeaderMessagesButton initialUnreadCount={adminUnreadMessages} compact />
+              ) : null}
 
               <button
                 type="button"
                 onClick={() => void toggleTheme()}
                 disabled={themeBusy}
                 className={cn(
-                  "awp-focus-ring inline-flex h-10 w-10 touch-manipulation items-center justify-center rounded-xl border border-white/20 bg-white/10 text-white shadow-sm hover:bg-white/15",
+                  "awp-focus-ring inline-flex h-9 w-9 touch-manipulation items-center justify-center rounded-xl border border-white/20 bg-white/10 text-white shadow-sm hover:bg-white/15 xs:h-10 xs:w-10",
                   themeBusy && "opacity-70"
                 )}
                 aria-label={isDarkNow ? "Przełącz na jasny motyw" : "Przełącz na ciemny motyw"}
                 title={isDarkNow ? "Jasny motyw" : "Ciemny motyw"}
               >
-                {isDarkNow ? <Sun className="h-5 w-5" aria-hidden /> : <Moon className="h-5 w-5" aria-hidden />}
+                {isDarkNow ? <Sun className="h-4 w-4 xs:h-5 xs:w-5" aria-hidden /> : <Moon className="h-4 w-4 xs:h-5 xs:w-5" aria-hidden />}
               </button>
 
               {isLoggedIn && account ? (
                 <Link
                   href="/profil"
                   className={cn(
-                    "awp-focus-ring flex touch-manipulation items-center gap-2 rounded-xl px-1.5 py-1.5 transition-[background-color,color] xs:px-2",
+                    "awp-focus-ring flex touch-manipulation items-center rounded-xl p-0.5 transition-[background-color,color] xs:p-1",
                     pathname === "/profil" ? "bg-white/15 text-white" : "text-emerald-100/90 hover:bg-white/10"
                   )}
                   aria-label="Mój profil"
@@ -309,8 +314,9 @@ export function SiteShell({
                     photoPath={account.profilePhotoPath}
                     firstName={account.firstName}
                     lastName={account.lastName}
-                    size="sm"
+                    size="xs"
                     ringClassName="ring-2 ring-white/45"
+                    className="xs:h-8 xs:w-8 xs:text-xs"
                   />
                 </Link>
               ) : null}
@@ -318,13 +324,13 @@ export function SiteShell({
               <button
                 type="button"
                 onClick={() => setMobileNavOpen(true)}
-                className="awp-focus-ring inline-flex h-10 w-10 touch-manipulation items-center justify-center rounded-xl border border-white/20 bg-white/10 text-white shadow-sm hover:bg-white/15"
+                className="awp-focus-ring inline-flex h-9 w-9 touch-manipulation items-center justify-center rounded-xl border border-white/20 bg-white/10 text-white shadow-sm hover:bg-white/15 xs:h-10 xs:w-10"
                 aria-label="Otwórz menu"
                 aria-expanded={mobileNavOpen}
                 aria-controls="awp-mobile-nav"
                 title="Menu"
               >
-                <Menu className="h-5 w-5" aria-hidden />
+                <Menu className="h-4 w-4 xs:h-5 xs:w-5" aria-hidden />
               </button>
             </div>
           </nav>

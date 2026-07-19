@@ -109,13 +109,24 @@ export async function GET() {
   for (const t of threadMap.values()) {
     if (t.kind !== "dm" || t.peer_user_id == null) continue;
     const u = (await db
-      .prepare("SELECT first_name, last_name, player_alias FROM users WHERE id = ?")
+      .prepare(
+        "SELECT first_name, last_name, player_alias, profile_photo_path FROM users WHERE id = ?"
+      )
       .get(t.peer_user_id)) as
-      | { first_name: string; last_name: string; player_alias: string }
+      | {
+          first_name: string;
+          last_name: string;
+          player_alias: string;
+          profile_photo_path: string | null;
+        }
       | undefined;
     if (u) {
       t.title = displayNameFromParts(u.first_name, u.last_name) || u.player_alias;
       t.subtitle = u.player_alias;
+      (t as ThreadAgg & { first_name?: string }).first_name = u.first_name;
+      (t as ThreadAgg & { last_name?: string }).last_name = u.last_name;
+      (t as ThreadAgg & { profile_photo_path?: string | null }).profile_photo_path =
+        u.profile_photo_path;
     }
   }
 

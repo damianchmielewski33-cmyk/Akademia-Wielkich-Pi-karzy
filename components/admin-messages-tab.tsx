@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ArrowLeft, Loader2, MessageCircle, Send } from "lucide-react";
+import { ArrowLeft, Loader2, MessageCircle, Plus, Send, UserPlus, Users } from "lucide-react";
 import { toast } from "sonner";
 import {
   ChatAttachmentControls,
@@ -13,20 +13,37 @@ import {
   chatClusterForIndex,
   insertEmojiAtCursor,
 } from "@/components/chat-composer-extras";
+import { ChatPeerPicker, type ChatPeer } from "@/components/chat-peer-picker";
 import {
   AdminCard,
   AdminToolbar,
   adminEmptyStateClass,
 } from "@/components/admin-ui";
+import { PlayerAvatar } from "@/components/player-avatar";
+import { SiteAssetImage } from "@/components/site-asset-image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+
+function conversationKeyForUser(userId: number) {
+  return `user:${userId}`;
+}
+
+function splitDisplayName(name: string): { first: string; last: string } {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return { first: "?", last: "" };
+  if (parts.length === 1) return { first: parts[0], last: "" };
+  return { first: parts[0], last: parts.slice(1).join(" ") };
+}
 
 type ThreadItem = {
   conversation_key: string;
   sender_name: string;
   user_id: number | null;
   user_alias: string | null;
+  profile_photo_path?: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
   recipient_label: string | null;
   last_at_display: string;
   unread_count: number;
@@ -65,6 +82,9 @@ export function AdminMessagesTab({ onUnreadChange, mode = "page", active = true 
   const [attachmentUrl, setAttachmentUrl] = useState<string | null>(null);
   const [attachmentPreview, setAttachmentPreview] = useState<string | null>(null);
   const [uploadingAttachment, setUploadingAttachment] = useState(false);
+  const [composingNew, setComposingNew] = useState(false);
+  const [draftPeer, setDraftPeer] = useState<ChatPeer | null>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -99,9 +119,15 @@ export function AdminMessagesTab({ onUnreadChange, mode = "page", active = true 
 
   const unreadCount = threads.reduce((sum, t) => sum + t.unread_count, 0);
   const selected = threads.find((t) => t.conversation_key === selectedKey) ?? null;
+  const selectedTitle =
+    selected?.sender_name ??
+    draftPeer?.display_name ??
+    (selectedKey ? "Rozmowa" : null);
 
   const openThread = useCallback(
     async (key: string) => {
+      setComposingNew(false);
+      setDraftPeer(null);
       setSelectedKey(key);
       setLoadingThread(true);
       setReply("");
@@ -111,6 +137,7 @@ export function AdminMessagesTab({ onUnreadChange, mode = "page", active = true 
         const res = await fetch(`/api/admin/messages/thread?${params.toString()}`);
         const data = (await res.json().catch(() => ({}))) as {
           messages?: ChatMessage[];
+          peer?: { display_name: string; user_id: number | null; player_alias: string | null } | null;
           error?: string;
         };
         if (!res.ok) {
@@ -118,6 +145,18 @@ export function AdminMessagesTab({ onUnreadChange, mode = "page", active = true 
           return;
         }
         setMessages(data.messages ?? []);
+        if (data.peer?.user_id) {
+          const fromList = threads.find((t) => t.conversation_key === key);
+          const nameBits = splitDisplayName(data.peer.display_name);
+          setDraftPeer({
+            id: data.peer.user_id,
+            display_name: data.peer.display_name,
+            player_alias: data.peer.player_alias ?? "",
+            first_name: fromList?.first_name || nameBits.first,
+            last_name: fromList?.last_name || nameBits.last,
+            profile_photo_path: fromList?.profile_photo_path ?? null,
+          });
+        }
         setThreads((prev) =>
           prev.map((t) => (t.conversation_key === key ? { ...t, unread_count: 0 } : t))
         );
@@ -126,8 +165,22 @@ export function AdminMessagesTab({ onUnreadChange, mode = "page", active = true 
         setLoadingThread(false);
       }
     },
-    [onUnreadChange, clearAttachment]
+    [onUnreadChange, clearAttachment, threads]
   );
+
+  function startNewWithPeer(peer: ChatPeer) {
+    const key = conversationKeyForUser(peer.id);
+    setComposingNew(false);
+    setDraftPeer(peer);
+    setSelectedKey(key);
+    setMessages([]);
+    setReply("");
+    clearAttachment();
+    const existing = threads.find((t) => t.conversation_key === key);
+    if (existing) {
+      void openThread(key);
+    }
+  }
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -135,28 +188,35 @@ export function AdminMessagesTab({ onUnreadChange, mode = "page", active = true 
 
   async function sendReply(e: React.FormEvent) {
     e.preventDefault();
-    if (!selectedKey) return;
+    if (!selectedKey && !draftPeer) return;
     const text = reply.trim();
     if (!text && !attachmentUrl) return;
     setSending(true);
     try {
+      const payload: Record<string, unknown> = {
+        body: text,
+        attachment_url: attachmentUrl,
+      };
+      if (draftPeer && !threads.some((t) => t.conversation_key === selectedKey)) {
+        payload.target_user_id = draftPeer.id;
+      } else {
+        payload.conversation_key = selectedKey;
+      }
       const res = await fetch("/api/admin/messages/thread", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          conversation_key: selectedKey,
-          body: text,
-          attachment_url: attachmentUrl,
-        }),
+        body: JSON.stringify(payload),
       });
       const data = (await res.json().catch(() => ({}))) as {
         message?: ChatMessage;
+        conversation_key?: string;
         error?: string;
       };
       if (!res.ok) {
         toast.error(typeof data.error === "string" ? data.error : "Nie udało się wysłać odpowiedzi");
         return;
       }
+      if (data.conversation_key) setSelectedKey(data.conversation_key);
       if (data.message) {
         setMessages((prev) => [...prev, data.message!]);
       }
@@ -169,53 +229,135 @@ export function AdminMessagesTab({ onUnreadChange, mode = "page", active = true 
     }
   }
 
+  async function deleteMessage(id: number) {
+    if (!window.confirm("Usunąć tę wiadomość?")) return;
+    setDeletingId(id);
+    try {
+      const res = await fetch(`/api/admin/messages/${id}`, { method: "DELETE" });
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) {
+        toast.error(typeof data.error === "string" ? data.error : "Nie udało się usunąć wiadomości");
+        return;
+      }
+      setMessages((prev) => prev.filter((m) => m.id !== id));
+      await load();
+      onUnreadChange?.();
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
   const canSend = Boolean(reply.trim() || attachmentUrl);
+  const showChatPane = Boolean(selectedKey || draftPeer);
+  /** Popup jest na murawie — zawsze ton pitch (nie jasny formularz). */
+  const chatTone = "pitch" as const;
+
+  function threadAvatar(t: ThreadItem | null, peer?: ChatPeer | null) {
+    if (peer) {
+      return (
+        <PlayerAvatar
+          photoPath={peer.profile_photo_path}
+          firstName={peer.first_name}
+          lastName={peer.last_name}
+          size="md"
+          ringClassName="ring-2 ring-[var(--mundial-gold)]/45"
+        />
+      );
+    }
+    if (!t) return null;
+    if (t.is_guest) {
+      return (
+        <span
+          className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-amber-600/90 to-amber-800 ring-2 ring-[var(--mundial-gold)]/40"
+          aria-hidden
+        >
+          <Users className="h-4 w-4 text-amber-50" />
+        </span>
+      );
+    }
+    const fromUser = Boolean(t.first_name || t.last_name);
+    const parts = fromUser
+      ? { first: t.first_name || "", last: t.last_name || "" }
+      : splitDisplayName(t.sender_name);
+    return (
+      <PlayerAvatar
+        photoPath={t.profile_photo_path}
+        firstName={parts.first}
+        lastName={parts.last}
+        size="md"
+        ringClassName="ring-2 ring-white/40"
+      />
+    );
+  }
 
   const threadList = (
     <>
-      <div className="mb-3 flex items-center justify-between gap-2">
-        <p className={cn("text-sm font-semibold", isPopup ? "text-zinc-900 dark:text-zinc-50" : "text-white")}>
-          Rozmowy
-        </p>
-        {unreadCount > 0 ? (
-          <Badge className="bg-red-500 text-white hover:bg-red-500">
-            {unreadCount > 99 ? "99+" : unreadCount} nowe
-          </Badge>
-        ) : (
-          <Badge
-            variant="outline"
-            className={
-              isPopup
-                ? "border-zinc-300 text-zinc-600 dark:border-zinc-600 dark:text-zinc-300"
-                : "border-white/25 text-emerald-100/80"
-            }
-          >
-            Brak nowych
-          </Badge>
-        )}
-      </div>
+      {!isPopup ? (
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <p className="text-sm font-semibold text-white">Rozmowy</p>
+          <div className="flex items-center gap-2">
+            {unreadCount > 0 ? (
+              <Badge className="bg-red-500 text-white hover:bg-red-500">
+                {unreadCount > 99 ? "99+" : unreadCount} nowe
+              </Badge>
+            ) : null}
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              className="h-8 gap-1.5 border-white/25 bg-white/10 text-white hover:bg-white/15"
+              onClick={() => {
+                setComposingNew(true);
+                setSelectedKey(null);
+                setDraftPeer(null);
+                setMessages([]);
+              }}
+            >
+              <Plus className="h-3.5 w-3.5" aria-hidden />
+              Nowa
+            </Button>
+          </div>
+        </div>
+      ) : null}
 
-      {loading ? (
-        <div
-          className={cn(
-            "flex items-center justify-center py-16",
-            isPopup ? "text-zinc-500" : "text-emerald-100/70"
-          )}
-        >
+      {composingNew ? (
+        <div className={cn("space-y-3", isPopup && "px-1")}>
+          <p className="text-xs font-medium tracking-wide text-emerald-100/75">
+            Wybierz zawodnika z akademii
+          </p>
+          <ChatPeerPicker tone="pitch" onSelect={startNewWithPeer} />
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="text-emerald-100/80 hover:bg-white/10 hover:text-white"
+            onClick={() => setComposingNew(false)}
+          >
+            Anuluj
+          </Button>
+        </div>
+      ) : loading ? (
+        <div className="flex items-center justify-center py-16 text-emerald-100/70">
           <Loader2 className="h-6 w-6 animate-spin" aria-hidden />
         </div>
       ) : threads.length === 0 ? (
-        <p
-          className={
-            isPopup
-              ? "rounded-xl border border-dashed border-zinc-200 bg-zinc-50 px-4 py-8 text-center text-sm text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900/50 dark:text-zinc-400"
-              : adminEmptyStateClass
-          }
+        <div
+          className={cn(
+            "flex flex-col items-center justify-center gap-3 px-4 py-12 text-center",
+            !isPopup && adminEmptyStateClass
+          )}
         >
-          Brak wiadomości.
-        </p>
+          {isPopup ? (
+            <span className="relative flex h-16 w-16 items-center justify-center rounded-2xl bg-black/20 ring-1 ring-white/20">
+              <SiteAssetImage asset="logo_crest" decorative width={48} height={48} className="h-10 w-10" />
+            </span>
+          ) : null}
+          <p className={cn("text-sm", isPopup ? "text-emerald-100/75" : undefined)}>
+            Brak wiadomości. Kliknij „Nowa”, aby napisać do gracza.
+          </p>
+        </div>
       ) : (
-        <ul className="space-y-2" role="list">
+        <ul className={cn(isPopup ? "divide-y divide-white/10" : "space-y-2")} role="list">
           {threads.map((t) => {
             const activeThread = selectedKey === t.conversation_key;
             const unread = t.unread_count > 0;
@@ -225,97 +367,100 @@ export function AdminMessagesTab({ onUnreadChange, mode = "page", active = true 
                   type="button"
                   onClick={() => void openThread(t.conversation_key)}
                   className={cn(
-                    "w-full rounded-xl border px-3 py-3 text-left transition-colors",
+                    "w-full text-left transition-colors",
                     isPopup
-                      ? activeThread
-                        ? "border-emerald-500/70 bg-emerald-50 dark:border-emerald-500/50 dark:bg-emerald-950/40"
-                        : "border-zinc-200 bg-white hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900/60 dark:hover:bg-zinc-800/60"
-                      : activeThread
-                        ? "border-[var(--mundial-gold)]/60 bg-white/15"
-                        : "border-white/20 bg-black/10 hover:bg-white/10",
-                    unread &&
-                      !activeThread &&
-                      (isPopup
-                        ? "border-emerald-300/60 bg-emerald-50/70 dark:border-emerald-700/50 dark:bg-emerald-950/30"
-                        : "border-emerald-300/35 bg-emerald-950/25")
+                      ? cn(
+                          "flex items-center gap-3 px-3 py-3 sm:px-4",
+                          activeThread ? "bg-white/15" : "hover:bg-white/8",
+                          unread && !activeThread && "bg-emerald-950/35"
+                        )
+                      : cn(
+                          "rounded-xl border px-3 py-3",
+                          activeThread
+                            ? "border-[var(--mundial-gold)]/60 bg-white/15"
+                            : "border-white/20 bg-black/10 hover:bg-white/10",
+                          unread && !activeThread && "border-emerald-300/35 bg-emerald-950/25"
+                        )
                   )}
                 >
-                  <div className="flex items-start gap-2">
-                    {unread ? (
-                      <span className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full bg-red-500" aria-hidden />
-                    ) : (
-                      <span
-                        className={cn(
-                          "mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full",
-                          isPopup ? "bg-zinc-300 dark:bg-zinc-600" : "bg-white/20"
-                        )}
-                        aria-hidden
-                      />
-                    )}
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
-                        <p
+                  {isPopup ? (
+                    <>
+                      <span className="relative shrink-0">
+                        {threadAvatar(t)}
+                        {unread ? (
+                          <span className="absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full bg-red-500 ring-2 ring-[#0a4a38]" />
+                        ) : null}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="flex items-baseline justify-between gap-2">
+                          <span
+                            className={cn(
+                              "truncate text-sm font-semibold",
+                              unread ? "text-white" : "text-emerald-50"
+                            )}
+                          >
+                            {t.sender_name}
+                          </span>
+                          <time className="shrink-0 text-[10px] tabular-nums text-emerald-100/50">
+                            {t.last_at_display}
+                          </time>
+                        </span>
+                        <span className="mt-0.5 block truncate text-[11px] text-emerald-100/55">
+                          {t.is_guest
+                            ? "Gość z boiska"
+                            : t.user_alias
+                              ? `@${t.user_alias}`
+                              : "Zawodnik"}
+                          {t.recipient_label ? ` · do ${t.recipient_label}` : ""}
+                        </span>
+                        <span
                           className={cn(
-                            "truncate font-semibold",
-                            isPopup
-                              ? unread
-                                ? "text-zinc-900 dark:text-zinc-50"
-                                : "text-zinc-800 dark:text-zinc-100"
-                              : unread
-                                ? "text-white"
-                                : "text-emerald-50/90"
+                            "mt-1 line-clamp-1 text-sm",
+                            unread ? "font-medium text-emerald-50" : "text-emerald-100/70"
                           )}
                         >
-                          {t.sender_name}
-                        </p>
-                        <time
-                          className={cn(
-                            "shrink-0 text-[0.7rem] tabular-nums",
-                            isPopup ? "text-zinc-500 dark:text-zinc-400" : "text-emerald-100/60"
-                          )}
-                        >
-                          {t.last_at_display}
-                        </time>
+                          {t.preview || "Brak wiadomości"}
+                        </span>
+                      </span>
+                      {unread ? (
+                        <span className="inline-flex min-h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white">
+                          {t.unread_count > 99 ? "99+" : t.unread_count}
+                        </span>
+                      ) : null}
+                    </>
+                  ) : (
+                    <div className="flex items-start gap-2">
+                      {unread ? (
+                        <span className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full bg-red-500" aria-hidden />
+                      ) : (
+                        <span className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full bg-white/20" aria-hidden />
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
+                          <p
+                            className={cn(
+                              "truncate font-semibold",
+                              unread ? "text-white" : "text-emerald-50/90"
+                            )}
+                          >
+                            {t.sender_name}
+                          </p>
+                          <time className="shrink-0 text-[0.7rem] tabular-nums text-emerald-100/60">
+                            {t.last_at_display}
+                          </time>
+                        </div>
+                        {t.recipient_label ? (
+                          <p className="truncate text-xs text-emerald-100/55">Do: {t.recipient_label}</p>
+                        ) : null}
+                        {t.user_alias ? (
+                          <p className="truncate text-xs text-emerald-100/55">Konto: {t.user_alias}</p>
+                        ) : t.is_guest ? (
+                          <p className="truncate text-xs text-emerald-100/45">Gość (bez konta)</p>
+                        ) : null}
+                        <p className="mt-1 line-clamp-2 text-sm text-emerald-100/75">{t.preview}</p>
                       </div>
-                      {t.recipient_label ? (
-                        <p
-                          className={cn(
-                            "truncate text-xs",
-                            isPopup ? "text-zinc-500 dark:text-zinc-400" : "text-emerald-100/55"
-                          )}
-                        >
-                          Do: {t.recipient_label}
-                        </p>
-                      ) : null}
-                      {t.user_alias ? (
-                        <p
-                          className={cn(
-                            "truncate text-xs",
-                            isPopup ? "text-zinc-500 dark:text-zinc-400" : "text-emerald-100/55"
-                          )}
-                        >
-                          Konto: {t.user_alias}
-                        </p>
-                      ) : t.is_guest ? (
-                        <p
-                          className={cn(
-                            "truncate text-xs",
-                            isPopup ? "text-zinc-400 dark:text-zinc-500" : "text-emerald-100/45"
-                          )}
-                        >
-                          Gość (bez konta)
-                        </p>
-                      ) : null}
-                      <p
-                        className={cn(
-                          "mt-1 line-clamp-2 text-sm",
-                          isPopup ? "text-zinc-600 dark:text-zinc-300" : "text-emerald-100/75"
-                        )}
-                      >
-                        {t.preview}
-                      </p>
                     </div>
-                  </div>
+                  )}
                 </button>
               </li>
             );
@@ -325,117 +470,78 @@ export function AdminMessagesTab({ onUnreadChange, mode = "page", active = true 
     </>
   );
 
-  const chatPane = selected ? (
-    <div className="flex h-full min-h-0 flex-col gap-4">
+  const chatPane = showChatPane ? (
+    <div className="flex h-full min-h-0 flex-col gap-3">
       <div
         className={cn(
-          "flex flex-wrap items-start justify-between gap-3 border-b pb-4",
-          isPopup ? "border-zinc-200 dark:border-zinc-700" : "border-white/15"
+          "flex flex-wrap items-center gap-3 border-b border-white/15 pb-3",
+          isPopup && "px-1"
         )}
       >
-        <div className="min-w-0">
-          {isPopup ? (
-            <button
-              type="button"
-              onClick={() => {
-                setSelectedKey(null);
-                setMessages([]);
-                clearAttachment();
-                setReply("");
-              }}
-              className="mb-2 inline-flex items-center gap-1.5 text-sm font-medium text-emerald-700 hover:underline dark:text-emerald-300 lg:hidden"
-            >
-              <ArrowLeft className="h-4 w-4" aria-hidden />
-              Wróć do listy
-            </button>
-          ) : null}
-          <div className="flex items-center gap-2">
-            <MessageCircle
-              className={cn(
-                "h-5 w-5 shrink-0",
-                isPopup ? "text-emerald-600 dark:text-emerald-400" : "text-[var(--mundial-gold)]"
-              )}
-              aria-hidden
-            />
-            <h3
-              className={cn(
-                "truncate text-lg font-bold",
-                isPopup ? "text-zinc-900 dark:text-zinc-50" : "text-white"
-              )}
-            >
-              {selected.sender_name}
-            </h3>
-          </div>
-          {selected.recipient_label ? (
-            <p
-              className={cn(
-                "mt-2 text-sm font-medium",
-                isPopup ? "text-emerald-700 dark:text-emerald-300" : "text-[var(--mundial-gold)]"
-              )}
-            >
-              Adresat: {selected.recipient_label}
-            </p>
-          ) : null}
-          {selected.user_alias ? (
-            <p
-              className={cn(
-                "mt-1 text-xs",
-                isPopup ? "text-zinc-500 dark:text-zinc-400" : "text-emerald-100/55"
-              )}
-            >
-              Powiązane konto: {selected.user_alias}
-            </p>
-          ) : (
-            <p
-              className={cn(
-                "mt-1 text-xs",
-                isPopup ? "text-zinc-400 dark:text-zinc-500" : "text-emerald-100/45"
-              )}
-            >
-              Gość — imię i nazwisko z listy Piłkarze
-            </p>
-          )}
-        </div>
-        {selected.unread_count > 0 ? (
-          <Badge className="bg-red-500 text-white hover:bg-red-500">Nowe</Badge>
-        ) : (
-          <Badge
-            className={
-              isPopup
-                ? "border-zinc-300 bg-zinc-100 text-zinc-600 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-300"
-                : "border-white/25 bg-black/20 text-emerald-100/80"
-            }
+        {isPopup ? (
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedKey(null);
+              setDraftPeer(null);
+              setMessages([]);
+              clearAttachment();
+              setReply("");
+            }}
+            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/20 bg-black/20 text-white hover:bg-white/10 lg:hidden"
+            aria-label="Wróć do listy"
           >
-            Przeczytane
+            <ArrowLeft className="h-4 w-4" aria-hidden />
+          </button>
+        ) : null}
+        <span className="shrink-0">{threadAvatar(selected, draftPeer)}</span>
+        <div className="min-w-0 flex-1">
+          <h3 className="truncate text-base font-bold text-white sm:text-lg">{selectedTitle}</h3>
+          {selected?.recipient_label ? (
+            <p className="truncate text-xs font-medium text-[var(--mundial-gold)]">
+              Do: {selected.recipient_label}
+            </p>
+          ) : draftPeer && !selected ? (
+            <p className="truncate text-xs text-emerald-100/60">
+              Nowa rozmowa · {draftPeer.player_alias || "gracz"}
+            </p>
+          ) : selected?.user_alias ? (
+            <p className="truncate text-xs text-emerald-100/55">@{selected.user_alias}</p>
+          ) : selected?.is_guest ? (
+            <p className="truncate text-xs text-emerald-100/45">Gość — bez konta</p>
+          ) : null}
+        </div>
+        {selected && selected.unread_count > 0 ? (
+          <Badge className="bg-red-500 text-white hover:bg-red-500">Nowe</Badge>
+        ) : selected ? (
+          <Badge className="border-white/25 bg-black/20 text-emerald-100/80">Przeczytane</Badge>
+        ) : (
+          <Badge className="border-white/25 bg-black/20 text-emerald-100/80">
+            <UserPlus className="mr-1 h-3 w-3" aria-hidden />
+            Nowa
           </Badge>
         )}
       </div>
 
       <div
         className={cn(
-          isPopup ? "max-h-[min(340px,42vh)] min-h-[14rem]" : "max-h-[min(380px,48vh)] min-h-[16rem]"
+          isPopup ? "min-h-0 flex-1" : "max-h-[min(380px,48vh)] min-h-[16rem]"
         )}
       >
         <ChatTranscript
-          tone={isPopup ? "light" : "pitch"}
-          className="h-full max-h-[inherit] min-h-[inherit]"
+          tone={chatTone}
+          className={cn(
+            "h-full",
+            isPopup ? "max-h-[min(42vh,22rem)] min-h-[12rem] lg:max-h-none lg:min-h-[18rem]" : "max-h-[inherit] min-h-[inherit]"
+          )}
           empty={
             loadingThread ? (
-              <Loader2
-                className={cn(
-                  "h-5 w-5 animate-spin",
-                  isPopup ? "text-zinc-500" : "text-emerald-100/70"
-                )}
-                aria-hidden
-              />
+              <Loader2 className="h-5 w-5 animate-spin text-emerald-100/70" aria-hidden />
             ) : messages.length === 0 ? (
-              <p
-                className={cn(
-                  "text-center text-sm",
-                  isPopup ? "text-zinc-500 dark:text-zinc-400" : "text-emerald-100/60"
-                )}
-              >
-                Brak wiadomości w wątku.
+              <p className="text-center text-sm text-emerald-100/60">
+                {draftPeer && !selected
+                  ? "Napisz pierwszą wiadomość do gracza."
+                  : "Brak wiadomości w wątku."}
               </p>
             ) : undefined
           }
@@ -454,8 +560,10 @@ export function AdminMessagesTab({ onUnreadChange, mode = "page", active = true 
                     senderLabel={m.mine ? null : m.sender_name}
                     timeLabel={m.created_at_display}
                     mine={m.mine}
-                    tone={isPopup ? "light" : "pitch"}
+                    tone={chatTone}
                     cluster={chatClusterForIndex(clustered, i)}
+                    onDelete={() => void deleteMessage(m.id)}
+                    deleting={deletingId === m.id}
                   />
                 ));
               })()
@@ -465,16 +573,16 @@ export function AdminMessagesTab({ onUnreadChange, mode = "page", active = true 
       </div>
 
       <form className="space-y-2" onSubmit={(e) => void sendReply(e)}>
-        <ChatComposerShell tone={isPopup ? "light" : "pitch"}>
+        <ChatComposerShell tone={chatTone}>
           <ChatEmojiPicker
-            tone={isPopup ? "light" : "pitch"}
+            tone={chatTone}
             disabled={sending || loadingThread}
             onPick={(emoji) => {
               setReply((prev) => insertEmojiAtCursor(prev, emoji, textareaRef.current));
             }}
           />
           <ChatAttachmentControls
-            tone={isPopup ? "light" : "pitch"}
+            tone={chatTone}
             disabled={sending || loadingThread}
             attachmentUrl={attachmentUrl}
             previewUrl={attachmentPreview}
@@ -488,10 +596,10 @@ export function AdminMessagesTab({ onUnreadChange, mode = "page", active = true 
           />
           <ChatComposerField
             id={isPopup ? "admin-chat-reply-popup" : "admin-chat-reply"}
-            tone={isPopup ? "light" : "pitch"}
+            tone={chatTone}
             value={reply}
             onChange={setReply}
-            placeholder="Aa"
+            placeholder="Napisz do zawodnika…"
             disabled={sending || loadingThread}
             rows={2}
             fieldRef={textareaRef}
@@ -516,25 +624,94 @@ export function AdminMessagesTab({ onUnreadChange, mode = "page", active = true 
   ) : (
     <div
       className={cn(
-        "flex h-full min-h-[12rem] flex-col items-center justify-center gap-3 px-4 text-center",
+        "flex h-full min-h-[12rem] flex-col items-center justify-center gap-4 px-6 text-center",
         isPopup && "hidden lg:flex"
       )}
     >
-      <MessageCircle
-        className={cn("h-10 w-10", isPopup ? "text-zinc-300 dark:text-zinc-600" : "text-emerald-100/35")}
-        aria-hidden
-      />
-      <p className={cn("text-sm", isPopup ? "text-zinc-500 dark:text-zinc-400" : "text-emerald-100/70")}>
-        Wybierz rozmowę z listy, aby odpisać.
-      </p>
+      {isPopup ? (
+        <span className="relative flex h-20 w-20 items-center justify-center rounded-3xl bg-black/25 ring-1 ring-[var(--mundial-gold)]/35">
+          <SiteAssetImage asset="logo_crest" decorative width={64} height={64} className="h-12 w-12 drop-shadow" />
+          <SiteAssetImage
+            asset="bg_soccer_ball"
+            decorative
+            width={28}
+            height={28}
+            className="absolute -bottom-1 -right-1 h-7 w-7 opacity-90"
+          />
+        </span>
+      ) : (
+        <MessageCircle className="h-10 w-10 text-emerald-100/35" aria-hidden />
+      )}
+      <div>
+        <p className="text-sm font-semibold text-white">Wybierz rozmowę</p>
+        <p className="mt-1 max-w-[16rem] text-xs leading-relaxed text-emerald-100/65">
+          Odpisz zawodnikowi albo zacznij nową rozmowę z listy.
+        </p>
+      </div>
     </div>
   );
 
   if (isPopup) {
     return (
-      <div className="grid min-h-0 gap-4 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.15fr)]">
-        <div className={cn("min-h-0", selectedKey ? "hidden lg:block" : "block")}>{threadList}</div>
-        <div className={cn("min-h-0", selectedKey ? "block" : "hidden lg:block")}>{chatPane}</div>
+      <div className="flex min-h-[min(78dvh,36rem)] flex-col text-white">
+        <header className="relative z-[1] shrink-0 border-b border-white/15 px-4 pb-3.5 pt-4 pr-14 sm:px-5 sm:pt-5">
+          <div className="flex items-center gap-3">
+            <span className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-black/25 shadow-inner ring-1 ring-[var(--mundial-gold)]/45">
+              <SiteAssetImage asset="logo_crest" decorative width={40} height={40} className="h-8 w-8" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-[0.62rem] font-bold uppercase tracking-[0.22em] text-[var(--mundial-gold)]">
+                Szatnia łączności
+              </p>
+              <h2 className="truncate text-lg font-bold tracking-tight text-white sm:text-xl">
+                Wiadomości
+              </h2>
+              <p className="mt-0.5 truncate text-xs text-emerald-100/70">
+                {unreadCount > 0
+                  ? `${unreadCount > 99 ? "99+" : unreadCount} nieprzeczytanych na murawie`
+                  : "Wszystkie rozmowy na bieżąco"}
+              </p>
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              variant="stadium"
+              className="h-9 shrink-0 gap-1.5 rounded-xl px-3"
+              onClick={() => {
+                setComposingNew(true);
+                setSelectedKey(null);
+                setDraftPeer(null);
+                setMessages([]);
+              }}
+            >
+              <Plus className="h-3.5 w-3.5" aria-hidden />
+              <span className="hidden xs:inline">Nowa</span>
+            </Button>
+          </div>
+          <div
+            className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-[var(--mundial-gold)]/50 to-transparent"
+            aria-hidden
+          />
+        </header>
+
+        <div className="grid min-h-0 flex-1 lg:grid-cols-[minmax(15rem,0.95fr)_minmax(0,1.2fr)]">
+          <aside
+            className={cn(
+              "min-h-0 overflow-y-auto overscroll-contain border-white/10 lg:border-r",
+              showChatPane ? "hidden lg:block" : "block"
+            )}
+          >
+            {threadList}
+          </aside>
+          <section
+            className={cn(
+              "flex min-h-0 flex-col overflow-hidden p-3 sm:p-4",
+              showChatPane ? "block" : "hidden lg:flex"
+            )}
+          >
+            {chatPane}
+          </section>
+        </div>
       </div>
     );
   }

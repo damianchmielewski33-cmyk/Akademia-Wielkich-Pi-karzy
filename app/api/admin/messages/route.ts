@@ -42,7 +42,10 @@ export async function GET() {
               COALESCE(m.direction, 'inbound') AS direction,
               COALESCE(m.conversation_key, '') AS conversation_key,
               m.admin_user_id, m.attachment_url,
-              u.player_alias AS user_alias
+              u.player_alias AS user_alias,
+              u.profile_photo_path AS profile_photo_path,
+              u.first_name AS user_first_name,
+              u.last_name AS user_last_name
        FROM admin_messages m
        LEFT JOIN users u ON u.id = m.user_id
        ORDER BY m.created_at DESC, m.id DESC
@@ -50,12 +53,19 @@ export async function GET() {
     )
     .all()) as (AdminMessageRow & {
     user_alias: string | null;
+    profile_photo_path: string | null;
+    user_first_name: string | null;
+    user_last_name: string | null;
     direction: AdminMessageDirection;
     conversation_key: string;
     attachment_url: string | null;
   })[];
 
-  const threadMap = new Map<string, ThreadAgg>();
+  const threadMap = new Map<string, ThreadAgg & {
+    profile_photo_path: string | null;
+    first_name: string | null;
+    last_name: string | null;
+  }>();
   for (const r of rows) {
     const key = r.conversation_key || `legacy:${r.id}`;
     const existing = threadMap.get(key);
@@ -72,6 +82,9 @@ export async function GET() {
         last_at: r.created_at,
         last_direction: r.direction,
         unread_count: isInboundUnread ? 1 : 0,
+        profile_photo_path: r.profile_photo_path,
+        first_name: r.user_first_name,
+        last_name: r.user_last_name,
       });
     } else {
       if (isInboundUnread) existing.unread_count += 1;
@@ -79,6 +92,11 @@ export async function GET() {
       if (!existing.user_alias && r.user_alias) existing.user_alias = r.user_alias;
       if (existing.user_id == null && r.user_id != null) existing.user_id = r.user_id;
       if (!existing.recipient_key && r.recipient_key) existing.recipient_key = r.recipient_key;
+      if (!existing.profile_photo_path && r.profile_photo_path) {
+        existing.profile_photo_path = r.profile_photo_path;
+      }
+      if (!existing.first_name && r.user_first_name) existing.first_name = r.user_first_name;
+      if (!existing.last_name && r.user_last_name) existing.last_name = r.user_last_name;
       // Prefer a non-admin display name from inbound messages
       if (r.direction === "inbound" && r.sender_name) {
         existing.sender_name = r.sender_name;
@@ -93,6 +111,9 @@ export async function GET() {
       sender_name: t.sender_name,
       user_id: t.user_id,
       user_alias: t.user_alias,
+      profile_photo_path: t.profile_photo_path,
+      first_name: t.first_name,
+      last_name: t.last_name,
       recipient_key: t.recipient_key,
       recipient_label: contactAdminRecipientLabel(t.recipient_key, appSettings),
       last_body: t.last_body,

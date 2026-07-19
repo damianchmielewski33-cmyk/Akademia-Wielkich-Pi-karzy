@@ -1,45 +1,55 @@
 import fs from "fs";
 import path from "path";
 import { getDb } from "@/lib/db";
-import { profileUploadsDir, resolveProfilePhotoAbsolute } from "@/lib/runtime-paths";
+import {
+  chatUploadsDir,
+  profileUploadsDir,
+  resolveChatAttachmentAbsolute,
+  resolveProfilePhotoAbsolute,
+} from "@/lib/runtime-paths";
 
 function clampInt(n: number, min: number, max: number): number {
   if (!Number.isFinite(n)) return min;
   return Math.min(max, Math.max(min, Math.floor(n)));
 }
 
-function retentionDaysFromEnv(key: string, fallback: number): number {
+function retentionDaysFromEnv(key: string, fallback: number, min = 30, max = 3650): number {
   const raw = process.env[key]?.trim();
   if (!raw) return fallback;
   const n = Number.parseInt(raw, 10);
-  return clampInt(n, 30, 3650);
+  return clampInt(n, min, max);
 }
 
 export type DatabaseCleanupResult = {
   page_views_deleted: number;
   activity_log_deleted: number;
   transport_messages_deleted: number;
+  admin_messages_deleted: number;
   orphan_profile_files_removed: number;
+  orphan_chat_files_removed: number;
   cutoff_iso: string;
   retention_days: number;
   transport_match_days: number;
+  chat_message_days: number;
 };
 
 /**
- * Usuwa stare rekordy (analityka, log aktywności, stare wiadomości transportu) oraz osierocone pliki zdjęć profilowych.
- * Domyślnie zostawia ok. rok historii — dopasuj zmienne środowiskowe w produkcji.
+ * Usuwa stare rekordy (analityka, log aktywności, wiadomości czatu/transportu) oraz osierocone pliki.
  *
- * - `DATABASE_RETENTION_DAYS` — ile dni trzymać `page_views` i `activity_log` (domyślnie 400, ~13 mies. przy cronie miesięcznym).
- * - `TRANSPORT_MESSAGES_MATCH_DAYS` — usuwa wiadomości transportu dla meczów, których `match_date` jest starszy niż N dni (domyślnie 180).
+ * - `DATABASE_RETENTION_DAYS` — ile dni trzymać `page_views` i `activity_log` (domyślnie 400).
+ * - `TRANSPORT_MESSAGES_MATCH_DAYS` — wiadomości transportu dla meczów starszych niż N dni (domyślnie 180).
+ * - `CHAT_MESSAGES_RETENTION_DAYS` — wiadomości `admin_messages` (czat admin/DM) starsze niż N dni (domyślnie 7).
  */
 export async function runDatabaseCleanup(): Promise<DatabaseCleanupResult> {
   const retentionDays = retentionDaysFromEnv("DATABASE_RETENTION_DAYS", 400);
   const transportMatchDays = retentionDaysFromEnv("TRANSPORT_MESSAGES_MATCH_DAYS", 180);
+  const chatMessageDays = retentionDaysFromEnv("CHAT_MESSAGES_RETENTION_DAYS", 7, 1, 365);
 
   const cutoffMs = Date.now() - retentionDays * 86_400_000;
   const cutoffIso = new Date(cutoffMs).toISOString();
   const dateModifier = `-${retentionDays} days`;
   const transportModifier = `-${transportMatchDays} days`;
+  const chatModifier = `-${chatMessageDays} days`;
 
   const db = await getDb();
 
@@ -74,6 +84,33 @@ export async function runDatabaseCleanup(): Promise<DatabaseCleanupResult> {
     )
     .run(transportModifier);
 
+  const expiredAttachments = (await db
+    .prepare(
+      `SELECT attachment_url FROM admin_messages
+       WHERE created_at < datetime('now', ?)
+         AND attachment_url IS NOT NULL
+         AND TRIM(attachment_url) != ''`
+    )
+    .all(chatModifier)) as { attachment_url: string }[];
+
+  const amBefore = await countBefore(
+    "SELECT COUNT(*) AS c FROM admin_messages WHERE created_at < datetime('now', ?)",
+    chatModifier
+  );
+  await db
+    .prepare("DELETE FROM admin_messages WHERE created_at < datetime('now', ?)")
+    .run(chatModifier);
+
+  for (const row of expiredAttachments) {
+    const abs = resolveChatAttachmentAbsolute(row.attachment_url);
+    if (!abs) continue;
+    try {
+      fs.unlinkSync(abs);
+    } catch {
+      /* plik już usunięty lub niedostępny */
+    }
+  }
+
   let orphanProfileFilesRemoved = 0;
   const dir = profileUploadsDir();
   try {
@@ -103,13 +140,48 @@ export async function runDatabaseCleanup(): Promise<DatabaseCleanupResult> {
     /* brak katalogu lub odczytu — pomijamy */
   }
 
+  let orphanChatFilesRemoved = 0;
+  const chatDir = chatUploadsDir();
+  try {
+    const names = fs.readdirSync(chatDir);
+    const referenced = new Set<string>();
+    const rows = (await db
+      .prepare(
+        `SELECT attachment_url FROM admin_messages
+         WHERE attachment_url IS NOT NULL AND TRIM(attachment_url) != ''`
+      )
+      .all()) as { attachment_url: string }[];
+    for (const r of rows) {
+      const abs = resolveChatAttachmentAbsolute(r.attachment_url);
+      if (abs) referenced.add(path.basename(abs));
+    }
+    const dirResolved = path.resolve(chatDir);
+    for (const name of names) {
+      if (referenced.has(name)) continue;
+      const abs = path.join(chatDir, name);
+      const resolved = path.resolve(abs);
+      if (!resolved.startsWith(dirResolved + path.sep)) continue;
+      try {
+        fs.unlinkSync(resolved);
+        orphanChatFilesRemoved += 1;
+      } catch {
+        /* ignore */
+      }
+    }
+  } catch {
+    /* brak katalogu — pomijamy */
+  }
+
   return {
     page_views_deleted: pvBefore,
     activity_log_deleted: alBefore,
     transport_messages_deleted: tmBefore,
+    admin_messages_deleted: amBefore,
     orphan_profile_files_removed: orphanProfileFilesRemoved,
+    orphan_chat_files_removed: orphanChatFilesRemoved,
     cutoff_iso: cutoffIso,
     retention_days: retentionDays,
     transport_match_days: transportMatchDays,
+    chat_message_days: chatMessageDays,
   };
 }

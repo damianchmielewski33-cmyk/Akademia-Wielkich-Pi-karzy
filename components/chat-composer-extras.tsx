@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode, type Ref } from "react";
-import { ImagePlus, Smile, X } from "lucide-react";
+import { ImagePlus, Smile, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -242,6 +242,9 @@ type BubbleProps = {
   cluster?: ChatCluster;
   avatar?: ReactNode;
   showTime?: boolean;
+  /** Pokazuje przycisk usuwania (np. własne wiadomości / admin). */
+  onDelete?: () => void;
+  deleting?: boolean;
 };
 
 function bubbleRadius(mine: boolean, cluster: ChatCluster) {
@@ -279,6 +282,8 @@ export function ChatBubble({
   cluster = "single",
   avatar,
   showTime = true,
+  onDelete,
+  deleting,
 }: BubbleProps) {
   const text = body.trim();
   const imageOnly = Boolean(attachmentUrl) && !text;
@@ -289,7 +294,7 @@ export function ChatBubble({
   return (
     <div
       className={cn(
-        "flex items-end gap-2",
+        "group/bubble flex items-end gap-2",
         mine ? "justify-end" : "justify-start",
         cluster === "middle" || cluster === "end" ? "mt-0.5" : "mt-2.5 first:mt-0"
       )}
@@ -310,30 +315,55 @@ export function ChatBubble({
           </p>
         ) : null}
 
-        <div
-          className={cn(
-            "overflow-hidden shadow-sm",
-            bubbleRadius(mine, cluster),
-            imageOnly ? "p-0.5" : "px-3.5 py-2",
-            mine
-              ? "bg-gradient-to-br from-emerald-600 via-emerald-700 to-emerald-800 text-white shadow-emerald-950/20"
-              : light
-                ? "border border-zinc-200/90 bg-white text-zinc-900 shadow-zinc-950/5 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-50"
-                : "border border-white/20 bg-white/14 text-emerald-50 backdrop-blur-[2px]"
-          )}
-        >
-          {attachmentUrl ? (
-            <a
-              href={attachmentUrl}
-              target="_blank"
-              rel="noreferrer"
-              className={cn("block overflow-hidden", imageOnly ? "rounded-[1rem]" : "mb-2 rounded-xl")}
+        <div className={cn("flex max-w-full items-end gap-1", mine ? "flex-row-reverse" : "flex-row")}>
+          <div
+            className={cn(
+              "overflow-hidden shadow-sm",
+              bubbleRadius(mine, cluster),
+              imageOnly ? "p-0.5" : "px-3.5 py-2",
+              mine
+                ? "bg-gradient-to-br from-emerald-600 via-emerald-700 to-emerald-800 text-white shadow-emerald-950/20"
+                : light
+                  ? "border border-zinc-200/90 bg-white text-zinc-900 shadow-zinc-950/5 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-50"
+                  : "border border-white/20 bg-white/14 text-emerald-50 backdrop-blur-[2px]"
+            )}
+          >
+            {attachmentUrl ? (
+              <a
+                href={attachmentUrl}
+                target="_blank"
+                rel="noreferrer"
+                className={cn("block overflow-hidden", imageOnly ? "rounded-[1rem]" : "mb-2 rounded-xl")}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={attachmentUrl} alt="Załącznik" className="max-h-56 w-full object-cover" />
+              </a>
+            ) : null}
+            {text ? <p className="whitespace-pre-wrap break-words text-[0.925rem] leading-relaxed">{text}</p> : null}
+          </div>
+
+          {onDelete ? (
+            <button
+              type="button"
+              onClick={onDelete}
+              disabled={deleting}
+              className={cn(
+                "mb-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full opacity-100 transition sm:opacity-0 sm:group-hover/bubble:opacity-100",
+                light
+                  ? "text-zinc-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40"
+                  : "text-emerald-100/50 hover:bg-white/10 hover:text-red-300",
+                deleting && "opacity-60"
+              )}
+              aria-label="Usuń wiadomość"
+              title="Usuń wiadomość"
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={attachmentUrl} alt="Załącznik" className="max-h-56 w-full object-cover" />
-            </a>
+              {deleting ? (
+                <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+              ) : (
+                <Trash2 className="h-3.5 w-3.5" aria-hidden />
+              )}
+            </button>
           ) : null}
-          {text ? <p className="whitespace-pre-wrap break-words text-[0.925rem] leading-relaxed">{text}</p> : null}
         </div>
 
         {showMeta ? (
