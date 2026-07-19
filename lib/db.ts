@@ -508,6 +508,9 @@ function initSchemaSync(db: Database.Database) {
   if (!adminMsgCols.some((c) => c.name === "admin_user_id")) {
     db.exec("ALTER TABLE admin_messages ADD COLUMN admin_user_id INTEGER");
   }
+  if (!adminMsgCols.some((c) => c.name === "attachment_url")) {
+    db.exec("ALTER TABLE admin_messages ADD COLUMN attachment_url TEXT");
+  }
   db.exec("CREATE INDEX IF NOT EXISTS idx_admin_messages_conversation ON admin_messages(conversation_key, created_at)");
 
   const hasAcademySettings = db.prepare("SELECT 1 AS ok FROM app_settings WHERE realm = 'academy'").get() as

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { formatActivityTimePl } from "@/lib/activity-display";
 import {
   backfillAdminMessageConversationKeys,
+  isAllowedChatAttachmentUrl,
   markConversationReadForAdmin,
   type AdminMessageDirection,
 } from "@/lib/admin-messages";
@@ -37,7 +38,7 @@ export async function GET(req: Request) {
   const rows = (await db
     .prepare(
       `SELECT id, body, status, created_at, recipient_key, sender_name,
-              COALESCE(direction, 'inbound') AS direction, user_id
+              COALESCE(direction, 'inbound') AS direction, user_id, attachment_url
        FROM admin_messages
        WHERE conversation_key = ?
        ORDER BY created_at ASC, id ASC
@@ -52,13 +53,15 @@ export async function GET(req: Request) {
     sender_name: string;
     direction: AdminMessageDirection;
     user_id: number | null;
+    attachment_url: string | null;
   }[];
 
   await markConversationReadForAdmin(db, conversation_key, gate.session.userId);
 
   const messages = rows.map((r) => ({
     id: r.id,
-    body: r.body,
+    body: r.body === "📷" && r.attachment_url ? "" : r.body,
+    attachment_url: r.attachment_url,
     direction: r.direction,
     status: r.status,
     sender_name: r.sender_name,
@@ -73,11 +76,20 @@ export async function GET(req: Request) {
   return NextResponse.json({ messages, conversation_key });
 }
 
-const replySchema = z.object({
-  conversation_key: z.string().trim().min(1).max(200),
-  body: z.string().trim().min(1, "Wiadomość nie może być pusta.").max(4000),
-  recipient_key: z.enum(CONTACT_ADMIN_RECIPIENT_KEYS).optional(),
-});
+const replySchema = z
+  .object({
+    conversation_key: z.string().trim().min(1).max(200),
+    body: z.string().trim().max(4000).optional().default(""),
+    attachment_url: z.string().trim().max(800).optional().nullable(),
+    recipient_key: z.enum(CONTACT_ADMIN_RECIPIENT_KEYS).optional(),
+  })
+  .superRefine((data, ctx) => {
+    const text = data.body.trim();
+    const att = data.attachment_url?.trim() || "";
+    if (!text && !att) {
+      ctx.addIssue({ code: "custom", message: "Napisz wiadomość lub dołącz grafikę.", path: ["body"] });
+    }
+  });
 
 export async function POST(req: Request) {
   const gate = await requireAdmin();
@@ -92,12 +104,22 @@ export async function POST(req: Request) {
 
   const parsed = replySchema.safeParse(json);
   if (!parsed.success) {
-    const msg = parsed.error.flatten().fieldErrors;
-    const first = msg.body?.[0] ?? msg.conversation_key?.[0] ?? "Sprawdź wprowadzone dane.";
+    const flat = parsed.error.flatten();
+    const first =
+      flat.fieldErrors.body?.[0] ??
+      flat.fieldErrors.conversation_key?.[0] ??
+      flat.formErrors[0] ??
+      "Sprawdź wprowadzone dane.";
     return NextResponse.json({ error: first }, { status: 400 });
   }
 
-  const { conversation_key, body, recipient_key } = parsed.data;
+  const { conversation_key, body, recipient_key, attachment_url } = parsed.data;
+  const text = body.trim();
+  const attachment = attachment_url?.trim() || null;
+  if (attachment && !isAllowedChatAttachmentUrl(attachment)) {
+    return NextResponse.json({ error: "Nieprawidłowy załącznik." }, { status: 400 });
+  }
+
   const db = await getDb();
   await backfillAdminMessageConversationKeys(db);
 
@@ -138,17 +160,18 @@ export async function POST(req: Request) {
     .prepare(
       `INSERT INTO admin_messages (
          user_id, sender_name, sender_email, recipient_key, body, status,
-         direction, conversation_key, admin_user_id
-       ) VALUES (?, ?, ?, ?, ?, 'unread', 'outbound', ?, ?)`
+         direction, conversation_key, admin_user_id, attachment_url
+       ) VALUES (?, ?, ?, ?, ?, 'unread', 'outbound', ?, ?, ?)`
     )
     .run(
       last.user_id,
       adminName,
       last.sender_email,
       finalRecipient,
-      body,
+      text || "📷",
       conversation_key,
-      gate.session.userId
+      gate.session.userId,
+      attachment
     );
 
   await markConversationReadForAdmin(db, conversation_key, gate.session.userId);
@@ -164,7 +187,8 @@ export async function POST(req: Request) {
     ok: true,
     message: {
       id: Number(result.lastInsertRowid),
-      body,
+      body: text,
+      attachment_url: attachment,
       direction: "outbound" as const,
       status: "unread",
       sender_name: adminName,

@@ -64,4 +64,6 @@ export const RATE = {
   weatherForecast: { limit: 30, windowMs: 60 * 1000 },
   /** Wiadomości do admina — limit na IP. */
   contactAdmin: { limit: 8, windowMs: 60 * 60 * 1000 },
+  /** Załączniki czatu (obrazy) — limit na IP. */
+  contactAdminAttachment: { limit: 20, windowMs: 60 * 60 * 1000 },
 } as const;

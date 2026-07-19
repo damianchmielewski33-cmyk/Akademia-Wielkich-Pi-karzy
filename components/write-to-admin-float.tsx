@@ -5,6 +5,12 @@ import { createPortal } from "react-dom";
 import { usePathname } from "next/navigation";
 import { Loader2, MessageCircle, Send } from "lucide-react";
 import { toast } from "sonner";
+import {
+  ChatAttachmentControls,
+  ChatBubble,
+  ChatEmojiPicker,
+  insertEmojiAtCursor,
+} from "@/components/chat-composer-extras";
 import { AppModal } from "@/components/ui/app-modal";
 import { FormInput, FormTextarea } from "@/components/ui/form-field";
 import { Label } from "@/components/ui/label";
@@ -16,6 +22,7 @@ import type { ContactAdminRecipientKey, ContactAdminRecipientOption } from "@/li
 type ChatMessage = {
   id: number;
   body: string;
+  attachment_url?: string | null;
   direction: "inbound" | "outbound";
   status: string;
   sender_name: string;
@@ -28,11 +35,11 @@ const GUEST_NAME_STORAGE_KEY = "awp-contact-admin-guest-name";
 type Props = {
   defaults?: { senderName: string } | null;
   recipients: ContactAdminRecipientOption[];
-  /** Ukryj pływający czat (np. dla administratora — wiadomości tylko w panelu). */
-  hiddenForAdmin?: boolean;
+  /** Ukryj pływający przycisk (admin — ikona tylko na pasku górnym). */
+  hideFloat?: boolean;
 };
 
-export function WriteToAdminFloat({ defaults, recipients, hiddenForAdmin = false }: Props) {
+export function WriteToAdminFloat({ defaults, recipients, hideFloat = false }: Props) {
   const pathname = usePathname();
   const [mounted, setMounted] = useState(false);
   const [open, setOpen] = useState(false);
@@ -46,7 +53,11 @@ export function WriteToAdminFloat({ defaults, recipients, hiddenForAdmin = false
   const [loadingThread, setLoadingThread] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [unreadReplies, setUnreadReplies] = useState(0);
+  const [attachmentUrl, setAttachmentUrl] = useState<string | null>(null);
+  const [attachmentPreview, setAttachmentPreview] = useState<string | null>(null);
+  const [uploadingAttachment, setUploadingAttachment] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const senderNameRef = useRef(senderName);
   const openRef = useRef(open);
   const isLoggedIn = Boolean(defaults?.senderName);
@@ -86,11 +97,17 @@ export function WriteToAdminFloat({ defaults, recipients, hiddenForAdmin = false
     }
   }, [recipients, recipientKey]);
 
-  const hidden = hiddenForAdmin || pathname.startsWith("/panel-admina");
+  const hidden = hideFloat || pathname.startsWith("/panel-admina");
 
   const scrollToBottom = useCallback(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, []);
+
+  const clearAttachment = useCallback(() => {
+    if (attachmentPreview?.startsWith("blob:")) URL.revokeObjectURL(attachmentPreview);
+    setAttachmentUrl(null);
+    setAttachmentPreview(null);
+  }, [attachmentPreview]);
 
   const loadThread = useCallback(
     async (opts?: { markRead?: boolean; name?: string; quiet?: boolean }) => {
@@ -173,7 +190,7 @@ export function WriteToAdminFloat({ defaults, recipients, hiddenForAdmin = false
     e.preventDefault();
     const name = senderName.trim();
     if (name.length < 2) {
-      toast.error("Podaj imię i nazwisko widniejące na stronie (lista Piłkarze).");
+      toast.error("Podaj imię i nazwisko z listy Piłkarze albo ze strony Kontakt.");
       return;
     }
     const ok = await loadThread({ name, markRead: true });
@@ -193,8 +210,8 @@ export function WriteToAdminFloat({ defaults, recipients, hiddenForAdmin = false
       toast.error("Podaj imię i nazwisko (min. 2 znaki).");
       return;
     }
-    if (text.length < 1) {
-      toast.error("Wiadomość nie może być pusta.");
+    if (!text && !attachmentUrl) {
+      toast.error("Napisz wiadomość lub dołącz grafikę.");
       return;
     }
     if (!recipients.some((r) => r.key === recipientKey)) {
@@ -211,6 +228,7 @@ export function WriteToAdminFloat({ defaults, recipients, hiddenForAdmin = false
           sender_name: name,
           recipient_key: recipientKey,
           body: text,
+          attachment_url: attachmentUrl,
         }),
       });
       const data = (await res.json().catch(() => ({}))) as { error?: string };
@@ -219,6 +237,7 @@ export function WriteToAdminFloat({ defaults, recipients, hiddenForAdmin = false
         return;
       }
       setBody("");
+      clearAttachment();
       await loadThread({ markRead: true });
     } catch {
       toast.error("Nie udało się wysłać wiadomości.");
@@ -230,6 +249,7 @@ export function WriteToAdminFloat({ defaults, recipients, hiddenForAdmin = false
   if (!mounted || hidden || recipients.length === 0) return null;
 
   const showChat = isLoggedIn || nameConfirmed;
+  const canSend = Boolean(body.trim() || attachmentUrl);
 
   const floatButton = (
     <>
@@ -262,8 +282,8 @@ export function WriteToAdminFloat({ defaults, recipients, hiddenForAdmin = false
         title="Czat z organizatorem"
         description={
           isLoggedIn
-            ? "Napisz do organizatora i czytaj odpowiedzi w tym oknie."
-            : "Podaj imię i nazwisko z listy Piłkarze, aby pisać i czytać odpowiedzi."
+            ? "Napisz do organizatora, dołącz grafikę lub emotkę."
+            : "Podaj imię i nazwisko z listy Piłkarze (lub organizatora z Kontakt), aby pisać i czytać odpowiedzi."
         }
         icon={<MessageCircle className="h-6 w-6 text-[var(--mundial-gold)]" aria-hidden />}
         headerKicker="Wiadomość"
@@ -275,7 +295,12 @@ export function WriteToAdminFloat({ defaults, recipients, hiddenForAdmin = false
               <Button type="button" variant="outline" disabled={sending} onClick={() => setOpen(false)}>
                 Zamknij
               </Button>
-              <Button type="submit" form="write-to-admin-form" variant="stadium" disabled={sending || !body.trim()}>
+              <Button
+                type="submit"
+                form="write-to-admin-form"
+                variant="stadium"
+                disabled={sending || uploadingAttachment || !canSend}
+              >
                 {sending ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
@@ -311,10 +336,10 @@ export function WriteToAdminFloat({ defaults, recipients, hiddenForAdmin = false
               required
               value={senderName}
               onChange={(e) => setSenderName(e.target.value)}
-              placeholder="Jak na liście Piłkarze"
+              placeholder="np. Jan Kowalski"
               autoComplete="name"
               disabled={loadingThread}
-              hint="Musi dokładnie odpowiadać imieniu i nazwisku zawodnika na stronie."
+              hint="Tak jak na liście Piłkarze albo Kontakt. Wielkość liter i polskie znaki nie mają znaczenia."
             />
           </form>
         ) : (
@@ -330,6 +355,7 @@ export function WriteToAdminFloat({ defaults, recipients, hiddenForAdmin = false
                     setNameConfirmed(false);
                     setMessages([]);
                     setUnreadReplies(0);
+                    clearAttachment();
                     try {
                       localStorage.removeItem(GUEST_NAME_STORAGE_KEY);
                     } catch {
@@ -373,34 +399,14 @@ export function WriteToAdminFloat({ defaults, recipients, hiddenForAdmin = false
                 </p>
               ) : (
                 messages.map((m) => (
-                  <div
+                  <ChatBubble
                     key={m.id}
-                    className={cn("flex", m.mine ? "justify-end" : "justify-start")}
-                  >
-                    <div
-                      className={cn(
-                        "max-w-[85%] rounded-2xl px-3 py-2 text-sm shadow-sm",
-                        m.mine
-                          ? "bg-emerald-700 text-white"
-                          : "border border-white/20 bg-white/10 text-emerald-50"
-                      )}
-                    >
-                      {!m.mine ? (
-                        <p className="mb-1 text-[11px] font-semibold text-[var(--mundial-gold)]">
-                          {m.sender_name}
-                        </p>
-                      ) : null}
-                      <p className="whitespace-pre-wrap break-words leading-relaxed">{m.body}</p>
-                      <p
-                        className={cn(
-                          "mt-1 text-[10px]",
-                          m.mine ? "text-emerald-100/80" : "text-emerald-100/50"
-                        )}
-                      >
-                        {m.created_at_display}
-                      </p>
-                    </div>
-                  </div>
+                    body={m.body}
+                    attachmentUrl={m.attachment_url}
+                    senderLabel={m.mine ? null : m.sender_name}
+                    timeLabel={m.created_at_display}
+                    mine={m.mine}
+                  />
                 ))
               )}
               <div ref={bottomRef} />
@@ -410,13 +416,33 @@ export function WriteToAdminFloat({ defaults, recipients, hiddenForAdmin = false
               <FormTextarea
                 id="contact-admin-body"
                 label="Twoja wiadomość"
-                required
                 value={body}
                 onChange={(e) => setBody(e.target.value)}
                 placeholder="Napisz wiadomość…"
                 rows={3}
                 disabled={sending}
+                ref={textareaRef}
               />
+              <div className="flex flex-wrap items-center gap-2">
+                <ChatEmojiPicker
+                  disabled={sending}
+                  onPick={(emoji) => {
+                    setBody((prev) => insertEmojiAtCursor(prev, emoji, textareaRef.current));
+                  }}
+                />
+                <ChatAttachmentControls
+                  disabled={sending}
+                  attachmentUrl={attachmentUrl}
+                  previewUrl={attachmentPreview}
+                  onUploadingChange={setUploadingAttachment}
+                  onUploaded={(url, preview) => {
+                    if (attachmentPreview?.startsWith("blob:")) URL.revokeObjectURL(attachmentPreview);
+                    setAttachmentUrl(url);
+                    setAttachmentPreview(preview);
+                  }}
+                  onClear={clearAttachment}
+                />
+              </div>
             </form>
           </div>
         )}

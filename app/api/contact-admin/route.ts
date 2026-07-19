@@ -4,8 +4,11 @@ import {
   conversationKeyForGuest,
   conversationKeyForUser,
   findRosterPlayerByFullName,
+  isAllowedChatAttachmentUrl,
   normalizeContactName,
+  organizerNamesFromSettings,
 } from "@/lib/admin-messages";
+import { getAppSettings } from "@/lib/app-settings";
 import { getServerSession } from "@/lib/auth";
 import { CONTACT_ADMIN_RECIPIENT_KEYS, isContactAdminRecipientKey } from "@/lib/contact-admin-recipients";
 import { getDb, logActivity } from "@/lib/db";
@@ -13,11 +16,23 @@ import { checkRateLimit, rateLimitKey, rateLimitedResponse, RATE } from "@/lib/r
 
 export const runtime = "nodejs";
 
-const bodySchema = z.object({
-  sender_name: z.string().trim().min(2, "Podaj imię i nazwisko (min. 2 znaki).").max(120),
-  recipient_key: z.enum(CONTACT_ADMIN_RECIPIENT_KEYS),
-  body: z.string().trim().min(1, "Wiadomość nie może być pusta.").max(4000),
-});
+const bodySchema = z
+  .object({
+    sender_name: z.string().trim().min(2, "Podaj imię i nazwisko (min. 2 znaki).").max(120),
+    recipient_key: z.enum(CONTACT_ADMIN_RECIPIENT_KEYS),
+    body: z.string().trim().max(4000).optional().default(""),
+    attachment_url: z.string().trim().max(800).optional().nullable(),
+  })
+  .superRefine((data, ctx) => {
+    const text = data.body.trim();
+    const att = data.attachment_url?.trim() || "";
+    if (!text && !att) {
+      ctx.addIssue({ code: "custom", message: "Napisz wiadomość lub dołącz grafikę.", path: ["body"] });
+    }
+    if (att && !isAllowedChatAttachmentUrl(att)) {
+      ctx.addIssue({ code: "custom", message: "Nieprawidłowy załącznik.", path: ["attachment_url"] });
+    }
+  });
 
 export async function POST(req: Request) {
   await connection();
@@ -33,13 +48,18 @@ export async function POST(req: Request) {
 
   const parsed = bodySchema.safeParse(json);
   if (!parsed.success) {
-    const msg = parsed.error.flatten().fieldErrors;
+    const flat = parsed.error.flatten();
     const first =
-      msg.sender_name?.[0] ?? msg.recipient_key?.[0] ?? msg.body?.[0] ?? "Sprawdź wprowadzone dane.";
+      flat.fieldErrors.sender_name?.[0] ??
+      flat.fieldErrors.recipient_key?.[0] ??
+      flat.fieldErrors.body?.[0] ??
+      flat.fieldErrors.attachment_url?.[0] ??
+      flat.formErrors[0] ??
+      "Sprawdź wprowadzone dane.";
     return NextResponse.json({ error: first }, { status: 400 });
   }
 
-  const { sender_name, recipient_key, body } = parsed.data;
+  const { sender_name, recipient_key, body, attachment_url } = parsed.data;
   if (!isContactAdminRecipientKey(recipient_key)) {
     return NextResponse.json({ error: "Nieprawidłowy odbiorca wiadomości." }, { status: 400 });
   }
@@ -53,6 +73,7 @@ export async function POST(req: Request) {
   }
 
   const db = await getDb();
+  const appSettings = await getAppSettings(db);
   const userId = session?.userId ?? null;
 
   let senderName = sender_name;
@@ -71,12 +92,16 @@ export async function POST(req: Request) {
       sender_name;
     conversationKey = conversationKeyForUser(userId);
   } else {
-    const roster = await findRosterPlayerByFullName(db, sender_name);
+    const roster = await findRosterPlayerByFullName(
+      db,
+      sender_name,
+      organizerNamesFromSettings(appSettings)
+    );
     if (!roster) {
       return NextResponse.json(
         {
           error:
-            "Podaj imię i nazwisko zawodnika widniejące na stronie (lista Piłkarze), aby napisać lub odpisać administratorowi.",
+            "Nie znaleziono takiej osoby na stronie. Wpisz imię i nazwisko z listy Piłkarze albo organizatora ze strony Kontakt (bez literówek).",
         },
         { status: 400 }
       );
@@ -95,14 +120,17 @@ export async function POST(req: Request) {
     senderEmail = email || null;
   }
 
+  const text = body.trim();
+  const attachment = attachment_url?.trim() || null;
+
   await db
     .prepare(
       `INSERT INTO admin_messages (
          user_id, sender_name, sender_email, recipient_key, body, status,
-         direction, conversation_key
-       ) VALUES (?, ?, ?, ?, ?, 'unread', 'inbound', ?)`
+         direction, conversation_key, attachment_url
+       ) VALUES (?, ?, ?, ?, ?, 'unread', 'inbound', ?, ?)`
     )
-    .run(linkedUserId, senderName, senderEmail, recipient_key, body, conversationKey);
+    .run(linkedUserId, senderName, senderEmail, recipient_key, text || "📷", conversationKey, attachment);
 
   await logActivity(userId, `Wiadomość do admina (${recipient_key}) od ${senderName}`);
 

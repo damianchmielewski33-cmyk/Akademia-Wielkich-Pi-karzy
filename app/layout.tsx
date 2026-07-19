@@ -187,7 +187,7 @@ export default async function RootLayout({
           <WriteToAdminFloat
             defaults={writeToAdminDefaults}
             recipients={contactAdminRecipients}
-            hiddenForAdmin={isAdmin}
+            hideFloat={isAdmin}
           />
         ) : null}
         {!isPzuCupSection ? <MatchParticipationSurveyPrompt /> : null}

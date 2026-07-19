@@ -86,3 +86,32 @@ export function resolveProfilePhotoAbsolute(dbPath: string): string | null {
   }
   return null;
 }
+
+export function chatUploadsDir(): string {
+  if (isVercel()) {
+    return path.join(os.tmpdir(), TMP_APP, "public", "uploads", "chat");
+  }
+  return path.join(process.cwd(), "public", "uploads", "chat");
+}
+
+export function chatAttachmentPublicUrl(filename: string): string {
+  if (isVercel()) {
+    return `/api/uploads/chat/${filename}`;
+  }
+  return `/uploads/chat/${filename}`;
+}
+
+export function resolveChatAttachmentAbsolute(dbPath: string): string | null {
+  const trimmed = dbPath.trim();
+  if (trimmed.startsWith("/api/uploads/chat/")) {
+    const name = trimmed.slice("/api/uploads/chat/".length);
+    if (!name || name.includes("..") || name.includes("/") || name.includes("\\")) return null;
+    return path.join(chatUploadsDir(), name);
+  }
+  if (trimmed.startsWith("/uploads/chat/")) {
+    const name = trimmed.slice("/uploads/chat/".length);
+    if (!name || name.includes("..") || name.includes("/") || name.includes("\\")) return null;
+    return path.join(chatUploadsDir(), name);
+  }
+  return null;
+}

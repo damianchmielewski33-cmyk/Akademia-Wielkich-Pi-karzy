@@ -449,6 +449,9 @@ export async function initLibsqlSchema(client: Client) {
   if (!adminMsgNames.includes("admin_user_id")) {
     await client.execute("ALTER TABLE admin_messages ADD COLUMN admin_user_id INTEGER");
   }
+  if (!adminMsgNames.includes("attachment_url")) {
+    await client.execute("ALTER TABLE admin_messages ADD COLUMN attachment_url TEXT");
+  }
   await client.execute(
     "CREATE INDEX IF NOT EXISTS idx_admin_messages_conversation ON admin_messages(conversation_key, created_at)"
   );

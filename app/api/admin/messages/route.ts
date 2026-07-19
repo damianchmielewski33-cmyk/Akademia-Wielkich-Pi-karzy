@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { formatActivityTimePl } from "@/lib/activity-display";
 import {
   backfillAdminMessageConversationKeys,
+  chatMessagePreview,
   getUnreadAdminMessageCount,
   type AdminMessageDirection,
   type AdminMessageRow,
@@ -20,6 +21,7 @@ type ThreadAgg = {
   user_alias: string | null;
   recipient_key: string | null;
   last_body: string;
+  last_attachment_url: string | null;
   last_at: string;
   last_direction: AdminMessageDirection;
   unread_count: number;
@@ -39,7 +41,7 @@ export async function GET() {
               m.read_at, m.read_by_admin_id, m.created_at,
               COALESCE(m.direction, 'inbound') AS direction,
               COALESCE(m.conversation_key, '') AS conversation_key,
-              m.admin_user_id,
+              m.admin_user_id, m.attachment_url,
               u.player_alias AS user_alias
        FROM admin_messages m
        LEFT JOIN users u ON u.id = m.user_id
@@ -50,6 +52,7 @@ export async function GET() {
     user_alias: string | null;
     direction: AdminMessageDirection;
     conversation_key: string;
+    attachment_url: string | null;
   })[];
 
   const threadMap = new Map<string, ThreadAgg>();
@@ -65,6 +68,7 @@ export async function GET() {
         user_alias: r.user_alias,
         recipient_key: r.recipient_key,
         last_body: r.body,
+        last_attachment_url: r.attachment_url,
         last_at: r.created_at,
         last_direction: r.direction,
         unread_count: isInboundUnread ? 1 : 0,
@@ -96,7 +100,7 @@ export async function GET() {
       last_at: t.last_at,
       last_at_display: formatActivityTimePl(t.last_at),
       unread_count: t.unread_count,
-      preview: t.last_body.length > 120 ? `${t.last_body.slice(0, 117).trimEnd()}…` : t.last_body,
+      preview: chatMessagePreview(t.last_body === "📷" ? "" : t.last_body, t.last_attachment_url),
       is_guest: t.user_id == null || t.conversation_key.startsWith("guest:"),
     }));
 

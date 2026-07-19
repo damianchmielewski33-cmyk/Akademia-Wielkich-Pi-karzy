@@ -4,6 +4,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Loader2, MessageCircle, Send } from "lucide-react";
 import { toast } from "sonner";
 import {
+  ChatAttachmentControls,
+  ChatBubble,
+  ChatEmojiPicker,
+  insertEmojiAtCursor,
+} from "@/components/chat-composer-extras";
+import {
   AdminCard,
   AdminToolbar,
   adminEmptyStateClass,
@@ -29,6 +35,7 @@ type ThreadItem = {
 type ChatMessage = {
   id: number;
   body: string;
+  attachment_url?: string | null;
   direction: "inbound" | "outbound";
   status: string;
   sender_name: string;
@@ -48,7 +55,17 @@ export function AdminMessagesTab({ onUnreadChange }: Props) {
   const [loadingThread, setLoadingThread] = useState(false);
   const [reply, setReply] = useState("");
   const [sending, setSending] = useState(false);
+  const [attachmentUrl, setAttachmentUrl] = useState<string | null>(null);
+  const [attachmentPreview, setAttachmentPreview] = useState<string | null>(null);
+  const [uploadingAttachment, setUploadingAttachment] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const clearAttachment = useCallback(() => {
+    if (attachmentPreview?.startsWith("blob:")) URL.revokeObjectURL(attachmentPreview);
+    setAttachmentUrl(null);
+    setAttachmentPreview(null);
+  }, [attachmentPreview]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -80,6 +97,7 @@ export function AdminMessagesTab({ onUnreadChange }: Props) {
       setSelectedKey(key);
       setLoadingThread(true);
       setReply("");
+      clearAttachment();
       try {
         const params = new URLSearchParams({ conversation_key: key });
         const res = await fetch(`/api/admin/messages/thread?${params.toString()}`);
@@ -100,7 +118,7 @@ export function AdminMessagesTab({ onUnreadChange }: Props) {
         setLoadingThread(false);
       }
     },
-    [onUnreadChange]
+    [onUnreadChange, clearAttachment]
   );
 
   useEffect(() => {
@@ -109,7 +127,9 @@ export function AdminMessagesTab({ onUnreadChange }: Props) {
 
   async function sendReply(e: React.FormEvent) {
     e.preventDefault();
-    if (!selectedKey || !reply.trim()) return;
+    if (!selectedKey) return;
+    const text = reply.trim();
+    if (!text && !attachmentUrl) return;
     setSending(true);
     try {
       const res = await fetch("/api/admin/messages/thread", {
@@ -117,7 +137,8 @@ export function AdminMessagesTab({ onUnreadChange }: Props) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           conversation_key: selectedKey,
-          body: reply.trim(),
+          body: text,
+          attachment_url: attachmentUrl,
         }),
       });
       const data = (await res.json().catch(() => ({}))) as {
@@ -132,6 +153,7 @@ export function AdminMessagesTab({ onUnreadChange }: Props) {
         setMessages((prev) => [...prev, data.message!]);
       }
       setReply("");
+      clearAttachment();
       await load();
       onUnreadChange?.();
     } finally {
@@ -139,11 +161,13 @@ export function AdminMessagesTab({ onUnreadChange }: Props) {
     }
   }
 
+  const canSend = Boolean(reply.trim() || attachmentUrl);
+
   return (
     <div>
       <AdminToolbar
         title="Wiadomości"
-        description="Rozmowy z zalogowanymi graczami i gośćmi (imię i nazwisko z listy Piłkarze). Odpowiadaj bezpośrednio w wątku — bez wyskakujących okien."
+        description="Rozmowy z graczami i gośćmi. Możesz odpisywać tekstem, emotkami i grafikami."
         onReload={load}
         loading={loading}
       />
@@ -260,24 +284,14 @@ export function AdminMessagesTab({ onUnreadChange }: Props) {
                   <p className="py-8 text-center text-sm text-emerald-100/60">Brak wiadomości w wątku.</p>
                 ) : (
                   messages.map((m) => (
-                    <div key={m.id} className={cn("flex", m.mine ? "justify-end" : "justify-start")}>
-                      <div
-                        className={cn(
-                          "max-w-[85%] rounded-2xl px-3 py-2 text-sm",
-                          m.mine
-                            ? "bg-emerald-700 text-white"
-                            : "border border-white/20 bg-black/25 text-emerald-50"
-                        )}
-                      >
-                        <p className="mb-1 text-[11px] font-semibold text-[var(--mundial-gold)]">
-                          {m.mine ? "Ty" : m.sender_name}
-                        </p>
-                        <p className="whitespace-pre-wrap break-words leading-relaxed">{m.body}</p>
-                        <p className={cn("mt-1 text-[10px]", m.mine ? "text-emerald-100/80" : "text-emerald-100/50")}>
-                          {m.created_at_display}
-                        </p>
-                      </div>
-                    </div>
+                    <ChatBubble
+                      key={m.id}
+                      body={m.body}
+                      attachmentUrl={m.attachment_url}
+                      senderLabel={m.mine ? "Ty" : m.sender_name}
+                      timeLabel={m.created_at_display}
+                      mine={m.mine}
+                    />
                   ))
                 )}
                 <div ref={bottomRef} />
@@ -292,20 +306,46 @@ export function AdminMessagesTab({ onUnreadChange }: Props) {
                   placeholder="Napisz odpowiedź do gracza…"
                   rows={3}
                   disabled={sending || loadingThread}
+                  ref={textareaRef}
                 />
-                <Button type="submit" variant="stadium" disabled={sending || !reply.trim()}>
-                  {sending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
-                      Wysyłanie…
-                    </>
-                  ) : (
-                    <>
-                      <Send className="mr-2 h-4 w-4" aria-hidden />
-                      Odpisz
-                    </>
-                  )}
-                </Button>
+                <div className="flex flex-wrap items-center gap-2">
+                  <ChatEmojiPicker
+                    disabled={sending || loadingThread}
+                    onPick={(emoji) => {
+                      setReply((prev) => insertEmojiAtCursor(prev, emoji, textareaRef.current));
+                    }}
+                  />
+                  <ChatAttachmentControls
+                    disabled={sending || loadingThread}
+                    attachmentUrl={attachmentUrl}
+                    previewUrl={attachmentPreview}
+                    onUploadingChange={setUploadingAttachment}
+                    onUploaded={(url, preview) => {
+                      if (attachmentPreview?.startsWith("blob:")) URL.revokeObjectURL(attachmentPreview);
+                      setAttachmentUrl(url);
+                      setAttachmentPreview(preview);
+                    }}
+                    onClear={clearAttachment}
+                  />
+                  <Button
+                    type="submit"
+                    variant="stadium"
+                    className="ml-auto"
+                    disabled={sending || uploadingAttachment || !canSend}
+                  >
+                    {sending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
+                        Wysyłanie…
+                      </>
+                    ) : (
+                      <>
+                        <Send className="mr-2 h-4 w-4" aria-hidden />
+                        Odpisz
+                      </>
+                    )}
+                  </Button>
+                </div>
               </form>
             </div>
           ) : (

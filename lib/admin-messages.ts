@@ -1,3 +1,4 @@
+import type { AppSettings } from "@/lib/app-settings";
 import type { AppDb } from "@/lib/db";
 import { REALMS } from "@/lib/realm";
 
@@ -18,11 +19,29 @@ export type AdminMessageRow = {
   direction: AdminMessageDirection | null;
   conversation_key: string | null;
   admin_user_id: number | null;
+  attachment_url: string | null;
 };
 
-/** Normalizuje imię i nazwisko do porównań (bez rozróżniania wielkości liter). */
+const DIACRITICS_MAP: Record<string, string> = {
+  ą: "a",
+  ć: "c",
+  ę: "e",
+  ł: "l",
+  ń: "n",
+  ó: "o",
+  ś: "s",
+  ź: "z",
+  ż: "z",
+};
+
+/** Normalizuje imię i nazwisko do porównań (bez wielkości liter i polskich znaków). */
 export function normalizeContactName(input: string): string {
-  return input.trim().replace(/\s+/g, " ").normalize("NFC").toLowerCase();
+  const base = input
+    .trim()
+    .replace(/\s+/g, " ")
+    .normalize("NFC")
+    .toLowerCase();
+  return base.replace(/[ąćęłńóśźż]/g, (ch) => DIACRITICS_MAP[ch] ?? ch);
 }
 
 export function conversationKeyForUser(userId: number): string {
@@ -37,31 +56,96 @@ export function displayNameFromParts(firstName: string, lastName: string): strin
   return `${firstName.trim()} ${lastName.trim()}`.replace(/\s+/g, " ").trim();
 }
 
+function nameCandidatesMatch(needle: string, ...candidates: Array<string | null | undefined>): boolean {
+  for (const c of candidates) {
+    if (!c) continue;
+    if (normalizeContactName(c) === needle) return true;
+  }
+  return false;
+}
+
 /**
- * Sprawdza, czy imię i nazwisko odpowiada zawodnikowi widocznemu na stronie (lista piłkarzy akademii).
+ * Sprawdza, czy imię i nazwisko odpowiada osobie widocznej na stronie
+ * (lista Piłkarze — ta sama reguła co /pilkarze — albo organizatorzy z Kontakt).
  */
 export async function findRosterPlayerByFullName(
   db: AppDb,
-  fullName: string
-): Promise<{ id: number; first_name: string; last_name: string; display_name: string } | null> {
+  fullName: string,
+  organizerNames?: string[]
+): Promise<{ id: number | null; first_name: string; last_name: string; display_name: string } | null> {
   const needle = normalizeContactName(fullName);
-  if (needle.length < 3 || !needle.includes(" ")) return null;
+  if (needle.length < 3) return null;
 
   const rows = (await db
     .prepare(
-      `SELECT id, first_name, last_name
+      `SELECT id, first_name, last_name, player_alias
        FROM users
-       WHERE realm = ? AND COALESCE(is_admin, 0) = 0`
+       WHERE COALESCE(realm, ?) = ? AND COALESCE(is_temporary, 0) = 0`
     )
-    .all(REALMS.ACADEMY)) as { id: number; first_name: string; last_name: string }[];
+    .all(REALMS.ACADEMY, REALMS.ACADEMY)) as {
+    id: number;
+    first_name: string;
+    last_name: string;
+    player_alias: string;
+  }[];
 
   for (const row of rows) {
     const display = displayNameFromParts(row.first_name, row.last_name);
-    if (normalizeContactName(display) === needle) {
-      return { ...row, display_name: display };
+    const reversed = displayNameFromParts(row.last_name, row.first_name);
+    if (
+      nameCandidatesMatch(
+        needle,
+        display,
+        reversed,
+        row.player_alias,
+        // „Imię Pseudonim Nazwisko” albo sam nick z listy
+        `${row.first_name} ${row.player_alias}`.trim(),
+        `${row.player_alias} ${row.last_name}`.trim()
+      )
+    ) {
+      return { ...row, display_name: display || row.player_alias };
     }
   }
+
+  for (const org of organizerNames ?? []) {
+    const label = org.trim();
+    if (!label) continue;
+    if (nameCandidatesMatch(needle, label)) {
+      const parts = label.split(/\s+/);
+      const first = parts[0] ?? label;
+      const last = parts.slice(1).join(" ") || first;
+      return { id: null, first_name: first, last_name: last, display_name: label };
+    }
+  }
+
   return null;
+}
+
+export function organizerNamesFromSettings(settings: AppSettings): string[] {
+  return [settings.organizer_damian_name, settings.organizer_mateusz_name].filter(Boolean);
+}
+
+/** Dozwolone URL-e załączników czatu (lokalne lub Vercel Blob). */
+export function isAllowedChatAttachmentUrl(url: string): boolean {
+  const t = url.trim();
+  if (!t || t.length > 800) return false;
+  if (t.startsWith("/uploads/chat/") || t.startsWith("/api/uploads/chat/")) {
+    const name = t.replace(/^\/(api\/)?uploads\/chat\//, "");
+    return Boolean(name) && !name.includes("..") && !name.includes("/") && !name.includes("\\");
+  }
+  try {
+    const u = new URL(t);
+    return u.protocol === "https:" && u.hostname.endsWith(".public.blob.vercel-storage.com");
+  } catch {
+    return false;
+  }
+}
+
+export function chatMessagePreview(body: string, attachmentUrl: string | null | undefined): string {
+  const text = body.trim();
+  if (text) return text.length > 120 ? `${text.slice(0, 117).trimEnd()}…` : text;
+  if (attachmentUrl) return "📷 Zdjęcie";
+  return "";
 }
 
 export async function getUnreadAdminMessageCount(db: AppDb): Promise<number> {

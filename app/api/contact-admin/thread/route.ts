@@ -8,6 +8,7 @@ import {
   findRosterPlayerByFullName,
   markConversationReadForUser,
   normalizeContactName,
+  organizerNamesFromSettings,
   type AdminMessageDirection,
 } from "@/lib/admin-messages";
 import { getAppSettings } from "@/lib/app-settings";
@@ -54,6 +55,7 @@ export async function GET(req: Request) {
 
   const db = await getDb();
   await backfillAdminMessageConversationKeys(db);
+  const appSettings = await getAppSettings(db);
 
   let conversationKey: string | null = null;
   let senderName: string | null = null;
@@ -72,12 +74,16 @@ export async function GET(req: Request) {
     if (name.length < 2) {
       return NextResponse.json({ messages: [], conversation_key: null, needs_name: true });
     }
-    const roster = await findRosterPlayerByFullName(db, name);
+    const roster = await findRosterPlayerByFullName(
+      db,
+      name,
+      organizerNamesFromSettings(appSettings)
+    );
     if (!roster) {
       return NextResponse.json(
         {
           error:
-            "Podaj imię i nazwisko zawodnika widniejące na stronie (lista Piłkarze), aby zobaczyć rozmowę.",
+            "Nie znaleziono takiej osoby na stronie. Wpisz imię i nazwisko z listy Piłkarze albo organizatora ze strony Kontakt (bez literówek).",
           messages: [],
           conversation_key: null,
         },
@@ -91,12 +97,10 @@ export async function GET(req: Request) {
   if (parsed.data.mark_read && conversationKey) {
     await markConversationReadForUser(db, conversationKey);
   }
-
-  const appSettings = await getAppSettings(db);
   const rows = (await db
     .prepare(
       `SELECT id, body, status, created_at, recipient_key,
-              COALESCE(direction, 'inbound') AS direction, sender_name
+              COALESCE(direction, 'inbound') AS direction, sender_name, attachment_url
        FROM admin_messages
        WHERE conversation_key = ?
        ORDER BY created_at ASC, id ASC
@@ -110,11 +114,13 @@ export async function GET(req: Request) {
     recipient_key: string | null;
     direction: AdminMessageDirection;
     sender_name: string;
+    attachment_url: string | null;
   }[];
 
   const messages = rows.map((r) => ({
     id: r.id,
-    body: r.body,
+    body: r.body === "📷" && r.attachment_url ? "" : r.body,
+    attachment_url: r.attachment_url,
     direction: r.direction,
     status: r.status,
     sender_name: r.sender_name,
