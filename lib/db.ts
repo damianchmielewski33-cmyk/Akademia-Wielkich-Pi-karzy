@@ -4,7 +4,7 @@ import fs from "fs";
 import * as path from "path";
 import { isVercel, resolveDatabaseFilePath } from "@/lib/runtime-paths";
 import { initLibsqlSchema } from "@/lib/turso-init-schema";
-import { migrateAppSettingsColumnsSqlite } from "@/lib/app-settings";
+import { isDuplicateColumnError, migrateAppSettingsColumnsSqlite } from "@/lib/app-settings";
 import { migrateRealmSchemaSqlite } from "@/lib/realm-migration";
 import { withTransientNetworkRetries } from "@/lib/transient-network-retry";
 
@@ -25,6 +25,8 @@ function hasTursoEnv(): boolean {
 let sqliteInstance: Database.Database | null = null;
 let libsqlClient: Client | null = null;
 let libsqlSchemaReady = false;
+/** Jedna wspólna inicjalizacja schematu — unikamy wyścigu przy równoległym prerenderze. */
+let libsqlSchemaInitPromise: Promise<void> | null = null;
 
 function rowToRecord(row: Row, columns: string[]): Record<string, unknown> {
   const o: Record<string, unknown> = {};
@@ -496,21 +498,28 @@ function initSchemaSync(db: Database.Database) {
   migrateRealmSchemaSqlite(db);
 
   const adminMsgCols = db.prepare("PRAGMA table_info(admin_messages)").all() as { name: string }[];
-  if (!adminMsgCols.some((c) => c.name === "recipient_key")) {
-    db.exec("ALTER TABLE admin_messages ADD COLUMN recipient_key TEXT");
-  }
-  if (!adminMsgCols.some((c) => c.name === "direction")) {
-    db.exec("ALTER TABLE admin_messages ADD COLUMN direction TEXT DEFAULT 'inbound'");
-  }
-  if (!adminMsgCols.some((c) => c.name === "conversation_key")) {
-    db.exec("ALTER TABLE admin_messages ADD COLUMN conversation_key TEXT");
-  }
-  if (!adminMsgCols.some((c) => c.name === "admin_user_id")) {
-    db.exec("ALTER TABLE admin_messages ADD COLUMN admin_user_id INTEGER");
-  }
-  if (!adminMsgCols.some((c) => c.name === "attachment_url")) {
-    db.exec("ALTER TABLE admin_messages ADD COLUMN attachment_url TEXT");
-  }
+  const adminMsgNames = new Set(adminMsgCols.map((c) => c.name));
+  const addAdminMsgColumn = (name: string, ddl: string) => {
+    if (adminMsgNames.has(name)) return;
+    try {
+      db.exec(ddl);
+      adminMsgNames.add(name);
+    } catch (err) {
+      if (isDuplicateColumnError(err)) {
+        adminMsgNames.add(name);
+        return;
+      }
+      throw err;
+    }
+  };
+  addAdminMsgColumn("recipient_key", "ALTER TABLE admin_messages ADD COLUMN recipient_key TEXT");
+  addAdminMsgColumn(
+    "direction",
+    "ALTER TABLE admin_messages ADD COLUMN direction TEXT DEFAULT 'inbound'"
+  );
+  addAdminMsgColumn("conversation_key", "ALTER TABLE admin_messages ADD COLUMN conversation_key TEXT");
+  addAdminMsgColumn("admin_user_id", "ALTER TABLE admin_messages ADD COLUMN admin_user_id INTEGER");
+  addAdminMsgColumn("attachment_url", "ALTER TABLE admin_messages ADD COLUMN attachment_url TEXT");
   db.exec("CREATE INDEX IF NOT EXISTS idx_admin_messages_conversation ON admin_messages(conversation_key, created_at)");
 
   const hasAcademySettings = db.prepare("SELECT 1 AS ok FROM app_settings WHERE realm = 'academy'").get() as
@@ -542,23 +551,33 @@ export async function getDb(): Promise<AppDb> {
       });
     }
     if (!libsqlSchemaReady) {
-      await withTransientNetworkRetries(
-        async () => {
-          await initLibsqlSchema(libsqlClient!);
-        },
-        {
-          onBeforeRetry: () => {
-            libsqlClient?.close();
-            libsqlClient = createClient({
-              url: process.env.TURSO_DATABASE_URL!,
-              authToken: process.env.TURSO_AUTH_TOKEN?.trim() || undefined,
-            });
-          },
-        }
-      );
-      libsqlSchemaReady = true;
+      if (!libsqlSchemaInitPromise) {
+        libsqlSchemaInitPromise = (async () => {
+          try {
+            await withTransientNetworkRetries(
+              async () => {
+                await initLibsqlSchema(libsqlClient!);
+              },
+              {
+                onBeforeRetry: () => {
+                  libsqlClient?.close();
+                  libsqlClient = createClient({
+                    url: process.env.TURSO_DATABASE_URL!,
+                    authToken: process.env.TURSO_AUTH_TOKEN?.trim() || undefined,
+                  });
+                },
+              }
+            );
+            libsqlSchemaReady = true;
+          } catch (err) {
+            libsqlSchemaInitPromise = null;
+            throw err;
+          }
+        })();
+      }
+      await libsqlSchemaInitPromise;
     }
-    return createLibsqlFacade(libsqlClient);
+    return createLibsqlFacade(libsqlClient!);
   }
 
   if (!sqliteInstance) {

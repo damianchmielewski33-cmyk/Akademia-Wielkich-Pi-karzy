@@ -466,7 +466,8 @@ const APP_SETTINGS_MIGRATION_COLUMNS: { name: string; ddl: string }[] = [
   { name: "asset_bg_pitch_lines_url", ddl: "ALTER TABLE app_settings ADD COLUMN asset_bg_pitch_lines_url TEXT" },
 ];
 
-function isDuplicateColumnError(err: unknown): boolean {
+/** True gdy SQLite/libSQL zgłasza „duplicate column” (także lokalizowane komunikaty). */
+export function isDuplicateColumnError(err: unknown): boolean {
   const parts: string[] = [];
   if (err instanceof Error) {
     parts.push(err.message);

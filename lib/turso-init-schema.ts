@@ -1,10 +1,18 @@
 import type { Client } from "@libsql/client";
-import { migrateAppSettingsColumnsLibsql } from "@/lib/app-settings";
+import { isDuplicateColumnError, migrateAppSettingsColumnsLibsql } from "@/lib/app-settings";
 import { migrateRealmSchemaLibsql } from "@/lib/realm-migration";
 
 async function pragmaColumnNames(
   client: Client,
-  table: "users" | "matches" | "match_stats" | "match_signups" | "app_settings" | "public_share_links" | "standalone_match_stats"
+  table:
+    | "users"
+    | "matches"
+    | "match_stats"
+    | "match_signups"
+    | "app_settings"
+    | "public_share_links"
+    | "standalone_match_stats"
+    | "admin_messages"
 ): Promise<string[]> {
   const rs = await client.execute(`PRAGMA table_info(${table})`);
   let nameIdx = rs.columns.indexOf("name");
@@ -21,6 +29,25 @@ async function pragmaColumnNames(
       return String(rec[nameIdx] ?? "");
     })
     .filter(Boolean);
+}
+
+async function addColumnIfMissing(
+  client: Client,
+  existingNames: string[],
+  column: string,
+  ddl: string
+): Promise<void> {
+  if (existingNames.includes(column)) return;
+  try {
+    await client.execute(ddl);
+    existingNames.push(column);
+  } catch (err) {
+    if (isDuplicateColumnError(err)) {
+      existingNames.push(column);
+      return;
+    }
+    throw err;
+  }
 }
 
 /** Tworzy / aktualizuje schemat w zdalnej bazie libSQL (Turso). Wywoływane z getDb() i skryptu db:init-turso. */
@@ -433,25 +460,37 @@ export async function initLibsqlSchema(client: Client) {
 
   await migrateRealmSchemaLibsql(client);
 
-  const adminMsgRs = await client.execute("PRAGMA table_info(admin_messages)");
-  const adminMsgNames = adminMsgRs.rows.map((row) =>
-    String((row as Record<string, unknown>).name ?? row[1] ?? "")
+  const adminMsgNames = await pragmaColumnNames(client, "admin_messages");
+  await addColumnIfMissing(
+    client,
+    adminMsgNames,
+    "recipient_key",
+    "ALTER TABLE admin_messages ADD COLUMN recipient_key TEXT"
   );
-  if (!adminMsgNames.includes("recipient_key")) {
-    await client.execute("ALTER TABLE admin_messages ADD COLUMN recipient_key TEXT");
-  }
-  if (!adminMsgNames.includes("direction")) {
-    await client.execute("ALTER TABLE admin_messages ADD COLUMN direction TEXT DEFAULT 'inbound'");
-  }
-  if (!adminMsgNames.includes("conversation_key")) {
-    await client.execute("ALTER TABLE admin_messages ADD COLUMN conversation_key TEXT");
-  }
-  if (!adminMsgNames.includes("admin_user_id")) {
-    await client.execute("ALTER TABLE admin_messages ADD COLUMN admin_user_id INTEGER");
-  }
-  if (!adminMsgNames.includes("attachment_url")) {
-    await client.execute("ALTER TABLE admin_messages ADD COLUMN attachment_url TEXT");
-  }
+  await addColumnIfMissing(
+    client,
+    adminMsgNames,
+    "direction",
+    "ALTER TABLE admin_messages ADD COLUMN direction TEXT DEFAULT 'inbound'"
+  );
+  await addColumnIfMissing(
+    client,
+    adminMsgNames,
+    "conversation_key",
+    "ALTER TABLE admin_messages ADD COLUMN conversation_key TEXT"
+  );
+  await addColumnIfMissing(
+    client,
+    adminMsgNames,
+    "admin_user_id",
+    "ALTER TABLE admin_messages ADD COLUMN admin_user_id INTEGER"
+  );
+  await addColumnIfMissing(
+    client,
+    adminMsgNames,
+    "attachment_url",
+    "ALTER TABLE admin_messages ADD COLUMN attachment_url TEXT"
+  );
   await client.execute(
     "CREATE INDEX IF NOT EXISTS idx_admin_messages_conversation ON admin_messages(conversation_key, created_at)"
   );
