@@ -311,3 +311,42 @@ export async function PATCH(req: Request) {
   await markConversationReadForAdmin(db, conversationKey, gate.session.userId);
   return NextResponse.json({ ok: true });
 }
+
+/** Usuwa całą rozmowę (wszystkie wiadomości w wątku admin↔gracz/gość). */
+export async function DELETE(req: Request) {
+  const gate = await requireAdmin();
+  if (!gate.ok) return gate.response;
+
+  const url = new URL(req.url);
+  let conversationKey = url.searchParams.get("conversation_key")?.trim() ?? "";
+
+  if (!conversationKey) {
+    try {
+      const json = (await req.json()) as { conversation_key?: string };
+      conversationKey = json.conversation_key?.trim() ?? "";
+    } catch {
+      /* empty */
+    }
+  }
+
+  if (!conversationKey) {
+    return NextResponse.json({ error: "Brak conversation_key" }, { status: 400 });
+  }
+  if (isDmConversationKey(conversationKey)) {
+    return NextResponse.json({ error: "Brak dostępu do prywatnej rozmowy." }, { status: 403 });
+  }
+
+  const db = await getDb();
+  const before = (await db
+    .prepare("SELECT COUNT(*) AS c FROM admin_messages WHERE conversation_key = ?")
+    .get(conversationKey)) as { c: number } | undefined;
+  const count = before?.c ?? 0;
+
+  await db.prepare("DELETE FROM admin_messages WHERE conversation_key = ?").run(conversationKey);
+  await logActivity(
+    gate.session.userId,
+    `Usunięto rozmowę czatu ${conversationKey} (${count} wiadomości)`
+  );
+
+  return NextResponse.json({ ok: true, deleted: count });
+}

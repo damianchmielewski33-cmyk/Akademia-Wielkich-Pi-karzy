@@ -439,7 +439,7 @@ export function WriteToAdminFloat({ defaults, recipients, hideFloat = false }: P
     }
   }
 
-  async function deleteOwnMessage(id: number) {
+  async function deleteChatMessage(id: number) {
     if (!isLoggedIn) return;
     if (!window.confirm("Usunąć tę wiadomość?")) return;
     setDeletingId(id);
@@ -722,7 +722,7 @@ export function WriteToAdminFloat({ defaults, recipients, hideFloat = false }: P
                         mine={m.mine}
                         tone="pitch"
                         cluster={chatClusterForIndex(clustered, i)}
-                        onDelete={m.mine ? () => void deleteOwnMessage(m.id) : undefined}
+                        onDelete={() => void deleteChatMessage(m.id)}
                         deleting={deletingId === m.id}
                       />
                     ));

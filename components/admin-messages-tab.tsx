@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ArrowLeft, Loader2, MessageCircle, Plus, Send, UserPlus, Users } from "lucide-react";
+import { ArrowLeft, Loader2, MessageCircle, Plus, Send, Trash2, UserPlus, Users } from "lucide-react";
 import { toast } from "sonner";
 import {
   ChatAttachmentControls,
@@ -85,6 +85,7 @@ export function AdminMessagesTab({ onUnreadChange, mode = "page", active = true 
   const [composingNew, setComposingNew] = useState(false);
   const [draftPeer, setDraftPeer] = useState<ChatPeer | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [deletingThreadKey, setDeletingThreadKey] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -247,6 +248,32 @@ export function AdminMessagesTab({ onUnreadChange, mode = "page", active = true 
     }
   }
 
+  async function deleteThread(key: string, label: string) {
+    if (!window.confirm(`Usunąć całą rozmowę z „${label}”? Tej operacji nie da się cofnąć.`)) return;
+    setDeletingThreadKey(key);
+    try {
+      const params = new URLSearchParams({ conversation_key: key });
+      const res = await fetch(`/api/admin/messages/thread?${params.toString()}`, { method: "DELETE" });
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) {
+        toast.error(typeof data.error === "string" ? data.error : "Nie udało się usunąć rozmowy");
+        return;
+      }
+      if (selectedKey === key) {
+        setSelectedKey(null);
+        setDraftPeer(null);
+        setMessages([]);
+        clearAttachment();
+        setReply("");
+      }
+      toast.success("Rozmowa usunięta");
+      await load();
+      onUnreadChange?.();
+    } finally {
+      setDeletingThreadKey(null);
+    }
+  }
+
   const canSend = Boolean(reply.trim() || attachmentUrl);
   const showChatPane = Boolean(selectedKey || draftPeer);
   /** Popup jest na murawie — zawsze ton pitch (nie jasny formularz). */
@@ -361,21 +388,19 @@ export function AdminMessagesTab({ onUnreadChange, mode = "page", active = true 
           {threads.map((t) => {
             const activeThread = selectedKey === t.conversation_key;
             const unread = t.unread_count > 0;
+            const threadBusy = deletingThreadKey === t.conversation_key;
             return (
               <li key={t.conversation_key}>
-                <button
-                  type="button"
-                  onClick={() => void openThread(t.conversation_key)}
+                <div
                   className={cn(
-                    "w-full text-left transition-colors",
+                    "flex items-stretch gap-1",
                     isPopup
                       ? cn(
-                          "flex items-center gap-3 px-3 py-3 sm:px-4",
                           activeThread ? "bg-white/15" : "hover:bg-white/8",
                           unread && !activeThread && "bg-emerald-950/35"
                         )
                       : cn(
-                          "rounded-xl border px-3 py-3",
+                          "rounded-xl border",
                           activeThread
                             ? "border-[var(--mundial-gold)]/60 bg-white/15"
                             : "border-white/20 bg-black/10 hover:bg-white/10",
@@ -383,85 +408,114 @@ export function AdminMessagesTab({ onUnreadChange, mode = "page", active = true 
                         )
                   )}
                 >
-                  {isPopup ? (
-                    <>
-                      <span className="relative shrink-0">
-                        {threadAvatar(t)}
-                        {unread ? (
-                          <span className="absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full bg-red-500 ring-2 ring-[#0a4a38]" />
-                        ) : null}
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="flex items-baseline justify-between gap-2">
+                  <button
+                    type="button"
+                    onClick={() => void openThread(t.conversation_key)}
+                    className={cn(
+                      "min-w-0 flex-1 text-left transition-colors",
+                      isPopup ? "flex items-center gap-3 px-3 py-3 sm:px-4" : "px-3 py-3"
+                    )}
+                  >
+                    {isPopup ? (
+                      <>
+                        <span className="relative shrink-0">
+                          {threadAvatar(t)}
+                          {unread ? (
+                            <span className="absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full bg-red-500 ring-2 ring-[#0a4a38]" />
+                          ) : null}
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="flex items-baseline justify-between gap-2">
+                            <span
+                              className={cn(
+                                "truncate text-sm font-semibold",
+                                unread ? "text-white" : "text-emerald-50"
+                              )}
+                            >
+                              {t.sender_name}
+                            </span>
+                            <time className="shrink-0 text-[10px] tabular-nums text-emerald-100/50">
+                              {t.last_at_display}
+                            </time>
+                          </span>
+                          <span className="mt-0.5 block truncate text-[11px] text-emerald-100/55">
+                            {t.is_guest
+                              ? "Gość z boiska"
+                              : t.user_alias
+                                ? `@${t.user_alias}`
+                                : "Zawodnik"}
+                            {t.recipient_label ? ` · do ${t.recipient_label}` : ""}
+                          </span>
                           <span
                             className={cn(
-                              "truncate text-sm font-semibold",
-                              unread ? "text-white" : "text-emerald-50"
+                              "mt-1 line-clamp-1 text-sm",
+                              unread ? "font-medium text-emerald-50" : "text-emerald-100/70"
                             )}
                           >
-                            {t.sender_name}
+                            {t.preview || "Brak wiadomości"}
                           </span>
-                          <time className="shrink-0 text-[10px] tabular-nums text-emerald-100/50">
-                            {t.last_at_display}
-                          </time>
                         </span>
-                        <span className="mt-0.5 block truncate text-[11px] text-emerald-100/55">
-                          {t.is_guest
-                            ? "Gość z boiska"
-                            : t.user_alias
-                              ? `@${t.user_alias}`
-                              : "Zawodnik"}
-                          {t.recipient_label ? ` · do ${t.recipient_label}` : ""}
-                        </span>
-                        <span
-                          className={cn(
-                            "mt-1 line-clamp-1 text-sm",
-                            unread ? "font-medium text-emerald-50" : "text-emerald-100/70"
-                          )}
-                        >
-                          {t.preview || "Brak wiadomości"}
-                        </span>
-                      </span>
-                      {unread ? (
-                        <span className="inline-flex min-h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white">
-                          {t.unread_count > 99 ? "99+" : t.unread_count}
-                        </span>
-                      ) : null}
-                    </>
-                  ) : (
-                    <div className="flex items-start gap-2">
-                      {unread ? (
-                        <span className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full bg-red-500" aria-hidden />
-                      ) : (
-                        <span className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full bg-white/20" aria-hidden />
-                      )}
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
-                          <p
-                            className={cn(
-                              "truncate font-semibold",
-                              unread ? "text-white" : "text-emerald-50/90"
-                            )}
-                          >
-                            {t.sender_name}
-                          </p>
-                          <time className="shrink-0 text-[0.7rem] tabular-nums text-emerald-100/60">
-                            {t.last_at_display}
-                          </time>
+                        {unread ? (
+                          <span className="inline-flex min-h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white">
+                            {t.unread_count > 99 ? "99+" : t.unread_count}
+                          </span>
+                        ) : null}
+                      </>
+                    ) : (
+                      <div className="flex items-start gap-2">
+                        {unread ? (
+                          <span className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full bg-red-500" aria-hidden />
+                        ) : (
+                          <span className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full bg-white/20" aria-hidden />
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
+                            <p
+                              className={cn(
+                                "truncate font-semibold",
+                                unread ? "text-white" : "text-emerald-50/90"
+                              )}
+                            >
+                              {t.sender_name}
+                            </p>
+                            <time className="shrink-0 text-[0.7rem] tabular-nums text-emerald-100/60">
+                              {t.last_at_display}
+                            </time>
+                          </div>
+                          {t.recipient_label ? (
+                            <p className="truncate text-xs text-emerald-100/55">Do: {t.recipient_label}</p>
+                          ) : null}
+                          {t.user_alias ? (
+                            <p className="truncate text-xs text-emerald-100/55">Konto: {t.user_alias}</p>
+                          ) : t.is_guest ? (
+                            <p className="truncate text-xs text-emerald-100/45">Gość (bez konta)</p>
+                          ) : null}
+                          <p className="mt-1 line-clamp-2 text-sm text-emerald-100/75">{t.preview}</p>
                         </div>
-                        {t.recipient_label ? (
-                          <p className="truncate text-xs text-emerald-100/55">Do: {t.recipient_label}</p>
-                        ) : null}
-                        {t.user_alias ? (
-                          <p className="truncate text-xs text-emerald-100/55">Konto: {t.user_alias}</p>
-                        ) : t.is_guest ? (
-                          <p className="truncate text-xs text-emerald-100/45">Gość (bez konta)</p>
-                        ) : null}
-                        <p className="mt-1 line-clamp-2 text-sm text-emerald-100/75">{t.preview}</p>
                       </div>
-                    </div>
-                  )}
-                </button>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      void deleteThread(t.conversation_key, t.sender_name);
+                    }}
+                    disabled={threadBusy}
+                    className={cn(
+                      "m-2 inline-flex h-9 w-9 shrink-0 items-center justify-center self-center rounded-xl border border-white/15 bg-black/20 text-emerald-100/70 transition hover:border-red-400/40 hover:bg-red-500/20 hover:text-red-200",
+                      threadBusy && "opacity-60"
+                    )}
+                    aria-label={`Usuń rozmowę z ${t.sender_name}`}
+                    title="Usuń rozmowę"
+                  >
+                    {threadBusy ? (
+                      <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                    ) : (
+                      <Trash2 className="h-4 w-4" aria-hidden />
+                    )}
+                  </button>
+                </div>
               </li>
             );
           })}
@@ -521,6 +575,24 @@ export function AdminMessagesTab({ onUnreadChange, mode = "page", active = true 
             Nowa
           </Badge>
         )}
+        {selectedKey ? (
+          <button
+            type="button"
+            onClick={() =>
+              void deleteThread(selectedKey, selectedTitle || selected?.sender_name || "rozmowę")
+            }
+            disabled={deletingThreadKey === selectedKey}
+            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-black/20 text-emerald-100/70 transition hover:border-red-400/40 hover:bg-red-500/20 hover:text-red-200 disabled:opacity-60"
+            aria-label="Usuń całą rozmowę"
+            title="Usuń całą rozmowę"
+          >
+            {deletingThreadKey === selectedKey ? (
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+            ) : (
+              <Trash2 className="h-4 w-4" aria-hidden />
+            )}
+          </button>
+        ) : null}
       </div>
 
       <div

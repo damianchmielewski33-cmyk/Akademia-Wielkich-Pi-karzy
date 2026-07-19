@@ -348,10 +348,10 @@ export function ChatBubble({
               onClick={onDelete}
               disabled={deleting}
               className={cn(
-                "mb-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full opacity-100 transition sm:opacity-0 sm:group-hover/bubble:opacity-100",
+                "mb-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition",
                 light
-                  ? "text-zinc-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40"
-                  : "text-emerald-100/50 hover:bg-white/10 hover:text-red-300",
+                  ? "bg-zinc-100 text-zinc-500 hover:bg-red-50 hover:text-red-600 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-red-950/40 dark:hover:text-red-300"
+                  : "bg-black/25 text-emerald-50/80 hover:bg-red-500/25 hover:text-red-200",
                 deleting && "opacity-60"
               )}
               aria-label="Usuń wiadomość"
