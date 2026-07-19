@@ -106,5 +106,8 @@ export async function GET() {
 
   const unread_count = await getUnreadAdminMessageCount(db);
 
-  return NextResponse.json({ threads, unread_count });
+  return NextResponse.json({
+    threads: threads.filter((t) => !t.conversation_key.startsWith("dm:")),
+    unread_count,
+  });
 }

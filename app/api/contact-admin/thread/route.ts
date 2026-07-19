@@ -95,7 +95,7 @@ export async function GET(req: Request) {
   }
 
   if (parsed.data.mark_read && conversationKey) {
-    await markConversationReadForUser(db, conversationKey);
+    await markConversationReadForUser(db, conversationKey, session?.userId);
   }
   const rows = (await db
     .prepare(

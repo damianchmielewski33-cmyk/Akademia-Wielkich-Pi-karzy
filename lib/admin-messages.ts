@@ -52,6 +52,55 @@ export function conversationKeyForGuest(normalizedName: string): string {
   return `guest:${normalizedName}`;
 }
 
+/** Klucz DM między dwoma użytkownikami (posortowane ID). */
+export function conversationKeyForDm(userIdA: number, userIdB: number): string {
+  const low = Math.min(userIdA, userIdB);
+  const high = Math.max(userIdA, userIdB);
+  return `dm:${low}:${high}`;
+}
+
+export type ParsedConversationKey =
+  | { kind: "user"; userId: number }
+  | { kind: "guest"; normalizedName: string }
+  | { kind: "dm"; userIdLow: number; userIdHigh: number };
+
+export function parseConversationKey(key: string): ParsedConversationKey | null {
+  const t = key.trim();
+  const userMatch = /^user:(\d+)$/.exec(t);
+  if (userMatch) return { kind: "user", userId: Number(userMatch[1]) };
+  const guestMatch = /^guest:(.+)$/.exec(t);
+  if (guestMatch) return { kind: "guest", normalizedName: guestMatch[1] };
+  const dmMatch = /^dm:(\d+):(\d+)$/.exec(t);
+  if (dmMatch) {
+    const a = Number(dmMatch[1]);
+    const b = Number(dmMatch[2]);
+    if (!Number.isFinite(a) || !Number.isFinite(b) || a === b) return null;
+    return { kind: "dm", userIdLow: Math.min(a, b), userIdHigh: Math.max(a, b) };
+  }
+  return null;
+}
+
+export function isDmConversationKey(key: string): boolean {
+  return parseConversationKey(key)?.kind === "dm";
+}
+
+/** Czy użytkownik ma dostęp do wątku (własny user: / udział w dm:). */
+export function userCanAccessConversation(userId: number, conversationKey: string): boolean {
+  const parsed = parseConversationKey(conversationKey);
+  if (!parsed) return false;
+  if (parsed.kind === "user") return parsed.userId === userId;
+  if (parsed.kind === "dm") return parsed.userIdLow === userId || parsed.userIdHigh === userId;
+  return false;
+}
+
+export function peerUserIdFromDmKey(conversationKey: string, selfUserId: number): number | null {
+  const parsed = parseConversationKey(conversationKey);
+  if (!parsed || parsed.kind !== "dm") return null;
+  if (parsed.userIdLow === selfUserId) return parsed.userIdHigh;
+  if (parsed.userIdHigh === selfUserId) return parsed.userIdLow;
+  return null;
+}
+
 export function displayNameFromParts(firstName: string, lastName: string): string {
   return `${firstName.trim()} ${lastName.trim()}`.replace(/\s+/g, " ").trim();
 }
@@ -152,7 +201,9 @@ export async function getUnreadAdminMessageCount(db: AppDb): Promise<number> {
   const row = (await db
     .prepare(
       `SELECT COUNT(*) AS c FROM admin_messages
-       WHERE status = 'unread' AND COALESCE(direction, 'inbound') = 'inbound'`
+       WHERE status = 'unread'
+         AND COALESCE(direction, 'inbound') = 'inbound'
+         AND COALESCE(conversation_key, '') NOT LIKE 'dm:%'`
     )
     .get()) as { c: number };
   return row.c;
@@ -170,7 +221,48 @@ export async function getUnreadUserReplyCount(db: AppDb, conversationKey: string
   return row.c;
 }
 
+/** Nieprzeczytane dla gracza: odpowiedzi admina + DM od innych. */
+export async function getUnreadCountForPlayer(db: AppDb, userId: number): Promise<number> {
+  const userKey = conversationKeyForUser(userId);
+  const adminReplies = await getUnreadUserReplyCount(db, userKey);
+  const threads = await listPlayerConversationKeys(db, userId);
+  let dmCount = 0;
+  for (const key of threads) {
+    if (!key.startsWith("dm:")) continue;
+    const row = (await db
+      .prepare(
+        `SELECT COUNT(*) AS c FROM admin_messages
+         WHERE conversation_key = ?
+           AND status = 'unread'
+           AND user_id IS NOT NULL
+           AND user_id != ?`
+      )
+      .get(key, userId)) as { c: number };
+    dmCount += row.c;
+  }
+  return adminReplies + dmCount;
+}
+
+export async function listPlayerConversationKeys(db: AppDb, userId: number): Promise<string[]> {
+  const userKey = conversationKeyForUser(userId);
+  const rows = (await db
+    .prepare(
+      `SELECT DISTINCT conversation_key FROM admin_messages
+       WHERE conversation_key = ?
+          OR (
+            conversation_key LIKE 'dm:%'
+            AND (
+              conversation_key LIKE ?
+              OR conversation_key LIKE ?
+            )
+          )`
+    )
+    .all(userKey, `dm:${userId}:%`, `dm:%:${userId}`)) as { conversation_key: string }[];
+  return rows.map((r) => r.conversation_key).filter(Boolean);
+}
+
 export async function markConversationReadForAdmin(db: AppDb, conversationKey: string, adminUserId: number) {
+  if (isDmConversationKey(conversationKey)) return;
   await db
     .prepare(
       `UPDATE admin_messages
@@ -182,7 +274,22 @@ export async function markConversationReadForAdmin(db: AppDb, conversationKey: s
     .run(adminUserId, conversationKey);
 }
 
-export async function markConversationReadForUser(db: AppDb, conversationKey: string) {
+export async function markConversationReadForUser(db: AppDb, conversationKey: string, readerUserId?: number) {
+  const parsed = parseConversationKey(conversationKey);
+  if (parsed?.kind === "dm") {
+    if (readerUserId == null) return;
+    await db
+      .prepare(
+        `UPDATE admin_messages
+         SET status = 'read', read_at = datetime('now')
+         WHERE conversation_key = ?
+           AND status = 'unread'
+           AND user_id IS NOT NULL
+           AND user_id != ?`
+      )
+      .run(conversationKey, readerUserId);
+    return;
+  }
   await db
     .prepare(
       `UPDATE admin_messages

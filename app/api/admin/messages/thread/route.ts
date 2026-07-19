@@ -3,14 +3,19 @@ import { z } from "zod";
 import { formatActivityTimePl } from "@/lib/activity-display";
 import {
   backfillAdminMessageConversationKeys,
+  conversationKeyForUser,
+  displayNameFromParts,
   isAllowedChatAttachmentUrl,
+  isDmConversationKey,
   markConversationReadForAdmin,
+  parseConversationKey,
   type AdminMessageDirection,
 } from "@/lib/admin-messages";
 import { getAppSettings } from "@/lib/app-settings";
 import { requireAdmin } from "@/lib/api-helpers";
 import { CONTACT_ADMIN_RECIPIENT_KEYS, contactAdminRecipientLabel } from "@/lib/contact-admin-recipients";
 import { getDb, logActivity } from "@/lib/db";
+import { REALMS } from "@/lib/realm";
 
 export const runtime = "nodejs";
 
@@ -31,6 +36,10 @@ export async function GET(req: Request) {
   }
 
   const { conversation_key } = parsed.data;
+  if (isDmConversationKey(conversation_key)) {
+    return NextResponse.json({ error: "Brak dostępu do prywatnej rozmowy." }, { status: 403 });
+  }
+
   const db = await getDb();
   await backfillAdminMessageConversationKeys(db);
   const appSettings = await getAppSettings(db);
@@ -73,17 +82,46 @@ export async function GET(req: Request) {
     user_id: r.user_id,
   }));
 
-  return NextResponse.json({ messages, conversation_key });
+  const parsedKey = parseConversationKey(conversation_key);
+  let peer: {
+    user_id: number | null;
+    display_name: string;
+    player_alias: string | null;
+  } | null = null;
+  if (parsedKey?.kind === "user") {
+    const u = (await db
+      .prepare("SELECT id, first_name, last_name, player_alias FROM users WHERE id = ?")
+      .get(parsedKey.userId)) as
+      | { id: number; first_name: string; last_name: string; player_alias: string }
+      | undefined;
+    if (u) {
+      peer = {
+        user_id: u.id,
+        display_name: displayNameFromParts(u.first_name, u.last_name) || u.player_alias,
+        player_alias: u.player_alias,
+      };
+    }
+  }
+
+  return NextResponse.json({ messages, conversation_key, peer });
 }
 
 const replySchema = z
   .object({
-    conversation_key: z.string().trim().min(1).max(200),
+    conversation_key: z.string().trim().min(1).max(200).optional(),
+    target_user_id: z.coerce.number().int().positive().optional(),
     body: z.string().trim().optional().default(""),
     attachment_url: z.string().trim().max(800).optional().nullable(),
     recipient_key: z.enum(CONTACT_ADMIN_RECIPIENT_KEYS).optional(),
   })
   .superRefine((data, ctx) => {
+    if (!data.conversation_key && !data.target_user_id) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Podaj conversation_key lub target_user_id.",
+        path: ["conversation_key"],
+      });
+    }
     const text = data.body.trim();
     const att = data.attachment_url?.trim() || "";
     if (!text && !att) {
@@ -108,20 +146,36 @@ export async function POST(req: Request) {
     const first =
       flat.fieldErrors.body?.[0] ??
       flat.fieldErrors.conversation_key?.[0] ??
+      flat.fieldErrors.target_user_id?.[0] ??
       flat.formErrors[0] ??
       "Sprawdź wprowadzone dane.";
     return NextResponse.json({ error: first }, { status: 400 });
   }
 
-  const { conversation_key, body, recipient_key, attachment_url } = parsed.data;
+  const { body, recipient_key, attachment_url, target_user_id } = parsed.data;
+  let conversation_key = parsed.data.conversation_key?.trim() ?? "";
+
   const text = body.trim();
   const attachment = attachment_url?.trim() || null;
   if (attachment && !isAllowedChatAttachmentUrl(attachment)) {
     return NextResponse.json({ error: "Nieprawidłowy załącznik." }, { status: 400 });
   }
 
+  if (target_user_id) {
+    conversation_key = conversationKeyForUser(target_user_id);
+  }
+
+  if (isDmConversationKey(conversation_key)) {
+    return NextResponse.json({ error: "Brak dostępu do prywatnej rozmowy." }, { status: 403 });
+  }
+
   const db = await getDb();
   await backfillAdminMessageConversationKeys(db);
+
+  const parsedKey = parseConversationKey(conversation_key);
+  if (!parsedKey || (parsedKey.kind !== "user" && parsedKey.kind !== "guest")) {
+    return NextResponse.json({ error: "Nieprawidłowy klucz rozmowy." }, { status: 400 });
+  }
 
   const last = (await db
     .prepare(
@@ -140,8 +194,35 @@ export async function POST(req: Request) {
       }
     | undefined;
 
+  let linkedUserId: number | null = last?.user_id ?? null;
+  let peerName = last?.sender_name ?? "";
+  let peerEmail: string | null = last?.sender_email ?? null;
+
   if (!last) {
-    return NextResponse.json({ error: "Nie znaleziono rozmowy." }, { status: 404 });
+    if (parsedKey.kind !== "user") {
+      return NextResponse.json({ error: "Nie znaleziono rozmowy." }, { status: 404 });
+    }
+    const u = (await db
+      .prepare(
+        `SELECT id, first_name, last_name, player_alias, email
+         FROM users
+         WHERE id = ? AND COALESCE(realm, ?) = ? AND COALESCE(is_temporary, 0) = 0`
+      )
+      .get(parsedKey.userId, REALMS.ACADEMY, REALMS.ACADEMY)) as
+      | {
+          id: number;
+          first_name: string;
+          last_name: string;
+          player_alias: string;
+          email: string | null;
+        }
+      | undefined;
+    if (!u) {
+      return NextResponse.json({ error: "Nie znaleziono gracza." }, { status: 404 });
+    }
+    linkedUserId = u.id;
+    peerName = displayNameFromParts(u.first_name, u.last_name) || u.player_alias;
+    peerEmail = u.email?.trim() || null;
   }
 
   const adminRow = (await db
@@ -154,7 +235,7 @@ export async function POST(req: Request) {
     adminRow?.player_alias ||
     "Administrator";
 
-  const finalRecipient = recipient_key ?? last.recipient_key ?? "damian";
+  const finalRecipient = recipient_key ?? last?.recipient_key ?? "damian";
 
   const result = await db
     .prepare(
@@ -164,9 +245,9 @@ export async function POST(req: Request) {
        ) VALUES (?, ?, ?, ?, ?, 'unread', 'outbound', ?, ?, ?)`
     )
     .run(
-      last.user_id,
+      linkedUserId,
       adminName,
-      last.sender_email,
+      peerEmail,
       finalRecipient,
       text || "📷",
       conversation_key,
@@ -175,7 +256,7 @@ export async function POST(req: Request) {
     );
 
   await markConversationReadForAdmin(db, conversation_key, gate.session.userId);
-  await logActivity(gate.session.userId, `Odpowiedź admina w czacie (${conversation_key})`);
+  await logActivity(gate.session.userId, `Wiadomość admina w czacie (${conversation_key})`);
 
   const appSettings = await getAppSettings(db);
   const createdAtRow = (await db
@@ -185,6 +266,8 @@ export async function POST(req: Request) {
 
   return NextResponse.json({
     ok: true,
+    conversation_key,
+    peer_name: peerName,
     message: {
       id: Number(result.lastInsertRowid),
       body: text,
@@ -219,6 +302,9 @@ export async function PATCH(req: Request) {
 
   if (!conversationKey) {
     return NextResponse.json({ error: "Brak conversation_key" }, { status: 400 });
+  }
+  if (isDmConversationKey(conversationKey)) {
+    return NextResponse.json({ error: "Brak dostępu do prywatnej rozmowy." }, { status: 403 });
   }
 
   const db = await getDb();
