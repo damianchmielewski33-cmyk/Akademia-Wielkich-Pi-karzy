@@ -499,6 +499,16 @@ function initSchemaSync(db: Database.Database) {
   if (!adminMsgCols.some((c) => c.name === "recipient_key")) {
     db.exec("ALTER TABLE admin_messages ADD COLUMN recipient_key TEXT");
   }
+  if (!adminMsgCols.some((c) => c.name === "direction")) {
+    db.exec("ALTER TABLE admin_messages ADD COLUMN direction TEXT DEFAULT 'inbound'");
+  }
+  if (!adminMsgCols.some((c) => c.name === "conversation_key")) {
+    db.exec("ALTER TABLE admin_messages ADD COLUMN conversation_key TEXT");
+  }
+  if (!adminMsgCols.some((c) => c.name === "admin_user_id")) {
+    db.exec("ALTER TABLE admin_messages ADD COLUMN admin_user_id INTEGER");
+  }
+  db.exec("CREATE INDEX IF NOT EXISTS idx_admin_messages_conversation ON admin_messages(conversation_key, created_at)");
 
   const hasAcademySettings = db.prepare("SELECT 1 AS ok FROM app_settings WHERE realm = 'academy'").get() as
     | { ok: 1 }

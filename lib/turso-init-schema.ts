@@ -440,6 +440,18 @@ export async function initLibsqlSchema(client: Client) {
   if (!adminMsgNames.includes("recipient_key")) {
     await client.execute("ALTER TABLE admin_messages ADD COLUMN recipient_key TEXT");
   }
+  if (!adminMsgNames.includes("direction")) {
+    await client.execute("ALTER TABLE admin_messages ADD COLUMN direction TEXT DEFAULT 'inbound'");
+  }
+  if (!adminMsgNames.includes("conversation_key")) {
+    await client.execute("ALTER TABLE admin_messages ADD COLUMN conversation_key TEXT");
+  }
+  if (!adminMsgNames.includes("admin_user_id")) {
+    await client.execute("ALTER TABLE admin_messages ADD COLUMN admin_user_id INTEGER");
+  }
+  await client.execute(
+    "CREATE INDEX IF NOT EXISTS idx_admin_messages_conversation ON admin_messages(conversation_key, created_at)"
+  );
 
   const rs = await client.execute("SELECT 1 AS ok FROM app_settings WHERE realm = 'academy'");
   if (rs.rows.length === 0) {

@@ -184,7 +184,11 @@ export default async function RootLayout({
           <WalletBalanceFloat balancePln={walletBalancePln} />
         ) : null}
         {!isPzuCupSection ? (
-          <WriteToAdminFloat defaults={writeToAdminDefaults} recipients={contactAdminRecipients} />
+          <WriteToAdminFloat
+            defaults={writeToAdminDefaults}
+            recipients={contactAdminRecipients}
+            hiddenForAdmin={isAdmin}
+          />
         ) : null}
         {!isPzuCupSection ? <MatchParticipationSurveyPrompt /> : null}
         {!isPzuCupSection && matchNotificationPromptEnabled ? <MatchNotificationPrompt /> : null}

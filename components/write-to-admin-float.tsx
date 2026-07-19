@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { usePathname } from "next/navigation";
 import { Loader2, MessageCircle, Send } from "lucide-react";
@@ -13,31 +13,72 @@ import { cn } from "@/lib/utils";
 import { nativeSelectClasses } from "@/lib/field-styles";
 import type { ContactAdminRecipientKey, ContactAdminRecipientOption } from "@/lib/contact-admin-recipients";
 
+type ChatMessage = {
+  id: number;
+  body: string;
+  direction: "inbound" | "outbound";
+  status: string;
+  sender_name: string;
+  created_at_display: string;
+  mine: boolean;
+};
+
+const GUEST_NAME_STORAGE_KEY = "awp-contact-admin-guest-name";
+
 type Props = {
   defaults?: { senderName: string } | null;
   recipients: ContactAdminRecipientOption[];
+  /** Ukryj pływający czat (np. dla administratora — wiadomości tylko w panelu). */
+  hiddenForAdmin?: boolean;
 };
 
-export function WriteToAdminFloat({ defaults, recipients }: Props) {
+export function WriteToAdminFloat({ defaults, recipients, hiddenForAdmin = false }: Props) {
   const pathname = usePathname();
   const [mounted, setMounted] = useState(false);
   const [open, setOpen] = useState(false);
   const [senderName, setSenderName] = useState(defaults?.senderName ?? "");
+  const [nameConfirmed, setNameConfirmed] = useState(Boolean(defaults?.senderName));
   const [recipientKey, setRecipientKey] = useState<ContactAdminRecipientKey>(
     recipients[0]?.key ?? "damian"
   );
   const [body, setBody] = useState("");
   const [sending, setSending] = useState(false);
+  const [loadingThread, setLoadingThread] = useState(false);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [unreadReplies, setUnreadReplies] = useState(0);
+  const bottomRef = useRef<HTMLDivElement>(null);
+  const senderNameRef = useRef(senderName);
+  const openRef = useRef(open);
+  const isLoggedIn = Boolean(defaults?.senderName);
 
   useEffect(() => {
     setMounted(true);
-  }, []);
+    if (defaults?.senderName) return;
+    try {
+      const stored = localStorage.getItem(GUEST_NAME_STORAGE_KEY)?.trim() ?? "";
+      if (stored.length >= 2) {
+        setSenderName(stored);
+        setNameConfirmed(true);
+      }
+    } catch {
+      /* ignore */
+    }
+  }, [defaults?.senderName]);
 
   useEffect(() => {
     if (defaults?.senderName) {
       setSenderName(defaults.senderName);
+      setNameConfirmed(true);
     }
   }, [defaults]);
+
+  useEffect(() => {
+    senderNameRef.current = senderName;
+  }, [senderName]);
+
+  useEffect(() => {
+    openRef.current = open;
+  }, [open]);
 
   useEffect(() => {
     if (recipients.length > 0 && !recipients.some((r) => r.key === recipientKey)) {
@@ -45,12 +86,98 @@ export function WriteToAdminFloat({ defaults, recipients }: Props) {
     }
   }, [recipients, recipientKey]);
 
-  const hidden = pathname.startsWith("/panel-admina");
+  const hidden = hiddenForAdmin || pathname.startsWith("/panel-admina");
 
-  function resetForm() {
-    setSenderName(defaults?.senderName ?? "");
-    setRecipientKey(recipients[0]?.key ?? "damian");
-    setBody("");
+  const scrollToBottom = useCallback(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, []);
+
+  const loadThread = useCallback(
+    async (opts?: { markRead?: boolean; name?: string; quiet?: boolean }) => {
+      const name = (opts?.name ?? senderNameRef.current).trim();
+      if (!isLoggedIn && name.length < 2) {
+        setMessages([]);
+        return false;
+      }
+
+      setLoadingThread(true);
+      try {
+        const params = new URLSearchParams();
+        if (!isLoggedIn) params.set("sender_name", name);
+        if (opts?.markRead) params.set("mark_read", "1");
+        const res = await fetch(`/api/contact-admin/thread?${params.toString()}`);
+        const data = (await res.json().catch(() => ({}))) as {
+          messages?: ChatMessage[];
+          unread_replies?: number;
+          error?: string;
+          sender_name?: string;
+        };
+        if (!res.ok) {
+          if (!opts?.quiet && (opts?.markRead || openRef.current)) {
+            toast.error(typeof data.error === "string" ? data.error : "Nie udało się wczytać rozmowy.");
+          }
+          if (!isLoggedIn && opts?.quiet) {
+            setNameConfirmed(false);
+            try {
+              localStorage.removeItem(GUEST_NAME_STORAGE_KEY);
+            } catch {
+              /* ignore */
+            }
+          }
+          setMessages([]);
+          return false;
+        }
+        setMessages(data.messages ?? []);
+        setUnreadReplies(data.unread_replies ?? 0);
+        if (data.sender_name) {
+          setSenderName(data.sender_name);
+          senderNameRef.current = data.sender_name;
+        }
+        if (!isLoggedIn) {
+          setNameConfirmed(true);
+          try {
+            localStorage.setItem(GUEST_NAME_STORAGE_KEY, data.sender_name ?? name);
+          } catch {
+            /* ignore */
+          }
+        }
+        return true;
+      } finally {
+        setLoadingThread(false);
+      }
+    },
+    [isLoggedIn]
+  );
+
+  useEffect(() => {
+    if (hidden) return;
+    if (!isLoggedIn && !nameConfirmed) return;
+    void loadThread({ quiet: true });
+    const id = window.setInterval(() => void loadThread({ quiet: true }), 45_000);
+    return () => window.clearInterval(id);
+  }, [hidden, isLoggedIn, nameConfirmed, loadThread]);
+
+  useEffect(() => {
+    if (!open) return;
+    if (!isLoggedIn && !nameConfirmed) return;
+    void loadThread({ markRead: true });
+    const id = window.setInterval(() => void loadThread({ markRead: true, quiet: true }), 12_000);
+    return () => window.clearInterval(id);
+  }, [open, isLoggedIn, nameConfirmed, loadThread]);
+
+  useEffect(() => {
+    if (open) scrollToBottom();
+  }, [messages, open, scrollToBottom]);
+
+  async function confirmGuestName(e: React.FormEvent) {
+    e.preventDefault();
+    const name = senderName.trim();
+    if (name.length < 2) {
+      toast.error("Podaj imię i nazwisko widniejące na stronie (lista Piłkarze).");
+      return;
+    }
+    const ok = await loadThread({ name, markRead: true });
+    if (!ok) setNameConfirmed(false);
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -58,12 +185,16 @@ export function WriteToAdminFloat({ defaults, recipients }: Props) {
     const name = senderName.trim();
     const text = body.trim();
 
+    if (!isLoggedIn && !nameConfirmed) {
+      toast.error("Najpierw potwierdź imię i nazwisko z listy Piłkarze.");
+      return;
+    }
     if (name.length < 2) {
       toast.error("Podaj imię i nazwisko (min. 2 znaki).");
       return;
     }
-    if (text.length < 10) {
-      toast.error("Wiadomość musi mieć co najmniej 10 znaków.");
+    if (text.length < 1) {
+      toast.error("Wiadomość nie może być pusta.");
       return;
     }
     if (!recipients.some((r) => r.key === recipientKey)) {
@@ -87,10 +218,8 @@ export function WriteToAdminFloat({ defaults, recipients }: Props) {
         toast.error(typeof data.error === "string" ? data.error : "Nie udało się wysłać wiadomości.");
         return;
       }
-      const recipientLabel = recipients.find((r) => r.key === recipientKey)?.label ?? "organizatora";
-      toast.success(`Wiadomość wysłana do ${recipientLabel}.`);
-      resetForm();
-      setOpen(false);
+      setBody("");
+      await loadThread({ markRead: true });
     } catch {
       toast.error("Nie udało się wysłać wiadomości.");
     } finally {
@@ -100,24 +229,29 @@ export function WriteToAdminFloat({ defaults, recipients }: Props) {
 
   if (!mounted || hidden || recipients.length === 0) return null;
 
+  const showChat = isLoggedIn || nameConfirmed;
+
   const floatButton = (
     <>
       <button
         type="button"
         onClick={() => setOpen(true)}
         className={cn(
-          "group fixed z-[60] flex items-center gap-2.5 overflow-hidden rounded-full border-2 border-[var(--mundial-gold)]/70 bg-gradient-to-br from-emerald-800 via-emerald-900 to-emerald-950 px-4 py-3.5 text-left text-white shadow-2xl ring-2 ring-emerald-300/30 transition-[transform,box-shadow] motion-safe:hover:-translate-y-1 hover:shadow-[0_20px_50px_-12px_rgba(5,80,55,0.55)] focus:outline-none focus-visible:ring-4 focus-visible:ring-emerald-400/60 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent",
-          "bottom-[max(1.25rem,env(safe-area-inset-bottom))] left-4 sm:bottom-6 sm:left-6 sm:px-5 sm:py-4"
+          "group fixed z-[60] flex h-11 w-11 items-center justify-center overflow-hidden rounded-full border border-[var(--mundial-gold)]/65 bg-gradient-to-br from-emerald-800 via-emerald-900 to-emerald-950 text-white shadow-lg ring-1 ring-emerald-300/25 transition-[transform,box-shadow] motion-safe:hover:-translate-y-0.5 hover:shadow-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent",
+          "bottom-[max(0.75rem,env(safe-area-inset-bottom))] left-3 sm:bottom-5 sm:left-5 sm:h-12 sm:w-12"
         )}
-        aria-label="Napis do admina — otwórz formularz wiadomości"
+        aria-label="Czat z organizatorem — otwórz rozmowę"
+        title="Napisz do organizatora"
       >
-        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/15 ring-2 ring-white/30 sm:h-12 sm:w-12">
-          <MessageCircle className="h-6 w-6 text-[var(--mundial-gold)]" strokeWidth={2.25} aria-hidden />
-        </span>
-        <span className="hidden min-w-0 flex-col pr-1 sm:flex">
-          <span className="text-[0.65rem] font-bold uppercase tracking-[0.14em] text-emerald-100/85">Kontakt</span>
-          <span className="truncate text-sm font-extrabold leading-tight">Napis do admina</span>
-        </span>
+        <MessageCircle className="h-5 w-5 text-[var(--mundial-gold)] sm:h-[1.35rem] sm:w-[1.35rem]" strokeWidth={2.25} aria-hidden />
+        {unreadReplies > 0 ? (
+          <span
+            className="absolute -right-0.5 -top-0.5 inline-flex min-h-[1.125rem] min-w-[1.125rem] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold tabular-nums text-white ring-2 ring-emerald-950"
+            aria-hidden
+          >
+            {unreadReplies > 99 ? "99+" : unreadReplies}
+          </span>
+        ) : null}
       </button>
 
       <AppModal
@@ -125,74 +259,167 @@ export function WriteToAdminFloat({ defaults, recipients }: Props) {
         onOpenChange={(next) => {
           if (!sending) setOpen(next);
         }}
-        title="Napis do admina"
-        description="Wybierz organizatora i wyślij wiadomość — odpowiemy tak szybko, jak to możliwe."
+        title="Czat z organizatorem"
+        description={
+          isLoggedIn
+            ? "Napisz do organizatora i czytaj odpowiedzi w tym oknie."
+            : "Podaj imię i nazwisko z listy Piłkarze, aby pisać i czytać odpowiedzi."
+        }
         icon={<MessageCircle className="h-6 w-6 text-[var(--mundial-gold)]" aria-hidden />}
         headerKicker="Wiadomość"
         size="md"
         scrollable
         footer={
-          <>
-            <Button type="button" variant="outline" disabled={sending} onClick={() => setOpen(false)}>
-              Anuluj
-            </Button>
-            <Button type="submit" form="write-to-admin-form" variant="stadium" disabled={sending}>
-              {sending ? (
+          showChat ? (
+            <>
+              <Button type="button" variant="outline" disabled={sending} onClick={() => setOpen(false)}>
+                Zamknij
+              </Button>
+              <Button type="submit" form="write-to-admin-form" variant="stadium" disabled={sending || !body.trim()}>
+                {sending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
+                    Wysyłanie…
+                  </>
+                ) : (
+                  <>
+                    <Send className="mr-2 h-4 w-4" aria-hidden />
+                    Wyślij
+                  </>
+                )}
+              </Button>
+            </>
+          ) : (
+            <Button type="submit" form="guest-name-form" variant="stadium" disabled={loadingThread}>
+              {loadingThread ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
-                  Wysyłanie…
+                  Sprawdzanie…
                 </>
               ) : (
-                <>
-                  <Send className="mr-2 h-4 w-4" aria-hidden />
-                  Wyślij
-                </>
+                "Dalej"
               )}
             </Button>
-          </>
+          )
         }
       >
-        <form id="write-to-admin-form" className="space-y-4" onSubmit={handleSubmit}>
-          <div className="grid gap-1.5">
-            <Label htmlFor="contact-admin-recipient">
-              Do kogo piszesz? <span className="text-red-400">*</span>
-            </Label>
-            <select
-              id="contact-admin-recipient"
-              className={cn(nativeSelectClasses, "w-full")}
-              value={recipientKey}
-              disabled={sending}
+        {!showChat ? (
+          <form id="guest-name-form" className="space-y-4" onSubmit={(e) => void confirmGuestName(e)}>
+            <FormInput
+              id="contact-admin-name"
+              label="Imię i nazwisko"
               required
-              onChange={(e) => setRecipientKey(e.target.value as ContactAdminRecipientKey)}
-            >
-              {recipients.map((r) => (
-                <option key={r.key} value={r.key}>
-                  {r.label}
-                </option>
-              ))}
-            </select>
+              value={senderName}
+              onChange={(e) => setSenderName(e.target.value)}
+              placeholder="Jak na liście Piłkarze"
+              autoComplete="name"
+              disabled={loadingThread}
+              hint="Musi dokładnie odpowiadać imieniu i nazwisku zawodnika na stronie."
+            />
+          </form>
+        ) : (
+          <div className="space-y-4">
+            {!isLoggedIn ? (
+              <p className="text-sm text-emerald-100/75">
+                Rozmawiasz jako <span className="font-semibold text-white">{senderName}</span>
+                {" · "}
+                <button
+                  type="button"
+                  className="underline underline-offset-2 hover:text-white"
+                  onClick={() => {
+                    setNameConfirmed(false);
+                    setMessages([]);
+                    setUnreadReplies(0);
+                    try {
+                      localStorage.removeItem(GUEST_NAME_STORAGE_KEY);
+                    } catch {
+                      /* ignore */
+                    }
+                  }}
+                >
+                  Zmień
+                </button>
+              </p>
+            ) : null}
+
+            <div className="grid gap-1.5">
+              <Label htmlFor="contact-admin-recipient">
+                Do kogo piszesz? <span className="text-red-400">*</span>
+              </Label>
+              <select
+                id="contact-admin-recipient"
+                className={cn(nativeSelectClasses, "w-full")}
+                value={recipientKey}
+                disabled={sending}
+                required
+                onChange={(e) => setRecipientKey(e.target.value as ContactAdminRecipientKey)}
+              >
+                {recipients.map((r) => (
+                  <option key={r.key} value={r.key}>
+                    {r.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="max-h-[min(280px,40vh)] space-y-2 overflow-y-auto rounded-xl border border-white/15 bg-black/20 p-3">
+              {loadingThread && messages.length === 0 ? (
+                <div className="flex justify-center py-8 text-emerald-100/70">
+                  <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
+                </div>
+              ) : messages.length === 0 ? (
+                <p className="py-6 text-center text-sm text-emerald-100/60">
+                  Brak wiadomości — napisz pierwszą.
+                </p>
+              ) : (
+                messages.map((m) => (
+                  <div
+                    key={m.id}
+                    className={cn("flex", m.mine ? "justify-end" : "justify-start")}
+                  >
+                    <div
+                      className={cn(
+                        "max-w-[85%] rounded-2xl px-3 py-2 text-sm shadow-sm",
+                        m.mine
+                          ? "bg-emerald-700 text-white"
+                          : "border border-white/20 bg-white/10 text-emerald-50"
+                      )}
+                    >
+                      {!m.mine ? (
+                        <p className="mb-1 text-[11px] font-semibold text-[var(--mundial-gold)]">
+                          {m.sender_name}
+                        </p>
+                      ) : null}
+                      <p className="whitespace-pre-wrap break-words leading-relaxed">{m.body}</p>
+                      <p
+                        className={cn(
+                          "mt-1 text-[10px]",
+                          m.mine ? "text-emerald-100/80" : "text-emerald-100/50"
+                        )}
+                      >
+                        {m.created_at_display}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              )}
+              <div ref={bottomRef} />
+            </div>
+
+            <form id="write-to-admin-form" className="space-y-3" onSubmit={(e) => void handleSubmit(e)}>
+              <FormTextarea
+                id="contact-admin-body"
+                label="Twoja wiadomość"
+                required
+                value={body}
+                onChange={(e) => setBody(e.target.value)}
+                placeholder="Napisz wiadomość…"
+                rows={3}
+                disabled={sending}
+              />
+            </form>
           </div>
-          <FormInput
-            id="contact-admin-name"
-            label="Imię i nazwisko"
-            required
-            value={senderName}
-            onChange={(e) => setSenderName(e.target.value)}
-            placeholder="Jan Kowalski"
-            autoComplete="name"
-            disabled={sending}
-          />
-          <FormTextarea
-            id="contact-admin-body"
-            label="Wiadomość"
-            required
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            placeholder="Napisz, o co chodzi…"
-            rows={6}
-            disabled={sending}
-          />
-        </form>
+        )}
       </AppModal>
     </>
   );

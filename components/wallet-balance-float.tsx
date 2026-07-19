@@ -29,36 +29,38 @@ export function WalletBalanceFloat({ balancePln }: Props) {
     <Link
       href="/platnosci"
       className={cn(
-        "group fixed z-[60] flex items-center gap-3 overflow-hidden rounded-2xl border-2 px-4 py-3.5 shadow-2xl ring-2 transition-[transform,box-shadow] motion-safe:hover:-translate-y-1 hover:shadow-[0_20px_50px_-12px_rgba(5,80,55,0.55)] focus:outline-none focus-visible:ring-4 focus-visible:ring-emerald-400/60 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent",
-        "bottom-[max(1.25rem,env(safe-area-inset-bottom))] right-4 min-w-[11.5rem] max-w-[min(calc(100%-2rem),20rem)] sm:bottom-6 sm:right-6 sm:min-w-[13rem] sm:gap-3.5 sm:px-5 sm:py-4",
+        "group fixed z-[60] flex items-center gap-2 overflow-hidden rounded-xl border px-2.5 py-2 shadow-lg ring-1 transition-[transform,box-shadow] motion-safe:hover:-translate-y-0.5 hover:shadow-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent",
+        "bottom-[max(0.75rem,env(safe-area-inset-bottom))] right-3 max-w-[min(calc(100%-1.5rem),11.5rem)] sm:bottom-5 sm:right-5",
         negative
-          ? "border-red-300/55 shadow-red-950/35 ring-red-400/35"
-          : "border-white/45 shadow-emerald-950/40 ring-emerald-300/40"
+          ? "border-red-300/50 shadow-red-950/25 ring-red-400/30"
+          : "border-white/40 shadow-emerald-950/30 ring-emerald-300/35"
       )}
       aria-label={`Twoje saldo: ${formatPln(balancePln)}. Przejdź do płatności.`}
     >
       <div className="home-pitch-tile absolute inset-0" aria-hidden />
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1 bg-white/50" aria-hidden />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-0.5 bg-white/45" aria-hidden />
       {negative ? (
         <div
           className="pointer-events-none absolute inset-0 bg-red-600/20 motion-safe:animate-pulse"
           aria-hidden
         />
       ) : null}
-      <div className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white/20 ring-2 ring-white/45 backdrop-blur-[2px] sm:h-14 sm:w-14">
+      <div className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/20 ring-1 ring-white/40 backdrop-blur-[2px]">
         <SiteAssetImage
           asset="bg_soccer_ball"
           decorative
-          width={56}
-          height={56}
-          className="h-9 w-9 drop-shadow sm:h-10 sm:w-10"
+          width={32}
+          height={32}
+          className="h-5 w-5 drop-shadow"
         />
       </div>
       <div className="relative min-w-0 flex-1 text-left">
-        <p className="text-xs font-bold uppercase tracking-[0.16em] text-emerald-100/90 sm:text-[0.8rem]">Saldo</p>
+        <p className="text-[0.6rem] font-bold uppercase leading-none tracking-[0.12em] text-emerald-100/85">
+          Saldo
+        </p>
         <p
           className={cn(
-            "truncate text-lg font-extrabold tabular-nums text-white drop-shadow-md sm:text-xl",
+            "mt-0.5 truncate text-sm font-extrabold tabular-nums leading-tight text-white drop-shadow-sm",
             negative && "text-red-100",
             positive && "text-emerald-50"
           )}
@@ -67,8 +69,8 @@ export function WalletBalanceFloat({ balancePln }: Props) {
         </p>
       </div>
       <ChevronRight
-        className="relative h-5 w-5 shrink-0 text-white/60 transition-all group-hover:translate-x-0.5 group-hover:text-white sm:h-6 sm:w-6"
-        strokeWidth={2.75}
+        className="relative h-4 w-4 shrink-0 text-white/55 transition-all group-hover:translate-x-0.5 group-hover:text-white"
+        strokeWidth={2.5}
         aria-hidden
       />
     </Link>

@@ -1,48 +1,106 @@
 import { NextResponse } from "next/server";
 import { formatActivityTimePl } from "@/lib/activity-display";
+import {
+  backfillAdminMessageConversationKeys,
+  getUnreadAdminMessageCount,
+  type AdminMessageDirection,
+  type AdminMessageRow,
+} from "@/lib/admin-messages";
 import { getAppSettings } from "@/lib/app-settings";
 import { contactAdminRecipientLabel } from "@/lib/contact-admin-recipients";
-import { getUnreadAdminMessageCount, type AdminMessageRow } from "@/lib/admin-messages";
 import { requireAdmin } from "@/lib/api-helpers";
 import { getDb } from "@/lib/db";
 
 export const runtime = "nodejs";
+
+type ThreadAgg = {
+  conversation_key: string;
+  sender_name: string;
+  user_id: number | null;
+  user_alias: string | null;
+  recipient_key: string | null;
+  last_body: string;
+  last_at: string;
+  last_direction: AdminMessageDirection;
+  unread_count: number;
+};
 
 export async function GET() {
   const gate = await requireAdmin();
   if (!gate.ok) return gate.response;
 
   const db = await getDb();
+  await backfillAdminMessageConversationKeys(db);
   const appSettings = await getAppSettings(db);
+
   const rows = (await db
     .prepare(
       `SELECT m.id, m.user_id, m.sender_name, m.sender_email, m.recipient_key, m.body, m.status,
               m.read_at, m.read_by_admin_id, m.created_at,
+              COALESCE(m.direction, 'inbound') AS direction,
+              COALESCE(m.conversation_key, '') AS conversation_key,
+              m.admin_user_id,
               u.player_alias AS user_alias
        FROM admin_messages m
        LEFT JOIN users u ON u.id = m.user_id
-       ORDER BY m.created_at DESC
-       LIMIT 200`
+       ORDER BY m.created_at DESC, m.id DESC
+       LIMIT 500`
     )
-    .all()) as (AdminMessageRow & { user_alias: string | null })[];
+    .all()) as (AdminMessageRow & {
+    user_alias: string | null;
+    direction: AdminMessageDirection;
+    conversation_key: string;
+  })[];
+
+  const threadMap = new Map<string, ThreadAgg>();
+  for (const r of rows) {
+    const key = r.conversation_key || `legacy:${r.id}`;
+    const existing = threadMap.get(key);
+    const isInboundUnread = r.direction === "inbound" && r.status === "unread";
+    if (!existing) {
+      threadMap.set(key, {
+        conversation_key: key,
+        sender_name: r.sender_name,
+        user_id: r.user_id,
+        user_alias: r.user_alias,
+        recipient_key: r.recipient_key,
+        last_body: r.body,
+        last_at: r.created_at,
+        last_direction: r.direction,
+        unread_count: isInboundUnread ? 1 : 0,
+      });
+    } else {
+      if (isInboundUnread) existing.unread_count += 1;
+      // rows are newest-first; keep first as last_*
+      if (!existing.user_alias && r.user_alias) existing.user_alias = r.user_alias;
+      if (existing.user_id == null && r.user_id != null) existing.user_id = r.user_id;
+      if (!existing.recipient_key && r.recipient_key) existing.recipient_key = r.recipient_key;
+      // Prefer a non-admin display name from inbound messages
+      if (r.direction === "inbound" && r.sender_name) {
+        existing.sender_name = r.sender_name;
+      }
+    }
+  }
+
+  const threads = [...threadMap.values()]
+    .sort((a, b) => (a.last_at < b.last_at ? 1 : a.last_at > b.last_at ? -1 : 0))
+    .map((t) => ({
+      conversation_key: t.conversation_key,
+      sender_name: t.sender_name,
+      user_id: t.user_id,
+      user_alias: t.user_alias,
+      recipient_key: t.recipient_key,
+      recipient_label: contactAdminRecipientLabel(t.recipient_key, appSettings),
+      last_body: t.last_body,
+      last_direction: t.last_direction,
+      last_at: t.last_at,
+      last_at_display: formatActivityTimePl(t.last_at),
+      unread_count: t.unread_count,
+      preview: t.last_body.length > 120 ? `${t.last_body.slice(0, 117).trimEnd()}…` : t.last_body,
+      is_guest: t.user_id == null || t.conversation_key.startsWith("guest:"),
+    }));
 
   const unread_count = await getUnreadAdminMessageCount(db);
 
-  const messages = rows.map((r) => ({
-    id: r.id,
-    user_id: r.user_id,
-    sender_name: r.sender_name,
-    sender_email: r.sender_email,
-    recipient_key: r.recipient_key,
-    recipient_label: contactAdminRecipientLabel(r.recipient_key, appSettings),
-    body: r.body,
-    status: r.status,
-    read_at: r.read_at,
-    created_at: r.created_at,
-    created_at_display: formatActivityTimePl(r.created_at),
-    user_alias: r.user_alias,
-    preview: r.body.length > 120 ? `${r.body.slice(0, 117).trimEnd()}…` : r.body,
-  }));
-
-  return NextResponse.json({ messages, unread_count });
+  return NextResponse.json({ threads, unread_count });
 }
