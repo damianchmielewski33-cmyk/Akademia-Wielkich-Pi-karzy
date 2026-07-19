@@ -81,8 +81,8 @@ export function AppModal({
         className={cn(
           sizeClasses[size],
           formHeader && "awp-modal-content--form gap-0 p-0 pt-0",
-          scrollable && !formHeader && "max-h-[90dvh] overflow-y-auto",
-          scrollable && formHeader && "max-h-[90dvh] grid-rows-[auto_1fr_auto] overflow-hidden",
+          scrollable && !formHeader && "max-h-[min(90dvh,calc(100dvh-2rem))] overflow-y-auto",
+          scrollable && formHeader && "max-h-[min(90dvh,calc(100dvh-2rem))] grid-rows-[auto_1fr_auto] overflow-hidden",
           hideCloseButton && "[&>button]:hidden",
           className
         )}

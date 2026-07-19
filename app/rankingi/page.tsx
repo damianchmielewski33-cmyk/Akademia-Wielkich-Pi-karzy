@@ -37,7 +37,7 @@ export default async function RankingiPage({ searchParams }: Props) {
 
   if (!season) {
     return (
-      <div className="container mx-auto max-w-6xl flex-1 px-4 py-8 text-center sm:py-10">
+      <div className="awp-page awp-page--wide text-center">
         <PitchPageHero title="Rankingi" subtitle="Brak sezonów rankingu do wyświetlenia." />
       </div>
     );
@@ -61,7 +61,7 @@ export default async function RankingiPage({ searchParams }: Props) {
     : `${season.name} — sezon zakończony`;
 
   return (
-    <div className="container mx-auto max-w-6xl flex-1 px-4 py-8 text-center sm:py-10">
+    <div className="awp-page awp-page--wide text-center">
       <PitchPageHero title="Rankingi" subtitle={seasonSubtitle} />
 
       {seasons.length > 1 ? (
@@ -163,6 +163,7 @@ function RankBlock({
             <Icon className="h-5 w-5 shrink-0 text-white" strokeWidth={2.25} aria-hidden />
             <h2 className="text-center text-base font-bold tracking-tight text-white sm:text-lg">{title}</h2>
           </div>
+          <div className="overflow-x-auto [scrollbar-width:thin]">
           <Table>
             <TableHeader className="border-b border-emerald-200/80 bg-emerald-50/90 text-emerald-950 [&_th]:text-emerald-900 dark:border-emerald-800/80 dark:bg-emerald-950/55 dark:text-emerald-100 dark:[&_th]:text-emerald-200">
               <TableRow className="border-0 hover:bg-transparent dark:hover:bg-transparent">
@@ -205,6 +206,7 @@ function RankBlock({
               ))}
             </TableBody>
           </Table>
+          </div>
         </div>
       </div>
     </div>

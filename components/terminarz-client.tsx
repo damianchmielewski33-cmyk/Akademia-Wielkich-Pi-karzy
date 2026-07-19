@@ -1049,7 +1049,7 @@ export function TerminarzClient({
 
   return (
     <>
-      <div className="container mx-auto max-w-5xl flex-1 space-y-6 px-4 py-8 sm:py-10">
+      <div className="awp-page awp-page--default space-y-6">
         <SiteSectionHero
           kicker="Mecze"
           title="Terminarz"

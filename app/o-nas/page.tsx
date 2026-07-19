@@ -20,7 +20,7 @@ export default async function ONasPage() {
   const siteName = settings.site_name;
 
   return (
-    <div className="container mx-auto max-w-2xl flex-1 px-4 py-8 sm:py-10">
+    <div className="awp-page awp-page--narrow">
       <PitchPageHero
         title="O akademii"
         subtitle={

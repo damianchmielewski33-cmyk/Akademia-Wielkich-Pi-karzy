@@ -8,11 +8,15 @@ import { toast } from "sonner";
 import {
   ChatAttachmentControls,
   ChatBubble,
+  ChatComposerField,
+  ChatComposerShell,
   ChatEmojiPicker,
+  ChatTranscript,
+  chatClusterForIndex,
   insertEmojiAtCursor,
 } from "@/components/chat-composer-extras";
 import { AppModal } from "@/components/ui/app-modal";
-import { FormInput, FormTextarea } from "@/components/ui/form-field";
+import { FormInput } from "@/components/ui/form-field";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -388,49 +392,53 @@ export function WriteToAdminFloat({ defaults, recipients, hideFloat = false }: P
               </select>
             </div>
 
-            <div className="max-h-[min(280px,40vh)] space-y-2 overflow-y-auto rounded-xl border border-white/15 bg-black/20 p-3">
-              {loadingThread && messages.length === 0 ? (
-                <div className="flex justify-center py-8 text-emerald-100/70">
-                  <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
-                </div>
-              ) : messages.length === 0 ? (
-                <p className="py-6 text-center text-sm text-emerald-100/60">
-                  Brak wiadomości — napisz pierwszą.
-                </p>
-              ) : (
-                messages.map((m) => (
-                  <ChatBubble
-                    key={m.id}
-                    body={m.body}
-                    attachmentUrl={m.attachment_url}
-                    senderLabel={m.mine ? null : m.sender_name}
-                    timeLabel={m.created_at_display}
-                    mine={m.mine}
-                  />
-                ))
-              )}
+            <ChatTranscript
+              tone="pitch"
+              className="max-h-[min(320px,42vh)] min-h-[12rem]"
+              empty={
+                loadingThread && messages.length === 0 ? (
+                  <Loader2 className="h-5 w-5 animate-spin text-emerald-100/70" aria-hidden />
+                ) : messages.length === 0 ? (
+                  <p className="text-center text-sm text-emerald-100/65">
+                    Brak wiadomości — napisz pierwszą.
+                  </p>
+                ) : undefined
+              }
+            >
+              {messages.length > 0
+                ? (() => {
+                    const clustered = messages.map((m) => ({
+                      mine: m.mine,
+                      senderKey: m.mine ? "me" : m.sender_name,
+                    }));
+                    return messages.map((m, i) => (
+                      <ChatBubble
+                        key={m.id}
+                        body={m.body}
+                        attachmentUrl={m.attachment_url}
+                        senderLabel={m.mine ? null : m.sender_name}
+                        timeLabel={m.created_at_display}
+                        mine={m.mine}
+                        tone="pitch"
+                        cluster={chatClusterForIndex(clustered, i)}
+                      />
+                    ));
+                  })()
+                : null}
               <div ref={bottomRef} />
-            </div>
+            </ChatTranscript>
 
-            <form id="write-to-admin-form" className="space-y-3" onSubmit={(e) => void handleSubmit(e)}>
-              <FormTextarea
-                id="contact-admin-body"
-                label="Twoja wiadomość"
-                value={body}
-                onChange={(e) => setBody(e.target.value)}
-                placeholder="Napisz wiadomość…"
-                rows={3}
-                disabled={sending}
-                ref={textareaRef}
-              />
-              <div className="flex flex-wrap items-center gap-2">
+            <form id="write-to-admin-form" className="space-y-2" onSubmit={(e) => void handleSubmit(e)}>
+              <ChatComposerShell tone="pitch">
                 <ChatEmojiPicker
+                  tone="pitch"
                   disabled={sending}
                   onPick={(emoji) => {
                     setBody((prev) => insertEmojiAtCursor(prev, emoji, textareaRef.current));
                   }}
                 />
                 <ChatAttachmentControls
+                  tone="pitch"
                   disabled={sending}
                   attachmentUrl={attachmentUrl}
                   previewUrl={attachmentPreview}
@@ -442,7 +450,31 @@ export function WriteToAdminFloat({ defaults, recipients, hideFloat = false }: P
                   }}
                   onClear={clearAttachment}
                 />
-              </div>
+                <ChatComposerField
+                  id="contact-admin-body"
+                  tone="pitch"
+                  value={body}
+                  onChange={setBody}
+                  placeholder="Aa"
+                  disabled={sending}
+                  rows={2}
+                  fieldRef={textareaRef}
+                />
+                <Button
+                  type="submit"
+                  size="icon"
+                  variant="stadium"
+                  className="h-10 w-10 shrink-0 rounded-full"
+                  disabled={sending || uploadingAttachment || !canSend}
+                  aria-label="Wyślij"
+                >
+                  {sending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                  ) : (
+                    <Send className="h-4 w-4" aria-hidden />
+                  )}
+                </Button>
+              </ChatComposerShell>
             </form>
           </div>
         )}

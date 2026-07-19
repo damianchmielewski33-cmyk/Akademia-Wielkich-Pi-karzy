@@ -246,7 +246,7 @@ export function PlatnosciClient({
   }, [isLoggedIn, isAdmin]);
 
   return (
-    <div className="container mx-auto max-w-5xl flex-1 px-4 py-8 text-center sm:py-10">
+    <div className="awp-page awp-page--default text-center">
       <PitchPageHero
         title="Płatności"
         subtitle={

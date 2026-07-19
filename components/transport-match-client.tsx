@@ -42,7 +42,7 @@ export function TransportMatchClient({
   const [editOpen, setEditOpen] = useState(false);
 
   return (
-    <div className="container mx-auto max-w-2xl flex-1 space-y-6 px-4 py-8 sm:py-10">
+    <div className="awp-page awp-page--narrow space-y-6">
       <SiteSectionHero
         kicker="Dojazd"
         title="Transport na mecz"

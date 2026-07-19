@@ -40,7 +40,7 @@
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  background-attachment: fixed;
+  background-attachment: scroll;
 }
 
 @layer components {
@@ -80,7 +80,7 @@
 
   /* ========== Panel admina — tabele i powierzchnie na murawie ========== */
   .admin-table-shell {
-    @apply overflow-hidden rounded-xl border border-white/25 bg-black/10 backdrop-blur-sm;
+    @apply overflow-x-auto overflow-y-hidden rounded-xl border border-white/25 bg-black/10 backdrop-blur-sm [scrollbar-width:thin];
   }
 
   .admin-table-shell :where(thead tr) {
@@ -246,7 +246,7 @@
 
   /* Wspólny nagłówek strony — spójny z nawigacją (Mundial) */
   .awp-section-hero {
-    @apply relative mx-auto w-full overflow-hidden rounded-3xl border px-5 py-7 text-white sm:px-8 sm:py-8;
+    @apply relative mx-auto w-full overflow-hidden rounded-2xl border px-4 py-6 text-white xs:rounded-3xl xs:px-5 xs:py-7 sm:px-8 sm:py-8;
     border-color: color-mix(in srgb, var(--mundial-gold) 28%, transparent);
     background:
       radial-gradient(ellipse 90% 70% at 100% -10%, rgba(0, 166, 81, 0.22), transparent 55%),
@@ -870,6 +870,40 @@ body {
   background: var(--background);
   color: var(--foreground);
   min-height: 100vh;
+  min-height: 100dvh;
+  overflow-x: clip;
+}
+
+html {
+  overflow-x: clip;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* Wspólny kontener stron — spójne marginesy na wąskich ekranach */
+.awp-page {
+  @apply container mx-auto w-full min-w-0 flex-1 px-3 py-6 xs:px-4 sm:py-10;
+}
+
+.awp-page--narrow {
+  @apply max-w-3xl;
+}
+
+.awp-page--default {
+  @apply max-w-5xl;
+}
+
+.awp-page--wide {
+  @apply max-w-6xl;
+}
+
+.awp-page--xl {
+  @apply max-w-7xl;
+}
+
+/* Tabele / szerokie bloki: poziomy scroll bez „rozjechania” layoutu */
+.awp-scroll-x {
+  @apply -mx-3 overflow-x-auto overscroll-x-contain px-3 [scrollbar-width:thin] xs:-mx-0 xs:px-0;
 }
 
 /* Tlo stadionu: panorama boiska + trybuny */
@@ -882,7 +916,14 @@ body {
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  background-attachment: fixed;
+  background-attachment: scroll;
+}
+
+@media (min-width: 1024px) {
+  .murawa-bg,
+  .dark .murawa-bg {
+    background-attachment: fixed;
+  }
 }
 
 /* Akcent ÔÇ×linii ┼ŤrodkowejÔÇŁ pod nag┼é├│wkami sekcji */

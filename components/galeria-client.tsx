@@ -125,7 +125,7 @@ export function GaleriaClient({ videos: initialVideos, isAdmin }: Props) {
   const hiddenCount = isAdmin ? adminRows.filter((r) => r.published !== 1).length : 0;
 
   return (
-    <div className="container mx-auto max-w-5xl flex-1 px-4 py-8 sm:py-10">
+    <div className="awp-page awp-page--default">
       <PitchPageHero
         title="Galeria meczów"
         subtitle="Nagrania z naszych spotkań na boisku — oglądaj bezpośrednio na stronie Akademii."

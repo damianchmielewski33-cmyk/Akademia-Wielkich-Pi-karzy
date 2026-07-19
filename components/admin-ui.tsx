@@ -102,15 +102,15 @@ export function AdminShell({
           }}
           aria-hidden
         />
-        <div className="relative flex flex-col gap-5 p-4 lg:sticky lg:top-0 lg:max-h-screen lg:overflow-y-auto">
-          <div className="flex items-center gap-3 border-b border-white/15 pb-4">
-            <span className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/10 shadow-inner ring-1 ring-[var(--mundial-gold)]/40">
+        <div className="relative flex flex-col gap-4 p-3 xs:p-4 lg:sticky lg:top-0 lg:max-h-screen lg:gap-5 lg:overflow-y-auto lg:pt-[max(1rem,env(safe-area-inset-top))]">
+          <div className="flex items-center gap-3 border-b border-white/15 pb-3 lg:pb-4">
+            <span className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/10 shadow-inner ring-1 ring-[var(--mundial-gold)]/40 xs:h-11 xs:w-11">
               <SiteAssetImage
                 asset="logo_crest"
                 alt=""
                 width={128}
                 height={128}
-                className="h-8 w-8"
+                className="h-7 w-7 xs:h-8 xs:w-8"
                 sizes="32px"
               />
             </span>
@@ -120,7 +120,10 @@ export function AdminShell({
             </div>
           </div>
 
-          <nav className="flex flex-wrap gap-2 lg:flex-col lg:gap-1" aria-label="Zakładki panelu admina">
+          <nav
+            className="-mx-3 flex gap-2 overflow-x-auto overscroll-x-contain px-3 pb-1 [scrollbar-width:thin] lg:mx-0 lg:flex-col lg:gap-1 lg:overflow-visible lg:px-0 lg:pb-0"
+            aria-label="Zakładki panelu admina"
+          >
             {tabs.map((t) => {
               const Icon = t.icon;
               const active = activeTab === t.id;
@@ -130,14 +133,14 @@ export function AdminShell({
                   type="button"
                   onClick={() => onTabChange(t.id)}
                   className={cn(
-                    "awp-focus-ring flex items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-semibold transition-[background-color,color,box-shadow]",
+                    "awp-focus-ring flex shrink-0 touch-manipulation items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-semibold transition-[background-color,color,box-shadow] lg:w-full",
                     active
                       ? "bg-white/15 text-white shadow-sm ring-1 ring-white/20"
                       : "text-emerald-100/85 hover:bg-white/10 hover:text-white"
                   )}
                 >
                   <Icon className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
-                  <span className="flex min-w-0 flex-1 items-center justify-between gap-2">
+                  <span className="flex min-w-0 flex-1 items-center justify-between gap-2 whitespace-nowrap">
                     {t.label}
                     {t.badgeCount != null && t.badgeCount > 0 ? (
                       <span
@@ -160,35 +163,35 @@ export function AdminShell({
             })}
           </nav>
 
-          <div className="mt-auto flex flex-col gap-1 border-t border-white/15 pt-4">
+          <div className="flex flex-wrap gap-1 border-t border-white/15 pt-3 lg:mt-auto lg:flex-col lg:pt-4">
             <button
               type="button"
               onClick={() => void toggleTheme()}
-              className="awp-focus-ring flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-emerald-100/90 transition-colors hover:bg-white/10 hover:text-white"
+              className="awp-focus-ring flex min-h-10 flex-1 items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-emerald-100/90 transition-colors hover:bg-white/10 hover:text-white lg:flex-none"
             >
               {isDarkNow ? <Sun className="h-4 w-4" aria-hidden /> : <Moon className="h-4 w-4" aria-hidden />}
-              {isDarkNow ? "Jasny motyw" : "Ciemny motyw"}
+              <span className="truncate">{isDarkNow ? "Jasny motyw" : "Ciemny motyw"}</span>
             </button>
             <Link
               href="/terminarz"
-              className="awp-focus-ring flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-emerald-100/90 transition-colors hover:bg-white/10 hover:text-white"
+              className="awp-focus-ring flex min-h-10 flex-1 items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-emerald-100/90 transition-colors hover:bg-white/10 hover:text-white lg:flex-none"
             >
-              <Calendar className="h-4 w-4" aria-hidden />
-              Terminarz (edycja)
+              <Calendar className="h-4 w-4 shrink-0" aria-hidden />
+              <span className="truncate">Terminarz</span>
             </Link>
             <Link
               href="/"
-              className="awp-focus-ring flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-emerald-100/90 transition-colors hover:bg-white/10 hover:text-white"
+              className="awp-focus-ring flex min-h-10 flex-1 items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-emerald-100/90 transition-colors hover:bg-white/10 hover:text-white lg:flex-none"
             >
-              <ArrowLeft className="h-4 w-4" aria-hidden />
-              Strona główna
+              <ArrowLeft className="h-4 w-4 shrink-0" aria-hidden />
+              <span className="truncate">Strona główna</span>
             </Link>
             <button
               type="button"
               onClick={onLogout}
-              className="awp-focus-ring flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-emerald-100/90 transition-colors hover:bg-white/10 hover:text-white"
+              className="awp-focus-ring flex min-h-10 flex-1 items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-emerald-100/90 transition-colors hover:bg-white/10 hover:text-white lg:flex-none"
             >
-              <LogOut className="h-4 w-4" aria-hidden />
+              <LogOut className="h-4 w-4 shrink-0" aria-hidden />
               Wyloguj
             </button>
           </div>
@@ -223,8 +226,8 @@ export function AdminShell({
           </div>
         ) : null}
 
-        <div className="relative z-10 p-4 sm:p-6 lg:p-8">
-          <div className="mx-auto max-w-6xl">{children}</div>
+        <div className="relative z-10 p-3 xs:p-4 sm:p-6 lg:p-8">
+          <div className="mx-auto w-full min-w-0 max-w-6xl">{children}</div>
         </div>
       </main>
     </div>

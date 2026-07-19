@@ -20,7 +20,7 @@ export default async function KontaktPage() {
   const settings = await getAppSettings(db);
 
   return (
-    <div className="container mx-auto max-w-5xl flex-1 px-4 py-8 text-center sm:py-10">
+    <div className="awp-page awp-page--default text-center">
       <PitchPageHero title="Kontakt" subtitle="Dane kontaktowe organizatorów" />
 
       <div className="mx-auto mt-8 max-w-3xl">

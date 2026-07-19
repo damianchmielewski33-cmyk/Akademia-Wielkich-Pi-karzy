@@ -38,7 +38,7 @@ export default async function PzuCupRankingiPage({ searchParams }: Props) {
 
   if (!season) {
     return (
-      <div className="container mx-auto max-w-6xl flex-1 px-4 py-8 text-center sm:py-10">
+      <div className="awp-page awp-page--wide text-center">
         <div className="mx-auto max-w-lg rounded-2xl border border-sky-400/25 bg-sky-950/40 px-6 py-10">
           <h1 className="text-2xl font-bold text-white">Rankingi PZU Cup</h1>
           <p className="mt-2 text-sm text-sky-200/80">Brak sezonów rankingu do wyświetlenia.</p>
@@ -57,7 +57,7 @@ export default async function PzuCupRankingiPage({ searchParams }: Props) {
   const ranked = rankPlayers(players, "punkty");
 
   return (
-    <div className="container mx-auto max-w-6xl flex-1 px-4 py-8 sm:py-10">
+    <div className="awp-page awp-page--wide">
       <div className="mb-8 rounded-2xl border border-sky-400/25 bg-sky-950/40 px-6 py-8 text-center">
         <p className="text-xs font-bold uppercase tracking-[0.2em] text-amber-400">PZU Cup</p>
         <h1 className="mt-2 text-3xl font-bold text-white">Rankingi</h1>

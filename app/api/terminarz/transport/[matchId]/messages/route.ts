@@ -7,8 +7,6 @@ export const runtime = "nodejs";
 
 type Ctx = { params: Promise<{ matchId: string }> };
 
-const MAX_LEN = 1500;
-
 async function getEligibleSignup(
   db: AppDb,
   userId: number,
@@ -95,9 +93,6 @@ export async function POST(req: Request, ctx: Ctx) {
   }
   if (!bodyText) {
     return NextResponse.json({ error: "Wiadomość nie może być pusta." }, { status: 400 });
-  }
-  if (bodyText.length > MAX_LEN) {
-    return NextResponse.json({ error: `Maksymalnie ${MAX_LEN} znaków.` }, { status: 400 });
   }
 
   const db = await getDb();

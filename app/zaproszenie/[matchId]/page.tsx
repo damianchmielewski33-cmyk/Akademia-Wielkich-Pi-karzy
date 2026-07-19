@@ -72,7 +72,7 @@ export default async function ZaproszeniePage({ params }: PageProps) {
         : null;
 
   return (
-    <div className="container mx-auto max-w-5xl flex-1 px-4 py-8 sm:py-10">
+    <div className="awp-page awp-page--default">
       <InviteMatchClient
         matchId={matchId}
         match={matchForClient ?? null}

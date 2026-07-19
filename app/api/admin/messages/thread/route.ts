@@ -79,7 +79,7 @@ export async function GET(req: Request) {
 const replySchema = z
   .object({
     conversation_key: z.string().trim().min(1).max(200),
-    body: z.string().trim().max(4000).optional().default(""),
+    body: z.string().trim().optional().default(""),
     attachment_url: z.string().trim().max(800).optional().nullable(),
     recipient_key: z.enum(CONTACT_ADMIN_RECIPIENT_KEYS).optional(),
   })

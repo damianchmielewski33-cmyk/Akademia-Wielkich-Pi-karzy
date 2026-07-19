@@ -37,7 +37,7 @@ export default async function SkladyPage({ searchParams }: PageProps) {
   if (publicMatches.length === 0) {
     if (nextUpcomingAny) {
       return (
-        <div className="container mx-auto max-w-lg flex-1 px-4 py-8 sm:py-10">
+        <div className="awp-page max-w-lg">
           <div className="rounded-2xl border border-zinc-200 bg-white p-8 text-center shadow-sm dark:border-zinc-700 dark:bg-zinc-900/90">
             <h1 className="text-xl font-bold text-emerald-950 dark:text-emerald-100">Składy jeszcze niewidoczne</h1>
             <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
@@ -55,7 +55,7 @@ export default async function SkladyPage({ searchParams }: PageProps) {
       );
     }
     return (
-      <div className="container mx-auto max-w-lg flex-1 px-4 py-8 sm:py-10">
+      <div className="awp-page max-w-lg">
         <div className="rounded-2xl border border-zinc-200 bg-white p-8 text-center shadow-sm dark:border-zinc-700 dark:bg-zinc-900/90">
           <h1 className="text-xl font-bold text-emerald-950 dark:text-emerald-100">Brak publicznych składów</h1>
           <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
@@ -98,7 +98,7 @@ export default async function SkladyPage({ searchParams }: PageProps) {
   });
 
   return (
-    <div className="container mx-auto max-w-6xl flex-1 space-y-6 px-2 py-6 xs:px-3 sm:px-4 sm:py-10">
+    <div className="awp-page awp-page--wide space-y-6">
       <SiteSectionHero
         kicker="Boisko"
         title="Składy"
@@ -116,7 +116,10 @@ export default async function SkladyPage({ searchParams }: PageProps) {
       </div>
 
       {navMatches.length > 1 && (
-        <nav className="mb-8 flex flex-wrap gap-2" aria-label="Wybór meczu">
+        <nav
+          className="-mx-1 mb-8 flex gap-2 overflow-x-auto overscroll-x-contain px-1 pb-1 [scrollbar-width:thin] sm:flex-wrap sm:overflow-visible"
+          aria-label="Wybór meczu"
+        >
           {navMatches.map((m) => {
             const active = m.id === selectedId;
             return (
@@ -125,7 +128,7 @@ export default async function SkladyPage({ searchParams }: PageProps) {
                 href={`/sklady?m=${m.id}`}
                 scroll={false}
                 className={cn(
-                  "rounded-full border px-3 py-1.5 text-xs font-medium transition-colors sm:text-sm",
+                  "shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors sm:text-sm",
                   active
                     ? "border-emerald-700 bg-emerald-700 text-white shadow-sm"
                     : "border-zinc-200 bg-white text-zinc-700 hover:border-emerald-300 hover:bg-emerald-50/80"

@@ -20,7 +20,7 @@ const bodySchema = z
   .object({
     sender_name: z.string().trim().min(2, "Podaj imię i nazwisko (min. 2 znaki).").max(120),
     recipient_key: z.enum(CONTACT_ADMIN_RECIPIENT_KEYS),
-    body: z.string().trim().max(4000).optional().default(""),
+    body: z.string().trim().optional().default(""),
     attachment_url: z.string().trim().max(800).optional().nullable(),
   })
   .superRefine((data, ctx) => {

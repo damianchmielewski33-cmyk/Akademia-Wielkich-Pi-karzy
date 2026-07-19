@@ -170,7 +170,9 @@ export function TerminarzMatchCard({
           )}
         </div>
 
-        <div className="mt-4 flex flex-wrap gap-2 border-t border-white/20 pt-4">{actions}</div>
+        <div className="mt-4 flex flex-col gap-2 border-t border-white/20 pt-4 sm:flex-row sm:flex-wrap [&_a]:w-full [&_button]:w-full sm:[&_a]:w-auto sm:[&_button]:w-auto">
+          {actions}
+        </div>
 
         {!archive && (
           <details className="pitch-panel mt-3">

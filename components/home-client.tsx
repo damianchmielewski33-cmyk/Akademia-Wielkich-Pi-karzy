@@ -235,7 +235,7 @@ export function HomeClient({
 
   return (
     <div className="flex flex-1 flex-col">
-      <div className="container mx-auto max-w-5xl flex-1 px-4 py-8 text-center sm:py-10">
+      <div className="awp-page awp-page--default text-center">
         {isLoggedIn && (
           <div className="mb-8 flex items-center justify-center gap-4">
             <PlayerAvatar

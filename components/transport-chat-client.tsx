@@ -3,9 +3,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Send } from "lucide-react";
-import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
+import { PlayerAvatar } from "@/components/player-avatar";
+import {
+  ChatBubble,
+  ChatComposerField,
+  ChatComposerShell,
+  ChatTranscript,
+  chatClusterForIndex,
+} from "@/components/chat-composer-extras";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 
 function formatWhen(createdAt: string) {
   return createdAt.includes("T")
@@ -34,6 +40,7 @@ export function TransportChatClient({ matchId, currentUserId, initialMessages }:
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const fieldRef = useRef<HTMLTextAreaElement>(null);
 
   const scrollToBottom = useCallback(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -83,21 +90,36 @@ export function TransportChatClient({ matchId, currentUserId, initialMessages }:
     }
   }
 
+  const clustered = items.map((m) => ({
+    mine: m.userId === currentUserId,
+    senderKey: String(m.userId),
+  }));
+
   return (
-    <div className="flex flex-col rounded-2xl border border-emerald-200/80 bg-white shadow-sm">
-      <div className="max-h-[min(420px,55vh)] space-y-3 overflow-y-auto px-3 py-3 sm:px-4">
-        {items.length === 0 ? (
-          <p className="py-8 text-center text-sm text-zinc-500">
-            Brak wiadomości — napisz pierwszą propozycję dojazdu lub miejsce zbiórki.
-          </p>
-        ) : (
-          items.map((m) => {
-            const mine = m.userId === currentUserId;
-            return (
-              <div
-                key={m.id}
-                className={`flex gap-2 ${mine ? "flex-row-reverse" : "flex-row"}`}
-              >
+    <div className="flex flex-col gap-3 overflow-hidden rounded-2xl border border-emerald-200/80 bg-white/95 p-3 shadow-sm dark:border-emerald-900/40 dark:bg-zinc-950/40 sm:p-4">
+      <ChatTranscript
+        tone="light"
+        className="max-h-[min(420px,55vh)] min-h-[14rem]"
+        empty={
+          items.length === 0 ? (
+            <p className="text-center text-sm text-zinc-500 dark:text-zinc-400">
+              Brak wiadomości — napisz pierwszą propozycję dojazdu lub miejsce zbiórki.
+            </p>
+          ) : undefined
+        }
+      >
+        {items.map((m, i) => {
+          const mine = m.userId === currentUserId;
+          return (
+            <ChatBubble
+              key={m.id}
+              body={m.body}
+              senderLabel={mine ? null : `${m.firstName} ${m.lastName}`.trim() || m.zawodnik}
+              timeLabel={formatWhen(m.createdAt)}
+              mine={mine}
+              tone="light"
+              cluster={chatClusterForIndex(clustered, i)}
+              avatar={
                 <PlayerAvatar
                   photoPath={null}
                   firstName={m.firstName}
@@ -105,36 +127,22 @@ export function TransportChatClient({ matchId, currentUserId, initialMessages }:
                   size="sm"
                   ringClassName="ring-2 ring-emerald-200/90"
                 />
-                <div
-                  className={`max-w-[min(100%,20rem)] rounded-2xl px-3 py-2 text-sm shadow-sm ${
-                    mine
-                      ? "bg-emerald-700 text-white"
-                      : "border border-zinc-200/90 bg-zinc-50 text-zinc-900"
-                  }`}
-                >
-                  {!mine && (
-                    <div className="mb-1 text-xs font-semibold text-emerald-900 dark:text-emerald-200">
-                      <PlayerNameStack firstName={m.firstName} lastName={m.lastName} nick={m.zawodnik} />
-                    </div>
-                  )}
-                  <p className="whitespace-pre-wrap break-words leading-relaxed">{m.body}</p>
-                  <p className={`mt-1 text-[10px] ${mine ? "text-emerald-100/90" : "text-zinc-500"}`}>
-                    {formatWhen(m.createdAt)}
-                  </p>
-                </div>
-              </div>
-            );
-          })
-        )}
+              }
+            />
+          );
+        })}
         <div ref={bottomRef} />
-      </div>
-      <div className="flex gap-2 border-t border-zinc-200/80 p-3">
-        <Input
+      </ChatTranscript>
+
+      <ChatComposerShell tone="light">
+        <ChatComposerField
+          tone="light"
           value={text}
-          onChange={(e) => setText(e.target.value)}
-          placeholder="Napisz wiadomość do grupy transportowej…"
-          maxLength={1500}
-          className="flex-1"
+          onChange={setText}
+          placeholder="Aa"
+          disabled={sending}
+          rows={1}
+          fieldRef={fieldRef}
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) {
               e.preventDefault();
@@ -144,13 +152,16 @@ export function TransportChatClient({ matchId, currentUserId, initialMessages }:
         />
         <Button
           type="button"
-          className="shrink-0 bg-emerald-700 hover:bg-emerald-800"
+          size="icon"
+          variant="stadium"
+          className="h-10 w-10 shrink-0 rounded-full"
           onClick={() => void send()}
           disabled={sending || !text.trim()}
+          aria-label="Wyślij"
         >
           <Send className="h-4 w-4" aria-hidden />
         </Button>
-      </div>
+      </ChatComposerShell>
     </div>
   );
 }
