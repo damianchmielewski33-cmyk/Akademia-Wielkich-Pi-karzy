@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { getAppSettings } from "@/lib/app-settings";
 import { getDb } from "@/lib/db";
 import { getServerSession } from "@/lib/auth";
+import { PREVIEW_BLOCKED_COOKIE } from "@/lib/constants";
+import { isPreviewBlockedCookieValue } from "@/lib/screen-block-preview";
 import {
   getScreenKeyFromApiPath,
   isScreenDisabledForUser,
@@ -15,8 +18,10 @@ export async function screenBlockApiResponse(req: Request): Promise<NextResponse
   if (!key) return null;
 
   const session = await getServerSession();
+  const cookieStore = await cookies();
+  const previewAsPlayer = isPreviewBlockedCookieValue(cookieStore.get(PREVIEW_BLOCKED_COOKIE)?.value);
   const isAdmin = Boolean(session?.isAdmin && !session.pinChangePending && !session.needsPinSetup);
-  if (isAdmin) return null;
+  if (isAdmin && !previewAsPlayer) return null;
 
   const db = await getDb();
   const settings = await getAppSettings(db);

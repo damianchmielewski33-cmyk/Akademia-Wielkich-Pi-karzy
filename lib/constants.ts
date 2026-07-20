@@ -18,6 +18,12 @@ export const INVITE_MATCH_QUERY_PARAM = "zaproszenie";
 /** Krótkotrwałe ciasteczko (nie httpOnly): sygnał dla klienta, żeby wyczyścić sessionStorage / localStorage po wejściu z udostępnionego linku. */
 export const CLIENT_STORAGE_CLEANUP_COOKIE = "awp_client_cleanup";
 
+/** Parametr i ciasteczko podglądu zaślepki przez admina (?preview_blocked=1). */
+export const PREVIEW_BLOCKED_QUERY_PARAM = "preview_blocked";
+export const PREVIEW_BLOCKED_COOKIE = "awp_preview_blocked";
+/** Szkic zaślepek z panelu admina (sessionStorage) na czas podglądu przed odświeżeniem cache. */
+export const PREVIEW_BLOCKS_DRAFT_STORAGE_KEY = "awp_screen_blocks_preview_draft";
+
 /** Klucz localStorage dla anonimowej analityki — zachowujemy przy czyszczeniu po udostępnionym linku. */
 export const VISITOR_ID_STORAGE_KEY = "awp_visitor_id";
 

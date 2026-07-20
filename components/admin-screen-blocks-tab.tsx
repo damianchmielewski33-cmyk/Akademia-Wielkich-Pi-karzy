@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { Construction, Eye, Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -23,8 +22,8 @@ import {
   type BlockableScreenKey,
   type ScreenBlockEntry,
 } from "@/lib/screen-blocks";
+import { screenBlockPreviewHref, storeScreenBlocksPreviewDraft } from "@/lib/screen-block-preview";
 import type { AppSettingsApiResponse } from "@/app/api/admin/app-settings/route";
-
 type Props = {
   loading: boolean;
   onReload: () => void;
@@ -70,7 +69,7 @@ export function AdminScreenBlocksTab({ loading, onReload }: Props) {
     });
   };
 
-  const save = async () => {
+  const save = async (): Promise<Record<BlockableScreenKey, ScreenBlockEntry> | null> => {
     setSaving(true);
     try {
       const res = await fetch("/api/admin/app-settings", {
@@ -81,16 +80,25 @@ export function AdminScreenBlocksTab({ loading, onReload }: Props) {
       const data = (await res.json().catch(() => ({}))) as AppSettingsApiResponse & { error?: string };
       if (!res.ok) {
         toast.error(typeof data.error === "string" ? data.error : "Nie udało się zapisać");
-        return;
+        return null;
       }
       setBlocks(data.screen_blocks);
       toast.success("Zaślepki ekranów zapisane");
       onReload();
+      return data.screen_blocks;
     } catch {
       toast.error("Nie udało się zapisać");
+      return null;
     } finally {
       setSaving(false);
     }
+  };
+
+  const openPreview = async (href: string) => {
+    const savedBlocks = await save();
+    if (!savedBlocks) return;
+    storeScreenBlocksPreviewDraft(savedBlocks);
+    window.open(screenBlockPreviewHref(href), "_blank", "noopener,noreferrer");
   };
 
   const busy = loading || fetching || saving;
@@ -121,9 +129,7 @@ export function AdminScreenBlocksTab({ loading, onReload }: Props) {
           <li>Wyłączony ekran znika z menu nawigacji dla graczy.</li>
           <li>Wejście bezpośrednim linkiem pokazuje zaślepkę z Twoim komunikatem.</li>
           <li>Harmonogram (od–do) pozwala zaplanować zaślepkę na konkretne dni.</li>
-          <li>
-            Podgląd gracza: dodaj <code className="text-amber-200">?preview_blocked=1</code> do adresu ekranu.
-          </li>
+          <li>Podgląd gracza: kliknij <strong>Podgląd</strong> — zmiany zostaną zapisane i otworzy się nowa karta.</li>
           <li>Pusty komunikat = domyślny tekst: „{DEFAULT_SCREEN_BLOCK_MESSAGE}”</li>
           <li>Panel admina, logowanie i rejestracja nie są zaślepiane.</li>
         </ul>
@@ -156,11 +162,15 @@ export function AdminScreenBlocksTab({ loading, onReload }: Props) {
                     </span>
                     <span className="flex flex-wrap items-center gap-2">
                       {entry.disabled ? (
-                        <Button type="button" variant="outline" size="sm" asChild>
-                          <Link href={`${screen.href === "/players/*" ? "/pilkarze" : screen.href}?preview_blocked=1`} target="_blank">
-                            <Eye className="mr-1.5 h-3.5 w-3.5" aria-hidden />
-                            Podgląd
-                          </Link>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={busy}
+                          onClick={() => void openPreview(screen.href)}
+                        >
+                          <Eye className="mr-1.5 h-3.5 w-3.5" aria-hidden />
+                          Podgląd
                         </Button>
                       ) : null}
                       <YesNoSwitch

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import type { CSSProperties } from "react";
-import { headers } from "next/headers";
+import { headers, cookies } from "next/headers";
 import { Geist, Geist_Mono, Teko } from "next/font/google";
 import { Toaster } from "sonner";
 import { SiteShell } from "@/components/site-shell";
@@ -22,6 +22,7 @@ import { SiteAssetsProvider } from "@/components/site-assets-provider";
 import { ScreenBlocksProvider } from "@/components/screen-blocks-provider";
 import { ScreenBlockPlaceholder } from "@/components/screen-block-placeholder";
 import { AdminScreenBlockPreviewBanner } from "@/components/admin-screen-block-preview-banner";
+import { ScreenBlockPreviewContent } from "@/components/screen-block-preview-content";
 import { getGoogleSiteVerification, getSiteUrl } from "@/lib/site";
 import { getAppSettings } from "@/lib/app-settings";
 import {
@@ -33,6 +34,8 @@ import {
 import { getUnreadAdminMessageCount } from "@/lib/admin-messages";
 import { contactAdminRecipientsFromSettings } from "@/lib/contact-admin-recipients";
 import { siteAssetCssUrl } from "@/lib/site-assets";
+import { PREVIEW_BLOCKED_COOKIE } from "@/lib/constants";
+import { isPreviewBlockedCookieValue } from "@/lib/screen-block-preview";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -98,8 +101,12 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const session = await getServerSession();
-  const pathname = (await headers()).get("x-pathname") ?? "";
-  const previewBlocked = (await headers()).get("x-preview-blocked") === "1";
+  const headerStore = await headers();
+  const cookieStore = await cookies();
+  const pathname = headerStore.get("x-pathname") ?? "";
+  const previewBlocked =
+    headerStore.get("x-preview-blocked") === "1" ||
+    isPreviewBlockedCookieValue(cookieStore.get(PREVIEW_BLOCKED_COOKIE)?.value);
   const isPzuCupSection = pathname.startsWith("/pzu-cup");
   const loggedInFull = Boolean(
     session && !session.needsPinSetup && !session.pinChangePending
@@ -148,25 +155,49 @@ export default async function RootLayout({
   const contactAdminRecipients = contactAdminRecipientsFromSettings(appSettings);
 
   const isAdmin = Boolean(session?.isAdmin && loggedInFull);
-  const screenBlocksAsPlayer = previewBlocked && isAdmin;
+  /** Podgląd zaślepki — widok gracza dla każdego z aktywnym ciasteczkiem / parametrem (ustawiane z panelu admina). */
+  const screenBlocksAsPlayer = previewBlocked;
+  const shellIsAdmin = isAdmin && !screenBlocksAsPlayer;
   const adminUnreadMessages = isAdmin ? await getUnreadAdminMessageCount(db) : 0;
 
   const screenKey = !isPzuCupSection ? getScreenKeyFromPathname(pathname) : null;
-  const screenBlocksAdminBypass = isAdmin && !screenBlocksAsPlayer;
+  const screenBlocksAdminBypass = shellIsAdmin;
   const screenBlockedForPlayers =
     screenKey != null && isScreenDisabledForUser(appSettings.screen_blocks, screenKey, false);
   const screenBlocked =
     screenKey != null && isScreenDisabledForUser(appSettings.screen_blocks, screenKey, screenBlocksAdminBypass);
 
   let mainContent = children;
-  if (screenBlocked && screenKey) {
+  if (screenBlocksAsPlayer && screenKey) {
+    mainContent = (
+      <>
+        <AdminScreenBlockPreviewBanner
+          mode="as-player"
+          screenTitle={screenLabel(screenKey)}
+          blocked={screenBlocked}
+        />
+        {screenBlocked ? (
+          <ScreenBlockPreviewContent
+            screenKey={screenKey}
+            screenTitle={screenLabel(screenKey)}
+            serverBlocked={screenBlocked}
+            serverMessage={screenBlockMessage(appSettings.screen_blocks, screenKey)}
+          >
+            {children}
+          </ScreenBlockPreviewContent>
+        ) : (
+          children
+        )}
+      </>
+    );
+  } else if (screenBlocked && screenKey) {
     mainContent = (
       <ScreenBlockPlaceholder
         title={screenLabel(screenKey)}
         message={screenBlockMessage(appSettings.screen_blocks, screenKey)}
       />
     );
-  } else if (screenBlockedForPlayers && screenKey && isAdmin && !screenBlocksAsPlayer) {
+  } else if (screenBlockedForPlayers && screenKey && shellIsAdmin) {
     mainContent = (
       <>
         <AdminScreenBlockPreviewBanner screenTitle={screenLabel(screenKey)} />
@@ -206,12 +237,12 @@ export default async function RootLayout({
           <SiteAssetsProvider assets={siteAssets}>
             <ScreenBlocksProvider
               blocks={appSettings.screen_blocks}
-              isAdmin={isAdmin}
+              isAdmin={shellIsAdmin}
               previewAsPlayer={screenBlocksAsPlayer}
             >
               <SiteShell
                 isLoggedIn={loggedInFull}
-                isAdmin={isAdmin}
+                isAdmin={shellIsAdmin}
                 account={accountNav}
                 adminUnreadMessages={adminUnreadMessages}
                 siteName={appSettings.site_name}
@@ -230,7 +261,7 @@ export default async function RootLayout({
           <WriteToAdminFloat
             defaults={writeToAdminDefaults}
             recipients={contactAdminRecipients}
-            hideFloat={isAdmin}
+            hideFloat={shellIsAdmin}
           />
         ) : null}
         {!isPzuCupSection ? <MatchParticipationSurveyPrompt /> : null}

@@ -3,12 +3,15 @@ import type { NextRequest } from "next/server";
 import { jwtVerify } from "jose";
 import {
   CLIENT_STORAGE_CLEANUP_COOKIE,
+  PREVIEW_BLOCKED_COOKIE,
+  PREVIEW_BLOCKED_QUERY_PARAM,
   SESSION_COOKIE,
   SHARE_LINK_QUERY_PARAM,
 } from "@/lib/constants";
 import { getAuthSecretKey } from "@/lib/auth-secret";
 
 const PATHNAME_HEADER = "x-pathname";
+const PREVIEW_HEADER = "x-preview-blocked";
 
 /** Przekazuje bieżący pathname do layoutu (np. bramka wymuszenia ustawienia PIN-u). */
 function nextWithPathname(request: NextRequest, extraHeaders?: Record<string, string>): NextResponse {
@@ -72,12 +75,25 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  const previewBlocked = searchParams.get("preview_blocked") === "1";
-  if (previewBlocked) {
-    return nextWithPathname(request, { "x-preview-blocked": "1" });
+  const previewBlocked =
+    searchParams.get(PREVIEW_BLOCKED_QUERY_PARAM) === "1" ||
+    request.cookies.get(PREVIEW_BLOCKED_COOKIE)?.value === "1";
+
+  const response = previewBlocked
+    ? nextWithPathname(request, { [PREVIEW_HEADER]: "1" })
+    : nextWithPathname(request);
+
+  if (searchParams.get(PREVIEW_BLOCKED_QUERY_PARAM) === "1") {
+    response.cookies.set(PREVIEW_BLOCKED_COOKIE, "1", {
+      maxAge: 60 * 30,
+      path: "/",
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      httpOnly: true,
+    });
   }
 
-  return nextWithPathname(request);
+  return response;
 }
 
 export const config = {

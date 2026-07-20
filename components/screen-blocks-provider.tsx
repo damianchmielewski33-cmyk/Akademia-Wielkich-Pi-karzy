@@ -1,6 +1,8 @@
 "use client";
 
-import { createContext, useCallback, useContext, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { PREVIEW_BLOCKED_QUERY_PARAM } from "@/lib/constants";
+import { readScreenBlocksPreviewDraft } from "@/lib/screen-block-preview";
 import {
   type BlockableScreenKey,
   getScreenBlockEntry,
@@ -31,10 +33,25 @@ export function ScreenBlocksProvider({
   previewAsPlayer?: boolean;
   children: ReactNode;
 }) {
-  const effectiveAdmin = isAdmin && !previewAsPlayer;
+  const [previewFromUrl, setPreviewFromUrl] = useState(false);
+  const [draftBlocks, setDraftBlocks] = useState<Record<BlockableScreenKey, ScreenBlockEntry> | null>(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const fromUrl = params.get(PREVIEW_BLOCKED_QUERY_PARAM) === "1";
+    setPreviewFromUrl(fromUrl);
+    if (fromUrl || previewAsPlayer) {
+      setDraftBlocks(readScreenBlocksPreviewDraft());
+    }
+  }, [previewAsPlayer]);
+
+  const effectiveBlocks = useMemo(() => draftBlocks ?? blocks, [draftBlocks, blocks]);
+  const inPlayerPreview = previewAsPlayer || previewFromUrl;
+  const effectiveAdmin = isAdmin && !inPlayerPreview;
+
   const isHidden = useCallback(
-    (key: BlockableScreenKey) => isScreenDisabledForUser(blocks, key, effectiveAdmin),
-    [blocks, effectiveAdmin]
+    (key: BlockableScreenKey) => isScreenDisabledForUser(effectiveBlocks, key, effectiveAdmin),
+    [effectiveBlocks, effectiveAdmin]
   );
 
   const isHiddenHref = useCallback(
@@ -46,12 +63,14 @@ export function ScreenBlocksProvider({
   );
 
   const getMessage = useCallback(
-    (key: BlockableScreenKey) => screenBlockMessage(blocks, key),
-    [blocks]
+    (key: BlockableScreenKey) => screenBlockMessage(effectiveBlocks, key),
+    [effectiveBlocks]
   );
 
   return (
-    <ScreenBlocksContext.Provider value={{ isAdmin, blocks, isHidden, isHiddenHref, getMessage }}>
+    <ScreenBlocksContext.Provider
+      value={{ isAdmin: effectiveAdmin, blocks: effectiveBlocks, isHidden, isHiddenHref, getMessage }}
+    >
       {children}
     </ScreenBlocksContext.Provider>
   );
