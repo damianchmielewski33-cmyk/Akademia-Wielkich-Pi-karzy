@@ -100,7 +100,7 @@ export function ChatEmojiPicker({ onPick, disabled, className, tone = "pitch" }:
               ? "border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900"
               : "border-white/20 bg-emerald-950/95"
           )}
-          role="listbox"
+          role="group"
           aria-label="Lista emotek"
         >
           <div className="grid grid-cols-8 gap-0.5">
@@ -108,7 +108,7 @@ export function ChatEmojiPicker({ onPick, disabled, className, tone = "pitch" }:
               <button
                 key={emoji}
                 type="button"
-                role="option"
+                aria-label={emoji}
                 className={cn(
                   "flex h-8 w-8 items-center justify-center rounded-lg text-lg transition-colors",
                   light ? "hover:bg-emerald-50 dark:hover:bg-emerald-950/40" : "hover:bg-white/15"

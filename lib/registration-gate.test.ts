@@ -23,9 +23,15 @@ describe("isSelfRegistrationAllowed", () => {
     expect(await isSelfRegistrationAllowed(mockDb(0))).toBe(true);
   });
 
-  it("blocks production registration when users exist and flag is off", async () => {
+  it("allows production registration by default in auto mode", async () => {
     vi.stubEnv("NODE_ENV", "production");
     vi.stubEnv("ALLOW_SELF_REGISTRATION", "");
+    expect(await isSelfRegistrationAllowed(mockDb(3))).toBe(true);
+  });
+
+  it("blocks when ALLOW_SELF_REGISTRATION=0 in auto mode", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("ALLOW_SELF_REGISTRATION", "0");
     expect(await isSelfRegistrationAllowed(mockDb(3))).toBe(false);
   });
 
@@ -49,5 +55,16 @@ describe("isSelfRegistrationAllowed", () => {
   it("respects admin panel force-closed", async () => {
     vi.stubEnv("NODE_ENV", "development");
     expect(await isSelfRegistrationAllowed(mockDb(3, 0))).toBe(false);
+  });
+
+  it("respects boolean false from settings object", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    expect(await isSelfRegistrationAllowed(mockDb(3), { allow_self_registration: false })).toBe(false);
+  });
+
+  it("respects boolean true from settings object", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("ALLOW_SELF_REGISTRATION", "0");
+    expect(await isSelfRegistrationAllowed(mockDb(3), { allow_self_registration: true })).toBe(true);
   });
 });

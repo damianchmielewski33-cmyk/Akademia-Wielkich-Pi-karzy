@@ -14,6 +14,7 @@ import {
 } from "@/components/admin-ui";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { YesNoSwitch } from "@/components/ui/yes-no-switch";
 import { cn } from "@/lib/utils";
 import {
   BLOCKABLE_SCREENS,
@@ -162,16 +163,14 @@ export function AdminScreenBlocksTab({ loading, onReload }: Props) {
                           </Link>
                         </Button>
                       ) : null}
-                      <input
-                        type="checkbox"
-                        className="h-4 w-4 rounded border-white/30 bg-black/20 text-amber-500 focus:ring-amber-400"
+                      <YesNoSwitch
                         checked={entry.disabled}
                         disabled={busy}
-                        onChange={(e) => updateEntry(screen.key, { disabled: e.target.checked })}
+                        onCheckedChange={(v) => updateEntry(screen.key, { disabled: v })}
+                        tone="admin"
+                        size="sm"
+                        aria-label={`Zaślepka ekranu ${screen.label}`}
                       />
-                      <span className="text-sm font-medium text-emerald-100/90">
-                        {entry.disabled ? "Zaślepka włączona" : "Widoczny"}
-                      </span>
                     </span>
                   </label>
 

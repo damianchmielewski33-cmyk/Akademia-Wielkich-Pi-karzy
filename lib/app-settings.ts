@@ -13,7 +13,6 @@ import {
   emptyScreenBlocksMap,
   parseScreenBlocksJson,
   serializeScreenBlocksMap,
-  BLOCKABLE_SCREENS,
   type BlockableScreenKey,
   type ScreenBlockEntry,
 } from "@/lib/screen-blocks";
@@ -91,7 +90,7 @@ export const APP_SETTINGS_DEFAULTS: AppSettings = {
   organizer_mateusz_email: "mateusz.wierzbicki@opoczta.pl",
   facebook_damian_url: DEFAULT_FACEBOOK_DAMIAN_URL,
   facebook_mateusz_url: DEFAULT_FACEBOOK_MATEUSZ_URL,
-  allow_self_registration: null,
+  allow_self_registration: true,
   default_match_max_slots: 14,
   default_match_fee_pln: null,
   default_match_location: "",
@@ -294,7 +293,7 @@ export function resolveAppSettings(
     facebook_damian_url: nonEmptyString(row?.facebook_damian_url, d.facebook_damian_url),
     facebook_mateusz_url: nonEmptyString(row?.facebook_mateusz_url, d.facebook_mateusz_url),
     allow_self_registration:
-      allowRaw === null || allowRaw === undefined ? null : allowRaw === 1,
+      allowRaw === null || allowRaw === undefined ? true : allowRaw === 1,
     default_match_max_slots:
       typeof row?.default_match_max_slots === "number" && row.default_match_max_slots >= 1
         ? row.default_match_max_slots

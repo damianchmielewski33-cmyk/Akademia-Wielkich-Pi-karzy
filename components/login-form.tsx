@@ -12,6 +12,7 @@ import { AppModal } from "@/components/ui/app-modal";
 import { Button } from "@/components/ui/button";
 import { FormInput } from "@/components/ui/form-field";
 import { Label } from "@/components/ui/label";
+import { YesNoSwitch } from "@/components/ui/yes-no-switch";
 import { PlayerAliasPicker } from "@/components/player-alias-picker";
 import { formSchemas, useValidatedForm } from "@/lib/form-validation";
 import { notifyPostLoginPromptsUpdated } from "@/lib/post-login-prompts";
@@ -201,17 +202,17 @@ export function LoginForm({
           error={loginForm.errors.pin}
           placeholder="4–6 cyfr"
         />
-        <div className="flex items-start gap-3 pt-0.5">
-          <input
-            id="login_remember"
-            type="checkbox"
-            checked={rememberMe}
-            onChange={(e) => setRememberMe(e.target.checked)}
-            className="mt-1 h-4 w-4 rounded border border-zinc-300 text-emerald-600 focus:ring-2 focus:ring-emerald-500/30"
-          />
+        <div className="flex items-center justify-between gap-3 pt-0.5">
           <Label htmlFor="login_remember" className="cursor-pointer font-normal leading-snug text-zinc-600 dark:text-zinc-400">
             Nie wylogowuj mnie
           </Label>
+          <YesNoSwitch
+            id="login_remember"
+            checked={rememberMe}
+            onCheckedChange={setRememberMe}
+            tone="pitch"
+            aria-label="Nie wylogowuj mnie"
+          />
         </div>
         <Button type="submit" className="w-full" variant="pitch" disabled={loading}>
           {loading ? "Logowanie…" : "Zaloguj się"}

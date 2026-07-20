@@ -34,6 +34,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { YesNoSwitch } from "@/components/ui/yes-no-switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MatchTransportSignupDialog } from "@/components/match-transport-signup-dialog";
 import { MatchManageDialog } from "@/components/match-manage-dialog";
@@ -1667,24 +1668,10 @@ export function TerminarzClient({
           {attendanceRows.map((p) => {
             const checked = attendancePresent.has(p.user_id);
             return (
-              <label
+              <div
                 key={p.user_id}
-                className="flex cursor-pointer items-center gap-3 rounded-xl border border-emerald-900/10 bg-white px-3 py-2 dark:bg-zinc-900"
+                className="flex items-center gap-3 rounded-xl border border-emerald-900/10 bg-white px-3 py-2 dark:bg-zinc-900"
               >
-                <input
-                  type="checkbox"
-                  className="h-4 w-4 accent-emerald-700"
-                  checked={checked}
-                  onChange={(e) => {
-                    const on = e.target.checked;
-                    setAttendancePresent((prev) => {
-                      const next = new Set(prev);
-                      if (on) next.add(p.user_id);
-                      else next.delete(p.user_id);
-                      return next;
-                    });
-                  }}
-                />
                 <PlayerAvatar
                   photoPath={p.profile_photo_path}
                   firstName={p.first_name}
@@ -1696,6 +1683,20 @@ export function TerminarzClient({
                   <PlayerNameStack firstName={p.first_name} lastName={p.last_name} nick={p.zawodnik} />
                   <p className="mt-0.5 text-xs text-zinc-500">ID: {p.user_id}</p>
                 </div>
+                <YesNoSwitch
+                  checked={checked}
+                  onCheckedChange={(on) => {
+                    setAttendancePresent((prev) => {
+                      const next = new Set(prev);
+                      if (on) next.add(p.user_id);
+                      else next.delete(p.user_id);
+                      return next;
+                    });
+                  }}
+                  size="sm"
+                  tone="pitch"
+                  aria-label={`Obecność: ${p.first_name} ${p.last_name}`}
+                />
                 <Badge
                   variant="outline"
                   className={
@@ -1706,7 +1707,7 @@ export function TerminarzClient({
                 >
                   {checked ? "Obecny" : "Nieobecny"}
                 </Badge>
-              </label>
+              </div>
             );
           })}
         </div>

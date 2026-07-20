@@ -9,12 +9,19 @@ type RegistrationSettings = {
   allow_self_registration: boolean | null;
 };
 
+/** null/undefined w bazie = domyślnie włączone; 0/false = wyłączone; 1/true = włączone. */
+function resolveRegistrationFlag(raw: boolean | number | null | undefined): boolean | null {
+  if (raw === null || raw === undefined) return null;
+  if (raw === true || raw === 1) return true;
+  if (raw === false || raw === 0) return false;
+  return null;
+}
+
 /**
  * Rejestracja samoobsługowa (osobno dla Akademii i PZU Cup):
- * - zawsze dozwolona, gdy w danym realm nie ma jeszcze użytkowników (pierwszy admin — tylko Akademia),
- * - w produkcji domyślnie wyłączona po utworzeniu pierwszego konta,
- * - można włączyć jawnie przez ALLOW_SELF_REGISTRATION=1,
- * - panel admina może wymusić otwarcie/zamknięcie (allow_self_registration w app_settings danego realm).
+ * - zawsze dozwolona, gdy w danym realm nie ma jeszcze użytkowników (pierwszy admin),
+ * - domyślnie włączona (brak wpisu lub null w app_settings),
+ * - wyłączenie tylko jawnie: panel admina (allow_self_registration = 0) lub ALLOW_SELF_REGISTRATION=0.
  */
 export async function isSelfRegistrationAllowed(
   db: DbLike,
@@ -29,20 +36,23 @@ export async function isSelfRegistrationAllowed(
     )?.c ?? 0;
   if (count === 0) return true;
 
-  const allowFromDb =
-    settings?.allow_self_registration ??
-    ((
-      (await db
-        .prepare("SELECT allow_self_registration FROM app_settings WHERE realm = ?")
-        .get(realm)) as { allow_self_registration: number | null } | undefined
-    )?.allow_self_registration);
+  const rawFromSettings = settings?.allow_self_registration;
+  const rawFromDb =
+    rawFromSettings !== undefined
+      ? rawFromSettings
+      : ((
+          (await db
+            .prepare("SELECT allow_self_registration FROM app_settings WHERE realm = ?")
+            .get(realm)) as { allow_self_registration: number | null } | undefined
+        )?.allow_self_registration);
 
-  if (allowFromDb === 1) return true;
-  if (allowFromDb === 0) return false;
+  const flag = resolveRegistrationFlag(rawFromDb);
 
-  if (process.env.ALLOW_SELF_REGISTRATION === "1") return true;
-  if (process.env.NODE_ENV !== "production") return true;
-  return false;
+  if (flag === false) return false;
+  if (flag === true) return true;
+
+  if (process.env.ALLOW_SELF_REGISTRATION === "0") return false;
+  return true;
 }
 
 export async function isSelfRegistrationAllowedForRealm(db: DbLike, realm: Realm): Promise<boolean> {

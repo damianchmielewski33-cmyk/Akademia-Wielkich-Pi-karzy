@@ -14,6 +14,7 @@ import {
   adminToggleRowClass,
 } from "@/components/admin-ui";
 import { Button } from "@/components/ui/button";
+import { YesNoSwitchRow } from "@/components/ui/yes-no-switch";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
@@ -65,39 +66,6 @@ function FieldRow({
       {hint ? <p className="text-sm leading-relaxed pitch-muted">{hint}</p> : null}
       {children}
     </div>
-  );
-}
-
-function ToggleRow({
-  label,
-  hint,
-  checked,
-  disabled,
-  onChange,
-}: {
-  label: string;
-  hint?: string;
-  checked: boolean;
-  disabled?: boolean;
-  onChange: (v: boolean) => void;
-}) {
-  return (
-    <label className={adminToggleRowClass}>
-      <span className="min-w-0">
-        <span className="block text-sm font-semibold text-white">{label}</span>
-        {hint ? <span className="mt-1 block text-sm pitch-muted">{hint}</span> : null}
-      </span>
-      <span className="flex items-center gap-2">
-        <input
-          type="checkbox"
-          className="h-4 w-4 rounded border-white/30 bg-black/20 text-emerald-500 focus:ring-emerald-400"
-          checked={checked}
-          disabled={disabled}
-          onChange={(e) => onChange(e.target.checked)}
-        />
-        <span className="text-sm font-medium text-emerald-100/90">{checked ? "Tak" : "Nie"}</span>
-      </span>
-    </label>
   );
 }
 
@@ -175,19 +143,13 @@ export function AdminSettingsTab({ loading, onReload, settingsRealm = "academy" 
   }
 
   const registrationStatusLabel = (() => {
-    if (settings.allow_self_registration === true) {
-      return "Włączona — każdy może założyć konto";
-    }
     if (settings.allow_self_registration === false) {
       return "Wyłączona — nowe konta zakłada administrator";
     }
     if (settings.system.self_registration_env_override) {
-      return "Włączona dodatkowo na serwerze";
+      return "Włączona dodatkowo na serwerze (zmienna env)";
     }
-    if (!settings.system.is_production) {
-      return "Włączona (serwer testowy)";
-    }
-    return "Domyślnie wyłączona po utworzeniu pierwszego konta";
+    return "Włączona — gracze mogą zakładać konta samodzielnie";
   })();
 
   return (
@@ -433,43 +395,38 @@ export function AdminSettingsTab({ loading, onReload, settingsRealm = "academy" 
       >
         <FieldRow
           label="Czy nowi gracze mogą sami zakładać konta?"
-          hint="Standardowo: pierwszy użytkownik może się zarejestrować, potem rejestracja jest zamknięta. Możesz to wymusić włączeniem lub wyłączeniem poniżej."
+          hint="Domyślnie rejestracja jest otwarta. Wyłącz, jeśli nowe konta ma zakładać tylko administrator."
         >
           <select
             className={cn("awp-native-select h-10 w-full rounded-xl px-3 text-sm", adminFieldClass)}
-            value={
-              settings.allow_self_registration === null
-                ? "auto"
-                : settings.allow_self_registration
-                  ? "open"
-                  : "closed"
-            }
+            value={settings.allow_self_registration === false ? "closed" : "open"}
             disabled={busy}
             onChange={(e) => {
               const v = e.target.value;
               void save({
-                allow_self_registration: v === "auto" ? null : v === "open",
+                allow_self_registration: v === "closed" ? false : true,
               });
             }}
           >
-            <option value="auto">Standardowo (zalecane)</option>
-            <option value="open">Tak — zawsze pozwól na rejestrację</option>
-            <option value="closed">Nie — tylko administrator dodaje graczy</option>
+            <option value="open">Włączona — gracze sami zakładają konta</option>
+            <option value="closed">Wyłączona — tylko administrator dodaje graczy</option>
           </select>
         </FieldRow>
-        <ToggleRow
+        <YesNoSwitchRow
+          className={adminToggleRowClass}
           label="Pytaj gracza o e-mail po logowaniu"
           hint="Okno z prośbą o adres i zgodę na powiadomienia o nowych meczach."
           checked={settings.match_notification_prompt_enabled}
           disabled={busy}
-          onChange={(v) => void save({ match_notification_prompt_enabled: v })}
+          onCheckedChange={(v) => void save({ match_notification_prompt_enabled: v })}
         />
-        <ToggleRow
+        <YesNoSwitchRow
+          className={adminToggleRowClass}
           label="Wysyłaj e-maile o nowych meczach"
           hint="Do graczy, którzy zgodzili się na powiadomienia. Wymaga skonfigurowanej wysyłki e-mail na serwerze."
           checked={settings.match_email_notifications_enabled}
           disabled={busy}
-          onChange={(v) => void save({ match_email_notifications_enabled: v })}
+          onCheckedChange={(v) => void save({ match_email_notifications_enabled: v })}
         />
       </SettingsSection>
 

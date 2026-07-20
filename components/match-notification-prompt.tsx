@@ -9,6 +9,7 @@ import { AppModal } from "@/components/ui/app-modal";
 import { Button } from "@/components/ui/button";
 import { FormInput } from "@/components/ui/form-field";
 import { modalPanelClass } from "@/components/ui/modal-shared";
+import { YesNoSwitch } from "@/components/ui/yes-no-switch";
 import { formSchemas } from "@/lib/form-validation";
 
 type MeUser = {
@@ -174,18 +175,21 @@ export function MatchNotificationPrompt() {
         disabled={busy}
       />
       <div className={modalPanelClass}>
-        <label className="flex cursor-pointer gap-3 text-sm leading-snug text-zinc-800 dark:text-zinc-200">
-          <input
-            type="checkbox"
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <p className="text-sm leading-snug text-zinc-800 dark:text-zinc-200">
+            Wyrażam dobrowolną zgodę na przetwarzanie podanego adresu e-mail w celu przesyłania informacji o nowych
+            terminach meczów w ramach serwisu Akademii Wielkich Piłkarzy. Wiem, że mogę wycofać zgodę w dowolnym
+            momencie (np. kontaktując się z administratorem strony); wycofanie zgody nie wpływa na zgodność z prawem
+            przetwarzania przed jej wycofaniem.
+          </p>
+          <YesNoSwitch
             checked={consent}
-            onChange={(e) => setConsent(e.target.checked)}
+            onCheckedChange={setConsent}
             disabled={busy}
-            className="mt-0.5 h-4 w-4 shrink-0 rounded border-zinc-300 text-emerald-700 focus:ring-emerald-600"
+            tone="pitch"
+            aria-label="Zgoda na powiadomienia e-mail"
           />
-          <span>
-            Wyrażam dobrowolną zgodę na przetwarzanie podanego adresu e-mail w celu przesyłania informacji o nowych terminach meczów w ramach serwisu Akademii Wielkich Piłkarzy. Wiem, że mogę wycofać zgodę w dowolnym momencie (np. kontaktując się z administratorem strony); wycofanie zgody nie wpływa na zgodność z prawem przetwarzania przed jej wycofaniem.
-          </span>
-        </label>
+        </div>
       </div>
     </AppModal>
   );

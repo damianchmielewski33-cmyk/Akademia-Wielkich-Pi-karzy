@@ -60,6 +60,7 @@ import {
 } from "@/components/ui/modal-shared";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { YesNoSwitchRow } from "@/components/ui/yes-no-switch";
 import {
   Select,
   SelectContent,
@@ -2222,26 +2223,16 @@ function UserCreateForm({
             </SelectContent>
           </Select>
         </div>
-        <label className={`${adminToggleRowClass} mt-1`}>
-          <span className="min-w-0">
-            <span className="block text-sm font-semibold text-zinc-900 dark:text-white">Dostęp do PZU Cup</span>
-            <span className="mt-1 block text-sm text-zinc-600 dark:text-zinc-400">
-              Użytkownik zobaczy ukryty kafelek „PZU Cup” na stronie startowej i wejdzie do panelu turnieju.
-            </span>
-          </span>
-          <span className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              className="h-4 w-4 rounded border-zinc-300 text-emerald-600 focus:ring-emerald-500"
-              checked={canPzuCup}
-              disabled={saving}
-              onChange={(e) => setCanPzuCup(e.target.checked)}
-            />
-            <span className="text-sm font-medium text-zinc-700 dark:text-emerald-100/90">
-              {canPzuCup ? "Tak" : "Nie"}
-            </span>
-          </span>
-        </label>
+        <YesNoSwitchRow
+          className={`${adminToggleRowClass} mt-1`}
+          label="Dostęp do PZU Cup"
+          hint="Użytkownik zobaczy ukryty kafelek „PZU Cup” na stronie startowej i wejdzie do panelu turnieju."
+          checked={canPzuCup}
+          disabled={saving}
+          onCheckedChange={setCanPzuCup}
+          tone="light"
+          rowTone="light"
+        />
       </div>
     </AppModal>
   );
@@ -2355,26 +2346,16 @@ function UserEditForm({
             </SelectContent>
           </Select>
         </div>
-        <label className="flex flex-wrap items-start justify-between gap-4 rounded-xl border border-zinc-200 bg-zinc-50/80 px-4 py-3 dark:border-zinc-700 dark:bg-zinc-900/40">
-          <span className="min-w-0">
-            <span className="block text-sm font-semibold text-zinc-900 dark:text-white">Dostęp do PZU Cup</span>
-            <span className="mt-1 block text-sm text-zinc-600 dark:text-zinc-400">
-              Widoczny kafelek turnieju na stronie startowej i dostęp do /pzu-cup.
-            </span>
-          </span>
-          <span className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              className="h-4 w-4 rounded border-zinc-300 text-emerald-600 focus:ring-emerald-500"
-              checked={canPzuCup}
-              disabled={saving}
-              onChange={(e) => setCanPzuCup(e.target.checked)}
-            />
-            <span className="text-sm font-medium text-zinc-700 dark:text-emerald-100/90">
-              {canPzuCup ? "Tak" : "Nie"}
-            </span>
-          </span>
-        </label>
+        <YesNoSwitchRow
+          className="rounded-xl border border-zinc-200 bg-zinc-50/80 px-4 py-3 dark:border-zinc-700 dark:bg-zinc-900/40"
+          label="Dostęp do PZU Cup"
+          hint="Widoczny kafelek turnieju na stronie startowej i dostęp do /pzu-cup."
+          checked={canPzuCup}
+          disabled={saving}
+          onCheckedChange={setCanPzuCup}
+          tone="light"
+          rowTone="light"
+        />
       </div>
     </AppModal>
   );

@@ -5,6 +5,7 @@ import { AppModal } from "@/components/ui/app-modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { YesNoSwitchRow } from "@/components/ui/yes-no-switch";
 import { adminFieldClass } from "@/components/admin-ui";
 import type { GalleryVideoRow } from "@/lib/gallery-videos";
 
@@ -120,16 +121,14 @@ export function GalleryVideoFormModal({
             />
           </div>
         </div>
-        <label className="flex cursor-pointer items-center gap-2 text-sm text-emerald-100/90">
-          <input
-            type="checkbox"
-            className="h-4 w-4 rounded border-white/30 bg-black/20"
-            checked={form.published}
-            disabled={busy}
-            onChange={(e) => onFormChange({ ...form, published: e.target.checked })}
-          />
-          Widoczny publicznie na stronie Galeria
-        </label>
+        <YesNoSwitchRow
+          className="rounded-xl border border-white/20 bg-black/10 px-4 py-3"
+          label="Widoczny publicznie na stronie Galeria"
+          checked={form.published}
+          disabled={busy}
+          onCheckedChange={(v) => onFormChange({ ...form, published: v })}
+          tone="admin"
+        />
       </div>
     </AppModal>
   );
