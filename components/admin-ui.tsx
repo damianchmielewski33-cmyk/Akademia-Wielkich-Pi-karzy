@@ -14,8 +14,16 @@ import { cn } from "@/lib/utils";
 
 export const adminTableShellClass = "admin-table-shell";
 
+export const adminDataTableShellClass = "admin-data-table-shell";
+
 export const adminSearchInputClass =
   "border-white/25 bg-black/15 text-white placeholder:text-emerald-100/45 pl-9 focus-visible:ring-emerald-400/60";
+
+export const adminDataSearchInputClass =
+  "border-zinc-300 bg-white text-zinc-900 placeholder:text-zinc-400 pl-9 focus-visible:ring-emerald-500/50 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-50 dark:placeholder:text-zinc-500";
+
+export const adminDataOutlineBtnClass =
+  "border-zinc-300 bg-white text-zinc-800 hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800";
 
 export const adminOutlineBtnClass = "border-white/30 bg-black/10 text-white hover:bg-white/15 dark:border-white/20";
 
@@ -285,24 +293,43 @@ export function AdminCard({
   children,
   className,
   headerExtra,
+  tone = "pitch",
 }: {
   title?: string;
   description?: string;
   children?: ReactNode;
   className?: string;
   headerExtra?: ReactNode;
+  /** `data` — jasny panel pod tabele i wykresy (analityka). */
+  tone?: "pitch" | "data";
 }) {
+  const header =
+    title || description || headerExtra ? (
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          {title ? <h2 className="pitch-heading text-lg font-bold">{title}</h2> : null}
+          {description ? (
+            <p className={cn("mt-1 text-sm", tone === "data" ? "admin-data-muted" : "pitch-muted")}>
+              {description}
+            </p>
+          ) : null}
+        </div>
+        {headerExtra}
+      </div>
+    ) : null;
+
+  if (tone === "data") {
+    return (
+      <section className={cn("admin-data-card", className)}>
+        {header}
+        {children}
+      </section>
+    );
+  }
+
   return (
     <PitchCard className={cn(className)} contentClassName="p-5 sm:p-6">
-      {(title || description || headerExtra) && (
-        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div className="min-w-0">
-            {title ? <h2 className="pitch-heading text-lg font-bold">{title}</h2> : null}
-            {description ? <p className="mt-1 text-sm pitch-muted">{description}</p> : null}
-          </div>
-          {headerExtra}
-        </div>
-      )}
+      {header}
       {children}
     </PitchCard>
   );
@@ -350,9 +377,15 @@ export function AdminMetricTile({
 export function AdminTableShell({
   children,
   className,
+  tone = "pitch",
 }: {
   children: ReactNode;
   className?: string;
+  tone?: "pitch" | "data";
 }) {
-  return <div className={cn(adminTableShellClass, className)}>{children}</div>;
+  return (
+    <div className={cn(tone === "data" ? adminDataTableShellClass : adminTableShellClass, className)}>
+      {children}
+    </div>
+  );
 }

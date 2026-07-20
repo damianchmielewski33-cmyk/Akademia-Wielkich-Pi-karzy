@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getDb, logActivity } from "@/lib/db";
 import { requireUser } from "@/lib/api-helpers";
+import { screenBlockApiResponse } from "@/lib/screen-block-api";
 import { getActiveRankingSeasonId } from "@/lib/ranking-seasons";
 import { isWithinStatsEditWindow, utcTodayYmd } from "@/lib/match-stats-rules";
 import { PARTICIPATION_SURVEY_KEY, participationSurveyPlayedYes } from "@/lib/match-participation-survey";
@@ -64,6 +65,9 @@ async function parseBody(req: Request) {
 }
 
 export async function POST(req: Request) {
+  const blocked = await screenBlockApiResponse(req);
+  if (blocked) return blocked;
+
   const gate = await requireUser();
   if (!gate.ok) return gate.response;
   const session = gate.session;

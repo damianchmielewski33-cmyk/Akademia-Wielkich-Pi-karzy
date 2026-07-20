@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getDb, logActivity } from "@/lib/db";
 import { requireUser } from "@/lib/api-helpers";
+import { screenBlockApiResponse } from "@/lib/screen-block-api";
 
 export const runtime = "nodejs";
 
@@ -14,6 +15,9 @@ const postSchema = z.object({
  * Zawodnik deklaruje: "przelałem pieniądze" -> admin ma do autoryzacji otrzymanie.
  */
 export async function POST(req: Request) {
+  const blocked = await screenBlockApiResponse(req);
+  if (blocked) return blocked;
+
   const gate = await requireUser();
   if (!gate.ok) return gate.response;
 

@@ -279,6 +279,7 @@ export function AdminSettingsTab({ loading, onReload, settingsRealm = "academy" 
             const customMap: Record<(typeof SITE_ASSET_KEYS)[number], string | null> = {
               logo_header: settings.asset_logo_header_url,
               logo_crest: settings.asset_logo_crest_url,
+              logo_login: settings.asset_logo_login_url,
               logo_favicon: settings.asset_logo_favicon_url,
               bg_soccer_ball: settings.asset_bg_soccer_ball_url,
               bg_stadium: settings.asset_bg_stadium_url,

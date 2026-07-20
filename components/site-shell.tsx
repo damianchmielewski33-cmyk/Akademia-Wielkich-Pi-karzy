@@ -34,6 +34,7 @@ import { SiteAssetImage } from "@/components/site-asset-image";
 import { useSiteAsset } from "@/components/site-assets-provider";
 import { cn } from "@/lib/utils";
 import { SITE_NAME, getPublicContactEmailWithFallback } from "@/lib/site";
+import { useScreenBlocks } from "@/components/screen-blocks-provider";
 
 type Props = {
   children: ReactNode;
@@ -94,6 +95,7 @@ export function SiteShell({
   const pathname = usePathname();
   const contactEmail = contactEmailProp ?? getPublicContactEmailWithFallback();
   const pitchLinesBg = useSiteAsset("bg_pitch_lines");
+  const { isHiddenHref } = useScreenBlocks();
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [themeBusy, setThemeBusy] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -140,7 +142,7 @@ export function SiteShell({
     { href: "/register", label: "Rejestracja", visible: !isLoggedIn, icon: UserPlus },
   ];
 
-  const visibleNav = navItems.filter((x) => x.visible);
+  const visibleNav = navItems.filter((x) => x.visible && !isHiddenHref(x.href));
 
   const isDarkNow =
     typeof document !== "undefined" ? document.documentElement.classList.contains("dark") : true;

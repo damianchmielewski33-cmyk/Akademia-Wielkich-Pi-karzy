@@ -3,6 +3,12 @@ import { z } from "zod";
 import { getDb, logActivity } from "@/lib/db";
 import { requireAdmin } from "@/lib/api-helpers";
 import { tryRemoveTemporaryGuestIfBalanceZero } from "@/lib/guest-cleanup";
+import { syncPaidFlagWithWallet } from "@/lib/match-paid";
+import {
+  assertMatchOpenForSignup,
+  decrementMatchSignedUp,
+  tryIncrementMatchSignedUp,
+} from "@/lib/match-signup";
 
 export const runtime = "nodejs";
 
@@ -84,6 +90,17 @@ export async function PATCH(req: Request, context: RouteContext) {
     parsed.data.user_id
   );
 
+  const matchLabel = `${match.match_date} ${match.match_time} (${match.location})`;
+  if (paid === 1) {
+    await syncPaidFlagWithWallet(db, {
+      matchId: mid,
+      userId: parsed.data.user_id,
+      paid: true,
+      adminId: gate.session.userId,
+      matchLabel,
+    });
+  }
+
   const who = await db
     .prepare("SELECT first_name, last_name FROM users WHERE id = ?")
     .get(parsed.data.user_id) as { first_name: string; last_name: string } | undefined;
@@ -137,12 +154,13 @@ export async function POST(req: Request, context: RouteContext) {
         signed_up: number;
         max_slots: number;
         played: number;
+        cancelled?: number;
       }
     | undefined;
   if (!match) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  if (match.played === 1 || match.match_date < todayISO()) {
-    return NextResponse.json({ error: "Nie można zapisać do meczu po terminie lub rozegranego." }, { status: 400 });
-  }
+
+  const signupErr = assertMatchOpenForSignup(match);
+  if (signupErr) return NextResponse.json({ error: signupErr }, { status: 400 });
 
   const uid = parsed.data.user_id;
   const who = (await db
@@ -158,12 +176,11 @@ export async function POST(req: Request, context: RouteContext) {
     return NextResponse.json({ ok: true, already: true }, { status: 200 });
   }
 
-  if (match.signed_up >= match.max_slots) {
-    return NextResponse.json({ error: "Brak miejsc na ten mecz!" }, { status: 400 });
-  }
-
   if (existing) {
-    // "Przywróć" zapis: zamień na commitment=1 i wyczyść transport (admin zapisuje ręcznie — transport ustawia zawodnik).
+    const incremented = await tryIncrementMatchSignedUp(db, mid);
+    if (!incremented) {
+      return NextResponse.json({ error: "Brak miejsc na ten mecz!" }, { status: 400 });
+    }
     await db
       .prepare(
         `UPDATE match_signups
@@ -172,6 +189,10 @@ export async function POST(req: Request, context: RouteContext) {
       )
       .run(existing.id);
   } else {
+    const incremented = await tryIncrementMatchSignedUp(db, mid);
+    if (!incremented) {
+      return NextResponse.json({ error: "Brak miejsc na ten mecz!" }, { status: 400 });
+    }
     await db
       .prepare(
         `INSERT INTO match_signups (user_id, match_id, paid, commitment, drives_car, can_take_passengers, needs_transport)
@@ -179,7 +200,6 @@ export async function POST(req: Request, context: RouteContext) {
       )
       .run(uid, mid);
   }
-  await db.prepare("UPDATE matches SET signed_up = signed_up + 1 WHERE id = ?").run(mid);
 
   logActivity(
     gate.session.userId,
@@ -229,7 +249,7 @@ export async function DELETE(req: Request, context: RouteContext) {
 
   await db.prepare("DELETE FROM match_signups WHERE id = ?").run(signup.id);
   if (signup.commitment === 1) {
-    await db.prepare("UPDATE matches SET signed_up = signed_up - 1 WHERE id = ? AND signed_up > 0").run(mid);
+    await decrementMatchSignedUp(db, mid);
   }
 
   const who = (await db

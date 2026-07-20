@@ -76,3 +76,51 @@ export async function notifySubscribersAboutNewMatch(match: MatchRow): Promise<v
     console.log(`[match-notifications] Mecz id=${match.id}: wysłano ${sent}/${rows.length} wiadomości.`);
   }
 }
+
+export async function notifySignedUpPlayersAboutCancelledMatch(args: {
+  matchId: number;
+  matchDate: string;
+  matchTime: string;
+  location: string;
+  reason: string;
+}): Promise<void> {
+  const db = await getDb();
+  const settings = await getAppSettings(db);
+
+  const players = (await db
+    .prepare(
+      `SELECT u.id, u.email, u.first_name
+       FROM match_signups ms
+       JOIN users u ON u.id = ms.user_id
+       WHERE ms.match_id = ? AND COALESCE(ms.commitment, 1) = 1`
+    )
+    .all(args.matchId)) as { id: number; email: string | null; first_name: string }[];
+
+  if (players.length === 0) return;
+
+  if (isMailConfigured() && settings.match_email_notifications_enabled) {
+    const subject = `Mecz odwołany — ${args.matchDate} ${args.matchTime}`;
+    for (const row of players) {
+      const email = row.email?.trim();
+      if (!email) continue;
+      const text = [
+        `Cześć ${row.first_name},`,
+        "",
+        `Mecz został anulowany:`,
+        `• Data: ${args.matchDate}`,
+        `• Godzina: ${args.matchTime}`,
+        `• Miejsce: ${args.location}`,
+        `• Powód: ${args.reason}`,
+        "",
+        `Sprawdź terminarz na stronie akademii.`,
+        "",
+        `— ${settings.site_name}`,
+      ].join("\n");
+      try {
+        await sendMail({ to: email, subject, text });
+      } catch (e) {
+        console.error(`[match-notifications] anulacja — błąd mail do user ${row.id}:`, e);
+      }
+    }
+  }
+}

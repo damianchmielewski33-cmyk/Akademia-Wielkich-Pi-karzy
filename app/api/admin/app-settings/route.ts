@@ -12,6 +12,7 @@ import { getDb } from "@/lib/db";
 import { isMailConfigured } from "@/lib/mail";
 import { parseYoutubeVideoIdFromUserInput } from "@/lib/site";
 import { parseRealm, REALMS } from "@/lib/realm";
+import { BLOCKABLE_SCREENS } from "@/lib/screen-blocks";
 
 export const runtime = "nodejs";
 
@@ -22,6 +23,13 @@ const MAX_URL_LEN = 2048;
 const cancelReasonSchema = z.object({
   value: z.string().trim().min(1).max(64),
   label: z.string().trim().min(1).max(120),
+});
+
+const screenBlockEntrySchema = z.object({
+  disabled: z.boolean(),
+  message: z.string().max(500),
+  active_from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  active_until: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
 });
 
 const putBodySchema = z
@@ -52,6 +60,7 @@ const putBodySchema = z
     lineup_pitch_slots_min: z.number().int().min(1).max(32).optional(),
     lineup_pitch_slots_max: z.number().int().min(1).max(32).optional(),
     match_cancel_reasons: z.array(cancelReasonSchema).min(1).max(20).optional(),
+    screen_blocks: z.record(z.string(), screenBlockEntrySchema).optional(),
   })
   .strict();
 
@@ -215,6 +224,24 @@ export async function PUT(req: Request) {
       return NextResponse.json({ error: "Wymagany co najmniej jeden powód anulowania" }, { status: 400 });
     }
     next.match_cancel_reasons = cleaned;
+  }
+
+  if (body.screen_blocks !== undefined) {
+    const merged = { ...current.screen_blocks };
+    for (const screen of BLOCKABLE_SCREENS) {
+      const entry = body.screen_blocks[screen.key];
+      if (!entry) {
+        merged[screen.key] = { disabled: false, message: "" };
+        continue;
+      }
+      merged[screen.key] = {
+        disabled: entry.disabled,
+        message: entry.message.trim().slice(0, 500),
+        ...(entry.active_from ? { active_from: entry.active_from } : {}),
+        ...(entry.active_until ? { active_until: entry.active_until } : {}),
+      };
+    }
+    next.screen_blocks = merged;
   }
 
   await saveAppSettings(db, realm, next);

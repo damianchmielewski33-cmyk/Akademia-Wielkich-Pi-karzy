@@ -3,7 +3,8 @@ import { z } from "zod";
 import { getDb, logActivity } from "@/lib/db";
 import { createSessionToken, setSessionCookie } from "@/lib/auth";
 import { normalizePlayerAlias } from "@/lib/player-alias";
-import { checkRateLimit, rateLimitKey, rateLimitedResponse, RATE } from "@/lib/rate-limit";
+import { checkRateLimitDistributed } from "@/lib/rate-limit-db";
+import { rateLimitKey, rateLimitedResponse, RATE } from "@/lib/rate-limit";
 import { hashPin, isValidPinFormat, isWeakPin, WEAK_PIN_MESSAGE } from "@/lib/pin";
 
 export const runtime = "nodejs";
@@ -22,7 +23,7 @@ const bodySchema = z.object({
 
 export async function POST(req: Request) {
   await connection();
-  const rl = checkRateLimit(rateLimitKey("set_initial_pin", req), RATE.register.limit, RATE.register.windowMs);
+  const rl = await checkRateLimitDistributed(rateLimitKey("set_initial_pin", req), RATE.register.limit, RATE.register.windowMs);
   if (!rl.ok) return rateLimitedResponse(rl.retryAfterSec);
 
   let json: unknown;

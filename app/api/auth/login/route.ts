@@ -2,7 +2,8 @@ import { connection, NextResponse } from "next/server";
 import { z } from "zod";
 import { getDb, logActivity } from "@/lib/db";
 import { createSessionToken, setSessionCookie } from "@/lib/auth";
-import { checkRateLimit, rateLimitKey, rateLimitedResponse, RATE } from "@/lib/rate-limit";
+import { checkRateLimitDistributed } from "@/lib/rate-limit-db";
+import { rateLimitKey, rateLimitedResponse, RATE } from "@/lib/rate-limit";
 import { hashPin, isValidPinFormat, verifyPin } from "@/lib/pin";
 import { parseRealm, REALMS } from "@/lib/realm";
 
@@ -30,7 +31,7 @@ type LoginUserRow = {
 
 export async function POST(req: Request) {
   await connection();
-  const rl = checkRateLimit(rateLimitKey("login", req), RATE.login.limit, RATE.login.windowMs);
+  const rl = await checkRateLimitDistributed(rateLimitKey("login", req), RATE.login.limit, RATE.login.windowMs);
   if (!rl.ok) return rateLimitedResponse(rl.retryAfterSec);
 
   let json: unknown;

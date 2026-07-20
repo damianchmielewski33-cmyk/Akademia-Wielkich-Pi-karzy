@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getDb, logActivity } from "@/lib/db";
 import { requireAdmin } from "@/lib/api-helpers";
 import { adminDemotionBlockedReason, bumpAuthVersion } from "@/lib/admin-role";
+import { deleteUserAccountData } from "@/lib/delete-user-data";
 import { normalizePlayerAlias } from "@/lib/player-alias";
 
 export const runtime = "nodejs";
@@ -117,27 +118,15 @@ export async function DELETE(_req: Request, ctx: Ctx) {
     .get(userId)) as { first_name: string; last_name: string; player_alias: string } | undefined;
   if (!target) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const signupMatchIds = (await db
-    .prepare("SELECT match_id, COALESCE(commitment, 1) AS commitment FROM match_signups WHERE user_id = ?")
-    .all(userId)) as { match_id: number; commitment: number }[];
-
-  for (const row of signupMatchIds) {
-    if (row.commitment === 1) {
-      await db
-        .prepare("UPDATE matches SET signed_up = signed_up - 1 WHERE id = ? AND signed_up > 0")
-        .run(row.match_id);
-    }
+  try {
+    await deleteUserAccountData(db, userId);
+  } catch (err) {
+    console.error("[admin/user] DELETE failed", err);
+    return NextResponse.json(
+      { error: "Nie udało się usunąć użytkownika — konto ma powiązane dane, których nie udało się wyczyścić." },
+      { status: 500 }
+    );
   }
-  await db.prepare("UPDATE page_views SET user_id = NULL WHERE user_id = ?").run(userId);
-  await db.prepare("DELETE FROM match_transport_messages WHERE user_id = ?").run(userId);
-  await db.prepare("DELETE FROM match_participation_survey WHERE user_id = ?").run(userId);
-  await db.prepare("UPDATE activity_log SET user_id = NULL WHERE user_id = ?").run(userId);
-  await db.prepare("DELETE FROM match_lineup_slots WHERE user_id = ?").run(userId);
-  await db.prepare("DELETE FROM match_stats WHERE user_id = ?").run(userId);
-  await db.prepare("DELETE FROM standalone_match_stats WHERE user_id = ?").run(userId);
-  await db.prepare("DELETE FROM participation_survey_answer WHERE user_id = ?").run(userId);
-  await db.prepare("DELETE FROM match_signups WHERE user_id = ?").run(userId);
-  await db.prepare("DELETE FROM users WHERE id = ?").run(userId);
 
   await logActivity(
     gate.session.userId,

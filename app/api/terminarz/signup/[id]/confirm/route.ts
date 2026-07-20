@@ -2,14 +2,17 @@ import { NextResponse } from "next/server";
 import { getDb, logActivity } from "@/lib/db";
 import { requireUser } from "@/lib/api-helpers";
 import { normalizeTransportFromBody, validateTransportBody, type SignupTransportRow } from "@/lib/transport";
+import {
+  assertMatchOpenForSignup,
+  tryIncrementMatchSignedUp,
+  decrementMatchSignedUp,
+  type MatchSignupRow,
+} from "@/lib/match-signup";
+import { screenBlockApiResponse } from "@/lib/screen-block-api";
 
 export const runtime = "nodejs";
 
 type Ctx = { params: Promise<{ id: string }> };
-
-function todayISO() {
-  return new Date().toISOString().slice(0, 10);
-}
 
 function parseTransportBody(raw: unknown): SignupTransportRow | { error: string } {
   if (raw === null || typeof raw !== "object") {
@@ -34,6 +37,9 @@ function parseTransportBody(raw: unknown): SignupTransportRow | { error: string 
 
 /** Promocja zapisu wstępnego («jeszcze nie wiem» / «nie biorę udziału») na pełny zapis z transportem. */
 export async function POST(req: Request, ctx: Ctx) {
+  const blocked = await screenBlockApiResponse(req);
+  if (blocked) return blocked;
+
   const gate = await requireUser();
   if (!gate.ok) return gate.response;
   const { id } = await ctx.params;
@@ -55,25 +61,11 @@ export async function POST(req: Request, ctx: Ctx) {
   const transport = tr as SignupTransportRow;
 
   const db = await getDb();
-  const match = await db.prepare("SELECT * FROM matches WHERE id = ?").get(mid) as
-    | {
-        id: number;
-        match_date: string;
-        match_time: string;
-        location: string;
-        signed_up: number;
-        max_slots: number;
-        played: number;
-      }
-    | undefined;
+  const match = (await db.prepare("SELECT * FROM matches WHERE id = ?").get(mid)) as MatchSignupRow | undefined;
   if (!match) return NextResponse.json({ error: "Mecz nie istnieje" }, { status: 404 });
 
-  if (match.match_date < todayISO() || match.played === 1) {
-    return NextResponse.json(
-      { error: "Nie można potwierdzić udziału po terminie lub rozegranym meczu." },
-      { status: 400 }
-    );
-  }
+  const openErr = assertMatchOpenForSignup(match);
+  if (openErr) return NextResponse.json({ error: openErr }, { status: 400 });
 
   const row = (await db
     .prepare(
@@ -91,20 +83,29 @@ export async function POST(req: Request, ctx: Ctx) {
     return NextResponse.json({ error: "Brak miejsc na ten mecz!" }, { status: 400 });
   }
 
-  await db
-    .prepare(
-      `UPDATE match_signups
-       SET commitment = 1, drives_car = ?, can_take_passengers = ?, needs_transport = ?
-       WHERE user_id = ? AND match_id = ?`
-    )
-    .run(
-      transport.drives_car,
-      transport.can_take_passengers,
-      transport.needs_transport,
-      gate.session.userId,
-      mid
-    );
-  await db.prepare("UPDATE matches SET signed_up = signed_up + 1 WHERE id = ?").run(mid);
+  const incremented = await tryIncrementMatchSignedUp(db, mid);
+  if (!incremented) {
+    return NextResponse.json({ error: "Brak miejsc na ten mecz!" }, { status: 400 });
+  }
+
+  try {
+    await db
+      .prepare(
+        `UPDATE match_signups
+         SET commitment = 1, drives_car = ?, can_take_passengers = ?, needs_transport = ?
+         WHERE user_id = ? AND match_id = ?`
+      )
+      .run(
+        transport.drives_car,
+        transport.can_take_passengers,
+        transport.needs_transport,
+        gate.session.userId,
+        mid
+      );
+  } catch (e) {
+    await decrementMatchSignedUp(db, mid);
+    throw e;
+  }
 
   await logActivity(
     gate.session.userId,

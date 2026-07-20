@@ -12,7 +12,9 @@ import { getAppSettings } from "@/lib/app-settings";
 import { getServerSession } from "@/lib/auth";
 import { CONTACT_ADMIN_RECIPIENT_KEYS, isContactAdminRecipientKey } from "@/lib/contact-admin-recipients";
 import { getDb, logActivity } from "@/lib/db";
-import { checkRateLimit, rateLimitKey, rateLimitedResponse, RATE } from "@/lib/rate-limit";
+import { checkRateLimitDistributed } from "@/lib/rate-limit-db";
+import { rateLimitKey, rateLimitedResponse, RATE } from "@/lib/rate-limit";
+import { notifyAdminsByEmail } from "@/lib/admin-notify";
 
 export const runtime = "nodejs";
 
@@ -36,7 +38,11 @@ const bodySchema = z
 
 export async function POST(req: Request) {
   await connection();
-  const rl = checkRateLimit(rateLimitKey("contact_admin", req), RATE.contactAdmin.limit, RATE.contactAdmin.windowMs);
+  const rl = await checkRateLimitDistributed(
+    rateLimitKey("contact_admin", req),
+    RATE.contactAdmin.limit,
+    RATE.contactAdmin.windowMs
+  );
   if (!rl.ok) return rateLimitedResponse(rl.retryAfterSec);
 
   let json: unknown;
@@ -133,6 +139,10 @@ export async function POST(req: Request) {
     .run(linkedUserId, senderName, senderEmail, recipient_key, text || "📷", conversationKey, attachment);
 
   await logActivity(userId, `Wiadomość do admina (${recipient_key}) od ${senderName}`);
+  void notifyAdminsByEmail(
+    "Nowa wiadomość od zawodnika — Akademia",
+    `${senderName} napisał do ${recipient_key}:\n\n${text || "(załącznik)"}`
+  );
 
   return NextResponse.json({ ok: true, conversation_key: conversationKey });
 }

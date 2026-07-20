@@ -495,6 +495,14 @@ export async function initLibsqlSchema(client: Client) {
     "CREATE INDEX IF NOT EXISTS idx_admin_messages_conversation ON admin_messages(conversation_key, created_at)"
   );
 
+  await client.execute(`
+    CREATE TABLE IF NOT EXISTS rate_limit_buckets (
+      bucket_key TEXT PRIMARY KEY,
+      count INTEGER NOT NULL DEFAULT 0,
+      reset_at TEXT NOT NULL
+    );
+  `);
+
   const rs = await client.execute("SELECT 1 AS ok FROM app_settings WHERE realm = 'academy'");
   if (rs.rows.length === 0) {
     await client.execute(

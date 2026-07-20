@@ -10,6 +10,14 @@ import {
 import { REALMS, type Realm } from "@/lib/realm";
 import { MATCH_CANCEL_REASONS } from "@/lib/match-cancel-reasons";
 import {
+  emptyScreenBlocksMap,
+  parseScreenBlocksJson,
+  serializeScreenBlocksMap,
+  BLOCKABLE_SCREENS,
+  type BlockableScreenKey,
+  type ScreenBlockEntry,
+} from "@/lib/screen-blocks";
+import {
   resolveSiteAssets,
   type ResolvedSiteAssets,
   type SiteAssetKey,
@@ -49,12 +57,15 @@ export type AppSettings = {
   /** Niestandardowe URL grafik — null = domyślny plik z `public/`. */
   asset_logo_header_url: string | null;
   asset_logo_crest_url: string | null;
+  asset_logo_login_url: string | null;
   asset_logo_favicon_url: string | null;
   asset_bg_soccer_ball_url: string | null;
   asset_bg_stadium_url: string | null;
   asset_bg_pitch_lines_url: string | null;
   /** Rozwiązane URL (z fallbackiem do domyślnych). */
   site_assets: ResolvedSiteAssets;
+  /** Zaślepki ekranów dla graczy (admin widzi pełną treść). */
+  screen_blocks: Record<BlockableScreenKey, ScreenBlockEntry>;
 };
 
 export const PZU_CUP_APP_SETTINGS_DEFAULTS: Partial<AppSettings> = {
@@ -94,6 +105,7 @@ export const APP_SETTINGS_DEFAULTS: AppSettings = {
   match_cancel_reasons: [...MATCH_CANCEL_REASONS],
   asset_logo_header_url: null,
   asset_logo_crest_url: null,
+  asset_logo_login_url: null,
   asset_logo_favicon_url: null,
   asset_bg_soccer_ball_url: null,
   asset_bg_stadium_url: null,
@@ -101,11 +113,13 @@ export const APP_SETTINGS_DEFAULTS: AppSettings = {
   site_assets: resolveSiteAssets({
     logo_header: null,
     logo_crest: null,
+    logo_login: null,
     logo_favicon: null,
     bg_soccer_ball: null,
     bg_stadium: null,
     bg_pitch_lines: null,
   }),
+  screen_blocks: emptyScreenBlocksMap(),
 };
 
 type DbReadLike = {
@@ -149,10 +163,12 @@ type AppSettingsRow = {
   match_cancel_reasons_json?: string | null;
   asset_logo_header_url?: string | null;
   asset_logo_crest_url?: string | null;
+  asset_logo_login_url?: string | null;
   asset_logo_favicon_url?: string | null;
   asset_bg_soccer_ball_url?: string | null;
   asset_bg_stadium_url?: string | null;
   asset_bg_pitch_lines_url?: string | null;
+  screen_blocks_json?: string | null;
 };
 
 function appSettingsSelectSql(): string {
@@ -186,10 +202,12 @@ function appSettingsSelectSql(): string {
     match_cancel_reasons_json,
     asset_logo_header_url,
     asset_logo_crest_url,
+    asset_logo_login_url,
     asset_logo_favicon_url,
     asset_bg_soccer_ball_url,
     asset_bg_stadium_url,
-    asset_bg_pitch_lines_url
+    asset_bg_pitch_lines_url,
+    screen_blocks_json
   FROM app_settings WHERE realm = ?
 `;
 }
@@ -237,6 +255,7 @@ function siteAssetUrlsFromRow(row: AppSettingsRow | null | undefined): SiteAsset
   return {
     logo_header: nullableAssetUrl(row?.asset_logo_header_url),
     logo_crest: nullableAssetUrl(row?.asset_logo_crest_url),
+    logo_login: nullableAssetUrl(row?.asset_logo_login_url),
     logo_favicon: nullableAssetUrl(row?.asset_logo_favicon_url),
     bg_soccer_ball: nullableAssetUrl(row?.asset_bg_soccer_ball_url),
     bg_stadium: nullableAssetUrl(row?.asset_bg_stadium_url),
@@ -311,11 +330,13 @@ export function resolveAppSettings(
     match_cancel_reasons: parseCancelReasonsJson(row?.match_cancel_reasons_json),
     asset_logo_header_url: assetUrls.logo_header,
     asset_logo_crest_url: assetUrls.logo_crest,
+    asset_logo_login_url: assetUrls.logo_login,
     asset_logo_favicon_url: assetUrls.logo_favicon,
     asset_bg_soccer_ball_url: assetUrls.bg_soccer_ball,
     asset_bg_stadium_url: assetUrls.bg_stadium,
     asset_bg_pitch_lines_url: assetUrls.bg_pitch_lines,
     site_assets: resolveSiteAssets(assetUrls),
+    screen_blocks: parseScreenBlocksJson(row?.screen_blocks_json),
   };
 }
 
@@ -328,6 +349,7 @@ export async function saveAppSettings(db: DbWriteLike, realm: Realm, settings: A
   const assetUrls = {
     logo_header: settings.asset_logo_header_url,
     logo_crest: settings.asset_logo_crest_url,
+    logo_login: settings.asset_logo_login_url,
     logo_favicon: settings.asset_logo_favicon_url,
     bg_soccer_ball: settings.asset_bg_soccer_ball_url,
     bg_stadium: settings.asset_bg_stadium_url,
@@ -365,10 +387,12 @@ export async function saveAppSettings(db: DbWriteLike, realm: Realm, settings: A
         match_cancel_reasons_json = ?,
         asset_logo_header_url = ?,
         asset_logo_crest_url = ?,
+        asset_logo_login_url = ?,
         asset_logo_favicon_url = ?,
         asset_bg_soccer_ball_url = ?,
         asset_bg_stadium_url = ?,
-        asset_bg_pitch_lines_url = ?
+        asset_bg_pitch_lines_url = ?,
+        screen_blocks_json = ?
       WHERE realm = ?`
     )
     .run(
@@ -400,10 +424,12 @@ export async function saveAppSettings(db: DbWriteLike, realm: Realm, settings: A
       serializeMatchCancelReasons(settings.match_cancel_reasons),
       assetUrls.logo_header,
       assetUrls.logo_crest,
+      assetUrls.logo_login,
       assetUrls.logo_favicon,
       assetUrls.bg_soccer_ball,
       assetUrls.bg_stadium,
       assetUrls.bg_pitch_lines,
+      serializeScreenBlocksMap(settings.screen_blocks),
       realm
     );
 }
@@ -460,10 +486,12 @@ const APP_SETTINGS_MIGRATION_COLUMNS: { name: string; ddl: string }[] = [
   { name: "match_cancel_reasons_json", ddl: "ALTER TABLE app_settings ADD COLUMN match_cancel_reasons_json TEXT" },
   { name: "asset_logo_header_url", ddl: "ALTER TABLE app_settings ADD COLUMN asset_logo_header_url TEXT" },
   { name: "asset_logo_crest_url", ddl: "ALTER TABLE app_settings ADD COLUMN asset_logo_crest_url TEXT" },
+  { name: "asset_logo_login_url", ddl: "ALTER TABLE app_settings ADD COLUMN asset_logo_login_url TEXT" },
   { name: "asset_logo_favicon_url", ddl: "ALTER TABLE app_settings ADD COLUMN asset_logo_favicon_url TEXT" },
   { name: "asset_bg_soccer_ball_url", ddl: "ALTER TABLE app_settings ADD COLUMN asset_bg_soccer_ball_url TEXT" },
   { name: "asset_bg_stadium_url", ddl: "ALTER TABLE app_settings ADD COLUMN asset_bg_stadium_url TEXT" },
   { name: "asset_bg_pitch_lines_url", ddl: "ALTER TABLE app_settings ADD COLUMN asset_bg_pitch_lines_url TEXT" },
+  { name: "screen_blocks_json", ddl: "ALTER TABLE app_settings ADD COLUMN screen_blocks_json TEXT" },
 ];
 
 /** True gdy SQLite/libSQL zgłasza „duplicate column” (także lokalizowane komunikaty). */

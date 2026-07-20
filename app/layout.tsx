@@ -7,6 +7,7 @@ import { SiteShell } from "@/components/site-shell";
 import { ShareLinkClientCleanup } from "@/components/share-link-client-cleanup";
 import { MatchParticipationSurveyPrompt } from "@/components/match-participation-survey-prompt";
 import { MatchNotificationPrompt } from "@/components/match-notification-prompt";
+import { PinChangePendingBanner } from "@/components/pin-change-pending-banner";
 import { PinSetupGate } from "@/components/pin-setup-gate";
 import { SessionIdleMonitor } from "@/components/session-idle-monitor";
 import { getAccountNavFields } from "@/lib/account-server";
@@ -18,8 +19,17 @@ import { WalletBalanceFloat } from "@/components/wallet-balance-float";
 import { WriteToAdminFloat } from "@/components/write-to-admin-float";
 import { SiteJsonLd } from "@/components/site-json-ld";
 import { SiteAssetsProvider } from "@/components/site-assets-provider";
+import { ScreenBlocksProvider } from "@/components/screen-blocks-provider";
+import { ScreenBlockPlaceholder } from "@/components/screen-block-placeholder";
+import { AdminScreenBlockPreviewBanner } from "@/components/admin-screen-block-preview-banner";
 import { getGoogleSiteVerification, getSiteUrl } from "@/lib/site";
 import { getAppSettings } from "@/lib/app-settings";
+import {
+  getScreenKeyFromPathname,
+  isScreenDisabledForUser,
+  screenBlockMessage,
+  screenLabel,
+} from "@/lib/screen-blocks";
 import { getUnreadAdminMessageCount } from "@/lib/admin-messages";
 import { contactAdminRecipientsFromSettings } from "@/lib/contact-admin-recipients";
 import { siteAssetCssUrl } from "@/lib/site-assets";
@@ -89,6 +99,7 @@ export default async function RootLayout({
 }>) {
   const session = await getServerSession();
   const pathname = (await headers()).get("x-pathname") ?? "";
+  const previewBlocked = (await headers()).get("x-preview-blocked") === "1";
   const isPzuCupSection = pathname.startsWith("/pzu-cup");
   const loggedInFull = Boolean(
     session && !session.needsPinSetup && !session.pinChangePending
@@ -137,7 +148,32 @@ export default async function RootLayout({
   const contactAdminRecipients = contactAdminRecipientsFromSettings(appSettings);
 
   const isAdmin = Boolean(session?.isAdmin && loggedInFull);
+  const screenBlocksAsPlayer = previewBlocked && isAdmin;
   const adminUnreadMessages = isAdmin ? await getUnreadAdminMessageCount(db) : 0;
+
+  const screenKey = !isPzuCupSection ? getScreenKeyFromPathname(pathname) : null;
+  const screenBlocksAdminBypass = isAdmin && !screenBlocksAsPlayer;
+  const screenBlockedForPlayers =
+    screenKey != null && isScreenDisabledForUser(appSettings.screen_blocks, screenKey, false);
+  const screenBlocked =
+    screenKey != null && isScreenDisabledForUser(appSettings.screen_blocks, screenKey, screenBlocksAdminBypass);
+
+  let mainContent = children;
+  if (screenBlocked && screenKey) {
+    mainContent = (
+      <ScreenBlockPlaceholder
+        title={screenLabel(screenKey)}
+        message={screenBlockMessage(appSettings.screen_blocks, screenKey)}
+      />
+    );
+  } else if (screenBlockedForPlayers && screenKey && isAdmin && !screenBlocksAsPlayer) {
+    mainContent = (
+      <>
+        <AdminScreenBlockPreviewBanner screenTitle={screenLabel(screenKey)} />
+        {children}
+      </>
+    );
+  }
 
   const siteAssets = appSettings.site_assets;
   const assetCssVars = {
@@ -168,16 +204,23 @@ export default async function RootLayout({
         <ShareLinkClientCleanup />
         <PinSetupGate>
           <SiteAssetsProvider assets={siteAssets}>
-            <SiteShell
-            isLoggedIn={loggedInFull}
-            isAdmin={isAdmin}
-            account={accountNav}
-            adminUnreadMessages={adminUnreadMessages}
-            siteName={appSettings.site_name}
-            contactEmail={appSettings.contact_email}
-          >
-            {children}
-          </SiteShell>
+            <ScreenBlocksProvider
+              blocks={appSettings.screen_blocks}
+              isAdmin={isAdmin}
+              previewAsPlayer={screenBlocksAsPlayer}
+            >
+              <SiteShell
+                isLoggedIn={loggedInFull}
+                isAdmin={isAdmin}
+                account={accountNav}
+                adminUnreadMessages={adminUnreadMessages}
+                siteName={appSettings.site_name}
+                contactEmail={appSettings.contact_email}
+              >
+                {session?.pinChangePending && !session.needsPinSetup ? <PinChangePendingBanner /> : null}
+                {mainContent}
+              </SiteShell>
+            </ScreenBlocksProvider>
           </SiteAssetsProvider>
         </PinSetupGate>
         {walletBalancePln != null && !isPzuCupSection ? (

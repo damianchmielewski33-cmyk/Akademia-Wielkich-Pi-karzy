@@ -38,6 +38,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MatchTransportSignupDialog } from "@/components/match-transport-signup-dialog";
 import { MatchManageDialog } from "@/components/match-manage-dialog";
 import { MatchAddGuestDialog } from "@/components/match-add-guest-dialog";
+import { MatchCancelledNoticeModal } from "@/components/match-cancelled-notice-modal";
 import { AppModal } from "@/components/ui/app-modal";
 import {
   ModalAlert,
@@ -221,6 +222,12 @@ export function TerminarzClient({
   const [manageInitialTab, setManageInitialTab] = useState<"edit" | "guest" | "signups" | "cancel">("edit");
   const [addGuestMatch, setAddGuestMatch] = useState<MatchRow | null>(null);
   const [addGuestOpen, setAddGuestOpen] = useState(false);
+
+  const [cancelledNotice, setCancelledNotice] = useState<{
+    matchId: number;
+    label: string;
+    reason: string;
+  } | null>(null);
 
   const cancelledMatchShownRef = useRef(false);
 
@@ -585,15 +592,35 @@ export function TerminarzClient({
   }, [openAttendanceFromUrl, highlightMatchId, isAdmin, allMatches, playedConfirmed, router, openAttendanceDialog]);
 
   useEffect(() => {
-    // Szukaj anulowanego meczu w liście
-    if (cancelledMatchShownRef.current) return;
-    
-    const cancelled = allMatches.find((m) => m.cancelled && m.cancelled === 1);
+    if (!isLoggedIn || cancelledMatchShownRef.current) return;
+
+    const cancelled = allMatches.find(
+      (m) =>
+        isMatchCancelled(m) &&
+        (userSignupKind[m.id] === "confirmed" || userSignupKind[m.id] === "tentative")
+    );
     if (!cancelled) return;
 
-    // Znaleziony anulowany mecz - pokaż pop-up
-    // TODO: Implementacja powiadomienia o anulacji meczu
-  }, [allMatches]);
+    const storageKey = `awp_cancel_seen_${cancelled.id}`;
+    if (typeof window !== "undefined" && localStorage.getItem(storageKey) === "1") {
+      cancelledMatchShownRef.current = true;
+      return;
+    }
+
+    cancelledMatchShownRef.current = true;
+    setCancelledNotice({
+      matchId: cancelled.id,
+      label: `${cancelled.match_date} ${cancelled.match_time} — ${cancelled.location}`,
+      reason: cancelled.cancellation_reason?.trim() || "Organizator anulował ten termin.",
+    });
+  }, [allMatches, isLoggedIn, userSignupKind]);
+
+  function dismissCancelledNotice() {
+    if (cancelledNotice && typeof window !== "undefined") {
+      localStorage.setItem(`awp_cancel_seen_${cancelledNotice.matchId}`, "1");
+    }
+    setCancelledNotice(null);
+  }
 
   async function saveAttendance() {
     if (!attendanceMatch) return;
@@ -1910,6 +1937,13 @@ export function TerminarzClient({
           }}
         />
       )}
+
+      <MatchCancelledNoticeModal
+        open={cancelledNotice != null}
+        matchLabel={cancelledNotice?.label ?? ""}
+        reason={cancelledNotice?.reason ?? ""}
+        onClose={dismissCancelledNotice}
+      />
 
     </>
   );

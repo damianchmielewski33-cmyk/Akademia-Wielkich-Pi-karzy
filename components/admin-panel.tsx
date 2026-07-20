@@ -9,6 +9,7 @@ import {
   ArrowUpAZ,
   BarChart3,
   Calendar,
+  Construction,
   Download,
   Film,
   LayoutDashboard,
@@ -41,6 +42,8 @@ import {
   AdminToolbar,
   adminAlertDangerClass,
   adminEmptyStateClass,
+  adminDataOutlineBtnClass,
+  adminDataSearchInputClass,
   adminOutlineBtnClass,
   adminSearchInputClass,
   adminToggleRowClass,
@@ -71,6 +74,7 @@ import {
 } from "@/components/admin-analytics-hourly-charts";
 import { AdminWalletsSaldoSection } from "@/components/admin-wallets-saldo-section";
 import { AdminSettingsTab } from "@/components/admin-settings-tab";
+import { AdminScreenBlocksTab } from "@/components/admin-screen-blocks-tab";
 import { AdminPzuCupTab } from "@/components/admin-pzu-cup-tab";
 import { AdminGalleryTab } from "@/components/admin-gallery-tab";
 import { AdminMessagesTab } from "@/components/admin-messages-tab";
@@ -224,6 +228,7 @@ const tabs = [
   { id: "rankings", label: "Rankingi", icon: Trophy },
   { id: "pzu-cup", label: "PZU Cup", icon: Medal },
   { id: "gallery", label: "Galeria", icon: Film },
+  { id: "screen-blocks", label: "Zaślepki", icon: Construction },
   { id: "settings", label: "Ustawienia", icon: Settings2 },
 ] as const;
 
@@ -528,16 +533,44 @@ function MatchSignupsDialogContent({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ user_id: userId, paid: !currentPaid }),
       });
-      if (!res.ok) throw new Error();
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) {
+        toast.error(typeof data.error === "string" ? data.error : "Nie udało się zapisać opłaty");
+        return;
+      }
       setSignups((prev) =>
         prev.map((s) => (s.user_id === userId ? { ...s, paid: currentPaid ? 0 : 1 } : s))
       );
       toast.success("Zapisano");
     } catch {
-      toast.error("Nie udało się zapisać");
+      toast.error("Nie udało się zapisać opłaty — sprawdź połączenie");
     } finally {
       setSaving(null);
     }
+  };
+
+  const downloadSignupsCsv = () => {
+    const esc = (s: string) => `"${s.replace(/"/g, '""')}"`;
+    const header = ["Imię", "Nazwisko", "Pseudonim", "Status", "Opłacony", "Gościnny"];
+    const body = signups.map((s) =>
+      [
+        esc(s.first_name),
+        esc(s.last_name),
+        esc(s.zawodnik),
+        s.commitment === 1 ? "Potwierdzony" : "Niepewny",
+        s.paid ? "Tak" : "Nie",
+        s.is_temporary ? "Tak" : "Nie",
+      ].join(";")
+    );
+    const csv = "\uFEFF" + [header.join(";"), ...body].join("\r\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `zapisy-mecz-${match.id}-${match.date}.csv`;
+    a.rel = "noopener";
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   const handleAddGuest = async () => {
@@ -609,6 +642,9 @@ function MatchSignupsDialogContent({
         description={match.location}
         footer={
           <>
+            <Button type="button" variant="outline" size="sm" disabled={loading || signups.length === 0} onClick={downloadSignupsCsv}>
+              Eksport CSV
+            </Button>
             <Button type="button" variant="outline" size="sm" onClick={() => setAddGuestOpen(true)}>
               Dodaj gościa
             </Button>
@@ -1022,7 +1058,7 @@ export function AdminPanel() {
   }, [tab, analyticsRange, analyticsFetchNonce]);
 
   const shellLoading =
-    tab === "lineups" || tab === "wallets" || tab === "settings" || tab === "gallery" || tab === "messages" || tab === "rankings" || tab === "pzu-cup"
+    tab === "lineups" || tab === "wallets" || tab === "settings" || tab === "gallery" || tab === "messages" || tab === "rankings" || tab === "pzu-cup" || tab === "screen-blocks"
       ? false
       : tab === "analytics"
         ? analyticsLoading
@@ -1084,6 +1120,7 @@ export function AdminPanel() {
         {tab === "stats" && <StatsView stats={stats} loading={loading} onReload={loadStats} />}
         {tab === "rankings" && <AdminRankingSeasonsTab />}
         {tab === "gallery" && <AdminGalleryTab />}
+        {tab === "screen-blocks" && <AdminScreenBlocksTab loading={loading} onReload={loadDashboard} />}
         {tab === "settings" && <AdminSettingsTab loading={loading} onReload={loadDashboard} />}
         {tab === "pzu-cup" && <AdminPzuCupTab loading={loading} onReload={loadDashboard} />}
       </AdminShell>
@@ -1207,10 +1244,10 @@ function AnalyticsView({
       : null;
 
   return (
-    <div aria-busy={loading}>
+    <div className="space-y-6" aria-busy={loading}>
       <AdminToolbar
         title="Analityka wejść"
-        description="Dane zbierane przy otwarciu stron przez użytkowników (bez panelu admina). Zakres dat to dni kalendarzowe w strefie Polski (Europe/Warsaw). Zmiana dat wczytuje raport ponownie."
+        description="Odsłony stron, aktywność graczy i dziennik zdarzeń. Zakres dat to dni kalendarzowe (Europe/Warsaw)."
         onReload={onReload}
         loading={loading}
       >
@@ -1300,46 +1337,17 @@ function AnalyticsView({
         </div>
       </AdminToolbar>
 
-      <AdminAnalyticsHourlyCharts data={hourlyData} loading={loading && hourlyData === null} />
-
       {rangeSummary && data ? (
-        <p className="mb-4 text-sm pitch-muted">
-          <span className="font-medium text-white">Zakres raportu (dni kalendarzowe, PL):</span>{" "}
-          {rangeSummary}{" "}
-          <span className="text-emerald-100/70">
-            ({data.range.from} — {data.range.to})
-          </span>
-        </p>
-      ) : null}
-
-      <AdminCard className="mb-6 home-pitch-tile-gold" title="Jak czytać te liczby">
-        <div className="space-y-2 text-sm text-amber-50/95">
-          <p>
-            <strong>Gracze zalogowani vs bez aktywności</strong> — spośród kont z rolą gracza (bez
-            administratorów), ilu miało co najmniej jedno odsłonięcie strony zalogowane w wybranym
-            okresie. Reszta to konta bez takich wejść w tym zakresie dat (nie znaczy to, że nigdy nie
-            wchodzili).
-          </p>
-          <p>
-            <strong>Rejestracje (samodzielne)</strong> — wpisy z dziennika aktywności przy
-            rejestracji z formularza (nie obejmuje kont utworzonych przez administratora).
-          </p>
-          <p>
-            <strong>Terminarz → zapis na mecz</strong> — gracze, którzy w okresie oglądali ekran
-            terminarza zalogowani, a w tym samym okresie zapisali się na dowolny mecz (wg daty
-            zapisu).
-          </p>
-          <p>
-            <strong>Wejścia anonimowe vs zalogowane</strong> — udział surowych odsłon stron bez
-            sesji vs z aktywną sesją (jedna osoba może generować wiele odsłon).
-          </p>
-          <p>
-            <strong>Dziennik akcji</strong> — konkretne czynności zapisane po stronie serwera (nie
-            mylić z samym otwarciem stron). Dla każdego wpisu widać kto (imię, nazwisko, pseudonim),
-            opis akcji oraz znacznik czasu w Europe/Warsaw.
+        <div className="admin-data-card py-3 sm:px-5">
+          <p className="text-sm admin-data-muted">
+            <span className="font-semibold text-zinc-900 dark:text-zinc-50">Zakres raportu:</span>{" "}
+            {rangeSummary}{" "}
+            <span className="font-mono text-xs text-zinc-500 dark:text-zinc-400">
+              ({data.range.from} — {data.range.to})
+            </span>
           </p>
         </div>
-      </AdminCard>
+      ) : null}
 
       {!data && !loading ? (
         <p className="text-sm pitch-muted">Brak danych do wyświetlenia.</p>
@@ -1347,168 +1355,118 @@ function AnalyticsView({
 
       {data ? (
         <>
-          <AdminCard
-            className="mb-6"
-            title="Dziennik akcji użytkowników"
-            description="Zdarzenia z serwera w wybranym zakresie dat (np. logowanie, zapisy na mecze, edycje profilu). Najnowsze na górze. Do 400 wpisów na jedno wczytanie."
-          >
-            <div className="relative mb-4 w-full min-w-[200px] sm:max-w-md">
-              <Search
-                className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-emerald-100/50"
-                aria-hidden
-              />
-              <Input
-                className={adminSearchInputClass}
-                placeholder="Szukaj po osobie, treści akcji lub czasie…"
-                value={activityQuery}
-                onChange={(e) => setActivityQuery(e.target.value)}
-                aria-label="Filtruj dziennik akcji"
-              />
-            </div>
-            <div className="max-h-[min(28rem,70vh)] overflow-y-auto overflow-x-auto">
-              <AdminTableShell>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="whitespace-nowrap">Czas (PL)</TableHead>
-                      <TableHead className="min-w-[10rem]">Kto</TableHead>
-                      <TableHead>Czynność</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {(data.activity_events?.length ?? 0) === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={3} className="text-center text-sm text-emerald-100/70">
-                          Brak wpisów dziennika dla tego zakresu dat.
-                        </TableCell>
-                      </TableRow>
-                    ) : eventsPrepared.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={3} className="text-center text-sm text-emerald-100/70">
-                          Brak wyników dla podanego filtra.
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      eventsPrepared.map((row) => (
-                        <TableRow key={row.id}>
-                          <TableCell className="whitespace-nowrap align-top text-xs tabular-nums text-emerald-100/80">
-                            <time dateTime={row.timestamp} title={row.timestamp}>
-                              {row.time_display}
-                            </time>
-                          </TableCell>
-                          <TableCell className="align-top text-sm font-medium text-white">
-                            {row.actor_label}
-                          </TableCell>
-                          <TableCell className="align-top text-sm pitch-muted">{row.action}</TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </AdminTableShell>
-            </div>
-          </AdminCard>
-
-          <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <AdminCard title="Wszystkie odsłony">
-              <p className="text-2xl font-bold tabular-nums text-[var(--mundial-gold,#f5c518)]">
-                {data.totals.total_views}
-              </p>
-              <p className="mt-1 text-xs pitch-muted">
-                Unikalni odbiorcy (gość lub id gracza): {data.totals.unique_visitors}
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <AdminCard tone="data" title="Wszystkie odsłony">
+              <p className="admin-analytics-kpi">{data.totals.total_views}</p>
+              <p className="mt-2 text-sm admin-data-muted">
+                Unikalni odbiorcy:{" "}
+                <strong className="text-zinc-900 dark:text-zinc-50">{data.totals.unique_visitors}</strong>
               </p>
             </AdminCard>
-            <AdminCard title="Odsłony: anonim / zalogowany">
+            <AdminCard tone="data" title="Anonim / zalogowany">
               {viewSplit ? (
-                <div className="space-y-1 text-sm pitch-muted">
+                <div className="space-y-2 text-sm admin-data-muted">
                   <p>
-                    Anonimowe: <strong className="text-white">{data.totals.anonymous_views}</strong> (
-                    {viewSplit.anonPct}%)
+                    Anonimowe:{" "}
+                    <strong className="text-zinc-900 dark:text-zinc-50">{data.totals.anonymous_views}</strong>{" "}
+                    <span className="tabular-nums">({viewSplit.anonPct}%)</span>
                   </p>
                   <p>
-                    Zalogowane: <strong className="text-white">{data.totals.authenticated_views}</strong> (
-                    {viewSplit.authPct}%)
+                    Zalogowane:{" "}
+                    <strong className="text-zinc-900 dark:text-zinc-50">{data.totals.authenticated_views}</strong>{" "}
+                    <span className="tabular-nums">({viewSplit.authPct}%)</span>
                   </p>
                 </div>
               ) : (
-                <p className="text-sm pitch-muted">Brak odsłon w okresie.</p>
+                <p className="text-sm admin-data-muted">Brak odsłon w okresie.</p>
               )}
             </AdminCard>
-            <AdminCard title="Gracze w bazie" description="Konta nie-admin">
-              <div className="space-y-1 text-sm pitch-muted">
+            <AdminCard tone="data" title="Gracze w bazie" description="Konta nie-admin">
+              <div className="space-y-2 text-sm admin-data-muted">
                 <p>
-                  Z aktywnością w okresie:{" "}
-                  <strong className="text-white tabular-nums">{data.players.visited_in_range}</strong>
+                  Z aktywnością:{" "}
+                  <strong className="text-zinc-900 dark:text-zinc-50 tabular-nums">
+                    {data.players.visited_in_range}
+                  </strong>
                   {data.players.pct_visited != null ? (
-                    <span> ({data.players.pct_visited}%)</span>
+                    <span className="tabular-nums"> ({data.players.pct_visited}%)</span>
                   ) : null}
                 </p>
                 <p>
-                  Bez wejść zalogowanych w okresie:{" "}
-                  <strong className="text-white tabular-nums">{data.players.not_visited_in_range}</strong>
+                  Bez wejść w okresie:{" "}
+                  <strong className="text-zinc-900 dark:text-zinc-50 tabular-nums">
+                    {data.players.not_visited_in_range}
+                  </strong>
                   {data.players.pct_not_visited != null ? (
-                    <span> ({data.players.pct_not_visited}%)</span>
+                    <span className="tabular-nums"> ({data.players.pct_not_visited}%)</span>
                   ) : null}
                 </p>
-                <p className="text-xs text-emerald-100/70">
-                  Nowe konta (rejestracja): {data.players.self_service_registrations_in_range}
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                  Rejestracje samodzielne: {data.players.self_service_registrations_in_range}
                 </p>
               </div>
             </AdminCard>
-            <AdminCard title="Terminarz → mecz" description="Gracze (nie-admin)">
-              <div className="space-y-1 text-sm pitch-muted">
+            <AdminCard tone="data" title="Terminarz → mecz" description="Gracze (nie-admin)">
+              <div className="space-y-2 text-sm admin-data-muted">
                 <p>
                   Oglądali terminarz:{" "}
-                  <strong className="text-white tabular-nums">
+                  <strong className="text-zinc-900 dark:text-zinc-50 tabular-nums">
                     {data.terminarz_funnel.distinct_players_viewed}
                   </strong>
                 </p>
                 <p>
-                  Zapis na mecz w okresie:{" "}
-                  <strong className="text-white tabular-nums">
+                  Zapis na mecz:{" "}
+                  <strong className="text-zinc-900 dark:text-zinc-50 tabular-nums">
                     {data.terminarz_funnel.distinct_players_viewed_and_signed_match_in_range}
                   </strong>
                   {data.terminarz_funnel.pct_signed_after_view != null ? (
-                    <span> ({data.terminarz_funnel.pct_signed_after_view}%)</span>
+                    <span className="tabular-nums"> ({data.terminarz_funnel.pct_signed_after_view}%)</span>
                   ) : data.terminarz_funnel.distinct_players_viewed === 0 ? (
-                    <span className="text-emerald-100/70"> (–)</span>
+                    <span className="text-zinc-500"> (–)</span>
                   ) : null}
                 </p>
               </div>
             </AdminCard>
           </div>
+        </>
+      ) : null}
 
+      <AdminAnalyticsHourlyCharts data={hourlyData} loading={loading && hourlyData === null} />
+
+      {data ? (
+        <>
           <AdminCard
+            tone="data"
             title="Wejścia wg ekranu"
-            description="Liczba odsłon i szacunek unikalnych odbiorców (gość lub zalogowany gracz) w wybranym zakresie. Kliknij nagłówek kolumny, aby sortować."
+            description="Odsłony i unikalni odbiorcy w wybranym zakresie. Kliknij nagłówek kolumny, aby sortować."
             headerExtra={
               <Button
                 type="button"
                 variant="stadium"
                 size="sm"
-                className={adminOutlineBtnClass}
+                className={adminDataOutlineBtnClass}
                 disabled={loading || screensPrepared.length === 0}
                 onClick={() => downloadAnalyticsScreensCsv(screensPrepared, data.range)}
               >
                 <Download className="mr-2 h-4 w-4" aria-hidden />
-                CSV (widok)
+                CSV
               </Button>
             }
           >
             <div className="relative mb-4 w-full min-w-[200px] sm:max-w-xs">
               <Search
-                className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-emerald-100/50"
+                className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400"
                 aria-hidden
               />
               <Input
-                className={adminSearchInputClass}
+                className={adminDataSearchInputClass}
                 placeholder="Filtruj ekran lub klucz…"
                 value={screenQuery}
                 onChange={(e) => setScreenQuery(e.target.value)}
                 aria-label="Filtruj listę ekranów"
               />
             </div>
-            <AdminTableShell>
+            <AdminTableShell tone="data">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -1565,13 +1523,13 @@ function AnalyticsView({
                 <TableBody>
                   {data.screens.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={3} className="text-center text-sm text-emerald-100/70">
-                        Brak zapisanych wejść w tym okresie (dane pojawią się po pierwszych wizytach).
+                      <TableCell colSpan={3} className="text-center text-sm admin-data-muted">
+                        Brak zapisanych wejść w tym okresie.
                       </TableCell>
                     </TableRow>
                   ) : screensPrepared.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={3} className="text-center text-sm text-emerald-100/70">
+                      <TableCell colSpan={3} className="text-center text-sm admin-data-muted">
                         Brak wyników dla podanego filtra.
                       </TableCell>
                     </TableRow>
@@ -1579,11 +1537,11 @@ function AnalyticsView({
                     screensPrepared.map((row) => (
                       <TableRow key={row.screen_key}>
                         <TableCell>
-                          <span className="font-medium text-white">{row.label}</span>
+                          <span className="font-medium text-zinc-900 dark:text-zinc-50">{row.label}</span>
                           <span className="admin-table-muted ml-2">{row.screen_key}</span>
                         </TableCell>
-                        <TableCell className="text-right tabular-nums">{row.total_views}</TableCell>
-                        <TableCell className="text-right tabular-nums">{row.unique_visitors}</TableCell>
+                        <TableCell className="text-right tabular-nums font-medium">{row.total_views}</TableCell>
+                        <TableCell className="text-right tabular-nums font-medium">{row.unique_visitors}</TableCell>
                       </TableRow>
                     ))
                   )}
@@ -1591,6 +1549,95 @@ function AnalyticsView({
               </Table>
             </AdminTableShell>
           </AdminCard>
+
+          <AdminCard
+            tone="data"
+            title="Dziennik akcji"
+            description="Zdarzenia z serwera w wybranym zakresie (logowanie, zapisy, edycje profilu). Najnowsze na górze — do 400 wpisów."
+          >
+            <div className="relative mb-4 w-full min-w-[200px] sm:max-w-md">
+              <Search
+                className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400"
+                aria-hidden
+              />
+              <Input
+                className={adminDataSearchInputClass}
+                placeholder="Szukaj po osobie, treści akcji lub czasie…"
+                value={activityQuery}
+                onChange={(e) => setActivityQuery(e.target.value)}
+                aria-label="Filtruj dziennik akcji"
+              />
+            </div>
+            <div className="max-h-[min(28rem,70vh)] overflow-y-auto overflow-x-auto">
+              <AdminTableShell tone="data">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="whitespace-nowrap">Czas (PL)</TableHead>
+                      <TableHead className="min-w-[10rem]">Kto</TableHead>
+                      <TableHead>Czynność</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {(data.activity_events?.length ?? 0) === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={3} className="text-center text-sm admin-data-muted">
+                          Brak wpisów dziennika dla tego zakresu dat.
+                        </TableCell>
+                      </TableRow>
+                    ) : eventsPrepared.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={3} className="text-center text-sm admin-data-muted">
+                          Brak wyników dla podanego filtra.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      eventsPrepared.map((row) => (
+                        <TableRow key={row.id}>
+                          <TableCell className="whitespace-nowrap align-top text-xs tabular-nums text-zinc-500 dark:text-zinc-400">
+                            <time dateTime={row.timestamp} title={row.timestamp}>
+                              {row.time_display}
+                            </time>
+                          </TableCell>
+                          <TableCell className="align-top text-sm font-medium text-zinc-900 dark:text-zinc-50">
+                            {row.actor_label}
+                          </TableCell>
+                          <TableCell className="align-top text-sm admin-data-muted">{row.action}</TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </AdminTableShell>
+            </div>
+          </AdminCard>
+
+          <details className="admin-analytics-help">
+            <summary>Jak czytać te liczby?</summary>
+            <div className="mt-3 space-y-2">
+              <p>
+                <strong>Gracze zalogowani vs bez aktywności</strong> — spośród kont z rolą gracza (bez
+                administratorów), ilu miało co najmniej jedno odsłonięcie strony zalogowane w wybranym
+                okresie.
+              </p>
+              <p>
+                <strong>Rejestracje (samodzielne)</strong> — wpisy z dziennika przy rejestracji z formularza
+                (nie obejmuje kont utworzonych przez administratora).
+              </p>
+              <p>
+                <strong>Terminarz → zapis na mecz</strong> — gracze, którzy w okresie oglądali terminarz
+                zalogowani i zapisali się na dowolny mecz.
+              </p>
+              <p>
+                <strong>Wejścia anonimowe vs zalogowane</strong> — udział surowych odsłon bez sesji vs z
+                aktywną sesją.
+              </p>
+              <p>
+                <strong>Dziennik akcji</strong> — konkretne czynności zapisane po stronie serwera (nie mylić z
+                samym otwarciem stron).
+              </p>
+            </div>
+          </details>
         </>
       ) : null}
     </div>
@@ -2011,7 +2058,8 @@ function DeleteUserModal({
     try {
       const res = await fetch(API.user(user.id), { method: "DELETE" });
       if (!res.ok) {
-        toast.error("Nie udało się usunąć użytkownika");
+        const j = (await res.json().catch(() => ({}))) as { error?: string };
+        toast.error(typeof j.error === "string" ? j.error : "Nie udało się usunąć użytkownika");
         return;
       }
       toast.success("Użytkownik został usunięty");

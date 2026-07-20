@@ -1,11 +1,15 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { requireUser } from "@/lib/api-helpers";
+import { screenBlockApiResponse } from "@/lib/screen-block-api";
 import { getUserWalletBalancePln } from "@/lib/wallet";
 
 export const runtime = "nodejs";
 
-export async function GET() {
+export async function GET(req: Request) {
+  const blocked = await screenBlockApiResponse(req);
+  if (blocked) return blocked;
+
   const gate = await requireUser();
   if (!gate.ok) return gate.response;
 

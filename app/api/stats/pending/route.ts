@@ -1,10 +1,14 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { getServerSession } from "@/lib/auth";
+import { screenBlockApiResponse } from "@/lib/screen-block-api";
 
 export const runtime = "nodejs";
 
-export async function GET() {
+export async function GET(req: Request) {
+  const blocked = await screenBlockApiResponse(req);
+  if (blocked) return blocked;
+
   const session = await getServerSession();
   if (!session || session.needsPinSetup || session.pinChangePending) {
     return NextResponse.json({ pending: false });

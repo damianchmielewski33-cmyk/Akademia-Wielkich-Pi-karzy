@@ -55,6 +55,17 @@ export const SITE_ASSET_UPLOAD_SPECS: Record<SiteAssetKey, ImageUploadSpec> = {
     maxFileSize: "4 MB",
     fillTip: "Herb wyśrodkuj w kwadracie — będzie skalowany proporcjonalnie.",
   },
+  logo_login: {
+    label: SITE_ASSET_META.logo_login.label,
+    hint: SITE_ASSET_META.logo_login.hint,
+    whereUsed: "Strona logowania — panel marki po lewej (lub u góry na telefonie)",
+    displayOnSite: "Ok. 112–160 px w ramce logo",
+    recommendedPixels: "512×512 px (min. 320×320 px); poziome logo też OK",
+    aspectRatio: "1:1 lub poziome do 3:1",
+    formats: "PNG, SVG lub WebP (najlepiej z przezroczystym tłem)",
+    maxFileSize: "4 MB",
+    fillTip: "Logo będzie wyświetlane w jasnej ramce na ciemnym tle — unikaj białego prostokąta wokół znaku.",
+  },
   logo_favicon: {
     label: SITE_ASSET_META.logo_favicon.label,
     hint: SITE_ASSET_META.logo_favicon.hint,

@@ -31,6 +31,7 @@ const APP_SETTINGS_COLUMNS = [
   "match_cancel_reasons_json",
   "asset_logo_header_url",
   "asset_logo_crest_url",
+  "asset_logo_login_url",
   "asset_logo_favicon_url",
   "asset_bg_soccer_ball_url",
   "asset_bg_stadium_url",

@@ -9,6 +9,8 @@ import { AdminWalletsSaldoSection } from "@/components/admin-wallets-saldo-secti
 import { PayMatchButton } from "@/components/pay-match-button";
 import { PitchCard, PitchPageHero, pitchLabelClass, pitchPanelClass } from "@/components/ui/pitch-card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import type { WalletTransactionRow } from "@/lib/wallet";
 
@@ -21,6 +23,15 @@ export type PlatnosciUserLite = {
 };
 
 type WalletMeTransaction = WalletTransactionRow & { balance_after_pln: number };
+
+type WalletDepositPending = {
+  id: number;
+  amount_pln: number;
+  status: string;
+  note: string | null;
+  created_at: string;
+  player_declared_at: string | null;
+};
 
 type Props = {
   isLoggedIn: boolean;
@@ -214,7 +225,11 @@ export function PlatnosciClient({
 }: Props) {
   const [walletBalancePln, setWalletBalancePln] = useState<number | null>(null);
   const [walletTransactions, setWalletTransactions] = useState<WalletMeTransaction[]>([]);
+  const [walletPending, setWalletPending] = useState<WalletDepositPending[]>([]);
   const [walletLoading, setWalletLoading] = useState(false);
+  const [depositAmount, setDepositAmount] = useState("");
+  const [depositNote, setDepositNote] = useState("");
+  const [depositSubmitting, setDepositSubmitting] = useState(false);
 
   async function refreshWallet() {
     if (!isLoggedIn) return;
@@ -224,6 +239,7 @@ export function PlatnosciClient({
       const json = (await res.json().catch(() => null)) as {
         balance_pln?: unknown;
         transactions?: WalletMeTransaction[];
+        pending?: WalletDepositPending[];
         error?: unknown;
       } | null;
       if (!res.ok) {
@@ -233,10 +249,38 @@ export function PlatnosciClient({
       }
       setWalletBalancePln(Number(json?.balance_pln ?? 0));
       setWalletTransactions(Array.isArray(json?.transactions) ? json.transactions : []);
+      setWalletPending(Array.isArray(json?.pending) ? json.pending : []);
     } catch {
       toast.error("Błąd sieci");
     } finally {
       setWalletLoading(false);
+    }
+  }
+
+  async function submitDeposit() {
+    const amount = Number.parseFloat(depositAmount.replace(",", "."));
+    if (!Number.isFinite(amount) || amount <= 0) {
+      toast.error("Podaj poprawną kwotę wpłaty");
+      return;
+    }
+    setDepositSubmitting(true);
+    try {
+      const res = await fetch("/api/wallet/deposits", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount_pln: amount, note: depositNote.trim() || undefined }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) {
+        toast.error(typeof data.error === "string" ? data.error : "Nie udało się zgłosić wpłaty");
+        return;
+      }
+      toast.success("Wpłata zgłoszona — administrator ją zaksięguje po otrzymaniu przelewu");
+      setDepositAmount("");
+      setDepositNote("");
+      await refreshWallet();
+    } finally {
+      setDepositSubmitting(false);
     }
   }
 
@@ -349,6 +393,65 @@ export function PlatnosciClient({
               balancePln={walletBalancePln}
               playerLabel={playerLabel}
             />
+
+            <div className={contentPanelClass}>
+              <h3 className="text-base font-bold text-emerald-950 dark:text-emerald-100">Zgłoś wpłatę</h3>
+              <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+                Po wykonaniu przelewu BLIK wpisz kwotę — administrator potwierdzi i zaksięguje ją na Twoim koncie.
+              </p>
+              {walletPending.length > 0 ? (
+                <ul className="mt-3 space-y-2 rounded-lg border border-amber-200 bg-amber-50/80 p-3 text-sm dark:border-amber-800/50 dark:bg-amber-950/30">
+                  {walletPending.map((p) => (
+                    <li key={p.id} className="flex flex-wrap justify-between gap-2 text-amber-950 dark:text-amber-100">
+                      <span>
+                        Oczekuje: <strong className="tabular-nums">{formatPln(Number(p.amount_pln))}</strong>
+                        {p.note ? <span className="text-amber-800/80"> — {p.note}</span> : null}
+                      </span>
+                      <span className="text-xs text-amber-800/70">{formatTxDateParts(p.created_at).date}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <div>
+                  <Label htmlFor="deposit-amount" className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                    Kwota (PLN)
+                  </Label>
+                  <Input
+                    id="deposit-amount"
+                    type="number"
+                    min={0.01}
+                    step={0.01}
+                    className="mt-1"
+                    value={depositAmount}
+                    onChange={(e) => setDepositAmount(e.target.value)}
+                    placeholder="np. 50"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="deposit-note" className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                    Notatka (opcjonalnie)
+                  </Label>
+                  <Input
+                    id="deposit-note"
+                    className="mt-1"
+                    value={depositNote}
+                    onChange={(e) => setDepositNote(e.target.value)}
+                    placeholder="np. przelew z mBanku"
+                  />
+                </div>
+              </div>
+              <Button
+                type="button"
+                className="mt-4"
+                variant="pitch"
+                disabled={depositSubmitting || walletLoading}
+                onClick={() => void submitDeposit()}
+              >
+                {depositSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
+                Zgłosiłem wpłatę
+              </Button>
+            </div>
 
             <div className={contentPanelClass}>
               <div className="flex items-start gap-3">

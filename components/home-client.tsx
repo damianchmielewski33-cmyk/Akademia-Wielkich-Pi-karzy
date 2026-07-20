@@ -31,6 +31,7 @@ import { ModalMatchSummary, modalPanelClass } from "@/components/ui/modal-shared
 import type { MatchRow } from "@/lib/db";
 import type { HomeTopPlayer } from "@/lib/rankings-data";
 import { cn } from "@/lib/utils";
+import { useScreenBlocks } from "@/components/screen-blocks-provider";
 
 type Props = {
   nextMatch: MatchRow | null;
@@ -72,6 +73,7 @@ export function HomeClient({
   topRankedPlayers = [],
 }: Props) {
   const router = useRouter();
+  const { isHiddenHref } = useScreenBlocks();
   const [transportSignupOpen, setTransportSignupOpen] = useState(false);
   const [transportIntent, setTransportIntent] = useState<"signup" | "confirm">("signup");
   const [tentativeBusy, setTentativeBusy] = useState(false);
@@ -198,13 +200,23 @@ export function HomeClient({
 
   const tiles = (
     <div className="mx-auto grid max-w-3xl grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-3">
-      <PitchTile href="/terminarz" icon={CalendarDays} title="Terminarz" desc="Mecze, zapisy, terminy" />
-      <PitchTile href="/pilkarze" icon={Users} title="Piłkarze" desc="Skład i profile" />
+      {!isHiddenHref("/terminarz") ? (
+        <PitchTile href="/terminarz" icon={CalendarDays} title="Terminarz" desc="Mecze, zapisy, terminy" />
+      ) : null}
+      {!isHiddenHref("/pilkarze") ? (
+        <PitchTile href="/pilkarze" icon={Users} title="Piłkarze" desc="Skład i profile" />
+      ) : null}
       {isLoggedIn && (
         <>
-          <PitchTile href="/platnosci" icon={Wallet} title="Płatności" desc="BLIK i status wpłaty za mecz" />
-          <PitchTile href="/statystyki" icon={Activity} title="Statystyki" desc="Twoje liczby z boiska" />
-          <PitchTile href="/rankingi" icon={Trophy} title="Rankingi" desc="Gole, asysty, punkty" variant="gold" />
+          {!isHiddenHref("/platnosci") ? (
+            <PitchTile href="/platnosci" icon={Wallet} title="Płatności" desc="BLIK i status wpłaty za mecz" />
+          ) : null}
+          {!isHiddenHref("/statystyki") ? (
+            <PitchTile href="/statystyki" icon={Activity} title="Statystyki" desc="Twoje liczby z boiska" />
+          ) : null}
+          {!isHiddenHref("/rankingi") ? (
+            <PitchTile href="/rankingi" icon={Trophy} title="Rankingi" desc="Gole, asysty, punkty" variant="gold" />
+          ) : null}
           {showPzuCupTile ? (
             <PitchTile
               href="/pzu-cup"

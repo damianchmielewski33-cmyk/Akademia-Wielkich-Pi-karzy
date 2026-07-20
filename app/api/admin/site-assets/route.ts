@@ -73,6 +73,8 @@ function assetUrlFromSettings(settings: Awaited<ReturnType<typeof getAppSettings
       return settings.asset_logo_header_url;
     case "logo_crest":
       return settings.asset_logo_crest_url;
+    case "logo_login":
+      return settings.asset_logo_login_url;
     case "logo_favicon":
       return settings.asset_logo_favicon_url;
     case "bg_soccer_ball":

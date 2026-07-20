@@ -4,7 +4,9 @@ import { clearSessionCookie, getServerSession } from "@/lib/auth";
 import { getDb, logActivity } from "@/lib/db";
 import { hashPin, isValidPinFormat, isWeakPin, WEAK_PIN_MESSAGE } from "@/lib/pin";
 import { normalizePlayerAlias } from "@/lib/player-alias";
-import { checkRateLimit, rateLimitKey, rateLimitedResponse, RATE } from "@/lib/rate-limit";
+import { notifyAdminsByEmail } from "@/lib/admin-notify";
+import { checkRateLimitDistributed } from "@/lib/rate-limit-db";
+import { rateLimitKey, rateLimitedResponse, RATE } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
@@ -22,7 +24,7 @@ const bodySchema = z.object({
 
 export async function POST(req: Request) {
   await connection();
-  const rl = checkRateLimit(rateLimitKey("forgot_pin", req), RATE.login.limit, RATE.login.windowMs);
+  const rl = await checkRateLimitDistributed(rateLimitKey("forgot_pin", req), RATE.login.limit, RATE.login.windowMs);
   if (!rl.ok) return rateLimitedResponse(rl.retryAfterSec);
 
   let json: unknown;
@@ -79,6 +81,10 @@ export async function POST(req: Request) {
     )
     .run(pinHashPending, user.id);
   await logActivity(user.id, "Zgłosił nowy PIN (oczekuje na zatwierdzenie przez administratora)");
+  void notifyAdminsByEmail(
+    "Prośba o zmianę PIN-u — Akademia",
+    `${first_name} ${last_name} (${canonical}) zgłosił nowy PIN. Zatwierdź w panelu admina → Użytkownicy.`
+  );
 
   const sess = await getServerSession();
   if (sess && sess.userId === user.id) {

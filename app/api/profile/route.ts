@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getDb, logActivity } from "@/lib/db";
 import { createSessionToken, setSessionCookie } from "@/lib/auth";
 import { requireUser } from "@/lib/api-helpers";
+import { screenBlockApiResponse } from "@/lib/screen-block-api";
 import { getProfileDashboard } from "@/lib/profile-data";
 import { normalizePlayerAlias } from "@/lib/player-alias";
 import { isUniqueConstraintError } from "@/lib/sql-errors";
@@ -26,7 +27,10 @@ const patchSchema = z
     { message: "Brak pól do aktualizacji." }
   );
 
-export async function GET() {
+export async function GET(req: Request) {
+  const blocked = await screenBlockApiResponse(req);
+  if (blocked) return blocked;
+
   const gate = await requireUser();
   if (!gate.ok) return gate.response;
   const session = gate.session;
@@ -36,6 +40,9 @@ export async function GET() {
 }
 
 export async function PATCH(req: Request) {
+  const blocked = await screenBlockApiResponse(req);
+  if (blocked) return blocked;
+
   const gate = await requireUser();
   if (!gate.ok) return gate.response;
   const session = gate.session;

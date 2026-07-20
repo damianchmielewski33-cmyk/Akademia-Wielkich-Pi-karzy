@@ -1,5 +1,6 @@
 import { getDb, logActivity } from "@/lib/db";
 import { normalizePlayerAlias } from "@/lib/player-alias";
+import { assertMatchOpenForSignup, tryIncrementMatchSignedUp } from "@/lib/match-signup";
 
 export type AddMatchGuestInput = {
   matchId: number;
@@ -33,7 +34,7 @@ export async function addMatchGuest(input: AddMatchGuestInput): Promise<AddMatch
   const db = await getDb();
   const match = (await db
     .prepare(
-      "SELECT id, match_date, match_time, location, max_slots, signed_up FROM matches WHERE id = ?"
+      "SELECT id, match_date, match_time, location, max_slots, signed_up, played, COALESCE(cancelled, 0) AS cancelled FROM matches WHERE id = ?"
     )
     .get(input.matchId)) as
     | {
@@ -43,11 +44,18 @@ export async function addMatchGuest(input: AddMatchGuestInput): Promise<AddMatch
         location: string;
         max_slots: number;
         signed_up: number;
+        played: number;
+        cancelled: number;
       }
     | undefined;
 
   if (!match) {
     return { ok: false, error: "Mecz nie został znaleziony", status: 404 };
+  }
+
+  const signupErr = assertMatchOpenForSignup(match);
+  if (signupErr) {
+    return { ok: false, error: signupErr, status: 400 };
   }
 
   if (match.signed_up >= match.max_slots) {
@@ -66,14 +74,18 @@ export async function addMatchGuest(input: AddMatchGuestInput): Promise<AddMatch
   const userResult = await createUser.run(firstName, lastName, playerAlias, input.matchId);
   const userId = Number(userResult.lastInsertRowid);
 
+  const incremented = await tryIncrementMatchSignedUp(db, input.matchId);
+  if (!incremented) {
+    await db.prepare("DELETE FROM users WHERE id = ?").run(userId);
+    return { ok: false, error: "Brak wolnych miejsc na ten mecz", status: 400 };
+  }
+
   await db
     .prepare(
       `INSERT INTO match_signups (user_id, match_id, paid, commitment)
        VALUES (?, ?, 0, 1)`
     )
     .run(userId, input.matchId);
-
-  await db.prepare("UPDATE matches SET signed_up = signed_up + 1 WHERE id = ?").run(input.matchId);
 
   const activityMessage =
     input.activityMessage ??

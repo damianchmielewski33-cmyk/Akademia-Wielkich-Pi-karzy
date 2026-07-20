@@ -2,6 +2,7 @@
 export const SITE_ASSET_KEYS = [
   "logo_header",
   "logo_crest",
+  "logo_login",
   "logo_favicon",
   "bg_soccer_ball",
   "bg_stadium",
@@ -14,6 +15,7 @@ export type SiteAssetKey = (typeof SITE_ASSET_KEYS)[number];
 export const SITE_ASSET_DEFAULTS: Record<SiteAssetKey, string> = {
   logo_header: "/mundial-2026-logo.svg",
   logo_crest: "/logo-akademia.svg",
+  logo_login: "/logo-akademia.svg",
   logo_favicon: "/logo-akademia.svg",
   bg_soccer_ball: "/soccer-ball.svg",
   bg_stadium: "/stadium-bg.svg",
@@ -37,6 +39,11 @@ export const SITE_ASSET_META: Record<SiteAssetKey, SiteAssetMeta> = {
     label: "Herb akademii",
     hint: "Większe logo na stronie głównej, w stopce i przy ładowaniu.",
     recommended: "Kwadrat, PNG lub SVG, min. 256×256 px",
+  },
+  logo_login: {
+    label: "Logo ekranu logowania",
+    hint: "Główne logo na stronie logowania — widoczne dla każdego przed wejściem do konta.",
+    recommended: "Kwadrat lub poziome, PNG lub SVG, min. 320×320 px",
   },
   logo_favicon: {
     label: "Ikona w karcie przeglądarki",
@@ -64,6 +71,7 @@ export const SITE_ASSET_META: Record<SiteAssetKey, SiteAssetMeta> = {
 export const SITE_ASSET_DB_COLUMNS: Record<SiteAssetKey, string> = {
   logo_header: "asset_logo_header_url",
   logo_crest: "asset_logo_crest_url",
+  logo_login: "asset_logo_login_url",
   logo_favicon: "asset_logo_favicon_url",
   bg_soccer_ball: "asset_bg_soccer_ball_url",
   bg_stadium: "asset_bg_stadium_url",

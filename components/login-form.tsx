@@ -209,20 +209,20 @@ export function LoginForm({
             onChange={(e) => setRememberMe(e.target.checked)}
             className="mt-1 h-4 w-4 rounded border border-zinc-300 text-emerald-600 focus:ring-2 focus:ring-emerald-500/30"
           />
-          <Label htmlFor="login_remember" className="cursor-pointer font-normal leading-snug text-zinc-700">
+          <Label htmlFor="login_remember" className="cursor-pointer font-normal leading-snug text-zinc-600 dark:text-zinc-400">
             Nie wylogowuj mnie
           </Label>
         </div>
-        <Button type="submit" className="w-full" disabled={loading}>
+        <Button type="submit" className="w-full" variant="pitch" disabled={loading}>
           {loading ? "Logowanie…" : "Zaloguj się"}
         </Button>
       </form>
 
       {!embedMode && (
-        <div className="mt-4 flex flex-col gap-2 border-t border-zinc-100 pt-4">
+        <div className="mt-4 flex flex-col gap-2 border-t border-zinc-100 pt-4 dark:border-zinc-800">
           <button
             type="button"
-            className="text-center text-sm font-medium text-emerald-700 hover:underline"
+            className="text-center text-sm font-medium text-emerald-700 hover:underline dark:text-emerald-300"
             onClick={() => {
               forgotForm.reset({
                 firstName: loginForm.values.firstName.trim(),

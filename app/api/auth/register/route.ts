@@ -4,7 +4,8 @@ import { getDb, logActivity } from "@/lib/db";
 import { normalizePlayerAlias } from "@/lib/player-alias";
 import { isUniqueConstraintError } from "@/lib/sql-errors";
 import { createSessionToken, setSessionCookie } from "@/lib/auth";
-import { checkRateLimit, rateLimitKey, rateLimitedResponse, RATE } from "@/lib/rate-limit";
+import { checkRateLimitDistributed } from "@/lib/rate-limit-db";
+import { rateLimitKey, rateLimitedResponse, RATE } from "@/lib/rate-limit";
 import { isSelfRegistrationAllowed } from "@/lib/registration-gate";
 import { hashPin, isValidPinFormat, isWeakPin, WEAK_PIN_MESSAGE } from "@/lib/pin";
 import { parseRealm, REALMS } from "@/lib/realm";
@@ -23,7 +24,7 @@ const bodySchema = z.object({
 
 export async function POST(req: Request) {
   await connection();
-  const rl = checkRateLimit(rateLimitKey("register", req), RATE.register.limit, RATE.register.windowMs);
+  const rl = await checkRateLimitDistributed(rateLimitKey("register", req), RATE.register.limit, RATE.register.windowMs);
   if (!rl.ok) return rateLimitedResponse(rl.retryAfterSec);
 
   let json: unknown;

@@ -11,9 +11,12 @@ import { getAuthSecretKey } from "@/lib/auth-secret";
 const PATHNAME_HEADER = "x-pathname";
 
 /** Przekazuje bieżący pathname do layoutu (np. bramka wymuszenia ustawienia PIN-u). */
-function nextWithPathname(request: NextRequest): NextResponse {
+function nextWithPathname(request: NextRequest, extraHeaders?: Record<string, string>): NextResponse {
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set(PATHNAME_HEADER, request.nextUrl.pathname);
+  if (extraHeaders) {
+    for (const [k, v] of Object.entries(extraHeaders)) requestHeaders.set(k, v);
+  }
   return NextResponse.next({ request: { headers: requestHeaders } });
 }
 
@@ -67,6 +70,11 @@ export async function middleware(request: NextRequest) {
       u.searchParams.set("next", "/panel-admina");
       return NextResponse.redirect(u);
     }
+  }
+
+  const previewBlocked = searchParams.get("preview_blocked") === "1";
+  if (previewBlocked) {
+    return nextWithPathname(request, { "x-preview-blocked": "1" });
   }
 
   return nextWithPathname(request);

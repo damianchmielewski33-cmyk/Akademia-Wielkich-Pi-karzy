@@ -11,7 +11,7 @@ import { withTransientNetworkRetries } from "@/lib/transient-network-retry";
 /** Lokalny plik SQLite (dev) lub Turso (gdy TURSO_DATABASE_URL). */
 export type AppDb = {
   prepare(sql: string): {
-    run(...params: unknown[]): Promise<{ lastInsertRowid: bigint }>;
+    run(...params: unknown[]): Promise<{ lastInsertRowid: bigint; changes: number }>;
     get<T = unknown>(...params: unknown[]): Promise<T | undefined>;
     all<T = unknown>(...params: unknown[]): Promise<T[]>;
   };
@@ -45,6 +45,7 @@ function createSqliteFacade(db: Database.Database): AppDb {
           const r = stmt.run(...(params as never[]));
           return Promise.resolve({
             lastInsertRowid: BigInt(r.lastInsertRowid ?? 0),
+            changes: Number(r.changes ?? 0),
           });
         },
         get<T = unknown>(...params: unknown[]) {
@@ -130,7 +131,10 @@ function createLibsqlFacade(client: Client): AppDb {
       return {
         async run(...params: unknown[]) {
           const rs = await client.execute({ sql, args: params as InArgs });
-          return { lastInsertRowid: rs.lastInsertRowid ?? BigInt(0) };
+          return {
+            lastInsertRowid: rs.lastInsertRowid ?? BigInt(0),
+            changes: Number(rs.rowsAffected ?? 0),
+          };
         },
         async get<T = unknown>(...params: unknown[]) {
           const rs = await client.execute({ sql, args: params as InArgs });
@@ -521,6 +525,14 @@ function initSchemaSync(db: Database.Database) {
   addAdminMsgColumn("admin_user_id", "ALTER TABLE admin_messages ADD COLUMN admin_user_id INTEGER");
   addAdminMsgColumn("attachment_url", "ALTER TABLE admin_messages ADD COLUMN attachment_url TEXT");
   db.exec("CREATE INDEX IF NOT EXISTS idx_admin_messages_conversation ON admin_messages(conversation_key, created_at)");
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS rate_limit_buckets (
+      bucket_key TEXT PRIMARY KEY,
+      count INTEGER NOT NULL DEFAULT 0,
+      reset_at TEXT NOT NULL
+    );
+  `);
 
   const hasAcademySettings = db.prepare("SELECT 1 AS ok FROM app_settings WHERE realm = 'academy'").get() as
     | { ok: 1 }
