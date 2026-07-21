@@ -36,8 +36,8 @@ android {
         applicationId = "pl.akademiawielkichpilkarzy.mobile"
         minSdk = 26
         targetSdk = 34
-        versionCode = 5
-        versionName = "1.0.4"
+        versionCode = 6
+        versionName = "1.0.5"
 
         val apiBase = readLocalProperty("api.base.url")
             ?: (project.findProperty("API_BASE_URL") as String?)
