@@ -165,7 +165,7 @@ export function HomeNextMatchCard({
               {perPersonFee != null
                 ? `Wynajem ${formatMatchFeePln(rentalTotal)} ÷ ${match.signed_up} ${
                     match.signed_up === 1 ? "osoba" : match.signed_up < 5 ? "osoby" : "osób"
-                  } (zaokrąglenie w górę do 0,50 zł)`
+                  }`
                 : "Składka na osobę pojawi się po pierwszych zapisach."}
             </p>
           </div>

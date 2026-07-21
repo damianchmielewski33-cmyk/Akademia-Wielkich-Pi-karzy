@@ -5,6 +5,17 @@ plugins {
     id("com.google.gms.google-services")
 }
 
+fun readLocalProperty(key: String): String? {
+    val localFile = rootProject.file("local.properties")
+    if (!localFile.exists()) return null
+    return localFile.readLines()
+        .map { it.trim() }
+        .firstOrNull { it.startsWith("$key=") && !it.startsWith("#") }
+        ?.substringAfter("=", "")
+        ?.trim()
+        ?.takeIf { it.isNotEmpty() }
+}
+
 android {
     namespace = "pl.akademiawielkichpilkarzy.app"
     compileSdk = 35
@@ -17,13 +28,9 @@ android {
         versionName = "1.0.0"
 
         // Nadpisz w local.properties: api.base.url=https://twoja-domena.pl/
-        val localProps = java.util.Properties()
-        val localFile = rootProject.file("local.properties")
-        if (localFile.exists()) {
-            localFile.inputStream().use { localProps.load(it) }
-        }
-        val apiBase = localProps.getProperty("api.base.url")
-            ?: project.findProperty("API_BASE_URL") as String?
+        // albo w gradle.properties: API_BASE_URL=https://…
+        val apiBase = readLocalProperty("api.base.url")
+            ?: (project.findProperty("API_BASE_URL") as String?)
             ?: "http://10.0.2.2:3000/"
         buildConfigField("String", "API_BASE_URL", "\"$apiBase\"")
     }
