@@ -71,6 +71,11 @@ export default function PobierzClient() {
             „Instaluj przez USB” w opcjach deweloperskich (bez podłączania kabla).
           </li>
           <li>Po Play Protect wybierz „Zainstaluj mimo to” / „I tak zainstaluj”.</li>
+          <li>
+            Po udanym buildzie w aplikacji zobaczysz nazwę „Akademia WP” (pakiet{" "}
+            <code className="text-emerald-200">…player</code>). To osobna instalacja od wcześniejszych
+            prób.
+          </li>
           <li>Wymagany Android 8.0+. Zaloguj się: imię, nazwisko i PIN jak na stronie.</li>
         </ol>
 

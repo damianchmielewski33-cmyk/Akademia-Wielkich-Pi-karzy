@@ -112,7 +112,7 @@ jobs:
           script: |
             set -euo pipefail
             adb install -r dist/akademia-wp.apk
-            adb shell pm path pl.akademiawielkichpilkarzy.mobile
+            adb shell pm path pl.akademiawielkichpilkarzy.player
             echo "Emulator install OK"
 
       - name: Upload build artifact

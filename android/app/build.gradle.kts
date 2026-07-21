@@ -2,7 +2,6 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
-    id("com.google.gms.google-services")
 }
 
 fun readLocalProperty(key: String): String? {
@@ -33,14 +32,15 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "pl.akademiawielkichpilkarzy.mobile"
+        // Nowe ID — czysta instalacja obok starych prób
+        applicationId = "pl.akademiawielkichpilkarzy.player"
         minSdk = 26
-        targetSdk = 34
-        versionCode = 10
-        versionName = "1.0.9"
+        // S10+ max Android 12 (API 31) — target pod ten poziom
+        targetSdk = 31
+        versionCode = 11
+        versionName = "1.1.0"
 
         ndk {
-            // Mniejsze APK, typowe telefony ARM
             abiFilters += listOf("armeabi-v7a", "arm64-v8a")
         }
 
@@ -62,7 +62,6 @@ android {
                 if (!type.isNullOrBlank()) {
                     storeType = type
                 }
-                // v3 bywa problematyczne na starszych One UI (np. S10) — zostawiamy v2 (+ v1 jeśli AGP doda).
                 enableV1Signing = true
                 enableV2Signing = true
                 enableV3Signing = false
@@ -73,7 +72,6 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = false
-            // Zawsze podpis Gradle (bez ponownego uber/apksigner — mniej ryzyka uszkodzenia APK).
             signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
@@ -95,14 +93,6 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
-    }
-    packaging {
-        resources {
-            excludes += "/META-INF/{AL2.0,LGPL2.1}"
-        }
-        jniLibs {
-            useLegacyPackaging = true
-        }
     }
 }
 
@@ -127,10 +117,6 @@ dependencies {
     implementation("com.squareup.retrofit2:converter-moshi:2.11.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
     implementation("com.squareup.moshi:moshi-kotlin:1.15.1")
-
-    implementation(platform("com.google.firebase:firebase-bom:33.6.0"))
-    implementation("com.google.firebase:firebase-messaging-ktx")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.9.0")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
