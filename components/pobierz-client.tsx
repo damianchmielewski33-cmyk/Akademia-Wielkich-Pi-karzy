@@ -51,20 +51,27 @@ export default function PobierzClient() {
         <h2 className="pitch-heading mt-4 text-xl">Jak zainstalować</h2>
         <ol className="mt-4 list-decimal space-y-3 pl-5 text-sm leading-relaxed text-emerald-100/90">
           <li>
-            Jeśli masz starą wersję „Akademia WP” — <strong>najpierw ją odinstaluj</strong>.
+            Sprawdź w telefonie: <strong>Ustawienia → Data i godzina</strong> — włącz „Automatyczna
+            data i godzina” (zła data blokuje instalację).
           </li>
           <li>
-            Kliknij przycisk poniżej (pobranie idzie przez stronę akademii — widać je w logach
-            Vercel).
+            Odinstaluj wszystkie stare wersje „Akademia WP” (jeśli są na liście aplikacji).
           </li>
+          <li>
+            Usuń stare pliki <code className="text-emerald-200">akademia-wp.apk</code> z folderu
+            Pobrane.
+          </li>
+          <li>Kliknij przycisk poniżej i poczekaj na pełne pobranie (~10–15 MB).</li>
           <li>
             Otwórz plik w aplikacji <strong>Pliki</strong> / <strong>Moje pliki</strong> (nie z
             powiadomienia Chrome, jeśli nie działa).
           </li>
           <li>
-            Zezwól na instalację z nieznanych źródeł dla tej aplikacji (Pliki / Chrome).
+            Zezwól na instalację z nieznanych źródeł dla Plików/Chrome. Na Xiaomi/HyperOS: włącz też
+            „Instaluj przez USB” w opcjach deweloperskich (bez podłączania kabla).
           </li>
-          <li>Zaloguj się: imię, nazwisko i PIN jak na stronie.</li>
+          <li>Po Play Protect wybierz „Zainstaluj mimo to” / „I tak zainstaluj”.</li>
+          <li>Wymagany Android 8.0+. Zaloguj się: imię, nazwisko i PIN jak na stronie.</li>
         </ol>
 
         <a

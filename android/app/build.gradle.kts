@@ -36,8 +36,13 @@ android {
         applicationId = "pl.akademiawielkichpilkarzy.mobile"
         minSdk = 26
         targetSdk = 34
-        versionCode = 8
-        versionName = "1.0.7"
+        versionCode = 9
+        versionName = "1.0.8"
+
+        ndk {
+            // Mniejsze APK, typowe telefony ARM
+            abiFilters += listOf("armeabi-v7a", "arm64-v8a")
+        }
 
         val apiBase = readLocalProperty("api.base.url")
             ?: (project.findProperty("API_BASE_URL") as String?)
@@ -68,20 +73,14 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = false
-            // Na CI: unsigned → podpis w workflow (uber-apk-signer: v1+v2).
-            // Lokalnie: podpis Gradle.
-            if (System.getenv("CI") == "true") {
-                signingConfig = null
-            } else {
-                signingConfig = signingConfigs.getByName("release")
-            }
+            // Zawsze podpis Gradle (bez ponownego uber/apksigner — mniej ryzyka uszkodzenia APK).
+            signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
         }
         debug {
-            // Takze podpisuj debug kluczem release — latwiejszy sideload na telefonach OEM
             signingConfig = signingConfigs.getByName("release")
         }
     }
