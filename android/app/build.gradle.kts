@@ -36,8 +36,8 @@ android {
         applicationId = "pl.akademiawielkichpilkarzy.mobile"
         minSdk = 26
         targetSdk = 34
-        versionCode = 4
-        versionName = "1.0.3"
+        versionCode = 5
+        versionName = "1.0.4"
 
         val apiBase = readLocalProperty("api.base.url")
             ?: (project.findProperty("API_BASE_URL") as String?)
@@ -68,7 +68,13 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = false
-            signingConfig = signingConfigs.getByName("release")
+            // Na CI zostawiamy unsigned — podpis v1+v2+v3 robi apksigner w workflow
+            // (ponowne podpisywanie już podpisanego APK często wypada bez v1).
+            if (System.getenv("CI") == "true") {
+                signingConfig = null
+            } else {
+                signingConfig = signingConfigs.getByName("release")
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

@@ -85,25 +85,39 @@ jobs:
           BUILD_TOOLS=$(ls -1d "$SDK"/build-tools/* | sort -V | tail -n1)
           ZIPALIGN="$BUILD_TOOLS/zipalign"
           APKSIGNER="$BUILD_TOOLS/apksigner"
-          IN="app/build/outputs/apk/release/app-release.apk"
-          ALIGNED="app/build/outputs/apk/release/app-release-aligned.apk"
-          OUT="app/build/outputs/apk/release/app-release-signed.apk"
+          OUT_DIR="app/build/outputs/apk/release"
+          # CI buduje unsigned (patrz build.gradle.kts) — podpisujemy od zera z v1.
+          if [ -f "$OUT_DIR/app-release-unsigned.apk" ]; then
+            IN="$OUT_DIR/app-release-unsigned.apk"
+          elif [ -f "$OUT_DIR/app-release.apk" ]; then
+            IN="$OUT_DIR/app-release.apk"
+          else
+            echo "Brak APK w $OUT_DIR"; ls -la "$OUT_DIR" || true; exit 1
+          fi
+          ALIGNED="$OUT_DIR/app-release-aligned.apk"
+          OUT="$OUT_DIR/app-release-signed.apk"
+          echo "Input APK: $IN"
           "$ZIPALIGN" -f -p 4 "$IN" "$ALIGNED"
           "$APKSIGNER" sign \
             --ks keystore/awp-upload.p12 \
             --ks-pass pass:awp-sideload-2026 \
             --ks-type PKCS12 \
+            --ks-key-alias awp \
             --key-pass pass:awp-sideload-2026 \
+            --min-sdk-version 26 \
             --v1-signing-enabled true \
             --v2-signing-enabled true \
             --v3-signing-enabled true \
             --out "$OUT" \
             "$ALIGNED"
-          "$APKSIGNER" verify --verbose --print-certs "$OUT"
-          # Wymagamy JAR (v1) w META-INF
+          VERIFY_OUT=$("$APKSIGNER" verify --verbose --print-certs "$OUT" 2>&1)
+          echo "$VERIFY_OUT"
+          echo "$VERIFY_OUT" | grep -q "Verified using v1 scheme (JAR signing): true"
+          # Wymagamy plików JAR (v1) w META-INF
           python3 - <<'PY'
           import zipfile, sys
-          z = zipfile.ZipFile("app/build/outputs/apk/release/app-release-signed.apk")
+          apk = "app/build/outputs/apk/release/app-release-signed.apk"
+          z = zipfile.ZipFile(apk)
           need = {"META-INF/MANIFEST.MF", "META-INF/CERT.SF", "META-INF/CERT.RSA"}
           have = set(z.namelist())
           missing = need - have
@@ -112,7 +126,7 @@ jobs:
               sys.exit(1)
           print("v1 JAR signature OK:", sorted(need))
           PY
-          cp "$OUT" app/build/outputs/apk/release/app-release.apk
+          cp "$OUT" "$OUT_DIR/app-release.apk"
 
       - name: Prepare APK artifact
         run: |
