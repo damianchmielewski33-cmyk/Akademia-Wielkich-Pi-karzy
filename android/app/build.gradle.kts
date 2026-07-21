@@ -36,8 +36,8 @@ android {
         applicationId = "pl.akademiawielkichpilkarzy.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 2
-        versionName = "1.0.1"
+        versionCode = 3
+        versionName = "1.0.2"
 
         val apiBase = readLocalProperty("api.base.url")
             ?: (project.findProperty("API_BASE_URL") as String?)
@@ -57,6 +57,10 @@ android {
                 if (!type.isNullOrBlank()) {
                     storeType = type
                 }
+                // v1 potrzebne na wielu telefonach (Samsung itd.) — bez tego: „Aplikacja nie została zainstalowana”
+                enableV1Signing = true
+                enableV2Signing = true
+                enableV3Signing = true
             }
         }
     }

@@ -77,6 +77,13 @@ jobs:
         working-directory: android
         run: gradle :app:assembleRelease --stacktrace
 
+      - name: Verify APK signatures (v1/v2/v3)
+        run: |
+          SDK="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
+          APKSIGNER=$(ls -1 "$SDK"/build-tools/*/apksigner | sort -V | tail -n1)
+          echo "Using $APKSIGNER"
+          "$APKSIGNER" verify --verbose --print-certs android/app/build/outputs/apk/release/app-release.apk
+
       - name: Prepare APK artifact
         run: |
           mkdir -p dist
