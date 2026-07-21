@@ -49,6 +49,16 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# Android
+/android/.gradle/
+/android/build/
+/android/app/build/
+/android/local.properties
+/android/.idea/
+/android/*.iml
+/android/captures/
+/android/.cxx/
+
 # zdjęcia profilowe (lokalnie)
 /public/uploads/profiles/*
 !/public/uploads/profiles/.gitkeep

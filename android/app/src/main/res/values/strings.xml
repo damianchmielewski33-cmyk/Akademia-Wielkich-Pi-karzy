@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Akademia WP</string>
+    <string name="channel_matches_name">Mecze</string>
+    <string name="channel_matches_desc">Powiadomienia o nowych i odwołanych meczach</string>
+</resources>

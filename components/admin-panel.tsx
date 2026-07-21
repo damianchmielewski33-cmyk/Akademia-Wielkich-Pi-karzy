@@ -295,7 +295,7 @@ function MatchesView({
               <TableHead>Lokalizacja</TableHead>
               <TableHead className="text-right">Miejsca</TableHead>
               <TableHead className="text-right">Rozegrane</TableHead>
-              <TableHead className="text-right">Opłata</TableHead>
+              <TableHead className="text-right">Wynajem</TableHead>
               <TableHead className="text-right">Akcje</TableHead>
             </TableRow>
           </TableHeader>

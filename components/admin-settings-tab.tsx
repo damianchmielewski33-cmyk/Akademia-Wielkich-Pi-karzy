@@ -451,7 +451,7 @@ export function AdminSettingsTab({ loading, onReload, settingsRealm = "academy" 
               }}
             />
           </FieldRow>
-          <FieldRow label="Wpisowe (zł)" hint="Zostaw puste, jeśli kwota ustalana jest osobno dla każdego meczu.">
+          <FieldRow label="Wynajem boiska (zł)" hint="Domyślna kwota wynajmu przy dodawaniu meczu. Zostaw puste, jeśli ustalana osobno.">
             <Input
               type="number"
               min={0}

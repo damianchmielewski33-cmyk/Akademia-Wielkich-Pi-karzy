@@ -362,6 +362,9 @@ function initSchemaSync(db: Database.Database) {
   if (!userCols.some((c) => c.name === "can_pzu_cup")) {
     db.exec("ALTER TABLE users ADD COLUMN can_pzu_cup INTEGER NOT NULL DEFAULT 0");
   }
+  if (!userCols.some((c) => c.name === "push_notifications_consent")) {
+    db.exec("ALTER TABLE users ADD COLUMN push_notifications_consent INTEGER NOT NULL DEFAULT 0");
+  }
 
   const matchStatsCols = db.prepare("PRAGMA table_info(match_stats)").all() as { name: string }[];
   if (!matchStatsCols.some((c) => c.name === "season_id")) {
@@ -534,6 +537,20 @@ function initSchemaSync(db: Database.Database) {
     );
   `);
 
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS user_devices (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      fcm_token TEXT NOT NULL UNIQUE,
+      platform TEXT NOT NULL DEFAULT 'android',
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+  `);
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_user_devices_user ON user_devices(user_id);
+  `);
+
   const hasAcademySettings = db.prepare("SELECT 1 AS ok FROM app_settings WHERE realm = 'academy'").get() as
     | { ok: 1 }
     | undefined;
@@ -641,7 +658,7 @@ export type MatchRow = {
   signed_up: number;
   played: number;
   lineup_public: number;
-  /** Kwota wpisowego za mecz (PLN); ustawiana przez administratora. */
+  /** Całkowita kwota wynajmu boiska (PLN); składka na osobę = fee_pln / signed_up (zaokr. w górę do 0,50). */
   fee_pln?: number | null;
   /** 1 = mecz został anulowany. */
   cancelled?: number;

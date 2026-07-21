@@ -12,6 +12,7 @@ const bodySchema = z.object({
   time: z.string().min(1),
   location: z.string().min(1),
   max_slots: z.coerce.number().int().min(1),
+  fee_pln: z.union([z.number().nonnegative(), z.null()]).optional(),
   gate_pin: z
     .string()
     .trim()
@@ -31,9 +32,10 @@ export async function POST(req: Request) {
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
-  const { date, time, location, max_slots, gate_pin } = parsed.data;
+  const { date, time, location, max_slots, gate_pin, fee_pln } = parsed.data;
   const db = await getDb();
   const realm = getApiRealm(req);
+  const fee = fee_pln === undefined ? null : fee_pln;
 
   const existing = (await db
     .prepare(
@@ -49,14 +51,14 @@ export async function POST(req: Request) {
   }
 
   const ins = db.prepare(
-    `INSERT INTO matches (match_date, match_time, location, max_slots, signed_up, played, gate_pin, realm)
-     VALUES (?, ?, ?, ?, 0, 0, ?, ?)`
+    `INSERT INTO matches (match_date, match_time, location, max_slots, signed_up, played, fee_pln, gate_pin, realm)
+     VALUES (?, ?, ?, ?, 0, 0, ?, ?, ?)`
   );
-  const r = await ins.run(date, time, location, max_slots, gate_pin, realm);
+  const r = await ins.run(date, time, location, max_slots, fee, gate_pin, realm);
   const newId = Number(r.lastInsertRowid);
   await logActivity(
     gate.session.userId,
-    `Dodał mecz do terminarza id ${newId}: ${date} ${time} (${location}), max. ${max_slots} miejsc`
+    `Dodał mecz do terminarza id ${newId}: ${date} ${time} (${location}), max. ${max_slots} miejsc${fee != null ? `, wynajem ${fee} zł` : ""}`
   );
   const matchRow = await db.prepare("SELECT * FROM matches WHERE id = ?").get(newId) as MatchRow | undefined;
   if (matchRow) {

@@ -9,7 +9,8 @@ export async function GET() {
   const db = await getDb();
   const row = (await db
     .prepare(
-      `SELECT profile_photo_path, email, match_notifications_consent, notification_prompt_completed, ui_theme
+      `SELECT profile_photo_path, email, match_notifications_consent, push_notifications_consent,
+              notification_prompt_completed, ui_theme
        FROM users WHERE id = ?`
     )
     .get(s.userId)) as
@@ -17,6 +18,7 @@ export async function GET() {
         profile_photo_path: string | null;
         email: string | null;
         match_notifications_consent: number;
+        push_notifications_consent: number;
         notification_prompt_completed: number;
         ui_theme: string | null;
       }
@@ -34,6 +36,7 @@ export async function GET() {
       profile_photo_path: row?.profile_photo_path ?? null,
       email: row?.email ?? null,
       match_notifications_consent: row?.match_notifications_consent ?? 0,
+      push_notifications_consent: row?.push_notifications_consent ?? 0,
       notification_prompt_completed: row?.notification_prompt_completed ?? 0,
       ui_theme: normalizeUiTheme(row?.ui_theme),
     },

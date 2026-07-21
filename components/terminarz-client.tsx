@@ -28,7 +28,8 @@ import type { MatchRow } from "@/lib/db";
 import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
 import type { PlayersDataEntry } from "@/lib/terminarz-shared";
 import { formatPonderingPlayersPolish, isMatchCancelled, tentativeSignupCount } from "@/lib/terminarz-shared";
-import { cn } from "@/lib/utils";
+import { cn, matchFeeToInputString, parseMatchFeeInput } from "@/lib/utils";
+import { formatMatchFeePln, perPersonMatchFeePln } from "@/lib/match-fee";
 import { nativeSelectClasses } from "@/lib/field-styles";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -86,6 +87,7 @@ type Props = {
   matchDefaults?: {
     maxSlots: number;
     location: string;
+    feePln?: number | null;
   };
   cancelReasons?: { value: string; label: string }[];
 };
@@ -103,8 +105,7 @@ type AdminMatchSignupRow = {
 };
 
 function formatPln(n: number) {
-  const v = Math.round(n * 100) / 100;
-  return new Intl.NumberFormat("pl-PL", { style: "currency", currency: "PLN" }).format(v);
+  return formatMatchFeePln(n);
 }
 
 async function fetchJson<T>(
@@ -449,8 +450,7 @@ export function TerminarzClient({
     setSettleLoading(true);
     setSettleRows([]);
     setSettleAmounts({});
-    const fee = typeof m.fee_pln === "number" && Number.isFinite(m.fee_pln) ? String(m.fee_pln) : "";
-    setSettleDefaultAmount(fee);
+    setSettleDefaultAmount("");
     try {
       const [signupsR, attR] = await Promise.all([
         fetchJson<{ signups: AdminMatchSignupRow[] }>(`/api/admin/match/${m.id}/signups`),
@@ -466,9 +466,12 @@ export function TerminarzClient({
         confirmed = confirmed.filter((s) => present.has(s.user_id));
       }
       setSettleRows(confirmed);
-      if (fee) {
+      const settlePerPerson = perPersonMatchFeePln(m.fee_pln, confirmed.length);
+      if (settlePerPerson != null) {
+        const feeForPlayers = String(settlePerPerson);
+        setSettleDefaultAmount(feeForPlayers);
         const next: Record<number, string> = {};
-        for (const s of confirmed) next[s.user_id] = fee;
+        for (const s of confirmed) next[s.user_id] = feeForPlayers;
         setSettleAmounts(next);
       }
     } finally {
@@ -1728,7 +1731,7 @@ export function TerminarzClient({
         size="lg"
         scrollable
         title="Rozlicz mecz"
-        description="Domyślnie wpisuje równą kwotę dla wszystkich (z pola „Kwota domyślna”, zwykle `fee_pln`)."
+        description="Domyślnie wpisuje równą składkę na osobę (wynajem boiska ÷ liczba obecnych, zaokrąglenie w górę do 0,50 zł)."
         footer={
           <>
             <Button type="button" variant="outline" onClick={() => setSettleOpen(false)}>
@@ -2114,7 +2117,7 @@ function AddMatchDialog({
   open: boolean;
   onOpenChange: (v: boolean) => void;
   onDone: () => void;
-  defaults: { maxSlots: number; location: string };
+  defaults: { maxSlots: number; location: string; feePln?: number | null };
 }) {
   const { busy, run } = useAsyncAction();
   const form = useValidatedForm({
@@ -2127,10 +2130,24 @@ function AddMatchDialog({
     },
     schema: addMatchSchema,
   });
+  const [feeInput, setFeeInput] = useState(() => matchFeeToInputString(defaults.feePln));
+  const [feeError, setFeeError] = useState<string | undefined>();
+
+  useEffect(() => {
+    if (!open) return;
+    setFeeInput(matchFeeToInputString(defaults.feePln));
+    setFeeError(undefined);
+  }, [open, defaults.feePln]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!form.validate()) return;
+    const parsedFee = parseMatchFeeInput(feeInput);
+    if (!parsedFee.ok) {
+      setFeeError("Podaj nieujemną kwotę lub zostaw puste");
+      return;
+    }
+    setFeeError(undefined);
     await run(async () => {
       const { location, date, time, maxSlots, gatePin } = form.values;
       const res = await fetch("/api/terminarz/add", {
@@ -2141,6 +2158,7 @@ function AddMatchDialog({
           date,
           time,
           max_slots: maxSlots,
+          fee_pln: parsedFee.fee,
           gate_pin: gatePin.trim(),
         }),
       });
@@ -2149,6 +2167,7 @@ function AddMatchDialog({
         return;
       }
       form.reset();
+      setFeeInput(matchFeeToInputString(defaults.feePln));
       onOpenChange(false);
       onDone();
       toast.success("Mecz dodany");
@@ -2160,13 +2179,17 @@ function AddMatchDialog({
       open={open}
       onOpenChange={(v) => {
         if (busy) return;
-        if (!v) form.reset();
+        if (!v) {
+          form.reset();
+          setFeeInput(matchFeeToInputString(defaults.feePln));
+          setFeeError(undefined);
+        }
         onOpenChange(v);
       }}
       size="lg"
       title="Dodaj mecz"
       headerKicker="Terminarz"
-      description="Uzupełnij termin, lokalizację i kod bramy — mecz pojawi się na stronie głównej i w terminarzu."
+      description="Uzupełnij termin, lokalizację, wynajem boiska i kod bramy — mecz pojawi się na stronie głównej i w terminarzu."
       icon={<CalendarPlus className="h-5 w-5 text-[var(--mundial-gold)]" strokeWidth={2.25} aria-hidden />}
       footer={
         <>
@@ -2220,7 +2243,7 @@ function AddMatchDialog({
           </div>
         </ModalFormSection>
 
-        <ModalFormSection title="Szczegóły" description="Limit miejsc i kod dostępu na bramę.">
+        <ModalFormSection title="Szczegóły" description="Limit miejsc, wynajem boiska i kod dostępu na bramę.">
           <div className={modalFormGridClass}>
             <FormInput
               label="Ilość miejsc"
@@ -2232,6 +2255,20 @@ function AddMatchDialog({
               onBlur={() => form.setFieldTouched("maxSlots")}
               error={form.errors.maxSlots}
               disabled={busy}
+            />
+            <FormInput
+              label="Wynajem boiska (zł)"
+              type="text"
+              inputMode="decimal"
+              placeholder="np. 100"
+              value={feeInput}
+              onChange={(e) => {
+                setFeeInput(e.target.value);
+                if (feeError) setFeeError(undefined);
+              }}
+              error={feeError}
+              disabled={busy}
+              hint="Całkowita kwota wynajmu — składka na osobę liczona automatycznie."
             />
             <FormInput
               label="PIN do bramy"
@@ -2248,7 +2285,7 @@ function AddMatchDialog({
             />
           </div>
           <p className="mt-3 text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
-            Kod bramy gracze zobaczą na stronie głównej przy najbliższym meczu.
+            Kod bramy i składkę gracze zobaczą na stronie głównej przy najbliższym meczu.
           </p>
         </ModalFormSection>
       </form>

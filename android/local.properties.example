@@ -1,0 +1,8 @@
+## This file must *not* be checked into Version Control Systems,
+# as it contains information specific to your local configuration.
+#
+# Location of the SDK. This is only used by Gradle.
+# sdk.dir=C\:\\Users\\YOU\\AppData\\Local\\Android\\Sdk
+#
+# Backend API base URL (trailing slash recommended)
+api.base.url=http://10.0.2.2:3000/

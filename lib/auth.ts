@@ -1,9 +1,22 @@
 import { SignJWT, jwtVerify } from "jose";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { cache } from "react";
 import { SESSION_COOKIE } from "@/lib/constants";
 import { getAuthSecretKey } from "@/lib/auth-secret";
 import { getDb } from "@/lib/db";
+
+/** Token z cookie sesji albo nagłówka Authorization: Bearer (klienci mobile). */
+export async function readSessionTokenFromRequest(): Promise<string | null> {
+  const jar = await cookies();
+  const fromCookie = jar.get(SESSION_COOKIE)?.value;
+  if (fromCookie) return fromCookie;
+
+  const h = await headers();
+  const auth = h.get("authorization");
+  if (!auth) return null;
+  const m = /^Bearer\s+(.+)$/i.exec(auth.trim());
+  return m?.[1]?.trim() || null;
+}
 
 export type AppSession = {
   userId: number;
@@ -66,8 +79,7 @@ export async function verifySessionToken(token: string): Promise<JwtSessionField
 }
 
 export const getServerSession = cache(async (): Promise<AppSession | null> => {
-  const jar = await cookies();
-  const token = jar.get(SESSION_COOKIE)?.value;
+  const token = await readSessionTokenFromRequest();
   if (!token) return null;
   try {
     const session = await verifySessionToken(token);

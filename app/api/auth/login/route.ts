@@ -118,6 +118,8 @@ export async function POST(req: Request) {
 
   return NextResponse.json({
     ok: true,
+    /** JWT do Authorization: Bearer — używane przez aplikację Android (cookie zostaje dla web). */
+    token,
     pin_change_pending: matched.pin_hash_pending ? 1 : 0,
     user: {
       id: matched.id,

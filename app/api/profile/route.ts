@@ -126,5 +126,5 @@ export async function PATCH(req: Request) {
   await setSessionCookie(token, { rememberMe: session.rememberMe });
 
   const data = await getProfileDashboard(session.userId);
-  return NextResponse.json({ ok: true, ...data });
+  return NextResponse.json({ ok: true, token, ...data });
 }

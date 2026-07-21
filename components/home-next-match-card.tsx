@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Calendar, Car, Clock, HelpCircle, KeyRound, LayoutGrid, MapPin } from "lucide-react";
+import { Calendar, Car, Clock, HelpCircle, KeyRound, LayoutGrid, MapPin, Wallet } from "lucide-react";
 import { SiteAssetImage } from "@/components/site-asset-image";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,7 +11,8 @@ import {
   pitchSecondaryBtnClass,
 } from "@/components/ui/pitch-card";
 import { MatchLocationWeather } from "@/components/match-location-weather";
-import { cn } from "@/lib/utils";
+import { cn, isValidMatchFee } from "@/lib/utils";
+import { formatMatchFeePln, perPersonMatchFeePln } from "@/lib/match-fee";
 import type { MatchRow } from "@/lib/db";
 
 type SignupState = "none" | "tentative" | "confirmed" | "declined";
@@ -67,6 +68,8 @@ export function HomeNextMatchCard({
   const slots = slotMeta(match.signed_up, match.max_slots);
   const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(match.location)}`;
   const gatePin = match.gate_pin?.trim() ?? "";
+  const rentalTotal = isValidMatchFee(match.fee_pln) ? match.fee_pln : null;
+  const perPersonFee = perPersonMatchFeePln(rentalTotal, match.signed_up);
 
   const barClass =
     slots.tone === "full" ? "bg-red-400/90" : slots.tone === "warn" ? "bg-amber-400/90" : "bg-emerald-100";
@@ -128,6 +131,45 @@ export function HomeNextMatchCard({
             className="mx-auto max-w-sm"
           />
         </div>
+
+        {rentalTotal != null ? (
+          <div className={cn(pitchPanelClass, "mx-auto mt-3 max-w-md px-3.5 py-3")}>
+            <span className={cn(pitchLabelClass, "mb-2 block text-center")}>Składka</span>
+            <div className="flex items-center justify-center gap-3">
+              <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/15 ring-2 ring-white/35">
+                <Wallet className="h-5 w-5 text-[var(--mundial-gold,#f5c518)]" strokeWidth={2.25} aria-hidden />
+              </span>
+              <div className="min-w-0 text-left">
+                {perPersonFee != null ? (
+                  <>
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-100/85">
+                      Na osobę
+                    </p>
+                    <p className="text-2xl font-bold tabular-nums tracking-tight text-white drop-shadow-sm">
+                      {formatMatchFeePln(perPersonFee)}
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-100/85">
+                      Wynajem boiska
+                    </p>
+                    <p className="text-2xl font-bold tabular-nums tracking-tight text-white drop-shadow-sm">
+                      {formatMatchFeePln(rentalTotal)}
+                    </p>
+                  </>
+                )}
+              </div>
+            </div>
+            <p className="mt-2 text-center text-[11px] leading-snug text-emerald-100/85">
+              {perPersonFee != null
+                ? `Wynajem ${formatMatchFeePln(rentalTotal)} ÷ ${match.signed_up} ${
+                    match.signed_up === 1 ? "osoba" : match.signed_up < 5 ? "osoby" : "osób"
+                  } (zaokrąglenie w górę do 0,50 zł)`
+                : "Składka na osobę pojawi się po pierwszych zapisach."}
+            </p>
+          </div>
+        ) : null}
 
         {gatePin && signup === "confirmed" ? (
           <div className={cn(pitchPanelClass, "mx-auto mt-3 max-w-md px-3.5 py-3")}>

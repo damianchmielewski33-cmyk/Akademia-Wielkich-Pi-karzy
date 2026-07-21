@@ -25,7 +25,7 @@ export function matchFeeToInputString(fee: number | null | undefined): string {
 
 export type ParsedMatchFee = { ok: true; fee: number | null } | { ok: false };
 
-/** Parsuje pole tekstowe kwoty wpisowego: puste → null, liczba nieujemna → wartość. */
+/** Parsuje pole tekstowe kwoty wynajmu boiska: puste → null, liczba nieujemna → wartość. */
 export function parseMatchFeeInput(rawInput: string): ParsedMatchFee {
   const raw = rawInput.trim().replace(",", ".");
   if (raw === "") return { ok: true, fee: null };

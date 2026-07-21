@@ -75,6 +75,17 @@ export default async function ONasPage() {
           </div>
 
           <div>
+            <h2 className="pitch-heading text-lg">Aplikacja na telefon</h2>
+            <p className="mt-2">
+              Możesz zainstalować wersję Android (terminarz, zapisy, portfel). Instrukcja i pobieranie:{" "}
+              <Link className="pitch-link" href="/pobierz">
+                Pobierz aplikację
+              </Link>
+              .
+            </p>
+          </div>
+
+          <div>
             <h2 className="pitch-heading text-lg">Kontakt i dane</h2>
             <p className="mt-2">
               Pytania organizacyjne:{" "}

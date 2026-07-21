@@ -260,6 +260,11 @@ export async function initLibsqlSchema(client: Client) {
   if (!names.includes("can_pzu_cup")) {
     await client.execute("ALTER TABLE users ADD COLUMN can_pzu_cup INTEGER NOT NULL DEFAULT 0");
   }
+  if (!names.includes("push_notifications_consent")) {
+    await client.execute(
+      "ALTER TABLE users ADD COLUMN push_notifications_consent INTEGER NOT NULL DEFAULT 0"
+    );
+  }
 
   names = await pragmaColumnNames(client, "match_stats");
   if (!names.includes("season_id")) {
@@ -502,6 +507,20 @@ export async function initLibsqlSchema(client: Client) {
       reset_at TEXT NOT NULL
     );
   `);
+
+  await client.execute(`
+    CREATE TABLE IF NOT EXISTS user_devices (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      fcm_token TEXT NOT NULL UNIQUE,
+      platform TEXT NOT NULL DEFAULT 'android',
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+  `);
+  await client.execute(
+    "CREATE INDEX IF NOT EXISTS idx_user_devices_user ON user_devices(user_id)"
+  );
 
   const rs = await client.execute("SELECT 1 AS ok FROM app_settings WHERE realm = 'academy'");
   if (rs.rows.length === 0) {

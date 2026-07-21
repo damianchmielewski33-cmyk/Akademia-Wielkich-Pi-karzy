@@ -24,7 +24,8 @@ import { FormInput, FormSelectField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { cn } from "@/lib/utils";
+import { cn, isValidMatchFee, matchFeeToInputString, parseMatchFeeInput } from "@/lib/utils";
+import { formatMatchFeePln, perPersonMatchFeePln } from "@/lib/match-fee";
 import {
   Select,
   SelectContent,
@@ -134,6 +135,8 @@ export function MatchManageDialog({
   const [signupsQuery, setSignupsQuery] = useState("");
   const [confirmedSignups, setConfirmedSignups] = useState<MatchSignupRow[]>([]);
   const [signupsLoading, setSignupsLoading] = useState(false);
+  const [feeInput, setFeeInput] = useState("");
+  const [feeError, setFeeError] = useState<string | undefined>();
 
   const editForm = useValidatedForm({
     initialValues: { date: "", time: "", location: "", maxSlots: 10, gatePin: "" },
@@ -149,6 +152,8 @@ export function MatchManageDialog({
     if (!open || !match) return;
     editForm.reset(matchToFormValues(match));
     guestForm.reset({ guestFirst: "", guestLast: "", guestAlias: "" });
+    setFeeInput(matchFeeToInputString(match.fee_pln));
+    setFeeError(undefined);
     setTab(initialTab);
     setCancelReason("weather");
     setIsEditing(false);
@@ -171,7 +176,11 @@ export function MatchManageDialog({
   };
 
   function cancelEdit() {
-    if (match) editForm.reset(matchToFormValues(match));
+    if (match) {
+      editForm.reset(matchToFormValues(match));
+      setFeeInput(matchFeeToInputString(match.fee_pln));
+      setFeeError(undefined);
+    }
     setIsEditing(false);
   }
 
@@ -244,6 +253,12 @@ export function MatchManageDialog({
 
   async function saveEdit() {
     if (!match || !editForm.validate()) return;
+    const parsedFee = parseMatchFeeInput(feeInput);
+    if (!parsedFee.ok) {
+      setFeeError("Podaj nieujemną kwotę lub zostaw puste");
+      return;
+    }
+    setFeeError(undefined);
     const { date, time, location, maxSlots, gatePin } = editForm.values;
     setBusy(true);
     try {
@@ -255,6 +270,7 @@ export function MatchManageDialog({
           time,
           location: location.trim(),
           max_slots: maxSlots,
+          fee_pln: parsedFee.fee,
           gate_pin: gatePin.trim(),
         }),
       });
@@ -480,6 +496,8 @@ export function MatchManageDialog({
             setTab(value as ManageTab);
             setIsEditing(false);
             editForm.reset(matchToFormValues(match));
+            setFeeInput(matchFeeToInputString(match.fee_pln));
+            setFeeError(undefined);
           }}
         >
           <TabsList className={cn(modalTabListClass, "grid-cols-2 sm:grid-cols-4")}>
@@ -562,6 +580,35 @@ export function MatchManageDialog({
                 onBlur={() => editForm.setFieldTouched("maxSlots")}
                 error={editForm.errors.maxSlots}
                 hint={`Obecnie zapisanych: ${match.signed_up}`}
+                inputClassName={cn(!isEditing && readOnlyInputClass)}
+              />
+              <FormInput
+                id="mm-fee"
+                label="Wynajem boiska (zł)"
+                type="text"
+                inputMode="decimal"
+                placeholder="np. 100"
+                readOnly={!isEditing}
+                disabled={!isEditing || busy}
+                value={feeInput}
+                onChange={(e) => {
+                  setFeeInput(e.target.value);
+                  if (feeError) setFeeError(undefined);
+                }}
+                error={feeError}
+                hint={
+                  (() => {
+                    const parsed = parseMatchFeeInput(feeInput);
+                    const total = parsed.ok ? parsed.fee : match.fee_pln;
+                    const per = perPersonMatchFeePln(total, match.signed_up);
+                    if (per == null) {
+                      return isValidMatchFee(total)
+                        ? "Składka na osobę pojawi się po zapisach."
+                        : "Całkowita kwota wynajmu — składka liczona automatycznie.";
+                    }
+                    return `Składka na osobę: ${formatMatchFeePln(per)} (${match.signed_up} zapisanych)`;
+                  })()
+                }
                 inputClassName={cn(!isEditing && readOnlyInputClass)}
               />
               <FormInput

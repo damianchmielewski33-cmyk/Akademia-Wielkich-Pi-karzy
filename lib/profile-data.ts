@@ -41,7 +41,9 @@ export async function getProfileDashboard(userId: number) {
   const db = await getDb();
   const user = (await db
     .prepare(
-      "SELECT id, first_name, last_name, player_alias, profile_photo_path, is_admin, ui_theme FROM users WHERE id = ?"
+      `SELECT id, first_name, last_name, player_alias, profile_photo_path, is_admin, ui_theme,
+              push_notifications_consent, email, match_notifications_consent
+       FROM users WHERE id = ?`
     )
     .get(userId)) as
     | {
@@ -52,6 +54,9 @@ export async function getProfileDashboard(userId: number) {
         profile_photo_path: string | null;
         is_admin: number;
         ui_theme: string | null;
+        push_notifications_consent: number;
+        email: string | null;
+        match_notifications_consent: number;
       }
     | undefined;
 
@@ -135,6 +140,9 @@ export async function getProfileDashboard(userId: number) {
       profile_photo_path: user.profile_photo_path,
       is_admin: user.is_admin,
       ui_theme: normalizeUiTheme(user.ui_theme),
+      email: user.email,
+      match_notifications_consent: user.match_notifications_consent ?? 0,
+      push_notifications_consent: user.push_notifications_consent ?? 0,
     },
     summary: {
       matches_with_stats: statsRows.length,

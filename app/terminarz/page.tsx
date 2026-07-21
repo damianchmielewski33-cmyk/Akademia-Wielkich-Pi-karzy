@@ -62,6 +62,7 @@ export default async function TerminarzPage({
         matchDefaults={{
           maxSlots: data.appSettings.default_match_max_slots,
           location: data.appSettings.default_match_location,
+          feePln: data.appSettings.default_match_fee_pln,
         }}
         cancelReasons={data.appSettings.match_cancel_reasons}
       />
