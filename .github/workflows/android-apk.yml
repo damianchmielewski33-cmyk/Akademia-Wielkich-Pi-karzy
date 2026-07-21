@@ -73,14 +73,14 @@ jobs:
           echo "api.base.url=${{ steps.api.outputs.url }}" >> android/local.properties
           cat android/local.properties
 
-      - name: Build debug APK
+      - name: Build release APK
         working-directory: android
-        run: gradle :app:assembleDebug --stacktrace
+        run: gradle :app:assembleRelease --stacktrace
 
       - name: Prepare APK artifact
         run: |
           mkdir -p dist
-          cp android/app/build/outputs/apk/debug/app-debug.apk dist/akademia-wp.apk
+          cp android/app/build/outputs/apk/release/app-release.apk dist/akademia-wp.apk
           ls -lh dist/akademia-wp.apk
 
       - name: Upload build artifact

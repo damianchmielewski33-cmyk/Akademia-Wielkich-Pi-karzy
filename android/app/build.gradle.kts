@@ -16,6 +16,18 @@ fun readLocalProperty(key: String): String? {
         ?.takeIf { it.isNotEmpty() }
 }
 
+val keystorePropertiesFile = rootProject.file("keystore.properties")
+val keystoreProperties = mutableMapOf<String, String>()
+if (keystorePropertiesFile.exists()) {
+    keystorePropertiesFile.readLines()
+        .map { it.trim() }
+        .filter { it.isNotEmpty() && !it.startsWith("#") && it.contains("=") }
+        .forEach { line ->
+            val idx = line.indexOf('=')
+            keystoreProperties[line.substring(0, idx).trim()] = line.substring(idx + 1).trim()
+        }
+}
+
 android {
     namespace = "pl.akademiawielkichpilkarzy.app"
     compileSdk = 35
@@ -24,24 +36,43 @@ android {
         applicationId = "pl.akademiawielkichpilkarzy.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = 2
+        versionName = "1.0.1"
 
-        // Nadpisz w local.properties: api.base.url=https://twoja-domena.pl/
-        // albo w gradle.properties: API_BASE_URL=https://…
         val apiBase = readLocalProperty("api.base.url")
             ?: (project.findProperty("API_BASE_URL") as String?)
             ?: "http://10.0.2.2:3000/"
         buildConfigField("String", "API_BASE_URL", "\"$apiBase\"")
     }
 
+    signingConfigs {
+        create("release") {
+            val storePath = keystoreProperties["storeFile"]
+            if (storePath != null) {
+                storeFile = rootProject.file(storePath)
+                storePassword = keystoreProperties["storePassword"]
+                keyAlias = keystoreProperties["keyAlias"]
+                keyPassword = keystoreProperties["keyPassword"]
+                val type = keystoreProperties["storeType"]
+                if (!type.isNullOrBlank()) {
+                    storeType = type
+                }
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+        }
+        debug {
+            // Takze podpisuj debug kluczem release — latwiejszy sideload na telefonach OEM
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 
@@ -59,6 +90,9 @@ android {
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        }
+        jniLibs {
+            useLegacyPackaging = true
         }
     }
 }
