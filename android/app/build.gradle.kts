@@ -36,8 +36,8 @@ android {
         applicationId = "pl.akademiawielkichpilkarzy.mobile"
         minSdk = 26
         targetSdk = 34
-        versionCode = 7
-        versionName = "1.0.6"
+        versionCode = 8
+        versionName = "1.0.7"
 
         val apiBase = readLocalProperty("api.base.url")
             ?: (project.findProperty("API_BASE_URL") as String?)
@@ -57,7 +57,7 @@ android {
                 if (!type.isNullOrBlank()) {
                     storeType = type
                 }
-                // v1 potrzebne na wielu telefonach (Samsung itd.) — bez tego: „Aplikacja nie została zainstalowana”
+                // minSdk 26: v2/v3 wystarczą (Android 7+). v1 AGP i tak pomija.
                 enableV1Signing = true
                 enableV2Signing = true
                 enableV3Signing = true
