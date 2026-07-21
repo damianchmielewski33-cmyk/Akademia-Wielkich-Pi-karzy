@@ -8,7 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.modifier.Modifier
+import androidx.compose.ui.Modifier
 import pl.akademiawielkichpilkarzy.app.ui.login.LoginScreen
 import pl.akademiawielkichpilkarzy.app.ui.nav.MainScaffold
 import pl.akademiawielkichpilkarzy.app.ui.theme.AwpTheme
@@ -22,11 +22,9 @@ class MainActivity : ComponentActivity() {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     val token by AwpApp.instance.sessionStore.tokenFlow.collectAsState(initial = null)
                     if (token.isNullOrBlank()) {
-                        LoginScreen(onLoggedIn = { /* state from DataStore */ })
+                        LoginScreen(onLoggedIn = {})
                     } else {
-                        MainScaffold(
-                            onLoggedOut = { /* state from DataStore */ }
-                        )
+                        MainScaffold(onLoggedOut = {})
                     }
                 }
             }

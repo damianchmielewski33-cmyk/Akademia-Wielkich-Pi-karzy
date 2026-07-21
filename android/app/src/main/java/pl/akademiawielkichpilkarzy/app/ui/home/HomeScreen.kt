@@ -22,7 +22,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.modifier.Modifier
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
@@ -129,7 +129,7 @@ private fun NextMatchCard(
     onUnsubscribe: () -> Unit
 ) {
     Card(modifier = Modifier.fillMaxWidth()) {
-        Column(Modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text("${match.matchDate} · ${match.matchTime}", fontWeight = FontWeight.SemiBold)
             Text(match.location)
             Text("Zapisani: ${match.signedUp ?: 0}/${match.maxSlots ?: "?"}")

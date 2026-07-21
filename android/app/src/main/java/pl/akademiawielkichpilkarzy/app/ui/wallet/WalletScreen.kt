@@ -24,7 +24,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.modifier.Modifier
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -76,7 +76,7 @@ fun WalletScreen() {
             }
             else -> {
                 Card(modifier = Modifier.fillMaxWidth()) {
-                    Column(Modifier = Modifier.padding(16.dp)) {
+                    Column(modifier = Modifier.padding(16.dp)) {
                         Text("Saldo", style = MaterialTheme.typography.labelLarge)
                         Text(
                             "%.2f zł".format(wallet?.balancePln ?: 0.0),
@@ -141,7 +141,7 @@ fun WalletScreen() {
                     Spacer(Modifier.height(8.dp))
                     pending.forEach { d ->
                         Card(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
-                            Column(Modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                                 Text("%.2f zł · ${d.status}".format(d.amountPln))
                                 if (!d.note.isNullOrBlank()) Text(d.note)
                             }
