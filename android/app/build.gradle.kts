@@ -35,10 +35,10 @@ android {
         // Nowe ID — czysta instalacja obok starych prób
         applicationId = "pl.akademiawielkichpilkarzy.player"
         minSdk = 26
-        // S10+ max Android 12 (API 31) — target pod ten poziom
-        targetSdk = 31
-        versionCode = 11
-        versionName = "1.1.0"
+        // Sideload (nie Play): 33 zaliczane przez lint; działa na Android 12 (S10+).
+        targetSdk = 33
+        versionCode = 12
+        versionName = "1.1.1"
 
         ndk {
             abiFilters += listOf("armeabi-v7a", "arm64-v8a")
@@ -93,6 +93,13 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+    }
+
+    lint {
+        // Sideload poza Play — nie blokuj release przez reguły sklepu Google.
+        disable += "ExpiredTargetSdkVersion"
+        checkReleaseBuilds = true
+        abortOnError = true
     }
 }
 
