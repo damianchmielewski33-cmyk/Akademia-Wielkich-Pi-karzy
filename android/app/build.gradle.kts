@@ -36,8 +36,8 @@ android {
         applicationId = "pl.akademiawielkichpilkarzy.mobile"
         minSdk = 26
         targetSdk = 34
-        versionCode = 6
-        versionName = "1.0.5"
+        versionCode = 7
+        versionName = "1.0.6"
 
         val apiBase = readLocalProperty("api.base.url")
             ?: (project.findProperty("API_BASE_URL") as String?)
@@ -68,8 +68,8 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = false
-            // Na CI zostawiamy unsigned — podpis v1+v2+v3 robi apksigner w workflow
-            // (ponowne podpisywanie już podpisanego APK często wypada bez v1).
+            // Na CI: unsigned → podpis w workflow (uber-apk-signer: v1+v2).
+            // Lokalnie: podpis Gradle.
             if (System.getenv("CI") == "true") {
                 signingConfig = null
             } else {

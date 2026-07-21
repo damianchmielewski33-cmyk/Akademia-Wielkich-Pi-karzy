@@ -77,52 +77,65 @@ jobs:
         working-directory: android
         run: gradle :app:assembleRelease --stacktrace
 
-      - name: Zipalign + jarsigner (v1 JAR)
+      - name: Sign APK (v1+v2 via uber-apk-signer)
         working-directory: android
         run: |
           set -euo pipefail
-          # build-tools 35 apksigner NIE zapisuje v1 mimo --v1-signing-enabled true
-          # (weryfikacja: v1=false, v2/v3=true). Sideload na OEM wymaga v1 → jarsigner.
+          # targetSdk 34 wymaga v2+; wiele OEM wymaga też v1.
+          # apksigner z build-tools 35 pomija v1; sam jarsigner nie daje v2.
+          # uber-apk-signer ustawia obie schemy poprawnie.
           SDK="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
           BUILD_TOOLS=$(ls -1d "$SDK"/build-tools/* | sort -V | tail -n1)
-          ZIPALIGN="$BUILD_TOOLS/zipalign"
           APKSIGNER="$BUILD_TOOLS/apksigner"
           OUT_DIR="app/build/outputs/apk/release"
           if [ -f "$OUT_DIR/app-release-unsigned.apk" ]; then
             IN="$OUT_DIR/app-release-unsigned.apk"
-          elif [ -f "$OUT_DIR/app-release.apk" ]; then
-            IN="$OUT_DIR/app-release.apk"
           else
-            echo "Brak APK w $OUT_DIR"; ls -la "$OUT_DIR" || true; exit 1
+            echo "Brak unsigned APK"; ls -la "$OUT_DIR" || true; exit 1
           fi
-          ALIGNED="$OUT_DIR/app-release-aligned.apk"
-          OUT="$OUT_DIR/app-release-signed.apk"
-          echo "Input APK: $IN"
-          "$ZIPALIGN" -f -p 4 "$IN" "$ALIGNED"
-          cp "$ALIGNED" "$OUT"
-          jarsigner -sigalg SHA256withRSA -digestalg SHA-256 \
-            -keystore keystore/awp-upload.p12 -storetype PKCS12 \
-            -storepass awp-sideload-2026 -keypass awp-sideload-2026 \
-            "$OUT" awp
-          echo "=== jarsigner -verify ==="
-          jarsigner -verify -verbose -certs "$OUT" | tail -n 30
-          python3 - <<'PY'
+          curl -fsSL -o /tmp/uber-apk-signer.jar \
+            "https://github.com/patrickfav/uber-apk-signer/releases/download/v1.3.0/uber-apk-signer-1.3.0.jar"
+          java -jar /tmp/uber-apk-signer.jar \
+            --apks "$IN" \
+            --allowResign \
+            --overwrite \
+            --ks keystore/awp-upload.p12 \
+            --ksAlias awp \
+            --ksType PKCS12 \
+            --ksPass awp-sideload-2026 \
+            --ksKeyPass awp-sideload-2026
+          # Szukaj wynikowego APK (overwrite albo *signed*.apk)
+          OUT=""
+          for cand in "$IN" \
+            "$OUT_DIR/app-release-unsigned-aligned-signed.apk" \
+            "$OUT_DIR/app-release-unsigned-signed.apk" \
+            "$OUT_DIR/app-release.apk"; do
+            if [ -f "$cand" ]; then OUT="$cand"; break; fi
+          done
+          if [ -z "$OUT" ]; then
+            OUT=$(ls -1t "$OUT_DIR"/*.apk 2>/dev/null | head -n1 || true)
+          fi
+          if [ -z "${OUT:-}" ] || [ ! -f "$OUT" ]; then
+            echo "Nie znaleziono podpisanego APK"; ls -la "$OUT_DIR"; exit 1
+          fi
+          echo "Signed APK: $OUT"
+          VERIFY_OUT=$("$APKSIGNER" verify --verbose --print-certs "$OUT" 2>&1)
+          echo "$VERIFY_OUT"
+          echo "$VERIFY_OUT" | grep -q "Verified using v1 scheme (JAR signing): true"
+          echo "$VERIFY_OUT" | grep -Eq "Verified using v2 scheme \(APK Signature Scheme v2\): true|Verified using v3 scheme \(APK Signature Scheme v3\): true"
+          python3 - <<PY
           import zipfile, sys
-          z = zipfile.ZipFile("app/build/outputs/apk/release/app-release-signed.apk")
+          z = zipfile.ZipFile(r"""$OUT""")
           names = set(z.namelist())
           sf = sorted(n for n in names if n.startswith("META-INF/") and n.endswith(".SF"))
           rsa = sorted(n for n in names if n.startswith("META-INF/") and (n.endswith(".RSA") or n.endswith(".DSA")))
-          if "META-INF/MANIFEST.MF" not in names or not sf or not rsa:
-              print("MISSING v1 META-INF:", "SF", sf, "RSA/DSA", rsa)
+          if not sf or not rsa:
+              print("MISSING v1 META-INF", sf, rsa)
               sys.exit(1)
-          print("v1 JAR signature OK:", sf + rsa)
+          print("v1 files OK:", sf + rsa)
           PY
-          # Informacyjnie: apksigner powinien zgłosić v1=true (v2 może być false — OK przy sideload)
-          VERIFY_OUT=$("$APKSIGNER" verify --verbose --print-certs "$OUT" 2>&1 || true)
-          echo "=== apksigner verify ==="
-          echo "$VERIFY_OUT"
-          echo "$VERIFY_OUT" | grep -q "Verified using v1 scheme (JAR signing): true"
           cp "$OUT" "$OUT_DIR/app-release.apk"
+          ls -lh "$OUT_DIR/app-release.apk"
 
       - name: Prepare APK artifact
         run: |
