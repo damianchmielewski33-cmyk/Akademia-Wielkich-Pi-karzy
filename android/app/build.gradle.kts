@@ -36,8 +36,8 @@ android {
         applicationId = "pl.akademiawielkichpilkarzy.mobile"
         minSdk = 26
         targetSdk = 34
-        versionCode = 9
-        versionName = "1.0.8"
+        versionCode = 10
+        versionName = "1.0.9"
 
         ndk {
             // Mniejsze APK, typowe telefony ARM
@@ -62,10 +62,10 @@ android {
                 if (!type.isNullOrBlank()) {
                     storeType = type
                 }
-                // minSdk 26: v2/v3 wystarczą (Android 7+). v1 AGP i tak pomija.
+                // v3 bywa problematyczne na starszych One UI (np. S10) — zostawiamy v2 (+ v1 jeśli AGP doda).
                 enableV1Signing = true
                 enableV2Signing = true
-                enableV3Signing = true
+                enableV3Signing = false
             }
         }
     }

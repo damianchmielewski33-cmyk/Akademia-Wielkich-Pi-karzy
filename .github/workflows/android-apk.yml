@@ -93,14 +93,27 @@ jobs:
           VERIFY_OUT=$("$APKSIGNER" verify --verbose --print-certs "$APK" 2>&1)
           echo "$VERIFY_OUT"
           echo "$VERIFY_OUT" | grep -q "Verifies"
-          echo "$VERIFY_OUT" | grep -Eq "Verified using v2 scheme \(APK Signature Scheme v2\): true|Verified using v3 scheme \(APK Signature Scheme v3\): true"
-          echo "OK: APK podpisany przez Gradle"
+          echo "$VERIFY_OUT" | grep -q "Verified using v2 scheme (APK Signature Scheme v2): true"
+          echo "OK: APK podpisany przez Gradle (wymagane v2)"
 
       - name: Prepare APK artifact
         run: |
           mkdir -p dist
           cp android/app/build/outputs/apk/release/app-release.apk dist/akademia-wp.apk
           ls -lh dist/akademia-wp.apk
+
+      - name: Install APK on emulator (API 31 ≈ Galaxy S10)
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 31
+          arch: x86_64
+          force-avd-creation: false
+          disable-animations: true
+          script: |
+            set -euo pipefail
+            adb install -r dist/akademia-wp.apk
+            adb shell pm path pl.akademiawielkichpilkarzy.mobile
+            echo "Emulator install OK"
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
