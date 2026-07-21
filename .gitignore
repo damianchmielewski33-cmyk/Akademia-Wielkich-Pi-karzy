@@ -58,6 +58,7 @@ next-env.d.ts
 /android/*.iml
 /android/captures/
 /android/.cxx/
+/tmp-apk/
 
 # zdjęcia profilowe (lokalnie)
 /public/uploads/profiles/*

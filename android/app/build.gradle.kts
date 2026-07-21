@@ -33,11 +33,11 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "pl.akademiawielkichpilkarzy.app"
+        applicationId = "pl.akademiawielkichpilkarzy.mobile"
         minSdk = 26
-        targetSdk = 35
-        versionCode = 3
-        versionName = "1.0.2"
+        targetSdk = 34
+        versionCode = 4
+        versionName = "1.0.3"
 
         val apiBase = readLocalProperty("api.base.url")
             ?: (project.findProperty("API_BASE_URL") as String?)

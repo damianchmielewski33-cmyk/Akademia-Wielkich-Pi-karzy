@@ -77,12 +77,42 @@ jobs:
         working-directory: android
         run: gradle :app:assembleRelease --stacktrace
 
-      - name: Verify APK signatures (v1/v2/v3)
+      - name: Zipalign + apksigner (v1/v2/v3)
+        working-directory: android
         run: |
+          set -euo pipefail
           SDK="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
-          APKSIGNER=$(ls -1 "$SDK"/build-tools/*/apksigner | sort -V | tail -n1)
-          echo "Using $APKSIGNER"
-          "$APKSIGNER" verify --verbose --print-certs android/app/build/outputs/apk/release/app-release.apk
+          BUILD_TOOLS=$(ls -1d "$SDK"/build-tools/* | sort -V | tail -n1)
+          ZIPALIGN="$BUILD_TOOLS/zipalign"
+          APKSIGNER="$BUILD_TOOLS/apksigner"
+          IN="app/build/outputs/apk/release/app-release.apk"
+          ALIGNED="app/build/outputs/apk/release/app-release-aligned.apk"
+          OUT="app/build/outputs/apk/release/app-release-signed.apk"
+          "$ZIPALIGN" -f -p 4 "$IN" "$ALIGNED"
+          "$APKSIGNER" sign \
+            --ks keystore/awp-upload.p12 \
+            --ks-pass pass:awp-sideload-2026 \
+            --ks-type PKCS12 \
+            --key-pass pass:awp-sideload-2026 \
+            --v1-signing-enabled true \
+            --v2-signing-enabled true \
+            --v3-signing-enabled true \
+            --out "$OUT" \
+            "$ALIGNED"
+          "$APKSIGNER" verify --verbose --print-certs "$OUT"
+          # Wymagamy JAR (v1) w META-INF
+          python3 - <<'PY'
+          import zipfile, sys
+          z = zipfile.ZipFile("app/build/outputs/apk/release/app-release-signed.apk")
+          need = {"META-INF/MANIFEST.MF", "META-INF/CERT.SF", "META-INF/CERT.RSA"}
+          have = set(z.namelist())
+          missing = need - have
+          if missing:
+              print("MISSING v1 files:", missing)
+              sys.exit(1)
+          print("v1 JAR signature OK:", sorted(need))
+          PY
+          cp "$OUT" app/build/outputs/apk/release/app-release.apk
 
       - name: Prepare APK artifact
         run: |

@@ -46,4 +46,7 @@ interface AwpApi {
 
     @POST("api/user/push-preferences")
     suspend fun pushPreferences(@Body body: PushConsentRequest): ApiOkResponse
+
+    @POST("api/client-log")
+    suspend fun clientLog(@Body body: ClientLogRequest): ApiOkResponse
 }

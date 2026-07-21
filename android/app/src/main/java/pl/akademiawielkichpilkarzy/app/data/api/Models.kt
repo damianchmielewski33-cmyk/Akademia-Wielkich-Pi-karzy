@@ -129,3 +129,12 @@ data class DeviceUnregisterRequest(
 )
 
 data class PushConsentRequest(val consent: Boolean)
+
+data class ClientLogRequest(
+    val kind: String,
+    val message: String,
+    @Json(name = "phoneModel") val phoneModel: String? = null,
+    @Json(name = "androidVersion") val androidVersion: String? = null,
+    @Json(name = "appVersion") val appVersion: String? = null,
+    val details: String? = null
+)
