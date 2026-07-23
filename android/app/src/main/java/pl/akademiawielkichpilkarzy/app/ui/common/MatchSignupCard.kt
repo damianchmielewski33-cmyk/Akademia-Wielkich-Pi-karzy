@@ -13,24 +13,36 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import pl.akademiawielkichpilkarzy.app.data.api.MatchDto
+import pl.akademiawielkichpilkarzy.app.data.api.PlayersDataEntryDto
 import pl.akademiawielkichpilkarzy.app.ui.theme.AwpColors
 
 @Composable
 fun MatchSignupCard(
     match: MatchDto,
     signupKind: String?,
+    playersEntry: PlayersDataEntryDto? = null,
     weatherLine: String? = null,
     showArchiveBadge: Boolean = false,
-    onCommitment: (String) -> Unit,
-    onUnsubscribe: () -> Unit,
+    needsStats: Boolean = false,
+    onConfirmSignup: () -> Unit = {},
+    onTentative: () -> Unit = {},
+    onDeclined: () -> Unit = {},
+    onUnsubscribe: () -> Unit = {},
     onTransport: (() -> Unit)? = null,
+    onAddStats: (() -> Unit)? = null,
     compact: Boolean = false
 ) {
-    PitchCard(gold = match.cancelled == 1) {
+    val signed = match.signedUp ?: 0
+    val maxSlots = match.maxSlots
+    val isFull = maxSlots != null && signed >= maxSlots
+    val isArchive = showArchiveBadge || match.played == 1
+    val isCancelled = match.cancelled == 1
+
+    PitchCard(gold = isCancelled) {
         PitchLabel(
             when {
-                match.cancelled == 1 -> "Mecz odwołany"
-                showArchiveBadge || match.played == 1 -> "Archiwum"
+                isCancelled -> "Mecz odwołany"
+                isArchive -> "Archiwum"
                 else -> "Termin"
             }
         )
@@ -42,17 +54,17 @@ fun MatchSignupCard(
             fontWeight = FontWeight.SemiBold
         )
         Text(match.location, color = AwpColors.OnPitchMuted)
-        if (match.cancelled == 1) {
+        if (isCancelled) {
             Text(
                 match.cancellationReason?.let { "Powód: $it" } ?: "Odwołany",
                 color = AwpColors.MundialRed
             )
         }
-        if (showArchiveBadge || match.played == 1) {
+        if (isArchive) {
             Text("Rozegrany", color = AwpColors.MundialGold)
         }
         Text(
-            "Zapisani: ${match.signedUp ?: 0}/${match.maxSlots ?: "?"}",
+            "Miejsca: $signed/${maxSlots ?: "?"} ${if (isFull && !isArchive) "· pełny skład" else ""}".trim(),
             color = AwpColors.OnPitch
         )
         if (match.feePln != null) {
@@ -73,52 +85,176 @@ fun MatchSignupCard(
         }
         Text(status, color = AwpColors.MundialGold, fontWeight = FontWeight.SemiBold)
 
-        if (match.cancelled == 1 || match.played == 1) return@PitchCard
+        if (playersEntry != null) {
+            Spacer(Modifier.height(6.dp))
+            MatchRosterBlock(playersEntry)
+        }
+
+        if (isArchive) {
+            if (needsStats && onAddStats != null) {
+                Spacer(Modifier.height(8.dp))
+                AwpPrimaryButton("Dodaj statystyki", onClick = onAddStats)
+            }
+            return@PitchCard
+        }
+
+        if (isCancelled) return@PitchCard
 
         Spacer(Modifier.height(8.dp))
         if (compact) {
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                androidx.compose.material3.Button(
-                    onClick = { onCommitment("confirmed") },
-                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
-                        containerColor = AwpColors.MundialTeal
-                    ),
-                    shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
-                ) { Text("Tak") }
-                androidx.compose.material3.OutlinedButton(
-                    onClick = { onCommitment("tentative") },
-                    border = androidx.compose.foundation.BorderStroke(1.dp, AwpColors.OnPitch.copy(0.4f)),
-                    colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
-                        contentColor = AwpColors.OnPitch
-                    ),
-                    shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
-                ) { Text("Może") }
-                androidx.compose.material3.OutlinedButton(
-                    onClick = { onCommitment("declined") },
-                    border = androidx.compose.foundation.BorderStroke(1.dp, AwpColors.OnPitch.copy(0.4f)),
-                    colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
-                        contentColor = AwpColors.OnPitch
-                    ),
-                    shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
-                ) { Text("Nie") }
-            }
-            if (signupKind != null) {
-                LinkTextButton("Wypisz całkowicie", onUnsubscribe)
-            }
-            if (signupKind == "confirmed" && onTransport != null) {
-                LinkTextButton("Transport", onTransport)
+            when (signupKind) {
+                "confirmed" -> {
+                    LinkTextButton("Wypisz", onUnsubscribe)
+                    if (onTransport != null) {
+                        LinkTextButton("Transport", onTransport)
+                    }
+                }
+                "tentative" -> {
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        if (!isFull) {
+                            androidx.compose.material3.Button(
+                                onClick = onConfirmSignup,
+                                colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                                    containerColor = AwpColors.MundialTeal
+                                ),
+                                shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
+                            ) { Text("Potwierdzam") }
+                        }
+                        androidx.compose.material3.OutlinedButton(
+                            onClick = onUnsubscribe,
+                            border = androidx.compose.foundation.BorderStroke(1.dp, AwpColors.OnPitch.copy(0.4f)),
+                            colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
+                                contentColor = AwpColors.OnPitch
+                            ),
+                            shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
+                        ) { Text("Wypisz") }
+                    }
+                    if (isFull) {
+                        Text("Skład pełny — nie można potwierdzić miejsca.", color = AwpColors.OnPitchMuted)
+                    }
+                }
+                "declined" -> {
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        if (!isFull) {
+                            androidx.compose.material3.Button(
+                                onClick = onConfirmSignup,
+                                colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                                    containerColor = AwpColors.MundialTeal
+                                ),
+                                shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
+                            ) { Text("Zmieniam zdanie") }
+                        }
+                        androidx.compose.material3.OutlinedButton(
+                            onClick = onUnsubscribe,
+                            border = androidx.compose.foundation.BorderStroke(1.dp, AwpColors.OnPitch.copy(0.4f)),
+                            colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
+                                contentColor = AwpColors.OnPitch
+                            ),
+                            shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
+                        ) { Text("Wypisz") }
+                    }
+                }
+                else -> {
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        if (!isFull) {
+                            androidx.compose.material3.Button(
+                                onClick = onConfirmSignup,
+                                colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                                    containerColor = AwpColors.MundialTeal
+                                ),
+                                shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
+                            ) { Text("Zapisz") }
+                        }
+                        androidx.compose.material3.OutlinedButton(
+                            onClick = onTentative,
+                            border = androidx.compose.foundation.BorderStroke(1.dp, AwpColors.OnPitch.copy(0.4f)),
+                            colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
+                                contentColor = AwpColors.OnPitch
+                            ),
+                            shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
+                        ) { Text("Może") }
+                        androidx.compose.material3.OutlinedButton(
+                            onClick = onDeclined,
+                            border = androidx.compose.foundation.BorderStroke(1.dp, AwpColors.OnPitch.copy(0.4f)),
+                            colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
+                                contentColor = AwpColors.OnPitch
+                            ),
+                            shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
+                        ) { Text("Nie") }
+                    }
+                    if (isFull) {
+                        Text("Skład pełny — możesz tylko zaznaczyć „Może” / „Nie”.", color = AwpColors.OnPitchMuted)
+                    }
+                }
             }
         } else {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                AwpPrimaryButton("Biorę udział") { onCommitment("confirmed") }
-                AwpSecondaryButton("Jeszcze nie wiem") { onCommitment("tentative") }
-                AwpSecondaryButton("Nie biorę udziału") { onCommitment("declined") }
-                if (signupKind != null) {
-                    LinkTextButton("Wypisz całkowicie", onUnsubscribe)
+                when (signupKind) {
+                    "confirmed" -> {
+                        LinkTextButton("Wypisz całkowicie", onUnsubscribe)
+                        if (onTransport != null) {
+                            AwpGoldButton("Transport / dojazd", onTransport)
+                        }
+                    }
+                    "tentative" -> {
+                        if (!isFull) {
+                            AwpPrimaryButton("Potwierdzam udział", onConfirmSignup)
+                        } else {
+                            Text("Skład pełny — nie można potwierdzić miejsca.", color = AwpColors.OnPitchMuted)
+                        }
+                        LinkTextButton("Wypisz całkowicie", onUnsubscribe)
+                    }
+                    "declined" -> {
+                        if (!isFull) {
+                            AwpPrimaryButton("Zmieniam zdanie — zapisuję się", onConfirmSignup)
+                        }
+                        LinkTextButton("Wypisz całkowicie", onUnsubscribe)
+                    }
+                    else -> {
+                        if (!isFull) {
+                            AwpPrimaryButton("Zapisz się", onConfirmSignup)
+                        } else {
+                            Text("Skład pełny — zapis potwierdzony niedostępny.", color = AwpColors.OnPitchMuted)
+                        }
+                        AwpSecondaryButton("Jeszcze nie wiem", onTentative)
+                        AwpSecondaryButton("Nie biorę udziału", onDeclined)
+                    }
                 }
-                if (signupKind == "confirmed" && onTransport != null) {
-                    AwpGoldButton("Transport / dojazd", onTransport)
-                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MatchRosterBlock(entry: PlayersDataEntryDto) {
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        PitchLabel("Skład")
+        if (entry.players.isEmpty() && entry.tentativePlayers.isEmpty() && entry.declinedPlayers.isEmpty()) {
+            Text("Brak zapisanych.", color = AwpColors.OnPitchMuted, style = MaterialTheme.typography.bodySmall)
+        } else {
+            if (entry.players.isNotEmpty()) {
+                Text(
+                    "Potwierdzeni (${entry.players.size}): " +
+                        entry.players.joinToString { it.zawodnik.ifBlank { it.name } },
+                    color = AwpColors.OnPitch,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+            if (entry.tentativePlayers.isNotEmpty()) {
+                Text(
+                    "Jeszcze nie wiedzą (${entry.tentativePlayers.size}): " +
+                        entry.tentativePlayers.joinToString { it.zawodnik.ifBlank { it.name } },
+                    color = AwpColors.OnPitchMuted,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+            if (entry.declinedPlayers.isNotEmpty()) {
+                Text(
+                    "Nie biorą (${entry.declinedPlayers.size}): " +
+                        entry.declinedPlayers.joinToString { it.zawodnik.ifBlank { it.name } },
+                    color = AwpColors.OnPitchMuted,
+                    style = MaterialTheme.typography.bodySmall
+                )
             }
         }
     }

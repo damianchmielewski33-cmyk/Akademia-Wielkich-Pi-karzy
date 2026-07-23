@@ -2,6 +2,7 @@ package pl.akademiawielkichpilkarzy.app.ui.common
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -334,5 +335,44 @@ fun PitchLabel(text: String) {
 fun LinkTextButton(text: String, onClick: () -> Unit) {
     TextButton(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
         Text(text, color = AwpColors.MundialGold)
+    }
+}
+
+/** Kafelek nawigacji jak PitchTile na WWW. */
+@Composable
+fun HomePitchTile(
+    title: String,
+    desc: String,
+    onClick: () -> Unit,
+    gold: Boolean = false,
+    modifier: Modifier = Modifier
+) {
+    val shape = RoundedCornerShape(16.dp)
+    val bg = if (gold) {
+        Brush.verticalGradient(listOf(Color(0xFF8B6914), Color(0xFF5C4510)))
+    } else {
+        Brush.verticalGradient(listOf(AwpColors.PitchCard, Color(0xFF0A5C45)))
+    }
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .background(bg)
+            .border(2.dp, Color.White.copy(alpha = 0.28f), shape)
+            .clickable(onClick = onClick)
+            .padding(14.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        Text(
+            title,
+            style = MaterialTheme.typography.titleMedium,
+            color = AwpColors.OnPitch,
+            fontWeight = FontWeight.Bold
+        )
+        Text(
+            desc,
+            style = MaterialTheme.typography.bodySmall,
+            color = AwpColors.OnPitchMuted
+        )
     }
 }

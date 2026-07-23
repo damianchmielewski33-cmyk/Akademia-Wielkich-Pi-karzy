@@ -42,15 +42,16 @@ W GitHub: **Settings → Secrets and variables → Actions → New repository se
 
 Albo wpisz raz w pliku `android/gradle.properties` linię `API_BASE_URL=...`
 
-## Co jest w aplikacji (v1.4+)
+## Co jest w aplikacji (v1.6+)
 
 Po zalogowaniu masz te same obszary co na stronie:
 
-- **Natywnie:** Home, Terminarz, Portfel, Statystyki, Rankingi, Składy, Profil  
-- **Jak na stronie (WebView, ta sama sesja):** Piłkarze, Galeria, O nas, Kontakt, PZU Cup, Transport, pełny profil/płatności  
-- **Panel admina** — widoczny dla kont admina w menu **Więcej** (pełny panel ze strony)
+- **Dolny pasek:** Start · Terminarz · Portfel · Profil  
+- **Start:** najbliższy mecz u góry + kafelki jak menu WWW (wszystkie sekcje)  
+- **Natywnie:** Terminarz (zapisy/skład/archiwum), Portfel, Statystyki, Rankingi, Składy, Profil  
+- **WebView (ta sama sesja):** Piłkarze, Galeria, O nas, Kontakt, PZU Cup, Transport, Panel admina, pełny profil/płatności  
 
-Wygląd (v1.4.1+): ciemna murawa, navy/purple Mundial, złote akcenty, font Teko w nagłówkach — jak na stronie.
+Wygląd: ciemna murawa, navy/purple Mundial, złote akcenty, font Teko w nagłówkach — jak na stronie.
 
 Rejestracja i „Zapomniałem PIN-u” są dostępne z ekranu logowania.
 

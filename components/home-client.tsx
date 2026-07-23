@@ -294,6 +294,24 @@ export function HomeClient({
           />
         )}
 
+        {nextMatch ? (
+          <HomeNextMatchCard
+            match={nextMatch}
+            tentativeLine={nextMatchTentativeLine}
+            lineupPublic={lineupPublicNextMatch}
+            signup={nextMatchSignup}
+            transportActive={transportHomeActive}
+            isLoggedIn={isLoggedIn}
+            tentativeBusy={tentativeBusy}
+            onSignup={openTransportSignup}
+            onTentative={() => void signupTentativeHome()}
+            onDeclined={() => void signupDeclinedHome()}
+            onConfirmFromTentative={openConfirmFromTentative}
+          />
+        ) : null}
+
+        <div className="mt-8">{tiles}</div>
+
         {pageVariant === "home" ? (
           <HomeTopRankings players={topRankedPlayers} isLoggedIn={isLoggedIn} />
         ) : null}
@@ -343,24 +361,6 @@ export function HomeClient({
               </div>
             </div>
           </section>
-        ) : null}
-
-        <div className="mt-8">{tiles}</div>
-
-        {nextMatch ? (
-          <HomeNextMatchCard
-            match={nextMatch}
-            tentativeLine={nextMatchTentativeLine}
-            lineupPublic={lineupPublicNextMatch}
-            signup={nextMatchSignup}
-            transportActive={transportHomeActive}
-            isLoggedIn={isLoggedIn}
-            tentativeBusy={tentativeBusy}
-            onSignup={openTransportSignup}
-            onTentative={() => void signupTentativeHome()}
-            onDeclined={() => void signupDeclinedHome()}
-            onConfirmFromTentative={openConfirmFromTentative}
-          />
         ) : null}
       </div>
 

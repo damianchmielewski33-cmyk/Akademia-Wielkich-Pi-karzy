@@ -50,11 +50,34 @@ data class MatchDto(
     @Json(name = "gate_pin") val gatePin: String? = null
 )
 
+data class TerminarzPlayerEntry(
+    val userId: Int = 0,
+    val firstName: String = "",
+    val lastName: String = "",
+    val name: String = "",
+    val zawodnik: String = "",
+    val initials: String = "",
+    val paid: Int = 0,
+    val commitment: String = "confirmed"
+)
+
+data class PlayersDataEntryDto(
+    val date: String = "",
+    val time: String = "",
+    val location: String = "",
+    val max: Int = 0,
+    val players: List<TerminarzPlayerEntry> = emptyList(),
+    val tentativePlayers: List<TerminarzPlayerEntry> = emptyList(),
+    val declinedPlayers: List<TerminarzPlayerEntry> = emptyList()
+)
+
 data class TerminarzResponse(
     val upcoming: List<MatchDto> = emptyList(),
     @Json(name = "playedConfirmed") val playedConfirmed: List<MatchDto> = emptyList(),
     val matches: List<MatchDto> = emptyList(),
     val userSignupKind: Map<String, String> = emptyMap(),
+    val playersData: Map<String, PlayersDataEntryDto> = emptyMap(),
+    val playedMissingStatsMatchIds: List<Int> = emptyList(),
     val isLoggedIn: Boolean = false,
     val isAdmin: Boolean = false
 )
