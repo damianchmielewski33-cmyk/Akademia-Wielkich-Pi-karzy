@@ -2,20 +2,13 @@ package pl.akademiawielkichpilkarzy.app.ui.lineups
 
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Card
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -25,12 +18,20 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import pl.akademiawielkichpilkarzy.app.data.api.ApiClient
 import pl.akademiawielkichpilkarzy.app.data.api.LineupSlot
 import pl.akademiawielkichpilkarzy.app.data.api.LineupsResponse
+import pl.akademiawielkichpilkarzy.app.ui.common.EmptyHint
+import pl.akademiawielkichpilkarzy.app.ui.common.ErrorBlock
+import pl.akademiawielkichpilkarzy.app.ui.common.LoadingBlock
+import pl.akademiawielkichpilkarzy.app.ui.common.PitchCard
+import pl.akademiawielkichpilkarzy.app.ui.common.PitchLabel
+import pl.akademiawielkichpilkarzy.app.ui.common.PitchPanel
+import pl.akademiawielkichpilkarzy.app.ui.common.ScreenScaffold
+import pl.akademiawielkichpilkarzy.app.ui.theme.AwpColors
 
 @Composable
 fun LineupsScreen() {
@@ -55,22 +56,11 @@ fun LineupsScreen() {
 
     LaunchedEffect(Unit) { reload() }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp)
-    ) {
-        Text("Składy", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-        Spacer(Modifier.height(12.dp))
-
+    ScreenScaffold(title = "Składy", subtitle = "Opublikowane ustawienia") {
         when {
-            loading -> CircularProgressIndicator()
-            error != null -> {
-                Text(error!!, color = MaterialTheme.colorScheme.error)
-                OutlinedButton(onClick = { reload() }) { Text("Odśwież") }
-            }
-            data?.selected == null -> Text("Brak opublikowanych składów.")
+            loading -> LoadingBlock()
+            error != null -> ErrorBlock(error!!) { reload() }
+            data?.selected == null -> EmptyHint("Brak opublikowanych składów.")
             else -> {
                 val matches = data!!.matches
                 if (matches.size > 1) {
@@ -82,18 +72,29 @@ fun LineupsScreen() {
                             FilterChip(
                                 selected = data?.selected?.id == m.id,
                                 onClick = { reload(m.id) },
-                                label = { Text("${m.matchDate} ${m.matchTime.take(5)}") }
+                                label = { Text("${m.matchDate} ${m.matchTime.take(5)}") },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = AwpColors.MundialTeal,
+                                    selectedLabelColor = Color.White,
+                                    containerColor = AwpColors.PitchCard,
+                                    labelColor = AwpColors.OnPitch
+                                )
                             )
                         }
                     }
-                    Spacer(Modifier.height(12.dp))
                 }
                 val sel = data!!.selected!!
-                Text("${sel.matchDate} · ${sel.matchTime}", fontWeight = FontWeight.SemiBold)
-                Text(sel.location)
-                Spacer(Modifier.height(12.dp))
+                PitchCard {
+                    PitchLabel("Mecz")
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        "${sel.matchDate} · ${sel.matchTime}",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = AwpColors.OnPitch
+                    )
+                    Text(sel.location, color = AwpColors.OnPitchMuted)
+                }
                 TeamBlock("Drużyna A (home)", sel.home)
-                Spacer(Modifier.height(10.dp))
                 TeamBlock("Drużyna B (away)", sel.away)
             }
         }
@@ -102,19 +103,21 @@ fun LineupsScreen() {
 
 @Composable
 private fun TeamBlock(title: String, slots: List<LineupSlot?>) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(title, fontWeight = FontWeight.SemiBold)
-            if (slots.isEmpty()) {
-                Text("Brak ustawienia")
-            } else {
-                slots.forEachIndexed { idx, slot ->
-                    val name = slot?.displayName
-                        ?: listOfNotNull(slot?.firstName, slot?.lastName).joinToString(" ").ifBlank {
-                            slot?.zawodnik ?: "—"
-                        }
-                    Text("${idx + 1}. $name")
+    PitchCard {
+        PitchLabel(title)
+        Spacer(Modifier.height(8.dp))
+        if (slots.isEmpty()) {
+            Text("Brak ustawienia", color = AwpColors.OnPitchMuted)
+        } else {
+            slots.forEachIndexed { idx, slot ->
+                val name = slot?.displayName
+                    ?: listOfNotNull(slot?.firstName, slot?.lastName).joinToString(" ").ifBlank {
+                        slot?.zawodnik ?: "—"
+                    }
+                PitchPanel {
+                    Text("${idx + 1}. $name", color = AwpColors.OnPitch)
                 }
+                Spacer(Modifier.height(4.dp))
             }
         }
     }

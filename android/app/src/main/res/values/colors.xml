@@ -1,7 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="awp_green">#1B5E20</color>
-    <color name="awp_green_dark">#0D3B12</color>
-    <color name="awp_pitch">#2E7D32</color>
-    <color name="ic_launcher_background">#1B5E20</color>
+    <color name="awp_green">#00A651</color>
+    <color name="awp_green_dark">#061410</color>
+    <color name="awp_pitch">#0D5C45</color>
+    <color name="awp_navy">#1A2D5A</color>
+    <color name="awp_gold">#F5C518</color>
+    <!-- Tło adaptive icon — navy Mundial -->
+    <color name="ic_launcher_background">#1A2D5A</color>
 </resources>

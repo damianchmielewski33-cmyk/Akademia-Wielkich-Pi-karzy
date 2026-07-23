@@ -40,10 +40,12 @@ object ApiClient {
             chain.request().newBuilder()
                 .header("Authorization", "Bearer $token")
                 .header("Accept", "application/json")
+                .header("X-AWP-Client", "android")
                 .build()
         } else {
             chain.request().newBuilder()
                 .header("Accept", "application/json")
+                .header("X-AWP-Client", "android")
                 .build()
         }
         chain.proceed(req)

@@ -5,16 +5,20 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.os.Build
 import pl.akademiawielkichpilkarzy.app.data.api.ApiClient
+import pl.akademiawielkichpilkarzy.app.data.auth.BiometricCredentialsStore
 import pl.akademiawielkichpilkarzy.app.data.auth.SessionStore
 
 class AwpApp : Application() {
     lateinit var sessionStore: SessionStore
+        private set
+    lateinit var biometricStore: BiometricCredentialsStore
         private set
 
     override fun onCreate() {
         super.onCreate()
         instance = this
         sessionStore = SessionStore(this)
+        biometricStore = BiometricCredentialsStore(this)
         ApiClient.init(sessionStore)
         createNotificationChannels()
     }

@@ -37,8 +37,8 @@ android {
         minSdk = 26
         // Sideload (nie Play): 33 zaliczane przez lint; działa na Android 12 (S10+).
         targetSdk = 33
-        versionCode = 14
-        versionName = "1.3.0"
+        versionCode = 19
+        versionName = "1.5.2"
 
         ndk {
             abiFilters += listOf("armeabi-v7a", "arm64-v8a")
@@ -119,6 +119,9 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.datastore:datastore-preferences:1.1.1")
+    implementation("androidx.biometric:biometric:1.1.0")
+    implementation("androidx.security:security-crypto:1.0.0")
+    implementation("androidx.fragment:fragment-ktx:1.8.5")
 
     implementation("com.squareup.retrofit2:retrofit:2.11.0")
     implementation("com.squareup.retrofit2:converter-moshi:2.11.0")

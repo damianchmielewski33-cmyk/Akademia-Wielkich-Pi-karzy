@@ -61,4 +61,11 @@ interface AwpApi {
 
     @POST("api/client-log")
     suspend fun clientLog(@Body body: ClientLogRequest): ApiOkResponse
+
+    /** Wymiana Bearer JWT na ticket do WebView (cookie sesji strony). */
+    @POST("api/auth/app-bridge")
+    suspend fun appBridge(@Body body: AppBridgeRequest): AppBridgeResponse
+
+    @GET("api/mobile/config")
+    suspend fun mobileConfig(): MobileConfigResponse
 }

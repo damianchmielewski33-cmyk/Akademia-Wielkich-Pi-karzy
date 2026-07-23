@@ -17,6 +17,19 @@ import {
   type ScreenBlockEntry,
 } from "@/lib/screen-blocks";
 import {
+  emptyMobileScreenBlocksMap,
+  parseMobileScreenBlocksJson,
+  serializeMobileScreenBlocksMap,
+  type BlockableMobileScreenKey,
+} from "@/lib/screen-blocks-mobile";
+import {
+  parseMobileSettingsJson,
+  serializeMobileSettings,
+  type MobileChannelSettings,
+  mobileSettingsFromWeb,
+  MOBILE_CHANNEL_SETTINGS_DEFAULTS,
+} from "@/lib/mobile-channel-settings";
+import {
   resolveSiteAssets,
   type ResolvedSiteAssets,
   type SiteAssetKey,
@@ -65,6 +78,10 @@ export type AppSettings = {
   site_assets: ResolvedSiteAssets;
   /** Zaślepki ekranów dla graczy (admin widzi pełną treść). */
   screen_blocks: Record<BlockableScreenKey, ScreenBlockEntry>;
+  /** Zaślepki ekranów aplikacji Android — niezależne od strony. */
+  screen_blocks_mobile: Record<BlockableMobileScreenKey, ScreenBlockEntry>;
+  /** Pełna konfiguracja kanału „aplikacja” (osobno od strony). */
+  mobile_settings: MobileChannelSettings;
 };
 
 export const PZU_CUP_APP_SETTINGS_DEFAULTS: Partial<AppSettings> = {
@@ -119,6 +136,8 @@ export const APP_SETTINGS_DEFAULTS: AppSettings = {
     bg_pitch_lines: null,
   }),
   screen_blocks: emptyScreenBlocksMap(),
+  screen_blocks_mobile: emptyMobileScreenBlocksMap(),
+  mobile_settings: { ...MOBILE_CHANNEL_SETTINGS_DEFAULTS },
 };
 
 type DbReadLike = {
@@ -168,6 +187,8 @@ type AppSettingsRow = {
   asset_bg_stadium_url?: string | null;
   asset_bg_pitch_lines_url?: string | null;
   screen_blocks_json?: string | null;
+  screen_blocks_mobile_json?: string | null;
+  mobile_settings_json?: string | null;
 };
 
 function appSettingsSelectSql(): string {
@@ -206,7 +227,9 @@ function appSettingsSelectSql(): string {
     asset_bg_soccer_ball_url,
     asset_bg_stadium_url,
     asset_bg_pitch_lines_url,
-    screen_blocks_json
+    screen_blocks_json,
+    screen_blocks_mobile_json,
+    mobile_settings_json
   FROM app_settings WHERE realm = ?
 `;
 }
@@ -336,6 +359,62 @@ export function resolveAppSettings(
     asset_bg_pitch_lines_url: assetUrls.bg_pitch_lines,
     site_assets: resolveSiteAssets(assetUrls),
     screen_blocks: parseScreenBlocksJson(row?.screen_blocks_json),
+    screen_blocks_mobile: parseMobileScreenBlocksJson(row?.screen_blocks_mobile_json),
+    mobile_settings: parseMobileSettingsJson(
+      row?.mobile_settings_json,
+      mobileSettingsFromWeb({
+        ...APP_SETTINGS_DEFAULTS,
+        match_notification_prompt_enabled: (row?.match_notification_prompt_enabled ?? 0) === 1,
+        home_youtube_url: row?.home_youtube_url?.trim() || null,
+        site_name: nonEmptyString(row?.site_name, d.site_name),
+        site_description: nonEmptyString(row?.site_description, d.site_description),
+        contact_email: nonEmptyString(row?.contact_email, d.contact_email),
+        blik_phone: nonEmptyString(row?.blik_phone, d.blik_phone),
+        organizer_damian_name: nonEmptyString(row?.organizer_damian_name, d.organizer_damian_name),
+        organizer_damian_phone: nonEmptyString(row?.organizer_damian_phone, d.organizer_damian_phone),
+        organizer_damian_email: nonEmptyString(row?.organizer_damian_email, d.organizer_damian_email),
+        organizer_mateusz_name: nonEmptyString(row?.organizer_mateusz_name, d.organizer_mateusz_name),
+        organizer_mateusz_phone: nonEmptyString(row?.organizer_mateusz_phone, d.organizer_mateusz_phone),
+        organizer_mateusz_email: nonEmptyString(row?.organizer_mateusz_email, d.organizer_mateusz_email),
+        facebook_damian_url: nonEmptyString(row?.facebook_damian_url, d.facebook_damian_url),
+        facebook_mateusz_url: nonEmptyString(row?.facebook_mateusz_url, d.facebook_mateusz_url),
+        allow_self_registration:
+          allowRaw === null || allowRaw === undefined ? true : allowRaw === 1,
+        default_match_max_slots:
+          typeof row?.default_match_max_slots === "number" && row.default_match_max_slots >= 1
+            ? row.default_match_max_slots
+            : d.default_match_max_slots,
+        default_match_fee_pln:
+          typeof row?.default_match_fee_pln === "number" && Number.isFinite(row.default_match_fee_pln)
+            ? row.default_match_fee_pln
+            : null,
+        default_match_location: row?.default_match_location?.trim() ?? d.default_match_location,
+        ranking_pt_goal:
+          typeof row?.ranking_pt_goal === "number" && row.ranking_pt_goal >= 0
+            ? row.ranking_pt_goal
+            : d.ranking_pt_goal,
+        ranking_pt_assist:
+          typeof row?.ranking_pt_assist === "number" && row.ranking_pt_assist >= 0
+            ? row.ranking_pt_assist
+            : d.ranking_pt_assist,
+        ranking_pt_km:
+          typeof row?.ranking_pt_km === "number" && row.ranking_pt_km >= 0 ? row.ranking_pt_km : d.ranking_pt_km,
+        ranking_pt_save:
+          typeof row?.ranking_pt_save === "number" && row.ranking_pt_save >= 0
+            ? row.ranking_pt_save
+            : d.ranking_pt_save,
+        match_email_notifications_enabled: (row?.match_email_notifications_enabled ?? 1) === 1,
+        lineup_pitch_slots_min:
+          typeof row?.lineup_pitch_slots_min === "number" && row.lineup_pitch_slots_min >= 1
+            ? row.lineup_pitch_slots_min
+            : d.lineup_pitch_slots_min,
+        lineup_pitch_slots_max:
+          typeof row?.lineup_pitch_slots_max === "number" && row.lineup_pitch_slots_max >= 1
+            ? row.lineup_pitch_slots_max
+            : d.lineup_pitch_slots_max,
+        match_cancel_reasons: parseCancelReasonsJson(row?.match_cancel_reasons_json),
+      })
+    ),
   };
 }
 
@@ -391,7 +470,9 @@ export async function saveAppSettings(db: DbWriteLike, realm: Realm, settings: A
         asset_bg_soccer_ball_url = ?,
         asset_bg_stadium_url = ?,
         asset_bg_pitch_lines_url = ?,
-        screen_blocks_json = ?
+        screen_blocks_json = ?,
+        screen_blocks_mobile_json = ?,
+        mobile_settings_json = ?
       WHERE realm = ?`
     )
     .run(
@@ -429,6 +510,8 @@ export async function saveAppSettings(db: DbWriteLike, realm: Realm, settings: A
       assetUrls.bg_stadium,
       assetUrls.bg_pitch_lines,
       serializeScreenBlocksMap(settings.screen_blocks),
+      serializeMobileScreenBlocksMap(settings.screen_blocks_mobile),
+      serializeMobileSettings(settings.mobile_settings),
       realm
     );
 }
@@ -491,6 +574,11 @@ const APP_SETTINGS_MIGRATION_COLUMNS: { name: string; ddl: string }[] = [
   { name: "asset_bg_stadium_url", ddl: "ALTER TABLE app_settings ADD COLUMN asset_bg_stadium_url TEXT" },
   { name: "asset_bg_pitch_lines_url", ddl: "ALTER TABLE app_settings ADD COLUMN asset_bg_pitch_lines_url TEXT" },
   { name: "screen_blocks_json", ddl: "ALTER TABLE app_settings ADD COLUMN screen_blocks_json TEXT" },
+  {
+    name: "screen_blocks_mobile_json",
+    ddl: "ALTER TABLE app_settings ADD COLUMN screen_blocks_mobile_json TEXT",
+  },
+  { name: "mobile_settings_json", ddl: "ALTER TABLE app_settings ADD COLUMN mobile_settings_json TEXT" },
 ];
 
 /** True gdy SQLite/libSQL zgłasza „duplicate column” (także lokalizowane komunikaty). */

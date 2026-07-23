@@ -17,7 +17,7 @@ const bodySchema = z.object({
 });
 
 /**
- * Zgłoszenia błędów instalacji / pobierania / API z telefonu lub strony /pobierz.
+ * Zgłoszenia błędów instalacji / pobierania / API z telefonu lub klienta WWW.
  * Widoczne w logach Vercel (console) oraz w activity_log.
  */
 export async function POST(req: Request) {

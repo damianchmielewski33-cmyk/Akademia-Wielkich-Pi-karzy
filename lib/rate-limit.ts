@@ -70,4 +70,9 @@ export const RATE = {
   androidDownload: { limit: 60, windowMs: 60 * 60 * 1000 },
   androidVersion: { limit: 120, windowMs: 60 * 1000 },
   clientLog: { limit: 80, windowMs: 60 * 1000 },
+  /** Most sesji mobile → cookie WebView. */
+  appBridge: { limit: 60, windowMs: 60 * 1000 },
+  appBridgeGo: { limit: 120, windowMs: 60 * 1000 },
+  /** Config kanału aplikacji Android. */
+  mobileConfig: { limit: 120, windowMs: 60 * 1000 },
 } as const;

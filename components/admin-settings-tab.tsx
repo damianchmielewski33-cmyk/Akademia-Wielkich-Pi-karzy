@@ -24,6 +24,12 @@ import { AdminSiteAssetField } from "@/components/admin-site-asset-field";
 import { AdminImageSpecsTable, ImageUploadSpecDetails } from "@/components/admin-image-specs";
 import { ALL_ADMIN_IMAGE_SPECS, PROFILE_PHOTO_SPEC } from "@/lib/image-upload-specs";
 import { SITE_ASSET_KEYS } from "@/lib/site-assets";
+import { AdminChannelToggle } from "@/components/admin-channel-toggle";
+import {
+  mobileSettingsFromWeb,
+  type ClientChannel,
+  type MobileChannelSettings,
+} from "@/lib/mobile-channel-settings";
 
 type Props = {
   loading: boolean;
@@ -70,6 +76,7 @@ function FieldRow({
 }
 
 export function AdminSettingsTab({ loading, onReload, settingsRealm = "academy" }: Props) {
+  const [channel, setChannel] = useState<ClientChannel>("web");
   const [settings, setSettings] = useState<AppSettingsApiResponse | null>(null);
   const [saving, setSaving] = useState(false);
   const [fetching, setFetching] = useState(true);
@@ -82,17 +89,26 @@ export function AdminSettingsTab({ loading, onReload, settingsRealm = "academy" 
       if (!res.ok) throw new Error("Nie udało się wczytać ustawień");
       const data = (await res.json()) as AppSettingsApiResponse;
       setSettings(data);
-      setCancelReasonsDraft(data.match_cancel_reasons);
+      setCancelReasonsDraft(
+        channel === "mobile" ? data.mobile_settings.match_cancel_reasons : data.match_cancel_reasons
+      );
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Błąd wczytywania ustawień");
     } finally {
       setFetching(false);
     }
-  }, [settingsRealm]);
+  }, [settingsRealm, channel]);
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    if (!settings) return;
+    setCancelReasonsDraft(
+      channel === "mobile" ? settings.mobile_settings.match_cancel_reasons : settings.match_cancel_reasons
+    );
+  }, [channel, settings]);
 
   const save = useCallback(
     async (patch: Record<string, unknown>) => {
@@ -109,7 +125,9 @@ export function AdminSettingsTab({ loading, onReload, settingsRealm = "academy" 
           return;
         }
         setSettings(j);
-        setCancelReasonsDraft(j.match_cancel_reasons);
+        setCancelReasonsDraft(
+          channel === "mobile" ? j.mobile_settings.match_cancel_reasons : j.match_cancel_reasons
+        );
         toast.success("Zapisano ustawienia");
       } catch {
         toast.error("Błąd połączenia");
@@ -117,10 +135,25 @@ export function AdminSettingsTab({ loading, onReload, settingsRealm = "academy" 
         setSaving(false);
       }
     },
-    [settingsRealm]
+    [settingsRealm, channel]
   );
 
+  const saveMobilePatch = useCallback(
+    async (patch: Partial<MobileChannelSettings>) => {
+      if (!settings) return;
+      await save({ mobile_settings: { ...settings.mobile_settings, ...patch } });
+    },
+    [save, settings]
+  );
+
+  const copyWebToMobile = useCallback(async () => {
+    if (!settings) return;
+    await save({ mobile_settings: mobileSettingsFromWeb(settings) });
+    toast.message("Skopiowano ustawienia strony do aplikacji — możesz je dalej zmieniać osobno.");
+  }, [save, settings]);
+
   const busy = loading || fetching || saving;
+  const mobile = settings?.mobile_settings;
 
   if (fetching && !settings) {
     return (
@@ -155,15 +188,37 @@ export function AdminSettingsTab({ loading, onReload, settingsRealm = "academy" 
   return (
     <div className="space-y-6">
       <AdminToolbar
-        title="Ustawienia strony"
-        description="Zmieniasz treści, kontakty, mecze i powiadomienia — bez edycji kodu. Po wyjściu z pola zmiany zapisują się same."
+        title={channel === "web" ? "Ustawienia strony" : "Ustawienia aplikacji"}
+        description={
+          channel === "web"
+            ? "Konfiguracja strony WWW — treści, kontakty, mecze. Po wyjściu z pola zmiany zapisują się same."
+            : "Osobna konfiguracja aplikacji Android — te same pola biznesowe, niezależne od strony WWW."
+        }
         onReload={() => {
           onReload();
           void load();
         }}
         loading={busy}
-      />
+      >
+        {channel === "mobile" ? (
+          <Button type="button" variant="outline" size="sm" disabled={busy} onClick={() => void copyWebToMobile()}>
+            Kopiuj ze strony → aplikacja
+          </Button>
+        ) : null}
+      </AdminToolbar>
 
+      <AdminChannelToggle channel={channel} onChange={setChannel} />
+
+      {channel === "mobile" && mobile ? (
+        <MobileSettingsEditor
+          mobile={mobile}
+          busy={busy}
+          cancelReasonsDraft={cancelReasonsDraft}
+          setCancelReasonsDraft={setCancelReasonsDraft}
+          onSavePatch={(patch) => void saveMobilePatch(patch)}
+        />
+      ) : (
+        <>
       <SettingsSection
         title="Co działa na serwerze"
         description="Tylko podgląd — tych rzeczy nie zmienisz tutaj. Gdy coś jest wyłączone, poproś osobę od hostingu o konfigurację."
@@ -627,6 +682,205 @@ export function AdminSettingsTab({ loading, onReload, settingsRealm = "academy" 
         Większość pól zapisuje się sama po kliknięciu poza pole. Powody anulowania zapisz przyciskiem „Zapisz powody”.
         Hasła do bazy i serwera e-mail ustawia się u hostingu — nie w tym panelu.
       </p>
+        </>
+      )}
+    </div>
+  );
+}
+
+function MobileSettingsEditor({
+  mobile,
+  busy,
+  cancelReasonsDraft,
+  setCancelReasonsDraft,
+  onSavePatch,
+}: {
+  mobile: MobileChannelSettings;
+  busy: boolean;
+  cancelReasonsDraft: MatchCancelReasonEntry[];
+  setCancelReasonsDraft: (v: MatchCancelReasonEntry[]) => void;
+  onSavePatch: (patch: Partial<MobileChannelSettings>) => void;
+}) {
+  return (
+    <div className="space-y-6">
+      <SettingsSection
+        title="Nazwa w aplikacji"
+        description="Wyświetlana w aplikacji Android (nie musi być identyczna ze stroną)."
+      >
+        <FieldRow label="Nazwa">
+          <Input
+            className={adminFieldClass}
+            defaultValue={mobile.site_name}
+            disabled={busy}
+            key={`m-site_name-${mobile.site_name}`}
+            onBlur={(e) => {
+              const v = e.target.value.trim();
+              if (v && v !== mobile.site_name) onSavePatch({ site_name: v });
+            }}
+          />
+        </FieldRow>
+        <FieldRow label="Opis">
+          <textarea
+            className={adminTextareaClass}
+            defaultValue={mobile.site_description}
+            disabled={busy}
+            key={`m-site_desc-${mobile.site_description}`}
+            onBlur={(e) => {
+              if (e.target.value.trim() !== mobile.site_description) {
+                onSavePatch({ site_description: e.target.value.trim() });
+              }
+            }}
+          />
+        </FieldRow>
+        <FieldRow label="Baner na ekranie logowania" hint="Opcjonalny komunikat pod formularzem PIN.">
+          <Input
+            className={adminFieldClass}
+            defaultValue={mobile.login_banner}
+            disabled={busy}
+            key={`m-banner-${mobile.login_banner}`}
+            onBlur={(e) => {
+              const v = e.target.value.trim();
+              if (v !== mobile.login_banner) onSavePatch({ login_banner: v });
+            }}
+          />
+        </FieldRow>
+        <YesNoSwitchRow
+          label="Pokaż PZU Cup w menu aplikacji"
+          checked={mobile.show_pzu_cup}
+          disabled={busy}
+          onCheckedChange={(v) => onSavePatch({ show_pzu_cup: v })}
+        />
+        <YesNoSwitchRow
+          label="Rejestracja z aplikacji (WebView)"
+          checked={mobile.allow_self_registration !== false}
+          disabled={busy}
+          onCheckedChange={(v) => onSavePatch({ allow_self_registration: v })}
+        />
+      </SettingsSection>
+
+      <SettingsSection title="Kontakt w aplikacji">
+        <FieldRow label="E-mail">
+          <Input
+            type="email"
+            className={adminFieldClass}
+            defaultValue={mobile.contact_email}
+            disabled={busy}
+            key={`m-contact-${mobile.contact_email}`}
+            onBlur={(e) => {
+              const v = e.target.value.trim();
+              if (v && v !== mobile.contact_email) onSavePatch({ contact_email: v });
+            }}
+          />
+        </FieldRow>
+        <FieldRow label="Telefon BLIK">
+          <Input
+            className={adminFieldClass}
+            defaultValue={mobile.blik_phone}
+            disabled={busy}
+            key={`m-blik-${mobile.blik_phone}`}
+            onBlur={(e) => {
+              const v = e.target.value.trim();
+              if (v && v !== mobile.blik_phone) onSavePatch({ blik_phone: v });
+            }}
+          />
+        </FieldRow>
+      </SettingsSection>
+
+      <SettingsSection title="Domyślne mecze (aplikacja)">
+        <FieldRow label="Domyślna liczba miejsc">
+          <Input
+            type="number"
+            className={adminFieldClass}
+            defaultValue={mobile.default_match_max_slots}
+            disabled={busy}
+            key={`m-slots-${mobile.default_match_max_slots}`}
+            onBlur={(e) => {
+              const n = Number(e.target.value);
+              if (Number.isFinite(n) && n >= 1 && n !== mobile.default_match_max_slots) {
+                onSavePatch({ default_match_max_slots: n });
+              }
+            }}
+          />
+        </FieldRow>
+        <FieldRow label="Domyślna lokalizacja">
+          <Input
+            className={adminFieldClass}
+            defaultValue={mobile.default_match_location}
+            disabled={busy}
+            key={`m-loc-${mobile.default_match_location}`}
+            onBlur={(e) => {
+              if (e.target.value.trim() !== mobile.default_match_location) {
+                onSavePatch({ default_match_location: e.target.value.trim() });
+              }
+            }}
+          />
+        </FieldRow>
+      </SettingsSection>
+
+      <SettingsSection title="Punkty rankingowe (aplikacja)">
+        {(
+          [
+            ["ranking_pt_goal", "Gol", mobile.ranking_pt_goal],
+            ["ranking_pt_assist", "Asysta", mobile.ranking_pt_assist],
+            ["ranking_pt_km", "Km", mobile.ranking_pt_km],
+            ["ranking_pt_save", "Obrona", mobile.ranking_pt_save],
+          ] as const
+        ).map(([key, label, value]) => (
+          <FieldRow key={key} label={label}>
+            <Input
+              type="number"
+              step="0.1"
+              className={adminFieldClass}
+              defaultValue={value}
+              disabled={busy}
+              key={`m-${key}-${value}`}
+              onBlur={(e) => {
+                const n = Number(e.target.value);
+                if (Number.isFinite(n) && n >= 0 && n !== value) onSavePatch({ [key]: n });
+              }}
+            />
+          </FieldRow>
+        ))}
+      </SettingsSection>
+
+      <SettingsSection title="Powody anulowania (aplikacja)">
+        <div className="space-y-2">
+          {cancelReasonsDraft.map((r, i) => (
+            <div key={i} className="flex flex-wrap gap-2">
+              <Input
+                className={cn(adminFieldClass, "min-w-[8rem] flex-1 font-mono text-xs")}
+                value={r.value}
+                disabled={busy}
+                onChange={(e) => {
+                  const next = [...cancelReasonsDraft];
+                  next[i] = { ...next[i], value: e.target.value };
+                  setCancelReasonsDraft(next);
+                }}
+              />
+              <Input
+                className={cn(adminFieldClass, "min-w-[10rem] flex-[2]")}
+                value={r.label}
+                disabled={busy}
+                onChange={(e) => {
+                  const next = [...cancelReasonsDraft];
+                  next[i] = { ...next[i], label: e.target.value };
+                  setCancelReasonsDraft(next);
+                }}
+              />
+            </div>
+          ))}
+        </div>
+        <Button
+          type="button"
+          variant="pitch"
+          size="sm"
+          className="mt-3"
+          disabled={busy}
+          onClick={() => onSavePatch({ match_cancel_reasons: cancelReasonsDraft })}
+        >
+          Zapisz powody (aplikacja)
+        </Button>
+      </SettingsSection>
     </div>
   );
 }

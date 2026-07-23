@@ -25,11 +25,11 @@ Po udanym buildzie:
 - **Releases** na GitHubie → plik `akademia-wp.apk`  
   bezpośrednio:  
   https://github.com/damianchmielewski33-cmyk/Akademia-Wielkich-Pi-karzy/releases/latest/download/akademia-wp.apk  
-- Na stronie akademii: **`/pobierz`** (menu „Aplikacja”)
+- Na stronie akademii: pasek u góry (Android) z przyciskiem **Pobierz** → `/api/android/download`
 
 ## Instalacja na telefonie
 
-1. Otwórz `/pobierz` na telefonie (albo link z Releases)  
+1. Otwórz stronę akademii na telefonie z Androidem (pasek „Pobierz aplikację”) albo link z Releases  
 2. Pobierz APK → otwórz → zainstaluj  
 3. Zaloguj się PIN-em jak na stronie
 
@@ -41,6 +41,27 @@ W GitHub: **Settings → Secrets and variables → Actions → New repository se
 - Wartość: `https://twoja-domena.pl/`
 
 Albo wpisz raz w pliku `android/gradle.properties` linię `API_BASE_URL=...`
+
+## Co jest w aplikacji (v1.4+)
+
+Po zalogowaniu masz te same obszary co na stronie:
+
+- **Natywnie:** Home, Terminarz, Portfel, Statystyki, Rankingi, Składy, Profil  
+- **Jak na stronie (WebView, ta sama sesja):** Piłkarze, Galeria, O nas, Kontakt, PZU Cup, Transport, pełny profil/płatności  
+- **Panel admina** — widoczny dla kont admina w menu **Więcej** (pełny panel ze strony)
+
+Wygląd (v1.4.1+): ciemna murawa, navy/purple Mundial, złote akcenty, font Teko w nagłówkach — jak na stronie.
+
+Rejestracja i „Zapomniałem PIN-u” są dostępne z ekranu logowania.
+
+## Logowanie biometrią (v1.5.1+)
+
+Jeśli telefon ma odcisk palca lub rozpoznawanie twarzy:
+1. Zaloguj się PIN-em — aplikacja zapyta o włączenie biometrii  
+2. Albo włącz przełącznik w **Profilu**  
+3. Przy kolejnym starcie możesz wejść odciskiem / twarzą  
+
+PIN jest przechowywany lokalnie w zaszyfrowanym magazynie telefonu.
 
 ## Push (powiadomienia)
 

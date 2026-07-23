@@ -6,18 +6,14 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import pl.akademiawielkichpilkarzy.app.data.api.MatchDto
+import pl.akademiawielkichpilkarzy.app.ui.theme.AwpColors
 
 @Composable
 fun MatchSignupCard(
@@ -27,76 +23,101 @@ fun MatchSignupCard(
     showArchiveBadge: Boolean = false,
     onCommitment: (String) -> Unit,
     onUnsubscribe: () -> Unit,
+    onTransport: (() -> Unit)? = null,
     compact: Boolean = false
 ) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier.padding(if (compact) 14.dp else 16.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
+    PitchCard(gold = match.cancelled == 1) {
+        PitchLabel(
+            when {
+                match.cancelled == 1 -> "Mecz odwołany"
+                showArchiveBadge || match.played == 1 -> "Archiwum"
+                else -> "Termin"
+            }
+        )
+        Spacer(Modifier.height(6.dp))
+        Text(
+            "${match.matchDate} · ${match.matchTime}",
+            style = MaterialTheme.typography.titleLarge,
+            color = AwpColors.OnPitch,
+            fontWeight = FontWeight.SemiBold
+        )
+        Text(match.location, color = AwpColors.OnPitchMuted)
+        if (match.cancelled == 1) {
             Text(
-                "${match.matchDate} · ${match.matchTime}",
-                fontWeight = FontWeight.SemiBold
+                match.cancellationReason?.let { "Powód: $it" } ?: "Odwołany",
+                color = AwpColors.MundialRed
             )
-            Text(match.location)
-            if (match.cancelled == 1) {
-                Text(
-                    "Odwołany" + (match.cancellationReason?.let { ": $it" } ?: ""),
-                    color = MaterialTheme.colorScheme.error
-                )
-            }
-            if (showArchiveBadge || match.played == 1) {
-                Text("Rozegrany", color = MaterialTheme.colorScheme.secondary)
-            }
-            Text("Zapisani: ${match.signedUp ?: 0}/${match.maxSlots ?: "?"}")
-            if (match.feePln != null) {
-                Text("Wynajem: ${"%.2f".format(match.feePln)} zł")
-            }
-            if (!match.gatePin.isNullOrBlank()) {
-                Text("PIN bramki: ${match.gatePin}")
-            }
-            weatherLine?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
+        }
+        if (showArchiveBadge || match.played == 1) {
+            Text("Rozegrany", color = AwpColors.MundialGold)
+        }
+        Text(
+            "Zapisani: ${match.signedUp ?: 0}/${match.maxSlots ?: "?"}",
+            color = AwpColors.OnPitch
+        )
+        if (match.feePln != null) {
+            Text("Wynajem: ${"%.2f".format(match.feePln)} zł", color = AwpColors.OnPitchMuted)
+        }
+        if (!match.gatePin.isNullOrBlank()) {
+            Text("PIN bramki: ${match.gatePin}", color = AwpColors.MundialGold)
+        }
+        weatherLine?.let {
+            Text(it, style = MaterialTheme.typography.bodySmall, color = AwpColors.OnPitchMuted)
+        }
 
-            val status = when (signupKind) {
-                "confirmed" -> "Status: biorę udział"
-                "tentative" -> "Status: jeszcze nie wiem"
-                "declined" -> "Status: nie biorę"
-                else -> "Status: brak zapisu"
+        val status = when (signupKind) {
+            "confirmed" -> "Status: biorę udział"
+            "tentative" -> "Status: jeszcze nie wiem"
+            "declined" -> "Status: nie biorę"
+            else -> "Status: brak zapisu"
+        }
+        Text(status, color = AwpColors.MundialGold, fontWeight = FontWeight.SemiBold)
+
+        if (match.cancelled == 1 || match.played == 1) return@PitchCard
+
+        Spacer(Modifier.height(8.dp))
+        if (compact) {
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                androidx.compose.material3.Button(
+                    onClick = { onCommitment("confirmed") },
+                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                        containerColor = AwpColors.MundialTeal
+                    ),
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
+                ) { Text("Tak") }
+                androidx.compose.material3.OutlinedButton(
+                    onClick = { onCommitment("tentative") },
+                    border = androidx.compose.foundation.BorderStroke(1.dp, AwpColors.OnPitch.copy(0.4f)),
+                    colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
+                        contentColor = AwpColors.OnPitch
+                    ),
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
+                ) { Text("Może") }
+                androidx.compose.material3.OutlinedButton(
+                    onClick = { onCommitment("declined") },
+                    border = androidx.compose.foundation.BorderStroke(1.dp, AwpColors.OnPitch.copy(0.4f)),
+                    colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
+                        contentColor = AwpColors.OnPitch
+                    ),
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
+                ) { Text("Nie") }
             }
-            Text(status, color = MaterialTheme.colorScheme.primary)
-
-            if (match.cancelled == 1 || match.played == 1) return@Column
-
-            Spacer(Modifier.height(6.dp))
-            if (compact) {
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Button(onClick = { onCommitment("confirmed") }) { Text("Tak") }
-                    OutlinedButton(onClick = { onCommitment("tentative") }) { Text("Może") }
-                    OutlinedButton(onClick = { onCommitment("declined") }) { Text("Nie") }
-                }
+            if (signupKind != null) {
+                LinkTextButton("Wypisz całkowicie", onUnsubscribe)
+            }
+            if (signupKind == "confirmed" && onTransport != null) {
+                LinkTextButton("Transport", onTransport)
+            }
+        } else {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                AwpPrimaryButton("Biorę udział") { onCommitment("confirmed") }
+                AwpSecondaryButton("Jeszcze nie wiem") { onCommitment("tentative") }
+                AwpSecondaryButton("Nie biorę udziału") { onCommitment("declined") }
                 if (signupKind != null) {
-                    TextButton(onClick = onUnsubscribe) { Text("Wypisz całkowicie") }
+                    LinkTextButton("Wypisz całkowicie", onUnsubscribe)
                 }
-            } else {
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Button(
-                        onClick = { onCommitment("confirmed") },
-                        modifier = Modifier.fillMaxWidth()
-                    ) { Text("Biorę udział") }
-                    OutlinedButton(
-                        onClick = { onCommitment("tentative") },
-                        modifier = Modifier.fillMaxWidth()
-                    ) { Text("Jeszcze nie wiem") }
-                    OutlinedButton(
-                        onClick = { onCommitment("declined") },
-                        modifier = Modifier.fillMaxWidth()
-                    ) { Text("Nie biorę udziału") }
-                    if (signupKind != null) {
-                        TextButton(
-                            onClick = onUnsubscribe,
-                            modifier = Modifier.fillMaxWidth()
-                        ) { Text("Wypisz całkowicie") }
-                    }
+                if (signupKind == "confirmed" && onTransport != null) {
+                    AwpGoldButton("Transport / dojazd", onTransport)
                 }
             }
         }

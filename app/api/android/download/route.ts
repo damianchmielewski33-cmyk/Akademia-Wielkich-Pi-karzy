@@ -16,7 +16,7 @@ function apkUrl(): string {
 
 /**
  * Start pobierania APK — log w Vercel + activity_log, potem redirect do pliku.
- * Używaj z /pobierz zamiast bezpośredniego linku GitHub.
+ * Preferuj ten endpoint zamiast bezpośredniego linku GitHub (pasek „Pobierz” na WWW).
  */
 export async function GET(req: Request) {
   const rl = checkRateLimit(
@@ -27,7 +27,7 @@ export async function GET(req: Request) {
   if (!rl.ok) return rateLimitedResponse(rl.retryAfterSec);
 
   const url = new URL(req.url);
-  const source = (url.searchParams.get("source") || "pobierz").slice(0, 40);
+  const source = (url.searchParams.get("source") || "banner").slice(0, 40);
   const ip = getClientIp(req);
   const ua = (req.headers.get("user-agent") || "").slice(0, 300);
   const target = apkUrl();

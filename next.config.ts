@@ -59,6 +59,7 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       { source: "/admin", destination: "/panel-admina", permanent: false },
+      { source: "/pobierz", destination: "/", permanent: true },
       { source: "/terminator", destination: "/terminarz", permanent: true },
       { source: "/terminator/:path*", destination: "/terminarz", permanent: true },
     ];

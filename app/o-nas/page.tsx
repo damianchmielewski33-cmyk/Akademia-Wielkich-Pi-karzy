@@ -77,11 +77,9 @@ export default async function ONasPage() {
           <div>
             <h2 className="pitch-heading text-lg">Aplikacja na telefon</h2>
             <p className="mt-2">
-              Możesz zainstalować wersję Android (terminarz, zapisy, portfel). Instrukcja i pobieranie:{" "}
-              <Link className="pitch-link" href="/pobierz">
-                Pobierz aplikację
-              </Link>
-              .
+              Na telefonie z Androidem u góry strony pojawia się pasek z przyciskiem pobierania APK
+              (terminarz, zapisy, portfel bez przeglądarki). Możesz go zamknąć — wróci dopiero po
+              wyczyszczeniu danych przeglądarki.
             </p>
           </div>
 

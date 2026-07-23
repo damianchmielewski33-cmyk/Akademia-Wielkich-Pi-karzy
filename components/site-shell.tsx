@@ -18,7 +18,6 @@ import {
   MessageCircle,
   Moon,
   Shield,
-  Smartphone,
   Sun,
   Trophy,
   UserPlus,
@@ -27,6 +26,7 @@ import {
   X,
 } from "lucide-react";
 import { AnalyticsTracker } from "@/components/analytics-tracker";
+import { AndroidAppBanner } from "@/components/android-app-banner";
 import { AdminHeaderMessagesButton } from "@/components/admin-header-messages-button";
 import { NavigationLoadingOverlay } from "@/components/navigation-loading-overlay";
 import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
@@ -137,7 +137,6 @@ export function SiteShell({
     { href: "/statystyki", label: "Statystyki", visible: isLoggedIn, icon: Activity },
     { href: "/rankingi", label: "Rankingi", visible: isLoggedIn, icon: Trophy },
     { href: "/o-nas", label: "O nas", visible: true, icon: Info },
-    { href: "/pobierz", label: "Aplikacja", visible: true, icon: Smartphone },
     { href: "/kontakt", label: "Kontakt", visible: true, icon: MessageCircle },
     { href: "/panel-admina", label: "Panel admina", visible: isAdmin, icon: Shield },
     { href: "/login", label: "Logowanie", visible: !isLoggedIn, icon: LogIn },
@@ -179,7 +178,9 @@ export function SiteShell({
     <div className="flex min-h-screen flex-col overflow-x-clip text-zinc-900 dark:text-zinc-100">
       <NavigationLoadingOverlay />
       <AnalyticsTracker />
-      <header className="mundial-header relative z-30 border-b border-[var(--mundial-gold)]/30 text-white shadow-lg pt-[env(safe-area-inset-top)]">
+      <div className="pt-[env(safe-area-inset-top)]">
+        <AndroidAppBanner />
+        <header className="mundial-header relative z-30 border-b border-[var(--mundial-gold)]/30 text-white shadow-lg">
         <div
           className="pointer-events-none absolute inset-0 opacity-[0.12]"
           style={{
@@ -340,6 +341,7 @@ export function SiteShell({
           </nav>
         </div>
       </header>
+      </div>
 
       {mobileNavOpen ? (
         <div className="fixed inset-0 z-[80] lg:hidden" role="presentation">

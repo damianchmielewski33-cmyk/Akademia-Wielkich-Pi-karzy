@@ -13,6 +13,8 @@ import { isMailConfigured } from "@/lib/mail";
 import { parseYoutubeVideoIdFromUserInput } from "@/lib/site";
 import { parseRealm, REALMS } from "@/lib/realm";
 import { BLOCKABLE_SCREENS } from "@/lib/screen-blocks";
+import { BLOCKABLE_MOBILE_SCREENS } from "@/lib/screen-blocks-mobile";
+import { type MobileChannelSettings } from "@/lib/mobile-channel-settings";
 
 export const runtime = "nodejs";
 
@@ -61,6 +63,39 @@ const putBodySchema = z
     lineup_pitch_slots_max: z.number().int().min(1).max(32).optional(),
     match_cancel_reasons: z.array(cancelReasonSchema).min(1).max(20).optional(),
     screen_blocks: z.record(z.string(), screenBlockEntrySchema).optional(),
+    screen_blocks_mobile: z.record(z.string(), screenBlockEntrySchema).optional(),
+    mobile_settings: z
+      .object({
+        match_notification_prompt_enabled: z.boolean(),
+        home_youtube_url: z.string().max(MAX_YT_URL_LEN).nullable(),
+        site_name: z.string().trim().min(1).max(120),
+        site_description: z.string().trim().max(500),
+        contact_email: z.string().trim().email().max(200),
+        blik_phone: z.string().trim().min(7).max(30),
+        organizer_damian_name: z.string().trim().min(1).max(120),
+        organizer_damian_phone: z.string().trim().max(30),
+        organizer_damian_email: z.string().trim().email().max(200),
+        organizer_mateusz_name: z.string().trim().min(1).max(120),
+        organizer_mateusz_phone: z.string().trim().max(30),
+        organizer_mateusz_email: z.string().trim().email().max(200),
+        facebook_damian_url: z.string().trim().max(MAX_URL_LEN),
+        facebook_mateusz_url: z.string().trim().max(MAX_URL_LEN),
+        allow_self_registration: z.union([z.boolean(), z.null()]),
+        default_match_max_slots: z.number().int().min(1).max(99),
+        default_match_fee_pln: z.union([z.number().nonnegative().max(9999), z.null()]),
+        default_match_location: z.string().trim().max(MAX_TEXT_LEN),
+        ranking_pt_goal: z.number().min(0).max(100),
+        ranking_pt_assist: z.number().min(0).max(100),
+        ranking_pt_km: z.number().min(0).max(100),
+        ranking_pt_save: z.number().min(0).max(100),
+        match_email_notifications_enabled: z.boolean(),
+        lineup_pitch_slots_min: z.number().int().min(1).max(32),
+        lineup_pitch_slots_max: z.number().int().min(1).max(32),
+        match_cancel_reasons: z.array(cancelReasonSchema).min(1).max(20),
+        show_pzu_cup: z.boolean(),
+        login_banner: z.string().max(300),
+      })
+      .optional(),
   })
   .strict();
 
@@ -242,6 +277,71 @@ export async function PUT(req: Request) {
       };
     }
     next.screen_blocks = merged;
+  }
+
+  if (body.screen_blocks_mobile !== undefined) {
+    const merged = { ...current.screen_blocks_mobile };
+    for (const screen of BLOCKABLE_MOBILE_SCREENS) {
+      const entry = body.screen_blocks_mobile[screen.key];
+      if (!entry) {
+        merged[screen.key] = { disabled: false, message: "" };
+        continue;
+      }
+      merged[screen.key] = {
+        disabled: entry.disabled,
+        message: entry.message.trim().slice(0, 500),
+        ...(entry.active_from ? { active_from: entry.active_from } : {}),
+        ...(entry.active_until ? { active_until: entry.active_until } : {}),
+      };
+    }
+    next.screen_blocks_mobile = merged;
+  }
+
+  if (body.mobile_settings !== undefined) {
+    const m = body.mobile_settings;
+    if (m.lineup_pitch_slots_min > m.lineup_pitch_slots_max) {
+      return NextResponse.json(
+        { error: "Minimalna liczba pól składu (aplikacja) nie może być większa od maksymalnej" },
+        { status: 400 }
+      );
+    }
+    const fbDamian = validateFacebookUrl(m.facebook_damian_url);
+    const fbMateusz = validateFacebookUrl(m.facebook_mateusz_url);
+    if (m.facebook_damian_url.trim() && !fbDamian) {
+      return NextResponse.json({ error: "Nieprawidłowy adres Facebook (Damian) — aplikacja" }, { status: 400 });
+    }
+    if (m.facebook_mateusz_url.trim() && !fbMateusz) {
+      return NextResponse.json({ error: "Nieprawidłowy adres Facebook (Mateusz) — aplikacja" }, { status: 400 });
+    }
+    let homeYt: string | null = null;
+    if (m.home_youtube_url && m.home_youtube_url.trim()) {
+      homeYt = parseYoutubeUrl(m.home_youtube_url);
+      if (!homeYt) {
+        return NextResponse.json(
+          { error: "Nieprawidłowy YouTube w ustawieniach aplikacji" },
+          { status: 400 }
+        );
+      }
+    }
+    const cleanedReasons: MatchCancelReasonEntry[] = [];
+    const seen = new Set<string>();
+    for (const r of m.match_cancel_reasons) {
+      if (seen.has(r.value)) continue;
+      seen.add(r.value);
+      cleanedReasons.push({ value: r.value, label: r.label });
+    }
+    if (cleanedReasons.length === 0) {
+      return NextResponse.json({ error: "Wymagany co najmniej jeden powód anulowania (aplikacja)" }, { status: 400 });
+    }
+    const mobileNext: MobileChannelSettings = {
+      ...m,
+      home_youtube_url: homeYt,
+      facebook_damian_url: fbDamian ?? current.mobile_settings.facebook_damian_url,
+      facebook_mateusz_url: fbMateusz ?? current.mobile_settings.facebook_mateusz_url,
+      match_cancel_reasons: cleanedReasons,
+      login_banner: m.login_banner.trim().slice(0, 300),
+    };
+    next.mobile_settings = mobileNext;
   }
 
   await saveAppSettings(db, realm, next);

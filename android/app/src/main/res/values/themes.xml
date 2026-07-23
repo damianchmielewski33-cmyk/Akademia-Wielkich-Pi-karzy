@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.Awp" parent="android:Theme.Material.Light.NoActionBar">
-        <item name="android:statusBarColor">@color/awp_green_dark</item>
+    <style name="Theme.Awp" parent="android:Theme.Material.NoActionBar">
+        <item name="android:statusBarColor">@color/awp_navy</item>
         <item name="android:navigationBarColor">@color/awp_green_dark</item>
+        <item name="android:windowBackground">@color/awp_green_dark</item>
+        <item name="android:colorPrimary">@color/awp_green</item>
     </style>
 </resources>
