@@ -9,7 +9,8 @@ function apkUrl(): string {
   return (
     process.env.ANDROID_APK_URL?.trim() ||
     process.env.NEXT_PUBLIC_ANDROID_APK_URL?.trim() ||
-    "https://github.com/damianchmielewski33-cmyk/Akademia-Wielkich-Pi-karzy/releases/latest/download/akademia-wp.apk"
+    // Tag android-latest — mniej przekierowań niż /releases/latest/ na telefonach
+    "https://github.com/damianchmielewski33-cmyk/Akademia-Wielkich-Pi-karzy/releases/download/android-latest/akademia-wp.apk"
   );
 }
 

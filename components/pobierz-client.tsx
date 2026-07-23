@@ -1,8 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Smartphone } from "lucide-react";
+import { Smartphone, Usb } from "lucide-react";
 import { PitchCard, PitchPageHero, pitchLabelClass } from "@/components/ui/pitch-card";
+
+const DIRECT_APK =
+  "https://github.com/damianchmielewski33-cmyk/Akademia-Wielkich-Pi-karzy/releases/download/android-latest/akademia-wp.apk";
 
 export default function PobierzClient() {
   const [phoneModel, setPhoneModel] = useState("");
@@ -48,57 +51,63 @@ export default function PobierzClient() {
 
       <PitchCard className="mt-8 text-left" contentClassName="p-6 sm:p-8">
         <span className={pitchLabelClass}>Android</span>
-        <h2 className="pitch-heading mt-4 text-xl">Jak zainstalować</h2>
-        <ol className="mt-4 list-decimal space-y-3 pl-5 text-sm leading-relaxed text-emerald-100/90">
-          <li>
-            Sprawdź w telefonie: <strong>Ustawienia → Data i godzina</strong> — włącz „Automatyczna
-            data i godzina” (zła data blokuje instalację).
-          </li>
-          <li>
-            Odinstaluj wszystkie stare wersje „Akademia WP” (jeśli są na liście aplikacji).
-          </li>
-          <li>
-            Usuń stare pliki <code className="text-emerald-200">akademia-wp.apk</code> z folderu
-            Pobrane.
-          </li>
-          <li>Kliknij przycisk poniżej i poczekaj na pełne pobranie (~10–15 MB).</li>
-          <li>
-            Otwórz plik w aplikacji <strong>Pliki</strong> / <strong>Moje pliki</strong> (nie z
-            powiadomienia Chrome, jeśli nie działa).
-          </li>
-          <li>
-            Zezwól na instalację z nieznanych źródeł dla Plików/Chrome. Na Xiaomi/HyperOS: włącz też
-            „Instaluj przez USB” w opcjach deweloperskich (bez podłączania kabla).
-          </li>
-          <li>Po Play Protect wybierz „Zainstaluj mimo to” / „I tak zainstaluj”.</li>
-          <li>
-            Po udanym buildzie w aplikacji zobaczysz nazwę „Akademia WP” (pakiet{" "}
-            <code className="text-emerald-200">…player</code>). To osobna instalacja od wcześniejszych
-            prób.
-          </li>
-          <li>Wymagany Android 8.0+. Zaloguj się: imię, nazwisko i PIN jak na stronie.</li>
-        </ol>
+        <h2 className="pitch-heading mt-4 text-xl">Pobierz APK</h2>
+        <p className="mt-3 text-sm leading-relaxed text-emerald-100/85">
+          Plik ma ok. 10–15 MB. Po pobraniu otwórz go w <strong>Moje pliki</strong> i zainstaluj.
+          Przy Play Protect wybierz „Zainstaluj mimo to”.
+        </p>
 
         <a
           href="/api/android/download?source=pobierz"
-          className="mt-8 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-400 px-5 py-3.5 text-center text-base font-semibold text-emerald-950 transition hover:bg-emerald-300 sm:w-auto"
+          className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-400 px-5 py-3.5 text-center text-base font-semibold text-emerald-950 transition hover:bg-emerald-300 sm:w-auto"
         >
           <Smartphone className="size-5 shrink-0" aria-hidden />
           Pobierz aplikację Android (APK)
         </a>
 
-        <p className="mt-4 text-xs leading-relaxed text-emerald-100/60">
-          Po udanym buildzie w GitHub Actions plik jest w Releases. Przycisk powyżej loguje próbę
-          pobrania i przekierowuje do APK.
+        <p className="mt-3 text-xs text-emerald-100/55">
+          Alternatywnie bezpośredni link:{" "}
+          <a href={DIRECT_APK} className="underline hover:text-emerald-200">
+            GitHub Releases
+          </a>
         </p>
+      </PitchCard>
+
+      <PitchCard className="mt-6 text-left" contentClassName="p-6 sm:p-8">
+        <span className={pitchLabelClass}>Samsung</span>
+        <h2 className="pitch-heading mt-4 text-lg flex items-center gap-2">
+          <Usb className="size-5 shrink-0" aria-hidden />
+          Jeśli „Moje pliki” nie instaluje
+        </h2>
+        <p className="mt-2 text-sm leading-relaxed text-emerald-100/85">
+          Na Galaxy (np. S10) system często blokuje instalację z pobranego APK, mimo że plik jest
+          poprawny. Działa wtedy instalacja z komputera przez USB (ADB) — tak udało się u nas na
+          S10+.
+        </p>
+        <ol className="mt-4 list-decimal space-y-2 pl-5 text-sm leading-relaxed text-emerald-100/90">
+          <li>
+            Ustawienia → Informacje o oprogramowaniu → 7× Numer kompilacji → włącz{" "}
+            <strong>Debugowanie USB</strong>.
+          </li>
+          <li>Pobierz APK na komputer (przycisk powyżej albo link GitHub).</li>
+          <li>
+            Podłącz telefon kablem, w PowerShell:
+            <code className="mt-2 block rounded-lg bg-black/30 p-3 text-xs text-emerald-100">
+              adb install -r &quot;C:\ścieżka\do\akademia-wp.apk&quot;
+            </code>
+          </li>
+          <li>
+            Jak zobaczysz <code className="text-emerald-200">Success</code> — apka jest na telefonie
+            (Akademia WP).
+          </li>
+        </ol>
       </PitchCard>
 
       <PitchCard className="mt-6 text-left" contentClassName="p-6 sm:p-8">
         <span className={pitchLabelClass}>Problem z instalacją?</span>
         <h2 className="pitch-heading mt-4 text-lg">Zgłoś błąd (logi na Vercel)</h2>
         <p className="mt-2 text-sm text-emerald-100/80">
-          Wypełnij krótko — zapisze się w logach serwera, żeby dało się zobaczyć model telefonu i
-          komunikat.
+          Wypełnij krótko — zapisze się w logach serwera (model telefonu i komunikat).
         </p>
         <div className="mt-4 space-y-3">
           <label className="block text-sm">
@@ -107,7 +116,7 @@ export default function PobierzClient() {
               className="mt-1 w-full rounded-lg border border-white/20 bg-black/20 px-3 py-2 text-white"
               value={phoneModel}
               onChange={(e) => setPhoneModel(e.target.value)}
-              placeholder="np. Samsung Galaxy A54"
+              placeholder="np. Samsung Galaxy S10+"
             />
           </label>
           <label className="block text-sm">
@@ -116,7 +125,7 @@ export default function PobierzClient() {
               className="mt-1 w-full rounded-lg border border-white/20 bg-black/20 px-3 py-2 text-white"
               value={androidVersion}
               onChange={(e) => setAndroidVersion(e.target.value)}
-              placeholder="np. 13 / 14"
+              placeholder="np. 12"
             />
           </label>
           <label className="block text-sm">
