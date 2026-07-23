@@ -30,7 +30,7 @@ export async function GET(req: Request) {
   const isAdmin = session?.isAdmin ?? false;
 
   const blocked: Partial<Record<BlockableMobileScreenKey, { message: string }>> = {};
-  for (const [key, entry] of Object.entries(settings.screen_blocks_mobile)) {
+  for (const key of Object.keys(settings.screen_blocks_mobile)) {
     const k = key as BlockableMobileScreenKey;
     if (isMobileScreenDisabledForUser(settings.screen_blocks_mobile, k, isAdmin)) {
       blocked[k] = { message: mobileScreenBlockMessage(settings.screen_blocks_mobile, k) };
