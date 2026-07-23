@@ -34,7 +34,7 @@ import { LogoutConfirmModal } from "@/components/logout-confirm-modal";
 import { SiteAssetImage } from "@/components/site-asset-image";
 import { useSiteAsset } from "@/components/site-assets-provider";
 import { cn } from "@/lib/utils";
-import { SITE_NAME, getPublicContactEmailWithFallback } from "@/lib/site";
+import { SITE_NAME } from "@/lib/site";
 import { useScreenBlocks } from "@/components/screen-blocks-provider";
 
 type Props = {
@@ -49,7 +49,6 @@ type Props = {
   } | null;
   adminUnreadMessages?: number;
   siteName?: string;
-  contactEmail?: string;
 };
 
 type NavItem = {
@@ -90,11 +89,9 @@ export function SiteShell({
   account = null,
   adminUnreadMessages = 0,
   siteName = SITE_NAME,
-  contactEmail: contactEmailProp,
 }: Props) {
   const router = useRouter();
   const pathname = usePathname();
-  const contactEmail = contactEmailProp ?? getPublicContactEmailWithFallback();
   const pitchLinesBg = useSiteAsset("bg_pitch_lines");
   const { isHiddenHref } = useScreenBlocks();
   const [logoutOpen, setLogoutOpen] = useState(false);
@@ -481,23 +478,10 @@ export function SiteShell({
             <div className="min-w-0">
               <p className="text-sm font-semibold text-white">{siteName}</p>
               <p className="text-xs text-emerald-200/80">Terminarz, statystyki i społeczność na boisku</p>
-              <p className="mt-2 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-xs text-emerald-200/85 sm:justify-start">
+              <p className="mt-2 text-xs text-emerald-200/85">
                 <Link href="/o-nas" className="font-medium underline-offset-2 hover:underline">
                   O nas i zasady
                 </Link>
-                {contactEmail ? (
-                  <>
-                    <span aria-hidden className="text-emerald-200/40">
-                      ·
-                    </span>
-                    <a
-                      href={`mailto:${contactEmail}`}
-                      className="break-all font-medium underline-offset-2 hover:underline"
-                    >
-                      {contactEmail}
-                    </a>
-                  </>
-                ) : null}
               </p>
             </div>
           </div>

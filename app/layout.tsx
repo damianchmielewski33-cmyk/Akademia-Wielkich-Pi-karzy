@@ -246,7 +246,6 @@ export default async function RootLayout({
                 account={accountNav}
                 adminUnreadMessages={adminUnreadMessages}
                 siteName={appSettings.site_name}
-                contactEmail={appSettings.contact_email}
               >
                 {session?.pinChangePending && !session.needsPinSetup ? <PinChangePendingBanner /> : null}
                 {mainContent}
