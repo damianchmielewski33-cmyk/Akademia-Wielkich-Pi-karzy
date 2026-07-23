@@ -2,11 +2,16 @@ package pl.akademiawielkichpilkarzy.app.ui.nav
 
 import android.util.Base64
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Icon
@@ -24,6 +29,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -56,7 +62,12 @@ import pl.akademiawielkichpilkarzy.app.ui.theme.AwpColors
 import pl.akademiawielkichpilkarzy.app.ui.wallet.WalletScreen
 import pl.akademiawielkichpilkarzy.app.ui.web.WebPortalScreen
 
-private data class Tab(val route: String, val label: String, val icon: ImageVector)
+private data class Tab(
+    val route: String,
+    val label: String,
+    val icon: ImageVector,
+    val highlighted: Boolean = false
+)
 
 private fun encodePortalArg(value: String): String =
     Base64.encodeToString(
@@ -77,10 +88,17 @@ private fun portalRoute(title: String, path: String, requireAuth: Boolean): Stri
 
 @Composable
 fun MainScaffold(onLoggedOut: () -> Unit) {
+    val isAdmin by AwpApp.instance.sessionStore.isAdminFlow.collectAsState(initial = false)
     val tabs = listOf(
         Tab("home", "Start", Icons.Filled.Home),
-        Tab("schedule", "Terminarz", Icons.Filled.CalendarMonth),
         Tab("wallet", "Portfel", Icons.Filled.AccountBalanceWallet),
+        Tab(
+            route = "schedule",
+            label = if (isAdmin) "Panel admina" else "Terminarz",
+            icon = Icons.Filled.CalendarMonth,
+            highlighted = true
+        ),
+        Tab("lineups", "Składy", Icons.Filled.Groups),
         Tab("profile", "Profil", Icons.Filled.Person)
     )
     val navController = rememberNavController()
@@ -88,10 +106,9 @@ fun MainScaffold(onLoggedOut: () -> Unit) {
     val current = backStack?.destination?.route
     val isWeb = current?.startsWith("web/") == true
     val barSelected = when {
-        current == "stats" || current == "rankings" || current == "lineups" -> "home"
+        current == "stats" || current == "rankings" -> "home"
         else -> current
     }
-    val isAdmin by AwpApp.instance.sessionStore.isAdminFlow.collectAsState(initial = false)
     var mobileConfig by remember { mutableStateOf<MobileConfigResponse?>(null) }
     val scope = rememberCoroutineScope()
 
@@ -118,7 +135,7 @@ fun MainScaffold(onLoggedOut: () -> Unit) {
     }
 
     fun goTab(route: String) {
-        val isBottomTab = route == "home" || route == "schedule" || route == "wallet" || route == "profile"
+        val isBottomTab = route == "home" || route == "schedule" || route == "wallet" || route == "lineups" || route == "profile"
         if (isBottomTab) {
             navController.navigate(route) {
                 popUpTo(navController.graph.findStartDestination().id) {
@@ -221,7 +238,22 @@ fun MainScaffold(onLoggedOut: () -> Unit) {
                         NavigationBarItem(
                             selected = barSelected == tab.route,
                             onClick = { goTab(tab.route) },
-                            icon = { Icon(tab.icon, contentDescription = tab.label) },
+                            icon = {
+                                if (tab.highlighted) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(42.dp)
+                                            .clip(RoundedCornerShape(16.dp))
+                                            .background(AwpColors.MundialGold)
+                                            .border(1.dp, Color.White.copy(alpha = 0.65f), RoundedCornerShape(16.dp)),
+                                        contentAlignment = androidx.compose.ui.Alignment.Center
+                                    ) {
+                                        Icon(tab.icon, contentDescription = tab.label, tint = AwpColors.PageDark)
+                                    }
+                                } else {
+                                    Icon(tab.icon, contentDescription = tab.label)
+                                }
+                            },
                             label = { Text(tab.label) },
                             colors = NavigationBarItemDefaults.colors(
                                 selectedIconColor = AwpColors.MundialGold,
@@ -248,10 +280,7 @@ fun MainScaffold(onLoggedOut: () -> Unit) {
             }
             composable("schedule") {
                 BlockedOrContent(message = isBlocked("schedule")) {
-                    ScheduleScreen(
-                        onOpenTransport = { openTransport(it) },
-                        onOpenStatsForMatch = { openStatsForMatch(it) }
-                    )
+                    ScheduleScreen()
                 }
             }
             composable("wallet") {

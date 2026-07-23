@@ -1,67 +1,32 @@
 from PIL import Image, ImageDraw
-import math
 import os
 
 ROOT = os.path.join("android", "app", "src", "main", "res")
-NAVY = (26, 45, 90, 255)
-TEAL = (0, 166, 81, 255)
-WHITE = (255, 255, 255, 255)
-BLACK = (20, 24, 32, 255)
+SOURCE_LOGO = os.path.join(
+    os.path.expanduser("~"),
+    ".cursor",
+    "projects",
+    "c-Users-damia-OneDrive-Pulpit-Akademia-Wielkich-Pi-karzy-1",
+    "assets",
+    "c__Users_damia_AppData_Roaming_Cursor_User_workspaceStorage_ad20bb949cb59d958ecc41fbc52ce684_images_image-f77312b8-a607-4071-ae7f-33ebf4ddd454.png",
+)
 
 
-def draw_icon(size: int) -> Image.Image:
-    img = Image.new("RGBA", (size, size), NAVY)
-    d = ImageDraw.Draw(img)
-    cx = cy = size / 2.0
+def load_source_logo() -> Image.Image:
+    if not os.path.exists(SOURCE_LOGO):
+        raise FileNotFoundError(f"Missing logo source: {SOURCE_LOGO}")
+    return Image.open(SOURCE_LOGO).convert("RGBA")
 
-    # Soft teal pitch circle behind ball
-    r_glow = size * 0.46
-    d.ellipse([cx - r_glow, cy - r_glow, cx + r_glow, cy + r_glow], fill=TEAL)
 
-    r = size * 0.38
-    # Ball base
-    d.ellipse([cx - r, cy - r, cx + r, cy + r], fill=WHITE, outline=BLACK, width=max(2, size // 48))
-
-    def pent(cxp, cyp, radius, rot=-90):
-        pts = []
-        for i in range(5):
-            a = math.radians(rot + i * 72)
-            pts.append((cxp + radius * math.cos(a), cyp + radius * math.sin(a)))
-        return pts
-
-    pr = r * 0.22
-    # Classic black panels — center-ish + around
-    panels = [
-        (cx, cy - r * 0.08, pr * 1.05, -90),  # center-topish
-        (cx, cy - r * 0.62, pr * 0.85, -90),
-        (cx - r * 0.58, cy - r * 0.18, pr * 0.85, -30),
-        (cx + r * 0.58, cy - r * 0.18, pr * 0.85, 30),
-        (cx - r * 0.38, cy + r * 0.48, pr * 0.8, -150),
-        (cx + r * 0.38, cy + r * 0.48, pr * 0.8, 150),
-    ]
-    for x, y, rad, rot in panels:
-        d.polygon(pent(x, y, rad, rot), fill=BLACK)
-
-    # Connecting seam lines between panels (hex pattern feel)
-    w = max(2, size // 64)
-    seams = [
-        [(cx, cy - r * 0.42), (cx - r * 0.35, cy - r * 0.05), (cx - r * 0.2, cy + r * 0.2)],
-        [(cx, cy - r * 0.42), (cx + r * 0.35, cy - r * 0.05), (cx + r * 0.2, cy + r * 0.2)],
-        [(cx - r * 0.35, cy - r * 0.05), (cx - r * 0.55, cy + r * 0.25), (cx - r * 0.25, cy + r * 0.55)],
-        [(cx + r * 0.35, cy - r * 0.05), (cx + r * 0.55, cy + r * 0.25), (cx + r * 0.25, cy + r * 0.55)],
-        [(cx - r * 0.2, cy + r * 0.2), (cx, cy + r * 0.35), (cx + r * 0.2, cy + r * 0.2)],
-        [(cx - r * 0.25, cy + r * 0.55), (cx, cy + r * 0.7), (cx + r * 0.25, cy + r * 0.55)],
-    ]
-    for path in seams:
-        d.line(path, fill=BLACK, width=w)
-
-    # Specular highlight
-    hr = r * 0.28
-    hx, hy = cx - r * 0.32, cy - r * 0.35
-    overlay = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-    od = ImageDraw.Draw(overlay)
-    od.ellipse([hx - hr, hy - hr * 0.65, hx + hr, hy + hr * 0.65], fill=(255, 255, 255, 70))
-    return Image.alpha_composite(img, overlay)
+def fit_logo(source: Image.Image, size: int, padding_ratio: float = 0.06) -> Image.Image:
+    canvas = Image.new("RGBA", (size, size), (255, 255, 255, 0))
+    max_side = int(size * (1 - padding_ratio * 2))
+    logo = source.copy()
+    logo.thumbnail((max_side, max_side), Image.Resampling.LANCZOS)
+    x = (size - logo.width) // 2
+    y = (size - logo.height) // 2
+    canvas.alpha_composite(logo, (x, y))
+    return canvas
 
 
 def round_mask(img: Image.Image) -> Image.Image:
@@ -82,15 +47,22 @@ SIZES = {
     "mipmap-xxxhdpi": 192,
 }
 
+source = load_source_logo()
+
+public_logo = fit_logo(source, 512, 0.0)
+public_logo.save(os.path.join("public", "app-logo.png"), "PNG")
+os.makedirs(os.path.join(ROOT, "drawable-nodpi"), exist_ok=True)
+public_logo.save(os.path.join(ROOT, "drawable-nodpi", "app_logo.png"), "PNG")
+
 for folder, size in SIZES.items():
     path = os.path.join(ROOT, folder)
     os.makedirs(path, exist_ok=True)
-    icon = draw_icon(size)
+    icon = fit_logo(source, size)
     icon.save(os.path.join(path, "ic_launcher.png"), "PNG")
     round_mask(icon).save(os.path.join(path, "ic_launcher_round.png"), "PNG")
     print("wrote", folder, size)
 
 # Also export a preview
-preview = draw_icon(512)
+preview = fit_logo(source, 512)
 preview.save(os.path.join("android", "scripts", "launcher_preview.png"), "PNG")
 print("done")

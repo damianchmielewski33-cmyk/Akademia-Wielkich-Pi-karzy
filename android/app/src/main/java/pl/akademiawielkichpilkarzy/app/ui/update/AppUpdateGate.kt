@@ -4,10 +4,8 @@ import android.app.Activity
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -20,6 +18,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import pl.akademiawielkichpilkarzy.app.BuildConfig
+import pl.akademiawielkichpilkarzy.app.ui.common.AwpModal
+import pl.akademiawielkichpilkarzy.app.ui.common.PitchPanel
 import pl.akademiawielkichpilkarzy.app.update.AppUpdateInfo
 import pl.akademiawielkichpilkarzy.app.update.AppUpdater
 
@@ -45,10 +45,40 @@ fun AppUpdateGate(checkOnStart: Boolean = true) {
 
     val info = update
     if (info != null && !dismissed && activity != null) {
-        AlertDialog(
-            onDismissRequest = { /* wymuszamy wybór */ },
-            title = { Text("Dostępna aktualizacja") },
-            text = {
+        AwpModal(
+            title = "Dostępna aktualizacja",
+            subtitle = "Nowa wersja ${info.versionName}",
+            onDismiss = { if (!busy) dismissed = true },
+            confirmText = if (busy) "Proszę czekać…" else "Aktualizuj",
+            dismissText = "Później",
+            onConfirm = {
+                if (!busy) {
+                    scope.launch {
+                        busy = true
+                        error = null
+                        try {
+                            if (!AppUpdater.canRequestPackageInstalls(activity)) {
+                                status = "Włącz instalację z tej aplikacji w ustawieniach…"
+                                AppUpdater.openUnknownSourcesSettings(activity)
+                                error = "Włącz zezwolenie i kliknij Aktualizuj ponownie."
+                                return@launch
+                            }
+                            status = "Pobieranie…"
+                            val file = AppUpdater.downloadApk(activity, info)
+                            status = "Uruchamianie instalatora…"
+                            AppUpdater.installApk(activity, file)
+                            dismissed = true
+                        } catch (e: Exception) {
+                            error = e.message ?: "Aktualizacja nieudana"
+                        } finally {
+                            busy = false
+                            status = null
+                        }
+                    }
+                }
+            }
+        ) {
+            PitchPanel {
                 Column {
                     Text(
                         "Nowa wersja ${info.versionName} (masz ${BuildConfig.VERSION_NAME}). " +
@@ -67,47 +97,8 @@ fun AppUpdateGate(checkOnStart: Boolean = true) {
                         Text(it)
                     }
                 }
-            },
-            confirmButton = {
-                TextButton(
-                    enabled = !busy,
-                    onClick = {
-                        scope.launch {
-                            busy = true
-                            error = null
-                            try {
-                                if (!AppUpdater.canRequestPackageInstalls(activity)) {
-                                    status = "Włącz instalację z tej aplikacji w ustawieniach…"
-                                    AppUpdater.openUnknownSourcesSettings(activity)
-                                    error = "Włącz zezwolenie i kliknij Aktualizuj ponownie."
-                                    return@launch
-                                }
-                                status = "Pobieranie…"
-                                val file = AppUpdater.downloadApk(activity, info)
-                                status = "Uruchamianie instalatora…"
-                                AppUpdater.installApk(activity, file)
-                                dismissed = true
-                            } catch (e: Exception) {
-                                error = e.message ?: "Aktualizacja nieudana"
-                            } finally {
-                                busy = false
-                                status = null
-                            }
-                        }
-                    }
-                ) {
-                    Text(if (busy) "Proszę czekać…" else "Aktualizuj")
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    enabled = !busy,
-                    onClick = { dismissed = true }
-                ) {
-                    Text("Później")
-                }
             }
-        )
+        }
     }
 }
 
@@ -123,10 +114,36 @@ fun rememberUpdateChecker(): () -> Unit {
 
     if (update != null && activity != null) {
         val info = update!!
-        AlertDialog(
-            onDismissRequest = { update = null },
-            title = { Text("Aktualizacja ${info.versionName}") },
-            text = {
+        AwpModal(
+            title = "Aktualizacja ${info.versionName}",
+            onDismiss = { update = null },
+            confirmText = "Aktualizuj",
+            dismissText = "Anuluj",
+            onConfirm = {
+                if (!busy) {
+                    scope.launch {
+                        busy = true
+                        message = null
+                        try {
+                            if (!AppUpdater.canRequestPackageInstalls(activity)) {
+                                AppUpdater.openUnknownSourcesSettings(activity)
+                                message = "Włącz zezwolenie i spróbuj ponownie."
+                                return@launch
+                            }
+                            message = "Pobieranie…"
+                            val file = AppUpdater.downloadApk(activity, info)
+                            AppUpdater.installApk(activity, file)
+                            update = null
+                        } catch (e: Exception) {
+                            message = e.message ?: "Błąd"
+                        } finally {
+                            busy = false
+                        }
+                    }
+                }
+            }
+        ) {
+            PitchPanel {
                 Column {
                     Text("Zainstalować nową wersję?")
                     message?.let {
@@ -138,46 +155,17 @@ fun rememberUpdateChecker(): () -> Unit {
                         CircularProgressIndicator()
                     }
                 }
-            },
-            confirmButton = {
-                TextButton(
-                    enabled = !busy,
-                    onClick = {
-                        scope.launch {
-                            busy = true
-                            message = null
-                            try {
-                                if (!AppUpdater.canRequestPackageInstalls(activity)) {
-                                    AppUpdater.openUnknownSourcesSettings(activity)
-                                    message = "Włącz zezwolenie i spróbuj ponownie."
-                                    return@launch
-                                }
-                                message = "Pobieranie…"
-                                val file = AppUpdater.downloadApk(activity, info)
-                                AppUpdater.installApk(activity, file)
-                                update = null
-                            } catch (e: Exception) {
-                                message = e.message ?: "Błąd"
-                            } finally {
-                                busy = false
-                            }
-                        }
-                    }
-                ) { Text("Aktualizuj") }
-            },
-            dismissButton = {
-                TextButton(onClick = { update = null }) { Text("Anuluj") }
             }
-        )
+        }
     } else if (message != null) {
-        AlertDialog(
-            onDismissRequest = { message = null },
-            title = { Text("Aktualizacje") },
-            text = { Text(message!!) },
-            confirmButton = {
-                TextButton(onClick = { message = null }) { Text("OK") }
-            }
-        )
+        AwpModal(
+            title = "Aktualizacje",
+            onDismiss = { message = null },
+            confirmText = "OK",
+            onConfirm = { message = null }
+        ) {
+            PitchPanel { Text(message!!) }
+        }
     }
 
     return {

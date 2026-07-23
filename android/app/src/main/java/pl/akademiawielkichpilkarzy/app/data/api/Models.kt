@@ -52,14 +52,28 @@ data class MatchDto(
 
 data class TerminarzPlayerEntry(
     val userId: Int = 0,
+    @Json(name = "user_id") val userIdSnake: Int? = null,
     val firstName: String = "",
+    @Json(name = "first_name") val firstNameSnake: String? = null,
     val lastName: String = "",
+    @Json(name = "last_name") val lastNameSnake: String? = null,
     val name: String = "",
     val zawodnik: String = "",
     val initials: String = "",
     val paid: Int = 0,
-    val commitment: String = "confirmed"
-)
+    val commitment: String = "confirmed",
+    @Json(name = "is_temporary") val isTemporary: Int = 0
+) {
+    val resolvedUserId: Int get() = userId.takeIf { it != 0 } ?: userIdSnake ?: 0
+    val resolvedFirstName: String get() = firstName.ifBlank { firstNameSnake.orEmpty() }
+    val resolvedLastName: String get() = lastName.ifBlank { lastNameSnake.orEmpty() }
+    val displayName: String
+        get() = zawodnik.ifBlank {
+            name.ifBlank {
+                listOf(resolvedFirstName, resolvedLastName).filter { it.isNotBlank() }.joinToString(" ")
+            }
+        }.ifBlank { "Zawodnik" }
+}
 
 data class PlayersDataEntryDto(
     val date: String = "",
@@ -79,7 +93,8 @@ data class TerminarzResponse(
     val playersData: Map<String, PlayersDataEntryDto> = emptyMap(),
     val playedMissingStatsMatchIds: List<Int> = emptyList(),
     val isLoggedIn: Boolean = false,
-    val isAdmin: Boolean = false
+    val isAdmin: Boolean = false,
+    val matchDefaults: MatchDefaultsDto? = null
 )
 
 data class SignupRequest(
@@ -88,7 +103,151 @@ data class SignupRequest(
 
 data class ApiOkResponse(
     val ok: Boolean? = null,
+    val status: String? = null,
+    val id: Int? = null,
+    val duplicate: Boolean? = null,
     val error: String? = null
+)
+
+data class MatchDefaultsDto(
+    val maxSlots: Int? = null,
+    val location: String? = null,
+    val feePln: Double? = null
+)
+
+data class AddMatchRequest(
+    val date: String,
+    val time: String,
+    val location: String,
+    @Json(name = "max_slots") val maxSlots: Int,
+    @Json(name = "fee_pln") val feePln: Double? = null,
+    @Json(name = "gate_pin") val gatePin: String
+)
+
+data class EditMatchRequest(
+    @Json(name = "match_id") val matchId: Int,
+    val date: String,
+    val time: String,
+    val location: String,
+    @Json(name = "max_slots") val maxSlots: Int
+)
+
+data class AdminEditMatchRequest(
+    val date: String,
+    val time: String,
+    val location: String,
+    @Json(name = "max_slots") val maxSlots: Int,
+    @Json(name = "fee_pln") val feePln: Double? = null,
+    @Json(name = "gate_pin") val gatePin: String? = null
+)
+
+data class CancelMatchRequest(val reason: String)
+
+data class UserIdRequest(@Json(name = "user_id") val userId: Int)
+
+data class AddGuestRequest(
+    @Json(name = "first_name") val firstName: String,
+    @Json(name = "last_name") val lastName: String,
+    @Json(name = "player_alias") val playerAlias: String
+)
+
+data class AdminMatchSignupRow(
+    @Json(name = "user_id") val userId: Int,
+    @Json(name = "first_name") val firstName: String = "",
+    @Json(name = "last_name") val lastName: String = "",
+    val zawodnik: String = "",
+    val paid: Int = 0,
+    val commitment: Int = 1,
+    @Json(name = "is_temporary") val isTemporary: Int = 0
+) {
+    val displayName: String
+        get() = zawodnik.ifBlank {
+            listOf(firstName, lastName).filter { it.isNotBlank() }.joinToString(" ")
+        }.ifBlank { "Zawodnik #$userId" }
+}
+
+data class AdminMatchSignupsResponse(
+    val signups: List<AdminMatchSignupRow> = emptyList(),
+    val error: String? = null
+)
+
+data class AdminUserDto(
+    val id: Int,
+    @Json(name = "first_name") val firstName: String = "",
+    @Json(name = "last_name") val lastName: String = "",
+    val zawodnik: String = "",
+    @Json(name = "profile_photo_path") val profilePhotoPath: String? = null
+) {
+    val displayName: String
+        get() = zawodnik.ifBlank {
+            listOf(firstName, lastName).filter { it.isNotBlank() }.joinToString(" ")
+        }.ifBlank { "Zawodnik #$id" }
+}
+
+data class AttendanceResponse(
+    @Json(name = "present_user_ids") val presentUserIds: List<Int> = emptyList(),
+    val error: String? = null
+)
+
+data class AttendanceRequest(
+    @Json(name = "present_user_ids") val presentUserIds: List<Int>
+)
+
+data class MatchChargeRequest(
+    @Json(name = "user_id") val userId: Int,
+    @Json(name = "amount_pln") val amountPln: Double,
+    val note: String? = null
+)
+
+data class MatchChargesRequest(val charges: List<MatchChargeRequest>)
+
+data class MatchChargeResult(
+    @Json(name = "user_id") val userId: Int,
+    @Json(name = "amount_pln") val amountPln: Double? = null,
+    val reason: String? = null
+)
+
+data class MatchChargesResponse(
+    val ok: Boolean? = null,
+    val applied: List<MatchChargeResult> = emptyList(),
+    val skipped: List<MatchChargeResult> = emptyList(),
+    val error: String? = null
+)
+
+data class TransportPrefsRequest(
+    val drivesCar: Boolean,
+    val canTakePassengers: Boolean? = null,
+    val needsTransport: Boolean? = null
+)
+
+data class TransportMessageDto(
+    val id: Int,
+    val body: String,
+    val createdAt: String = "",
+    val userId: Int = 0,
+    val firstName: String = "",
+    val lastName: String = "",
+    val zawodnik: String = ""
+) {
+    val displayName: String
+        get() = zawodnik.ifBlank {
+            listOf(firstName, lastName).filter { it.isNotBlank() }.joinToString(" ")
+        }.ifBlank { "Zawodnik" }
+}
+
+data class TransportMessagesResponse(
+    val messages: List<TransportMessageDto> = emptyList(),
+    val error: String? = null
+)
+
+data class TransportMessageRequest(val body: String)
+
+data class SaveStatsRequest(
+    @Json(name = "match_id") val matchId: Int,
+    val goals: Int = 0,
+    val assists: Int = 0,
+    val distance: Double = 0.0,
+    val saves: Int = 0
 )
 
 data class WalletResponse(

@@ -9,16 +9,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -43,6 +38,7 @@ import pl.akademiawielkichpilkarzy.app.data.auth.BiometricCredentialsStore
 import pl.akademiawielkichpilkarzy.app.push.PushRegistrar
 import pl.akademiawielkichpilkarzy.app.ui.common.AwpGoldButton
 import pl.akademiawielkichpilkarzy.app.ui.common.AwpPrimaryButton
+import pl.akademiawielkichpilkarzy.app.ui.common.AwpTextField
 import pl.akademiawielkichpilkarzy.app.ui.common.LinkTextButton
 import pl.akademiawielkichpilkarzy.app.ui.common.MundialHeroBanner
 import pl.akademiawielkichpilkarzy.app.ui.common.MurawaBackground
@@ -69,7 +65,6 @@ fun LoginScreen(
     var loginBanner by remember { mutableStateOf<String?>(null) }
     var biometricsAvailable by remember { mutableStateOf(false) }
     var biometricEnabled by remember { mutableStateOf(false) }
-    var offerEnableBiometric by remember { mutableStateOf<BiometricCredentialsStore.Credentials?>(null) }
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
@@ -92,16 +87,6 @@ fun LoginScreen(
             )
         }
     }
-
-    val fieldColors = OutlinedTextFieldDefaults.colors(
-        focusedBorderColor = AwpColors.MundialGold,
-        unfocusedBorderColor = Color.White.copy(alpha = 0.35f),
-        focusedLabelColor = AwpColors.MundialGold,
-        unfocusedLabelColor = AwpColors.OnPitchMuted,
-        cursorColor = AwpColors.MundialGold,
-        focusedTextColor = AwpColors.OnPitch,
-        unfocusedTextColor = AwpColors.OnPitch
-    )
 
     fun performPinLogin() {
         scope.launch {
@@ -136,15 +121,11 @@ fun LoginScreen(
                         pin = pin.trim(),
                         rememberMe = rememberMe
                     )
-                    if (biometricsAvailable && !biometricStore.isEnabled()) {
-                        offerEnableBiometric = creds
-                    } else {
-                        if (biometricStore.isEnabled()) {
-                            // Odśwież zapisane dane (np. nowy PIN).
-                            biometricStore.enable(creds)
-                        }
-                        onLoggedIn()
+                    if (biometricStore.isEnabled()) {
+                        // Odśwież zapisane dane (np. nowy PIN), bez pokazywania biometrii po zalogowaniu.
+                        biometricStore.enable(creds)
                     }
+                    onLoggedIn()
                 }
             } catch (e: HttpException) {
                 error = try {
@@ -160,39 +141,6 @@ fun LoginScreen(
                 loading = false
             }
         }
-    }
-
-    offerEnableBiometric?.let { creds ->
-        AlertDialog(
-            onDismissRequest = {
-                offerEnableBiometric = null
-                onLoggedIn()
-            },
-            title = { Text("Logowanie biometrią") },
-            text = {
-                Text(
-                    "Ten telefon obsługuje odcisk palca lub rozpoznawanie twarzy. " +
-                        "Włączyć szybkie logowanie bez wpisywania PIN-u?"
-                )
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        biometricStore.enable(creds)
-                        offerEnableBiometric = null
-                        onLoggedIn()
-                    }
-                ) { Text("Włącz") }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = {
-                        offerEnableBiometric = null
-                        onLoggedIn()
-                    }
-                ) { Text("Nie teraz") }
-            }
-        )
     }
 
     MurawaBackground {
@@ -247,33 +195,16 @@ fun LoginScreen(
                     Spacer(Modifier.height(8.dp))
                 }
 
-                OutlinedTextField(
-                    value = firstName,
-                    onValueChange = { firstName = it },
-                    label = { Text("Imię") },
-                    singleLine = true,
-                    colors = fieldColors,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                AwpTextField("Imię", firstName, { firstName = it })
                 Spacer(Modifier.height(10.dp))
-                OutlinedTextField(
-                    value = lastName,
-                    onValueChange = { lastName = it },
-                    label = { Text("Nazwisko") },
-                    singleLine = true,
-                    colors = fieldColors,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                AwpTextField("Nazwisko", lastName, { lastName = it })
                 Spacer(Modifier.height(10.dp))
-                OutlinedTextField(
+                AwpTextField(
+                    label = "PIN (4–6 cyfr)",
                     value = pin,
                     onValueChange = { if (it.length <= 6 && it.all(Char::isDigit)) pin = it },
-                    label = { Text("PIN (4–6 cyfr)") },
-                    singleLine = true,
-                    visualTransformation = PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-                    colors = fieldColors,
-                    modifier = Modifier.fillMaxWidth()
+                    keyboardType = KeyboardType.NumberPassword,
+                    visualTransformation = PasswordVisualTransformation()
                 )
                 Spacer(Modifier.height(4.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {

@@ -13,10 +13,10 @@ export type SiteAssetKey = (typeof SITE_ASSET_KEYS)[number];
 
 /** Domyślne pliki z katalogu `public/`. */
 export const SITE_ASSET_DEFAULTS: Record<SiteAssetKey, string> = {
-  logo_header: "/mundial-2026-logo.svg",
-  logo_crest: "/logo-akademia.svg",
-  logo_login: "/logo-akademia.svg",
-  logo_favicon: "/logo-akademia.svg",
+  logo_header: "/app-logo.png",
+  logo_crest: "/app-logo.png",
+  logo_login: "/app-logo.png",
+  logo_favicon: "/app-logo.png",
   bg_soccer_ball: "/soccer-ball.svg",
   bg_stadium: "/stadium-bg.svg",
   bg_pitch_lines: "/pitch-lines.svg",
@@ -87,6 +87,9 @@ export function isSiteAssetKey(v: string): v is SiteAssetKey {
 }
 
 export function resolveSiteAssetUrl(key: SiteAssetKey, custom: string | null | undefined): string {
+  if (key === "logo_header" || key === "logo_crest" || key === "logo_login" || key === "logo_favicon") {
+    return SITE_ASSET_DEFAULTS[key];
+  }
   const trimmed = custom?.trim();
   return trimmed ? trimmed : SITE_ASSET_DEFAULTS[key];
 }

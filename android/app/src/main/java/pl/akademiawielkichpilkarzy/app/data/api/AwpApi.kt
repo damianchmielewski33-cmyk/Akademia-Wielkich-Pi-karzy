@@ -1,11 +1,14 @@
 package pl.akademiawielkichpilkarzy.app.data.api
 
+import okhttp3.ResponseBody
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.HTTP
+import retrofit2.http.PATCH
 import retrofit2.http.POST
 import retrofit2.http.Path
+import retrofit2.http.PUT
 
 interface AwpApi {
     @POST("api/auth/login")
@@ -28,6 +31,93 @@ interface AwpApi {
 
     @POST("api/terminarz/unsubscribe/{id}")
     suspend fun unsubscribe(@Path("id") matchId: Int): ApiOkResponse
+
+    @POST("api/terminarz/add")
+    suspend fun addMatch(@Body body: AddMatchRequest): ApiOkResponse
+
+    @POST("api/terminarz/edit")
+    suspend fun editMatch(@Body body: EditMatchRequest): ApiOkResponse
+
+    @PUT("api/admin/match/{id}")
+    suspend fun adminEditMatch(
+        @Path("id") matchId: Int,
+        @Body body: AdminEditMatchRequest
+    ): ApiOkResponse
+
+    @GET("api/admin/users")
+    suspend fun adminUsers(): List<AdminUserDto>
+
+    @POST("api/admin/match/{id}/set-played")
+    suspend fun setMatchPlayed(@Path("id") matchId: Int): ApiOkResponse
+
+    @POST("api/admin/match/{id}/unset-played")
+    suspend fun unsetMatchPlayed(@Path("id") matchId: Int): ApiOkResponse
+
+    @POST("api/admin/match/{id}/cancel")
+    suspend fun cancelMatch(
+        @Path("id") matchId: Int,
+        @Body body: CancelMatchRequest
+    ): ApiOkResponse
+
+    @GET("api/admin/match/{id}/signups")
+    suspend fun adminMatchSignups(@Path("id") matchId: Int): AdminMatchSignupsResponse
+
+    @POST("api/admin/match/{id}/signups")
+    suspend fun adminAddSignup(
+        @Path("id") matchId: Int,
+        @Body body: UserIdRequest
+    ): ApiOkResponse
+
+    @HTTP(method = "DELETE", path = "api/admin/match/{id}/signups", hasBody = true)
+    suspend fun adminRemoveSignup(
+        @Path("id") matchId: Int,
+        @Body body: UserIdRequest
+    ): ApiOkResponse
+
+    @POST("api/admin/match/{id}/add-guest")
+    suspend fun adminAddGuest(
+        @Path("id") matchId: Int,
+        @Body body: AddGuestRequest
+    ): ApiOkResponse
+
+    @POST("api/admin/match/{id}/remove-guest")
+    suspend fun adminRemoveGuest(
+        @Path("id") matchId: Int,
+        @Body body: UserIdRequest
+    ): ApiOkResponse
+
+    @GET("api/admin/match/{id}/attendance")
+    suspend fun attendance(@Path("id") matchId: Int): AttendanceResponse
+
+    @POST("api/admin/match/{id}/attendance")
+    suspend fun saveAttendance(
+        @Path("id") matchId: Int,
+        @Body body: AttendanceRequest
+    ): ApiOkResponse
+
+    @POST("api/admin/wallet/match/{id}/charges")
+    suspend fun settleMatchCharges(
+        @Path("id") matchId: Int,
+        @Body body: MatchChargesRequest
+    ): MatchChargesResponse
+
+    @PATCH("api/terminarz/signup/{id}/transport")
+    suspend fun updateTransport(
+        @Path("id") matchId: Int,
+        @Body body: TransportPrefsRequest
+    ): ApiOkResponse
+
+    @GET("api/terminarz/transport/{matchId}/messages")
+    suspend fun transportMessages(@Path("matchId") matchId: Int): TransportMessagesResponse
+
+    @POST("api/terminarz/transport/{matchId}/messages")
+    suspend fun sendTransportMessage(
+        @Path("matchId") matchId: Int,
+        @Body body: TransportMessageRequest
+    ): ApiOkResponse
+
+    @POST("api/stats/save")
+    suspend fun saveStats(@Body body: SaveStatsRequest): ResponseBody
 
     @GET("api/wallet/me")
     suspend fun wallet(): WalletResponse

@@ -85,7 +85,7 @@ fun LineupsScreen() {
                 }
                 val sel = data!!.selected!!
                 PitchCard {
-                    PitchLabel("Mecz")
+                    PitchLabel("Ten mecz")
                     Spacer(Modifier.height(4.dp))
                     Text(
                         "${sel.matchDate} · ${sel.matchTime}",
@@ -94,8 +94,16 @@ fun LineupsScreen() {
                     )
                     Text(sel.location, color = AwpColors.OnPitchMuted)
                 }
-                TeamBlock("Drużyna A (home)", sel.home)
-                TeamBlock("Drużyna B (away)", sel.away)
+                PitchCard {
+                    PitchLabel("Boisko (${sel.home.size + sel.away.size} pól: A ${sel.home.size} · B ${sel.away.size})")
+                    Text(
+                        "Drużyna B — góra, drużyna A — dół. Układ odpowiada webowemu widokowi składów.",
+                        color = AwpColors.OnPitchMuted,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+                TeamBlock("Drużyna B", sel.away)
+                TeamBlock("Drużyna A", sel.home)
             }
         }
     }

@@ -3,11 +3,7 @@ package pl.akademiawielkichpilkarzy.app.ui.wallet
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -17,7 +13,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -26,6 +21,7 @@ import pl.akademiawielkichpilkarzy.app.data.api.ApiClient
 import pl.akademiawielkichpilkarzy.app.data.api.DepositRequest
 import pl.akademiawielkichpilkarzy.app.data.api.WalletResponse
 import pl.akademiawielkichpilkarzy.app.ui.common.AwpPrimaryButton
+import pl.akademiawielkichpilkarzy.app.ui.common.AwpTextField
 import pl.akademiawielkichpilkarzy.app.ui.common.ErrorBlock
 import pl.akademiawielkichpilkarzy.app.ui.common.LoadingBlock
 import pl.akademiawielkichpilkarzy.app.ui.common.PitchCard
@@ -44,16 +40,6 @@ fun WalletScreen() {
     var note by remember { mutableStateOf("") }
     var message by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
-
-    val fieldColors = OutlinedTextFieldDefaults.colors(
-        focusedBorderColor = AwpColors.MundialGold,
-        unfocusedBorderColor = Color.White.copy(alpha = 0.35f),
-        focusedLabelColor = AwpColors.MundialGold,
-        unfocusedLabelColor = AwpColors.OnPitchMuted,
-        cursorColor = AwpColors.MundialGold,
-        focusedTextColor = AwpColors.OnPitch,
-        unfocusedTextColor = AwpColors.OnPitch
-    )
 
     fun reload() {
         scope.launch {
@@ -89,21 +75,17 @@ fun WalletScreen() {
                 PitchCard {
                     PitchLabel("Zgłoś wpłatę")
                     Spacer(Modifier.height(8.dp))
-                    OutlinedTextField(
+                    AwpTextField(
+                        label = "Kwota (PLN)",
                         value = amount,
                         onValueChange = { amount = it.filter { ch -> ch.isDigit() || ch == '.' || ch == ',' } },
-                        label = { Text("Kwota (PLN)") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                        colors = fieldColors,
-                        modifier = Modifier.fillMaxWidth()
+                        keyboardType = KeyboardType.Decimal
                     )
                     Spacer(Modifier.height(8.dp))
-                    OutlinedTextField(
+                    AwpTextField(
+                        label = "Notatka (opcjonalnie)",
                         value = note,
-                        onValueChange = { note = it },
-                        label = { Text("Notatka (opcjonalnie)") },
-                        colors = fieldColors,
-                        modifier = Modifier.fillMaxWidth()
+                        onValueChange = { note = it }
                     )
                     Spacer(Modifier.height(10.dp))
                     AwpPrimaryButton("Wyślij zgłoszenie") {
