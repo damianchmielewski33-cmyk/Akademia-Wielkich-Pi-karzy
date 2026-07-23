@@ -193,12 +193,12 @@ fun MatchSignupCard(
                     "confirmed" -> {
                         LinkTextButton("Wypisz całkowicie", onUnsubscribe)
                         if (onTransport != null) {
-                            AwpGoldButton("Transport / dojazd", onTransport)
+                            AwpGoldButton("Transport / dojazd", onClick = onTransport)
                         }
                     }
                     "tentative" -> {
                         if (!isFull) {
-                            AwpPrimaryButton("Potwierdzam udział", onConfirmSignup)
+                            AwpPrimaryButton("Potwierdzam udział", onClick = onConfirmSignup)
                         } else {
                             Text("Skład pełny — nie można potwierdzić miejsca.", color = AwpColors.OnPitchMuted)
                         }
@@ -206,18 +206,18 @@ fun MatchSignupCard(
                     }
                     "declined" -> {
                         if (!isFull) {
-                            AwpPrimaryButton("Zmieniam zdanie — zapisuję się", onConfirmSignup)
+                            AwpPrimaryButton("Zmieniam zdanie — zapisuję się", onClick = onConfirmSignup)
                         }
                         LinkTextButton("Wypisz całkowicie", onUnsubscribe)
                     }
                     else -> {
                         if (!isFull) {
-                            AwpPrimaryButton("Zapisz się", onConfirmSignup)
+                            AwpPrimaryButton("Zapisz się", onClick = onConfirmSignup)
                         } else {
                             Text("Skład pełny — zapis potwierdzony niedostępny.", color = AwpColors.OnPitchMuted)
                         }
-                        AwpSecondaryButton("Jeszcze nie wiem", onTentative)
-                        AwpSecondaryButton("Nie biorę udziału", onDeclined)
+                        AwpSecondaryButton("Jeszcze nie wiem", onClick = onTentative)
+                        AwpSecondaryButton("Nie biorę udziału", onClick = onDeclined)
                     }
                 }
             }

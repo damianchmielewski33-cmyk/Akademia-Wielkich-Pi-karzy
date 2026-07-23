@@ -4,28 +4,15 @@ import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import pl.akademiawielkichpilkarzy.app.R
 
-/** Teko (variable) — display jak nagłówki na stronie. */
+/** Teko — display jak nagłówki na stronie. */
 val TekoFamily = FontFamily(
-    Font(
-        resId = R.font.teko,
-        weight = FontWeight.Normal,
-        variationSettings = FontVariation.Settings(FontVariation.weight(400))
-    ),
-    Font(
-        resId = R.font.teko,
-        weight = FontWeight.SemiBold,
-        variationSettings = FontVariation.Settings(FontVariation.weight(600))
-    ),
-    Font(
-        resId = R.font.teko,
-        weight = FontWeight.Bold,
-        variationSettings = FontVariation.Settings(FontVariation.weight(700))
-    )
+    Font(resId = R.font.teko, weight = FontWeight.Normal),
+    Font(resId = R.font.teko, weight = FontWeight.SemiBold),
+    Font(resId = R.font.teko, weight = FontWeight.Bold)
 )
 
 val AwpTypography = Typography(

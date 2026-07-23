@@ -199,10 +199,10 @@ fun MundialHeroBanner(
 @Composable
 fun AwpPrimaryButton(
     text: String,
-    onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    loading: Boolean = false
+    loading: Boolean = false,
+    onClick: () -> Unit
 ) {
     Button(
         onClick = onClick,
@@ -230,9 +230,9 @@ fun AwpPrimaryButton(
 @Composable
 fun AwpSecondaryButton(
     text: String,
-    onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    onClick: () -> Unit
 ) {
     OutlinedButton(
         onClick = onClick,
@@ -251,8 +251,8 @@ fun AwpSecondaryButton(
 @Composable
 fun AwpGoldButton(
     text: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
 ) {
     Button(
         onClick = onClick,
