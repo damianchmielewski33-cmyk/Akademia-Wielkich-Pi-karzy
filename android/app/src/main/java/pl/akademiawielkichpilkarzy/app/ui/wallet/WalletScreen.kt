@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -13,23 +12,23 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import pl.akademiawielkichpilkarzy.app.data.api.ApiClient
 import pl.akademiawielkichpilkarzy.app.data.api.DepositRequest
 import pl.akademiawielkichpilkarzy.app.data.api.WalletResponse
+import pl.akademiawielkichpilkarzy.app.ui.common.AwpListRow
+import pl.akademiawielkichpilkarzy.app.ui.common.AwpMetricGrid
 import pl.akademiawielkichpilkarzy.app.ui.common.AwpPrimaryButton
+import pl.akademiawielkichpilkarzy.app.ui.common.AwpStatusMessage
 import pl.akademiawielkichpilkarzy.app.ui.common.AwpTextField
+import pl.akademiawielkichpilkarzy.app.ui.common.EmptyHint
 import pl.akademiawielkichpilkarzy.app.ui.common.ErrorBlock
 import pl.akademiawielkichpilkarzy.app.ui.common.LoadingBlock
 import pl.akademiawielkichpilkarzy.app.ui.common.PitchCard
 import pl.akademiawielkichpilkarzy.app.ui.common.PitchLabel
-import pl.akademiawielkichpilkarzy.app.ui.common.PitchPanel
 import pl.akademiawielkichpilkarzy.app.ui.common.ScreenScaffold
-import pl.akademiawielkichpilkarzy.app.ui.theme.AwpColors
-import androidx.compose.material3.MaterialTheme
 
 @Composable
 fun WalletScreen() {
@@ -62,13 +61,16 @@ fun WalletScreen() {
             loading -> LoadingBlock()
             error != null -> ErrorBlock(error!!) { reload() }
             else -> {
+                val pending = wallet?.pending.orEmpty()
+                val txs = wallet?.transactions.orEmpty()
                 PitchCard(gold = true) {
                     PitchLabel("Saldo")
-                    Text(
-                        "%.2f zł".format(wallet?.balancePln ?: 0.0),
-                        style = MaterialTheme.typography.displayMedium,
-                        color = AwpColors.MundialGold,
-                        fontWeight = FontWeight.Bold
+                    Spacer(Modifier.height(8.dp))
+                    AwpMetricGrid(
+                        listOf(
+                            "Dostępne" to "%.2f zł".format(wallet?.balancePln ?: 0.0),
+                            "Oczekujące" to pending.size.toString()
+                        )
                     )
                 }
 
@@ -109,48 +111,48 @@ fun WalletScreen() {
                             }
                         }
                     }
-                    if (message != null) {
-                        Text(message!!, color = AwpColors.OnPitchMuted)
-                    }
                 }
 
-                val pending = wallet?.pending.orEmpty()
-                if (pending.isNotEmpty()) {
-                    PitchCard {
-                        PitchLabel("Oczekujące wpłaty")
-                        Spacer(Modifier.height(8.dp))
+                if (message != null) {
+                    AwpStatusMessage(
+                        message = message!!,
+                        isError = message!!.startsWith("Podaj") || message!!.startsWith("Nie")
+                    )
+                }
+
+                PitchCard {
+                    PitchLabel("Oczekujące wpłaty")
+                    Spacer(Modifier.height(8.dp))
+                    if (pending.isEmpty()) {
+                        EmptyHint("Brak oczekujących wpłat.")
+                    } else {
                         pending.forEach { d ->
-                            PitchPanel {
-                                Text("%.2f zł · ${d.status}".format(d.amountPln), color = AwpColors.OnPitch)
-                                if (!d.note.isNullOrBlank()) {
-                                    Text(d.note, color = AwpColors.OnPitchMuted)
-                                }
-                            }
+                            AwpListRow(
+                                title = "%.2f zł".format(d.amountPln),
+                                label = d.status,
+                                subtitle = d.note ?: d.createdAt,
+                                trailing = d.createdAt?.take(10),
+                                gold = true
+                            )
                             Spacer(Modifier.height(6.dp))
                         }
                     }
                 }
 
-                val txs = wallet?.transactions.orEmpty()
-                if (txs.isNotEmpty()) {
-                    PitchCard {
-                        PitchLabel("Historia")
-                        Spacer(Modifier.height(8.dp))
+                PitchCard {
+                    PitchLabel("Historia")
+                    Spacer(Modifier.height(8.dp))
+                    if (txs.isEmpty()) {
+                        EmptyHint("Brak historii portfela.")
+                    } else {
                         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             txs.take(20).forEach { tx ->
-                                PitchPanel {
-                                    Text(
-                                        "${tx.kind}: %.2f zł".format(tx.amountPln),
-                                        color = AwpColors.OnPitch
-                                    )
-                                    if (!tx.createdAt.isNullOrBlank()) {
-                                        Text(
-                                            tx.createdAt,
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = AwpColors.OnPitchMuted
-                                        )
-                                    }
-                                }
+                                AwpListRow(
+                                    title = tx.kind,
+                                    subtitle = tx.note ?: tx.createdAt,
+                                    trailing = "%.2f zł".format(tx.amountPln),
+                                    gold = tx.amountPln > 0
+                                )
                             }
                         }
                     }

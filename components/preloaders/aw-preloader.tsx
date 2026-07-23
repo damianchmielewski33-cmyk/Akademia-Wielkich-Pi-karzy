@@ -24,7 +24,7 @@ export function AwPreloader({ label, className, variant = "page" }: AwPreloaderP
   return (
     <div className={cn("awp-preloader awp-preloader--page", className)} role="status" aria-live="polite">
       <div className="awp-preloader__crest">
-        <SiteAssetImage asset="logo_header" alt="" width={160} height={160} className="h-9 w-9" sizes="36px" priority />
+        <SiteAssetImage asset="logo_header" alt="" width={160} height={160} className="h-11 w-11 drop-shadow" sizes="44px" priority />
       </div>
       <div className="awp-preloader__track" aria-hidden>
         <div className="awp-preloader__bar" />

@@ -87,9 +87,6 @@ export function isSiteAssetKey(v: string): v is SiteAssetKey {
 }
 
 export function resolveSiteAssetUrl(key: SiteAssetKey, custom: string | null | undefined): string {
-  if (key === "logo_header" || key === "logo_crest" || key === "logo_login" || key === "logo_favicon") {
-    return SITE_ASSET_DEFAULTS[key];
-  }
   const trimmed = custom?.trim();
   return trimmed ? trimmed : SITE_ASSET_DEFAULTS[key];
 }

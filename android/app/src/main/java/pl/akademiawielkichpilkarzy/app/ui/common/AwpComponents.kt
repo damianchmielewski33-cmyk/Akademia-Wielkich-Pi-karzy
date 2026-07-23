@@ -216,6 +216,137 @@ fun PitchPanel(
     )
 }
 
+@Composable
+fun AwpStatusMessage(
+    message: String,
+    modifier: Modifier = Modifier,
+    isError: Boolean = false,
+    actionText: String? = null,
+    onAction: (() -> Unit)? = null
+) {
+    PitchCard(modifier = modifier, gold = isError) {
+        PitchLabel(if (isError) "Uwaga" else "Status")
+        Text(
+            text = message,
+            color = if (isError) Color.White else AwpColors.OnPitch,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold
+        )
+        if (actionText != null && onAction != null) {
+            LinkTextButton(actionText, onAction)
+        }
+    }
+}
+
+@Composable
+fun AwpMetricGrid(
+    metrics: List<Pair<String, String>>,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        metrics.chunked(2).forEach { row ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                row.forEach { (label, value) ->
+                    AwpMetricTile(
+                        label = label,
+                        value = value,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                if (row.size == 1) {
+                    Spacer(Modifier.weight(1f))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun AwpMetricTile(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier,
+    gold: Boolean = false
+) {
+    PitchPanel(modifier = modifier) {
+        Text(
+            text = label.uppercase(),
+            style = MaterialTheme.typography.labelSmall,
+            color = AwpColors.OnPitchMuted,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.titleLarge,
+            color = if (gold) AwpColors.MundialGold else AwpColors.OnPitch,
+            fontWeight = FontWeight.Bold,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+@Composable
+fun AwpListRow(
+    title: String,
+    modifier: Modifier = Modifier,
+    label: String? = null,
+    subtitle: String? = null,
+    trailing: String? = null,
+    gold: Boolean = false
+) {
+    PitchPanel(modifier = modifier) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                if (!label.isNullOrBlank()) {
+                    Text(
+                        text = label.uppercase(),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = AwpColors.MundialGold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                Text(
+                    text = title,
+                    color = AwpColors.OnPitch,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                if (!subtitle.isNullOrBlank()) {
+                    Text(
+                        text = subtitle,
+                        color = AwpColors.OnPitchMuted,
+                        style = MaterialTheme.typography.bodySmall,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+            if (!trailing.isNullOrBlank()) {
+                Text(
+                    text = trailing,
+                    color = if (gold) AwpColors.MundialGold else AwpColors.OnPitch,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.End,
+                    modifier = Modifier.padding(start = 12.dp)
+                )
+            }
+        }
+    }
+}
+
 /** Pasek hero navy→purple jak .awp-section-hero / mundial-header. */
 @Composable
 fun MundialHeroBanner(

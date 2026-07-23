@@ -56,8 +56,8 @@ export function SiteSectionHero({
               alt=""
               width={160}
               height={160}
-              className="h-9 w-9 sm:h-10 sm:w-10"
-              sizes="40px"
+              className="h-12 w-12 drop-shadow sm:h-14 sm:w-14"
+              sizes="56px"
             />
           </span>
         ) : null}

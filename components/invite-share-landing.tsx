@@ -556,7 +556,7 @@ export function InviteShareLanding({
           decorative
           width={40}
           height={40}
-          className="h-10 w-10 opacity-80"
+          className="h-12 w-12 opacity-90 drop-shadow"
         />
       </div>
     </div>

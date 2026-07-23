@@ -46,9 +46,9 @@ export function LoginPageScreen({ siteName, nextPath, idleLogout }: Props) {
           <div className="relative z-10 flex w-full max-w-xs flex-col items-center">
             <div
               className={cn(
-                "mb-6 flex h-32 w-32 items-center justify-center rounded-2xl p-5",
+                "mb-6 flex h-32 w-32 items-center justify-center rounded-2xl p-3",
                 "bg-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] ring-1 ring-white/20 backdrop-blur-sm",
-                "md:h-36 md:w-36 md:rounded-3xl md:p-6"
+                "md:h-36 md:w-36 md:rounded-3xl md:p-4"
               )}
             >
               <SiteAssetImage

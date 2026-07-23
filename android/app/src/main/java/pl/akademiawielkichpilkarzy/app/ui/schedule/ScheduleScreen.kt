@@ -45,6 +45,7 @@ import pl.akademiawielkichpilkarzy.app.data.api.AdminUserDto
 import pl.akademiawielkichpilkarzy.app.data.api.MatchDto
 import pl.akademiawielkichpilkarzy.app.data.api.PlayersDataEntryDto
 import pl.akademiawielkichpilkarzy.app.ui.common.AwpGoldButton
+import pl.akademiawielkichpilkarzy.app.ui.common.AwpStatusMessage
 import pl.akademiawielkichpilkarzy.app.ui.common.AwpModal
 import pl.akademiawielkichpilkarzy.app.ui.common.AwpPrimaryButton
 import pl.akademiawielkichpilkarzy.app.ui.common.AwpSecondaryButton
@@ -103,10 +104,12 @@ fun ScheduleScreen(
 
             state.actionMessage?.let { message ->
                 item {
-                    PitchCard(gold = message.startsWith("Nie") || message.startsWith("Błąd")) {
-                        Text(message, color = AwpColors.OnPitch)
-                        LinkTextButton("Zamknij", viewModel::clearMessage)
-                    }
+                    AwpStatusMessage(
+                        message = message,
+                        isError = message.startsWith("Nie") || message.startsWith("Błąd"),
+                        actionText = "Zamknij",
+                        onAction = viewModel::clearMessage
+                    )
                 }
             }
 
@@ -232,13 +235,15 @@ private fun ScheduleToolbar(
     )
 
     PitchCard {
+        PitchLabel("Widok")
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.horizontalScroll(rememberScrollState())) {
             FilterChip(state.tab == ScheduleTab.Upcoming, { onTab(ScheduleTab.Upcoming) }, { Text("Do rozegrania") }, colors = chipColors)
             FilterChip(state.tab == ScheduleTab.Archive, { onTab(ScheduleTab.Archive) }, { Text("Archiwum") }, colors = chipColors)
             FilterChip(state.view == ScheduleView.List, { onView(ScheduleView.List) }, { Text("Lista") }, colors = chipColors)
             FilterChip(state.view == ScheduleView.Calendar, { onView(ScheduleView.Calendar) }, { Text("Kalendarz") }, colors = chipColors)
         }
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(10.dp))
+        PitchLabel("Szukaj")
         OutlinedTextField(
             value = state.search,
             onValueChange = onSearch,
@@ -246,13 +251,15 @@ private fun ScheduleToolbar(
             colors = fieldColors,
             modifier = Modifier.fillMaxWidth()
         )
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(10.dp))
+        PitchLabel("Dostępność")
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.horizontalScroll(rememberScrollState())) {
             ScheduleFilter.entries.forEach { f ->
                 FilterChip(state.filter == f, { onFilter(f) }, { Text(f.label()) }, colors = chipColors)
             }
         }
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(10.dp))
+        PitchLabel("Czas i moje mecze")
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.horizontalScroll(rememberScrollState())) {
             SchedulePeriod.entries.forEach { p ->
                 FilterChip(state.period == p, { onPeriod(p) }, { Text(p.label()) }, colors = chipColors)

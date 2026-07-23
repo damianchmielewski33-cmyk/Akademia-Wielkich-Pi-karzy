@@ -197,7 +197,7 @@ export function SiteShell({
                 alt="Logo"
                 width={160}
                 height={160}
-                className="h-7 w-7 xs:h-8 xs:w-8 sm:h-9 sm:w-9"
+                className="h-8 w-8 drop-shadow-sm xs:h-9 xs:w-9 sm:h-10 sm:w-10"
                 priority
                 sizes="40px"
               />
@@ -472,8 +472,8 @@ export function SiteShell({
               alt={siteName}
               width={144}
               height={144}
-              className="h-9 w-9 opacity-90"
-              sizes="36px"
+              className="h-11 w-11 opacity-95 drop-shadow"
+              sizes="44px"
             />
             <div className="min-w-0">
               <p className="text-sm font-semibold text-white">{siteName}</p>

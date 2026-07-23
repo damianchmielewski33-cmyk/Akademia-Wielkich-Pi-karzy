@@ -89,8 +89,8 @@ export function HomeNextMatchCard({
               alt=""
               width={128}
               height={128}
-              className="h-8 w-8 drop-shadow"
-              sizes="32px"
+              className="h-10 w-10 drop-shadow"
+              sizes="40px"
             />
           </div>
           <h2 id="home-next-match-heading" className="text-xl font-bold tracking-tight drop-shadow-sm sm:text-[1.35rem]">

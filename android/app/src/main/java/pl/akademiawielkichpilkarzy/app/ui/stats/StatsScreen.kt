@@ -7,8 +7,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -22,14 +20,15 @@ import kotlinx.coroutines.launch
 import pl.akademiawielkichpilkarzy.app.AwpApp
 import pl.akademiawielkichpilkarzy.app.data.api.ApiClient
 import pl.akademiawielkichpilkarzy.app.data.api.PlayerStatsResponse
+import pl.akademiawielkichpilkarzy.app.ui.common.AwpListRow
+import pl.akademiawielkichpilkarzy.app.ui.common.AwpMetricGrid
+import pl.akademiawielkichpilkarzy.app.ui.common.EmptyHint
 import pl.akademiawielkichpilkarzy.app.ui.common.ErrorBlock
 import pl.akademiawielkichpilkarzy.app.ui.common.LoadingBlock
 import pl.akademiawielkichpilkarzy.app.ui.common.MurawaBackground
 import pl.akademiawielkichpilkarzy.app.ui.common.PitchCard
 import pl.akademiawielkichpilkarzy.app.ui.common.PitchLabel
-import pl.akademiawielkichpilkarzy.app.ui.common.PitchPanel
 import pl.akademiawielkichpilkarzy.app.ui.common.ScreenHeader
-import pl.akademiawielkichpilkarzy.app.ui.theme.AwpColors
 
 @Composable
 fun StatsScreen() {
@@ -76,29 +75,28 @@ fun StatsScreen() {
                         PitchCard {
                             PitchLabel("Podsumowanie")
                             Spacer(Modifier.height(8.dp))
-                            Text("Mecze: ${s.matches}", color = AwpColors.OnPitch)
-                            Text(
-                                "Gole: ${s.goals} · Asysty: ${s.assists}",
-                                color = AwpColors.OnPitch
-                            )
-                            Text(
-                                "Dystans: %.1f km · Obrony: ${s.saves}".format(s.distance),
-                                color = AwpColors.OnPitch
+                            AwpMetricGrid(
+                                listOf(
+                                    "Mecze" to s.matches.toString(),
+                                    "Gole" to s.goals.toString(),
+                                    "Asysty" to s.assists.toString(),
+                                    "Dystans" to "%.1f km".format(s.distance),
+                                    "Obrony" to s.saves.toString()
+                                )
                             )
                         }
                     }
                     item { PitchLabel("Historia") }
-                    items(s.games) { g ->
-                        PitchPanel {
-                            Text(
-                                "${g.date} ${g.time.orEmpty()}",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = AwpColors.OnPitch
-                            )
-                            Text(g.location.orEmpty(), color = AwpColors.OnPitchMuted)
-                            Text(
-                                "G ${g.goals} · A ${g.assists} · ${"%.1f".format(g.distance)} km · O ${g.saves}",
-                                color = AwpColors.MundialGold
+                    if (s.games.isEmpty()) {
+                        item { EmptyHint("Brak zapisanych statystyk meczowych.") }
+                    } else {
+                        items(s.games) { g ->
+                            AwpListRow(
+                                title = "${g.date} ${g.time.orEmpty()}",
+                                subtitle = g.location.orEmpty(),
+                                label = "${"%.1f".format(g.distance)} km · O ${g.saves}",
+                                trailing = "G ${g.goals} · A ${g.assists}",
+                                gold = true
                             )
                         }
                     }

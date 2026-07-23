@@ -673,7 +673,7 @@
   }
 
   .awp-postcard__stampLogo {
-    @apply mt-0.5 h-5 w-5 opacity-85;
+    @apply mt-0.5 h-6 w-6 opacity-90 drop-shadow;
   }
 
   .awp-postcard__postmark {

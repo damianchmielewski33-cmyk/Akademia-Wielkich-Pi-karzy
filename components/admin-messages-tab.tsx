@@ -376,7 +376,7 @@ export function AdminMessagesTab({ onUnreadChange, mode = "page", active = true 
         >
           {isPopup ? (
             <span className="relative flex h-16 w-16 items-center justify-center rounded-2xl bg-black/20 ring-1 ring-white/20">
-              <SiteAssetImage asset="logo_crest" decorative width={48} height={48} className="h-10 w-10" />
+              <SiteAssetImage asset="logo_crest" decorative width={48} height={48} className="h-12 w-12 drop-shadow" />
             </span>
           ) : null}
           <p className={cn("text-sm", isPopup ? "text-emerald-100/75" : undefined)}>
@@ -702,7 +702,7 @@ export function AdminMessagesTab({ onUnreadChange, mode = "page", active = true 
     >
       {isPopup ? (
         <span className="relative flex h-20 w-20 items-center justify-center rounded-3xl bg-black/25 ring-1 ring-[var(--mundial-gold)]/35">
-          <SiteAssetImage asset="logo_crest" decorative width={64} height={64} className="h-12 w-12 drop-shadow" />
+          <SiteAssetImage asset="logo_crest" decorative width={64} height={64} className="h-16 w-16 drop-shadow" />
           <SiteAssetImage
             asset="bg_soccer_ball"
             decorative
@@ -729,7 +729,7 @@ export function AdminMessagesTab({ onUnreadChange, mode = "page", active = true 
         <header className="relative z-[1] shrink-0 border-b border-white/15 px-4 pb-3.5 pt-4 pr-14 sm:px-5 sm:pt-5">
           <div className="flex items-center gap-3">
             <span className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-black/25 shadow-inner ring-1 ring-[var(--mundial-gold)]/45">
-              <SiteAssetImage asset="logo_crest" decorative width={40} height={40} className="h-8 w-8" />
+              <SiteAssetImage asset="logo_crest" decorative width={40} height={40} className="h-10 w-10 drop-shadow" />
             </span>
             <div className="min-w-0 flex-1">
               <p className="text-[0.62rem] font-bold uppercase tracking-[0.22em] text-[var(--mundial-gold)]">

@@ -11,7 +11,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -27,10 +26,11 @@ import kotlinx.coroutines.launch
 import pl.akademiawielkichpilkarzy.app.data.api.ApiClient
 import pl.akademiawielkichpilkarzy.app.data.api.RankingRow
 import pl.akademiawielkichpilkarzy.app.data.api.RankingsResponse
+import pl.akademiawielkichpilkarzy.app.ui.common.AwpListRow
+import pl.akademiawielkichpilkarzy.app.ui.common.EmptyHint
 import pl.akademiawielkichpilkarzy.app.ui.common.ErrorBlock
 import pl.akademiawielkichpilkarzy.app.ui.common.LoadingBlock
 import pl.akademiawielkichpilkarzy.app.ui.common.MurawaBackground
-import pl.akademiawielkichpilkarzy.app.ui.common.PitchCard
 import pl.akademiawielkichpilkarzy.app.ui.common.ScreenHeader
 import pl.akademiawielkichpilkarzy.app.ui.theme.AwpColors
 
@@ -115,20 +115,21 @@ fun RankingsScreen() {
                         RankTab.DYSTANS -> data?.rankings?.distance.orEmpty()
                         RankTab.OBRONY -> data?.rankings?.saves.orEmpty()
                     }
-                    items(rows) { r ->
-                        PitchCard(gold = r.rank <= 3) {
-                            Text(
-                                "${r.rank}. ${r.firstName} ${r.lastName}",
-                                style = MaterialTheme.typography.titleLarge,
-                                color = AwpColors.OnPitch
-                            )
-                            Text(r.zawodnik, color = AwpColors.OnPitchMuted)
+                    if (rows.isEmpty()) {
+                        item { EmptyHint("Brak wyników dla tej klasyfikacji.") }
+                    } else {
+                        items(rows) { r ->
                             val valueText = when (tab) {
                                 RankTab.DYSTANS -> "%.1f km".format(r.value)
                                 RankTab.PUNKTY -> "%.1f pkt".format(r.value)
                                 else -> "%.0f".format(r.value)
                             }
-                            Text(valueText, color = AwpColors.MundialGold)
+                            AwpListRow(
+                                title = "${r.firstName} ${r.lastName}",
+                                label = "#${r.rank} · ${r.zawodnik}",
+                                trailing = valueText,
+                                gold = r.rank <= 3
+                            )
                         }
                     }
                 }

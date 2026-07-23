@@ -118,8 +118,8 @@ export function AdminShell({
                 alt=""
                 width={128}
                 height={128}
-                className="h-7 w-7 xs:h-8 xs:w-8"
-                sizes="32px"
+                className="h-9 w-9 drop-shadow xs:h-10 xs:w-10"
+                sizes="40px"
               />
             </span>
             <div className="min-w-0">

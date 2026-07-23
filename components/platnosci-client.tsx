@@ -346,8 +346,8 @@ export function PlatnosciClient({
                     alt=""
                     width={128}
                     height={128}
-                    className="h-8 w-8 drop-shadow"
-                    sizes="32px"
+                    className="h-10 w-10 drop-shadow"
+                    sizes="40px"
                   />
                 </div>
                 <h2 className="text-xl font-bold tracking-tight text-white drop-shadow-sm sm:text-2xl">Saldo konta</h2>
