@@ -53,8 +53,8 @@ export default function PobierzClient() {
         <span className={pitchLabelClass}>Android</span>
         <h2 className="pitch-heading mt-4 text-xl">Pobierz APK</h2>
         <p className="mt-3 text-sm leading-relaxed text-emerald-100/85">
-          Plik ma ok. 10–15 MB. Po pobraniu otwórz go w <strong>Moje pliki</strong> i zainstaluj.
-          Przy Play Protect wybierz „Zainstaluj mimo to”.
+          Plik ma ok. 10–15 MB. Po pierwszej instalacji kolejne wersje aplikacja może pobrać sama
+          (dialog „Dostępna aktualizacja” albo Profil → Sprawdź aktualizacje).
         </p>
 
         <a

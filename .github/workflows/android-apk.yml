@@ -96,10 +96,27 @@ jobs:
           echo "$VERIFY_OUT" | grep -q "Verified using v2 scheme (APK Signature Scheme v2): true"
           echo "OK: APK podpisany przez Gradle (wymagane v2)"
 
-      - name: Prepare APK artifact
+      - name: Prepare APK artifact + version.json
         run: |
+          set -euo pipefail
           mkdir -p dist
           cp android/app/build/outputs/apk/release/app-release.apk dist/akademia-wp.apk
+          VERSION_CODE=$(grep -E '^\s*versionCode\s*=' android/app/build.gradle.kts | head -1 | grep -oE '[0-9]+')
+          VERSION_NAME=$(grep -E '^\s*versionName\s*=' android/app/build.gradle.kts | head -1 | sed -E 's/.*"([^"]+)".*/\1/')
+          APK_URL="https://github.com/${{ github.repository }}/releases/download/android-latest/akademia-wp.apk"
+          python3 - <<PY
+          import json
+          info = {
+            "versionCode": int("${VERSION_CODE}"),
+            "versionName": "${VERSION_NAME}",
+            "apkUrl": "${APK_URL}",
+            "releasedAt": __import__("datetime").datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "commit": "${{ github.sha }}",
+          }
+          open("dist/android-version.json","w",encoding="utf-8").write(json.dumps(info, indent=2)+"\n")
+          open("public/android-version.json","w",encoding="utf-8").write(json.dumps(info, indent=2)+"\n")
+          print(json.dumps(info, indent=2))
+          PY
           ls -lh dist/akademia-wp.apk
 
       - name: Install APK on emulator (API 31 ≈ Galaxy S10)
@@ -129,8 +146,22 @@ jobs:
           set -e
           gh release delete android-latest --yes 2>/dev/null || true
           git push origin :refs/tags/android-latest 2>/dev/null || true
-          NOTES="APK Android. Pobierz akademia-wp.apk, zainstaluj na telefonie, zaloguj się PIN-em. API: ${{ steps.api.outputs.url }} Commit: ${{ github.sha }}"
-          gh release create android-latest dist/akademia-wp.apk \
+          NOTES="APK Android ${{ github.sha }}. Auto-aktualizacja w aplikacji sprawdza android-version.json. API: ${{ steps.api.outputs.url }}"
+          gh release create android-latest dist/akademia-wp.apk dist/android-version.json \
             --title "Aplikacja Android (najnowsza)" \
             --notes "$NOTES" \
             --latest
+
+      - name: Commit public/android-version.json (dla Vercel)
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/android-version.json
+          if git diff --staged --quiet; then
+            echo "Brak zmian w android-version.json"
+            exit 0
+          fi
+          git commit -m "chore: android-version.json $(jq -r .versionName dist/android-version.json)"
+          git pull --rebase origin "${{ github.ref_name }}" || true
+          git push origin "HEAD:${{ github.ref_name }}"

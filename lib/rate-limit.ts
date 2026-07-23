@@ -68,5 +68,6 @@ export const RATE = {
   contactAdminAttachment: { limit: 20, windowMs: 60 * 60 * 1000 },
   /** Pobranie APK / feedback instalacji / logi klienta mobile. */
   androidDownload: { limit: 60, windowMs: 60 * 60 * 1000 },
+  androidVersion: { limit: 120, windowMs: 60 * 1000 },
   clientLog: { limit: 80, windowMs: 60 * 1000 },
 } as const;

@@ -1,0 +1,8 @@
+{
+  "versionCode": 12,
+  "versionName": "1.1.1",
+  "apkUrl": "https://github.com/damianchmielewski33-cmyk/Akademia-Wielkich-Pi-karzy/releases/download/android-latest/akademia-wp.apk",
+  "releasedAt": null,
+  "commit": null,
+  "notes": "Fallback — nadpisywany przy każdym buildzie APK w CI."
+}

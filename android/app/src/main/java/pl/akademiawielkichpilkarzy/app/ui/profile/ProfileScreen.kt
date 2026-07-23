@@ -33,9 +33,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import pl.akademiawielkichpilkarzy.app.AwpApp
+import pl.akademiawielkichpilkarzy.app.BuildConfig
 import pl.akademiawielkichpilkarzy.app.data.api.ApiClient
 import pl.akademiawielkichpilkarzy.app.data.api.ProfileResponse
 import pl.akademiawielkichpilkarzy.app.push.PushRegistrar
+import pl.akademiawielkichpilkarzy.app.ui.update.rememberUpdateChecker
 
 @Composable
 fun ProfileScreen(onLoggedOut: () -> Unit) {
@@ -45,6 +47,7 @@ fun ProfileScreen(onLoggedOut: () -> Unit) {
     var pushEnabled by remember { mutableStateOf(false) }
     var pushBusy by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+    val checkUpdate = rememberUpdateChecker()
 
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -168,6 +171,14 @@ fun ProfileScreen(onLoggedOut: () -> Unit) {
                             }
                         )
                     }
+                }
+
+                Spacer(Modifier.height(16.dp))
+                OutlinedButton(
+                    onClick = { checkUpdate() },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Sprawdź aktualizacje (v${BuildConfig.VERSION_NAME})")
                 }
 
                 Spacer(Modifier.height(24.dp))

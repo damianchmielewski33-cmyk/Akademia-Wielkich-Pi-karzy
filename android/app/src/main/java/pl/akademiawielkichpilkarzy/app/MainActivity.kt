@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import pl.akademiawielkichpilkarzy.app.ui.login.LoginScreen
 import pl.akademiawielkichpilkarzy.app.ui.nav.MainScaffold
 import pl.akademiawielkichpilkarzy.app.ui.theme.AwpTheme
+import pl.akademiawielkichpilkarzy.app.ui.update.AppUpdateGate
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -20,6 +21,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             AwpTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
+                    AppUpdateGate(checkOnStart = true)
                     val token by AwpApp.instance.sessionStore.tokenFlow.collectAsState(initial = null)
                     if (token.isNullOrBlank()) {
                         LoginScreen(onLoggedIn = {})
