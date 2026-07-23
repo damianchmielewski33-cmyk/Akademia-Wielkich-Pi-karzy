@@ -38,6 +38,18 @@ interface AwpApi {
     @GET("api/profile")
     suspend fun profile(): ProfileResponse
 
+    @GET("api/player-stats/{userId}")
+    suspend fun playerStats(@Path("userId") userId: Int): PlayerStatsResponse
+
+    @GET("api/weather/forecast")
+    suspend fun weather(@retrofit2.http.Query("q") location: String): WeatherResponse
+
+    @GET("api/rankingi")
+    suspend fun rankingi(@retrofit2.http.Query("season") seasonId: Int? = null): RankingsResponse
+
+    @GET("api/sklady")
+    suspend fun sklady(@retrofit2.http.Query("m") matchId: Int? = null): LineupsResponse
+
     @POST("api/devices/register")
     suspend fun registerDevice(@Body body: DeviceRegisterRequest): ApiOkResponse
 

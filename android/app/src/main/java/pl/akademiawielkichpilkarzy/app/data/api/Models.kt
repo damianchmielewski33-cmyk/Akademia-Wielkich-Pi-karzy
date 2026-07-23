@@ -138,3 +138,110 @@ data class ClientLogRequest(
     @Json(name = "appVersion") val appVersion: String? = null,
     val details: String? = null
 )
+
+data class WeatherResponse(
+    val days: List<WeatherDay> = emptyList(),
+    val source: String? = null
+)
+
+data class WeatherDay(
+    val date: String,
+    val description: String? = null,
+    val maxC: Double? = null,
+    val minC: Double? = null,
+    val precipChance: Int? = null
+)
+
+data class PlayerStatsResponse(
+    @Json(name = "first_name") val firstName: String? = null,
+    @Json(name = "last_name") val lastName: String? = null,
+    val zawodnik: String? = null,
+    val matches: Int = 0,
+    val goals: Int = 0,
+    val assists: Int = 0,
+    val distance: Double = 0.0,
+    val saves: Int = 0,
+    val games: List<PlayerStatsMatch> = emptyList()
+)
+
+data class PlayerStatsMatch(
+    val date: String,
+    val time: String? = null,
+    val location: String? = null,
+    val goals: Int = 0,
+    val assists: Int = 0,
+    val distance: Double = 0.0,
+    val saves: Int = 0
+)
+
+data class RankingsResponse(
+    val season: RankingSeason? = null,
+    val seasons: List<RankingSeason> = emptyList(),
+    val points: RankingPoints? = null,
+    val rankings: RankingTables? = null
+)
+
+data class RankingSeason(
+    val id: Int,
+    val name: String,
+    val isActive: Boolean = false
+)
+
+data class RankingPoints(
+    val goal: Double = 0.0,
+    val assist: Double = 0.0,
+    val km: Double = 0.0,
+    val save: Double = 0.0
+)
+
+data class RankingTables(
+    val punkty: List<RankingRow> = emptyList(),
+    val goals: List<RankingRow> = emptyList(),
+    val assists: List<RankingRow> = emptyList(),
+    val distance: List<RankingRow> = emptyList(),
+    val saves: List<RankingRow> = emptyList()
+)
+
+data class RankingRow(
+    val rank: Int,
+    val userId: Int,
+    val firstName: String,
+    val lastName: String,
+    val zawodnik: String,
+    val value: Double,
+    val goals: Int = 0,
+    val assists: Int = 0,
+    val distance: Double = 0.0,
+    val saves: Int = 0,
+    val punkty: Double = 0.0
+)
+
+data class LineupsResponse(
+    val matches: List<LineupMatchRef> = emptyList(),
+    val selected: LineupSelected? = null
+)
+
+data class LineupMatchRef(
+    val id: Int,
+    val matchDate: String,
+    val matchTime: String,
+    val location: String
+)
+
+data class LineupSelected(
+    val id: Int,
+    val matchDate: String,
+    val matchTime: String,
+    val location: String,
+    val home: List<LineupSlot?> = emptyList(),
+    val away: List<LineupSlot?> = emptyList(),
+    val players: List<LineupSlot> = emptyList()
+)
+
+data class LineupSlot(
+    val userId: Int,
+    val displayName: String? = null,
+    val firstName: String? = null,
+    val lastName: String? = null,
+    val zawodnik: String? = null
+)

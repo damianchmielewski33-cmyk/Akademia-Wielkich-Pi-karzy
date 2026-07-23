@@ -1,6 +1,5 @@
 package pl.akademiawielkichpilkarzy.app.ui.home
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -9,8 +8,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -27,13 +24,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import pl.akademiawielkichpilkarzy.app.data.api.ApiClient
-import pl.akademiawielkichpilkarzy.app.data.api.MatchDto
 import pl.akademiawielkichpilkarzy.app.data.api.SignupRequest
 import pl.akademiawielkichpilkarzy.app.data.api.TerminarzResponse
+import pl.akademiawielkichpilkarzy.app.ui.common.MatchSignupCard
 
 @Composable
 fun HomeScreen() {
     var data by remember { mutableStateOf<TerminarzResponse?>(null) }
+    var weatherLine by remember { mutableStateOf<String?>(null) }
     var loading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
     var actionError by remember { mutableStateOf<String?>(null) }
@@ -43,8 +41,24 @@ fun HomeScreen() {
         scope.launch {
             loading = true
             error = null
+            weatherLine = null
             try {
-                data = ApiClient.api.terminarz()
+                val t = ApiClient.api.terminarz()
+                data = t
+                val next = t.upcoming.firstOrNull()
+                if (next != null && next.location.isNotBlank()) {
+                    try {
+                        val w = ApiClient.api.weather(next.location)
+                        val day = w.days.firstOrNull { it.date == next.matchDate } ?: w.days.firstOrNull()
+                        if (day != null) {
+                            val max = day.maxC?.let { "%.0f°C".format(it) } ?: ""
+                            val desc = day.description.orEmpty()
+                            val rain = day.precipChance?.let { " · deszcz $it%" } ?: ""
+                            weatherLine = listOf(desc, max).filter { it.isNotBlank() }.joinToString(" · ") + rain
+                        }
+                    } catch (_: Exception) {
+                    }
+                }
             } catch (e: Exception) {
                 error = e.message ?: "Nie udało się pobrać danych"
             } finally {
@@ -79,15 +93,15 @@ fun HomeScreen() {
                 if (next == null) {
                     Text("Brak nadchodzących meczów w terminarzu.")
                 } else {
-                    val kind = data?.userSignupKind?.get(next.id.toString())
-                    NextMatchCard(
+                    MatchSignupCard(
                         match = next,
-                        signupKind = kind,
-                        onSignup = {
+                        signupKind = data?.userSignupKind?.get(next.id.toString()),
+                        weatherLine = weatherLine,
+                        onCommitment = { commitment ->
                             scope.launch {
                                 actionError = null
                                 try {
-                                    val res = ApiClient.api.signup(next.id, SignupRequest("confirmed"))
+                                    val res = ApiClient.api.signup(next.id, SignupRequest(commitment))
                                     if (res.error != null) actionError = res.error
                                     reload()
                                 } catch (e: Exception) {
@@ -115,45 +129,6 @@ fun HomeScreen() {
                             modifier = Modifier.padding(top = 8.dp)
                         )
                     }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun NextMatchCard(
-    match: MatchDto,
-    signupKind: String?,
-    onSignup: () -> Unit,
-    onUnsubscribe: () -> Unit
-) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text("${match.matchDate} · ${match.matchTime}", fontWeight = FontWeight.SemiBold)
-            Text(match.location)
-            Text("Zapisani: ${match.signedUp ?: 0}/${match.maxSlots ?: "?"}")
-            if (match.feePln != null) {
-                Text("Wynajem: ${"%.2f".format(match.feePln)} zł")
-            }
-            if (!match.gatePin.isNullOrBlank()) {
-                Text("PIN bramki: ${match.gatePin}")
-            }
-            val status = when (signupKind) {
-                "confirmed" -> "Jesteś zapisany"
-                "tentative" -> "Jeszcze nie wiesz"
-                "declined" -> "Nie bierzesz udziału"
-                else -> "Nie zapisany"
-            }
-            Text(status, color = MaterialTheme.colorScheme.primary)
-            Spacer(Modifier.height(8.dp))
-            if (signupKind == "confirmed" || signupKind == "tentative") {
-                OutlinedButton(onClick = onUnsubscribe, modifier = Modifier.fillMaxWidth()) {
-                    Text("Wypisz się")
-                }
-            } else {
-                Button(onClick = onSignup, modifier = Modifier.fillMaxWidth()) {
-                    Text("Zapisz się")
                 }
             }
         }

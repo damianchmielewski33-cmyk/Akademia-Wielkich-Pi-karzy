@@ -134,6 +134,7 @@ fun LoginScreen(onLoggedIn: () -> Unit) {
                             } else {
                                 AwpApp.instance.sessionStore.saveSession(
                                     token = token,
+                                    userId = user.id,
                                     firstName = user.firstName,
                                     lastName = user.lastName,
                                     zawodnik = user.zawodnik
