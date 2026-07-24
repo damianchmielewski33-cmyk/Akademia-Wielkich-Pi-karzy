@@ -115,6 +115,10 @@ async function sendFcmToToken(args: {
               priority: "HIGH",
               notification: {
                 channel_id: "matches",
+                default_sound: true,
+                default_vibrate_timings: true,
+                notification_priority: "PRIORITY_MAX",
+                visibility: "PUBLIC",
               },
             },
           },
@@ -159,14 +163,12 @@ export async function sendPushToUserIds(args: {
     .prepare(
       `SELECT d.fcm_token, d.user_id
        FROM user_devices d
-       JOIN users u ON u.id = d.user_id
-       WHERE d.user_id IN (${placeholders})
-         AND u.push_notifications_consent = 1`
+       WHERE d.user_id IN (${placeholders})`
     )
     .all(...uniqueIds)) as { fcm_token: string; user_id: number }[];
 
   if (rows.length === 0) {
-    console.log("[push] Brak urządzeń z zgodą push dla wskazanych użytkowników.");
+    console.log("[push] Brak zarejestrowanych urządzeń dla wskazanych użytkowników.");
     return;
   }
 
@@ -186,7 +188,7 @@ export async function sendPushToUserIds(args: {
   console.log(`[push] Wysłano ${sent}/${rows.length} powiadomień.`);
 }
 
-/** Push do wszystkich użytkowników z zgodą (np. nowy mecz). */
+/** Push do wszystkich użytkowników z zarejestrowanym urządzeniem (np. nowy mecz). */
 export async function sendPushToConsentingUsers(args: {
   title: string;
   body: string;
@@ -200,7 +202,7 @@ export async function sendPushToConsentingUsers(args: {
   const db = await getDb();
   const rows = (await db
     .prepare(
-      `SELECT id FROM users WHERE push_notifications_consent = 1`
+      `SELECT DISTINCT user_id AS id FROM user_devices`
     )
     .all()) as { id: number }[];
 

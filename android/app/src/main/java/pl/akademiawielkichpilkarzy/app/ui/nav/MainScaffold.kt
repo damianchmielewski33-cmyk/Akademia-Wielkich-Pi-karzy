@@ -52,6 +52,7 @@ import pl.akademiawielkichpilkarzy.app.ui.common.EmptyHint
 import pl.akademiawielkichpilkarzy.app.ui.common.MurawaBackground
 import pl.akademiawielkichpilkarzy.app.ui.common.PitchCard
 import pl.akademiawielkichpilkarzy.app.ui.common.PitchLabel
+import pl.akademiawielkichpilkarzy.app.ui.common.PushAutoEnabler
 import pl.akademiawielkichpilkarzy.app.ui.common.ScreenHeader
 import pl.akademiawielkichpilkarzy.app.ui.home.HomeNavActions
 import pl.akademiawielkichpilkarzy.app.ui.home.HomeScreen
@@ -79,6 +80,7 @@ private data class Tab(
 
 @Composable
 fun MainScaffold(onLoggedOut: () -> Unit) {
+    PushAutoEnabler()
     val isAdmin by AwpApp.instance.sessionStore.isAdminFlow.collectAsState(initial = false)
     val tabs = listOf(
         Tab("home", "Start", Icons.Filled.Home),
@@ -98,7 +100,6 @@ fun MainScaffold(onLoggedOut: () -> Unit) {
     }
     var mobileConfig by remember { mutableStateOf<MobileConfigResponse?>(null) }
     var configLoaded by remember { mutableStateOf(false) }
-    val scope = rememberCoroutineScope()
     val useWebView = mobileConfig?.settings?.androidUiMode == "webview"
 
     LaunchedEffect(Unit) {
@@ -128,25 +129,48 @@ fun MainScaffold(onLoggedOut: () -> Unit) {
         return mobileConfig?.blocked?.get(key)?.message
     }
 
-    if (!configLoaded) {
-        MurawaBackground {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator(color = AwpColors.MundialGold)
+    when {
+        !configLoaded -> {
+            MurawaBackground {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(color = AwpColors.MundialGold)
+                }
             }
         }
-        return
+        useWebView -> {
+            WebAppShell(
+                isBlocked = { key -> isBlocked(key) },
+                onLoggedOut = onLoggedOut
+            )
+        }
+        else -> {
+            NativeMainScaffold(
+                tabs = tabs,
+                barSelected = barSelected,
+                isAdmin = isAdmin,
+                isBlocked = { key -> isBlocked(key) },
+                mobileConfig = mobileConfig,
+                onLoggedOut = onLoggedOut,
+                navController = navController
+            )
+        }
     }
+}
 
-    if (useWebView) {
-        WebAppShell(
-            isBlocked = { key -> isBlocked(key) },
-            onLoggedOut = onLoggedOut
-        )
-        return
-    }
+@Composable
+private fun NativeMainScaffold(
+    tabs: List<Tab>,
+    barSelected: String?,
+    isAdmin: Boolean,
+    isBlocked: (String) -> String?,
+    mobileConfig: MobileConfigResponse?,
+    onLoggedOut: () -> Unit,
+    navController: androidx.navigation.NavHostController
+) {
+    val scope = rememberCoroutineScope()
 
     fun goTab(route: String) {
         val isBottomTab = route == "home" || route == "schedule" || route == "wallet" || route == "profile"
@@ -191,7 +215,7 @@ fun MainScaffold(onLoggedOut: () -> Unit) {
     fun logout() {
         scope.launch {
             try {
-                PushRegistrar.unregisterAndRevokeConsent()
+                PushRegistrar.unregisterOnLogout()
             } catch (_: Exception) {
             }
             try {

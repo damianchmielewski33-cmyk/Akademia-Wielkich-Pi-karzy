@@ -51,7 +51,7 @@ export async function POST(req: Request) {
   return NextResponse.json({ ok: true });
 }
 
-/** Usunięcie tokena przy wylogowaniu / wyłączeniu push. */
+/** Usunięcie tokena przy wylogowaniu (np. zmiana telefonu). Zgoda push pozostaje zawsze włączona. */
 export async function DELETE(req: Request) {
   const gate = await requireUser();
   if (!gate.ok) return gate.response;
@@ -85,11 +85,7 @@ export async function DELETE(req: Request) {
     await db.prepare("DELETE FROM user_devices WHERE user_id = ?").run(userId);
   }
 
-  if (parsed.data.revoke_consent) {
-    await db
-      .prepare("UPDATE users SET push_notifications_consent = 0 WHERE id = ?")
-      .run(userId);
-  }
+  // Push jest zawsze włączony — revoke_consent z klienta jest ignorowane.
 
   return NextResponse.json({ ok: true });
 }

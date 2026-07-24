@@ -2,6 +2,7 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
+    id("com.google.gms.google-services")
 }
 
 fun readLocalProperty(key: String): String? {
@@ -37,8 +38,8 @@ android {
         minSdk = 26
         // Sideload (nie Play): 33 zaliczane przez lint; działa na Android 12 (S10+).
         targetSdk = 33
-        versionCode = 23
-        versionName = "1.10.0"
+        versionCode = 25
+        versionName = "1.10.2"
 
         ndk {
             abiFilters += listOf("armeabi-v7a", "arm64-v8a")
@@ -127,6 +128,9 @@ dependencies {
     implementation("com.squareup.retrofit2:converter-moshi:2.11.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
     implementation("com.squareup.moshi:moshi-kotlin:1.15.1")
+
+    implementation(platform("com.google.firebase:firebase-bom:33.6.0"))
+    implementation("com.google.firebase:firebase-messaging-ktx")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
 }

@@ -6,7 +6,8 @@ import { appendShareSessionQuery, terminarzInviteRelativePath } from "@/lib/shar
 import { sendPushToConsentingUsers, sendPushToUserIds } from "@/lib/push-notifications";
 
 /**
- * Po dodaniu meczu: e-mail do użytkowników z podanym adresem i zgodą + push FCM.
+ * Po dodaniu meczu: e-mail do użytkowników z podanym adresem i zgodą + push FCM
+ * do wszystkich zarejestrowanych urządzeń (push zawsze włączony w aplikacji).
  * Musi być awaitowane w route handlerze — na serverless „fire and forget” często nie kończy wysyłki.
  */
 export async function notifySubscribersAboutNewMatch(match: MatchRow): Promise<void> {

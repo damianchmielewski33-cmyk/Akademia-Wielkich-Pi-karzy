@@ -12,13 +12,13 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBalanceWallet
-import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.Assessment
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Logout
-import androidx.compose.material.icons.filled.MilitaryTech
 import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -270,7 +270,7 @@ private fun HomeTileGrid(nav: HomeNavActions) {
                     title = "Statystyki",
                     desc = "Twoje liczby z boiska",
                     gold = false,
-                    icon = Icons.Filled.BarChart,
+                    icon = Icons.Filled.Assessment,
                     onClick = { nav.onNative("stats") }
                 )
             )
@@ -292,7 +292,7 @@ private fun HomeTileGrid(nav: HomeNavActions) {
                     title = "PZU Cup",
                     desc = "Organizacja turnieju PZU Cup 2026",
                     gold = true,
-                    icon = Icons.Filled.MilitaryTech,
+                    icon = Icons.Filled.Star,
                     onClick = { nav.onPortal("PZU Cup", "/pzu-cup") }
                 )
             )

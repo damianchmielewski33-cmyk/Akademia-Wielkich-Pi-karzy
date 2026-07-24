@@ -38,6 +38,7 @@ import pl.akademiawielkichpilkarzy.app.ui.common.EmptyHint
 import pl.akademiawielkichpilkarzy.app.ui.common.MurawaBackground
 import pl.akademiawielkichpilkarzy.app.ui.common.PitchCard
 import pl.akademiawielkichpilkarzy.app.ui.common.PitchLabel
+import pl.akademiawielkichpilkarzy.app.ui.common.PushAutoEnabler
 import pl.akademiawielkichpilkarzy.app.ui.common.ScreenHeader
 import pl.akademiawielkichpilkarzy.app.ui.theme.AwpColors
 
@@ -55,6 +56,7 @@ fun WebAppShell(
     isBlocked: (String) -> String?,
     onLoggedOut: () -> Unit
 ) {
+    PushAutoEnabler()
     val tabs = listOf(
         WebTab("home", "Start", Icons.Filled.Home, "/", "home"),
         WebTab("schedule", "Terminarz", Icons.Filled.CalendarMonth, "/terminarz", "schedule"),
@@ -69,7 +71,7 @@ fun WebAppShell(
     fun logout() {
         scope.launch {
             try {
-                PushRegistrar.unregisterAndRevokeConsent()
+                PushRegistrar.unregisterOnLogout()
             } catch (_: Exception) {
             }
             try {

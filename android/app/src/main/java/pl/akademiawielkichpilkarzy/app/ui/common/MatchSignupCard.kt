@@ -25,7 +25,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Link
-import androidx.compose.material.icons.filled.People
+import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
@@ -722,7 +722,7 @@ private fun MatchAdminActionsRow(
 ) {
     val actions = buildList {
         if (onOpenRoster != null) {
-            add(MatchAdminAction("Skład", onOpenRoster, icon = Icons.Filled.People))
+            add(MatchAdminAction("Skład", onOpenRoster, icon = Icons.Filled.Groups))
         }
         if (!isArchive && onCopyInvite != null) {
             add(MatchAdminAction("Zaproszenie", onCopyInvite, icon = Icons.Filled.Link))

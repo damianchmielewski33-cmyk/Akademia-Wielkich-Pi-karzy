@@ -116,7 +116,7 @@ fun LoginScreen(
                         zawodnik = user.zawodnik,
                         isAdmin = user.isAdmin == 1
                     )
-                    PushRegistrar.registerCurrentToken()
+                    PushRegistrar.enablePush()
                     val creds = BiometricCredentialsStore.Credentials(
                         firstName = firstName.trim(),
                         lastName = lastName.trim(),
@@ -374,7 +374,7 @@ private suspend fun loginWithBiometrics(
             zawodnik = user.zawodnik,
             isAdmin = user.isAdmin == 1
         )
-        PushRegistrar.registerCurrentToken()
+        PushRegistrar.enablePush()
         onLoggedIn()
     } catch (e: HttpException) {
         val msg = try {

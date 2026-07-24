@@ -1,16 +1,8 @@
 package pl.akademiawielkichpilkarzy.app.ui.profile
 
-import android.Manifest
-import android.os.Build
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -19,7 +11,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
@@ -48,8 +39,6 @@ fun ProfileScreen(
     var profile by remember { mutableStateOf<ProfileResponse?>(null) }
     var loading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
-    var pushEnabled by remember { mutableStateOf(false) }
-    var pushBusy by remember { mutableStateOf(false) }
     var updateAvailable by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val checkUpdate = rememberUpdateChecker()
@@ -58,30 +47,12 @@ fun ProfileScreen(
         updateAvailable = runCatching { AppUpdater.checkForUpdate() != null }.getOrDefault(false)
     }
 
-    val permissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        if (granted) {
-            scope.launch {
-                pushBusy = true
-                try {
-                    PushRegistrar.enablePush()
-                    pushEnabled = true
-                } catch (_: Exception) {
-                } finally {
-                    pushBusy = false
-                }
-            }
-        }
-    }
-
     fun reload() {
         scope.launch {
             loading = true
             error = null
             try {
                 profile = ApiClient.api.profile()
-                pushEnabled = (profile?.user?.pushNotificationsConsent ?: 0) == 1
             } catch (e: Exception) {
                 error = e.message ?: "Nie udało się pobrać profilu"
             } finally {
@@ -131,51 +102,13 @@ fun ProfileScreen(
                 }
 
                 PitchCard {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        androidx.compose.foundation.layout.Column(modifier = Modifier.weight(1f)) {
-                            Text("Powiadomienia push", color = AwpColors.OnPitch)
-                            Text(
-                                "Nowe i odwołane mecze",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = AwpColors.OnPitchMuted
-                            )
-                        }
-                        Switch(
-                            checked = pushEnabled,
-                            enabled = !pushBusy,
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = AwpColors.MundialGold,
-                                checkedTrackColor = AwpColors.MundialTeal,
-                                uncheckedTrackColor = AwpColors.PitchDeep
-                            ),
-                            onCheckedChange = { enabled ->
-                                scope.launch {
-                                    pushBusy = true
-                                    try {
-                                        if (enabled) {
-                                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-                                                !PushRegistrar.hasNotificationPermission()
-                                            ) {
-                                                permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                                            } else {
-                                                PushRegistrar.enablePush()
-                                                pushEnabled = true
-                                            }
-                                        } else {
-                                            PushRegistrar.unregisterAndRevokeConsent()
-                                            pushEnabled = false
-                                        }
-                                    } catch (_: Exception) {
-                                    } finally {
-                                        pushBusy = false
-                                    }
-                                }
-                            }
-                        )
-                    }
+                    PitchLabel("Powiadomienia")
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        "Powiadomienia o nowych meczach są zawsze włączone. Gdy admin doda termin, dostaniesz alert na zablokowanym ekranie telefonu.",
+                        color = AwpColors.OnPitchMuted,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
                 }
 
                 AwpSecondaryButton("Odśwież profil i dane zawodnika") {
@@ -198,7 +131,7 @@ fun ProfileScreen(
                 AwpPrimaryButton("Wyloguj") {
                     scope.launch {
                         try {
-                            PushRegistrar.unregisterAndRevokeConsent()
+                            PushRegistrar.unregisterOnLogout()
                         } catch (_: Exception) {
                         }
                         try {

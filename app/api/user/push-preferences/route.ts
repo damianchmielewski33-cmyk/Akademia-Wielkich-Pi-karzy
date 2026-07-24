@@ -6,19 +6,22 @@ import { requireUser } from "@/lib/api-helpers";
 export const runtime = "nodejs";
 
 const bodySchema = z.object({
-  consent: z.boolean(),
+  consent: z.boolean().optional().default(true),
 });
 
-/** Włączenie / wyłączenie zgody na push (osobno od e-mail). */
+/**
+ * Push o nowych meczach jest zawsze włączony — brak przełącznika w aplikacji.
+ * Endpoint zostaje dla kompatybilności (rejestracja po logowaniu); wyłączenie jest ignorowane.
+ */
 export async function POST(req: Request) {
   const gate = await requireUser();
   if (!gate.ok) return gate.response;
 
-  let json: unknown;
+  let json: unknown = {};
   try {
     json = await req.json();
   } catch {
-    return NextResponse.json({ error: "Nieprawidłowe JSON" }, { status: 400 });
+    json = {};
   }
   const parsed = bodySchema.safeParse(json);
   if (!parsed.success) {
@@ -30,13 +33,8 @@ export async function POST(req: Request) {
 
   const db = await getDb();
   const uid = gate.session.userId;
-  const consent = parsed.data.consent ? 1 : 0;
 
-  await db.prepare("UPDATE users SET push_notifications_consent = ? WHERE id = ?").run(consent, uid);
+  await db.prepare("UPDATE users SET push_notifications_consent = 1 WHERE id = ?").run(uid);
 
-  if (!parsed.data.consent) {
-    await db.prepare("DELETE FROM user_devices WHERE user_id = ?").run(uid);
-  }
-
-  return NextResponse.json({ ok: true, push_notifications_consent: consent });
+  return NextResponse.json({ ok: true, push_notifications_consent: 1 });
 }

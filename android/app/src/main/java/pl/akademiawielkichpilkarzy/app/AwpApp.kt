@@ -31,6 +31,9 @@ class AwpApp : Application() {
             NotificationManager.IMPORTANCE_HIGH
         ).apply {
             description = getString(R.string.channel_matches_desc)
+            enableVibration(true)
+            setShowBadge(true)
+            lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
         }
         val nm = getSystemService(NotificationManager::class.java)
         nm.createNotificationChannel(channel)
