@@ -24,6 +24,31 @@ data class LoginUser(
     @Json(name = "is_admin") val isAdmin: Int = 0
 )
 
+data class RegisterRequest(
+    @Json(name = "first_name") val firstName: String,
+    @Json(name = "last_name") val lastName: String,
+    val zawodnik: String,
+    val pin: String,
+    @Json(name = "pin_confirm") val pinConfirm: String,
+    @Json(name = "auto_login") val autoLogin: Boolean = false,
+    val realm: String = "academy"
+)
+
+data class RegisterResponse(
+    val ok: Boolean? = null,
+    @Json(name = "logged_in") val loggedIn: Boolean? = null,
+    val error: String? = null,
+    val user: LoginUser? = null
+)
+
+data class ForgotPinRequest(
+    @Json(name = "first_name") val firstName: String,
+    @Json(name = "last_name") val lastName: String,
+    val zawodnik: String,
+    val pin: String,
+    @Json(name = "pin_confirm") val pinConfirm: String
+)
+
 data class MeResponse(val user: MeUser?)
 
 data class MeUser(
@@ -346,6 +371,35 @@ data class PlayerStatsResponse(
     val games: List<PlayerStatsMatch> = emptyList()
 )
 
+data class PlayersResponse(
+    val players: List<PlayerListItem> = emptyList()
+)
+
+data class PlayerListItem(
+    val id: Int,
+    @Json(name = "first_name") val firstName: String,
+    @Json(name = "last_name") val lastName: String,
+    val zawodnik: String,
+    @Json(name = "profile_photo_path") val profilePhotoPath: String? = null
+) {
+    val displayName: String
+        get() = zawodnik.ifBlank {
+            listOf(firstName, lastName).filter { it.isNotBlank() }.joinToString(" ")
+        }.ifBlank { "Zawodnik #$id" }
+}
+
+data class GalleryResponse(
+    val videos: List<GalleryVideoDto> = emptyList()
+)
+
+data class GalleryVideoDto(
+    val id: Int,
+    val title: String,
+    @Json(name = "youtubeVideoId") val youtubeVideoId: String,
+    @Json(name = "matchDate") val matchDate: String? = null,
+    @Json(name = "sortOrder") val sortOrder: Int = 0
+)
+
 data class PlayerStatsMatch(
     val date: String,
     val time: String? = null,
@@ -426,14 +480,6 @@ data class LineupSlot(
     val firstName: String? = null,
     val lastName: String? = null,
     val zawodnik: String? = null
-)
-
-data class AppBridgeRequest(val next: String)
-
-data class AppBridgeResponse(
-    val ok: Boolean? = null,
-    val path: String? = null,
-    val error: String? = null
 )
 
 data class MobileConfigResponse(

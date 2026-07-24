@@ -37,8 +37,8 @@ android {
         minSdk = 26
         // Sideload (nie Play): 33 zaliczane przez lint; działa na Android 12 (S10+).
         targetSdk = 33
-        versionCode = 21
-        versionName = "1.7.0"
+        versionCode = 19
+        versionName = "1.9.0"
 
         ndk {
             abiFilters += listOf("armeabi-v7a", "arm64-v8a")

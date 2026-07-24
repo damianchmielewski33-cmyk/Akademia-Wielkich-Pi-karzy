@@ -33,7 +33,9 @@ import kotlinx.coroutines.launch
 import pl.akademiawielkichpilkarzy.app.AwpApp
 import pl.akademiawielkichpilkarzy.app.biometrics.BiometricHelper
 import pl.akademiawielkichpilkarzy.app.data.api.ApiClient
+import pl.akademiawielkichpilkarzy.app.data.api.ForgotPinRequest
 import pl.akademiawielkichpilkarzy.app.data.api.LoginRequest
+import pl.akademiawielkichpilkarzy.app.data.api.RegisterRequest
 import pl.akademiawielkichpilkarzy.app.data.auth.BiometricCredentialsStore
 import pl.akademiawielkichpilkarzy.app.push.PushRegistrar
 import pl.akademiawielkichpilkarzy.app.ui.common.AwpScreen
@@ -49,8 +51,7 @@ import retrofit2.HttpException
 
 @Composable
 fun LoginScreen(
-    onLoggedIn: () -> Unit,
-    onOpenWeb: (title: String, path: String) -> Unit = { _, _ -> }
+    onLoggedIn: () -> Unit
 ) {
     val context = LocalContext.current
     val activity = context as? FragmentActivity
@@ -65,6 +66,7 @@ fun LoginScreen(
     var loginBanner by remember { mutableStateOf<String?>(null) }
     var biometricsAvailable by remember { mutableStateOf(false) }
     var biometricEnabled by remember { mutableStateOf(false) }
+    var authMode by remember { mutableStateOf("login") }
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
@@ -161,10 +163,19 @@ fun LoginScreen(
                     message = loginBanner!!
                 )
             }
-            AwpSectionCard(
-                title = "Logowanie",
-                subtitle = "Wejdź PIN-em albo biometrią, jeśli jest włączona."
-            ) {
+            when (authMode) {
+                "register" -> RegisterPanel(
+                    onBack = { authMode = "login" },
+                    onSuccess = { authMode = "login" }
+                )
+                "forgot" -> ForgotPinPanel(
+                    onBack = { authMode = "login" },
+                    onSuccess = { authMode = "login" }
+                )
+                else -> AwpSectionCard(
+                    title = "Logowanie",
+                    subtitle = "Wejdź PIN-em albo biometrią, jeśli jest włączona."
+                ) {
                 Spacer(Modifier.height(12.dp))
 
                 if (biometricsAvailable && biometricEnabled && activity != null) {
@@ -239,10 +250,93 @@ fun LoginScreen(
                     enabled = firstName.isNotBlank() && lastName.isNotBlank() && pin.length in 4..6,
                     onClick = { performPinLogin() }
                 )
-                LinkTextButton("Załóż konto") { onOpenWeb("Rejestracja", "/register") }
-                LinkTextButton("Zapomniałem PIN-u") { onOpenWeb("Logowanie / PIN", "/login") }
+                LinkTextButton("Załóż konto") { authMode = "register" }
+                LinkTextButton("Zapomniałem PIN-u") { authMode = "forgot" }
+                }
             }
         }
+    }
+}
+
+@Composable
+private fun RegisterPanel(onBack: () -> Unit, onSuccess: () -> Unit) {
+    var first by remember { mutableStateOf("") }
+    var last by remember { mutableStateOf("") }
+    var alias by remember { mutableStateOf("") }
+    var pin by remember { mutableStateOf("") }
+    var pinConfirm by remember { mutableStateOf("") }
+    var busy by remember { mutableStateOf(false) }
+    var message by remember { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
+
+    AwpSectionCard(title = "Rejestracja", subtitle = "Utwórz konto zawodnika bez otwierania strony WWW.") {
+        AwpTextField("Imię", first, { first = it })
+        AwpTextField("Nazwisko", last, { last = it })
+        AwpTextField("Pseudonim piłkarza", alias, { alias = it })
+        AwpTextField("PIN", pin, { if (it.length <= 6 && it.all(Char::isDigit)) pin = it }, keyboardType = KeyboardType.NumberPassword, visualTransformation = PasswordVisualTransformation())
+        AwpTextField("Powtórz PIN", pinConfirm, { if (it.length <= 6 && it.all(Char::isDigit)) pinConfirm = it }, keyboardType = KeyboardType.NumberPassword, visualTransformation = PasswordVisualTransformation())
+        message?.let { Text(it, color = if (it.startsWith("Konto")) AwpColors.MundialGold else AwpColors.MundialRed) }
+        AwpPrimaryButton("Utwórz konto", loading = busy, enabled = !busy && first.isNotBlank() && last.isNotBlank() && alias.isNotBlank() && pin.length in 4..6 && pin == pinConfirm) {
+            scope.launch {
+                busy = true
+                message = null
+                try {
+                    val res = ApiClient.api.register(RegisterRequest(first, last, alias, pin, pinConfirm))
+                    if (res.error != null) {
+                        message = res.error
+                    } else {
+                        message = "Konto utworzone — zaloguj się PIN-em"
+                        onSuccess()
+                    }
+                } catch (e: Exception) {
+                    message = e.message ?: "Nie udało się utworzyć konta"
+                } finally {
+                    busy = false
+                }
+            }
+        }
+        LinkTextButton("Wróć do logowania", onBack)
+    }
+}
+
+@Composable
+private fun ForgotPinPanel(onBack: () -> Unit, onSuccess: () -> Unit) {
+    var first by remember { mutableStateOf("") }
+    var last by remember { mutableStateOf("") }
+    var alias by remember { mutableStateOf("") }
+    var pin by remember { mutableStateOf("") }
+    var pinConfirm by remember { mutableStateOf("") }
+    var busy by remember { mutableStateOf(false) }
+    var message by remember { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
+
+    AwpSectionCard(title = "Nowy PIN", subtitle = "Zgłoszenie trafi do zatwierdzenia przez administratora.") {
+        AwpTextField("Imię", first, { first = it })
+        AwpTextField("Nazwisko", last, { last = it })
+        AwpTextField("Pseudonim piłkarza", alias, { alias = it })
+        AwpTextField("Nowy PIN", pin, { if (it.length <= 6 && it.all(Char::isDigit)) pin = it }, keyboardType = KeyboardType.NumberPassword, visualTransformation = PasswordVisualTransformation())
+        AwpTextField("Powtórz PIN", pinConfirm, { if (it.length <= 6 && it.all(Char::isDigit)) pinConfirm = it }, keyboardType = KeyboardType.NumberPassword, visualTransformation = PasswordVisualTransformation())
+        message?.let { Text(it, color = if (it.startsWith("Zgłoszenie")) AwpColors.MundialGold else AwpColors.MundialRed) }
+        AwpPrimaryButton("Wyślij prośbę", loading = busy, enabled = !busy && first.isNotBlank() && last.isNotBlank() && alias.isNotBlank() && pin.length in 4..6 && pin == pinConfirm) {
+            scope.launch {
+                busy = true
+                message = null
+                try {
+                    val res = ApiClient.api.forgotPin(ForgotPinRequest(first, last, alias, pin, pinConfirm))
+                    if (res.error != null) {
+                        message = res.error
+                    } else {
+                        message = "Zgłoszenie wysłane — poczekaj na akceptację admina"
+                        onSuccess()
+                    }
+                } catch (e: Exception) {
+                    message = e.message ?: "Nie udało się wysłać prośby"
+                } finally {
+                    busy = false
+                }
+            }
+        }
+        LinkTextButton("Wróć do logowania", onBack)
     }
 }
 

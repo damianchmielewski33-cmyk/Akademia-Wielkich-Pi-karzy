@@ -4,6 +4,7 @@ import okhttp3.ResponseBody
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
+import retrofit2.http.Header
 import retrofit2.http.HTTP
 import retrofit2.http.PATCH
 import retrofit2.http.POST
@@ -20,8 +21,17 @@ interface AwpApi {
     @POST("api/auth/logout")
     suspend fun logout(): ApiOkResponse
 
+    @POST("api/auth/register")
+    suspend fun register(@Body body: RegisterRequest): RegisterResponse
+
+    @POST("api/auth/forgot-pin-request")
+    suspend fun forgotPin(@Body body: ForgotPinRequest): ApiOkResponse
+
     @GET("api/terminarz")
     suspend fun terminarz(): TerminarzResponse
+
+    @GET("api/terminarz")
+    suspend fun terminarzRealm(@Header("X-AWP-Realm") realm: String): TerminarzResponse
 
     @POST("api/terminarz/signup/{id}")
     suspend fun signup(
@@ -131,11 +141,29 @@ interface AwpApi {
     @GET("api/player-stats/{userId}")
     suspend fun playerStats(@Path("userId") userId: Int): PlayerStatsResponse
 
+    @GET("api/player-stats/{userId}")
+    suspend fun playerStatsRealm(
+        @Path("userId") userId: Int,
+        @Header("X-AWP-Realm") realm: String
+    ): PlayerStatsResponse
+
+    @GET("api/players")
+    suspend fun players(): PlayersResponse
+
+    @GET("api/gallery")
+    suspend fun gallery(): GalleryResponse
+
     @GET("api/weather/forecast")
     suspend fun weather(@retrofit2.http.Query("q") location: String): WeatherResponse
 
     @GET("api/rankingi")
     suspend fun rankingi(@retrofit2.http.Query("season") seasonId: Int? = null): RankingsResponse
+
+    @GET("api/rankingi")
+    suspend fun rankingiRealm(
+        @Header("X-AWP-Realm") realm: String,
+        @retrofit2.http.Query("season") seasonId: Int? = null
+    ): RankingsResponse
 
     @GET("api/sklady")
     suspend fun sklady(@retrofit2.http.Query("m") matchId: Int? = null): LineupsResponse
@@ -151,10 +179,6 @@ interface AwpApi {
 
     @POST("api/client-log")
     suspend fun clientLog(@Body body: ClientLogRequest): ApiOkResponse
-
-    /** Wymiana Bearer JWT na ticket do WebView (cookie sesji strony). */
-    @POST("api/auth/app-bridge")
-    suspend fun appBridge(@Body body: AppBridgeRequest): AppBridgeResponse
 
     @GET("api/mobile/config")
     suspend fun mobileConfig(): MobileConfigResponse

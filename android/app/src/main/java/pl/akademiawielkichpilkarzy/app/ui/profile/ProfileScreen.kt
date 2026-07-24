@@ -43,7 +43,7 @@ import pl.akademiawielkichpilkarzy.app.update.AppUpdater
 @Composable
 fun ProfileScreen(
     onLoggedOut: () -> Unit,
-    onOpenWeb: (title: String, path: String) -> Unit = { _, _ -> }
+    onOpenNativeRoute: (title: String, path: String) -> Unit = { _, _ -> }
 ) {
     var profile by remember { mutableStateOf<ProfileResponse?>(null) }
     var loading by remember { mutableStateOf(true) }
@@ -178,11 +178,11 @@ fun ProfileScreen(
                     }
                 }
 
-                AwpSecondaryButton("Edytuj profil (zdjęcie, dane, motyw)") {
-                    onOpenWeb("Mój profil", "/profil")
+                AwpSecondaryButton("Odśwież profil i dane zawodnika") {
+                    reload()
                 }
-                AwpSecondaryButton("Płatności na stronie") {
-                    onOpenWeb("Płatności", "/platnosci")
+                AwpSecondaryButton("Płatności w aplikacji") {
+                    onOpenNativeRoute("Płatności", "/platnosci")
                 }
                 if (updateAvailable) {
                     AwpGoldButton("Dostępna aktualizacja — sprawdź (v${BuildConfig.VERSION_NAME})") {
