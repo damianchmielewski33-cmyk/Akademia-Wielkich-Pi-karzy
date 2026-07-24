@@ -1,25 +1,24 @@
 package pl.akademiawielkichpilkarzy.app.ui.home
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.TextButton
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountBalanceWallet
+import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material.icons.filled.Groups
+import androidx.compose.material.icons.filled.Logout
+import androidx.compose.material.icons.filled.MilitaryTech
+import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -28,27 +27,24 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import pl.akademiawielkichpilkarzy.app.data.api.ApiClient
 import pl.akademiawielkichpilkarzy.app.data.api.LineupSelected
+import pl.akademiawielkichpilkarzy.app.data.api.MeUser
 import pl.akademiawielkichpilkarzy.app.data.api.SignupRequest
 import pl.akademiawielkichpilkarzy.app.data.api.TerminarzResponse
-import pl.akademiawielkichpilkarzy.app.ui.common.AwpActionTile
 import pl.akademiawielkichpilkarzy.app.ui.common.AwpHeroCard
 import pl.akademiawielkichpilkarzy.app.ui.common.EmptyHint
 import pl.akademiawielkichpilkarzy.app.ui.common.ErrorBlock
+import pl.akademiawielkichpilkarzy.app.ui.common.HomeLogoutTile
+import pl.akademiawielkichpilkarzy.app.ui.common.HomePitchTile
+import pl.akademiawielkichpilkarzy.app.ui.common.HomeWelcomeBanner
 import pl.akademiawielkichpilkarzy.app.ui.common.LoadingBlock
 import pl.akademiawielkichpilkarzy.app.ui.common.MatchSignupCard
 import pl.akademiawielkichpilkarzy.app.ui.common.MurawaBackground
-import pl.akademiawielkichpilkarzy.app.ui.common.PitchLabel
-import pl.akademiawielkichpilkarzy.app.ui.common.ScreenHeader
 import pl.akademiawielkichpilkarzy.app.ui.theme.AwpColors
 
 data class HomeNavActions(
@@ -65,12 +61,12 @@ data class HomeNavActions(
 @Composable
 fun HomeScreen(nav: HomeNavActions) {
     var data by remember { mutableStateOf<TerminarzResponse?>(null) }
+    var user by remember { mutableStateOf<MeUser?>(null) }
     var nextLineup by remember { mutableStateOf<LineupSelected?>(null) }
     var weatherLine by remember { mutableStateOf<String?>(null) }
     var loading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
     var actionError by remember { mutableStateOf<String?>(null) }
-    var menuExpanded by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
     fun reload() {
@@ -80,6 +76,7 @@ fun HomeScreen(nav: HomeNavActions) {
             weatherLine = null
             nextLineup = null
             try {
+                user = ApiClient.api.me().user
                 val t = ApiClient.api.terminarz()
                 data = t
                 val next = t.upcoming.firstOrNull()
@@ -116,283 +113,233 @@ fun HomeScreen(nav: HomeNavActions) {
     LaunchedEffect(Unit) { reload() }
 
     MurawaBackground {
-        Box(modifier = Modifier.fillMaxSize()) {
-            val scroll = rememberScrollState()
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(scroll)
-                    .padding(horizontal = 16.dp)
-                    .padding(top = if (menuExpanded) 360.dp else 96.dp, bottom = 24.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                ScreenHeader(
-                    title = "Start",
-                    subtitle = "Najbliższy mecz i skróty jak na stronie"
+        val scroll = rememberScrollState()
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(scroll)
+                .padding(horizontal = 16.dp, vertical = 18.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            user?.let { me ->
+                HomeWelcomeBanner(
+                    firstName = me.firstName,
+                    lastName = me.lastName,
+                    zawodnik = me.zawodnik
                 )
+            }
 
-                AwpHeroCard(
-                    title = "Boisko czeka",
-                    subtitle = "Najbliższy termin, szybkie akcje i status drużyny",
-                    kicker = "Meczowy pulpit"
-                )
+            AwpHeroCard(
+                title = "Co dziś na boisku?",
+                subtitle = "Wybierz sekcję poniżej — terminarz, składy, statystyki i portfel.",
+                kicker = "Start"
+            )
 
-                PitchLabel("Najbliższy mecz")
-                when {
-                    loading -> LoadingBlock()
-                    error != null -> ErrorBlock(error!!) { reload() }
-                    else -> {
-                        val next = data?.upcoming?.firstOrNull()
-                        if (next == null) {
-                            EmptyHint("Brak nadchodzących meczów w terminarzu.")
-                        } else {
-                            val kind = data?.userSignupKind?.get(next.id.toString())
-                            MatchSignupCard(
-                                match = next,
-                                signupKind = kind,
-                                playersEntry = data?.playersData?.get(next.id.toString()),
-                                weatherLine = weatherLine,
-                                lineup = nextLineup,
-                                onConfirmSignup = {
-                                    scope.launch {
-                                        actionError = null
-                                        try {
-                                            val res = ApiClient.api.signup(next.id, SignupRequest("confirmed"))
-                                            if (res.error != null) {
-                                                actionError = res.error
-                                                return@launch
-                                            }
-                                            reload()
-                                            nav.onOpenTransport(next.id)
-                                        } catch (e: Exception) {
-                                            actionError = e.message
+            when {
+                loading -> LoadingBlock()
+                error != null -> ErrorBlock(error!!) { reload() }
+                else -> {
+                    val next = data?.upcoming?.firstOrNull()
+                    if (next != null) {
+                        MatchSignupCard(
+                            match = next,
+                            signupKind = data?.userSignupKind?.get(next.id.toString()),
+                            playersEntry = data?.playersData?.get(next.id.toString()),
+                            weatherLine = weatherLine,
+                            lineup = nextLineup,
+                            onConfirmSignup = {
+                                scope.launch {
+                                    actionError = null
+                                    try {
+                                        val res = ApiClient.api.signup(next.id, SignupRequest("confirmed"))
+                                        if (res.error != null) {
+                                            actionError = res.error
+                                            return@launch
                                         }
+                                        reload()
+                                        nav.onOpenTransport(next.id)
+                                    } catch (e: Exception) {
+                                        actionError = e.message
                                     }
-                                },
-                                onTentative = {
-                                    scope.launch {
-                                        actionError = null
-                                        try {
-                                            val res = ApiClient.api.signup(next.id, SignupRequest("tentative"))
-                                            if (res.error != null) actionError = res.error
-                                            reload()
-                                        } catch (e: Exception) {
-                                            actionError = e.message
-                                        }
+                                }
+                            },
+                            onTentative = {
+                                scope.launch {
+                                    actionError = null
+                                    try {
+                                        val res = ApiClient.api.signup(next.id, SignupRequest("tentative"))
+                                        if (res.error != null) actionError = res.error
+                                        reload()
+                                    } catch (e: Exception) {
+                                        actionError = e.message
                                     }
-                                },
-                                onDeclined = {
-                                    scope.launch {
-                                        actionError = null
-                                        try {
-                                            val res = ApiClient.api.signup(next.id, SignupRequest("declined"))
-                                            if (res.error != null) actionError = res.error
-                                            reload()
-                                        } catch (e: Exception) {
-                                            actionError = e.message
-                                        }
+                                }
+                            },
+                            onDeclined = {
+                                scope.launch {
+                                    actionError = null
+                                    try {
+                                        val res = ApiClient.api.signup(next.id, SignupRequest("declined"))
+                                        if (res.error != null) actionError = res.error
+                                        reload()
+                                    } catch (e: Exception) {
+                                        actionError = e.message
                                     }
-                                },
-                                onUnsubscribe = {
-                                    scope.launch {
-                                        actionError = null
-                                        try {
-                                            val res = ApiClient.api.unsubscribe(next.id)
-                                            if (res.error != null) actionError = res.error
-                                            reload()
-                                        } catch (e: Exception) {
-                                            actionError = e.message
-                                        }
+                                }
+                            },
+                            onUnsubscribe = {
+                                scope.launch {
+                                    actionError = null
+                                    try {
+                                        val res = ApiClient.api.unsubscribe(next.id)
+                                        if (res.error != null) actionError = res.error
+                                        reload()
+                                    } catch (e: Exception) {
+                                        actionError = e.message
                                     }
-                                },
-                                onTransport = { nav.onOpenTransport(next.id) },
-                                onOpenLineups = { nav.onNative("lineups") }
+                                }
+                            },
+                            onTransport = { nav.onOpenTransport(next.id) },
+                            onOpenLineups = { nav.onNative("lineups") }
+                        )
+                        if (actionError != null) {
+                            Text(
+                                actionError!!,
+                                color = AwpColors.MundialRed,
+                                modifier = Modifier.padding(top = 4.dp)
                             )
-                            if (actionError != null) {
-                                Text(
-                                    actionError!!,
-                                    color = AwpColors.MundialRed,
-                                    modifier = Modifier.padding(top = 4.dp)
-                                )
-                            }
                         }
                     }
                 }
-
-                Spacer(Modifier.height(8.dp))
-                PitchLabel("Szybkie skróty")
-                HomeQuickActions(nav)
-                EmptyHint("Pełne menu pozostaje w panelu u góry, ale najważniejsze akcje są teraz dostępne od razu.")
             }
 
-            HomeFloatingTopPanel(
-                nav = nav,
-                expanded = menuExpanded,
-                onToggleExpanded = { menuExpanded = !menuExpanded },
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .statusBarsPadding()
-                    .padding(horizontal = 12.dp, vertical = 8.dp)
-            )
+            HomeTileGrid(nav)
+
+            Spacer(Modifier.height(8.dp))
         }
     }
 }
 
+private data class HomeTile(
+    val title: String,
+    val desc: String,
+    val gold: Boolean,
+    val icon: ImageVector,
+    val onClick: () -> Unit
+)
+
 @Composable
-private fun HomeFloatingTopPanel(
-    nav: HomeNavActions,
-    expanded: Boolean,
-    onToggleExpanded: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    data class TopAction(
-        val label: String,
-        val blockedKey: String,
-        val onClick: () -> Unit
-    )
-
-    val actions = buildList {
-        add(TopAction("Terminarz", "schedule") { nav.onNative("schedule") })
-        add(TopAction("Portfel", "wallet") { nav.onNative("wallet") })
-    }.filterNot { action -> nav.isBlocked(action.blockedKey) }
-
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .heightIn(min = 56.dp)
-            .clip(RoundedCornerShape(22.dp))
-            .background(
-                Brush.horizontalGradient(
-                    listOf(
-                        AwpColors.MundialNavy.copy(alpha = 0.96f),
-                        AwpColors.MundialPurple.copy(alpha = 0.96f),
-                        AwpColors.MundialNavy.copy(alpha = 0.96f)
-                    )
+private fun HomeTileGrid(nav: HomeNavActions) {
+    val tiles = buildList {
+        if (!nav.isBlocked("schedule")) {
+            add(
+                HomeTile(
+                    title = "Terminarz",
+                    desc = "Mecze, zapisy, terminy",
+                    gold = false,
+                    icon = Icons.Filled.CalendarMonth,
+                    onClick = { nav.onNative("schedule") }
                 )
             )
-            .border(1.dp, AwpColors.MundialGold.copy(alpha = 0.45f), RoundedCornerShape(22.dp))
-            .padding(horizontal = 10.dp, vertical = 8.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            actions.forEach { action ->
-                TopPanelButton(action.label, onClick = action.onClick)
-            }
-            TopPanelButton(if (expanded) "Zamknij menu" else "Menu", onClick = onToggleExpanded, gold = true)
         }
-
-        if (expanded) {
-            Spacer(Modifier.height(10.dp))
-            ExpandedMenuSection(
-                title = "Gra",
-                actions = buildList {
-                    if (!nav.isBlocked("schedule")) add("Terminarz" to { nav.onNative("schedule") })
-                    if (!nav.isBlocked("lineups")) add("Składy" to { nav.onNative("lineups") })
-                    if (!nav.isBlocked("stats")) add("Statystyki" to { nav.onNative("stats") })
-                    if (!nav.isBlocked("rankings")) add("Rankingi" to { nav.onNative("rankings") })
-                }
+        if (!nav.isBlocked("pilkarze")) {
+            add(
+                HomeTile(
+                    title = "Piłkarze",
+                    desc = "Skład i profile",
+                    gold = false,
+                    icon = Icons.Filled.Groups,
+                    onClick = { nav.onPortal("Piłkarze", "/pilkarze") }
+                )
             )
-            ExpandedMenuSection(
-                title = "Akademia",
-                actions = buildList {
-                    if (!nav.isBlocked("pilkarze")) add("Piłkarze" to { nav.onPortal("Piłkarze", "/pilkarze") })
-                    if (!nav.isBlocked("galeria")) add("Galeria" to { nav.onPortal("Galeria", "/galeria") })
-                    if (!nav.isBlocked("o_nas")) add("O nas" to { nav.onPortal("O nas", "/o-nas") })
-                    if (!nav.isBlocked("kontakt")) add("Kontakt" to { nav.onPortal("Kontakt", "/kontakt") })
-                    if (nav.showPzuCup && !nav.isBlocked("pzu_cup")) add("PZU Cup" to { nav.onPortal("PZU Cup", "/pzu-cup") })
-                    if (nav.isAdmin) add("Panel admina" to { nav.onPortal("Panel admina", "/panel-admina") })
-                }
+        }
+        if (!nav.isBlocked("wallet")) {
+            add(
+                HomeTile(
+                    title = "Płatności",
+                    desc = "BLIK i status wpłaty za mecz",
+                    gold = false,
+                    icon = Icons.Filled.AccountBalanceWallet,
+                    onClick = { nav.onNative("wallet") }
+                )
             )
-            ExpandedMenuSection(
-                title = "Konto",
-                actions = buildList {
-                    if (!nav.isBlocked("profile")) add("Profil" to { nav.onNative("profile") })
-                    add("Wyloguj" to { nav.onLogout() })
-                }
+        }
+        if (!nav.isBlocked("stats")) {
+            add(
+                HomeTile(
+                    title = "Statystyki",
+                    desc = "Twoje liczby z boiska",
+                    gold = false,
+                    icon = Icons.Filled.BarChart,
+                    onClick = { nav.onNative("stats") }
+                )
+            )
+        }
+        if (!nav.isBlocked("rankings")) {
+            add(
+                HomeTile(
+                    title = "Rankingi",
+                    desc = "Gole, asysty, punkty",
+                    gold = true,
+                    icon = Icons.Filled.EmojiEvents,
+                    onClick = { nav.onNative("rankings") }
+                )
+            )
+        }
+        if (nav.showPzuCup && !nav.isBlocked("pzu_cup")) {
+            add(
+                HomeTile(
+                    title = "PZU Cup",
+                    desc = "Organizacja turnieju PZU Cup 2026",
+                    gold = true,
+                    icon = Icons.Filled.MilitaryTech,
+                    onClick = { nav.onPortal("PZU Cup", "/pzu-cup") }
+                )
+            )
+        }
+        if (nav.isAdmin) {
+            add(
+                HomeTile(
+                    title = "Panel admina",
+                    desc = "Zarządzanie akademią",
+                    gold = false,
+                    icon = Icons.Filled.Shield,
+                    onClick = { nav.onPortal("Panel admina", "/panel-admina") }
+                )
             )
         }
     }
-}
 
-@Composable
-private fun TopPanelButton(text: String, onClick: () -> Unit, gold: Boolean = false) {
-    TextButton(
-        onClick = onClick,
-        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
-        colors = ButtonDefaults.textButtonColors(
-            containerColor = if (gold) AwpColors.MundialGold.copy(alpha = 0.92f) else Color.White.copy(alpha = 0.12f),
-            contentColor = if (gold) AwpColors.PageDark else AwpColors.OnPitch
-        ),
-        shape = RoundedCornerShape(14.dp)
-    ) {
-        Text(text, fontWeight = FontWeight.SemiBold)
+    if (tiles.isEmpty()) {
+        EmptyHint("Brak dostępnych skrótów.")
+        return
     }
-}
 
-@Composable
-private fun ExpandedMenuSection(title: String, actions: List<Pair<String, () -> Unit>>) {
-    if (actions.isEmpty()) return
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(top = 8.dp)) {
-        Text(
-            text = title.uppercase(),
-            color = AwpColors.MundialGold,
-            fontWeight = FontWeight.Bold
-        )
-        actions.chunked(2).forEach { row ->
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        tiles.chunked(2).forEach { row ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                row.forEach { (label, onClick) ->
-                    TextButton(
-                        onClick = onClick,
-                        modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.textButtonColors(
-                            containerColor = Color.White.copy(alpha = 0.1f),
-                            contentColor = AwpColors.OnPitch
-                        ),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Text(label)
-                    }
+                row.forEach { tile ->
+                    HomePitchTile(
+                        title = tile.title,
+                        desc = tile.desc,
+                        gold = tile.gold,
+                        icon = tile.icon,
+                        onClick = tile.onClick,
+                        modifier = Modifier.weight(1f)
+                    )
                 }
                 if (row.size == 1) {
                     Spacer(Modifier.weight(1f))
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun HomeQuickActions(nav: HomeNavActions) {
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            if (!nav.isBlocked("schedule")) {
-                AwpActionTile(
-                    title = "Terminarz",
-                    desc = "Mecze i zapisy",
-                    onClick = { nav.onNative("schedule") },
-                    modifier = Modifier.weight(1f)
-                )
-            }
-            if (!nav.isBlocked("wallet")) {
-                AwpActionTile(
-                    title = "Płatności",
-                    desc = "Portfel i BLIK",
-                    onClick = { nav.onNative("wallet") },
-                    gold = true,
-                    modifier = Modifier.weight(1f)
-                )
-            }
-        }
+        HomeLogoutTile(
+            onClick = nav.onLogout,
+            icon = Icons.Filled.Logout,
+            modifier = Modifier.fillMaxWidth()
+        )
     }
 }

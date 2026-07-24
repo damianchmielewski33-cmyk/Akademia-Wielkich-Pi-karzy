@@ -750,6 +750,35 @@ function MobileSettingsEditor({
           disabled={busy}
           onCheckedChange={(v) => onSavePatch({ show_pzu_cup: v })}
         />
+        <FieldRow
+          label="Wygląd aplikacji Android"
+          hint="Cała aplikacja natywna (Compose) albo cała w WebView (jak strona WWW). Zmiana działa po odświeżeniu / ponownym otwarciu aplikacji."
+        >
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant={mobile.android_ui_mode !== "webview" ? "pitch" : "outline"}
+              disabled={busy}
+              onClick={() => {
+                if (mobile.android_ui_mode !== "native") onSavePatch({ android_ui_mode: "native" });
+              }}
+            >
+              Natywna
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={mobile.android_ui_mode === "webview" ? "pitch" : "outline"}
+              disabled={busy}
+              onClick={() => {
+                if (mobile.android_ui_mode !== "webview") onSavePatch({ android_ui_mode: "webview" });
+              }}
+            >
+              WebView
+            </Button>
+          </div>
+        </FieldRow>
         <YesNoSwitchRow
           label="Rejestracja z aplikacji (WebView)"
           checked={mobile.allow_self_registration !== false}

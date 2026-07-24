@@ -44,6 +44,12 @@ export type MobileChannelSettings = {
   show_pzu_cup: boolean;
   /** Komunikat na ekranie logowania aplikacji (opcjonalny). */
   login_banner: string;
+  /**
+   * Tryb UI aplikacji Android:
+   * - `native` — wszystkie ekrany Compose
+   * - `webview` — cała aplikacja w WebView (strona WWW)
+   */
+  android_ui_mode: "native" | "webview";
 };
 
 export const MOBILE_CHANNEL_SETTINGS_DEFAULTS: MobileChannelSettings = {
@@ -75,6 +81,7 @@ export const MOBILE_CHANNEL_SETTINGS_DEFAULTS: MobileChannelSettings = {
   match_cancel_reasons: [...MATCH_CANCEL_REASONS],
   show_pzu_cup: true,
   login_banner: "",
+  android_ui_mode: "native",
 };
 
 /** Snapshot ustawień strony → startowa konfiguracja aplikacji. */
@@ -135,6 +142,7 @@ export function mobileSettingsFromWeb(web: {
     match_cancel_reasons: web.match_cancel_reasons.map((r) => ({ ...r })),
     show_pzu_cup: true,
     login_banner: "",
+    android_ui_mode: "native",
   };
 }
 
@@ -264,6 +272,10 @@ export function parseMobileSettingsJson(
       match_cancel_reasons: parseCancelReasons(parsed.match_cancel_reasons),
       show_pzu_cup: typeof parsed.show_pzu_cup === "boolean" ? parsed.show_pzu_cup : base.show_pzu_cup,
       login_banner: typeof parsed.login_banner === "string" ? parsed.login_banner.trim().slice(0, 300) : base.login_banner,
+      android_ui_mode:
+        parsed.android_ui_mode === "webview" || parsed.android_ui_mode === "native"
+          ? parsed.android_ui_mode
+          : base.android_ui_mode,
     };
   } catch {
     return base;

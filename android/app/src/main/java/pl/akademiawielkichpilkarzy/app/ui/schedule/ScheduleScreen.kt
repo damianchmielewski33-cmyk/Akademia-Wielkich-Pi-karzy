@@ -36,6 +36,7 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -296,7 +297,6 @@ private fun ScheduleMatchCard(
         weatherLine = state.weatherByMatchId[match.id],
         showArchiveBadge = showArchiveBadge,
         needsStats = match.id in state.missingStatsIds,
-        compact = true,
         isAdmin = state.isAdmin,
         onConfirmSignup = onConfirm,
         onTentative = onTentative,
@@ -417,22 +417,37 @@ private fun AddMatchDialog(
 
 @Composable
 private fun AdminTabs(selected: AdminManageTab, onSelect: (AdminManageTab) -> Unit) {
-    Row(
-        modifier = Modifier.horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(6.dp)
-    ) {
-        AdminManageTab.values().forEach { tab ->
-            FilterChip(
-                selected = selected == tab,
-                onClick = { onSelect(tab) },
-                label = { Text(tab.label) },
-                colors = FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = if (tab == AdminManageTab.Cancel) AwpColors.MundialRed else AwpColors.MundialTeal,
-                    selectedLabelColor = Color.White,
-                    containerColor = AwpColors.PitchCard,
-                    labelColor = AwpColors.OnPitch
-                )
-            )
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+        AdminManageTab.entries.chunked(2).forEach { row ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                row.forEach { tab ->
+                    FilterChip(
+                        selected = selected == tab,
+                        onClick = { onSelect(tab) },
+                        label = {
+                            Text(
+                                tab.label,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                style = MaterialTheme.typography.labelMedium
+                            )
+                        },
+                        modifier = Modifier.weight(1f),
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = if (tab == AdminManageTab.Cancel) AwpColors.MundialRed else AwpColors.MundialTeal,
+                            selectedLabelColor = Color.White,
+                            containerColor = AwpColors.PitchCard,
+                            labelColor = AwpColors.OnPitch
+                        )
+                    )
+                }
+                if (row.size == 1) {
+                    Spacer(Modifier.weight(1f))
+                }
+            }
         }
     }
 }
@@ -523,9 +538,15 @@ private fun AdminMatchDialog(
                 TextFieldLine("Liczba graczy (miejsc)", maxSlots, KeyboardType.Number) { maxSlots = it.filter(Char::isDigit) }
                 TextFieldLine("Wynajem boiska (zł)", fee, KeyboardType.Decimal) { fee = it.filter { ch -> ch.isDigit() || ch == '.' || ch == ',' } }
                 TextFieldLine("PIN do bramy", pin, KeyboardType.Number) { pin = it.filter(Char::isDigit).take(6) }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick = { onSetPlayed(match.id, true) }) { Text("Rozegrany") }
-                    OutlinedButton(onClick = { onSetPlayed(match.id, false) }) { Text("Cofnij") }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                    OutlinedButton(
+                        onClick = { onSetPlayed(match.id, true) },
+                        modifier = Modifier.weight(1f)
+                    ) { Text("Rozegrany", maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                    OutlinedButton(
+                        onClick = { onSetPlayed(match.id, false) },
+                        modifier = Modifier.weight(1f)
+                    ) { Text("Cofnij", maxLines = 1, overflow = TextOverflow.Ellipsis) }
                 }
             }
             AdminManageTab.Guest -> {
@@ -601,12 +622,20 @@ private fun CancelReasonPicker(selected: String, onSelect: (String) -> Unit) {
         "insufficient-players" to "Niewystarczająca liczba zawodników",
         "admin-decision" to "Decyzja administratora"
     )
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
         reasons.forEach { (value, label) ->
             FilterChip(
                 selected = selected == value,
                 onClick = { onSelect(value) },
-                label = { Text(label) },
+                label = {
+                    Text(
+                        label,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                },
+                modifier = Modifier.fillMaxWidth(),
                 colors = FilterChipDefaults.filterChipColors(
                     selectedContainerColor = AwpColors.MundialRed,
                     selectedLabelColor = Color.White,

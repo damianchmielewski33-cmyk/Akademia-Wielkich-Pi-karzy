@@ -180,6 +180,9 @@ interface AwpApi {
     @POST("api/client-log")
     suspend fun clientLog(@Body body: ClientLogRequest): ApiOkResponse
 
+    @POST("api/auth/app-bridge")
+    suspend fun appBridge(@Body body: AppBridgeRequest): AppBridgeResponse
+
     @GET("api/mobile/config")
     suspend fun mobileConfig(): MobileConfigResponse
 }

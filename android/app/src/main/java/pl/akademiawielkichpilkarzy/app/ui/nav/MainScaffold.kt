@@ -4,15 +4,15 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.CalendarMonth
-import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -27,6 +27,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
@@ -40,6 +41,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import pl.akademiawielkichpilkarzy.app.AwpApp
 import pl.akademiawielkichpilkarzy.app.data.api.ApiClient
@@ -66,12 +69,12 @@ import pl.akademiawielkichpilkarzy.app.ui.schedule.ScheduleScreen
 import pl.akademiawielkichpilkarzy.app.ui.stats.StatsScreen
 import pl.akademiawielkichpilkarzy.app.ui.theme.AwpColors
 import pl.akademiawielkichpilkarzy.app.ui.wallet.WalletScreen
+import pl.akademiawielkichpilkarzy.app.ui.web.WebAppShell
 
 private data class Tab(
     val route: String,
     val label: String,
-    val icon: ImageVector,
-    val highlighted: Boolean = false
+    val icon: ImageVector
 )
 
 @Composable
@@ -79,28 +82,24 @@ fun MainScaffold(onLoggedOut: () -> Unit) {
     val isAdmin by AwpApp.instance.sessionStore.isAdminFlow.collectAsState(initial = false)
     val tabs = listOf(
         Tab("home", "Start", Icons.Filled.Home),
+        Tab("schedule", "Terminarz", Icons.Filled.CalendarMonth),
         Tab("wallet", "Portfel", Icons.Filled.AccountBalanceWallet),
-        Tab(
-            route = "schedule",
-            label = if (isAdmin) "Panel admina" else "Terminarz",
-            icon = Icons.Filled.CalendarMonth,
-            highlighted = true
-        ),
-        Tab("lineups", "Składy", Icons.Filled.Groups),
         Tab("profile", "Profil", Icons.Filled.Person)
     )
     val navController = rememberNavController()
     val backStack by navController.currentBackStackEntryAsState()
     val current = backStack?.destination?.route
     val barSelected = when {
-        current == "stats" || current == "rankings" -> "home"
+        current == "stats" || current == "rankings" || current == "lineups" -> "home"
         current == "players" || current == "gallery" || current == "about" || current == "contact" || current == "pzu" -> "home"
         current?.startsWith("transport/") == true -> "schedule"
-        current == "admin" -> "schedule"
+        current == "admin" -> "home"
         else -> current
     }
     var mobileConfig by remember { mutableStateOf<MobileConfigResponse?>(null) }
+    var configLoaded by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+    val useWebView = mobileConfig?.settings?.androidUiMode == "webview"
 
     LaunchedEffect(Unit) {
         try {
@@ -110,12 +109,17 @@ fun MainScaffold(onLoggedOut: () -> Unit) {
             }
         } catch (_: Exception) {
         }
-        try {
-            mobileConfig = ApiClient.api.mobileConfig()
-            if ((mobileConfig?.isAdmin ?: 0) == 1) {
-                AwpApp.instance.sessionStore.setIsAdmin(true)
+        while (isActive) {
+            try {
+                mobileConfig = ApiClient.api.mobileConfig()
+                if ((mobileConfig?.isAdmin ?: 0) == 1) {
+                    AwpApp.instance.sessionStore.setIsAdmin(true)
+                }
+            } catch (_: Exception) {
+            } finally {
+                configLoaded = true
             }
-        } catch (_: Exception) {
+            delay(45_000L)
         }
     }
 
@@ -124,8 +128,28 @@ fun MainScaffold(onLoggedOut: () -> Unit) {
         return mobileConfig?.blocked?.get(key)?.message
     }
 
+    if (!configLoaded) {
+        MurawaBackground {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(color = AwpColors.MundialGold)
+            }
+        }
+        return
+    }
+
+    if (useWebView) {
+        WebAppShell(
+            isBlocked = { key -> isBlocked(key) },
+            onLoggedOut = onLoggedOut
+        )
+        return
+    }
+
     fun goTab(route: String) {
-        val isBottomTab = route == "home" || route == "schedule" || route == "wallet" || route == "lineups" || route == "profile"
+        val isBottomTab = route == "home" || route == "schedule" || route == "wallet" || route == "profile"
         if (isBottomTab) {
             navController.navigate(route) {
                 popUpTo(navController.graph.findStartDestination().id) {
@@ -247,20 +271,7 @@ fun MainScaffold(onLoggedOut: () -> Unit) {
                             selected = barSelected == tab.route,
                             onClick = { goTab(tab.route) },
                             icon = {
-                                if (tab.highlighted) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(42.dp)
-                                            .clip(RoundedCornerShape(16.dp))
-                                            .background(AwpColors.MundialGold)
-                                            .border(1.dp, Color.White.copy(alpha = 0.65f), RoundedCornerShape(16.dp)),
-                                        contentAlignment = androidx.compose.ui.Alignment.Center
-                                    ) {
-                                        Icon(tab.icon, contentDescription = tab.label, tint = AwpColors.PageDark)
-                                    }
-                                } else {
-                                    Icon(tab.icon, contentDescription = tab.label)
-                                }
+                                Icon(tab.icon, contentDescription = tab.label)
                             },
                             label = { Text(tab.label) },
                             colors = NavigationBarItemDefaults.colors(

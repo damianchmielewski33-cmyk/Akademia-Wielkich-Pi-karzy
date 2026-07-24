@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
@@ -35,9 +36,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
+import androidx.compose.material3.Icon
+import androidx.compose.foundation.layout.matchParentSize
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -45,6 +51,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.DialogProperties
 import pl.akademiawielkichpilkarzy.app.R
 import pl.akademiawielkichpilkarzy.app.ui.theme.AwpColors
 
@@ -54,35 +61,78 @@ val AwpButtonShape = RoundedCornerShape(16.dp)
 val AwpHeroShape = RoundedCornerShape(28.dp)
 val AwpTileShape = RoundedCornerShape(18.dp)
 
-/** Tło murawy / boiska jak na stronie. */
+private fun pitchTileGradient(gold: Boolean): Brush {
+    return if (gold) {
+        Brush.verticalGradient(
+            listOf(
+                Color(0xFF8B6914),
+                Color(0xFF6D4C1B),
+                Color(0xFF5C4510)
+            )
+        )
+    } else {
+        Brush.linearGradient(
+            listOf(
+                Color(0xFF0F6E52),
+                Color(0xFF118060),
+                AwpColors.PitchCard,
+                Color(0xFF07382B)
+            )
+        )
+    }
+}
+
+/** Pasy murawy jak `.home-pitch-tile` / `.home-pitch-tile-gold` na WWW. */
+fun Modifier.pitchMurawaStripes(gold: Boolean = false): Modifier = drawBehind {
+    val stripeColor = if (gold) {
+        Color(0xFFB48C32).copy(alpha = 0.22f)
+    } else {
+        Color.White.copy(alpha = 0.045f)
+    }
+    val period = if (gold) 24.dp.toPx() else 22.dp.toPx()
+    val stroke = if (gold) 12.dp.toPx() else 11.dp.toPx()
+    val stepX = period * 0.27f
+    var x = -size.height
+    while (x < size.width + size.height) {
+        drawLine(
+            color = stripeColor,
+            start = Offset(x, size.height),
+            end = Offset(x + stepX, 0f),
+            strokeWidth = stroke
+        )
+        x += period
+    }
+    drawRect(
+        brush = Brush.verticalGradient(
+            listOf(
+                Color.White.copy(alpha = if (gold) 0.10f else 0.07f),
+                Color.Transparent
+            ),
+            startY = 0f,
+            endY = size.height * 0.42f
+        )
+    )
+}
+
+/** Tło murawy / boiska jak `.murawa-bg` na stronie. */
 @Composable
 fun MurawaBackground(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        AwpColors.MurawaDark,
-                        AwpColors.MurawaMid,
-                        AwpColors.PitchDeep,
-                        Color(0xFF083628),
-                        AwpColors.MurawaDark
-                    )
-                )
-            )
+            .background(AwpColors.MurawaDark)
     ) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(
-                    Brush.linearGradient(
+                    Brush.verticalGradient(
                         colors = listOf(
-                            Color.Transparent,
-                            Color.White.copy(alpha = 0.04f),
-                            Color.Transparent,
-                            Color.White.copy(alpha = 0.03f),
-                            Color.Transparent
+                            Color(0xFF0B3D2E).copy(alpha = 0.55f),
+                            AwpColors.MurawaMid,
+                            AwpColors.PitchDeep,
+                            Color(0xFF083628),
+                            AwpColors.MurawaDark
                         )
                     )
                 )
@@ -91,10 +141,12 @@ fun MurawaBackground(modifier: Modifier = Modifier, content: @Composable () -> U
             modifier = Modifier
                 .fillMaxSize()
                 .background(
-                    Brush.radialGradient(
-                        listOf(
-                            AwpColors.NeonGrass.copy(alpha = 0.22f),
-                            Color.Transparent
+                    Brush.horizontalGradient(
+                        colors = listOf(
+                            Color.Black.copy(alpha = 0.40f),
+                            Color.Transparent,
+                            Color.Transparent,
+                            Color.Black.copy(alpha = 0.40f)
                         )
                     )
                 )
@@ -105,8 +157,20 @@ fun MurawaBackground(modifier: Modifier = Modifier, content: @Composable () -> U
                 .background(
                     Brush.verticalGradient(
                         listOf(
+                            Color(0xFF061410).copy(alpha = 0.55f),
                             Color.Transparent,
-                            AwpColors.MundialNavy.copy(alpha = 0.18f),
+                            Color(0xFF020A08).copy(alpha = 0.82f)
+                        )
+                    )
+                )
+        )
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.radialGradient(
+                        listOf(
+                            AwpColors.NeonGrass.copy(alpha = 0.14f),
                             Color.Transparent
                         )
                     )
@@ -205,6 +269,43 @@ fun ScreenHeader(
     }
 }
 
+/** Powitanie zalogowanego gracza jak na stronie startowej WWW. */
+@Composable
+fun HomeWelcomeBanner(
+    firstName: String,
+    lastName: String,
+    zawodnik: String,
+    modifier: Modifier = Modifier
+) {
+    val fullName = "$firstName $lastName".trim()
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        Text(
+            text = "Witaj!",
+            style = MaterialTheme.typography.headlineSmall,
+            color = AwpColors.OnPitch,
+            fontWeight = FontWeight.Bold
+        )
+        if (fullName.isNotBlank()) {
+            Text(
+                text = fullName,
+                style = MaterialTheme.typography.titleLarge,
+                color = AwpColors.EmeraldSoft,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+        if (zawodnik.isNotBlank() && fullName.isNotBlank()) {
+            Text(
+                text = zawodnik,
+                style = MaterialTheme.typography.bodyMedium,
+                color = AwpColors.OnPitchMuted
+            )
+        }
+    }
+}
+
 @Composable
 fun AwpHeroCard(
     title: String,
@@ -213,12 +314,12 @@ fun AwpHeroCard(
     modifier: Modifier = Modifier,
     content: (@Composable ColumnScope.() -> Unit)? = null
 ) {
-    Column(
+    Box(
         modifier = modifier
             .fillMaxWidth()
             .clip(AwpHeroShape)
             .background(
-                Brush.horizontalGradient(
+                Brush.linearGradient(
                     listOf(
                         AwpColors.MundialNavy,
                         AwpColors.HeroMid,
@@ -227,44 +328,88 @@ fun AwpHeroCard(
                     )
                 )
             )
-            .border(1.dp, AwpColors.MundialGold.copy(alpha = 0.42f), AwpHeroShape)
-            .padding(18.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
+            .border(1.dp, AwpColors.MundialGold.copy(alpha = 0.28f), AwpHeroShape)
     ) {
         Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .height(3.dp)
+                .matchParentSize()
+                .pitchMurawaStripes(gold = false)
+                .background(Color.White.copy(alpha = 0.03f))
+        )
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .size(180.dp)
                 .background(
-                    Brush.horizontalGradient(
-                        listOf(AwpColors.MundialGold, AwpColors.NeonGrass, AwpColors.MundialGold)
+                    Brush.radialGradient(
+                        listOf(
+                            AwpColors.MundialGold.copy(alpha = 0.12f),
+                            Color.Transparent
+                        )
                     )
                 )
         )
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(14.dp)
+        Column(
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Image(
-                painter = painterResource(id = R.drawable.app_logo),
-                contentDescription = "Logo Akademia Wielkich Piłkarzy",
-                modifier = Modifier.size(64.dp)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(3.dp)
+                    .background(
+                        Brush.horizontalGradient(
+                            listOf(
+                                Color.Transparent,
+                                AwpColors.MundialGold,
+                                AwpColors.MundialTeal,
+                                AwpColors.MundialGold,
+                                Color.Transparent
+                            )
+                        )
+                    )
             )
-            Column(modifier = Modifier.weight(1f)) {
-                Text(kicker.uppercase(), style = MaterialTheme.typography.labelSmall, color = AwpColors.MundialGold)
-                Text(
-                    title.uppercase(),
-                    style = MaterialTheme.typography.displayMedium,
-                    color = Color.White,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.app_logo),
+                    contentDescription = "Logo Akademia Wielkich Piłkarzy",
+                    modifier = Modifier.size(64.dp)
                 )
-                if (!subtitle.isNullOrBlank()) {
-                    Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.86f))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(kicker.uppercase(), style = MaterialTheme.typography.labelSmall, color = AwpColors.MundialGold)
+                    Text(
+                        title.uppercase(),
+                        style = MaterialTheme.typography.displayMedium,
+                        color = Color.White,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    if (!subtitle.isNullOrBlank()) {
+                        Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.86f))
+                    }
                 }
             }
+            content?.invoke(this)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(1.dp)
+                    .background(
+                        Brush.horizontalGradient(
+                            listOf(
+                                Color.Transparent,
+                                AwpColors.MundialGold.copy(alpha = 0.55f),
+                                AwpColors.MundialTeal.copy(alpha = 0.65f),
+                                AwpColors.MundialGold.copy(alpha = 0.55f),
+                                Color.Transparent
+                            )
+                        )
+                    )
+            )
         }
-        content?.invoke(this)
     }
 }
 
@@ -276,25 +421,15 @@ fun PitchCard(
     contentPadding: PaddingValues = PaddingValues(16.dp),
     content: @Composable ColumnScope.() -> Unit
 ) {
-    val base = if (gold) Color(0xFF6D4C1B) else AwpColors.PitchCard
-    val sheen = if (gold) {
-        listOf(Color(0xFF8B6914), AwpColors.MundialGold.copy(alpha = 0.55f), base)
-    } else {
-        listOf(
-            Color(0xFF0F6E52),
-            Color(0xFF118060),
-            AwpColors.PitchCard,
-            Color(0xFF07382B)
-        )
-    }
     Box(
         modifier = modifier
             .fillMaxWidth()
             .clip(AwpPitchShape)
-            .background(Brush.linearGradient(sheen))
+            .background(pitchTileGradient(gold))
+            .pitchMurawaStripes(gold)
             .border(1.dp, Color.White.copy(alpha = 0.35f), AwpPitchShape)
     ) {
-        PitchCardDecorations()
+        PitchCardDecorations(gold)
         Column(
             modifier = Modifier.padding(contentPadding),
             verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -304,35 +439,22 @@ fun PitchCard(
 }
 
 @Composable
-fun PitchCardDecorations() {
+fun BoxScope.PitchCardDecorations(gold: Boolean = false) {
     Box(
         modifier = Modifier
-            .fillMaxSize()
-            .background(
-                Brush.linearGradient(
-                    listOf(
-                        Color.White.copy(alpha = 0.06f),
-                        Color.Transparent,
-                        Color.White.copy(alpha = 0.04f)
-                    )
-                )
-            )
-    )
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(4.dp)
-            .background(Color.White.copy(alpha = 0.4f))
-    )
-    Box(
-        modifier = Modifier
-            .padding(top = 2.dp)
+            .align(Alignment.BottomCenter)
             .fillMaxWidth()
             .height(2.dp)
-            .background(
-                Brush.horizontalGradient(
-                    listOf(AwpColors.MundialGold, AwpColors.MundialTeal, AwpColors.MundialGold)
-                )
+            .background(Color.White.copy(alpha = 0.45f))
+    )
+    Box(
+        modifier = Modifier
+            .align(Alignment.TopStart)
+            .size(28.dp)
+            .border(
+                width = 2.dp,
+                color = Color.White.copy(alpha = 0.40f),
+                shape = RoundedCornerShape(bottomEnd = 8.dp)
             )
     )
 }
@@ -387,39 +509,17 @@ fun AwpActionTile(
     desc: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    gold: Boolean = false
+    gold: Boolean = false,
+    icon: ImageVector? = null
 ) {
-    val bg = if (gold) {
-        Brush.verticalGradient(listOf(AwpColors.MundialGold, Color(0xFF9F7410)))
-    } else {
-        Brush.verticalGradient(listOf(AwpColors.PitchCard, Color(0xFF084B39)))
-    }
-    Column(
+    HomePitchTile(
+        title = title,
+        desc = desc,
+        onClick = onClick,
+        gold = gold,
+        icon = icon,
         modifier = modifier
-            .fillMaxWidth()
-            .clip(AwpTileShape)
-            .background(bg)
-            .border(1.dp, Color.White.copy(alpha = 0.28f), AwpTileShape)
-            .clickable(onClick = onClick)
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp)
-    ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleLarge,
-            color = if (gold) AwpColors.PageDark else AwpColors.OnPitch,
-            fontWeight = FontWeight.Bold,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-        Text(
-            text = desc,
-            style = MaterialTheme.typography.bodySmall,
-            color = if (gold) AwpColors.PageDark.copy(alpha = 0.82f) else AwpColors.OnPitchMuted,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis
-        )
-    }
+    )
 }
 
 @Composable
@@ -685,7 +785,14 @@ fun AwpPrimaryButton(
                 strokeWidth = 2.dp
             )
         } else {
-            Text(text, fontWeight = FontWeight.SemiBold)
+            Text(
+                text = text,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
+            )
         }
     }
 }
@@ -707,7 +814,15 @@ fun AwpSecondaryButton(
         ),
         border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.4f))
     ) {
-        Text(text, fontWeight = FontWeight.SemiBold)
+        Text(
+            text = text,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center,
+            style = MaterialTheme.typography.labelLarge,
+            modifier = Modifier.fillMaxWidth()
+        )
     }
 }
 
@@ -726,7 +841,14 @@ fun AwpGoldButton(
             contentColor = AwpColors.PageDark
         )
     ) {
-        Text(text, fontWeight = FontWeight.Bold)
+        Text(
+            text = text,
+            fontWeight = FontWeight.Bold,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth()
+        )
     }
 }
 
@@ -813,6 +935,8 @@ fun AwpModal(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
+        modifier = Modifier.fillMaxWidth(0.94f),
+        properties = DialogProperties(usePlatformDefaultWidth = false),
         confirmButton = {
             if (onConfirm != null) {
                 TextButton(onClick = onConfirm) {
@@ -843,6 +967,7 @@ fun AwpModal(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .heightIn(max = 520.dp)
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
                 content = content
@@ -949,34 +1074,129 @@ fun HomePitchTile(
     desc: String,
     onClick: () -> Unit,
     gold: Boolean = false,
+    icon: ImageVector? = null,
     modifier: Modifier = Modifier
 ) {
     val shape = RoundedCornerShape(16.dp)
-    val bg = if (gold) {
-        Brush.verticalGradient(listOf(Color(0xFF8B6914), Color(0xFF5C4510)))
-    } else {
-        Brush.verticalGradient(listOf(AwpColors.PitchCard, Color(0xFF0A5C45)))
-    }
-    Column(
+    val titleColor = if (gold) Color.White else AwpColors.OnPitch
+    val descColor = if (gold) Color(0xFFFEF3C7).copy(alpha = 0.95f) else AwpColors.OnPitchMuted
+    Box(
         modifier = modifier
             .fillMaxWidth()
+            .heightIn(min = 88.dp)
             .clip(shape)
-            .background(bg)
-            .border(2.dp, Color.White.copy(alpha = 0.28f), shape)
+            .background(pitchTileGradient(gold))
+            .pitchMurawaStripes(gold)
+            .border(2.dp, Color.White.copy(alpha = 0.30f), shape)
             .clickable(onClick = onClick)
-            .padding(14.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        Text(
-            title,
-            style = MaterialTheme.typography.titleMedium,
-            color = AwpColors.OnPitch,
-            fontWeight = FontWeight.Bold
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .height(2.dp)
+                .background(Color.White.copy(alpha = 0.45f))
         )
-        Text(
-            desc,
-            style = MaterialTheme.typography.bodySmall,
-            color = AwpColors.OnPitchMuted
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .size(28.dp)
+                .border(
+                    width = 2.dp,
+                    color = Color.White.copy(alpha = 0.40f),
+                    shape = RoundedCornerShape(bottomEnd = 8.dp)
+                )
         )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 14.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (icon != null) {
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(RoundedCornerShape(50))
+                        .background(Color.White.copy(alpha = 0.15f))
+                        .border(2.dp, Color.White.copy(alpha = 0.35f), RoundedCornerShape(50)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(22.dp))
+                }
+            }
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    title,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = titleColor,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    desc,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = descColor,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+    }
+}
+
+/** Kafelek wylogowania jak LogoutPitchTile na WWW. */
+@Composable
+fun HomeLogoutTile(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    icon: ImageVector? = null
+) {
+    val shape = RoundedCornerShape(16.dp)
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .heightIn(min = 88.dp)
+            .clip(shape)
+            .background(Color(0xFF064E3B).copy(alpha = 0.25f))
+            .pitchMurawaStripes(gold = false)
+            .border(2.dp, Color.White.copy(alpha = 0.35f), shape)
+            .clickable(onClick = onClick)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 14.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (icon != null) {
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(RoundedCornerShape(50))
+                        .background(Color.White.copy(alpha = 0.10f))
+                        .border(2.dp, Color.White.copy(alpha = 0.25f), RoundedCornerShape(50)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(icon, contentDescription = null, tint = Color.White.copy(alpha = 0.9f), modifier = Modifier.size(22.dp))
+                }
+            }
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    "Wyloguj się",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = AwpColors.OnPitch,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    "Zakończ sesję",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = AwpColors.OnPitchMuted
+                )
+            }
+        }
     }
 }

@@ -94,6 +94,7 @@ const putBodySchema = z
         match_cancel_reasons: z.array(cancelReasonSchema).min(1).max(20),
         show_pzu_cup: z.boolean(),
         login_banner: z.string().max(300),
+        android_ui_mode: z.enum(["native", "webview"]),
       })
       .optional(),
   })

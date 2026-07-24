@@ -493,7 +493,16 @@ data class MobileChannelSettingsDto(
     @Json(name = "site_name") val siteName: String? = null,
     @Json(name = "show_pzu_cup") val showPzuCup: Boolean = true,
     @Json(name = "login_banner") val loginBanner: String? = null,
-    @Json(name = "blik_phone") val blikPhone: String? = null
+    @Json(name = "blik_phone") val blikPhone: String? = null,
+    @Json(name = "android_ui_mode") val androidUiMode: String = "native"
+)
+
+data class AppBridgeRequest(val next: String)
+
+data class AppBridgeResponse(
+    val ok: Boolean? = null,
+    val path: String? = null,
+    val error: String? = null
 )
 
 data class MobileBlockedEntry(
