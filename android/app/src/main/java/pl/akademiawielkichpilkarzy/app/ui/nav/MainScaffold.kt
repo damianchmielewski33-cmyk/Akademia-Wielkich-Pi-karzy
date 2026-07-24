@@ -223,15 +223,23 @@ fun MainScaffold(onLoggedOut: () -> Unit) {
             if (!isWeb) {
                 NavigationBar(
                     containerColor = Color.Transparent,
-                    modifier = Modifier.background(
-                        Brush.horizontalGradient(
-                            listOf(
-                                AwpColors.MundialNavy,
-                                AwpColors.MundialPurple,
-                                AwpColors.MundialNavy
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
+                        .background(
+                            Brush.horizontalGradient(
+                                listOf(
+                                    AwpColors.HeroDeep,
+                                    AwpColors.MundialPurple,
+                                    AwpColors.MundialNavy,
+                                    AwpColors.HeroDeep
+                                )
                             )
                         )
-                    ),
+                        .border(
+                            1.dp,
+                            AwpColors.MundialGold.copy(alpha = 0.32f),
+                            RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+                        ),
                     tonalElevation = 0.dp
                 ) {
                     tabs.forEach { tab ->

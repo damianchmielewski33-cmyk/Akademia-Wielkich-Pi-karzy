@@ -36,14 +36,14 @@ import pl.akademiawielkichpilkarzy.app.data.api.ApiClient
 import pl.akademiawielkichpilkarzy.app.data.api.LoginRequest
 import pl.akademiawielkichpilkarzy.app.data.auth.BiometricCredentialsStore
 import pl.akademiawielkichpilkarzy.app.push.PushRegistrar
+import pl.akademiawielkichpilkarzy.app.ui.common.AwpScreen
+import pl.akademiawielkichpilkarzy.app.ui.common.AwpSectionCard
+import pl.akademiawielkichpilkarzy.app.ui.common.AwpStatusBanner
+import pl.akademiawielkichpilkarzy.app.ui.common.AwpTopBrandBar
 import pl.akademiawielkichpilkarzy.app.ui.common.AwpGoldButton
 import pl.akademiawielkichpilkarzy.app.ui.common.AwpPrimaryButton
 import pl.akademiawielkichpilkarzy.app.ui.common.AwpTextField
 import pl.akademiawielkichpilkarzy.app.ui.common.LinkTextButton
-import pl.akademiawielkichpilkarzy.app.ui.common.MundialHeroBanner
-import pl.akademiawielkichpilkarzy.app.ui.common.MurawaBackground
-import pl.akademiawielkichpilkarzy.app.ui.common.PitchCard
-import pl.akademiawielkichpilkarzy.app.ui.common.PitchLabel
 import pl.akademiawielkichpilkarzy.app.ui.theme.AwpColors
 import retrofit2.HttpException
 
@@ -143,25 +143,28 @@ fun LoginScreen(
         }
     }
 
-    MurawaBackground {
+    AwpScreen {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
                 .padding(20.dp),
-            verticalArrangement = Arrangement.Center
+            verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically)
         ) {
-            MundialHeroBanner(
+            AwpTopBrandBar(
                 title = "Akademia Wielkich Piłkarzy",
-                subtitle = "Zaloguj się PIN-em lub biometrią"
+                subtitle = "Szatnia, terminarz i płatności w aplikacji"
             )
             if (!loginBanner.isNullOrBlank()) {
-                Spacer(Modifier.height(10.dp))
-                Text(loginBanner!!, color = AwpColors.MundialGold, style = MaterialTheme.typography.bodyMedium)
+                AwpStatusBanner(
+                    title = "Komunikat",
+                    message = loginBanner!!
+                )
             }
-            Spacer(Modifier.height(16.dp))
-            PitchCard {
-                PitchLabel("Logowanie")
+            AwpSectionCard(
+                title = "Logowanie",
+                subtitle = "Wejdź PIN-em albo biometrią, jeśli jest włączona."
+            ) {
                 Spacer(Modifier.height(12.dp))
 
                 if (biometricsAvailable && biometricEnabled && activity != null) {

@@ -48,9 +48,11 @@ import androidx.compose.ui.unit.dp
 import pl.akademiawielkichpilkarzy.app.R
 import pl.akademiawielkichpilkarzy.app.ui.theme.AwpColors
 
-val AwpPitchShape = RoundedCornerShape(20.dp)
-val AwpPanelShape = RoundedCornerShape(14.dp)
-val AwpButtonShape = RoundedCornerShape(14.dp)
+val AwpPitchShape = RoundedCornerShape(24.dp)
+val AwpPanelShape = RoundedCornerShape(18.dp)
+val AwpButtonShape = RoundedCornerShape(16.dp)
+val AwpHeroShape = RoundedCornerShape(28.dp)
+val AwpTileShape = RoundedCornerShape(18.dp)
 
 /** Tło murawy / boiska jak na stronie. */
 @Composable
@@ -62,6 +64,7 @@ fun MurawaBackground(modifier: Modifier = Modifier, content: @Composable () -> U
                 Brush.verticalGradient(
                     colors = listOf(
                         AwpColors.MurawaDark,
+                        AwpColors.MurawaMid,
                         AwpColors.PitchDeep,
                         Color(0xFF083628),
                         AwpColors.MurawaDark
@@ -90,13 +93,85 @@ fun MurawaBackground(modifier: Modifier = Modifier, content: @Composable () -> U
                 .background(
                     Brush.radialGradient(
                         listOf(
-                            AwpColors.MundialTeal.copy(alpha = 0.18f),
+                            AwpColors.NeonGrass.copy(alpha = 0.22f),
+                            Color.Transparent
+                        )
+                    )
+                )
+        )
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        listOf(
+                            Color.Transparent,
+                            AwpColors.MundialNavy.copy(alpha = 0.18f),
                             Color.Transparent
                         )
                     )
                 )
         )
         content()
+    }
+}
+
+@Composable
+fun AwpScreen(
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit
+) {
+    MurawaBackground(modifier = modifier, content = content)
+}
+
+@Composable
+fun AwpTopBrandBar(
+    title: String,
+    subtitle: String? = null,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(22.dp))
+            .background(
+                Brush.horizontalGradient(
+                    listOf(AwpColors.MundialNavy, AwpColors.MundialPurple, AwpColors.HeroDeep)
+                )
+            )
+            .border(1.dp, AwpColors.MundialGold.copy(alpha = 0.35f), RoundedCornerShape(22.dp))
+            .padding(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Image(
+            painter = painterResource(id = R.drawable.app_logo),
+            contentDescription = "Logo Akademia Wielkich Piłkarzy",
+            modifier = Modifier.size(52.dp)
+        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = "MUNDIAL 2026",
+                style = MaterialTheme.typography.labelSmall,
+                color = AwpColors.MundialGold
+            )
+            Text(
+                text = title.uppercase(),
+                style = MaterialTheme.typography.headlineSmall,
+                color = Color.White,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+            if (!subtitle.isNullOrBlank()) {
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.White.copy(alpha = 0.82f),
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
     }
 }
 
@@ -130,6 +205,69 @@ fun ScreenHeader(
     }
 }
 
+@Composable
+fun AwpHeroCard(
+    title: String,
+    subtitle: String? = null,
+    kicker: String = "Akademia WP",
+    modifier: Modifier = Modifier,
+    content: (@Composable ColumnScope.() -> Unit)? = null
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(AwpHeroShape)
+            .background(
+                Brush.horizontalGradient(
+                    listOf(
+                        AwpColors.MundialNavy,
+                        AwpColors.HeroMid,
+                        AwpColors.MundialPurple,
+                        AwpColors.HeroDeep
+                    )
+                )
+            )
+            .border(1.dp, AwpColors.MundialGold.copy(alpha = 0.42f), AwpHeroShape)
+            .padding(18.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(3.dp)
+                .background(
+                    Brush.horizontalGradient(
+                        listOf(AwpColors.MundialGold, AwpColors.NeonGrass, AwpColors.MundialGold)
+                    )
+                )
+        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Image(
+                painter = painterResource(id = R.drawable.app_logo),
+                contentDescription = "Logo Akademia Wielkich Piłkarzy",
+                modifier = Modifier.size(64.dp)
+            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(kicker.uppercase(), style = MaterialTheme.typography.labelSmall, color = AwpColors.MundialGold)
+                Text(
+                    title.uppercase(),
+                    style = MaterialTheme.typography.displayMedium,
+                    color = Color.White,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                if (!subtitle.isNullOrBlank()) {
+                    Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.86f))
+                }
+            }
+        }
+        content?.invoke(this)
+    }
+}
+
 /** Karta „pitch-card” — zielona murawa z ramką kredową. */
 @Composable
 fun PitchCard(
@@ -140,12 +278,13 @@ fun PitchCard(
 ) {
     val base = if (gold) Color(0xFF6D4C1B) else AwpColors.PitchCard
     val sheen = if (gold) {
-        listOf(base, Color(0xFF8B6914), base)
+        listOf(Color(0xFF8B6914), AwpColors.MundialGold.copy(alpha = 0.55f), base)
     } else {
         listOf(
-            AwpColors.PitchCard,
+            Color(0xFF0F6E52),
             Color(0xFF118060),
-            AwpColors.PitchCard
+            AwpColors.PitchCard,
+            Color(0xFF07382B)
         )
     }
     Box(
@@ -153,7 +292,7 @@ fun PitchCard(
             .fillMaxWidth()
             .clip(AwpPitchShape)
             .background(Brush.linearGradient(sheen))
-            .border(2.dp, Color.White.copy(alpha = 0.35f), AwpPitchShape)
+            .border(1.dp, Color.White.copy(alpha = 0.35f), AwpPitchShape)
     ) {
         PitchCardDecorations()
         Column(
@@ -208,12 +347,114 @@ fun PitchPanel(
         modifier = modifier
             .fillMaxWidth()
             .clip(AwpPanelShape)
-            .background(Color.Black.copy(alpha = 0.16f))
-            .border(1.dp, Color.White.copy(alpha = 0.25f), AwpPanelShape)
-            .padding(12.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
+            .background(Color.Black.copy(alpha = 0.22f))
+            .border(1.dp, Color.White.copy(alpha = 0.28f), AwpPanelShape)
+            .padding(14.dp),
+        verticalArrangement = Arrangement.spacedBy(7.dp),
         content = content
     )
+}
+
+@Composable
+fun AwpSectionCard(
+    title: String,
+    modifier: Modifier = Modifier,
+    subtitle: String? = null,
+    gold: Boolean = false,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    PitchCard(
+        modifier = modifier,
+        gold = gold,
+        contentPadding = PaddingValues(18.dp)
+    ) {
+        PitchLabel(title)
+        if (!subtitle.isNullOrBlank()) {
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = AwpColors.OnPitchMuted
+            )
+        }
+        Spacer(Modifier.height(4.dp))
+        content()
+    }
+}
+
+@Composable
+fun AwpActionTile(
+    title: String,
+    desc: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    gold: Boolean = false
+) {
+    val bg = if (gold) {
+        Brush.verticalGradient(listOf(AwpColors.MundialGold, Color(0xFF9F7410)))
+    } else {
+        Brush.verticalGradient(listOf(AwpColors.PitchCard, Color(0xFF084B39)))
+    }
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(AwpTileShape)
+            .background(bg)
+            .border(1.dp, Color.White.copy(alpha = 0.28f), AwpTileShape)
+            .clickable(onClick = onClick)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleLarge,
+            color = if (gold) AwpColors.PageDark else AwpColors.OnPitch,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+        Text(
+            text = desc,
+            style = MaterialTheme.typography.bodySmall,
+            color = if (gold) AwpColors.PageDark.copy(alpha = 0.82f) else AwpColors.OnPitchMuted,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+@Composable
+fun AwpStatTile(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier,
+    gold: Boolean = false
+) {
+    AwpMetricTile(label = label, value = value, modifier = modifier, gold = gold)
+}
+
+@Composable
+fun AwpStatusBanner(
+    title: String,
+    message: String,
+    modifier: Modifier = Modifier,
+    danger: Boolean = false
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .background(if (danger) AwpColors.MundialRed.copy(alpha = 0.22f) else AwpColors.GlassPanel)
+            .border(
+                1.dp,
+                if (danger) AwpColors.MundialRed.copy(alpha = 0.55f) else AwpColors.MundialGold.copy(alpha = 0.35f),
+                RoundedCornerShape(18.dp)
+            )
+            .padding(14.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        Text(title.uppercase(), style = MaterialTheme.typography.labelSmall, color = AwpColors.MundialGold)
+        Text(message, style = MaterialTheme.typography.bodyMedium, color = AwpColors.OnPitch)
+    }
 }
 
 @Composable
@@ -638,16 +879,16 @@ fun ScreenScaffold(
     scrollable: Boolean = true,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    MurawaBackground {
+    AwpScreen {
         val scroll = rememberScrollState()
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .then(if (scrollable) Modifier.verticalScroll(scroll) else Modifier)
                 .padding(horizontal = 16.dp, vertical = 18.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            ScreenHeader(title = title, subtitle = subtitle, kicker = kicker)
+            AwpHeroCard(title = title, subtitle = subtitle, kicker = kicker)
             content()
             Spacer(Modifier.height(8.dp))
         }

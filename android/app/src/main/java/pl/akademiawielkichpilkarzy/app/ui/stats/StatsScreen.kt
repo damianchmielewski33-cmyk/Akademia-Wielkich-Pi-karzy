@@ -20,6 +20,7 @@ import kotlinx.coroutines.launch
 import pl.akademiawielkichpilkarzy.app.AwpApp
 import pl.akademiawielkichpilkarzy.app.data.api.ApiClient
 import pl.akademiawielkichpilkarzy.app.data.api.PlayerStatsResponse
+import pl.akademiawielkichpilkarzy.app.ui.common.AwpHeroCard
 import pl.akademiawielkichpilkarzy.app.ui.common.AwpListRow
 import pl.akademiawielkichpilkarzy.app.ui.common.AwpMetricGrid
 import pl.akademiawielkichpilkarzy.app.ui.common.EmptyHint
@@ -28,7 +29,6 @@ import pl.akademiawielkichpilkarzy.app.ui.common.LoadingBlock
 import pl.akademiawielkichpilkarzy.app.ui.common.MurawaBackground
 import pl.akademiawielkichpilkarzy.app.ui.common.PitchCard
 import pl.akademiawielkichpilkarzy.app.ui.common.PitchLabel
-import pl.akademiawielkichpilkarzy.app.ui.common.ScreenHeader
 
 @Composable
 fun StatsScreen() {
@@ -64,7 +64,11 @@ fun StatsScreen() {
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             item {
-                ScreenHeader(title = "Statystyki", subtitle = "Twoje wyniki sezonu")
+                AwpHeroCard(
+                    title = "Statystyki",
+                    subtitle = "Twoje liczby, historia meczów i forma sezonu.",
+                    kicker = "Forma"
+                )
             }
             when {
                 loading -> item { LoadingBlock() }

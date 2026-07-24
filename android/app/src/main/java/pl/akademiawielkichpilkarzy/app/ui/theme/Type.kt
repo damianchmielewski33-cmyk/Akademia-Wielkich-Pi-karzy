@@ -19,23 +19,23 @@ val AwpTypography = Typography(
     displayLarge = TextStyle(
         fontFamily = TekoFamily,
         fontWeight = FontWeight.Bold,
-        fontSize = 40.sp,
-        lineHeight = 44.sp,
-        letterSpacing = 1.sp
+        fontSize = 46.sp,
+        lineHeight = 48.sp,
+        letterSpacing = 1.2.sp
     ),
     displayMedium = TextStyle(
         fontFamily = TekoFamily,
         fontWeight = FontWeight.Bold,
-        fontSize = 32.sp,
-        lineHeight = 36.sp,
-        letterSpacing = 0.8.sp
+        fontSize = 36.sp,
+        lineHeight = 38.sp,
+        letterSpacing = 1.sp
     ),
     headlineLarge = TextStyle(
         fontFamily = TekoFamily,
         fontWeight = FontWeight.SemiBold,
-        fontSize = 30.sp,
-        lineHeight = 34.sp,
-        letterSpacing = 0.6.sp
+        fontSize = 34.sp,
+        lineHeight = 36.sp,
+        letterSpacing = 0.9.sp
     ),
     headlineMedium = TextStyle(
         fontFamily = TekoFamily,
@@ -105,8 +105,8 @@ val AwpTypography = Typography(
     labelSmall = TextStyle(
         fontFamily = TekoFamily,
         fontWeight = FontWeight.SemiBold,
-        fontSize = 12.sp,
-        lineHeight = 14.sp,
-        letterSpacing = 1.4.sp
+        fontSize = 13.sp,
+        lineHeight = 15.sp,
+        letterSpacing = 1.6.sp
     )
 )

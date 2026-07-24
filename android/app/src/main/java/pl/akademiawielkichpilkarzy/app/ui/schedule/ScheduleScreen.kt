@@ -45,6 +45,7 @@ import pl.akademiawielkichpilkarzy.app.data.api.AdminUserDto
 import pl.akademiawielkichpilkarzy.app.data.api.MatchDto
 import pl.akademiawielkichpilkarzy.app.data.api.PlayersDataEntryDto
 import pl.akademiawielkichpilkarzy.app.ui.common.AwpGoldButton
+import pl.akademiawielkichpilkarzy.app.ui.common.AwpHeroCard
 import pl.akademiawielkichpilkarzy.app.ui.common.AwpStatusMessage
 import pl.akademiawielkichpilkarzy.app.ui.common.AwpModal
 import pl.akademiawielkichpilkarzy.app.ui.common.AwpPrimaryButton
@@ -59,7 +60,6 @@ import pl.akademiawielkichpilkarzy.app.ui.common.MurawaBackground
 import pl.akademiawielkichpilkarzy.app.ui.common.PitchCard
 import pl.akademiawielkichpilkarzy.app.ui.common.PitchLabel
 import pl.akademiawielkichpilkarzy.app.ui.common.PitchPanel
-import pl.akademiawielkichpilkarzy.app.ui.common.ScreenHeader
 import pl.akademiawielkichpilkarzy.app.ui.theme.AwpColors
 
 @Composable
@@ -81,9 +81,9 @@ fun ScheduleScreen(
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             item {
-                ScreenHeader(
+                AwpHeroCard(
                     title = "Terminarz",
-                    subtitle = "Lista, kalendarz, zapisy i administracja jak na stronie",
+                    subtitle = "Lista, kalendarz, zapisy i administracja w jednym meczowym centrum.",
                     kicker = "Mecze"
                 )
             }

@@ -26,12 +26,12 @@ import kotlinx.coroutines.launch
 import pl.akademiawielkichpilkarzy.app.data.api.ApiClient
 import pl.akademiawielkichpilkarzy.app.data.api.RankingRow
 import pl.akademiawielkichpilkarzy.app.data.api.RankingsResponse
+import pl.akademiawielkichpilkarzy.app.ui.common.AwpHeroCard
 import pl.akademiawielkichpilkarzy.app.ui.common.AwpListRow
 import pl.akademiawielkichpilkarzy.app.ui.common.EmptyHint
 import pl.akademiawielkichpilkarzy.app.ui.common.ErrorBlock
 import pl.akademiawielkichpilkarzy.app.ui.common.LoadingBlock
 import pl.akademiawielkichpilkarzy.app.ui.common.MurawaBackground
-import pl.akademiawielkichpilkarzy.app.ui.common.ScreenHeader
 import pl.akademiawielkichpilkarzy.app.ui.theme.AwpColors
 
 private enum class RankTab(val label: String) {
@@ -74,11 +74,12 @@ fun RankingsScreen() {
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             item {
-                ScreenHeader(
+                AwpHeroCard(
                     title = "Rankingi",
                     subtitle = data?.season?.let {
                         it.name + if (it.isActive) " (aktywny)" else ""
-                    }
+                    } ?: "Klasyfikacje zawodników i sezonu.",
+                    kicker = "Tabela"
                 )
             }
 

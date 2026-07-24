@@ -40,13 +40,13 @@ import pl.akademiawielkichpilkarzy.app.data.api.ApiClient
 import pl.akademiawielkichpilkarzy.app.data.api.LineupSelected
 import pl.akademiawielkichpilkarzy.app.data.api.SignupRequest
 import pl.akademiawielkichpilkarzy.app.data.api.TerminarzResponse
+import pl.akademiawielkichpilkarzy.app.ui.common.AwpActionTile
+import pl.akademiawielkichpilkarzy.app.ui.common.AwpHeroCard
 import pl.akademiawielkichpilkarzy.app.ui.common.EmptyHint
 import pl.akademiawielkichpilkarzy.app.ui.common.ErrorBlock
-import pl.akademiawielkichpilkarzy.app.ui.common.HomePitchTile
 import pl.akademiawielkichpilkarzy.app.ui.common.LoadingBlock
 import pl.akademiawielkichpilkarzy.app.ui.common.MatchSignupCard
 import pl.akademiawielkichpilkarzy.app.ui.common.MurawaBackground
-import pl.akademiawielkichpilkarzy.app.ui.common.MundialHeroBanner
 import pl.akademiawielkichpilkarzy.app.ui.common.PitchLabel
 import pl.akademiawielkichpilkarzy.app.ui.common.ScreenHeader
 import pl.akademiawielkichpilkarzy.app.ui.theme.AwpColors
@@ -131,9 +131,10 @@ fun HomeScreen(nav: HomeNavActions) {
                     subtitle = "Najbliższy mecz i skróty jak na stronie"
                 )
 
-                MundialHeroBanner(
+                AwpHeroCard(
                     title = "Boisko czeka",
-                    subtitle = "Zapisz się na najbliższy termin"
+                    subtitle = "Najbliższy termin, szybkie akcje i status drużyny",
+                    kicker = "Meczowy pulpit"
                 )
 
                 PitchLabel("Najbliższy mecz")
@@ -221,7 +222,7 @@ fun HomeScreen(nav: HomeNavActions) {
                 Spacer(Modifier.height(8.dp))
                 PitchLabel("Szybkie skróty")
                 HomeQuickActions(nav)
-                EmptyHint("Pełne menu jest dostępne w rozwijanym panelu u góry ekranu.")
+                EmptyHint("Pełne menu pozostaje w panelu u góry, ale najważniejsze akcje są teraz dostępne od razu.")
             }
 
             HomeFloatingTopPanel(
@@ -376,7 +377,7 @@ private fun HomeQuickActions(nav: HomeNavActions) {
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             if (!nav.isBlocked("schedule")) {
-                HomePitchTile(
+                AwpActionTile(
                     title = "Terminarz",
                     desc = "Mecze i zapisy",
                     onClick = { nav.onNative("schedule") },
@@ -384,10 +385,11 @@ private fun HomeQuickActions(nav: HomeNavActions) {
                 )
             }
             if (!nav.isBlocked("wallet")) {
-                HomePitchTile(
+                AwpActionTile(
                     title = "Płatności",
                     desc = "Portfel i BLIK",
                     onClick = { nav.onNative("wallet") },
+                    gold = true,
                     modifier = Modifier.weight(1f)
                 )
             }

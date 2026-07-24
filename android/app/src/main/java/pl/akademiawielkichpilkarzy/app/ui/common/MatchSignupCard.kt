@@ -117,20 +117,28 @@ fun MatchSignupCard(
             )
             Spacer(Modifier.height(6.dp))
             Text(
-                "Najbliższy mecz",
-                style = MaterialTheme.typography.titleLarge,
+                dateLabel,
+                style = MaterialTheme.typography.displayMedium,
                 color = AwpColors.OnPitch,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center
             )
             if (weekday.isNotBlank()) {
                 Text(
-                    weekday,
-                    color = AwpColors.OnPitchMuted,
-                    style = MaterialTheme.typography.bodySmall,
+                    "$weekday · ${match.matchTime}",
+                    color = AwpColors.MundialGold,
+                    style = MaterialTheme.typography.titleMedium,
                     textAlign = TextAlign.Center
                 )
             }
+            Text(
+                match.location,
+                color = AwpColors.OnPitchMuted,
+                style = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.Center,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
         }
         Spacer(Modifier.height(12.dp))
 
