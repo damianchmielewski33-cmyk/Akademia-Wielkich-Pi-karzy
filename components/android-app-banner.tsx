@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Download, X } from "lucide-react";
+import { isRunningInAppWebView } from "@/lib/app-webview";
 
 const STORAGE_KEY = "awp-android-app-banner-dismissed";
 
@@ -10,7 +11,8 @@ function isAndroidUa(ua: string): boolean {
 }
 
 /**
- * Pasek u góry strony — tylko na Androidzie, zamykany (localStorage).
+ * Pasek u góry strony — tylko na Androidzie w zwykłej przeglądarce (RWD).
+ * Wewnątrz WebView aplikacji (użytkownik już ją ma) baner jest zawsze ukryty. Zamykany (localStorage).
  */
 export function AndroidAppBanner() {
   const [visible, setVisible] = useState(false);
@@ -18,6 +20,7 @@ export function AndroidAppBanner() {
   useEffect(() => {
     try {
       if (typeof navigator === "undefined") return;
+      if (isRunningInAppWebView()) return;
       if (!isAndroidUa(navigator.userAgent)) return;
       if (localStorage.getItem(STORAGE_KEY) === "1") return;
       setVisible(true);

@@ -81,7 +81,7 @@ export const MOBILE_CHANNEL_SETTINGS_DEFAULTS: MobileChannelSettings = {
   match_cancel_reasons: [...MATCH_CANCEL_REASONS],
   show_pzu_cup: true,
   login_banner: "",
-  android_ui_mode: "native",
+  android_ui_mode: "webview",
 };
 
 /** Snapshot ustawień strony → startowa konfiguracja aplikacji. */
@@ -142,7 +142,7 @@ export function mobileSettingsFromWeb(web: {
     match_cancel_reasons: web.match_cancel_reasons.map((r) => ({ ...r })),
     show_pzu_cup: true,
     login_banner: "",
-    android_ui_mode: "native",
+    android_ui_mode: "webview",
   };
 }
 

@@ -1,5 +1,6 @@
 package pl.akademiawielkichpilkarzy.app.ui.nav
 
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
@@ -57,12 +58,6 @@ import pl.akademiawielkichpilkarzy.app.ui.common.ScreenHeader
 import pl.akademiawielkichpilkarzy.app.ui.home.HomeNavActions
 import pl.akademiawielkichpilkarzy.app.ui.home.HomeScreen
 import pl.akademiawielkichpilkarzy.app.ui.lineups.LineupsScreen
-import pl.akademiawielkichpilkarzy.app.ui.native.AboutScreen
-import pl.akademiawielkichpilkarzy.app.ui.native.AdminShellScreen
-import pl.akademiawielkichpilkarzy.app.ui.native.ContactScreen
-import pl.akademiawielkichpilkarzy.app.ui.native.GalleryScreen
-import pl.akademiawielkichpilkarzy.app.ui.native.PlayersScreen
-import pl.akademiawielkichpilkarzy.app.ui.native.PzuCupScreen
 import pl.akademiawielkichpilkarzy.app.ui.native.TransportScreen
 import pl.akademiawielkichpilkarzy.app.ui.profile.ProfileScreen
 import pl.akademiawielkichpilkarzy.app.ui.rankings.RankingsScreen
@@ -71,6 +66,7 @@ import pl.akademiawielkichpilkarzy.app.ui.stats.StatsScreen
 import pl.akademiawielkichpilkarzy.app.ui.theme.AwpColors
 import pl.akademiawielkichpilkarzy.app.ui.wallet.WalletScreen
 import pl.akademiawielkichpilkarzy.app.ui.web.WebAppShell
+import pl.akademiawielkichpilkarzy.app.ui.web.WebPortalScreen
 
 private data class Tab(
     val route: String,
@@ -79,7 +75,10 @@ private data class Tab(
 )
 
 @Composable
-fun MainScaffold(onLoggedOut: () -> Unit) {
+fun MainScaffold(
+    initialPath: String? = null,
+    onLoggedOut: () -> Unit
+) {
     PushAutoEnabler()
     val isAdmin by AwpApp.instance.sessionStore.isAdminFlow.collectAsState(initial = false)
     val tabs = listOf(
@@ -93,14 +92,13 @@ fun MainScaffold(onLoggedOut: () -> Unit) {
     val current = backStack?.destination?.route
     val barSelected = when {
         current == "stats" || current == "rankings" || current == "lineups" -> "home"
-        current == "players" || current == "gallery" || current == "about" || current == "contact" || current == "pzu" -> "home"
+        current?.startsWith("web/") == true -> "home"
         current?.startsWith("transport/") == true -> "schedule"
-        current == "admin" -> "home"
         else -> current
     }
     var mobileConfig by remember { mutableStateOf<MobileConfigResponse?>(null) }
     var configLoaded by remember { mutableStateOf(false) }
-    val useWebView = mobileConfig?.settings?.androidUiMode == "webview"
+    val useWebView = mobileConfig?.settings?.androidUiMode != "native"
 
     LaunchedEffect(Unit) {
         try {
@@ -143,6 +141,7 @@ fun MainScaffold(onLoggedOut: () -> Unit) {
         useWebView -> {
             WebAppShell(
                 isBlocked = { key -> isBlocked(key) },
+                initialPath = initialPath,
                 onLoggedOut = onLoggedOut
             )
         }
@@ -153,6 +152,7 @@ fun MainScaffold(onLoggedOut: () -> Unit) {
                 isAdmin = isAdmin,
                 isBlocked = { key -> isBlocked(key) },
                 mobileConfig = mobileConfig,
+                initialPath = initialPath,
                 onLoggedOut = onLoggedOut,
                 navController = navController
             )
@@ -167,6 +167,7 @@ private fun NativeMainScaffold(
     isAdmin: Boolean,
     isBlocked: (String) -> String?,
     mobileConfig: MobileConfigResponse?,
+    initialPath: String?,
     onLoggedOut: () -> Unit,
     navController: androidx.navigation.NavHostController
 ) {
@@ -189,17 +190,18 @@ private fun NativeMainScaffold(
 
     fun openPortal(title: String, path: String, requireAuth: Boolean = true) {
         val route = when {
-            path.startsWith("/pilkarze") -> "players"
-            path.startsWith("/galeria") -> "gallery"
-            path.startsWith("/o-nas") -> "about"
-            path.startsWith("/kontakt") -> "contact"
-            path.startsWith("/pzu-cup") -> "pzu"
-            path.startsWith("/panel-admina") -> "admin"
             path.startsWith("/profil") -> "profile"
             path.startsWith("/platnosci") -> "wallet"
-            else -> "home"
+            path.startsWith("/terminarz") -> "schedule"
+            else -> "web/${Uri.encode(title)}/${Uri.encode(path)}/${requireAuth}"
         }
         goTab(route)
+    }
+
+    LaunchedEffect(initialPath) {
+        if (initialPath?.startsWith("/zaproszenie") == true) {
+            openPortal("Zaproszenie", initialPath, requireAuth = false)
+        }
     }
 
     fun openTransport(matchId: Int) {
@@ -263,6 +265,12 @@ private fun NativeMainScaffold(
         onLogout = { logout() },
         isAdmin = isAdmin,
         showPzuCup = mobileConfig?.settings?.showPzuCup != false,
+        siteName = mobileConfig?.settings?.siteName?.takeIf { it.isNotBlank() }
+            ?: mobileConfig?.appSettings?.siteName?.takeIf { it.isNotBlank() }
+            ?: "Akademia Wielkich Piłkarzy",
+        siteDescription = mobileConfig?.settings?.siteDescription?.takeIf { it.isNotBlank() }
+            ?: mobileConfig?.appSettings?.siteDescription?.takeIf { it.isNotBlank() }
+            ?: "Terminarz, składy, statystyki i portfel.",
         isBlocked = { key -> isBlocked(key) != null }
     )
 
@@ -353,17 +361,40 @@ private fun NativeMainScaffold(
                     )
                 }
             }
-            composable("players") {
-                BlockedOrContent(message = isBlocked("pilkarze")) { PlayersScreen() }
-            }
-            composable("gallery") {
-                BlockedOrContent(message = isBlocked("galeria")) { GalleryScreen() }
-            }
-            composable("about") {
-                BlockedOrContent(message = isBlocked("o_nas")) { AboutScreen() }
-            }
-            composable("contact") {
-                BlockedOrContent(message = isBlocked("kontakt")) { ContactScreen() }
+            composable(
+                route = "web/{title}/{path}/{requireAuth}",
+                arguments = listOf(
+                    navArgument("title") { type = NavType.StringType },
+                    navArgument("path") { type = NavType.StringType },
+                    navArgument("requireAuth") { type = NavType.BoolType }
+                )
+            ) { entry ->
+                val title = Uri.decode(entry.arguments?.getString("title").orEmpty()).ifBlank { "Strona" }
+                val path = Uri.decode(entry.arguments?.getString("path").orEmpty()).ifBlank { "/" }
+                val requireAuth = entry.arguments?.getBoolean("requireAuth") ?: true
+                val blockKey = when {
+                    path.startsWith("/pilkarze") -> "pilkarze"
+                    path.startsWith("/galeria") -> "galeria"
+                    path.startsWith("/o-nas") -> "o_nas"
+                    path.startsWith("/kontakt") -> "kontakt"
+                    path.startsWith("/pzu-cup") -> "pzu_cup"
+                    path.startsWith("/panel-admina") -> if (isAdmin) null else "admin"
+                    else -> null
+                }
+                val message = when {
+                    blockKey == "admin" -> "Panel admina jest dostępny tylko dla administratora."
+                    blockKey != null -> isBlocked(blockKey)
+                    else -> null
+                }
+                BlockedOrContent(message = message) {
+                    WebPortalScreen(
+                        title = title,
+                        path = path,
+                        requireAuth = requireAuth,
+                        showTopBar = true,
+                        onBack = { navController.popBackStack() }
+                    )
+                }
             }
             composable(
                 route = "transport/{matchId}",
@@ -371,17 +402,6 @@ private fun NativeMainScaffold(
             ) { entry ->
                 val matchId = entry.arguments?.getInt("matchId") ?: return@composable
                 BlockedOrContent(message = isBlocked("transport")) { TransportScreen(matchId) }
-            }
-            composable("pzu") {
-                BlockedOrContent(message = isBlocked("pzu_cup")) {
-                    PzuCupScreen(
-                        onOpenSchedule = { goTab("schedule") },
-                        onOpenRankings = { goTab("rankings") }
-                    )
-                }
-            }
-            composable("admin") {
-                if (isAdmin) AdminShellScreen() else BlockedOrContent(message = "Panel admina jest dostępny tylko dla administratora.") {}
             }
         }
     }

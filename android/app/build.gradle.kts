@@ -1,3 +1,5 @@
+import java.net.URI
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -14,6 +16,13 @@ fun readLocalProperty(key: String): String? {
         ?.substringAfter("=", "")
         ?.trim()
         ?.takeIf { it.isNotEmpty() }
+}
+
+fun hostFromUrl(raw: String): String {
+    return runCatching { URI(raw).host }
+        .getOrNull()
+        ?.takeIf { it.isNotBlank() }
+        ?: "localhost"
 }
 
 val keystorePropertiesFile = rootProject.file("keystore.properties")
@@ -38,8 +47,8 @@ android {
         minSdk = 26
         // Sideload (nie Play): 33 zaliczane przez lint; działa na Android 12 (S10+).
         targetSdk = 33
-        versionCode = 25
-        versionName = "1.10.2"
+        versionCode = 26
+        versionName = "1.10.3"
 
         ndk {
             abiFilters += listOf("armeabi-v7a", "arm64-v8a")
@@ -49,6 +58,7 @@ android {
             ?: (project.findProperty("API_BASE_URL") as String?)
             ?: "http://10.0.2.2:3000/"
         buildConfigField("String", "API_BASE_URL", "\"$apiBase\"")
+        manifestPlaceholders["appLinkHost"] = hostFromUrl(apiBase)
     }
 
     signingConfigs {

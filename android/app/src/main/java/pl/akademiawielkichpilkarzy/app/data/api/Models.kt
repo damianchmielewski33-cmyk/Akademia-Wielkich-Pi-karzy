@@ -485,16 +485,77 @@ data class LineupSlot(
 data class MobileConfigResponse(
     val ok: Boolean? = null,
     val settings: MobileChannelSettingsDto? = null,
+    @Json(name = "screen_blocks") val screenBlocks: Map<String, MobileBlockedEntry> = emptyMap(),
     val blocked: Map<String, MobileBlockedEntry> = emptyMap(),
+    @Json(name = "app_settings") val appSettings: AppSettingsSnapshotDto? = null,
+    @Json(name = "site_assets") val siteAssets: SiteAssetsDto? = null,
     @Json(name = "is_admin") val isAdmin: Int = 0
 )
 
 data class MobileChannelSettingsDto(
+    @Json(name = "match_notification_prompt_enabled") val matchNotificationPromptEnabled: Boolean = false,
+    @Json(name = "home_youtube_url") val homeYoutubeUrl: String? = null,
     @Json(name = "site_name") val siteName: String? = null,
+    @Json(name = "site_description") val siteDescription: String? = null,
+    @Json(name = "contact_email") val contactEmail: String? = null,
+    @Json(name = "blik_phone") val blikPhone: String? = null,
+    @Json(name = "organizer_damian_name") val organizerDamianName: String? = null,
+    @Json(name = "organizer_damian_phone") val organizerDamianPhone: String? = null,
+    @Json(name = "organizer_damian_email") val organizerDamianEmail: String? = null,
+    @Json(name = "organizer_mateusz_name") val organizerMateuszName: String? = null,
+    @Json(name = "organizer_mateusz_phone") val organizerMateuszPhone: String? = null,
+    @Json(name = "organizer_mateusz_email") val organizerMateuszEmail: String? = null,
+    @Json(name = "facebook_damian_url") val facebookDamianUrl: String? = null,
+    @Json(name = "facebook_mateusz_url") val facebookMateuszUrl: String? = null,
+    @Json(name = "allow_self_registration") val allowSelfRegistration: Boolean? = null,
+    @Json(name = "default_match_max_slots") val defaultMatchMaxSlots: Int? = null,
+    @Json(name = "default_match_fee_pln") val defaultMatchFeePln: Double? = null,
+    @Json(name = "default_match_location") val defaultMatchLocation: String? = null,
+    @Json(name = "ranking_pt_goal") val rankingPtGoal: Double? = null,
+    @Json(name = "ranking_pt_assist") val rankingPtAssist: Double? = null,
+    @Json(name = "ranking_pt_km") val rankingPtKm: Double? = null,
+    @Json(name = "ranking_pt_save") val rankingPtSave: Double? = null,
+    @Json(name = "match_email_notifications_enabled") val matchEmailNotificationsEnabled: Boolean = true,
+    @Json(name = "lineup_pitch_slots_min") val lineupPitchSlotsMin: Int? = null,
+    @Json(name = "lineup_pitch_slots_max") val lineupPitchSlotsMax: Int? = null,
+    @Json(name = "match_cancel_reasons") val matchCancelReasons: List<MatchCancelReasonDto> = emptyList(),
     @Json(name = "show_pzu_cup") val showPzuCup: Boolean = true,
     @Json(name = "login_banner") val loginBanner: String? = null,
+    @Json(name = "android_ui_mode") val androidUiMode: String = "webview"
+)
+
+data class MatchCancelReasonDto(
+    val value: String = "",
+    val label: String = ""
+)
+
+data class AppSettingsSnapshotDto(
+    @Json(name = "site_name") val siteName: String? = null,
+    @Json(name = "site_description") val siteDescription: String? = null,
+    @Json(name = "contact_email") val contactEmail: String? = null,
     @Json(name = "blik_phone") val blikPhone: String? = null,
-    @Json(name = "android_ui_mode") val androidUiMode: String = "native"
+    @Json(name = "match_notification_prompt_enabled") val matchNotificationPromptEnabled: Boolean = false,
+    @Json(name = "home_youtube_url") val homeYoutubeUrl: String? = null,
+    @Json(name = "default_match_max_slots") val defaultMatchMaxSlots: Int? = null,
+    @Json(name = "default_match_fee_pln") val defaultMatchFeePln: Double? = null,
+    @Json(name = "default_match_location") val defaultMatchLocation: String? = null,
+    @Json(name = "ranking_pt_goal") val rankingPtGoal: Double? = null,
+    @Json(name = "ranking_pt_assist") val rankingPtAssist: Double? = null,
+    @Json(name = "ranking_pt_km") val rankingPtKm: Double? = null,
+    @Json(name = "ranking_pt_save") val rankingPtSave: Double? = null,
+    @Json(name = "lineup_pitch_slots_min") val lineupPitchSlotsMin: Int? = null,
+    @Json(name = "lineup_pitch_slots_max") val lineupPitchSlotsMax: Int? = null,
+    @Json(name = "match_cancel_reasons") val matchCancelReasons: List<MatchCancelReasonDto> = emptyList()
+)
+
+data class SiteAssetsDto(
+    @Json(name = "logo_header") val logoHeader: String? = null,
+    @Json(name = "logo_crest") val logoCrest: String? = null,
+    @Json(name = "logo_login") val logoLogin: String? = null,
+    @Json(name = "logo_favicon") val logoFavicon: String? = null,
+    @Json(name = "bg_soccer_ball") val bgSoccerBall: String? = null,
+    @Json(name = "bg_stadium") val bgStadium: String? = null,
+    @Json(name = "bg_pitch_lines") val bgPitchLines: String? = null
 )
 
 data class AppBridgeRequest(val next: String)

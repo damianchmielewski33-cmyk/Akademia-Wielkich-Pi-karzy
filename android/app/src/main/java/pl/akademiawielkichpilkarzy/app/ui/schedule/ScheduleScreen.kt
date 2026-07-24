@@ -40,6 +40,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import pl.akademiawielkichpilkarzy.app.BuildConfig
 import pl.akademiawielkichpilkarzy.app.data.api.AddMatchRequest
 import pl.akademiawielkichpilkarzy.app.data.api.AdminMatchSignupRow
 import pl.akademiawielkichpilkarzy.app.data.api.AdminUserDto
@@ -69,6 +70,7 @@ fun ScheduleScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val clipboard = LocalClipboardManager.current
+    val inviteBaseUrl = remember { BuildConfig.API_BASE_URL.trim().trimEnd('/') }
     var rosterMatch by remember { mutableStateOf<MatchDto?>(null) }
     var statsMatch by remember { mutableStateOf<MatchDto?>(null) }
     var addMatchOpen by remember { mutableStateOf(false) }
@@ -142,7 +144,7 @@ fun ScheduleScreen(
                         },
                         onRoster = { rosterMatch = match },
                         onInvite = {
-                            clipboard.setText(AnnotatedString("/zaproszenie/${match.id}"))
+                            clipboard.setText(AnnotatedString("$inviteBaseUrl/zaproszenie/${match.id}?awp_share=1"))
                             viewModel.showMessage("Skopiowano link zaproszenia")
                         },
                         onManage = { viewModel.openAdmin(match) }

@@ -64,6 +64,8 @@ fun LoginScreen(
     var loading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     var loginBanner by remember { mutableStateOf<String?>(null) }
+    var siteName by remember { mutableStateOf("Akademia Wielkich Piłkarzy") }
+    var siteDescription by remember { mutableStateOf("Szatnia, terminarz i płatności w aplikacji") }
     var biometricsAvailable by remember { mutableStateOf(false) }
     var biometricEnabled by remember { mutableStateOf(false) }
     var authMode by remember { mutableStateOf("login") }
@@ -75,6 +77,12 @@ fun LoginScreen(
         try {
             val cfg = ApiClient.api.mobileConfig()
             loginBanner = cfg.settings?.loginBanner?.takeIf { it.isNotBlank() }
+            siteName = cfg.settings?.siteName?.takeIf { it.isNotBlank() }
+                ?: cfg.appSettings?.siteName?.takeIf { it.isNotBlank() }
+                ?: siteName
+            siteDescription = cfg.settings?.siteDescription?.takeIf { it.isNotBlank() }
+                ?: cfg.appSettings?.siteDescription?.takeIf { it.isNotBlank() }
+                ?: siteDescription
         } catch (_: Exception) {
         }
         // Auto-prompt biometrii przy starcie, jeśli włączona.
@@ -154,8 +162,8 @@ fun LoginScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically)
         ) {
             AwpTopBrandBar(
-                title = "Akademia Wielkich Piłkarzy",
-                subtitle = "Szatnia, terminarz i płatności w aplikacji"
+                title = siteName,
+                subtitle = siteDescription
             )
             if (!loginBanner.isNullOrBlank()) {
                 AwpStatusBanner(

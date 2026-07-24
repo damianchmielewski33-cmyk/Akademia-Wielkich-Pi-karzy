@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.graphics.Bitmap
+import android.graphics.Color as AndroidColor
 import android.net.Uri
 import android.view.ViewGroup
 import android.webkit.CookieManager
@@ -111,7 +112,7 @@ fun WebPortalScreen(
         }
     }
 
-    BackHandler(enabled = true) {
+    BackHandler(enabled = webView?.canGoBack() == true || onBack != null) {
         val wv = webView
         when {
             wv != null && wv.canGoBack() -> wv.goBack()
@@ -197,12 +198,23 @@ fun WebPortalScreen(
                             )
                             settings.javaScriptEnabled = true
                             settings.domStorageEnabled = true
+                            settings.databaseEnabled = true
                             settings.loadWithOverviewMode = true
                             settings.useWideViewPort = true
-                            settings.builtInZoomControls = true
+                            settings.builtInZoomControls = false
                             settings.displayZoomControls = false
+                            settings.textZoom = 100
+                            settings.allowFileAccess = true
+                            settings.allowContentAccess = true
+                            settings.cacheMode = WebSettings.LOAD_DEFAULT
                             settings.mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
                             settings.mediaPlaybackRequiresUserGesture = false
+                            overScrollMode = WebView.OVER_SCROLL_NEVER
+                            isVerticalScrollBarEnabled = false
+                            isHorizontalScrollBarEnabled = false
+                            setBackgroundColor(AndroidColor.TRANSPARENT)
+                            // Znacznik w UA - strona rozpoznaje po nim WebView aplikacji i chowa np. banery pobierania apki.
+                            settings.userAgentString = "${settings.userAgentString} AWPAndroidApp/${BuildConfig.VERSION_NAME}"
                             CookieManager.getInstance().setAcceptCookie(true)
                             CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
 

@@ -55,6 +55,8 @@ data class HomeNavActions(
     val onLogout: () -> Unit,
     val isAdmin: Boolean = false,
     val showPzuCup: Boolean = true,
+    val siteName: String = "Akademia Wielkich Piłkarzy",
+    val siteDescription: String = "Terminarz, składy, statystyki i portfel.",
     val isBlocked: (String) -> Boolean = { false }
 )
 
@@ -130,8 +132,8 @@ fun HomeScreen(nav: HomeNavActions) {
             }
 
             AwpHeroCard(
-                title = "Co dziś na boisku?",
-                subtitle = "Wybierz sekcję poniżej — terminarz, składy, statystyki i portfel.",
+                title = nav.siteName,
+                subtitle = nav.siteDescription,
                 kicker = "Start"
             )
 
