@@ -18,3 +18,8 @@ export function appendShareSessionQuery(relativePathWithQuery: string): string {
 export function terminarzInviteRelativePath(matchId: number): string {
   return `/zaproszenie/${matchId}`;
 }
+
+/** Link do losowania kapitanów na mecz (przekierowanie na terminarz z otwartym kołem). */
+export function captainLotteryRelativePath(matchId: number): string {
+  return `/losowanie-kapitana/${matchId}`;
+}

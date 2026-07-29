@@ -6,6 +6,7 @@ import { isVercel, resolveDatabaseFilePath } from "@/lib/runtime-paths";
 import { initLibsqlSchema } from "@/lib/turso-init-schema";
 import { isDuplicateColumnError, migrateAppSettingsColumnsSqlite } from "@/lib/app-settings";
 import { migrateRealmSchemaSqlite } from "@/lib/realm-migration";
+import { CAPTAIN_LOTTERY_CREATE_SQL, migrateCaptainLotterySchemaSqlite } from "@/lib/captain-lottery-schema";
 import { withTransientNetworkRetries } from "@/lib/transient-network-retry";
 
 /** Lokalny plik SQLite (dev) lub Turso (gdy TURSO_DATABASE_URL). */
@@ -495,6 +496,10 @@ function initSchemaSync(db: Database.Database) {
 
     CREATE INDEX IF NOT EXISTS idx_ranking_seasons_active ON ranking_seasons(ended_at, started_at DESC);
   `);
+
+  db.exec(CAPTAIN_LOTTERY_CREATE_SQL);
+
+  migrateCaptainLotterySchemaSqlite(db);
 
   const appSettingsCols = db.prepare("PRAGMA table_info(app_settings)").all() as { name: string }[];
   migrateAppSettingsColumnsSqlite(

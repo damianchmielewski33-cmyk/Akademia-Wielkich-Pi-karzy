@@ -16,6 +16,7 @@ type PageProps = {
     mecz?: string;
     statystyki?: string;
     obecnosc?: string;
+    losowanie?: string;
   }>;
 };
 
@@ -36,6 +37,8 @@ export default async function PzuCupTerminarzPage({ searchParams }: PageProps) {
     Boolean(highlightMatchId) && (sp.statystyki === "1" || sp.statystyki === "true");
   const openAttendanceFromUrl =
     Boolean(highlightMatchId) && (sp.obecnosc === "1" || sp.obecnosc === "true");
+  const openLotteryFromUrl =
+    Boolean(highlightMatchId) && (sp.losowanie === "1" || sp.losowanie === "true");
 
   const data = await getTerminarzPageData(REALMS.PZU_CUP, session);
 
@@ -53,12 +56,15 @@ export default async function PzuCupTerminarzPage({ searchParams }: PageProps) {
         highlightMatchId={highlightMatchId}
         openStatsFromUrl={openStatsFromUrl}
         openAttendanceFromUrl={openAttendanceFromUrl}
+        openLotteryFromUrl={openLotteryFromUrl}
         matchDefaults={{
           maxSlots: data.appSettings.default_match_max_slots,
           location: data.appSettings.default_match_location,
           feePln: data.appSettings.default_match_fee_pln,
         }}
         cancelReasons={data.appSettings.match_cancel_reasons}
+        captainLotteryData={data.captainLotteryData}
+        captainLotteryHistory={data.captainLotteryHistory}
       />
     </div>
   );

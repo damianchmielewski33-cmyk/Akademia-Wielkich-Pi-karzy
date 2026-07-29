@@ -1,6 +1,7 @@
 import type { Client } from "@libsql/client";
 import { isDuplicateColumnError, migrateAppSettingsColumnsLibsql } from "@/lib/app-settings";
 import { migrateRealmSchemaLibsql } from "@/lib/realm-migration";
+import { CAPTAIN_LOTTERY_CREATE_SQL, migrateCaptainLotterySchemaLibsql } from "@/lib/captain-lottery-schema";
 
 async function pragmaColumnNames(
   client: Client,
@@ -521,6 +522,9 @@ export async function initLibsqlSchema(client: Client) {
   await client.execute(
     "CREATE INDEX IF NOT EXISTS idx_user_devices_user ON user_devices(user_id)"
   );
+
+  await client.executeMultiple(CAPTAIN_LOTTERY_CREATE_SQL);
+  await migrateCaptainLotterySchemaLibsql(client);
 
   const rs = await client.execute("SELECT 1 AS ok FROM app_settings WHERE realm = 'academy'");
   if (rs.rows.length === 0) {

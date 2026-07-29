@@ -19,6 +19,7 @@ export default async function TerminarzPage({
     statystyki?: string;
     statystyki_ankiety?: string;
     obecnosc?: string;
+    losowanie?: string;
   }>;
 }) {
   const sp = await searchParams;
@@ -40,6 +41,8 @@ export default async function TerminarzPage({
     sp.statystyki_ankiety === "1" || sp.statystyki_ankiety === "true";
   const openAttendanceFromUrl =
     Boolean(highlightMatchId) && (sp.obecnosc === "1" || sp.obecnosc === "true");
+  const openLotteryFromUrl =
+    Boolean(highlightMatchId) && (sp.losowanie === "1" || sp.losowanie === "true");
 
   const session = await getServerSession();
   const data = await getTerminarzPageData(REALMS.ACADEMY, session);
@@ -59,12 +62,15 @@ export default async function TerminarzPage({
         openStatsFromUrl={openStatsFromUrl}
         openStandaloneSurveyStats={openStandaloneSurveyStats}
         openAttendanceFromUrl={openAttendanceFromUrl}
+        openLotteryFromUrl={openLotteryFromUrl}
         matchDefaults={{
           maxSlots: data.appSettings.default_match_max_slots,
           location: data.appSettings.default_match_location,
           feePln: data.appSettings.default_match_fee_pln,
         }}
         cancelReasons={data.appSettings.match_cancel_reasons}
+        captainLotteryData={data.captainLotteryData}
+        captainLotteryHistory={data.captainLotteryHistory}
       />
     </div>
   );

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { appendShareSessionQuery, terminarzInviteRelativePath } from "@/lib/share-link";
+import { appendShareSessionQuery, captainLotteryRelativePath, terminarzInviteRelativePath } from "@/lib/share-link";
 import { SHARE_LINK_QUERY_PARAM } from "@/lib/constants";
 
 describe("appendShareSessionQuery", () => {
@@ -16,5 +16,9 @@ describe("appendShareSessionQuery", () => {
 
   it("zaproszenie: dedykowana wizytówka meczu", () => {
     expect(terminarzInviteRelativePath(7)).toBe("/zaproszenie/7");
+  });
+
+  it("losowanie kapitanów: krótki link do meczu", () => {
+    expect(captainLotteryRelativePath(12)).toBe("/losowanie-kapitana/12");
   });
 });

@@ -8,6 +8,10 @@ import {
   userSignupKindMap,
   type SignupRow,
 } from "@/lib/terminarz-shared";
+import {
+  buildCaptainLotteryMaps,
+  type CaptainLotteryRow,
+} from "@/lib/captain-lottery";
 
 export async function getTerminarzPageData(realm: Realm, session: AppSession | null) {
   const db = await getDb();
@@ -36,6 +40,23 @@ export async function getTerminarzPageData(realm: Realm, session: AppSession | n
   const userSignupKind = userSignupKindMap(signups, session?.zawodnik);
   const { upcoming, playedConfirmed } = categorizeMatches(matches);
 
+  const captainLotteryRows = (await db
+    .prepare(
+      `SELECT l.id, l.match_id, l.round_number, l.drawn_by_user_id, l.captain_count, l.captain_user_ids, l.drawn_at, l.locked,
+              u.first_name AS drawn_by_first_name, u.last_name AS drawn_by_last_name,
+              u.player_alias AS drawn_by_zawodnik, u.profile_photo_path AS drawn_by_profile_photo_path
+       FROM match_captain_lottery l
+       LEFT JOIN users u ON u.id = l.drawn_by_user_id
+       JOIN matches m ON m.id = l.match_id
+       WHERE m.realm = ?
+       ORDER BY l.match_id, l.round_number DESC`
+    )
+    .all(realm)) as CaptainLotteryRow[];
+  const { latest: captainLotteryData, history: captainLotteryHistory } = buildCaptainLotteryMaps(
+    captainLotteryRows,
+    playersData
+  );
+
   let playedMissingStatsMatchIds: number[] = [];
   if (session) {
     const missingRows = (await db
@@ -60,6 +81,8 @@ export async function getTerminarzPageData(realm: Realm, session: AppSession | n
     playedConfirmed,
     playersData,
     userSignupKind,
+    captainLotteryData,
+    captainLotteryHistory,
     playedMissingStatsMatchIds,
   };
 }
