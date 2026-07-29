@@ -24,6 +24,21 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
         type: iconType,
         purpose: "any",
       },
+      {
+        src: icon,
+        sizes: "192x192",
+        type: iconType,
+        purpose: "maskable",
+      },
+      {
+        src: icon,
+        sizes: "512x512",
+        type: iconType,
+        purpose: "any",
+      },
     ],
+    scope: "/",
+    orientation: "portrait",
+    categories: ["sports"],
   };
 }

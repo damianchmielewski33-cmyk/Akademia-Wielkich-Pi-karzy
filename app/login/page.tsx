@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { LoginPageScreen } from "@/components/login-page-screen";
 import { getDb } from "@/lib/db";
 import { getAppSettings } from "@/lib/app-settings";
+import { getServerSession } from "@/lib/auth";
 
 export const metadata: Metadata = {
   title: "Logowanie",
@@ -18,6 +19,13 @@ export default async function LoginPage({ searchParams }: Props) {
     const q = new URLSearchParams();
     if (nextPath && nextPath.startsWith("/")) q.set("next", nextPath);
     redirect(q.size ? `/ustaw-pin?${q}` : "/ustaw-pin");
+  }
+
+  if (!wylogowano) {
+    const session = await getServerSession();
+    if (session && !session.needsPinSetup && !session.pinChangePending) {
+      redirect(nextPath && nextPath.startsWith("/") ? nextPath : "/");
+    }
   }
 
   const db = await getDb();

@@ -5,6 +5,7 @@ import { Geist, Geist_Mono, Teko } from "next/font/google";
 import { Toaster } from "sonner";
 import { SiteShell } from "@/components/site-shell";
 import { ShareLinkClientCleanup } from "@/components/share-link-client-cleanup";
+import { PwaRegister } from "@/components/pwa-register";
 import { MatchParticipationSurveyPrompt } from "@/components/match-participation-survey-prompt";
 import { MatchNotificationPrompt } from "@/components/match-notification-prompt";
 import { PinChangePendingBanner } from "@/components/pin-change-pending-banner";
@@ -214,6 +215,11 @@ export default async function RootLayout({
 
   return (
     <html lang="pl" className={htmlThemeClass} style={assetCssVars}>
+      <head>
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="mobile-web-app-capable" content="yes" />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${displayFont.variable} murawa-bg min-h-screen antialiased font-sans`}
       >
@@ -231,6 +237,7 @@ export default async function RootLayout({
           blikPhone={appSettings.blik_phone}
           logoUrl={siteAssets.logo_favicon}
         />
+        <PwaRegister />
         <SessionIdleMonitor enabled={sessionIdleLogout} />
         <ShareLinkClientCleanup />
         <PinSetupGate>

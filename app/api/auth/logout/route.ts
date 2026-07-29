@@ -18,6 +18,6 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const nextRaw = url.searchParams.get("next");
   const next =
-    nextRaw && nextRaw.startsWith("/") && !nextRaw.startsWith("//") ? nextRaw : "/";
+    nextRaw && nextRaw.startsWith("/") && !nextRaw.startsWith("//") ? nextRaw : "/login";
   return NextResponse.redirect(new URL(next, req.url));
 }
