@@ -25,6 +25,7 @@ type Props = {
   playersData: PlayersDataEntry | null;
   initialLottery: CaptainLotteryEntry | null;
   lotteryHistory?: CaptainLotteryEntry[];
+  isLoggedIn: boolean;
   isAdmin: boolean;
   onLotteryChange: (matchId: number, lottery: CaptainLotteryEntry | null) => void;
 };
@@ -272,6 +273,7 @@ export function CaptainLotteryDialog({
   playersData,
   initialLottery,
   lotteryHistory = [],
+  isLoggedIn,
   isAdmin,
   onLotteryChange,
 }: Props) {
@@ -313,6 +315,11 @@ export function CaptainLotteryDialog({
 
   const handleSpin = async () => {
     if (!match || !canSpin) return;
+    if (!isLoggedIn) {
+      const next = encodeURIComponent(`${window.location.pathname}${window.location.search}`);
+      window.location.href = `/login?next=${next}`;
+      return;
+    }
     setSpinning(true);
     try {
       const res = await fetch(`/api/terminarz/match/${match.id}/captain-lottery/spin`, {
@@ -420,6 +427,13 @@ export function CaptainLotteryDialog({
               <div className="rounded-xl border border-amber-300/80 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-700/50 dark:bg-amber-950/35 dark:text-amber-100">
                 <strong className="font-semibold">Runda {lottery.roundNumber}</strong> jest otwarta — ustaw liczbę
                 kapitanów i naciśnij <strong className="font-semibold">Losuj</strong> na kole fortuny.
+              </div>
+            )}
+
+            {!isLoggedIn && (
+              <div className="rounded-xl border border-emerald-200/90 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 dark:border-emerald-700/55 dark:bg-emerald-950/35 dark:text-emerald-100">
+                Ekran losowania i historia są widoczne bez logowania. Zalogowanie jest potrzebne dopiero przy kliknięciu
+                <strong className="font-semibold"> Losuj</strong>.
               </div>
             )}
 

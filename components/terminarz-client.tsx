@@ -245,6 +245,7 @@ export function TerminarzClient({
     initialCaptainLotteryHistory
   );
   const [addLotteryBusyId, setAddLotteryBusyId] = useState<number | null>(null);
+  const [clearLotteryBusyId, setClearLotteryBusyId] = useState<number | null>(null);
 
   const [cancelledNotice, setCancelledNotice] = useState<{
     matchId: number;
@@ -622,16 +623,6 @@ export function TerminarzClient({
     lotteryOpenedFromUrlRef.current = true;
     const m = allMatches.find((x) => x.id === highlightMatchId);
     if (!m) return;
-    if (!isLoggedIn) {
-      const next = encodeURIComponent(
-        `${window.location.pathname}${window.location.search}`
-      );
-      const loginPath = window.location.pathname.startsWith("/pzu-cup")
-        ? "/pzu-cup/login"
-        : "/login";
-      window.location.href = `${loginPath}?next=${next}`;
-      return;
-    }
     setView("list");
     if (playedConfirmed.some((p) => p.id === m.id)) setListTab("archive");
     else setListTab("active");
@@ -806,6 +797,53 @@ export function TerminarzClient({
       toast.error("Nie udało się dodać losowania.");
     } finally {
       setAddLotteryBusyId(null);
+    }
+  }
+
+  async function clearCaptainLotteryHistory(m: MatchRow) {
+    if (clearLotteryBusyId === m.id) return;
+    const hasHistory = Boolean(captainLotteryHistory[m.id]?.length || captainLotteryData[m.id]);
+    if (!hasHistory) {
+      toast.error("Brak historii losowania do wyczyszczenia.");
+      return;
+    }
+    if (!window.confirm("Czy na pewno chcesz wyczyścić całą historię losowania kapitanów dla tego meczu?")) {
+      return;
+    }
+
+    setClearLotteryBusyId(m.id);
+    try {
+      const res = await fetch(`/api/admin/match/${m.id}/captain-lottery/clear-history`, { method: "DELETE" });
+      const text = await res.text();
+      if (!res.ok) {
+        try {
+          const j = JSON.parse(text) as { error?: string };
+          toast.error(typeof j.error === "string" ? j.error : "Nie udało się wyczyścić historii losowania.");
+        } catch {
+          toast.error("Nie udało się wyczyścić historii losowania.");
+        }
+        return;
+      }
+
+      setCaptainLotteryData((prev) => {
+        const next = { ...prev };
+        delete next[m.id];
+        return next;
+      });
+      setCaptainLotteryHistory((prev) => {
+        const next = { ...prev };
+        delete next[m.id];
+        return next;
+      });
+      if (captainLotteryMatch?.id === m.id) {
+        setCaptainLotteryOpen(false);
+        setCaptainLotteryMatch(null);
+      }
+      toast.success("Historia losowania została wyczyszczona.");
+    } catch {
+      toast.error("Nie udało się wyczyścić historii losowania.");
+    } finally {
+      setClearLotteryBusyId(null);
     }
   }
 
@@ -1144,6 +1182,26 @@ export function TerminarzClient({
               </span>
             </Button>
           )}
+          <Button
+            size="sm"
+            variant="ghost"
+            className={actionBtnDanger}
+            disabled={clearLotteryBusyId === m.id || (!captainLotteryHistory[m.id]?.length && !captainLotteryData[m.id])}
+            title="Usuwa wszystkie rundy i wyniki losowania kapitanów dla tego meczu"
+            onClick={() => void clearCaptainLotteryHistory(m)}
+          >
+            {clearLotteryBusyId === m.id ? (
+              <Loader2 className="shrink-0 animate-spin" aria-hidden />
+            ) : (
+              <RotateCcw className="shrink-0" aria-hidden />
+            )}
+            <span>
+              <span className="block leading-tight">Wyczyść historię losowania</span>
+              <span className="mt-1 block text-[11px] font-normal leading-snug text-red-700/90 dark:text-red-300">
+                Usuń wszystkie rundy koła fortuny dla tego meczu
+              </span>
+            </span>
+          </Button>
           {hasMatchTimePassed(m) && (
             <Button
               size="sm"
@@ -2110,6 +2168,7 @@ export function TerminarzClient({
         lotteryHistory={
           captainLotteryMatch != null ? captainLotteryHistory[captainLotteryMatch.id] ?? [] : []
         }
+        isLoggedIn={isLoggedIn}
         isAdmin={isAdmin}
         onLotteryChange={handleCaptainLotteryChange}
       />

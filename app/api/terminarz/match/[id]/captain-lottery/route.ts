@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
-import { requireUser, requireMatchInApiRealm } from "@/lib/api-helpers";
+import { requireMatchInApiRealm } from "@/lib/api-helpers";
 import {
   buildCaptainLotteryEntry,
   loadLotteryHistoryRows,
@@ -50,8 +50,6 @@ async function loadSignupPool(db: Awaited<ReturnType<typeof getDb>>, matchId: nu
 }
 
 export async function GET(req: Request, context: RouteContext) {
-  const gate = await requireUser();
-  if (!gate.ok) return gate.response;
   const { id } = await context.params;
   const mid = Number(id);
   if (!Number.isFinite(mid)) {
