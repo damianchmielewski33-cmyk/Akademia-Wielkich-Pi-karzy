@@ -11,6 +11,7 @@ import {
   CalendarPlus,
   ChevronLeft,
   ChevronRight,
+  Crown,
   List,
   Loader2,
   LogIn,
@@ -40,6 +41,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MatchTransportSignupDialog } from "@/components/match-transport-signup-dialog";
 import { MatchManageDialog } from "@/components/match-manage-dialog";
 import { MatchAddGuestDialog } from "@/components/match-add-guest-dialog";
+import { CaptainLotteryDialog } from "@/components/captain-lottery-dialog";
 import { MatchCancelledNoticeModal } from "@/components/match-cancelled-notice-modal";
 import { AppModal } from "@/components/ui/app-modal";
 import {
@@ -224,6 +226,8 @@ export function TerminarzClient({
   const [manageInitialTab, setManageInitialTab] = useState<"edit" | "guest" | "signups" | "cancel">("edit");
   const [addGuestMatch, setAddGuestMatch] = useState<MatchRow | null>(null);
   const [addGuestOpen, setAddGuestOpen] = useState(false);
+  const [captainLotteryMatch, setCaptainLotteryMatch] = useState<MatchRow | null>(null);
+  const [captainLotteryOpen, setCaptainLotteryOpen] = useState(false);
 
   const [cancelledNotice, setCancelledNotice] = useState<{
     matchId: number;
@@ -705,6 +709,11 @@ export function TerminarzClient({
     setAddGuestOpen(true);
   }
 
+  function openCaptainLottery(m: MatchRow) {
+    setCaptainLotteryMatch(m);
+    setCaptainLotteryOpen(true);
+  }
+
   async function copyInviteLink(matchId: number) {
     const rel = appendShareSessionQuery(terminarzInviteRelativePath(matchId));
     const url = `${window.location.origin}${rel}`;
@@ -972,6 +981,23 @@ export function TerminarzClient({
 
         {isAdmin && m.cancelled !== 1 && (
         <div className="flex flex-col gap-2 border-t border-zinc-200/80 pt-2.5 dark:border-zinc-600/80 sm:flex-row sm:flex-wrap">
+          {!past && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className={actionBtnAdmin}
+              title="Koło fortuny losuje kapitanów ze zapisanych zawodników"
+              onClick={() => openCaptainLottery(m)}
+            >
+              <Crown className="shrink-0" aria-hidden />
+              <span>
+                <span className="block leading-tight">Losuj kapitana</span>
+                <span className="mt-1 block text-[11px] font-normal leading-snug text-amber-900/85 dark:text-amber-200/90">
+                  Koło fortuny — max 5 kapitanów
+                </span>
+              </span>
+            </Button>
+          )}
           {hasMatchTimePassed(m) && (
             <Button
               size="sm"
@@ -1925,6 +1951,13 @@ export function TerminarzClient({
         open={addGuestOpen}
         onOpenChange={setAddGuestOpen}
         onDone={() => router.refresh()}
+      />
+
+      <CaptainLotteryDialog
+        open={captainLotteryOpen}
+        onOpenChange={setCaptainLotteryOpen}
+        match={captainLotteryMatch}
+        playersData={captainLotteryMatch != null ? playersData[captainLotteryMatch.id] : null}
       />
 
       {transportSignupMatchId != null && (
