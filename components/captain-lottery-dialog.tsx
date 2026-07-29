@@ -292,7 +292,8 @@ export function CaptainLotteryDialog({
     if (open) {
       setLottery(initialLottery);
       setHistory(lotteryHistory);
-      setCaptainCount(initialLottery?.captainCount > 0 ? initialLottery.captainCount : 1);
+      const count = initialLottery?.captainCount ?? 0;
+      setCaptainCount(count > 0 ? count : 1);
     }
   }, [open, initialLottery, lotteryHistory]);
 
