@@ -762,7 +762,8 @@ export function TerminarzClient({
   }
 
   function openCaptainLottery(m: MatchRow) {
-    openCaptainLottery(m);
+    setCaptainLotteryMatch(m);
+    setCaptainLotteryOpen(true);
   }
 
   function handleCaptainLotteryChange(matchId: number, lottery: CaptainLotteryEntry | null) {
