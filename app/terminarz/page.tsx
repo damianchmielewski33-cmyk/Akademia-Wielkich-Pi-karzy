@@ -41,8 +41,10 @@ export default async function TerminarzPage({
     sp.statystyki_ankiety === "1" || sp.statystyki_ankiety === "true";
   const openAttendanceFromUrl =
     Boolean(highlightMatchId) && (sp.obecnosc === "1" || sp.obecnosc === "true");
-  const openLotteryFromUrl =
-    Boolean(highlightMatchId) && (sp.losowanie === "1" || sp.losowanie === "true");
+
+  if (highlightMatchId != null && (sp.losowanie === "1" || sp.losowanie === "true")) {
+    redirect(`/losowanie-kapitana/${highlightMatchId}`);
+  }
 
   const session = await getServerSession();
   const data = await getTerminarzPageData(REALMS.ACADEMY, session);
@@ -62,7 +64,6 @@ export default async function TerminarzPage({
         openStatsFromUrl={openStatsFromUrl}
         openStandaloneSurveyStats={openStandaloneSurveyStats}
         openAttendanceFromUrl={openAttendanceFromUrl}
-        openLotteryFromUrl={openLotteryFromUrl}
         matchDefaults={{
           maxSlots: data.appSettings.default_match_max_slots,
           location: data.appSettings.default_match_location,

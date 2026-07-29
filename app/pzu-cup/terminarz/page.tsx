@@ -37,8 +37,10 @@ export default async function PzuCupTerminarzPage({ searchParams }: PageProps) {
     Boolean(highlightMatchId) && (sp.statystyki === "1" || sp.statystyki === "true");
   const openAttendanceFromUrl =
     Boolean(highlightMatchId) && (sp.obecnosc === "1" || sp.obecnosc === "true");
-  const openLotteryFromUrl =
-    Boolean(highlightMatchId) && (sp.losowanie === "1" || sp.losowanie === "true");
+
+  if (highlightMatchId != null && (sp.losowanie === "1" || sp.losowanie === "true")) {
+    redirect(`/losowanie-kapitana/${highlightMatchId}`);
+  }
 
   const data = await getTerminarzPageData(REALMS.PZU_CUP, session);
 
@@ -56,7 +58,6 @@ export default async function PzuCupTerminarzPage({ searchParams }: PageProps) {
         highlightMatchId={highlightMatchId}
         openStatsFromUrl={openStatsFromUrl}
         openAttendanceFromUrl={openAttendanceFromUrl}
-        openLotteryFromUrl={openLotteryFromUrl}
         matchDefaults={{
           maxSlots: data.appSettings.default_match_max_slots,
           location: data.appSettings.default_match_location,

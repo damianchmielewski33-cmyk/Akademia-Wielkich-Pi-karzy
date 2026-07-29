@@ -3,20 +3,21 @@
 import { Loader2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { PlayerEntry } from "@/lib/terminarz-shared";
+import { modalPanelClass } from "@/components/ui/modal-shared";
 import { cn } from "@/lib/utils";
 
-/** Paleta segmentów — murawa, złoto mundialu, odcienie zieleni. */
+/** Paleta segmentów — kolory strony (navy, teal, purple, gold). */
 const SEGMENT_FILLS = [
-  "#065f46",
+  "#1a2d5a",
+  "#00a651",
+  "#3d2a6e",
+  "#008c44",
   "#047857",
-  "#0d9488",
-  "#059669",
-  "#b45309",
-  "#047857",
+  "#1a2d5a",
   "#0f766e",
+  "#b45309",
+  "#2563eb",
   "#ca8a04",
-  "#064e3b",
-  "#d97706",
 ] as const;
 
 const SPIN_DURATION_MS = 4800;
@@ -157,7 +158,8 @@ export function CaptainLotteryWheel({
     return (
       <div
         className={cn(
-          "flex aspect-square w-full max-w-[min(100%,clamp(18rem,80vw,32rem))] items-center justify-center rounded-2xl border border-dashed border-emerald-700/40 bg-emerald-950/30 px-6 text-center text-sm text-emerald-100/80",
+          modalPanelClass,
+          "flex aspect-square w-full max-w-[min(100%,clamp(18rem,80vw,32rem))] items-center justify-center px-6 text-center text-sm text-zinc-600 dark:text-zinc-400",
           className
         )}
       >
@@ -177,17 +179,18 @@ export function CaptainLotteryWheel({
     >
       <div
         className={cn(
-          "relative overflow-hidden rounded-2xl border border-emerald-700/35 bg-gradient-to-b from-emerald-950 via-[#0a3d32] to-emerald-950 px-3 pb-4 pt-6 shadow-inner shadow-emerald-950/50 sm:px-5 sm:pb-5 sm:pt-7 md:px-6",
-          isActive && "ring-2 ring-[var(--mundial-gold,#f5c518)]/40 ring-offset-2 ring-offset-emerald-950"
+          modalPanelClass,
+          "relative overflow-hidden px-3 pb-4 pt-5 sm:px-5 sm:pb-5 sm:pt-6",
+          isActive && "ring-2 ring-emerald-500/35 ring-offset-2 ring-offset-white dark:ring-offset-zinc-900"
         )}
       >
-        <div className="home-pitch-tile pointer-events-none absolute inset-0 opacity-[0.14]" aria-hidden />
+        <div className="home-pitch-tile pointer-events-none absolute inset-0 opacity-[0.06] dark:opacity-[0.1]" aria-hidden />
         <div
-          className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--mundial-gold,#f5c518)]/70 to-transparent"
+          className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--mundial-gold,#f5c518)]/50 to-transparent"
           aria-hidden
         />
 
-        <p className="relative z-10 mb-3 text-center text-[0.65rem] font-bold uppercase tracking-[0.22em] text-[var(--mundial-gold,#f5c518)] sm:mb-4 sm:text-xs">
+        <p className="relative z-10 mb-3 text-center text-xs font-bold uppercase tracking-[0.18em] text-[var(--mundial-navy)] dark:text-emerald-100/90 sm:mb-4">
           Koło fortuny
         </p>
 
@@ -198,17 +201,17 @@ export function CaptainLotteryWheel({
           >
             <div className="flex flex-col items-center">
               <div
-                className="h-0 w-0 border-x-[12px] border-b-[20px] border-x-transparent border-b-[var(--mundial-gold,#f5c518)] drop-shadow-[0_2px_4px_rgba(0,0,0,0.45)] sm:border-x-[15px] sm:border-b-[24px]"
+                className="h-0 w-0 border-x-[12px] border-b-[20px] border-x-transparent border-b-[var(--mundial-gold,#f5c518)] drop-shadow-[0_2px_4px_rgba(0,0,0,0.2)] sm:border-x-[15px] sm:border-b-[24px]"
               />
-              <div className="h-2 w-2 rounded-full bg-[var(--mundial-gold,#f5c518)] shadow-[0_0_8px_rgba(245,197,24,0.8)] sm:h-2.5 sm:w-2.5" />
+              <div className="h-2 w-2 rounded-full bg-[var(--mundial-gold,#f5c518)] shadow-[0_0_6px_rgba(245,197,24,0.6)] sm:h-2.5 sm:w-2.5" />
             </div>
           </div>
 
           <div
-            className="relative mx-auto aspect-square w-full overflow-hidden rounded-full p-[4px] shadow-[0_0_0_2px_rgba(245,197,24,0.35),0_12px_40px_rgba(0,0,0,0.45)] sm:p-[5px]"
+            className="relative mx-auto aspect-square w-full overflow-hidden rounded-full border border-zinc-200/90 bg-white p-[4px] shadow-md shadow-zinc-950/10 dark:border-zinc-600 dark:bg-zinc-900 sm:p-[5px]"
             style={{ contain: "layout paint size" }}
           >
-            <div className="absolute inset-[4px] rounded-full bg-emerald-950/80 sm:inset-[5px]" aria-hidden />
+            <div className="absolute inset-[4px] rounded-full bg-zinc-100 dark:bg-zinc-800 sm:inset-[5px]" aria-hidden />
 
             <div
               ref={spinLayerRef}
@@ -222,13 +225,13 @@ export function CaptainLotteryWheel({
               }}
             >
               <svg viewBox="0 0 200 200" className="h-full w-full" aria-hidden>
-                <circle cx="100" cy="100" r="99" fill="#022c22" />
+                <circle cx="100" cy="100" r="99" fill="#1a2d5a" />
                 <circle
                   cx="100"
                   cy="100"
                   r="98"
                   fill="none"
-                  stroke="rgba(245,197,24,0.25)"
+                  stroke="rgba(245,197,24,0.35)"
                   strokeWidth="1.5"
                 />
 
@@ -248,7 +251,7 @@ export function CaptainLotteryWheel({
                       key={players[i].userId}
                       d={`M 100 100 L ${x1} ${y1} A 98 98 0 ${largeArc} 1 ${x2} ${y2} Z`}
                       fill={color}
-                      stroke="rgba(255,255,255,0.5)"
+                      stroke="rgba(255,255,255,0.45)"
                       strokeWidth="1"
                     />
                   );
@@ -268,7 +271,7 @@ export function CaptainLotteryWheel({
                       textAnchor="middle"
                       dominantBaseline="middle"
                       fill="#ffffff"
-                      stroke="#022c22"
+                      stroke="#1a2d5a"
                       strokeWidth="0.7"
                       strokeLinejoin="round"
                       paintOrder="stroke fill"
@@ -295,8 +298,8 @@ export function CaptainLotteryWheel({
                   disabled={!canSpin || spinning}
                   onClick={() => onSpin?.()}
                   className={cn(
-                    "flex h-full w-full flex-col items-center justify-center rounded-full border-2 border-[var(--mundial-gold,#f5c518)] bg-gradient-to-br from-[var(--mundial-gold,#f5c518)] to-amber-500 text-emerald-950 shadow-[0_4px_14px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.35)] transition-transform",
-                    canSpin && !spinning && "hover:scale-[1.04] active:scale-[0.97]",
+                    "flex h-full w-full flex-col items-center justify-center rounded-full border-2 border-emerald-700/20 bg-emerald-600 text-white shadow-md shadow-emerald-950/25 transition-transform dark:border-emerald-400/25 dark:bg-emerald-500",
+                    canSpin && !spinning && "hover:scale-[1.04] hover:bg-emerald-700 active:scale-[0.97] dark:hover:bg-emerald-400",
                     spinning && "cursor-wait opacity-95"
                   )}
                   aria-label={spinning ? "Kręcimy koło fortuny" : "Zakręć koło fortuny — losuj kapitana"}
@@ -316,10 +319,10 @@ export function CaptainLotteryWheel({
                 </button>
               ) : (
                 <div
-                  className="flex h-full w-full items-center justify-center rounded-full border-2 border-[var(--mundial-gold,#f5c518)]/80 bg-gradient-to-br from-emerald-900 to-emerald-950 shadow-[inset_0_2px_8px_rgba(0,0,0,0.5),0_0_12px_rgba(245,197,24,0.25)]"
+                  className="flex h-full w-full items-center justify-center rounded-full border-2 border-zinc-200/90 bg-white shadow-inner dark:border-zinc-600 dark:bg-zinc-900"
                   aria-hidden
                 >
-                  <span className="text-xs font-extrabold uppercase tracking-[0.18em] text-[var(--mundial-gold,#f5c518)] sm:text-sm">
+                  <span className="text-xs font-extrabold uppercase tracking-[0.18em] text-[var(--mundial-navy)] dark:text-[var(--mundial-gold,#f5c518)] sm:text-sm">
                     AWP
                   </span>
                 </div>
@@ -328,7 +331,7 @@ export function CaptainLotteryWheel({
           </div>
         </div>
 
-        <p className="relative z-10 mt-3 text-center text-xs text-emerald-100/75 sm:mt-4 sm:text-sm">
+        <p className="relative z-10 mt-3 text-center text-xs text-zinc-600 dark:text-zinc-400 sm:mt-4 sm:text-sm">
           {n} graczów w puli losowania
         </p>
       </div>

@@ -76,10 +76,6 @@ export async function POST(_req: Request, context: RouteContext) {
   }
 
   const pool = await loadSignupPool(db, mid);
-  if (pool.length === 0) {
-    return NextResponse.json({ error: "Brak graczy biorących udział w meczu" }, { status: 400 });
-  }
-
   const newId = await createLotteryRound(db, mid, gate.session.userId);
   const row = await loadLotteryRowById(db, newId);
   if (!row) {

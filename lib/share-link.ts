@@ -19,7 +19,7 @@ export function terminarzInviteRelativePath(matchId: number): string {
   return `/zaproszenie/${matchId}`;
 }
 
-/** Link do losowania kapitanów na mecz (przekierowanie na terminarz z otwartym kołem). */
+/** Link do losowania kapitanów na mecz (dedykowana strona koła fortuny). */
 export function captainLotteryRelativePath(matchId: number): string {
   return `/losowanie-kapitana/${matchId}`;
 }

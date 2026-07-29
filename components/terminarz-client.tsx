@@ -88,8 +88,6 @@ type Props = {
   openStandaloneSurveyStats?: boolean;
   /** Z URL (?obecnosc=1 wraz z ?mecz=) — otwiera dialog obecności (admin). */
   openAttendanceFromUrl?: boolean;
-  /** Z URL (?losowanie=1 wraz z ?mecz=) — otwiera losowanie kapitanów. */
-  openLotteryFromUrl?: boolean;
   matchDefaults?: {
     maxSlots: number;
     location: string;
@@ -182,7 +180,6 @@ export function TerminarzClient({
   openStatsFromUrl = false,
   openStandaloneSurveyStats = false,
   openAttendanceFromUrl = false,
-  openLotteryFromUrl = false,
   matchDefaults = { maxSlots: 14, location: "" },
   cancelReasons,
   captainLotteryData: initialCaptainLotteryData = {},
@@ -216,7 +213,6 @@ export function TerminarzClient({
   const statsOpenedFromUrlRef = useRef(false);
   const standaloneStatsOpenedFromUrlRef = useRef(false);
   const attendanceOpenedFromUrlRef = useRef(false);
-  const lotteryOpenedFromUrlRef = useRef(false);
   const [settleOpen, setSettleOpen] = useState(false);
   const [settleMatch, setSettleMatch] = useState<MatchRow | null>(null);
   const [settleLoading, setSettleLoading] = useState(false);
@@ -616,31 +612,6 @@ export function TerminarzClient({
       router.replace(u.pathname + u.search, { scroll: false });
     }
   }, [openAttendanceFromUrl, highlightMatchId, isAdmin, allMatches, playedConfirmed, router, openAttendanceDialog]);
-
-  useEffect(() => {
-    if (!openLotteryFromUrl || highlightMatchId == null) return;
-    if (lotteryOpenedFromUrlRef.current) return;
-    lotteryOpenedFromUrlRef.current = true;
-    const m = allMatches.find((x) => x.id === highlightMatchId);
-    if (!m) return;
-    setView("list");
-    if (playedConfirmed.some((p) => p.id === m.id)) setListTab("archive");
-    else setListTab("active");
-    setCaptainLotteryMatch(m);
-    setCaptainLotteryOpen(true);
-    if (typeof window !== "undefined") {
-      const u = new URL(window.location.href);
-      u.searchParams.delete("losowanie");
-      router.replace(u.pathname + u.search, { scroll: false });
-    }
-  }, [
-    openLotteryFromUrl,
-    highlightMatchId,
-    isLoggedIn,
-    allMatches,
-    playedConfirmed,
-    router,
-  ]);
 
   useEffect(() => {
     if (!isLoggedIn || cancelledMatchShownRef.current) return;
@@ -1165,7 +1136,7 @@ export function TerminarzClient({
               title={
                 captainLotteryData[m.id] != null && !captainLotteryData[m.id].locked
                   ? "Aktywne losowanie już czeka na zakręcenie koła"
-                  : "Dodaje kolejną rundę losowania kapitanów dla tego meczu"
+                  : "Dodaje rundę losowania — także gdy nikt jeszcze nie potwierdził «wpadam»"
               }
               onClick={() => void addCaptainLotteryRound(m)}
             >
@@ -1177,31 +1148,33 @@ export function TerminarzClient({
               <span>
                 <span className="block leading-tight">Dodaj losowanie</span>
                 <span className="mt-1 block text-[11px] font-normal leading-snug text-amber-900/85 dark:text-amber-200/90">
-                  Kolejna runda koła fortuny dla graczy
+                  Także przed zapisami «wpadam» — koło czeka na graczy
                 </span>
               </span>
             </Button>
           )}
-          <Button
-            size="sm"
-            variant="ghost"
-            className={actionBtnDanger}
-            disabled={clearLotteryBusyId === m.id || (!captainLotteryHistory[m.id]?.length && !captainLotteryData[m.id])}
-            title="Usuwa wszystkie rundy i wyniki losowania kapitanów dla tego meczu"
-            onClick={() => void clearCaptainLotteryHistory(m)}
-          >
-            {clearLotteryBusyId === m.id ? (
-              <Loader2 className="shrink-0 animate-spin" aria-hidden />
-            ) : (
-              <RotateCcw className="shrink-0" aria-hidden />
-            )}
-            <span>
-              <span className="block leading-tight">Wyczyść historię losowania</span>
-              <span className="mt-1 block text-[11px] font-normal leading-snug text-red-700/90 dark:text-red-300">
-                Usuń wszystkie rundy koła fortuny dla tego meczu
+          {(captainLotteryHistory[m.id]?.length > 0 || captainLotteryData[m.id] != null) && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className={actionBtnDanger}
+              disabled={clearLotteryBusyId === m.id}
+              title="Usuwa wszystkie rundy i wyniki losowania kapitanów dla tego meczu"
+              onClick={() => void clearCaptainLotteryHistory(m)}
+            >
+              {clearLotteryBusyId === m.id ? (
+                <Loader2 className="shrink-0 animate-spin" aria-hidden />
+              ) : (
+                <RotateCcw className="shrink-0" aria-hidden />
+              )}
+              <span>
+                <span className="block leading-tight">Wyczyść historię losowania</span>
+                <span className="mt-1 block text-[11px] font-normal leading-snug text-red-700/90 dark:text-red-300">
+                  Usuń wszystkie rundy koła fortuny dla tego meczu
+                </span>
               </span>
-            </span>
-          </Button>
+            </Button>
+          )}
           {hasMatchTimePassed(m) && (
             <Button
               size="sm"
@@ -2170,6 +2143,7 @@ export function TerminarzClient({
         }
         isLoggedIn={isLoggedIn}
         isAdmin={isAdmin}
+        onAuthenticated={() => router.refresh()}
         onLotteryChange={handleCaptainLotteryChange}
       />
 
