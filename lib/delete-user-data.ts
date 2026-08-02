@@ -17,6 +17,8 @@ export async function deleteUserAccountData(db: AppDb, userId: number): Promise<
   }
 
   await db.prepare("DELETE FROM wallet_transactions WHERE user_id = ?").run(userId);
+  await db.prepare("UPDATE hotpay_payments SET deposit_request_id = NULL WHERE user_id = ?").run(userId);
+  await db.prepare("DELETE FROM hotpay_payments WHERE user_id = ?").run(userId);
   await db.prepare("DELETE FROM wallet_deposit_requests WHERE user_id = ?").run(userId);
   await db.prepare("DELETE FROM match_wallet_charges WHERE user_id = ?").run(userId);
 

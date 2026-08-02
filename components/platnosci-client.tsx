@@ -1,11 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { SiteAssetImage } from "@/components/site-asset-image";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowDownLeft, ArrowUpRight, Loader2, LogIn, SlidersHorizontal, UserPlus, Wallet } from "lucide-react";
 import { toast } from "sonner";
 import { AdminWalletsSaldoSection } from "@/components/admin-wallets-saldo-section";
+import { HotpayPayButtons } from "@/components/hotpay-pay-buttons";
 import { PayMatchButton } from "@/components/pay-match-button";
 import { PitchCard, PitchPageHero, pitchLabelClass, pitchPanelClass } from "@/components/ui/pitch-card";
 import { Button } from "@/components/ui/button";
@@ -39,6 +41,7 @@ type Props = {
   blikPhoneDisplay: string;
   defaultMatchFeePln: number | null;
   playerLabel: string;
+  hotpayEnabled: boolean;
 };
 
 const contentPanelClass =
@@ -222,7 +225,12 @@ export function PlatnosciClient({
   blikPhoneDisplay,
   defaultMatchFeePln,
   playerLabel,
+  hotpayEnabled,
 }: Props) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const paymentReturnHandled = useRef(false);
+
   const [walletBalancePln, setWalletBalancePln] = useState<number | null>(null);
   const [walletTransactions, setWalletTransactions] = useState<WalletMeTransaction[]>([]);
   const [walletPending, setWalletPending] = useState<WalletDepositPending[]>([]);
@@ -230,6 +238,7 @@ export function PlatnosciClient({
   const [depositAmount, setDepositAmount] = useState("");
   const [depositNote, setDepositNote] = useState("");
   const [depositSubmitting, setDepositSubmitting] = useState(false);
+  const [showBlikFallback, setShowBlikFallback] = useState(!hotpayEnabled);
 
   async function refreshWallet() {
     if (!isLoggedIn) return;
@@ -289,6 +298,87 @@ export function PlatnosciClient({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoggedIn, isAdmin]);
 
+  useEffect(() => {
+    if (!isLoggedIn || paymentReturnHandled.current) return;
+    const payment = searchParams.get("payment");
+    const sessionId = searchParams.get("session_id");
+    if (!payment) return;
+    paymentReturnHandled.current = true;
+
+    const clearQuery = () => {
+      router.replace("/platnosci", { scroll: false });
+    };
+
+    async function handleReturn() {
+      if (payment === "error" || payment === "cancelled" || payment === "failure") {
+        toast.error(
+          payment === "cancelled"
+            ? "Płatność została anulowana"
+            : "Płatność HotPay nie powiodła się"
+        );
+        clearQuery();
+        return;
+      }
+
+      if (payment === "success") {
+        toast.success("Wpłata zaksięgowana na portfelu", { duration: 6000 });
+        await refreshWallet();
+        clearQuery();
+        return;
+      }
+
+      // pending / default — odpytaj status (webhook może już zdążyć)
+      if (sessionId) {
+        toast.message("Sprawdzamy status płatności HotPay…", { duration: 5000 });
+        for (let i = 0; i < 5; i++) {
+          try {
+            const res = await fetch(`/api/wallet/hotpay/status?session_id=${encodeURIComponent(sessionId)}`);
+            const data = (await res.json().catch(() => null)) as {
+              status?: string;
+              error_message?: string | null;
+              amount_pln?: number;
+            } | null;
+            if (res.ok && data?.status === "success") {
+              toast.success(
+                typeof data.amount_pln === "number"
+                  ? `Wpłata ${formatPln(data.amount_pln)} zaksięgowana na portfelu`
+                  : "Wpłata zaksięgowana na portfelu",
+                { duration: 7000 }
+              );
+              await refreshWallet();
+              clearQuery();
+              return;
+            }
+            if (res.ok && data?.status === "failure") {
+              toast.error(data.error_message || "Płatność HotPay nie powiodła się", { duration: 7000 });
+              clearQuery();
+              return;
+            }
+          } catch {
+            /* retry */
+          }
+          await new Promise((r) => setTimeout(r, 1200));
+        }
+        toast.message(
+          "Płatność w toku — odśwież saldo za chwilę. Środki pojawią się po potwierdzeniu HotPay.",
+          { duration: 8000 }
+        );
+        await refreshWallet();
+        clearQuery();
+        return;
+      }
+
+      toast.message("Wróciłeś z płatności — odśwież saldo, jeśli środki jeszcze nie widać.", {
+        duration: 7000,
+      });
+      await refreshWallet();
+      clearQuery();
+    }
+
+    void handleReturn();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoggedIn, searchParams]);
+
   return (
     <div className="awp-page awp-page--default text-center">
       <PitchPageHero
@@ -297,7 +387,9 @@ export function PlatnosciClient({
           isAdmin
             ? "Salda portfeli, doładowania po przelewie i korekty — w stylu reszty akademii."
             : isLoggedIn
-              ? "Twoje aktualne saldo portfela i historia operacji."
+              ? hotpayEnabled
+                ? "Zapłać za mecz lub doładuj saldo online (HotPay). BLIK zostaje jako awaryjna metoda."
+                : "Twoje saldo portfela, historia operacji i wpłaty BLIK."
               : "Zaloguj się, aby zobaczyć saldo portfela."
         }
       />
@@ -327,6 +419,12 @@ export function PlatnosciClient({
           </PitchCard>
         ) : isAdmin ? (
           <div className="mx-auto max-w-4xl space-y-4">
+            <HotpayPayButtons
+              enabled={hotpayEnabled}
+              balancePln={walletBalancePln}
+              defaultMatchFeePln={defaultMatchFeePln}
+              walletLoading={walletLoading}
+            />
             <PayMatchButton
               blikPhoneDisplay={blikPhoneDisplay}
               defaultMatchFeePln={defaultMatchFeePln}
@@ -387,70 +485,106 @@ export function PlatnosciClient({
               </div>
             </PitchCard>
 
-            <PayMatchButton
-              blikPhoneDisplay={blikPhoneDisplay}
-              defaultMatchFeePln={defaultMatchFeePln}
+            <HotpayPayButtons
+              enabled={hotpayEnabled}
               balancePln={walletBalancePln}
-              playerLabel={playerLabel}
+              defaultMatchFeePln={defaultMatchFeePln}
+              walletLoading={walletLoading}
             />
 
             <div className={contentPanelClass}>
-              <h3 className="text-base font-bold text-emerald-950 dark:text-emerald-100">Zgłoś wpłatę</h3>
-              <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-                Po wykonaniu przelewu BLIK wpisz kwotę — administrator potwierdzi i zaksięguje ją na Twoim koncie.
-              </p>
-              {walletPending.length > 0 ? (
-                <ul className="mt-3 space-y-2 rounded-lg border border-amber-200 bg-amber-50/80 p-3 text-sm dark:border-amber-800/50 dark:bg-amber-950/30">
-                  {walletPending.map((p) => (
-                    <li key={p.id} className="flex flex-wrap justify-between gap-2 text-amber-950 dark:text-amber-100">
-                      <span>
-                        Oczekuje: <strong className="tabular-nums">{formatPln(Number(p.amount_pln))}</strong>
-                        {p.note ? <span className="text-amber-800/80"> — {p.note}</span> : null}
-                      </span>
-                      <span className="text-xs text-amber-800/70">{formatTxDateParts(p.created_at).date}</span>
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
-                  <Label htmlFor="deposit-amount" className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                    Kwota (PLN)
-                  </Label>
-                  <Input
-                    id="deposit-amount"
-                    type="number"
-                    min={0.01}
-                    step={0.01}
-                    className="mt-1"
-                    value={depositAmount}
-                    onChange={(e) => setDepositAmount(e.target.value)}
-                    placeholder="np. 50"
-                  />
+                  <h3 className="text-base font-bold text-emerald-950 dark:text-emerald-100">
+                    {hotpayEnabled ? "Inna metoda — BLIK" : "BLIK / przelew"}
+                  </h3>
+                  <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+                    {hotpayEnabled
+                      ? "Awaryjna płatność na telefon — wymaga potwierdzenia przez administratora."
+                      : "Skopiuj dane BLIK lub otwórz aplikację banku, potem zgłoś wpłatę."}
+                  </p>
                 </div>
-                <div>
-                  <Label htmlFor="deposit-note" className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                    Notatka (opcjonalnie)
-                  </Label>
-                  <Input
-                    id="deposit-note"
-                    className="mt-1"
-                    value={depositNote}
-                    onChange={(e) => setDepositNote(e.target.value)}
-                    placeholder="np. przelew z mBanku"
-                  />
-                </div>
+                {hotpayEnabled ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowBlikFallback((v) => !v)}
+                  >
+                    {showBlikFallback ? "Ukryj BLIK" : "Pokaż BLIK"}
+                  </Button>
+                ) : null}
               </div>
-              <Button
-                type="button"
-                className="mt-4"
-                variant="pitch"
-                disabled={depositSubmitting || walletLoading}
-                onClick={() => void submitDeposit()}
-              >
-                {depositSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
-                Zgłosiłem wpłatę
-              </Button>
+
+              {showBlikFallback ? (
+                <div className="mt-4 space-y-4">
+                  <PayMatchButton
+                    blikPhoneDisplay={blikPhoneDisplay}
+                    defaultMatchFeePln={defaultMatchFeePln}
+                    balancePln={walletBalancePln}
+                    playerLabel={playerLabel}
+                  />
+
+                  <div>
+                    <h4 className="text-sm font-bold text-emerald-950 dark:text-emerald-100">Zgłoś wpłatę BLIK</h4>
+                    <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+                      Po wykonaniu przelewu BLIK wpisz kwotę — administrator potwierdzi i zaksięguje ją na Twoim koncie.
+                    </p>
+                    {walletPending.length > 0 ? (
+                      <ul className="mt-3 space-y-2 rounded-lg border border-amber-200 bg-amber-50/80 p-3 text-sm dark:border-amber-800/50 dark:bg-amber-950/30">
+                        {walletPending.map((p) => (
+                          <li key={p.id} className="flex flex-wrap justify-between gap-2 text-amber-950 dark:text-amber-100">
+                            <span>
+                              Oczekuje: <strong className="tabular-nums">{formatPln(Number(p.amount_pln))}</strong>
+                              {p.note ? <span className="text-amber-800/80"> — {p.note}</span> : null}
+                            </span>
+                            <span className="text-xs text-amber-800/70">{formatTxDateParts(p.created_at).date}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                      <div>
+                        <Label htmlFor="deposit-amount" className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                          Kwota (PLN)
+                        </Label>
+                        <Input
+                          id="deposit-amount"
+                          type="number"
+                          min={0.01}
+                          step={0.01}
+                          className="mt-1"
+                          value={depositAmount}
+                          onChange={(e) => setDepositAmount(e.target.value)}
+                          placeholder="np. 50"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="deposit-note" className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                          Notatka (opcjonalnie)
+                        </Label>
+                        <Input
+                          id="deposit-note"
+                          className="mt-1"
+                          value={depositNote}
+                          onChange={(e) => setDepositNote(e.target.value)}
+                          placeholder="np. przelew z mBanku"
+                        />
+                      </div>
+                    </div>
+                    <Button
+                      type="button"
+                      className="mt-4"
+                      variant="pitch"
+                      disabled={depositSubmitting || walletLoading}
+                      onClick={() => void submitDeposit()}
+                    >
+                      {depositSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
+                      Zgłosiłem wpłatę
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
             </div>
 
             <div className={contentPanelClass}>

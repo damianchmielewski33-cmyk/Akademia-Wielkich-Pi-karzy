@@ -289,6 +289,27 @@ function initSchemaSync(db: Database.Database) {
     CREATE INDEX IF NOT EXISTS idx_match_wallet_charges_match_created
     ON match_wallet_charges(match_id, created_at);
 
+    CREATE TABLE IF NOT EXISTS hotpay_payments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      session_id TEXT NOT NULL UNIQUE,
+      user_id INTEGER NOT NULL,
+      kind TEXT NOT NULL CHECK (kind IN ('match','topup')),
+      amount_pln REAL NOT NULL,
+      status TEXT NOT NULL CHECK (status IN ('pending','success','failure','cancelled')) DEFAULT 'pending',
+      hotpay_payment_id TEXT,
+      secure TEXT,
+      deposit_request_id INTEGER,
+      error_message TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      completed_at TEXT,
+      FOREIGN KEY (user_id) REFERENCES users(id),
+      FOREIGN KEY (deposit_request_id) REFERENCES wallet_deposit_requests(id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_hotpay_payments_user_created
+    ON hotpay_payments(user_id, created_at);
+    CREATE INDEX IF NOT EXISTS idx_hotpay_payments_status_created
+    ON hotpay_payments(status, created_at);
+
     CREATE TABLE IF NOT EXISTS public_share_links (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       token TEXT NOT NULL UNIQUE,
