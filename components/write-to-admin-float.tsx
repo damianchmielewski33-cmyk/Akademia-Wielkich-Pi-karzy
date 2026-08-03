@@ -163,6 +163,7 @@ export function WriteToAdminFloat({ defaults, recipients, hideFloat = false }: P
           unread_replies?: number;
           error?: string;
           sender_name?: string;
+          guest_locked?: boolean;
         };
         if (!res.ok) {
           if (!opts?.quiet && (opts?.markRead || openRef.current)) {

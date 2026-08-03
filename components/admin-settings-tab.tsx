@@ -445,6 +445,72 @@ export function AdminSettingsTab({ loading, onReload, settingsRealm = "academy" 
       </SettingsSection>
 
       <SettingsSection
+        title="Google AdSense"
+        description="Reklamy wyświetlane po zgodzie użytkownika na cookies marketingowe. Nie pokazujemy ich na logowaniu, płatnościach ani w panelu admina."
+      >
+        <YesNoSwitchRow
+          className={adminToggleRowClass}
+          label="Włącz AdSense"
+          hint="Po włączeniu i podaniu Publisher ID załadujemy skrypt Google (Auto ads + opcjonalny slot nad stopką)."
+          checked={settings.adsense_enabled}
+          disabled={busy}
+          onCheckedChange={(v) => void save({ adsense_enabled: v })}
+        />
+        <FieldRow
+          label="Publisher ID"
+          hint="Z panelu AdSense, format ca-pub-XXXXXXXXXX. Możesz też ustawić NEXT_PUBLIC_ADSENSE_CLIENT_ID w środowisku."
+        >
+          <Input
+            type="text"
+            placeholder="ca-pub-…"
+            className={cn(adminFieldClass, "font-mono text-sm")}
+            defaultValue={settings.adsense_client_id ?? ""}
+            disabled={busy}
+            key={`adsense-${settings.adsense_client_id ?? ""}`}
+            onBlur={(e) => {
+              const v = e.target.value.trim();
+              const cur = settings.adsense_client_id ?? "";
+              if (v !== cur) void save({ adsense_client_id: v });
+            }}
+          />
+        </FieldRow>
+        <FieldRow
+          label="ID jednostki nad stopką (opcjonalnie)"
+          hint="Utwórz jednostkę Display w AdSense i wklej numer slotu. Bez tego działają tylko Auto ads (włącz je w panelu Google)."
+        >
+          <Input
+            type="text"
+            inputMode="numeric"
+            placeholder="np. 1234567890"
+            className={cn(adminFieldClass, "font-mono text-sm")}
+            defaultValue={settings.adsense_slot_footer ?? ""}
+            disabled={busy}
+            key={`adsense-slot-${settings.adsense_slot_footer ?? ""}`}
+            onBlur={(e) => {
+              const v = e.target.value.trim();
+              const cur = settings.adsense_slot_footer ?? "";
+              if (v !== cur) void save({ adsense_slot_footer: v });
+            }}
+          />
+        </FieldRow>
+        <p className="text-xs leading-relaxed pitch-muted">
+          Po akceptacji konta AdSense sprawdź też plik{" "}
+          <a className="underline underline-offset-2" href="/ads.txt" target="_blank" rel="noreferrer">
+            /ads.txt
+          </a>
+          . Strony prawne:{" "}
+          <a className="underline underline-offset-2" href="/polityka-prywatnosci" target="_blank" rel="noreferrer">
+            polityka prywatności
+          </a>
+          ,{" "}
+          <a className="underline underline-offset-2" href="/cookies" target="_blank" rel="noreferrer">
+            cookies
+          </a>
+          .
+        </p>
+      </SettingsSection>
+
+      <SettingsSection
         title="Rejestracja i powiadomienia"
         description="Kto może założyć konto samodzielnie oraz czy gracze dostają e-maile o nowych terminach."
       >

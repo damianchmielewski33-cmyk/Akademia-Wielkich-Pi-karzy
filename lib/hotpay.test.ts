@@ -39,6 +39,12 @@ describe("hotpay hashing", () => {
     expect(verifyNotificationHash(payload, HOTPAY_TEST_CONFIG.notificationPassword)).toBe(false);
   });
 
+  it("timing-safe hex compare rejects different lengths", async () => {
+    const { timingSafeEqualHex } = await import("@/lib/hotpay");
+    expect(timingSafeEqualHex("ab", "abcd")).toBe(false);
+    expect(timingSafeEqualHex("abcd", "abcd")).toBe(true);
+  });
+
   it("notification hash includes SECURE field", () => {
     const withSecure = buildNotificationHash({
       notificationPassword: HOTPAY_TEST_CONFIG.notificationPassword,

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { formatActivityActorLabel, formatActivityTimePl } from "@/lib/activity-display";
 import { requireAdmin } from "@/lib/api-helpers";
 import { localYmdInclusiveUtcRange } from "@/lib/analytics-date-range";
-import { SCREEN_LABELS } from "@/lib/analytics-screen";
+import { PAGE_VIEWS_REAL_SQL, SCREEN_LABELS } from "@/lib/analytics-screen";
 import { getDb } from "@/lib/db";
 
 export const runtime = "nodejs";
@@ -26,6 +26,26 @@ function parseRange(
   };
 }
 
+async function countScreenUniqueVisitors(
+  db: Awaited<ReturnType<typeof getDb>>,
+  screenKey: string,
+  fromIso: string,
+  toIso: string
+): Promise<{ total_views: number; unique_visitors: number }> {
+  const row = (await db
+    .prepare(
+      `SELECT COUNT(*) AS total_views,
+              COUNT(DISTINCT CASE WHEN user_id IS NOT NULL THEN CAST(user_id AS TEXT)
+                                  ELSE visitor_id END) AS unique_visitors
+       FROM page_views
+       WHERE screen_key = ?
+         AND created_at >= ? AND created_at <= ?
+         AND ${PAGE_VIEWS_REAL_SQL}`
+    )
+    .get(screenKey, fromIso, toIso)) as { total_views: number; unique_visitors: number };
+  return row;
+}
+
 export async function GET(req: Request) {
   const gate = await requireAdmin();
   if (!gate.ok) return gate.response;
@@ -40,7 +60,7 @@ export async function GET(req: Request) {
   const { fromDate, toDate, fromIso, toIso } = range;
   const db = await getDb();
 
-  const screenRows = await db
+  const screenRows = (await db
     .prepare(
       `SELECT screen_key,
               COUNT(*) AS total_views,
@@ -48,49 +68,54 @@ export async function GET(req: Request) {
                                   ELSE visitor_id END) AS unique_visitors
        FROM page_views
        WHERE created_at >= ? AND created_at <= ?
+         AND ${PAGE_VIEWS_REAL_SQL}
        GROUP BY screen_key
        ORDER BY total_views DESC`
     )
-    .all(fromIso, toIso) as { screen_key: string; total_views: number; unique_visitors: number }[];
+    .all(fromIso, toIso)) as { screen_key: string; total_views: number; unique_visitors: number }[];
 
-  const totals = await db
+  const totals = (await db
     .prepare(
       `SELECT COUNT(*) AS total_views,
               COUNT(DISTINCT CASE WHEN user_id IS NOT NULL THEN CAST(user_id AS TEXT)
                                   ELSE visitor_id END) AS unique_visitors
        FROM page_views
-       WHERE created_at >= ? AND created_at <= ?`
+       WHERE created_at >= ? AND created_at <= ?
+         AND ${PAGE_VIEWS_REAL_SQL}`
     )
-    .get(fromIso, toIso) as { total_views: number; unique_visitors: number };
+    .get(fromIso, toIso)) as { total_views: number; unique_visitors: number };
 
-  const anonViews = await db
+  const anonViews = (await db
     .prepare(
       `SELECT COUNT(*) AS c FROM page_views
-       WHERE created_at >= ? AND created_at <= ? AND user_id IS NULL`
+       WHERE created_at >= ? AND created_at <= ? AND user_id IS NULL
+         AND ${PAGE_VIEWS_REAL_SQL}`
     )
-    .get(fromIso, toIso) as { c: number };
+    .get(fromIso, toIso)) as { c: number };
 
-  const authViews = await db
+  const authViews = (await db
     .prepare(
       `SELECT COUNT(*) AS c FROM page_views
-       WHERE created_at >= ? AND created_at <= ? AND user_id IS NOT NULL`
+       WHERE created_at >= ? AND created_at <= ? AND user_id IS NOT NULL
+         AND ${PAGE_VIEWS_REAL_SQL}`
     )
-    .get(fromIso, toIso) as { c: number };
+    .get(fromIso, toIso)) as { c: number };
 
-  const totalPlayersRow = await db
+  const totalPlayersRow = (await db
     .prepare(`SELECT COUNT(*) AS c FROM users WHERE is_admin = 0`)
-    .get() as { c: number };
+    .get()) as { c: number };
   const totalPlayers = totalPlayersRow.c;
 
-  const playersVisitedRow = await db
+  const playersVisitedRow = (await db
     .prepare(
       `SELECT COUNT(DISTINCT pv.user_id) AS c
        FROM page_views pv
        INNER JOIN users u ON u.id = pv.user_id
        WHERE pv.created_at >= ? AND pv.created_at <= ?
-         AND u.is_admin = 0`
+         AND u.is_admin = 0
+         AND (pv.screen_key NOT LIKE 'client_log_%' AND pv.screen_key <> 'android_apk_download')`
     )
-    .get(fromIso, toIso) as { c: number };
+    .get(fromIso, toIso)) as { c: number };
   const playersVisited = playersVisitedRow.c;
   const playersNotVisited = Math.max(0, totalPlayers - playersVisited);
   const pctPlayersActive =
@@ -98,17 +123,17 @@ export async function GET(req: Request) {
   const pctPlayersInactive =
     totalPlayers > 0 ? Math.round((playersNotVisited / totalPlayers) * 1000) / 10 : null;
 
-  const selfRegRow = await db
+  const selfRegRow = (await db
     .prepare(
       `SELECT COUNT(*) AS c FROM activity_log
        WHERE datetime(timestamp) >= datetime(?) AND datetime(timestamp) <= datetime(?)
          AND user_id IS NOT NULL
          AND (action LIKE 'Zarejestrował konto%' OR action LIKE 'Zarejestrował konto i zalogował%')`
     )
-    .get(fromIso, toIso) as { c: number };
+    .get(fromIso, toIso)) as { c: number };
   const selfRegistrations = selfRegRow.c;
 
-  const terminarzViewersRow = await db
+  const terminarzViewersRow = (await db
     .prepare(
       `SELECT COUNT(DISTINCT pv.user_id) AS c
        FROM page_views pv
@@ -117,10 +142,10 @@ export async function GET(req: Request) {
          AND pv.created_at >= ? AND pv.created_at <= ?
          AND u.is_admin = 0`
     )
-    .get(fromIso, toIso) as { c: number };
+    .get(fromIso, toIso)) as { c: number };
   const terminarzViewers = terminarzViewersRow.c;
 
-  const terminarzSignedRow = await db
+  const terminarzSignedRow = (await db
     .prepare(
       `SELECT COUNT(DISTINCT pv.user_id) AS c
        FROM page_views pv
@@ -134,12 +159,15 @@ export async function GET(req: Request) {
              AND datetime(ms.created_at) >= datetime(?) AND datetime(ms.created_at) <= datetime(?)
          )`
     )
-    .get(fromIso, toIso, fromIso, toIso) as { c: number };
+    .get(fromIso, toIso, fromIso, toIso)) as { c: number };
   const terminarzSignedInRange = terminarzSignedRow.c;
   const pctTerminarzToSignup =
     terminarzViewers > 0
       ? Math.round((terminarzSignedInRange / terminarzViewers) * 1000) / 10
       : null;
+
+  const inviteStats = await countScreenUniqueVisitors(db, "zaproszenie", fromIso, toIso);
+  const paymentLinkStats = await countScreenUniqueVisitors(db, "platnosci_public", fromIso, toIso);
 
   const screens = screenRows.map((r) => ({
     screen_key: r.screen_key,
@@ -201,6 +229,16 @@ export async function GET(req: Request) {
       distinct_players_viewed: terminarzViewers,
       distinct_players_viewed_and_signed_match_in_range: terminarzSignedInRange,
       pct_signed_after_view: pctTerminarzToSignup,
+    },
+    share_links: {
+      zaproszenie: {
+        total_views: inviteStats.total_views,
+        unique_visitors: inviteStats.unique_visitors,
+      },
+      platnosci_public: {
+        total_views: paymentLinkStats.total_views,
+        unique_visitors: paymentLinkStats.unique_visitors,
+      },
     },
     screens,
     activity_events,

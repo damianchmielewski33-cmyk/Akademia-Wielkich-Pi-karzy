@@ -7,6 +7,7 @@ import {
   nowLocalYmd,
   startOfLocalDayUtcIso,
 } from "@/lib/analytics-date-range";
+import { PAGE_VIEWS_REAL_SQL } from "@/lib/analytics-screen";
 import { wallClockYmdHourFromUtcIso } from "@/lib/analytics-wall-clock";
 import { getDb } from "@/lib/db";
 
@@ -55,7 +56,8 @@ export async function GET() {
   const rows = (await db
     .prepare(
       `SELECT created_at AS created_at FROM page_views
-       WHERE created_at >= ? AND created_at <= ?`
+       WHERE created_at >= ? AND created_at <= ?
+         AND ${PAGE_VIEWS_REAL_SQL}`
     )
     .all(fromIso, toIso)) as Row[];
 

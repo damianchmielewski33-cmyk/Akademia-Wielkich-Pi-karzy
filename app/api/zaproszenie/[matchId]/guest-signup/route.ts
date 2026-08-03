@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { addMatchGuest } from "@/lib/add-match-guest";
+import { checkRateLimitDistributed } from "@/lib/rate-limit-db";
+import { rateLimitKey, rateLimitedResponse, RATE } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
@@ -17,6 +19,13 @@ function todayISO() {
 }
 
 export async function POST(req: Request, context: RouteContext) {
+  const rl = await checkRateLimitDistributed(
+    rateLimitKey("guest_signup", req),
+    RATE.guestSignup.limit,
+    RATE.guestSignup.windowMs
+  );
+  if (!rl.ok) return rateLimitedResponse(rl.retryAfterSec);
+
   const { matchId: raw } = await context.params;
   const mid = Number(raw);
   if (!Number.isFinite(mid)) {

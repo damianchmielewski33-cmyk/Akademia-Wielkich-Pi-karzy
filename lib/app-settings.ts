@@ -41,6 +41,12 @@ export type MatchCancelReasonEntry = { value: string; label: string };
 export type AppSettings = {
   match_notification_prompt_enabled: boolean;
   home_youtube_url: string | null;
+  /** Google AdSense publisher ID (`ca-pub-…`). */
+  adsense_client_id: string | null;
+  /** Czy ładować AdSense (wymaga też zgody marketingowej cookies). */
+  adsense_enabled: boolean;
+  /** Opcjonalny ID jednostki reklamowej nad stopką (z panelu AdSense). */
+  adsense_slot_footer: string | null;
   site_name: string;
   site_description: string;
   contact_email: string;
@@ -95,6 +101,9 @@ export const PZU_CUP_APP_SETTINGS_DEFAULTS: Partial<AppSettings> = {
 export const APP_SETTINGS_DEFAULTS: AppSettings = {
   match_notification_prompt_enabled: false,
   home_youtube_url: null,
+  adsense_client_id: null,
+  adsense_enabled: false,
+  adsense_slot_footer: null,
   site_name: SITE_NAME,
   site_description: SITE_DESCRIPTION,
   contact_email: DEFAULT_PUBLIC_CONTACT_EMAIL,
@@ -155,6 +164,9 @@ type DbWriteLike = {
 type AppSettingsRow = {
   match_notification_prompt_enabled?: number | null;
   home_youtube_url?: string | null;
+  adsense_client_id?: string | null;
+  adsense_enabled?: number | null;
+  adsense_slot_footer?: string | null;
   site_name?: string | null;
   site_description?: string | null;
   contact_email?: string | null;
@@ -196,6 +208,9 @@ function appSettingsSelectSql(): string {
   SELECT
     match_notification_prompt_enabled,
     home_youtube_url,
+    adsense_client_id,
+    adsense_enabled,
+    adsense_slot_footer,
     site_name,
     site_description,
     contact_email,
@@ -303,6 +318,9 @@ export function resolveAppSettings(
   return {
     match_notification_prompt_enabled: (row?.match_notification_prompt_enabled ?? 0) === 1,
     home_youtube_url: row?.home_youtube_url?.trim() || null,
+    adsense_client_id: row?.adsense_client_id?.trim() || null,
+    adsense_enabled: (row?.adsense_enabled ?? 0) === 1,
+    adsense_slot_footer: row?.adsense_slot_footer?.trim() || null,
     site_name: nonEmptyString(row?.site_name, d.site_name),
     site_description: nonEmptyString(row?.site_description, d.site_description),
     contact_email: nonEmptyString(row?.contact_email, d.contact_email),
@@ -439,6 +457,9 @@ export async function saveAppSettings(db: DbWriteLike, realm: Realm, settings: A
       `UPDATE app_settings SET
         match_notification_prompt_enabled = ?,
         home_youtube_url = ?,
+        adsense_client_id = ?,
+        adsense_enabled = ?,
+        adsense_slot_footer = ?,
         site_name = ?,
         site_description = ?,
         contact_email = ?,
@@ -478,6 +499,9 @@ export async function saveAppSettings(db: DbWriteLike, realm: Realm, settings: A
     .run(
       settings.match_notification_prompt_enabled ? 1 : 0,
       settings.home_youtube_url,
+      settings.adsense_client_id,
+      settings.adsense_enabled ? 1 : 0,
+      settings.adsense_slot_footer,
       settings.site_name,
       settings.site_description,
       settings.contact_email,
@@ -536,6 +560,12 @@ export function matchCancelReasonLabelFromSettings(
 
 const APP_SETTINGS_MIGRATION_COLUMNS: { name: string; ddl: string }[] = [
   { name: "home_youtube_url", ddl: "ALTER TABLE app_settings ADD COLUMN home_youtube_url TEXT" },
+  { name: "adsense_client_id", ddl: "ALTER TABLE app_settings ADD COLUMN adsense_client_id TEXT" },
+  {
+    name: "adsense_enabled",
+    ddl: "ALTER TABLE app_settings ADD COLUMN adsense_enabled INTEGER NOT NULL DEFAULT 0",
+  },
+  { name: "adsense_slot_footer", ddl: "ALTER TABLE app_settings ADD COLUMN adsense_slot_footer TEXT" },
   { name: "site_name", ddl: "ALTER TABLE app_settings ADD COLUMN site_name TEXT" },
   { name: "site_description", ddl: "ALTER TABLE app_settings ADD COLUMN site_description TEXT" },
   { name: "contact_email", ddl: "ALTER TABLE app_settings ADD COLUMN contact_email TEXT" },

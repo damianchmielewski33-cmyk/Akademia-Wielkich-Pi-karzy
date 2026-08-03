@@ -24,7 +24,9 @@ import { ScreenBlocksProvider } from "@/components/screen-blocks-provider";
 import { ScreenBlockPlaceholder } from "@/components/screen-block-placeholder";
 import { AdminScreenBlockPreviewBanner } from "@/components/admin-screen-block-preview-banner";
 import { ScreenBlockPreviewContent } from "@/components/screen-block-preview-content";
+import { AdsenseProvider } from "@/components/adsense-provider";
 import { getGoogleSiteVerification, getSiteUrl } from "@/lib/site";
+import { resolveAdsenseClientId } from "@/lib/adsense";
 import { getAppSettings } from "@/lib/app-settings";
 import {
   getScreenKeyFromPathname,
@@ -208,6 +210,7 @@ export default async function RootLayout({
   }
 
   const siteAssets = appSettings.site_assets;
+  const adsenseClientId = resolveAdsenseClientId(appSettings.adsense_client_id);
   const assetCssVars = {
     "--awp-bg-stadium": siteAssetCssUrl(siteAssets.bg_stadium),
     "--awp-bg-pitch-lines": siteAssetCssUrl(siteAssets.bg_pitch_lines),
@@ -219,6 +222,7 @@ export default async function RootLayout({
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="mobile-web-app-capable" content="yes" />
+        {adsenseClientId ? <meta name="google-adsense-account" content={adsenseClientId} /> : null}
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${displayFont.variable} murawa-bg min-h-screen antialiased font-sans`}
@@ -241,24 +245,30 @@ export default async function RootLayout({
         <SessionIdleMonitor enabled={sessionIdleLogout} />
         <ShareLinkClientCleanup />
         <PinSetupGate>
-          <SiteAssetsProvider assets={siteAssets}>
-            <ScreenBlocksProvider
-              blocks={appSettings.screen_blocks}
-              isAdmin={shellIsAdmin}
-              previewAsPlayer={screenBlocksAsPlayer}
-            >
-              <SiteShell
-                isLoggedIn={loggedInFull}
+          <AdsenseProvider
+            clientId={adsenseClientId}
+            enabled={appSettings.adsense_enabled}
+            slotFooter={appSettings.adsense_slot_footer}
+          >
+            <SiteAssetsProvider assets={siteAssets}>
+              <ScreenBlocksProvider
+                blocks={appSettings.screen_blocks}
                 isAdmin={shellIsAdmin}
-                account={accountNav}
-                adminUnreadMessages={adminUnreadMessages}
-                siteName={appSettings.site_name}
+                previewAsPlayer={screenBlocksAsPlayer}
               >
-                {session?.pinChangePending && !session.needsPinSetup ? <PinChangePendingBanner /> : null}
-                {mainContent}
-              </SiteShell>
-            </ScreenBlocksProvider>
-          </SiteAssetsProvider>
+                <SiteShell
+                  isLoggedIn={loggedInFull}
+                  isAdmin={shellIsAdmin}
+                  account={accountNav}
+                  adminUnreadMessages={adminUnreadMessages}
+                  siteName={appSettings.site_name}
+                >
+                  {session?.pinChangePending && !session.needsPinSetup ? <PinChangePendingBanner /> : null}
+                  {mainContent}
+                </SiteShell>
+              </ScreenBlocksProvider>
+            </SiteAssetsProvider>
+          </AdsenseProvider>
         </PinSetupGate>
         {walletBalancePln != null && !isPzuCupSection ? (
           <WalletBalanceFloat balancePln={walletBalancePln} />

@@ -29,7 +29,14 @@ export async function POST(req: Request) {
     return new NextResponse("HotPay not configured", { status: 503 });
   }
 
-  const enforceIp = process.env.HOTPAY_ENFORCE_IP?.trim() === "1";
+  // W produkcji domyślnie wymuszamy whitelist IP HotPay; wyłączenie: HOTPAY_ENFORCE_IP=0
+  const enforceIpEnv = process.env.HOTPAY_ENFORCE_IP?.trim();
+  const enforceIp =
+    enforceIpEnv === "0" || enforceIpEnv?.toLowerCase() === "false"
+      ? false
+      : enforceIpEnv === "1" || enforceIpEnv?.toLowerCase() === "true"
+        ? true
+        : process.env.NODE_ENV === "production";
   if (enforceIp) {
     const ip = clientIp(req);
     if (!isHotpayNotificationIp(ip)) {

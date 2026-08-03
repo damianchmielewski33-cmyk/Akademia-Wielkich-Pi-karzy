@@ -11,6 +11,7 @@ import {
 import { getDb } from "@/lib/db";
 import { isMailConfigured } from "@/lib/mail";
 import { parseYoutubeVideoIdFromUserInput } from "@/lib/site";
+import { normalizeAdsenseClientId } from "@/lib/adsense";
 import { parseRealm, REALMS } from "@/lib/realm";
 import { BLOCKABLE_SCREENS } from "@/lib/screen-blocks";
 import { BLOCKABLE_MOBILE_SCREENS } from "@/lib/screen-blocks-mobile";
@@ -38,6 +39,9 @@ const putBodySchema = z
   .object({
     match_notification_prompt_enabled: z.boolean().optional(),
     home_youtube_url: z.string().max(MAX_YT_URL_LEN).optional(),
+    adsense_client_id: z.string().max(64).optional(),
+    adsense_enabled: z.boolean().optional(),
+    adsense_slot_footer: z.string().max(32).optional(),
     site_name: z.string().trim().min(1).max(120).optional(),
     site_description: z.string().trim().max(500).optional(),
     contact_email: z.string().trim().email().max(200).optional(),
@@ -187,6 +191,40 @@ export async function PUT(req: Request) {
       );
     }
     next.home_youtube_url = yt;
+  }
+
+  if (body.adsense_client_id !== undefined) {
+    const raw = body.adsense_client_id.trim();
+    if (raw.length === 0) {
+      next.adsense_client_id = null;
+    } else {
+      const id = normalizeAdsenseClientId(raw);
+      if (!id) {
+        return NextResponse.json(
+          { error: "Nieprawidłowy Publisher ID AdSense (oczekiwane ca-pub-… lub pub-…)" },
+          { status: 400 }
+        );
+      }
+      next.adsense_client_id = id;
+    }
+  }
+
+  if (body.adsense_enabled !== undefined) {
+    next.adsense_enabled = body.adsense_enabled;
+  }
+
+  if (body.adsense_slot_footer !== undefined) {
+    const slot = body.adsense_slot_footer.trim();
+    if (slot.length === 0) {
+      next.adsense_slot_footer = null;
+    } else if (!/^\d{1,20}$/.test(slot)) {
+      return NextResponse.json(
+        { error: "Nieprawidłowy ID jednostki reklamowej (same cyfry z panelu AdSense)" },
+        { status: 400 }
+      );
+    } else {
+      next.adsense_slot_footer = slot;
+    }
   }
 
   if (body.site_name !== undefined) next.site_name = body.site_name;

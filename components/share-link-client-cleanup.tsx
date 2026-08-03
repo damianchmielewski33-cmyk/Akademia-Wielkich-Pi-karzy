@@ -1,11 +1,16 @@
 "use client";
 
 import { useEffect } from "react";
-import { CLIENT_STORAGE_CLEANUP_COOKIE, VISITOR_ID_STORAGE_KEY } from "@/lib/constants";
+import {
+  CLIENT_STORAGE_CLEANUP_COOKIE,
+  VISITOR_ID_STORAGE_KEY,
+} from "@/lib/constants";
+import { COOKIE_CONSENT_STORAGE_KEY } from "@/lib/cookie-consent";
 
 /**
  * Po przekierowaniu z middleware (udostępniony link) czyścimy pamięć przeglądarki,
- * zachowując wyłącznie anonimowy identyfikator odwiedzin (analityka).
+ * zachowując identyfikator odwiedzin oraz decyzję cookies (żeby analityka / baner
+ * nie resetowały się przy każdym zaproszeniu lub linku płatności).
  */
 export function ShareLinkClientCleanup() {
   useEffect(() => {
@@ -20,10 +25,13 @@ export function ShareLinkClientCleanup() {
       /* ignore */
     }
     let visitorId: string | null = null;
+    let cookieConsent: string | null = null;
     try {
       visitorId = localStorage.getItem(VISITOR_ID_STORAGE_KEY);
+      cookieConsent = localStorage.getItem(COOKIE_CONSENT_STORAGE_KEY);
       localStorage.clear();
       if (visitorId) localStorage.setItem(VISITOR_ID_STORAGE_KEY, visitorId);
+      if (cookieConsent) localStorage.setItem(COOKIE_CONSENT_STORAGE_KEY, cookieConsent);
     } catch {
       /* ignore */
     }

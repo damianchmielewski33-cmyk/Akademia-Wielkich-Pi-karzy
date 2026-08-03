@@ -13,6 +13,10 @@ import {
 } from "@/lib/admin-messages";
 import { getAppSettings } from "@/lib/app-settings";
 import { getServerSession } from "@/lib/auth";
+import {
+  guestHasConversationAccess,
+  readContactAdminGuestAccess,
+} from "@/lib/contact-admin-guest";
 import { contactAdminRecipientLabel } from "@/lib/contact-admin-recipients";
 import { getDb } from "@/lib/db";
 import { checkRateLimit, rateLimitKey, rateLimitedResponse, RATE } from "@/lib/rate-limit";
@@ -92,6 +96,19 @@ export async function GET(req: Request) {
     }
     senderName = roster.display_name;
     conversationKey = conversationKeyForGuest(normalizeContactName(roster.display_name));
+
+    const guestAccess = await readContactAdminGuestAccess();
+    if (!guestHasConversationAccess(guestAccess, conversationKey)) {
+      // Bez ciasteczka nie ujawniamy historii — tylko pusta rozmowa (uniemożliwia IDOR po samym imieniu).
+      return NextResponse.json({
+        conversation_key: conversationKey,
+        sender_name: senderName,
+        messages: [],
+        unread_replies: 0,
+        needs_name: false,
+        guest_locked: true,
+      });
+    }
   }
 
   if (parsed.data.mark_read && conversationKey) {
@@ -139,5 +156,6 @@ export async function GET(req: Request) {
     messages,
     unread_replies,
     needs_name: false,
+    guest_locked: false,
   });
 }

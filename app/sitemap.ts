@@ -11,6 +11,8 @@ const PUBLIC_PATHS = [
   "/kontakt",
   "/sklady",
   "/galeria",
+  "/polityka-prywatnosci",
+  "/cookies",
   "/login",
   "/register",
 ] as const;

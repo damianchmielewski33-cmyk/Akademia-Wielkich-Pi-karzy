@@ -1,4 +1,4 @@
-import { createHash, randomBytes } from "node:crypto";
+import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { getSiteUrl } from "@/lib/site";
 
 export const HOTPAY_PAYMENT_URL = "https://platnosc.hotpay.pl/";
@@ -134,7 +134,31 @@ export function verifyNotificationHash(
     secure: payload.SECURE,
     sekret: payload.SEKRET,
   });
-  return expected.toLowerCase() === payload.HASH.toLowerCase();
+  return timingSafeEqualHex(expected, payload.HASH);
+}
+
+/** Porównanie hex bez wycieku czasu (różna długość → false). */
+export function timingSafeEqualHex(a: string, b: string): boolean {
+  const left = a.trim().toLowerCase();
+  const right = b.trim().toLowerCase();
+  if (!/^[0-9a-f]+$/.test(left) || !/^[0-9a-f]+$/.test(right)) return false;
+  if (left.length !== right.length) return false;
+  try {
+    return timingSafeEqual(Buffer.from(left, "utf8"), Buffer.from(right, "utf8"));
+  } catch {
+    return false;
+  }
+}
+
+export function timingSafeEqualString(a: string, b: string): boolean {
+  const left = Buffer.from(a, "utf8");
+  const right = Buffer.from(b, "utf8");
+  if (left.length !== right.length) return false;
+  try {
+    return timingSafeEqual(left, right);
+  } catch {
+    return false;
+  }
 }
 
 export function isHotpayNotificationIp(ip: string | null | undefined): boolean {

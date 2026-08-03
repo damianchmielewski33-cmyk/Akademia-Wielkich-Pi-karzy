@@ -1,7 +1,7 @@
 import type { AppDb } from "@/lib/db";
 import { tryRemoveTemporaryGuestIfBalanceZero } from "@/lib/guest-cleanup";
 import type { HotpayNotificationPayload, HotpayPaymentKind, HotpayPaymentStatus } from "@/lib/hotpay";
-import { formatHotpayAmount, verifyNotificationHash } from "@/lib/hotpay";
+import { formatHotpayAmount, timingSafeEqualString, verifyNotificationHash } from "@/lib/hotpay";
 
 export type HotpayPaymentRow = {
   id: number;
@@ -34,6 +34,8 @@ export async function getHotpayPaymentBySessionId(
 
 /**
  * Idempotentnie księguje udaną płatność HotPay na portfelu użytkownika.
+ * Najpierw atomowo „rezerwuje” wiersz (`pending` → `success`), żeby równoległe
+ * webhooki nie zaksięgowały tej samej płatności dwukrotnie.
  */
 export async function applyHotpaySuccessCredit(
   db: AppDb,
@@ -47,6 +49,41 @@ export async function applyHotpaySuccessCredit(
   const amount = Math.round(Number(payment.amount_pln) * 100) / 100;
   if (!Number.isFinite(amount) || amount <= 0) {
     return { ok: false, error: "INVALID_AMOUNT" };
+  }
+
+  if (payment.status === "pending") {
+    const claim = await db
+      .prepare(
+        `UPDATE hotpay_payments
+         SET status = 'success',
+             hotpay_payment_id = ?,
+             secure = ?,
+             error_message = 'crediting-lock',
+             completed_at = datetime('now')
+         WHERE id = ? AND status = 'pending'`
+      )
+      .run(args.hotpayPaymentId, args.secure, payment.id);
+    if (claim.changes === 0) {
+      // Inny worker przejął wiersz — nie wznawiaj księgowania tutaj (unikamy podwójnego INSERT).
+      return { ok: true, alreadyApplied: true };
+    }
+  } else if (payment.status === "success" && payment.deposit_request_id == null) {
+    // Wznów po crashu: tylko jeden worker może trzymać crediting-lock.
+    const lock = await db
+      .prepare(
+        `UPDATE hotpay_payments
+         SET error_message = 'crediting-lock',
+             hotpay_payment_id = COALESCE(hotpay_payment_id, ?),
+             secure = COALESCE(secure, ?)
+         WHERE id = ? AND status = 'success' AND deposit_request_id IS NULL
+           AND IFNULL(error_message, '') != 'crediting-lock'`
+      )
+      .run(args.hotpayPaymentId, args.secure, payment.id);
+    if (lock.changes === 0) {
+      return { ok: true, alreadyApplied: true };
+    }
+  } else {
+    return { ok: true, alreadyApplied: true };
   }
 
   const note =
@@ -72,18 +109,20 @@ export async function applyHotpaySuccessCredit(
     )
     .run(payment.user_id, amount, depositId, note);
 
-  await db
+  const linked = await db
     .prepare(
       `UPDATE hotpay_payments
-       SET status = 'success',
-           hotpay_payment_id = ?,
-           secure = ?,
-           deposit_request_id = ?,
+       SET deposit_request_id = ?,
            error_message = NULL,
-           completed_at = datetime('now')
-       WHERE id = ?`
+           hotpay_payment_id = COALESCE(hotpay_payment_id, ?),
+           secure = COALESCE(secure, ?)
+       WHERE id = ? AND deposit_request_id IS NULL`
     )
-    .run(args.hotpayPaymentId, args.secure, depositId, payment.id);
+    .run(depositId, args.hotpayPaymentId, args.secure, payment.id);
+
+  if (linked.changes === 0) {
+    return { ok: true, alreadyApplied: true };
+  }
 
   await tryRemoveTemporaryGuestIfBalanceZero({
     userId: payment.user_id,
@@ -124,7 +163,7 @@ export async function processHotpayNotification(
   if (!verifyNotificationHash(payload, notificationPassword)) {
     return { ok: false, error: "BAD_HASH" };
   }
-  if (payload.SEKRET !== expectedSekret) {
+  if (!timingSafeEqualString(payload.SEKRET, expectedSekret)) {
     return { ok: false, error: "BAD_SEKRET" };
   }
 

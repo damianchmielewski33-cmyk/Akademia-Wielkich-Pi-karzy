@@ -162,6 +162,41 @@ describe("processHotpayNotification", () => {
     expect(Number(txCount.c)).toBe(1);
   });
 
+  it("does not double-credit under concurrent SUCCESS notifications", async () => {
+    seedPendingPayment();
+    const payload = buildMockNotification({ status: "SUCCESS" });
+
+    const [a, b] = await Promise.all([
+      processHotpayNotification(
+        db,
+        payload,
+        HOTPAY_TEST_CONFIG.notificationPassword,
+        HOTPAY_TEST_CONFIG.sekret
+      ),
+      processHotpayNotification(
+        db,
+        payload,
+        HOTPAY_TEST_CONFIG.notificationPassword,
+        HOTPAY_TEST_CONFIG.sekret
+      ),
+    ]);
+
+    expect(a.ok && b.ok).toBe(true);
+    const outcomes = [a, b].map((r) => (r.ok ? r.outcome : r.error));
+    expect(outcomes.filter((o) => o === "credited")).toHaveLength(1);
+    expect(outcomes.filter((o) => o === "already_credited")).toHaveLength(1);
+
+    const balance = sqlite
+      .prepare("SELECT COALESCE(SUM(amount_pln),0) AS b FROM wallet_transactions WHERE user_id = ?")
+      .get(userId) as { b: number };
+    expect(Number(balance.b)).toBe(50);
+
+    const txCount = sqlite
+      .prepare("SELECT COUNT(*) AS c FROM wallet_transactions WHERE user_id = ?")
+      .get(userId) as { c: number };
+    expect(Number(txCount.c)).toBe(1);
+  });
+
   it("marks failure without crediting on FAILURE", async () => {
     seedPendingPayment();
     const payload = buildMockNotification({ status: "FAILURE" });

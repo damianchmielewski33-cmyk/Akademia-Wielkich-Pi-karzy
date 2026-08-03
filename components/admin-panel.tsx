@@ -167,6 +167,10 @@ type AnalyticsPayload = {
     distinct_players_viewed_and_signed_match_in_range: number;
     pct_signed_after_view: number | null;
   };
+  share_links: {
+    zaproszenie: { total_views: number; unique_visitors: number };
+    platnosci_public: { total_views: number; unique_visitors: number };
+  };
   screens: { screen_key: string; label: string; total_views: number; unique_visitors: number }[];
   /** Zdarzenia z serwera (logowanie, zapisy, statystyki itd.) w wybranym zakresie dat. */
   activity_events: {
@@ -1425,6 +1429,34 @@ function AnalyticsView({
                   ) : data.terminarz_funnel.distinct_players_viewed === 0 ? (
                     <span className="text-zinc-500"> (–)</span>
                   ) : null}
+                </p>
+              </div>
+            </AdminCard>
+            <AdminCard
+              tone="data"
+              title="Linki zewnętrzne"
+              description="Zaproszenia i publiczne linki płatności"
+            >
+              <div className="space-y-2 text-sm admin-data-muted">
+                <p>
+                  Zaproszenia:{" "}
+                  <strong className="text-zinc-900 dark:text-zinc-50 tabular-nums">
+                    {data.share_links?.zaproszenie.total_views ?? 0}
+                  </strong>
+                  <span className="text-zinc-500">
+                    {" "}
+                    odsłon / {data.share_links?.zaproszenie.unique_visitors ?? 0} unikalnych
+                  </span>
+                </p>
+                <p>
+                  Linki płatności:{" "}
+                  <strong className="text-zinc-900 dark:text-zinc-50 tabular-nums">
+                    {data.share_links?.platnosci_public.total_views ?? 0}
+                  </strong>
+                  <span className="text-zinc-500">
+                    {" "}
+                    odsłon / {data.share_links?.platnosci_public.unique_visitors ?? 0} unikalnych
+                  </span>
                 </p>
               </div>
             </AdminCard>

@@ -75,4 +75,6 @@ export const RATE = {
   appBridgeGo: { limit: 120, windowMs: 60 * 1000 },
   /** Config kanału aplikacji Android. */
   mobileConfig: { limit: 120, windowMs: 60 * 1000 },
+  /** Zapis gościa przez link zaproszenia. */
+  guestSignup: { limit: 12, windowMs: 60 * 60 * 1000 },
 } as const;

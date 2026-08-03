@@ -10,6 +10,11 @@ import {
 } from "@/lib/admin-messages";
 import { getAppSettings } from "@/lib/app-settings";
 import { getServerSession } from "@/lib/auth";
+import {
+  guestHasConversationAccess,
+  readContactAdminGuestAccess,
+  setContactAdminGuestCookie,
+} from "@/lib/contact-admin-guest";
 import { CONTACT_ADMIN_RECIPIENT_KEYS, isContactAdminRecipientKey } from "@/lib/contact-admin-recipients";
 import { getDb, logActivity } from "@/lib/db";
 import { checkRateLimitDistributed } from "@/lib/rate-limit-db";
@@ -115,6 +120,24 @@ export async function POST(req: Request) {
     senderName = roster.display_name;
     conversationKey = conversationKeyForGuest(normalizeContactName(roster.display_name));
     linkedUserId = null;
+
+    const existing = (await db
+      .prepare(
+        `SELECT 1 AS ok FROM admin_messages WHERE conversation_key = ? LIMIT 1`
+      )
+      .get(conversationKey)) as { ok: number } | undefined;
+    if (existing) {
+      const guestAccess = await readContactAdminGuestAccess();
+      if (!guestHasConversationAccess(guestAccess, conversationKey)) {
+        return NextResponse.json(
+          {
+            error:
+              "Ta rozmowa jest już rozpoczęta. Użyj tej samej przeglądarki co wcześniej albo zaloguj się na konto.",
+          },
+          { status: 403 }
+        );
+      }
+    }
   }
 
   let senderEmail: string | null = null;
@@ -137,6 +160,10 @@ export async function POST(req: Request) {
        ) VALUES (?, ?, ?, ?, ?, 'unread', 'inbound', ?, ?)`
     )
     .run(linkedUserId, senderName, senderEmail, recipient_key, text || "📷", conversationKey, attachment);
+
+  if (!userId) {
+    await setContactAdminGuestCookie(conversationKey);
+  }
 
   await logActivity(userId, `Wiadomość do admina (${recipient_key}) od ${senderName}`);
   void notifyAdminsByEmail(

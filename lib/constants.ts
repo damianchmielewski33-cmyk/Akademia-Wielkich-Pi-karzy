@@ -6,8 +6,11 @@
 export const SESSION_COOKIE =
   process.env.NODE_ENV === "production" ? "__Host-awp_session" : "awp_session";
 
-/**
- * Parametr zapytania dodawany do linków wysyłanych na zewnątrz (e-mail, udostępnienie).
+/** Ciasteczko gościa czatu z organizatorem — podpisany dostęp do własnej rozmowy (bez IDOR po samym imieniu). */
+export const CONTACT_ADMIN_GUEST_COOKIE =
+  process.env.NODE_ENV === "production" ? "__Host-awp_contact_guest" : "awp_contact_guest";
+
+/** Parametr zapytania dodawany do linków wysyłanych na zewnątrz (e-mail, udostępnienie).
  * Middleware usuwa sesję i przekierowuje bez tego parametru — odbiorca nie jest traktowany jak zalogowany użytkownik z oryginalnej przeglądarki.
  */
 export const SHARE_LINK_QUERY_PARAM = "awp_share";

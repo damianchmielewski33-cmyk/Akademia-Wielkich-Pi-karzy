@@ -33,6 +33,7 @@ import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
 import { LogoutConfirmModal } from "@/components/logout-confirm-modal";
 import { SiteAssetImage } from "@/components/site-asset-image";
 import { useSiteAsset } from "@/components/site-assets-provider";
+import { AdsenseSlot } from "@/components/adsense-slot";
 import { cn } from "@/lib/utils";
 import { SITE_NAME } from "@/lib/site";
 import { useScreenBlocks } from "@/components/screen-blocks-provider";
@@ -453,6 +454,7 @@ export function SiteShell({
           />
         </div>
         <div className="relative z-10 flex flex-1 flex-col">{children}</div>
+        <AdsenseSlot className="relative z-10 mt-auto" />
       </main>
 
       <footer className="relative z-20 border-t border-emerald-950/25 bg-gradient-to-b from-emerald-950 via-emerald-900 to-emerald-950 text-emerald-50 pb-[env(safe-area-inset-bottom)]">
@@ -478,9 +480,15 @@ export function SiteShell({
             <div className="min-w-0">
               <p className="text-sm font-semibold text-white">{siteName}</p>
               <p className="text-xs text-emerald-200/80">Terminarz, statystyki i społeczność na boisku</p>
-              <p className="mt-2 text-xs text-emerald-200/85">
+              <p className="mt-2 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs text-emerald-200/85 sm:justify-start">
                 <Link href="/o-nas" className="font-medium underline-offset-2 hover:underline">
                   O nas i zasady
+                </Link>
+                <Link href="/polityka-prywatnosci" className="font-medium underline-offset-2 hover:underline">
+                  Polityka prywatności
+                </Link>
+                <Link href="/cookies" className="font-medium underline-offset-2 hover:underline">
+                  Cookies
                 </Link>
               </p>
             </div>
