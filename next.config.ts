@@ -17,16 +17,17 @@ const securityHeaders = [
     key: "Content-Security-Policy",
     value: [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline'",
-      "style-src 'self' 'unsafe-inline'",
+      // AdSense: pagead2 + partner / tag services (weryfikacja witryny + wyświetlanie reklam)
+      "script-src 'self' 'unsafe-inline' https://pagead2.googlesyndication.com https://partner.googleadservices.com https://www.googletagservices.com https://www.google.com https://ep2.adtrafficquality.google",
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "img-src 'self' data: blob: https:",
-      "font-src 'self' data:",
+      "font-src 'self' data: https://fonts.gstatic.com",
       "connect-src 'self' https:",
-      "frame-src https://www.youtube.com",
+      "frame-src https://www.youtube.com https://googleads.g.doubleclick.net https://tpc.g.doubleclick.net https://www.google.com https://www.googleadservices.com https://pagead2.googlesyndication.com https://ep2.adtrafficquality.google https://www.youtube-nocookie.com",
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",
-      "worker-src 'self'",
+      "worker-src 'self' blob:",
     ].join("; "),
   },
 ] as const;

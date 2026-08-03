@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 
 declare global {
   interface Window {
-    adsbygoogle?: unknown[];
+    adsbygoogle?: unknown[] & { pauseAdRequests?: number };
   }
 }
 

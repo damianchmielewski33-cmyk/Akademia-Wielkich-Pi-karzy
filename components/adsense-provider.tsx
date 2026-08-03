@@ -9,7 +9,6 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import Script from "next/script";
 import {
   acceptAllCookies,
   COOKIE_CONSENT_STORAGE_KEY,
@@ -18,6 +17,12 @@ import {
   type CookieConsentState,
 } from "@/lib/cookie-consent";
 import { CookieConsentBanner } from "@/components/cookie-consent-banner";
+
+declare global {
+  interface Window {
+    adsbygoogle?: unknown[] & { pauseAdRequests?: number };
+  }
+}
 
 type AdsenseContextValue = {
   clientId: string | null;
@@ -42,6 +47,15 @@ export function useCookieConsent() {
 
 export function useAdsense() {
   return useCookieConsent();
+}
+
+function setAdsensePause(paused: boolean) {
+  try {
+    window.adsbygoogle = window.adsbygoogle || [];
+    window.adsbygoogle.pauseAdRequests = paused ? 1 : 0;
+  } catch {
+    /* ignore */
+  }
 }
 
 type Props = {
@@ -84,6 +98,11 @@ export function AdsenseProvider({
   const marketingAllowed = Boolean(enabled && clientId && consent?.marketing);
   const analyticsAllowed = Boolean(consent?.analytics);
 
+  useEffect(() => {
+    if (!enabled || !clientId) return;
+    setAdsensePause(!marketingAllowed);
+  }, [enabled, clientId, marketingAllowed]);
+
   const value = useMemo<AdsenseContextValue>(
     () => ({
       clientId,
@@ -112,15 +131,6 @@ export function AdsenseProvider({
     <AdsenseContext.Provider value={value}>
       {children}
       {hydrated ? <CookieConsentBanner /> : null}
-      {marketingAllowed && clientId ? (
-        <Script
-          id="adsense-loader"
-          async
-          src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${encodeURIComponent(clientId)}`}
-          crossOrigin="anonymous"
-          strategy="afterInteractive"
-        />
-      ) : null}
     </AdsenseContext.Provider>
   );
 }

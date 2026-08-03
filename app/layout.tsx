@@ -223,6 +223,21 @@ export default async function RootLayout({
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="mobile-web-app-capable" content="yes" />
         {adsenseClientId ? <meta name="google-adsense-account" content={adsenseClientId} /> : null}
+        {adsenseClientId && appSettings.adsense_enabled ? (
+          <>
+            <script
+              dangerouslySetInnerHTML={{
+                __html:
+                  "(function(){try{window.adsbygoogle=window.adsbygoogle||[];window.adsbygoogle.pauseAdRequests=1;}catch(e){}})();",
+              }}
+            />
+            <script
+              async
+              src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${encodeURIComponent(adsenseClientId)}`}
+              crossOrigin="anonymous"
+            />
+          </>
+        ) : null}
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${displayFont.variable} murawa-bg min-h-screen antialiased font-sans`}
