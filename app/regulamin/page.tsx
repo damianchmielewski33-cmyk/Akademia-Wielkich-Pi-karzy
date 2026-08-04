@@ -98,8 +98,8 @@ export default async function RegulaminPage() {
             <h2 className="pitch-heading text-lg">4. Zapisy na mecze</h2>
             <p className="mt-2">
               Zapis na mecz odbywa się poprzez funkcje Serwisu (terminarz / zaproszenia). Liczba
-              miejsc, lokalizacja, termin oraz ewentualna opłata wynikają z informacji widocznych
-              przy danym meczu lub z ustawień akademii.
+              miejsc, lokalizacja, termin oraz zasady opłaty wynikają z informacji widocznych przy
+              danym meczu lub z ustawień akademii.
             </p>
             <p className="mt-2">
               Organizator zastrzega możliwość odwołania, przełożenia lub zmiany szczegółów meczu z
@@ -119,8 +119,16 @@ export default async function RegulaminPage() {
                 wskazanym w Serwisie (np. BLIK na telefon — po potwierdzeniu przez administratora);
               </li>
               <li>
-                kwota wpisowego może wynikać z niedopłaty na portfelu, domyślnej opłaty w ustawieniach
-                lub rozliczenia konkretnego meczu przez administratora;
+                <strong className="text-white">cena składki (wpisowego) za mecz zależy od liczby
+                zapisanych graczy</strong>
+                : łączny koszt organizacji meczu (np. wynajem boiska) jest dzielony między
+                uczestników zapisanych na dany mecz — im więcej zapisanych, tym niższa składka na
+                osobę; ostateczna kwota na zawodnika jest ustalana przy rozliczeniu meczu;
+              </li>
+              <li>
+                do czasu rozliczenia w Serwisie może być widoczna orientacyjna / domyślna kwota
+                wpisowego (np. z ustawień akademii lub niedopłaty na portfelu) — nie zawsze jest to
+                ostateczna składka za konkretny mecz;
               </li>
               <li>
                 obciążenie portfela za mecz (rozliczenie) jest dokonywane przez administratora po
