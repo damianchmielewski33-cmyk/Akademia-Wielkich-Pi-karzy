@@ -499,6 +499,10 @@ export function AdminSettingsTab({ loading, onReload, settingsRealm = "academy" 
             /ads.txt
           </a>
           . Strony prawne:{" "}
+          <a className="underline underline-offset-2" href="/regulamin" target="_blank" rel="noreferrer">
+            regulamin
+          </a>
+          ,{" "}
           <a className="underline underline-offset-2" href="/polityka-prywatnosci" target="_blank" rel="noreferrer">
             polityka prywatności
           </a>

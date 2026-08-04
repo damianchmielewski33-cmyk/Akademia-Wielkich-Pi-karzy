@@ -127,6 +127,10 @@ export default async function PolitykaPrywatnosciPage() {
               <a className="pitch-link" href={`mailto:${email}`}>
                 {email}
               </a>
+              . Zasady korzystania z serwisu i płatności:{" "}
+              <Link className="pitch-link" href="/regulamin">
+                regulamin
+              </Link>
               .
             </p>
           </section>

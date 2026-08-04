@@ -12,6 +12,7 @@ const PUBLIC_PATHS = [
   "/sklady",
   "/galeria",
   "/polityka-prywatnosci",
+  "/regulamin",
   "/cookies",
   "/login",
   "/register",

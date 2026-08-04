@@ -22,6 +22,7 @@ export const SCREEN_LABELS: Record<string, string> = {
   ustaw_pin: "Ustawienie PIN",
   cookies: "Polityka cookies",
   polityka_prywatnosci: "Polityka prywatności",
+  regulamin: "Regulamin",
   offline: "Offline",
   other: "Inna strona",
 };
@@ -71,6 +72,7 @@ export function getScreenFromPathname(pathname: string | null): { key: string; l
   if (path === "/polityka-prywatnosci") {
     return { key: "polityka_prywatnosci", label: SCREEN_LABELS.polityka_prywatnosci };
   }
+  if (path === "/regulamin") return { key: "regulamin", label: SCREEN_LABELS.regulamin };
   if (path === "/ustaw-pin") return { key: "ustaw_pin", label: SCREEN_LABELS.ustaw_pin };
   if (path === "/offline") return { key: "offline", label: SCREEN_LABELS.offline };
   if (path.startsWith("/confirm/")) return { key: "confirm", label: SCREEN_LABELS.confirm };

@@ -484,6 +484,9 @@ export function SiteShell({
                 <Link href="/o-nas" className="font-medium underline-offset-2 hover:underline">
                   O nas i zasady
                 </Link>
+                <Link href="/regulamin" className="font-medium underline-offset-2 hover:underline">
+                  Regulamin
+                </Link>
                 <Link href="/polityka-prywatnosci" className="font-medium underline-offset-2 hover:underline">
                   Polityka prywatności
                 </Link>
