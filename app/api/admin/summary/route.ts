@@ -26,7 +26,50 @@ export async function GET() {
       c: number;
     }
   ).c;
+  const pin_change_pending = (
+    (await db
+      .prepare("SELECT COUNT(*) AS c FROM users WHERE pin_hash_pending IS NOT NULL")
+      .get()) as { c: number }
+  ).c;
   const unread_messages = await getUnreadAdminMessageCount(db);
+  const negative_balances = (
+    (await db
+      .prepare(
+        `SELECT COUNT(*) AS c FROM (
+           SELECT u.id
+           FROM users u
+           LEFT JOIN wallet_transactions t ON t.user_id = u.id
+           WHERE COALESCE(u.is_admin, 0) = 0
+             AND COALESCE(u.is_temporary, 0) = 0
+           GROUP BY u.id
+           HAVING COALESCE(ROUND(SUM(t.amount_pln), 2), 0) < 0
+         )`
+      )
+      .get()) as { c: number } | undefined
+  )?.c ?? 0;
+  const pending_deposits = (
+    (await db
+      .prepare(`SELECT COUNT(*) AS c FROM wallet_deposit_requests WHERE status = 'pending'`)
+      .get()) as { c: number } | undefined
+  )?.c ?? 0;
+
+  const next_matches = (await db
+    .prepare(
+      `SELECT id, match_date AS date, match_time AS time, location, signed_up AS players_count, max_slots
+       FROM matches
+       WHERE match_date >= date('now') AND played = 0 AND COALESCE(cancelled, 0) = 0
+       ORDER BY match_date ASC, match_time ASC
+       LIMIT 5`
+    )
+    .all()) as {
+    id: number;
+    date: string;
+    time: string;
+    location: string;
+    players_count: number;
+    max_slots: number;
+  }[];
+
   return NextResponse.json({
     players,
     admins,
@@ -34,6 +77,11 @@ export async function GET() {
     stats,
     upcoming_matches,
     pin_reset_requests,
+    pin_change_pending,
     unread_messages,
+    negative_balances,
+    pending_deposits,
+    next_matches,
+    admin_sections: gate.session.adminSections,
   });
 }

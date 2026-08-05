@@ -35,9 +35,14 @@ export type AppSession = {
   needsPinSetup: boolean;
   /** Zgłoszona zmiana PIN-u czeka na akceptację admina — bez pełnego dostępu do konta. */
   pinChangePending: boolean;
+  /**
+   * Sekcje panelu admina. `null` = pełny dostęp (domyślnie dla adminów bez ograniczeń).
+   * Puste / brak tylko przy nie-adminie.
+   */
+  adminSections: import("@/lib/admin-permissions").AdminSectionId[] | null;
 };
 
-type JwtSessionFields = Omit<AppSession, "needsPinSetup" | "pinChangePending">;
+type JwtSessionFields = Omit<AppSession, "needsPinSetup" | "pinChangePending" | "adminSections">;
 
 function sessionMaxAgeSec(rememberMe: boolean): number {
   // Jeśli użytkownik nie zaznaczył „Nie wylogowuj mnie”, token powinien wygasać szybciej niż 30 dni.
@@ -85,23 +90,28 @@ export const getServerSession = cache(async (): Promise<AppSession | null> => {
     const session = await verifySessionToken(token);
     const db = await getDb();
     const row = (await db
-      .prepare("SELECT auth_version, pin_hash, pin_hash_pending, is_admin FROM users WHERE id = ?")
+      .prepare(
+        "SELECT auth_version, pin_hash, pin_hash_pending, is_admin, admin_permissions FROM users WHERE id = ?"
+      )
       .get(session.userId)) as
       | {
           auth_version: number;
           pin_hash: string | null;
           pin_hash_pending: string | null;
           is_admin: number;
+          admin_permissions: string | null;
         }
       | undefined;
     if (!row || row.auth_version !== session.authVersion) return null;
     const needsPinSetup = !row.pin_hash;
     const pinChangePending = Boolean(row.pin_hash_pending);
+    const { parseAdminPermissions } = await import("@/lib/admin-permissions");
     return {
       ...session,
       isAdmin: row.is_admin === 1,
       needsPinSetup,
       pinChangePending,
+      adminSections: row.is_admin === 1 ? parseAdminPermissions(row.admin_permissions) : null,
     };
   } catch {
     return null;

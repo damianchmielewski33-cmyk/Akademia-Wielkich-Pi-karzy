@@ -35,25 +35,165 @@ type Props = {
   loading: boolean;
   onReload: () => void;
   settingsRealm?: "academy" | "pzu_cup";
+  focusSectionId?: string | null;
+  onFocusSectionConsumed?: () => void;
 };
 
 function settingsApiUrl(realm: "academy" | "pzu_cup") {
   return realm === "pzu_cup" ? "/api/admin/app-settings?realm=pzu_cup" : "/api/admin/app-settings";
 }
 
+type SettingsTocItem = { id: string; label: string };
+
+type SettingsTocGroup = { label: string; items: SettingsTocItem[] };
+
+const WEB_SETTINGS_TOC: SettingsTocGroup[] = [
+  {
+    label: "System",
+    items: [{ id: "settings-system", label: "Co działa na serwerze" }],
+  },
+  {
+    label: "Marka i treści",
+    items: [
+      { id: "settings-brand", label: "Nazwa i opis" },
+      { id: "settings-assets", label: "Logo i tła" },
+      { id: "settings-home-video", label: "Film na stronie głównej" },
+    ],
+  },
+  {
+    label: "Kontakt",
+    items: [{ id: "settings-contact", label: "Kontakt i organizatorzy" }],
+  },
+  {
+    label: "Reklamy i rejestracja",
+    items: [
+      { id: "settings-adsense", label: "Google AdSense" },
+      { id: "settings-registration", label: "Rejestracja i powiadomienia" },
+    ],
+  },
+  {
+    label: "Mecze i rankingi",
+    items: [
+      { id: "settings-match-defaults", label: "Domyślne mecze" },
+      { id: "settings-ranking-points", label: "Punkty rankingowe" },
+      { id: "settings-pitch-plan", label: "Plan boiska" },
+      { id: "settings-cancel-reasons", label: "Powody anulowania" },
+    ],
+  },
+];
+
+const MOBILE_SETTINGS_TOC: SettingsTocGroup[] = [
+  {
+    label: "Aplikacja",
+    items: [
+      { id: "settings-m-name", label: "Nazwa w aplikacji" },
+      { id: "settings-m-contact", label: "Kontakt" },
+    ],
+  },
+  {
+    label: "Mecze i rankingi",
+    items: [
+      { id: "settings-m-matches", label: "Domyślne mecze" },
+      { id: "settings-m-ranking", label: "Punkty rankingowe" },
+      { id: "settings-m-cancel", label: "Powody anulowania" },
+    ],
+  },
+];
+
+function scrollToSettingsSection(id: string) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function categoryForSectionId(sectionId: string, groups: SettingsTocGroup[]): string | null {
+  for (const g of groups) {
+    if (g.items.some((i) => i.id === sectionId)) return g.label;
+  }
+  return null;
+}
+
+function SettingsCategoryNav({
+  groups,
+  activeLabel,
+  onChange,
+}: {
+  groups: SettingsTocGroup[];
+  activeLabel: string;
+  onChange: (label: string) => void;
+}) {
+  return (
+    <nav
+      className="-mx-1 mb-4 flex gap-1.5 overflow-x-auto overscroll-x-contain px-1 pb-1 [scrollbar-width:thin]"
+      aria-label="Kategorie ustawień"
+    >
+      {groups.map((g) => {
+        const active = g.label === activeLabel;
+        return (
+          <button
+            key={g.label}
+            type="button"
+            onClick={() => onChange(g.label)}
+            className={cn(
+              "awp-focus-ring shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors",
+              active
+                ? "bg-[var(--mundial-gold)]/25 text-white ring-1 ring-[var(--mundial-gold)]/50"
+                : "border border-white/20 bg-black/15 text-emerald-100/90 hover:bg-white/10 hover:text-white"
+            )}
+          >
+            {g.label}
+          </button>
+        );
+      })}
+    </nav>
+  );
+}
+
+function SettingsSectionNav({
+  items,
+}: {
+  items: SettingsTocItem[];
+}) {
+  if (items.length <= 1) return null;
+  return (
+    <nav
+      className="mb-4 flex flex-wrap gap-1.5"
+      aria-label="Sekcje w kategorii"
+    >
+      {items.map((item) => (
+        <button
+          key={item.id}
+          type="button"
+          onClick={() => scrollToSettingsSection(item.id)}
+          className="awp-focus-ring rounded-lg border border-white/15 bg-black/10 px-2.5 py-1 text-xs font-medium text-emerald-100/85 transition-colors hover:bg-white/10 hover:text-white"
+        >
+          {item.label}
+        </button>
+      ))}
+    </nav>
+  );
+}
+
 function SettingsSection({
+  id,
   title,
   description,
   children,
+  hidden,
 }: {
+  id?: string;
   title: string;
   description?: string;
   children: React.ReactNode;
+  hidden?: boolean;
 }) {
+  if (hidden) return null;
   return (
-    <AdminCard title={title} description={description}>
-      <div className="space-y-4">{children}</div>
-    </AdminCard>
+    <div id={id} className={id ? "scroll-mt-6" : undefined}>
+      <AdminCard title={title} description={description}>
+        <div className="space-y-4">{children}</div>
+      </AdminCard>
+    </div>
   );
 }
 
@@ -75,12 +215,37 @@ function FieldRow({
   );
 }
 
-export function AdminSettingsTab({ loading, onReload, settingsRealm = "academy" }: Props) {
+export function AdminSettingsTab({
+  loading,
+  onReload,
+  settingsRealm = "academy",
+  focusSectionId,
+  onFocusSectionConsumed,
+}: Props) {
   const [channel, setChannel] = useState<ClientChannel>("web");
+  const [settingsCategory, setSettingsCategory] = useState(WEB_SETTINGS_TOC[0]?.label ?? "System");
   const [settings, setSettings] = useState<AppSettingsApiResponse | null>(null);
   const [saving, setSaving] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [cancelReasonsDraft, setCancelReasonsDraft] = useState<MatchCancelReasonEntry[]>([]);
+  const [saveFlash, setSaveFlash] = useState<"idle" | "saving" | "saved" | "error">("idle");
+
+  const activeTocGroups = channel === "mobile" ? MOBILE_SETTINGS_TOC : WEB_SETTINGS_TOC;
+
+  useEffect(() => {
+    setSettingsCategory(activeTocGroups[0]?.label ?? "System");
+  }, [channel, activeTocGroups]);
+
+  useEffect(() => {
+    if (!focusSectionId) return;
+    const cat = categoryForSectionId(focusSectionId, WEB_SETTINGS_TOC);
+    if (cat) {
+      setChannel("web");
+      setSettingsCategory(cat);
+      window.setTimeout(() => scrollToSettingsSection(focusSectionId), 120);
+    }
+    onFocusSectionConsumed?.();
+  }, [focusSectionId, onFocusSectionConsumed]);
 
   const load = useCallback(async () => {
     setFetching(true);
@@ -113,6 +278,8 @@ export function AdminSettingsTab({ loading, onReload, settingsRealm = "academy" 
   const save = useCallback(
     async (patch: Record<string, unknown>) => {
       setSaving(true);
+      setSaveFlash("saving");
+      const toastId = toast.loading("Zapisywanie…");
       try {
         const res = await fetch(settingsApiUrl(settingsRealm), {
           method: "PUT",
@@ -121,16 +288,20 @@ export function AdminSettingsTab({ loading, onReload, settingsRealm = "academy" 
         });
         const j = (await res.json().catch(() => ({}))) as AppSettingsApiResponse & { error?: string };
         if (!res.ok) {
-          toast.error(typeof j.error === "string" ? j.error : "Nie udało się zapisać");
+          toast.error(typeof j.error === "string" ? j.error : "Nie udało się zapisać", { id: toastId });
+          setSaveFlash("error");
           return;
         }
         setSettings(j);
         setCancelReasonsDraft(
           channel === "mobile" ? j.mobile_settings.match_cancel_reasons : j.match_cancel_reasons
         );
-        toast.success("Zapisano ustawienia");
+        toast.success("Zapisano", { id: toastId });
+        setSaveFlash("saved");
+        window.setTimeout(() => setSaveFlash("idle"), 1800);
       } catch {
-        toast.error("Błąd połączenia");
+        toast.error("Błąd połączenia", { id: toastId });
+        setSaveFlash("error");
       } finally {
         setSaving(false);
       }
@@ -154,6 +325,10 @@ export function AdminSettingsTab({ loading, onReload, settingsRealm = "academy" 
 
   const busy = loading || fetching || saving;
   const mobile = settings?.mobile_settings;
+  const activeGroup = activeTocGroups.find((g) => g.label === settingsCategory) ?? activeTocGroups[0];
+  const visibleSectionIds = new Set(activeGroup?.items.map((i) => i.id) ?? []);
+
+  const sectionVisible = (id: string) => visibleSectionIds.has(id);
 
   if (fetching && !settings) {
     return (
@@ -187,12 +362,36 @@ export function AdminSettingsTab({ loading, onReload, settingsRealm = "academy" 
 
   return (
     <div className="space-y-6">
+      {settingsRealm === "pzu_cup" ? (
+        <div className="rounded-xl border border-amber-400/40 bg-amber-500/15 px-4 py-3 text-sm text-amber-50">
+          <p className="font-semibold">Realm: PZU Cup</p>
+          <p className="mt-1 text-amber-100/85">
+            Edytujesz ustawienia turnieju — osobne od Akademii. Zmiany tutaj nie wpływają na stronę główną akademii.
+          </p>
+        </div>
+      ) : (
+        <div className="rounded-xl border border-emerald-400/30 bg-emerald-950/40 px-4 py-3 text-sm text-emerald-50">
+          <p className="font-semibold">Realm: Akademia</p>
+          <p className="mt-1 text-emerald-100/80">
+            Ustawienia strony akademii i aplikacji. Turniej PZU Cup ma osobną zakładkę z własną konfiguracją.
+          </p>
+        </div>
+      )}
+
       <AdminToolbar
-        title={channel === "web" ? "Ustawienia strony" : "Ustawienia aplikacji"}
+        title={
+          settingsRealm === "pzu_cup"
+            ? channel === "web"
+              ? "Ustawienia PZU Cup (WWW)"
+              : "Ustawienia PZU Cup (aplikacja)"
+            : channel === "web"
+              ? "Ustawienia strony"
+              : "Ustawienia aplikacji"
+        }
         description={
           channel === "web"
-            ? "Konfiguracja strony WWW — treści, kontakty, mecze. Po wyjściu z pola zmiany zapisują się same."
-            : "Osobna konfiguracja aplikacji Android — te same pola biznesowe, niezależne od strony WWW."
+            ? "Konfiguracja WWW — treści, kontakty, mecze. Po wyjściu z pola zmiany zapisują się same."
+            : "Osobna konfiguracja aplikacji Android — niezależna od WWW."
         }
         onReload={() => {
           onReload();
@@ -200,6 +399,16 @@ export function AdminSettingsTab({ loading, onReload, settingsRealm = "academy" 
         }}
         loading={busy}
       >
+        {saveFlash === "saving" ? (
+          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-200">
+            <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+            Zapisywanie…
+          </span>
+        ) : saveFlash === "saved" ? (
+          <span className="text-xs font-semibold text-emerald-300">Zapisano</span>
+        ) : saveFlash === "error" ? (
+          <span className="text-xs font-semibold text-red-300">Błąd zapisu</span>
+        ) : null}
         {channel === "mobile" ? (
           <Button type="button" variant="outline" size="sm" disabled={busy} onClick={() => void copyWebToMobile()}>
             Kopiuj ze strony → aplikacja
@@ -209,6 +418,13 @@ export function AdminSettingsTab({ loading, onReload, settingsRealm = "academy" 
 
       <AdminChannelToggle channel={channel} onChange={setChannel} />
 
+      <SettingsCategoryNav
+        groups={activeTocGroups}
+        activeLabel={settingsCategory}
+        onChange={setSettingsCategory}
+      />
+      <SettingsSectionNav items={activeGroup?.items ?? []} />
+
       {channel === "mobile" && mobile ? (
         <MobileSettingsEditor
           mobile={mobile}
@@ -216,10 +432,13 @@ export function AdminSettingsTab({ loading, onReload, settingsRealm = "academy" 
           cancelReasonsDraft={cancelReasonsDraft}
           setCancelReasonsDraft={setCancelReasonsDraft}
           onSavePatch={(patch) => void saveMobilePatch(patch)}
+          visibleSectionIds={visibleSectionIds}
         />
       ) : (
         <>
       <SettingsSection
+        id="settings-system"
+        hidden={!sectionVisible("settings-system")}
         title="Co działa na serwerze"
         description="Tylko podgląd — tych rzeczy nie zmienisz tutaj. Gdy coś jest wyłączone, poproś osobę od hostingu o konfigurację."
       >
@@ -246,6 +465,8 @@ export function AdminSettingsTab({ loading, onReload, settingsRealm = "academy" 
       </SettingsSection>
 
       <SettingsSection
+        id="settings-brand"
+        hidden={!sectionVisible("settings-brand")}
         title="Nazwa i opis strony"
         description="Widoczne w nagłówku, w wynikach Google i przy udostępnianiu linku."
       >
@@ -280,6 +501,8 @@ export function AdminSettingsTab({ loading, onReload, settingsRealm = "academy" 
       </SettingsSection>
 
       <SettingsSection
+        id="settings-assets"
+        hidden={!sectionVisible("settings-assets")}
         title="Logo i tła"
         description="Wgraj własne grafiki albo zostaw domyślne. Poniżej tabela zalecanych rozmiarów — każde pole ma też szczegóły przy wgrywaniu."
       >
@@ -322,6 +545,8 @@ export function AdminSettingsTab({ loading, onReload, settingsRealm = "academy" 
       </SettingsSection>
 
       <SettingsSection
+        id="settings-contact"
+        hidden={!sectionVisible("settings-contact")}
         title="Kontakt i organizatorzy"
         description="Dane na stronie Kontakt, w stopce i przy płatnościach BLIK."
       >
@@ -421,6 +646,8 @@ export function AdminSettingsTab({ loading, onReload, settingsRealm = "academy" 
       </SettingsSection>
 
       <SettingsSection
+        id="settings-home-video"
+        hidden={!sectionVisible("settings-home-video")}
         title="Film na stronie głównej"
         description="Opcjonalny embed YouTube — np. skrót meczu lub zapowiedź."
       >
@@ -445,6 +672,8 @@ export function AdminSettingsTab({ loading, onReload, settingsRealm = "academy" 
       </SettingsSection>
 
       <SettingsSection
+        id="settings-adsense"
+        hidden={!sectionVisible("settings-adsense")}
         title="Google AdSense"
         description="Reklamy wyświetlane po zgodzie użytkownika na cookies marketingowe. Nie pokazujemy ich na logowaniu, płatnościach ani w panelu admina."
       >
@@ -561,6 +790,8 @@ export function AdminSettingsTab({ loading, onReload, settingsRealm = "academy" 
       </SettingsSection>
 
       <SettingsSection
+        id="settings-registration"
+        hidden={!sectionVisible("settings-registration")}
         title="Rejestracja i powiadomienia"
         description="Kto może założyć konto samodzielnie oraz czy gracze dostają e-maile o nowych terminach."
       >
@@ -602,6 +833,8 @@ export function AdminSettingsTab({ loading, onReload, settingsRealm = "academy" 
       </SettingsSection>
 
       <SettingsSection
+        id="settings-match-defaults"
+        hidden={!sectionVisible("settings-match-defaults")}
         title="Domyślne ustawienia nowego meczu"
         description="Te wartości podpowiadają się przy dodawaniu terminu — dla każdego meczu możesz je nadpisać."
       >
@@ -655,6 +888,8 @@ export function AdminSettingsTab({ loading, onReload, settingsRealm = "academy" 
       </SettingsSection>
 
       <SettingsSection
+        id="settings-ranking-points"
+        hidden={!sectionVisible("settings-ranking-points")}
         title="Rankingi — punkty za statystyki"
         description="Ile punktów do rankingu dostaje zawodnik za gol, asystę, kilometr biegu lub obroniony strzał."
       >
@@ -686,6 +921,8 @@ export function AdminSettingsTab({ loading, onReload, settingsRealm = "academy" 
       </SettingsSection>
 
       <SettingsSection
+        id="settings-pitch-plan"
+        hidden={!sectionVisible("settings-pitch-plan")}
         title="Plan boiska (składy)"
         description="Przy układaniu składu na boisku pokazujemy kafelki zawodników — liczba kafelków zależy od zapisanych, w podanym zakresie."
       >
@@ -726,6 +963,8 @@ export function AdminSettingsTab({ loading, onReload, settingsRealm = "academy" 
       </SettingsSection>
 
       <SettingsSection
+        id="settings-cancel-reasons"
+        hidden={!sectionVisible("settings-cancel-reasons")}
         title="Powody anulowania meczu"
         description="Lista wyboru, gdy anulujesz termin w terminarzu."
       >
@@ -810,16 +1049,21 @@ function MobileSettingsEditor({
   cancelReasonsDraft,
   setCancelReasonsDraft,
   onSavePatch,
+  visibleSectionIds,
 }: {
   mobile: MobileChannelSettings;
   busy: boolean;
   cancelReasonsDraft: MatchCancelReasonEntry[];
   setCancelReasonsDraft: (v: MatchCancelReasonEntry[]) => void;
   onSavePatch: (patch: Partial<MobileChannelSettings>) => void;
+  visibleSectionIds: Set<string>;
 }) {
+  const show = (id: string) => visibleSectionIds.has(id);
   return (
     <div className="space-y-6">
       <SettingsSection
+        id="settings-m-name"
+        hidden={!show("settings-m-name")}
         title="Nazwa w aplikacji"
         description="Wyświetlana w aplikacji Android (nie musi być identyczna ze stroną)."
       >
@@ -903,7 +1147,7 @@ function MobileSettingsEditor({
         />
       </SettingsSection>
 
-      <SettingsSection title="Kontakt w aplikacji">
+      <SettingsSection id="settings-m-contact" hidden={!show("settings-m-contact")} title="Kontakt w aplikacji">
         <FieldRow label="E-mail">
           <Input
             type="email"
@@ -931,7 +1175,7 @@ function MobileSettingsEditor({
         </FieldRow>
       </SettingsSection>
 
-      <SettingsSection title="Domyślne mecze (aplikacja)">
+      <SettingsSection id="settings-m-matches" hidden={!show("settings-m-matches")} title="Domyślne mecze (aplikacja)">
         <FieldRow label="Domyślna liczba miejsc">
           <Input
             type="number"
@@ -962,7 +1206,7 @@ function MobileSettingsEditor({
         </FieldRow>
       </SettingsSection>
 
-      <SettingsSection title="Punkty rankingowe (aplikacja)">
+      <SettingsSection id="settings-m-ranking" hidden={!show("settings-m-ranking")} title="Punkty rankingowe (aplikacja)">
         {(
           [
             ["ranking_pt_goal", "Gol", mobile.ranking_pt_goal],
@@ -988,7 +1232,7 @@ function MobileSettingsEditor({
         ))}
       </SettingsSection>
 
-      <SettingsSection title="Powody anulowania (aplikacja)">
+      <SettingsSection id="settings-m-cancel" hidden={!show("settings-m-cancel")} title="Powody anulowania (aplikacja)">
         <div className="space-y-2">
           {cancelReasonsDraft.map((r, i) => (
             <div key={i} className="flex flex-wrap gap-2">

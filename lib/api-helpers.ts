@@ -70,7 +70,7 @@ export async function requireSessionForParticipationSurvey() {
   return { ok: true as const, session };
 }
 
-export async function requireAdmin() {
+export async function requireAdmin(requiredSection?: import("@/lib/admin-permissions").AdminSectionId) {
   const r = await requireUser();
   if (!r.ok) return r;
   if (!r.session.isAdmin) {
@@ -79,6 +79,21 @@ export async function requireAdmin() {
       response: NextResponse.json({ error: "Brak uprawnień administratora" }, { status: 403 }),
     };
   }
+
+  const { adminSectionForApiPath, hasAdminSection } = await import("@/lib/admin-permissions");
+  const { headers } = await import("next/headers");
+  const pathname = (await headers()).get("x-pathname") ?? "";
+  const section = requiredSection ?? (pathname ? adminSectionForApiPath(pathname) : null);
+  if (section && !hasAdminSection(r.session.adminSections, section)) {
+    return {
+      ok: false as const,
+      response: NextResponse.json(
+        { error: "Brak uprawnień do tej sekcji panelu administratora" },
+        { status: 403 }
+      ),
+    };
+  }
+
   return { ok: true as const, session: r.session };
 }
 

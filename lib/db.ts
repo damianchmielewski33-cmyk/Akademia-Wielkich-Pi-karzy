@@ -414,6 +414,9 @@ function initSchemaSync(db: Database.Database) {
   if (!userCols.some((c) => c.name === "push_notifications_consent")) {
     db.exec("ALTER TABLE users ADD COLUMN push_notifications_consent INTEGER NOT NULL DEFAULT 0");
   }
+  if (!userCols.some((c) => c.name === "admin_permissions")) {
+    db.exec("ALTER TABLE users ADD COLUMN admin_permissions TEXT");
+  }
 
   const matchStatsCols = db.prepare("PRAGMA table_info(match_stats)").all() as { name: string }[];
   if (!matchStatsCols.some((c) => c.name === "season_id")) {

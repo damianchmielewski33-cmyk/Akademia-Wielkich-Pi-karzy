@@ -314,6 +314,9 @@ export async function initLibsqlSchema(client: Client) {
       "ALTER TABLE users ADD COLUMN push_notifications_consent INTEGER NOT NULL DEFAULT 0"
     );
   }
+  if (!names.includes("admin_permissions")) {
+    await client.execute("ALTER TABLE users ADD COLUMN admin_permissions TEXT");
+  }
 
   names = await pragmaColumnNames(client, "match_stats");
   if (!names.includes("season_id")) {

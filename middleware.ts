@@ -32,7 +32,9 @@ export async function middleware(request: NextRequest) {
   const { pathname, searchParams } = request.nextUrl;
 
   if (pathname.startsWith("/api")) {
-    return NextResponse.next();
+    const requestHeaders = new Headers(request.headers);
+    requestHeaders.set(PATHNAME_HEADER, pathname);
+    return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
   if (

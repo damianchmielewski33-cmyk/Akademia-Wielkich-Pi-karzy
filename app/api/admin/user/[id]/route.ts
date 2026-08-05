@@ -24,7 +24,8 @@ export async function GET(_req: Request, ctx: Ctx) {
       `
       SELECT id, first_name, last_name, player_alias AS zawodnik,
              CASE WHEN is_admin = 1 THEN 'admin' ELSE 'player' END AS role,
-             COALESCE(can_pzu_cup, 0) AS can_pzu_cup
+             COALESCE(can_pzu_cup, 0) AS can_pzu_cup,
+             admin_permissions
       FROM users WHERE id = ?
     `
     )
@@ -39,6 +40,7 @@ const putSchema = z.object({
   zawodnik: z.string().min(1),
   role: z.enum(["admin", "player"]),
   can_pzu_cup: z.boolean().optional(),
+  admin_permissions: z.string().nullable().optional(),
 });
 
 export async function PUT(req: Request, ctx: Ctx) {
@@ -66,8 +68,10 @@ export async function PUT(req: Request, ctx: Ctx) {
   }
   const db = await getDb();
   const existing = (await db
-    .prepare("SELECT is_admin, COALESCE(can_pzu_cup, 0) AS can_pzu_cup FROM users WHERE id = ?")
-    .get(userId)) as { is_admin: number; can_pzu_cup: number } | undefined;
+    .prepare(
+      "SELECT is_admin, COALESCE(can_pzu_cup, 0) AS can_pzu_cup, admin_permissions FROM users WHERE id = ?"
+    )
+    .get(userId)) as { is_admin: number; can_pzu_cup: number; admin_permissions: string | null } | undefined;
   if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const demotionBlock = await adminDemotionBlockedReason(db, userId, gate.session.userId, data.role);
@@ -83,15 +87,26 @@ export async function PUT(req: Request, ctx: Ctx) {
   }
   const nextIsAdmin = data.role === "admin" ? 1 : 0;
   const nextPzuCup = data.can_pzu_cup === undefined ? existing.can_pzu_cup : data.can_pzu_cup ? 1 : 0;
+  const nextPerms =
+    nextIsAdmin === 0
+      ? null
+      : data.admin_permissions !== undefined
+        ? data.admin_permissions
+        : existing.admin_permissions;
   if (existing.is_admin === 1 && nextIsAdmin === 0) {
+    await bumpAuthVersion(db, userId);
+  } else if (
+    nextIsAdmin === 1 &&
+    (existing.admin_permissions ?? null) !== (nextPerms ?? null)
+  ) {
     await bumpAuthVersion(db, userId);
   }
 
   await db
     .prepare(
-      `UPDATE users SET first_name = ?, last_name = ?, player_alias = ?, is_admin = ?, can_pzu_cup = ? WHERE id = ?`
+      `UPDATE users SET first_name = ?, last_name = ?, player_alias = ?, is_admin = ?, can_pzu_cup = ?, admin_permissions = ? WHERE id = ?`
     )
-    .run(data.first_name, data.last_name, canonical, nextIsAdmin, nextPzuCup, userId);
+    .run(data.first_name, data.last_name, canonical, nextIsAdmin, nextPzuCup, nextPerms, userId);
   const pzuNote =
     nextPzuCup !== existing.can_pzu_cup ? `, PZU Cup: ${nextPzuCup ? "tak" : "nie"}` : "";
   await logActivity(

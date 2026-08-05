@@ -43,6 +43,11 @@ import { MatchManageDialog } from "@/components/match-manage-dialog";
 import { MatchAddGuestDialog } from "@/components/match-add-guest-dialog";
 import { CaptainLotteryDialog } from "@/components/captain-lottery-dialog";
 import { MatchCancelledNoticeModal } from "@/components/match-cancelled-notice-modal";
+import {
+  isCancelNoticeRelevant,
+  markCancelNoticeSeen,
+  wasCancelNoticeSeen,
+} from "@/lib/match-cancel-notice";
 import { AppModal } from "@/components/ui/app-modal";
 import {
   ModalAlert,
@@ -250,6 +255,7 @@ export function TerminarzClient({
   } | null>(null);
 
   const cancelledMatchShownRef = useRef(false);
+  const cancelledNoticeIdRef = useRef<number | null>(null);
 
   const missingStatsSet = useMemo(() => new Set(playedMissingStatsMatchIds), [playedMissingStatsMatchIds]);
 
@@ -619,28 +625,42 @@ export function TerminarzClient({
     const cancelled = allMatches.find(
       (m) =>
         isMatchCancelled(m) &&
-        (userSignupKind[m.id] === "confirmed" || userSignupKind[m.id] === "tentative")
+        isCancelNoticeRelevant(m.match_date) &&
+        (userSignupKind[m.id] === "confirmed" || userSignupKind[m.id] === "tentative") &&
+        !wasCancelNoticeSeen(m.id)
     );
-    if (!cancelled) return;
-
-    const storageKey = `awp_cancel_seen_${cancelled.id}`;
-    if (typeof window !== "undefined" && localStorage.getItem(storageKey) === "1") {
-      cancelledMatchShownRef.current = true;
+    if (!cancelled) {
+      // Stare anulowania: oznacz jako „widziane”, żeby nie wracały po zmianie limitu wieku
+      for (const m of allMatches) {
+        if (
+          isMatchCancelled(m) &&
+          !isCancelNoticeRelevant(m.match_date) &&
+          (userSignupKind[m.id] === "confirmed" || userSignupKind[m.id] === "tentative") &&
+          !wasCancelNoticeSeen(m.id)
+        ) {
+          markCancelNoticeSeen(m.id);
+        }
+      }
       return;
     }
 
     cancelledMatchShownRef.current = true;
+    cancelledNoticeIdRef.current = cancelled.id;
+    const reasonRaw = cancelled.cancellation_reason?.trim() || "";
+    const reasonLabel =
+      cancelReasons?.find((r) => r.value === reasonRaw)?.label ??
+      (reasonRaw || "Organizator anulował ten termin.");
     setCancelledNotice({
       matchId: cancelled.id,
       label: `${cancelled.match_date} ${cancelled.match_time} — ${cancelled.location}`,
-      reason: cancelled.cancellation_reason?.trim() || "Organizator anulował ten termin.",
+      reason: reasonLabel,
     });
-  }, [allMatches, isLoggedIn, userSignupKind]);
+  }, [allMatches, isLoggedIn, userSignupKind, cancelReasons]);
 
   function dismissCancelledNotice() {
-    if (cancelledNotice && typeof window !== "undefined") {
-      localStorage.setItem(`awp_cancel_seen_${cancelledNotice.matchId}`, "1");
-    }
+    const id = cancelledNoticeIdRef.current ?? cancelledNotice?.matchId ?? null;
+    if (id != null) markCancelNoticeSeen(id);
+    cancelledNoticeIdRef.current = null;
     setCancelledNotice(null);
   }
 

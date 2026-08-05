@@ -1,9 +1,9 @@
 "use client";
 
-import type { ComponentType, ReactNode } from "react";
+import { useEffect, useMemo, useState, type ComponentType, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Calendar, Loader2, LogOut, Moon, RefreshCw, Sun } from "lucide-react";
+import { ArrowLeft, Calendar, ChevronDown, Loader2, LogOut, Moon, RefreshCw, Sun } from "lucide-react";
 import { PitchCard, PitchCardDecorations, pitchLabelClass } from "@/components/ui/pitch-card";
 import { SiteSectionHero } from "@/components/site-section-hero";
 import { SiteAssetImage } from "@/components/site-asset-image";
@@ -52,7 +52,7 @@ export const adminStatusChipClass =
 
 /* ========== Shell ========== */
 
-type AdminTab = {
+export type AdminTab = {
   id: string;
   label: string;
   icon: ComponentType<{ className?: string; "aria-hidden"?: boolean }>;
@@ -62,26 +62,135 @@ type AdminTab = {
   badgeCount?: number;
 };
 
+export type AdminNavGroup = {
+  id: string;
+  /** Brak label = samotna pozycja (np. Przegląd) bez nagłówka kategorii. */
+  label?: string;
+  items: readonly AdminTab[];
+};
+
 type AdminShellProps = {
-  tabs: readonly AdminTab[];
+  navGroups: readonly AdminNavGroup[];
   activeTab: string;
   onTabChange: (id: string) => void;
   onLogout: () => void;
   loading?: boolean;
   children: ReactNode;
+  /** Wyszukiwarka / skróty — renderowane pod logo. */
+  searchSlot?: ReactNode;
+  /** Stałe skróty mobilne (np. Wiadomości / Mecze / Ustawienia). */
+  mobileShortcuts?: readonly { id: string; label: string; badge?: boolean; badgeCount?: number }[];
 };
 
+function tabHasAlert(t: AdminTab) {
+  return Boolean(t.badge) || (t.badgeCount != null && t.badgeCount > 0);
+}
+
+function TabBadge({ tab }: { tab: AdminTab }) {
+  if (tab.badgeCount != null && tab.badgeCount > 0) {
+    return (
+      <span
+        className="inline-flex min-h-[1.25rem] min-w-[1.25rem] shrink-0 items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold tabular-nums text-white"
+        title={`${tab.badgeCount} nieprzeczytanych`}
+        aria-label={`${tab.badgeCount} nieprzeczytanych`}
+      >
+        {tab.badgeCount > 99 ? "99+" : tab.badgeCount}
+      </span>
+    );
+  }
+  if (tab.badge) {
+    return (
+      <span
+        className="inline-flex min-h-[1.25rem] min-w-[1.25rem] shrink-0 items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white"
+        title="Zgłoszenia zmiany PIN-u"
+        aria-label="Zgłoszenia zmiany PIN-u"
+      />
+    );
+  }
+  return null;
+}
+
+function NavTabButton({
+  tab,
+  active,
+  onSelect,
+  compact,
+}: {
+  tab: AdminTab;
+  active: boolean;
+  onSelect: () => void;
+  compact?: boolean;
+}) {
+  const Icon = tab.icon;
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className={cn(
+        "awp-focus-ring flex touch-manipulation items-center gap-2 rounded-xl text-left text-sm font-semibold transition-[background-color,color,box-shadow]",
+        compact ? "shrink-0 px-3 py-2" : "w-full px-3 py-2",
+        active
+          ? "bg-white/15 text-white shadow-sm ring-1 ring-white/20"
+          : "text-emerald-100/85 hover:bg-white/10 hover:text-white"
+      )}
+    >
+      <Icon className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
+      <span className="flex min-w-0 flex-1 items-center justify-between gap-2 whitespace-nowrap">
+        {tab.label}
+        <TabBadge tab={tab} />
+      </span>
+    </button>
+  );
+}
+
 export function AdminShell({
-  tabs,
+  navGroups,
   activeTab,
   onTabChange,
   onLogout,
   loading,
   children,
+  searchSlot,
+  mobileShortcuts,
 }: AdminShellProps) {
   const router = useRouter();
   const isDarkNow =
     typeof document !== "undefined" ? document.documentElement.classList.contains("dark") : true;
+
+  const activeGroupId = useMemo(() => {
+    for (const g of navGroups) {
+      if (g.items.some((t) => t.id === activeTab)) return g.id;
+    }
+    return navGroups[0]?.id ?? "";
+  }, [navGroups, activeTab]);
+
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
+    const init: Record<string, boolean> = {};
+    for (const g of navGroups) {
+      if (g.label) init[g.id] = g.items.some((t) => t.id === activeTab);
+    }
+    return init;
+  });
+
+  useEffect(() => {
+    setOpenGroups((prev) => {
+      const next = { ...prev };
+      for (const g of navGroups) {
+        if (!g.label) continue;
+        if (g.items.some((t) => t.id === activeTab)) next[g.id] = true;
+      }
+      return next;
+    });
+  }, [activeTab, navGroups]);
+
+  const mobileGroup = useMemo(
+    () => navGroups.find((g) => g.id === activeGroupId) ?? navGroups[0],
+    [navGroups, activeGroupId]
+  );
+
+  function toggleGroup(id: string) {
+    setOpenGroups((prev) => ({ ...prev, [id]: !prev[id] }));
+  }
 
   async function toggleTheme() {
     const nextTheme = isDarkNow ? "light" : "dark";
@@ -101,7 +210,7 @@ export function AdminShell({
 
   return (
     <div className="flex min-h-screen flex-col text-white lg:flex-row">
-      <aside className="mundial-header relative z-30 shrink-0 border-b border-[var(--mundial-gold)]/30 shadow-lg lg:w-64 lg:border-b-0 lg:border-r">
+      <aside className="mundial-header relative z-30 shrink-0 border-b border-[var(--mundial-gold)]/30 shadow-lg lg:w-72 lg:border-b-0 lg:border-r">
         <div
           className="pointer-events-none absolute inset-0 opacity-[0.12]"
           style={{
@@ -110,7 +219,7 @@ export function AdminShell({
           }}
           aria-hidden
         />
-        <div className="relative flex flex-col gap-4 p-3 xs:p-4 lg:sticky lg:top-0 lg:max-h-screen lg:gap-5 lg:overflow-y-auto lg:pt-[max(1rem,env(safe-area-inset-top))]">
+        <div className="relative flex flex-col gap-3 p-3 xs:p-4 lg:sticky lg:top-0 lg:max-h-screen lg:gap-5 lg:overflow-y-auto lg:pt-[max(1rem,env(safe-area-inset-top))]">
           <div className="flex items-center gap-3 border-b border-white/15 pb-3 lg:pb-4">
             <span className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/10 shadow-inner ring-1 ring-[var(--mundial-gold)]/40 xs:h-11 xs:w-11">
               <SiteAssetImage
@@ -128,45 +237,150 @@ export function AdminShell({
             </div>
           </div>
 
-          <nav
-            className="-mx-3 flex gap-2 overflow-x-auto overscroll-x-contain px-3 pb-1 [scrollbar-width:thin] lg:mx-0 lg:flex-col lg:gap-1 lg:overflow-visible lg:px-0 lg:pb-0"
-            aria-label="Zakładki panelu admina"
-          >
-            {tabs.map((t) => {
-              const Icon = t.icon;
-              const active = activeTab === t.id;
-              return (
-                <button
-                  key={t.id}
-                  type="button"
-                  onClick={() => onTabChange(t.id)}
-                  className={cn(
-                    "awp-focus-ring flex shrink-0 touch-manipulation items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-semibold transition-[background-color,color,box-shadow] lg:w-full",
-                    active
-                      ? "bg-white/15 text-white shadow-sm ring-1 ring-white/20"
-                      : "text-emerald-100/85 hover:bg-white/10 hover:text-white"
-                  )}
-                >
-                  <Icon className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
-                  <span className="flex min-w-0 flex-1 items-center justify-between gap-2 whitespace-nowrap">
-                    {t.label}
-                    {t.badgeCount != null && t.badgeCount > 0 ? (
-                      <span
-                        className="inline-flex min-h-[1.25rem] min-w-[1.25rem] shrink-0 items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold tabular-nums text-white"
-                        title={`${t.badgeCount} nieprzeczytanych`}
-                        aria-label={`${t.badgeCount} nieprzeczytanych`}
-                      >
-                        {t.badgeCount > 99 ? "99+" : t.badgeCount}
+          {searchSlot ? <div className="relative z-40">{searchSlot}</div> : null}
+
+          {/* Mobile: always-visible shortcuts */}
+          {mobileShortcuts && mobileShortcuts.length > 0 ? (
+            <div className="flex gap-1.5 lg:hidden" aria-label="Szybkie skróty">
+              {mobileShortcuts.map((s) => {
+                const active = activeTab === s.id;
+                return (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => onTabChange(s.id)}
+                    className={cn(
+                      "awp-focus-ring relative flex min-h-9 flex-1 items-center justify-center gap-1 rounded-xl px-2 py-1.5 text-xs font-semibold transition-colors",
+                      active
+                        ? "bg-white/20 text-white ring-1 ring-white/25"
+                        : "bg-white/10 text-emerald-100/90 hover:bg-white/15 hover:text-white"
+                    )}
+                  >
+                    <span className="truncate">{s.label}</span>
+                    {s.badgeCount != null && s.badgeCount > 0 ? (
+                      <span className="inline-flex min-h-[1.1rem] min-w-[1.1rem] items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white">
+                        {s.badgeCount > 99 ? "99+" : s.badgeCount}
                       </span>
-                    ) : t.badge ? (
-                      <span
-                        className="inline-flex min-h-[1.25rem] min-w-[1.25rem] shrink-0 items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white"
-                        title="Zgłoszenia zmiany PIN-u"
-                        aria-label="Zgłoszenia zmiany PIN-u"
-                      />
+                    ) : s.badge ? (
+                      <span className="h-1.5 w-1.5 rounded-full bg-red-500" aria-hidden />
                     ) : null}
-                  </span>
-                </button>
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
+
+          {/* Mobile: category chips + tabs of active category */}
+          <div className="flex flex-col gap-2 lg:hidden">
+            <nav
+              className="-mx-3 flex gap-1.5 overflow-x-auto overscroll-x-contain px-3 pb-0.5 [scrollbar-width:thin]"
+              aria-label="Kategorie panelu admina"
+            >
+              {navGroups.map((g) => {
+                const selected = g.id === activeGroupId;
+                const groupAlert = g.items.some(tabHasAlert);
+                const chipLabel = g.label ?? g.items[0]?.label ?? g.id;
+                return (
+                  <button
+                    key={g.id}
+                    type="button"
+                    onClick={() => {
+                      if (!selected && g.items[0]) onTabChange(g.items[0].id);
+                    }}
+                    className={cn(
+                      "awp-focus-ring relative flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors",
+                      selected
+                        ? "bg-[var(--mundial-gold)]/25 text-white ring-1 ring-[var(--mundial-gold)]/50"
+                        : "bg-white/10 text-emerald-100/85 hover:bg-white/15 hover:text-white"
+                    )}
+                  >
+                    {chipLabel}
+                    {groupAlert && !selected ? (
+                      <span className="h-1.5 w-1.5 rounded-full bg-red-500" aria-hidden />
+                    ) : null}
+                  </button>
+                );
+              })}
+            </nav>
+            {mobileGroup ? (
+              <nav
+                className="-mx-3 flex gap-1.5 overflow-x-auto overscroll-x-contain px-3 pb-1 [scrollbar-width:thin]"
+                aria-label={mobileGroup.label ? `Zakładki: ${mobileGroup.label}` : "Zakładki panelu admina"}
+              >
+                {mobileGroup.items.map((t) => (
+                  <NavTabButton
+                    key={t.id}
+                    tab={t}
+                    active={activeTab === t.id}
+                    onSelect={() => onTabChange(t.id)}
+                    compact
+                  />
+                ))}
+              </nav>
+            ) : null}
+          </div>
+
+          {/* Desktop: collapsible category groups */}
+          <nav className="hidden flex-col gap-1 lg:flex" aria-label="Zakładki panelu admina">
+            {navGroups.map((g) => {
+              const isLabeled = Boolean(g.label);
+              const isOpen = !isLabeled || openGroups[g.id];
+              const containsActive = g.items.some((t) => t.id === activeTab);
+              const groupAlert = !isOpen && g.items.some(tabHasAlert);
+
+              if (!isLabeled) {
+                return (
+                  <div key={g.id} className="mb-1">
+                    {g.items.map((t) => (
+                      <NavTabButton
+                        key={t.id}
+                        tab={t}
+                        active={activeTab === t.id}
+                        onSelect={() => onTabChange(t.id)}
+                      />
+                    ))}
+                  </div>
+                );
+              }
+
+              return (
+                <div key={g.id} className="mb-0.5">
+                  <button
+                    type="button"
+                    onClick={() => toggleGroup(g.id)}
+                    aria-expanded={isOpen}
+                    className={cn(
+                      "awp-focus-ring flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-[0.7rem] font-bold uppercase tracking-wider transition-colors",
+                      containsActive
+                        ? "text-[var(--mundial-gold,#f5c518)]"
+                        : "text-emerald-100/55 hover:text-emerald-100/85"
+                    )}
+                  >
+                    <ChevronDown
+                      className={cn(
+                        "h-3.5 w-3.5 shrink-0 transition-transform",
+                        !isOpen && "-rotate-90"
+                      )}
+                      aria-hidden
+                    />
+                    <span className="min-w-0 flex-1 truncate">{g.label}</span>
+                    {groupAlert ? (
+                      <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-red-500" aria-hidden />
+                    ) : null}
+                  </button>
+                  {isOpen ? (
+                    <div className="mt-0.5 space-y-0.5 border-l border-white/10 pl-2 ml-2">
+                      {g.items.map((t) => (
+                        <NavTabButton
+                          key={t.id}
+                          tab={t}
+                          active={activeTab === t.id}
+                          onSelect={() => onTabChange(t.id)}
+                        />
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
               );
             })}
           </nav>

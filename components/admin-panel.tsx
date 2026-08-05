@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Activity,
   ArrowDownAZ,
@@ -40,13 +40,14 @@ import {
   AdminShell,
   AdminTableShell,
   AdminToolbar,
-  adminAlertDangerClass,
   adminEmptyStateClass,
   adminDataOutlineBtnClass,
   adminDataSearchInputClass,
   adminOutlineBtnClass,
   adminSearchInputClass,
   adminToggleRowClass,
+  type AdminNavGroup,
+  type AdminTab,
 } from "@/components/admin-ui";
 import { LogoutConfirmModal } from "@/components/logout-confirm-modal";
 import { AppModal } from "@/components/ui/app-modal";
@@ -81,6 +82,17 @@ import { AdminGalleryTab } from "@/components/admin-gallery-tab";
 import { AdminMessagesTab } from "@/components/admin-messages-tab";
 import { AdminRankingSeasonsTab } from "@/components/admin-ranking-seasons-tab";
 import { MatchLineupAdmin } from "@/components/match-lineup-admin";
+import {
+  AdminCommandSearch,
+  type AdminSearchJump,
+} from "@/components/admin-command-search";
+import {
+  ADMIN_SECTIONS,
+  canAccessTab,
+  parseAdminPermissions,
+  serializeAdminPermissions,
+  type AdminSectionId,
+} from "@/lib/admin-permissions";
 import {
   cn,
   formatDateLocalYmd,
@@ -119,6 +131,7 @@ type UserRow = {
   pin_reset_requested?: number;
   pin_set?: number;
   pin_change_pending?: number;
+  admin_permissions?: string | null;
 };
 
 type MatchRow = {
@@ -245,30 +258,73 @@ type Summary = {
   stats: number;
   upcoming_matches: number;
   pin_reset_requests?: number;
+  pin_change_pending?: number;
   unread_messages?: number;
+  negative_balances?: number;
+  pending_deposits?: number;
+  next_matches?: {
+    id: number;
+    date: string;
+    time: string;
+    location: string;
+    players_count: number;
+    max_slots: number;
+  }[];
+  admin_sections?: import("@/lib/admin-permissions").AdminSectionId[] | null;
 };
 
 type AppSettings = {
   default_match_max_slots?: number;
 };
 
-const tabs = [
-  { id: "dashboard", label: "Przegląd", icon: LayoutDashboard },
-  { id: "analytics", label: "Analityka", icon: BarChart3 },
-  { id: "users", label: "Użytkownicy", icon: Users },
-  { id: "messages", label: "Wiadomości", icon: MessageCircle },
-  { id: "wallets", label: "Portfele", icon: Wallet },
-  { id: "matches", label: "Mecze", icon: Calendar },
-  { id: "lineups", label: "Składy na mecz", icon: LayoutGrid },
-  { id: "stats", label: "Statystyki", icon: Table2 },
-  { id: "rankings", label: "Rankingi", icon: Trophy },
-  { id: "pzu-cup", label: "PZU Cup", icon: Medal },
-  { id: "gallery", label: "Galeria", icon: Film },
-  { id: "screen-blocks", label: "Zaślepki", icon: Construction },
-  { id: "settings", label: "Ustawienia", icon: Settings2 },
+const navGroupDefs = [
+  {
+    id: "overview",
+    items: [{ id: "dashboard", label: "Przegląd", icon: LayoutDashboard }],
+  },
+  {
+    id: "people",
+    label: "Ludzie",
+    items: [
+      { id: "users", label: "Użytkownicy", icon: Users },
+      { id: "messages", label: "Wiadomości", icon: MessageCircle },
+    ],
+  },
+  {
+    id: "matches-comp",
+    label: "Mecze i rywalizacja",
+    items: [
+      { id: "matches", label: "Mecze", icon: Calendar },
+      { id: "lineups", label: "Składy na mecz", icon: LayoutGrid },
+      { id: "stats", label: "Statystyki", icon: Table2 },
+      { id: "rankings", label: "Rankingi", icon: Trophy },
+      { id: "pzu-cup", label: "PZU Cup", icon: Medal },
+    ],
+  },
+  {
+    id: "finance",
+    label: "Finanse",
+    items: [{ id: "wallets", label: "Portfele", icon: Wallet }],
+  },
+  {
+    id: "site",
+    label: "Treść i witryna",
+    items: [
+      { id: "gallery", label: "Galeria", icon: Film },
+      { id: "screen-blocks", label: "Zaślepki", icon: Construction },
+      { id: "analytics", label: "Analityka", icon: BarChart3 },
+      { id: "settings", label: "Ustawienia", icon: Settings2 },
+    ],
+  },
 ] as const;
 
-type TabId = (typeof tabs)[number]["id"];
+const allTabIds = navGroupDefs.flatMap((g) => g.items.map((t) => t.id));
+
+type TabId = (typeof allTabIds)[number];
+
+function isTabId(v: string | null): v is TabId {
+  return Boolean(v && (allTabIds as readonly string[]).includes(v));
+}
 
 type MatchSignupPaidRow = {
   user_id: number;
@@ -286,16 +342,33 @@ function MatchesView({
   loading,
   onReload,
   defaultMaxSlots,
+  openMatchId,
+  onOpenMatchConsumed,
 }: {
   matches: MatchRow[];
   loading: boolean;
   onReload: () => void;
   defaultMaxSlots: number;
+  openMatchId?: number | null;
+  onOpenMatchConsumed?: () => void;
 }) {
   const [cancelOpen, setCancelOpen] = useState(false);
   const [signupsOpen, setSignupsOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [selectedMatch, setSelectedMatch] = useState<MatchRow | null>(null);
+
+  useEffect(() => {
+    if (openMatchId == null || matches.length === 0) return;
+    const m = matches.find((x) => x.id === openMatchId);
+    if (!m) {
+      toast.error(`Nie znaleziono meczu #${openMatchId}`);
+      onOpenMatchConsumed?.();
+      return;
+    }
+    setSelectedMatch(m);
+    setSignupsOpen(true);
+    onOpenMatchConsumed?.();
+  }, [openMatchId, matches, onOpenMatchConsumed]);
 
   const handleCancelClick = (m: MatchRow) => {
     setSelectedMatch(m);
@@ -905,7 +978,7 @@ function StatsView({
                   <TableCell className="text-right align-middle tabular-nums">{s.distance}</TableCell>
                   <TableCell className="text-right align-middle tabular-nums">{s.saves}</TableCell>
                   <TableCell className="text-right align-middle tabular-nums">
-                    <Link href={`/panel-admina?match=${s.match_id}`} className="text-[var(--mundial-gold)] hover:underline">
+                    <Link href={`/panel-admina?tab=matches&match=${s.match_id}`} className="text-[var(--mundial-gold)] hover:underline">
                       {s.match_id}
                     </Link>
                   </TableCell>
@@ -920,14 +993,26 @@ function StatsView({
 }
 
 export function AdminPanel() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const initialTab = useMemo((): TabId => {
     const t = searchParams.get("tab");
-    if (t && tabs.some((x) => x.id === t)) return t as TabId;
+    if (isTabId(t)) return t;
+    if (searchParams.get("match")) return "matches";
     return "dashboard";
   }, [searchParams]);
 
+  const initialMatchId = useMemo(() => {
+    const raw = searchParams.get("match");
+    if (!raw) return null;
+    const n = Number(raw);
+    return Number.isFinite(n) ? n : null;
+  }, [searchParams]);
+
   const [tab, setTab] = useState<TabId>(initialTab);
+  const [openMatchId, setOpenMatchId] = useState<number | null>(initialMatchId);
+  const [highlightUserId, setHighlightUserId] = useState<number | null>(null);
+  const [settingsSectionId, setSettingsSectionId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [summary, setSummary] = useState<Summary | null>(null);
   const [matchDefaults, setMatchDefaults] = useState<AppSettings | null>(null);
@@ -951,9 +1036,55 @@ export function AdminPanel() {
   const [analyticsHourly, setAnalyticsHourly] = useState<AnalyticsHourlyPayload | null>(null);
   const [logoutOpen, setLogoutOpen] = useState(false);
 
+  const adminSections = summary?.admin_sections ?? null;
+
   useEffect(() => {
     setTab(initialTab);
   }, [initialTab]);
+
+  useEffect(() => {
+    if (initialMatchId != null) setOpenMatchId(initialMatchId);
+  }, [initialMatchId]);
+
+  const goToTab = useCallback(
+    (id: TabId, opts?: { matchId?: number; userId?: number; settingsSection?: string }) => {
+      if (!canAccessTab(adminSections, id)) {
+        toast.error("Brak uprawnień do tej sekcji");
+        return;
+      }
+      setTab(id);
+      if (opts?.matchId != null) setOpenMatchId(opts.matchId);
+      if (opts?.userId != null) setHighlightUserId(opts.userId);
+      if (opts?.settingsSection) setSettingsSectionId(opts.settingsSection);
+      const params = new URLSearchParams();
+      if (id !== "dashboard") params.set("tab", id);
+      if (opts?.matchId != null) params.set("match", String(opts.matchId));
+      const qs = params.toString();
+      router.replace(qs ? `/panel-admina?${qs}` : "/panel-admina", { scroll: false });
+    },
+    [router, adminSections]
+  );
+
+  const onSearchJump = useCallback(
+    (jump: AdminSearchJump) => {
+      if (jump.type === "tab" && isTabId(jump.tab)) {
+        goToTab(jump.tab);
+        return;
+      }
+      if (jump.type === "match") {
+        goToTab("matches", { matchId: jump.matchId });
+        return;
+      }
+      if (jump.type === "user") {
+        goToTab("users", { userId: jump.userId });
+        return;
+      }
+      if (jump.type === "settings") {
+        goToTab("settings", { settingsSection: jump.sectionId });
+      }
+    },
+    [goToTab]
+  );
 
   const onAnalyticsFromChange = useCallback((v: string) => {
     setAnalyticsRange((prev) => {
@@ -975,11 +1106,13 @@ export function AdminPanel() {
     setLoading(true);
     try {
       const [s, a, st] = await Promise.all([fetch(API.summary), fetch(API.activity), fetch(API.appSettings)]);
-      if (!s.ok || !a.ok || !st.ok) throw new Error();
+      if (!s.ok || !a.ok) throw new Error();
       setSummary(await s.json());
       setActivity(await a.json());
-      const settings = await st.json();
-      setMatchDefaults({ default_match_max_slots: settings.default_match_max_slots });
+      if (st.ok) {
+        const settings = await st.json();
+        setMatchDefaults({ default_match_max_slots: settings.default_match_max_slots });
+      }
     } catch {
       toast.error("Nie udało się wczytać przeglądu");
     } finally {
@@ -1106,18 +1239,58 @@ export function AdminPanel() {
 
   const unreadMessages = summary?.unread_messages ?? 0;
 
+  const navGroups: AdminNavGroup[] = useMemo(() => {
+    return navGroupDefs
+      .map((g) => ({
+        id: g.id,
+        label: "label" in g ? g.label : undefined,
+        items: g.items
+          .filter((t) => canAccessTab(adminSections, t.id))
+          .map(
+            (t): AdminTab => ({
+              ...t,
+              badge: t.id === "users" && pinBadge,
+              badgeCount: t.id === "messages" ? unreadMessages : undefined,
+            })
+          ),
+      }))
+      .filter((g) => g.items.length > 0);
+  }, [pinBadge, unreadMessages, adminSections]);
+
+  useEffect(() => {
+    if (!summary) return;
+    if (!canAccessTab(adminSections, tab)) {
+      const first = navGroups[0]?.items[0]?.id;
+      if (first && isTabId(first)) goToTab(first);
+    }
+  }, [summary, adminSections, tab, navGroups, goToTab]);
+
+  const clearOpenMatch = useCallback(() => {
+    setOpenMatchId(null);
+    const params = new URLSearchParams();
+    if (tab !== "dashboard") params.set("tab", tab);
+    const qs = params.toString();
+    router.replace(qs ? `/panel-admina?${qs}` : "/panel-admina", { scroll: false });
+  }, [router, tab]);
+
   return (
     <>
       <AdminShell
-        tabs={tabs.map((t) => ({
-          ...t,
-          badge: t.id === "users" && pinBadge,
-          badgeCount: t.id === "messages" ? unreadMessages : undefined,
-        }))}
+        navGroups={navGroups}
         activeTab={tab}
-        onTabChange={(id) => setTab(id as TabId)}
+        onTabChange={(id) => {
+          if (isTabId(id)) goToTab(id);
+        }}
         onLogout={() => setLogoutOpen(true)}
         loading={shellLoading}
+        searchSlot={<AdminCommandSearch onJump={onSearchJump} />}
+        mobileShortcuts={[
+          ...(canAccessTab(adminSections, "messages")
+            ? [{ id: "messages", label: "Wiadomości", badgeCount: unreadMessages }]
+            : []),
+          ...(canAccessTab(adminSections, "matches") ? [{ id: "matches", label: "Mecze" }] : []),
+          ...(canAccessTab(adminSections, "settings") ? [{ id: "settings", label: "Ustawienia" }] : []),
+        ]}
       >
         {tab === "dashboard" && (
           <DashboardView
@@ -1125,10 +1298,18 @@ export function AdminPanel() {
             activity={activity}
             loading={loading}
             onReload={loadDashboard}
-            onGoToTab={setTab}
+            onGoToTab={goToTab}
           />
         )}
-        {tab === "users" && <UsersView users={users} loading={loading} onReload={loadUsers} />}
+        {tab === "users" && (
+          <UsersView
+            users={users}
+            loading={loading}
+            onReload={loadUsers}
+            highlightUserId={highlightUserId}
+            onHighlightConsumed={() => setHighlightUserId(null)}
+          />
+        )}
         {tab === "messages" && <AdminMessagesTab onUnreadChange={loadSummaryOnly} />}
         {tab === "wallets" && <AdminWalletsSaldoSection />}
         {tab === "matches" && (
@@ -1137,6 +1318,8 @@ export function AdminPanel() {
             loading={loading}
             onReload={loadMatches}
             defaultMaxSlots={matchDefaults?.default_match_max_slots ?? 14}
+            openMatchId={openMatchId}
+            onOpenMatchConsumed={clearOpenMatch}
           />
         )}
         {tab === "lineups" && <MatchLineupAdmin />}
@@ -1157,7 +1340,14 @@ export function AdminPanel() {
         {tab === "rankings" && <AdminRankingSeasonsTab />}
         {tab === "gallery" && <AdminGalleryTab />}
         {tab === "screen-blocks" && <AdminScreenBlocksTab loading={loading} onReload={loadDashboard} />}
-        {tab === "settings" && <AdminSettingsTab loading={loading} onReload={loadDashboard} />}
+        {tab === "settings" && (
+          <AdminSettingsTab
+            loading={loading}
+            onReload={loadDashboard}
+            focusSectionId={settingsSectionId}
+            onFocusSectionConsumed={() => setSettingsSectionId(null)}
+          />
+        )}
         {tab === "pzu-cup" && <AdminPzuCupTab loading={loading} onReload={loadDashboard} />}
       </AdminShell>
 
@@ -1859,7 +2049,7 @@ function DashboardView({
   }[];
   loading: boolean;
   onReload: () => void;
-  onGoToTab: (t: TabId) => void;
+  onGoToTab: (t: TabId, opts?: { matchId?: number }) => void;
 }) {
 
   const metrics = [
@@ -1905,26 +2095,157 @@ function DashboardView({
     },
   ];
 
+  const shortcuts: {
+    category: string;
+    description: string;
+    links: { tab: TabId; label: string; icon: typeof Users }[];
+  }[] = [
+    {
+      category: "Ludzie",
+      description: "Konta, PIN-y i skrzynka wiadomości.",
+      links: [
+        { tab: "users", label: "Użytkownicy", icon: Users },
+        { tab: "messages", label: "Wiadomości", icon: MessageCircle },
+      ],
+    },
+    {
+      category: "Mecze i rywalizacja",
+      description: "Terminy, składy, wyniki i turnieje.",
+      links: [
+        { tab: "matches", label: "Mecze", icon: Calendar },
+        { tab: "lineups", label: "Składy", icon: LayoutGrid },
+        { tab: "stats", label: "Statystyki", icon: Table2 },
+        { tab: "rankings", label: "Rankingi", icon: Trophy },
+        { tab: "pzu-cup", label: "PZU Cup", icon: Medal },
+      ],
+    },
+    {
+      category: "Finanse",
+      description: "Salda graczy i doładowania.",
+      links: [{ tab: "wallets", label: "Portfele", icon: Wallet }],
+    },
+    {
+      category: "Treść i witryna",
+      description: "Galeria, zaślepki, analityka i konfiguracja.",
+      links: [
+        { tab: "gallery", label: "Galeria", icon: Film },
+        { tab: "screen-blocks", label: "Zaślepki", icon: Construction },
+        { tab: "analytics", label: "Analityka", icon: BarChart3 },
+        { tab: "settings", label: "Ustawienia", icon: Settings2 },
+      ],
+    },
+  ];
+
+  const opsAlerts: {
+    key: string;
+    title: string;
+    body: string;
+    tab: TabId;
+    tone: "danger" | "warn" | "info";
+  }[] = [];
+
+  if ((summary?.pin_reset_requests ?? 0) > 0 || (summary?.pin_change_pending ?? 0) > 0) {
+    opsAlerts.push({
+      key: "pin",
+      title: "PIN-y do obsługi",
+      body: `Reset: ${summary?.pin_reset_requests ?? 0}, zmiana oczekująca: ${summary?.pin_change_pending ?? 0}.`,
+      tab: "users",
+      tone: "danger",
+    });
+  }
+  if ((summary?.unread_messages ?? 0) > 0) {
+    opsAlerts.push({
+      key: "msg",
+      title: "Nieprzeczytane wiadomości",
+      body: `${summary?.unread_messages} w skrzynce admina.`,
+      tab: "messages",
+      tone: "warn",
+    });
+  }
+  if ((summary?.negative_balances ?? 0) > 0) {
+    opsAlerts.push({
+      key: "bal",
+      title: "Ujemne salda",
+      body: `${summary?.negative_balances} graczy z niedopłatą.`,
+      tab: "wallets",
+      tone: "warn",
+    });
+  }
+  if ((summary?.pending_deposits ?? 0) > 0) {
+    opsAlerts.push({
+      key: "dep",
+      title: "Doładowania do potwierdzenia",
+      body: `${summary?.pending_deposits} oczekujących wpłat.`,
+      tab: "wallets",
+      tone: "info",
+    });
+  }
+
   return (
     <div>
       <AdminToolbar
         title="Przegląd"
-        description="Skrót organizacji — kliknij kafelek, aby przejść do szczegółów."
+        description="Skrót operacyjny — alerty, najbliższe mecze i szybkie skoki do sekcji."
         onReload={onReload}
         loading={loading}
       />
 
-      {(summary?.pin_reset_requests ?? 0) > 0 ? (
-        <div className={cn("mb-6", adminAlertDangerClass)}>
-          <p className="font-semibold">Zgłoszenia zmiany PIN-u</p>
-          <p className="mt-1 text-red-100/90">
-            Oczekujące sprawy (nowy PIN lub prośba o reset):{" "}
-            <strong className="tabular-nums">{summary?.pin_reset_requests}</strong>. W zakładce{" "}
-            <strong>Użytkownicy</strong> możesz <strong>zatwierdzić</strong> nowy PIN,{" "}
-            <strong>odrzucić</strong> propozycję (pozostaje stary PIN) albo wykonać pełny{" "}
-            <strong>restart PIN</strong> konta.
-          </p>
+      {opsAlerts.length > 0 ? (
+        <div className="mb-6 grid gap-3 sm:grid-cols-2">
+          {opsAlerts.map((a) => (
+            <div
+              key={a.key}
+              className={cn(
+                "rounded-xl border px-4 py-3 text-sm shadow-sm backdrop-blur-sm",
+                a.tone === "danger" && "border-red-300/40 bg-red-950/35 text-red-100",
+                a.tone === "warn" && "border-amber-300/40 bg-amber-950/30 text-amber-50",
+                a.tone === "info" && "border-sky-300/40 bg-sky-950/30 text-sky-50"
+              )}
+            >
+              <p className="font-semibold">{a.title}</p>
+              <p className="mt-1 opacity-90">{a.body}</p>
+              <Button
+                type="button"
+                variant="stadium"
+                size="sm"
+                className="mt-3"
+                onClick={() => onGoToTab(a.tab)}
+              >
+                Przejdź
+              </Button>
+            </div>
+          ))}
         </div>
+      ) : null}
+
+      {(summary?.next_matches?.length ?? 0) > 0 ? (
+        <AdminCard
+          className="mb-8"
+          title="Najbliższe mecze"
+          description="Kliknij, aby otworzyć zapisy."
+        >
+          <ul className="space-y-2">
+            {summary!.next_matches!.map((m) => (
+              <li key={m.id}>
+                <button
+                  type="button"
+                  onClick={() => onGoToTab("matches", { matchId: m.id })}
+                  className="awp-focus-ring flex w-full items-center justify-between gap-3 rounded-xl border border-white/20 bg-black/10 px-3 py-2.5 text-left text-sm transition-colors hover:bg-white/10"
+                >
+                  <span className="min-w-0">
+                    <span className="font-semibold text-white">
+                      {m.date} {m.time}
+                    </span>
+                    <span className="mt-0.5 block truncate text-emerald-100/75">{m.location}</span>
+                  </span>
+                  <span className="shrink-0 tabular-nums text-emerald-100/80">
+                    {m.players_count}/{m.max_slots || "?"}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </AdminCard>
       ) : null}
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -1940,16 +2261,29 @@ function DashboardView({
         ))}
       </div>
 
-      <AdminCard
-        className="mt-8"
-        title="Konfiguracja aplikacji"
-        description="Branding, kontakt, rejestracja, rankingi, domyślne mecze i więcej — w dedykowanej zakładce."
-      >
-        <Button type="button" variant="stadium" onClick={() => onGoToTab("settings")}>
-          <Settings2 className="mr-2 h-4 w-4" aria-hidden />
-          Otwórz ustawienia
-        </Button>
-      </AdminCard>
+      <div className="mt-8 grid gap-4 sm:grid-cols-2">
+        {shortcuts.map((block) => (
+          <AdminCard key={block.category} title={block.category} description={block.description}>
+            <div className="flex flex-wrap gap-2">
+              {block.links.map((link) => {
+                const Icon = link.icon;
+                return (
+                  <Button
+                    key={link.tab}
+                    type="button"
+                    variant="stadium"
+                    size="sm"
+                    onClick={() => onGoToTab(link.tab)}
+                  >
+                    <Icon className="mr-1.5 h-4 w-4" aria-hidden />
+                    {link.label}
+                  </Button>
+                );
+              })}
+            </div>
+          </AdminCard>
+        ))}
+      </div>
 
       <AdminCard
         className="mt-8"
@@ -1994,15 +2328,27 @@ function UsersView({
   users,
   loading,
   onReload,
+  highlightUserId,
+  onHighlightConsumed,
 }: {
   users: UserRow[];
   loading: boolean;
   onReload: () => void;
+  highlightUserId?: number | null;
+  onHighlightConsumed?: () => void;
 }) {
   const [edit, setEdit] = useState<UserRow | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [delUser, setDelUser] = useState<UserRow | null>(null);
   const [q, setQ] = useState("");
+
+  useEffect(() => {
+    if (highlightUserId == null || users.length === 0) return;
+    const u = users.find((x) => x.id === highlightUserId);
+    if (u) setEdit(u);
+    else toast.error(`Nie znaleziono użytkownika #${highlightUserId}`);
+    onHighlightConsumed?.();
+  }, [highlightUserId, users, onHighlightConsumed]);
 
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase();
@@ -2304,6 +2650,58 @@ function DeleteUserModal({
   );
 }
 
+function AdminPermissionsPicker({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: AdminSectionId[] | null;
+  onChange: (next: AdminSectionId[] | null) => void;
+  disabled?: boolean;
+}) {
+  const fullAccess = value == null;
+  return (
+    <div className="space-y-2 rounded-xl border border-white/20 bg-black/10 p-3">
+      <YesNoSwitchRow
+        label="Pełny dostęp do panelu"
+        hint="Wyłącz, aby ograniczyć admina do wybranych sekcji."
+        checked={fullAccess}
+        disabled={disabled}
+        onCheckedChange={(v) => onChange(v ? null : ["overview"])}
+        tone="light"
+        rowTone="light"
+      />
+      {!fullAccess ? (
+        <ul className="mt-2 space-y-1.5">
+          {ADMIN_SECTIONS.map((s) => {
+            const checked = (value ?? []).includes(s.id);
+            return (
+              <li key={s.id}>
+                <label className="flex cursor-pointer items-center gap-2 text-sm text-white">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 rounded border-white/30"
+                    checked={checked}
+                    disabled={disabled}
+                    onChange={(e) => {
+                      const set = new Set(value ?? []);
+                      if (e.target.checked) set.add(s.id);
+                      else set.delete(s.id);
+                      const next = [...set] as AdminSectionId[];
+                      onChange(next.length === 0 ? [] : next);
+                    }}
+                  />
+                  {s.label}
+                </label>
+              </li>
+            );
+          })}
+        </ul>
+      ) : null}
+    </div>
+  );
+}
+
 function UserCreateForm({
   open,
   onOpenChange,
@@ -2317,6 +2715,7 @@ function UserCreateForm({
 }) {
   const [role, setRole] = useState<"admin" | "player">("player");
   const [canPzuCup, setCanPzuCup] = useState(false);
+  const [adminPerms, setAdminPerms] = useState<AdminSectionId[] | null>(null);
   const [saving, setSaving] = useState(false);
   const form = useValidatedForm({
     initialValues: { first_name: "", last_name: "", zawodnik: "" },
@@ -2358,6 +2757,7 @@ function UserCreateForm({
                     zawodnik,
                     role,
                     can_pzu_cup: canPzuCup,
+                    admin_permissions: role === "admin" ? serializeAdminPermissions(adminPerms) : null,
                   }),
                 });
                 const data = (await res.json().catch(() => ({}))) as { error?: string };
@@ -2420,6 +2820,9 @@ function UserCreateForm({
             </SelectContent>
           </Select>
         </div>
+        {role === "admin" ? (
+          <AdminPermissionsPicker value={adminPerms} onChange={setAdminPerms} disabled={saving} />
+        ) : null}
         <YesNoSwitchRow
           className={`${adminToggleRowClass} mt-1`}
           label="Dostęp do PZU Cup"
@@ -2453,6 +2856,9 @@ function UserEditForm({
   const [zawodnik, setZ] = useState(user.zawodnik);
   const [role, setRole] = useState(user.role);
   const [canPzuCup, setCanPzuCup] = useState((user.can_pzu_cup ?? 0) === 1);
+  const [adminPerms, setAdminPerms] = useState<AdminSectionId[] | null>(() =>
+    parseAdminPermissions(user.admin_permissions)
+  );
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -2461,6 +2867,7 @@ function UserEditForm({
     setZ(user.zawodnik);
     setRole(user.role);
     setCanPzuCup((user.can_pzu_cup ?? 0) === 1);
+    setAdminPerms(parseAdminPermissions(user.admin_permissions));
   }, [user]);
 
   return (
@@ -2484,10 +2891,18 @@ function UserEditForm({
                 const res = await fetch(API.user(user.id), {
                   method: "PUT",
                   headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ first_name, last_name, zawodnik, role, can_pzu_cup: canPzuCup }),
+                  body: JSON.stringify({
+                    first_name,
+                    last_name,
+                    zawodnik,
+                    role,
+                    can_pzu_cup: canPzuCup,
+                    admin_permissions: role === "admin" ? serializeAdminPermissions(adminPerms) : null,
+                  }),
                 });
                 if (!res.ok) {
-                  toast.error("Nie udało się zapisać zmian");
+                  const data = (await res.json().catch(() => ({}))) as { error?: string };
+                  toast.error(data.error ?? "Nie udało się zapisać zmian");
                   return;
                 }
                 toast.success("Zapisano dane użytkownika");
@@ -2543,6 +2958,9 @@ function UserEditForm({
             </SelectContent>
           </Select>
         </div>
+        {role === "admin" ? (
+          <AdminPermissionsPicker value={adminPerms} onChange={setAdminPerms} disabled={saving} />
+        ) : null}
         <YesNoSwitchRow
           className="rounded-xl border border-zinc-200 bg-zinc-50/80 px-4 py-3 dark:border-zinc-700 dark:bg-zinc-900/40"
           label="Dostęp do PZU Cup"
