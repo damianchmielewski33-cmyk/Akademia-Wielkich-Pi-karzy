@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import { toast } from "sonner";
+import { toast } from "@/lib/app-toast";
 import { Bell } from "lucide-react";
 import { z } from "zod";
 import { AppModal } from "@/components/ui/app-modal";

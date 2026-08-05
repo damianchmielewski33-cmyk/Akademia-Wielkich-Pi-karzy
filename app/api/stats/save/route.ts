@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getDb, logActivity } from "@/lib/db";
-import { requireUser } from "@/lib/api-helpers";
+import { requireUser, requireMatchInApiRealm } from "@/lib/api-helpers";
 import { screenBlockApiResponse } from "@/lib/screen-block-api";
 import { getActiveRankingSeasonId } from "@/lib/ranking-seasons";
 import { isWithinStatsEditWindow, utcTodayYmd } from "@/lib/match-stats-rules";
@@ -132,6 +132,9 @@ export async function POST(req: Request) {
   }
 
   const match_id = data.match_id!;
+  const realmGate = await requireMatchInApiRealm(req, match_id);
+  if (!realmGate.ok) return realmGate.response;
+
   const match = (await db
     .prepare("SELECT id, played, match_date FROM matches WHERE id = ?")
     .get(match_id)) as { id: number; played: number; match_date: string } | undefined;

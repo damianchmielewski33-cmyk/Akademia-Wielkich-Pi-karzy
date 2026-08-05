@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Construction, Eye, Loader2 } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/app-toast";
 import {
   AdminCard,
   AdminToolbar,

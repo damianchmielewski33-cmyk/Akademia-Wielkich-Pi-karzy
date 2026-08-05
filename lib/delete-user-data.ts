@@ -37,6 +37,8 @@ export async function deleteUserAccountData(db: AppDb, userId: number): Promise<
   await db.prepare("DELETE FROM standalone_match_stats WHERE user_id = ?").run(userId);
   await db.prepare("DELETE FROM participation_survey_answer WHERE user_id = ?").run(userId);
   await db.prepare("DELETE FROM match_signups WHERE user_id = ?").run(userId);
+  await db.prepare("DELETE FROM user_devices WHERE user_id = ?").run(userId);
+  await db.prepare("DELETE FROM push_subscriptions WHERE user_id = ?").run(userId);
 
   const fallbackAdmin = (await db
     .prepare("SELECT id FROM users WHERE is_admin = 1 AND id != ? ORDER BY id LIMIT 1")

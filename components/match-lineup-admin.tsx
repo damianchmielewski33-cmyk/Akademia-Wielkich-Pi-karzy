@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { createPortal } from "react-dom";
 import { Loader2, X } from "lucide-react";
 import { InlinePreloader } from "@/components/preloaders";
-import { toast } from "sonner";
+import { toast } from "@/lib/app-toast";
 import {
   AdminCard,
   AdminToolbar,

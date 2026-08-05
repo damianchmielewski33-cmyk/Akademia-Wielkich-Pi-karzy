@@ -11,7 +11,7 @@ type Ctx = { params: Promise<{ id: string }> };
  * Admin potwierdza: "otrzymałem" dla wpłaty zgłoszonej przez zawodnika.
  */
 export async function POST(_req: Request, ctx: Ctx) {
-  const gate = await requireAdmin();
+  const gate = await requireAdmin("finance");
   if (!gate.ok) return gate.response;
 
   const { id } = await ctx.params;
@@ -39,15 +39,17 @@ export async function POST(_req: Request, ctx: Ctx) {
   if (row.created_by !== "player" || !row.player_declared_at) {
     return NextResponse.json({ error: "Not confirmable" }, { status: 409 });
   }
-  if (row.admin_confirmed_received_at) return NextResponse.json({ error: "Already confirmed" }, { status: 409 });
 
-  await db
+  const claimed = await db
     .prepare(
       `UPDATE wallet_deposit_requests
        SET admin_confirmed_received_at = datetime('now')
-       WHERE id = ?`
+       WHERE id = ? AND status = 'pending' AND admin_confirmed_received_at IS NULL`
     )
     .run(depId);
+  if (claimed.changes === 0) {
+    return NextResponse.json({ error: "Already confirmed" }, { status: 409 });
+  }
 
   const done = await completeDepositRequest(depId, gate.session.userId);
   if (!done.ok) return NextResponse.json({ error: done.error }, { status: 409 });

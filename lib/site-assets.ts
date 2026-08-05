@@ -47,7 +47,7 @@ export const SITE_ASSET_META: Record<SiteAssetKey, SiteAssetMeta> = {
   },
   logo_favicon: {
     label: "Ikona w karcie przeglądarki",
-    hint: "Mała ikonka obok tytułu zakładki oraz na telefonie po dodaniu strony do ekranu.",
+    hint: "Mała ikonka obok tytułu zakładki. Ikona na iPhonie (Dodaj do ekranu) używa osobnego pliku jak na Androidzie.",
     recommended: "PNG lub SVG, ok. 512×512 px",
   },
   bg_soccer_ball: {

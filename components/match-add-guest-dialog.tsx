@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Loader2, UserPlus } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/app-toast";
 import { z } from "zod";
 import type { MatchRow } from "@/lib/db";
 import { AppModal } from "@/components/ui/app-modal";

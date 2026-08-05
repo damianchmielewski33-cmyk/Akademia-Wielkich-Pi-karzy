@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { CreditCard, Loader2, Wallet } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/app-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { SiteAssetImage } from "@/components/site-asset-image";
 import { useEffect, useRef, useState } from "react";
 import { ArrowDownLeft, ArrowUpRight, Loader2, LogIn, SlidersHorizontal, UserPlus, Wallet } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/app-toast";
 import { AdminWalletsSaldoSection } from "@/components/admin-wallets-saldo-section";
 import { HotpayPayButtons } from "@/components/hotpay-pay-buttons";
 import { PayMatchButton } from "@/components/pay-match-button";

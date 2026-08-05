@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/app-toast";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { FormInput } from "@/components/ui/form-field";

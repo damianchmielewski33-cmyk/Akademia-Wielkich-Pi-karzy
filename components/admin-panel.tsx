@@ -26,7 +26,7 @@ import {
   Users,
   Wallet,
 } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/app-toast";
 import { PlayerAliasPicker } from "@/components/player-alias-picker";
 import { FormInput } from "@/components/ui/form-field";
 import { formSchemas, useValidatedForm } from "@/lib/form-validation";
@@ -78,6 +78,7 @@ import { AdminWalletsSaldoSection } from "@/components/admin-wallets-saldo-secti
 import { AdminSettingsTab } from "@/components/admin-settings-tab";
 import { AdminScreenBlocksTab } from "@/components/admin-screen-blocks-tab";
 import { AdminPzuCupTab } from "@/components/admin-pzu-cup-tab";
+import { AdminFilterChips, AdminRowActions } from "@/components/admin-row-actions";
 import { AdminGalleryTab } from "@/components/admin-gallery-tab";
 import { AdminMessagesTab } from "@/components/admin-messages-tab";
 import { AdminRankingSeasonsTab } from "@/components/admin-ranking-seasons-tab";
@@ -428,23 +429,30 @@ function MatchesView({
                     {m.fee_pln !== null ? `${m.fee_pln} zł` : "–"}
                   </TableCell>
                   <TableCell className="text-right align-middle">
-                    <div className="flex flex-wrap justify-end gap-2">
-                      {m.cancelled ? (
-                        <Badge className="bg-red-600 text-white">Anulowany</Badge>
-                      ) : (
-                        <>
-                          <Button size="sm" variant="stadium" onClick={() => handleEditClick(m)}>
-                            Edytuj
-                          </Button>
+                    {m.cancelled ? (
+                      <Badge className="bg-red-600 text-white">Anulowany</Badge>
+                    ) : (
+                      <AdminRowActions
+                        primary={
                           <Button size="sm" variant="stadium" onClick={() => handleSignupsClick(m)}>
                             Zapisy
                           </Button>
-                          <Button size="sm" variant="stadium" onClick={() => handleCancelClick(m)}>
-                            Anuluj
-                          </Button>
-                        </>
-                      )}
-                    </div>
+                        }
+                        items={[
+                          {
+                            label: "Edytuj",
+                            onClick: () => handleEditClick(m),
+                          },
+                        ]}
+                        dangerItems={[
+                          {
+                            label: "Anuluj mecz",
+                            onClick: () => handleCancelClick(m),
+                            destructive: true,
+                          },
+                        ]}
+                      />
+                    )}
                   </TableCell>
                 </TableRow>
               ))
@@ -1403,6 +1411,7 @@ function AnalyticsView({
   const [activityQuery, setActivityQuery] = useState("");
   const [sortKey, setSortKey] = useState<AnalyticsScreenSortKey>("views");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const [section, setSection] = useState<"summary" | "ads" | "screens" | "activity">("summary");
   const maxDate = todayYmd();
 
   const toggleSort = useCallback((key: AnalyticsScreenSortKey) => {
@@ -1473,64 +1482,40 @@ function AnalyticsView({
     <div className="space-y-6" aria-busy={loading}>
       <AdminToolbar
         title="Analityka wejść"
-        description="Odsłony stron, wyświetlenia reklam, aktywność graczy i dziennik zdarzeń. Zakres dat to dni kalendarzowe (Europe/Warsaw)."
+        description="Odsłony stron, wyświetlenia reklam, aktywność graczy i dziennik zdarzeń."
         onReload={onReload}
         loading={loading}
+      />
+
+      <AdminCard
+        title="Zakres"
+        description="Dni kalendarzowe (Europe/Warsaw). Presety ustawiają obie daty naraz."
       >
-        <div className="flex w-full flex-col gap-3 xl:w-auto">
-          <div className="flex flex-wrap items-end gap-2">
-            <Button
-              type="button"
-              variant="stadium"
-              size="sm"
-              className={adminOutlineBtnClass}
-              disabled={loading}
-              onClick={() => {
-                const r = analyticsPresetLastNDaysInclusive(7);
-                onPresetRange(r.from, r.to);
-              }}
-            >
-              7 dni
-            </Button>
-            <Button
-              type="button"
-              variant="stadium"
-              size="sm"
-              className={adminOutlineBtnClass}
-              disabled={loading}
-              onClick={() => {
-                const r = analyticsPresetLastNDaysInclusive(30);
-                onPresetRange(r.from, r.to);
-              }}
-            >
-              30 dni
-            </Button>
-            <Button
-              type="button"
-              variant="stadium"
-              size="sm"
-              className={adminOutlineBtnClass}
-              disabled={loading}
-              onClick={() => {
-                const r = analyticsPresetMonthToDate();
-                onPresetRange(r.from, r.to);
-              }}
-            >
-              Ten miesiąc
-            </Button>
-            <Button
-              type="button"
-              variant="stadium"
-              size="sm"
-              className={adminOutlineBtnClass}
-              disabled={loading}
-              onClick={() => {
-                const r = defaultAnalyticsDateRange();
-                onPresetRange(r.from, r.to);
-              }}
-            >
-              Wczoraj–dziś
-            </Button>
+        <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end">
+          <div className="flex flex-wrap gap-2">
+            {(
+              [
+                { label: "7 dni", run: () => analyticsPresetLastNDaysInclusive(7) },
+                { label: "30 dni", run: () => analyticsPresetLastNDaysInclusive(30) },
+                { label: "Ten miesiąc", run: () => analyticsPresetMonthToDate() },
+                { label: "Wczoraj–dziś", run: () => defaultAnalyticsDateRange() },
+              ] as const
+            ).map((p) => (
+              <Button
+                key={p.label}
+                type="button"
+                variant="stadium"
+                size="sm"
+                className={adminOutlineBtnClass}
+                disabled={loading}
+                onClick={() => {
+                  const r = p.run();
+                  onPresetRange(r.from, r.to);
+                }}
+              >
+                {p.label}
+              </Button>
+            ))}
           </div>
           <div className="flex flex-wrap items-end gap-3">
             <div>
@@ -1560,26 +1545,34 @@ function AnalyticsView({
               />
             </div>
           </div>
+          {rangeSummary && data ? (
+            <p className="w-full text-sm pitch-muted">
+              Raport: <span className="font-semibold text-white">{rangeSummary}</span>
+              <span className="ml-2 font-mono text-xs opacity-70">
+                ({data.range.from} — {data.range.to})
+              </span>
+            </p>
+          ) : null}
         </div>
-      </AdminToolbar>
+      </AdminCard>
 
-      {rangeSummary && data ? (
-        <div className="admin-data-card py-3 sm:px-5">
-          <p className="text-sm admin-data-muted">
-            <span className="font-semibold text-zinc-900 dark:text-zinc-50">Zakres raportu:</span>{" "}
-            {rangeSummary}{" "}
-            <span className="font-mono text-xs text-zinc-500 dark:text-zinc-400">
-              ({data.range.from} — {data.range.to})
-            </span>
-          </p>
-        </div>
-      ) : null}
+      <AdminFilterChips
+        aria-label="Sekcja analityki"
+        value={section}
+        onChange={(id) => setSection(id as typeof section)}
+        options={[
+          { id: "summary", label: "Podsumowanie" },
+          { id: "ads", label: "Reklamy" },
+          { id: "screens", label: "Ekrany" },
+          { id: "activity", label: "Aktywność" },
+        ]}
+      />
 
       {!data && !loading ? (
         <p className="text-sm pitch-muted">Brak danych do wyświetlenia.</p>
       ) : null}
 
-      {data ? (
+      {data && section === "summary" ? (
         <>
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <AdminCard tone="data" title="Wszystkie odsłony">
@@ -1627,9 +1620,6 @@ function AnalyticsView({
                     <span className="tabular-nums"> ({data.players.pct_not_visited}%)</span>
                   ) : null}
                 </p>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                  Rejestracje samodzielne: {data.players.self_service_registrations_in_range}
-                </p>
               </div>
             </AdminCard>
             <AdminCard tone="data" title="Terminarz → mecz" description="Gracze (nie-admin)">
@@ -1647,94 +1637,66 @@ function AnalyticsView({
                   </strong>
                   {data.terminarz_funnel.pct_signed_after_view != null ? (
                     <span className="tabular-nums"> ({data.terminarz_funnel.pct_signed_after_view}%)</span>
-                  ) : data.terminarz_funnel.distinct_players_viewed === 0 ? (
-                    <span className="text-zinc-500"> (–)</span>
                   ) : null}
                 </p>
               </div>
             </AdminCard>
-            <AdminCard
-              tone="data"
-              title="Linki zewnętrzne"
-              description="Zaproszenia i publiczne linki płatności"
-            >
+          </div>
+          <AdminAnalyticsHourlyCharts data={hourlyData} loading={loading && hourlyData === null} />
+          <details className="admin-analytics-help">
+            <summary>Jak czytać te liczby?</summary>
+            <div className="mt-3 space-y-2 text-sm">
+              <p>
+                <strong>Gracze zalogowani vs bez aktywności</strong> — spośród kont gracza, ilu miało odsłonę w okresie.
+              </p>
+              <p>
+                <strong>Terminarz → zapis</strong> — gracze, którzy oglądali terminarz i zapisali się na mecz.
+              </p>
+            </div>
+          </details>
+        </>
+      ) : null}
+
+      {data && section === "ads" ? (
+        <>
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            <AdminCard tone="data" title="Wyświetlenia reklam" description="Wypełnione sloty AdSense">
+              <p className="admin-analytics-kpi">{data.ads?.filled ?? data.ads?.total_impressions ?? 0}</p>
+              <p className="mt-2 text-sm admin-data-muted">
+                Unikalni:{" "}
+                <strong className="text-zinc-900 dark:text-zinc-50">{data.ads?.unique_visitors ?? 0}</strong>
+                {data.ads?.fill_rate_pct != null ? (
+                  <span className="tabular-nums"> · wypełnienie {data.ads.fill_rate_pct}%</span>
+                ) : null}
+              </p>
+            </AdminCard>
+            <AdminCard tone="data" title="Linki zewnętrzne">
               <div className="space-y-2 text-sm admin-data-muted">
                 <p>
                   Zaproszenia:{" "}
                   <strong className="text-zinc-900 dark:text-zinc-50 tabular-nums">
                     {data.share_links?.zaproszenie.total_views ?? 0}
                   </strong>
-                  <span className="text-zinc-500">
-                    {" "}
-                    odsłon / {data.share_links?.zaproszenie.unique_visitors ?? 0} unikalnych
-                  </span>
                 </p>
                 <p>
                   Linki płatności:{" "}
                   <strong className="text-zinc-900 dark:text-zinc-50 tabular-nums">
                     {data.share_links?.platnosci_public.total_views ?? 0}
                   </strong>
-                  <span className="text-zinc-500">
-                    {" "}
-                    odsłon / {data.share_links?.platnosci_public.unique_visitors ?? 0} unikalnych
-                  </span>
                 </p>
               </div>
             </AdminCard>
-            <AdminCard
-              tone="data"
-              title="Wyświetlenia reklam"
-              description="Wypełnione sloty AdSense (nie puste bloki)"
-            >
-              <p className="admin-analytics-kpi">{data.ads?.filled ?? data.ads?.total_impressions ?? 0}</p>
-              <p className="mt-2 text-sm admin-data-muted">
-                Unikalni:{" "}
-                <strong className="text-zinc-900 dark:text-zinc-50">
-                  {data.ads?.unique_visitors ?? 0}
-                </strong>
-                {data.ads?.fill_rate_pct != null ? (
-                  <span className="tabular-nums"> · wypełnienie {data.ads.fill_rate_pct}%</span>
-                ) : null}
-              </p>
-              <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-                Żądania: {data.ads?.requests ?? 0} · puste: {data.ads?.unfilled ?? 0}
-              </p>
-            </AdminCard>
-            <AdminCard
-              tone="data"
-              title="Zgoda marketingowa"
-              description="Wybór w banerze cookies"
-            >
+            <AdminCard tone="data" title="Zgoda marketingowa">
               <p className="admin-analytics-kpi">
-                {data.cookie_consent?.accept_pct != null
-                  ? `${data.cookie_consent.accept_pct}%`
-                  : "–"}
+                {data.cookie_consent?.accept_pct != null ? `${data.cookie_consent.accept_pct}%` : "–"}
               </p>
               <p className="mt-2 text-sm admin-data-muted">
-                Akceptacja:{" "}
-                <strong className="text-zinc-900 dark:text-zinc-50 tabular-nums">
-                  {data.cookie_consent?.accept_all ?? 0}
-                </strong>
-                {" · "}
-                tylko niezbędne:{" "}
-                <strong className="text-zinc-900 dark:text-zinc-50 tabular-nums">
-                  {data.cookie_consent?.reject_marketing ?? 0}
-                </strong>
+                Akceptacja: {data.cookie_consent?.accept_all ?? 0} · tylko niezbędne:{" "}
+                {data.cookie_consent?.reject_marketing ?? 0}
               </p>
             </AdminCard>
           </div>
-        </>
-      ) : null}
-
-      <AdminAnalyticsHourlyCharts data={hourlyData} loading={loading && hourlyData === null} />
-
-      {data ? (
-        <>
-          <AdminCard
-            tone="data"
-            title="Reklamy wg miejsca"
-            description="Stopka, treść (Start/Terminarz/Galeria) i popup — wypełnione vs puste."
-          >
+          <AdminCard tone="data" title="Reklamy wg miejsca">
             <AdminTableShell tone="data">
               <Table>
                 <TableHeader>
@@ -1757,7 +1719,6 @@ function AnalyticsView({
                       <TableRow key={row.placement}>
                         <TableCell>
                           <span className="font-medium text-zinc-900 dark:text-zinc-50">{row.label}</span>
-                          <span className="admin-table-muted ml-2">{row.placement}</span>
                         </TableCell>
                         <TableCell className="text-right tabular-nums font-medium">{row.filled}</TableCell>
                         <TableCell className="text-right tabular-nums font-medium">{row.unfilled}</TableCell>
@@ -1769,12 +1730,7 @@ function AnalyticsView({
               </Table>
             </AdminTableShell>
           </AdminCard>
-
-          <AdminCard
-            tone="data"
-            title="Reklamy wg ekranu"
-            description="Wypełnione wyświetlenia reklam według strony."
-          >
+          <AdminCard tone="data" title="Reklamy wg ekranu">
             <AdminTableShell tone="data">
               <Table>
                 <TableHeader>
@@ -1797,14 +1753,11 @@ function AnalyticsView({
                       <TableRow key={row.screen_key}>
                         <TableCell>
                           <span className="font-medium text-zinc-900 dark:text-zinc-50">{row.label}</span>
-                          <span className="admin-table-muted ml-2">{row.screen_key}</span>
                         </TableCell>
                         <TableCell className="text-right tabular-nums font-medium">
                           {row.filled ?? row.impressions}
                         </TableCell>
-                        <TableCell className="text-right tabular-nums font-medium">
-                          {row.unfilled ?? 0}
-                        </TableCell>
+                        <TableCell className="text-right tabular-nums font-medium">{row.unfilled ?? 0}</TableCell>
                         <TableCell className="text-right tabular-nums font-medium">{row.unique_visitors}</TableCell>
                       </TableRow>
                     ))
@@ -1813,220 +1766,184 @@ function AnalyticsView({
               </Table>
             </AdminTableShell>
           </AdminCard>
+        </>
+      ) : null}
 
-          <AdminCard
-            tone="data"
-            title="Wejścia wg ekranu"
-            description="Odsłony i unikalni odbiorcy w wybranym zakresie. Kliknij nagłówek kolumny, aby sortować."
-            headerExtra={
-              <Button
-                type="button"
-                variant="stadium"
-                size="sm"
-                className={adminDataOutlineBtnClass}
-                disabled={loading || screensPrepared.length === 0}
-                onClick={() => downloadAnalyticsScreensCsv(screensPrepared, data.range)}
-              >
-                <Download className="mr-2 h-4 w-4" aria-hidden />
-                CSV
-              </Button>
-            }
-          >
-            <div className="relative mb-4 w-full min-w-[200px] sm:max-w-xs">
-              <Search
-                className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400"
-                aria-hidden
-              />
-              <Input
-                className={adminDataSearchInputClass}
-                placeholder="Filtruj ekran lub klucz…"
-                value={screenQuery}
-                onChange={(e) => setScreenQuery(e.target.value)}
-                aria-label="Filtruj listę ekranów"
-              />
-            </div>
+      {data && section === "screens" ? (
+        <AdminCard
+          tone="data"
+          title="Wejścia wg ekranu"
+          description="Odsłony i unikalni odbiorcy. Kliknij nagłówek, aby sortować."
+          headerExtra={
+            <Button
+              type="button"
+              variant="stadium"
+              size="sm"
+              className={adminDataOutlineBtnClass}
+              disabled={loading || screensPrepared.length === 0}
+              onClick={() => downloadAnalyticsScreensCsv(screensPrepared, data.range)}
+            >
+              <Download className="mr-2 h-4 w-4" aria-hidden />
+              CSV
+            </Button>
+          }
+        >
+          <div className="relative mb-4 w-full min-w-[200px] sm:max-w-xs">
+            <Search
+              className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400"
+              aria-hidden
+            />
+            <Input
+              className={adminDataSearchInputClass}
+              placeholder="Filtruj ekran lub klucz…"
+              value={screenQuery}
+              onChange={(e) => setScreenQuery(e.target.value)}
+              aria-label="Filtruj listę ekranów"
+            />
+          </div>
+          <AdminTableShell tone="data">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>
+                    <button type="button" className="admin-table-sort-btn" onClick={() => toggleSort("label")}>
+                      Ekran
+                      {sortKey === "label" ? (
+                        sortDir === "asc" ? (
+                          <ArrowUpAZ className="h-3.5 w-3.5 opacity-70" aria-hidden />
+                        ) : (
+                          <ArrowDownAZ className="h-3.5 w-3.5 opacity-70" aria-hidden />
+                        )
+                      ) : null}
+                    </button>
+                  </TableHead>
+                  <TableHead className="text-right">
+                    <button
+                      type="button"
+                      className="admin-table-sort-btn w-full justify-end"
+                      onClick={() => toggleSort("views")}
+                    >
+                      Odsłony
+                      {sortKey === "views" ? (
+                        sortDir === "asc" ? (
+                          <ArrowUpAZ className="h-3.5 w-3.5 opacity-70" aria-hidden />
+                        ) : (
+                          <ArrowDownAZ className="h-3.5 w-3.5 opacity-70" aria-hidden />
+                        )
+                      ) : null}
+                    </button>
+                  </TableHead>
+                  <TableHead className="text-right">
+                    <button
+                      type="button"
+                      className="admin-table-sort-btn w-full justify-end"
+                      onClick={() => toggleSort("unique")}
+                    >
+                      Unikalni
+                      {sortKey === "unique" ? (
+                        sortDir === "asc" ? (
+                          <ArrowUpAZ className="h-3.5 w-3.5 opacity-70" aria-hidden />
+                        ) : (
+                          <ArrowDownAZ className="h-3.5 w-3.5 opacity-70" aria-hidden />
+                        )
+                      ) : null}
+                    </button>
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {data.screens.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-center text-sm admin-data-muted">
+                      Brak zapisanych wejść w tym okresie.
+                    </TableCell>
+                  </TableRow>
+                ) : screensPrepared.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-center text-sm admin-data-muted">
+                      Brak wyników dla podanego filtra.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  screensPrepared.map((row) => (
+                    <TableRow key={row.screen_key}>
+                      <TableCell>
+                        <span className="font-medium text-zinc-900 dark:text-zinc-50">{row.label}</span>
+                        <span className="admin-table-muted ml-2">{row.screen_key}</span>
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums font-medium">{row.total_views}</TableCell>
+                      <TableCell className="text-right tabular-nums font-medium">{row.unique_visitors}</TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </AdminTableShell>
+        </AdminCard>
+      ) : null}
+
+      {data && section === "activity" ? (
+        <AdminCard
+          tone="data"
+          title="Dziennik akcji"
+          description="Zdarzenia z serwera w wybranym zakresie. Najnowsze na górze — do 400 wpisów."
+        >
+          <div className="relative mb-4 w-full min-w-[200px] sm:max-w-md">
+            <Search
+              className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400"
+              aria-hidden
+            />
+            <Input
+              className={adminDataSearchInputClass}
+              placeholder="Szukaj po osobie, treści akcji lub czasie…"
+              value={activityQuery}
+              onChange={(e) => setActivityQuery(e.target.value)}
+              aria-label="Filtruj dziennik akcji"
+            />
+          </div>
+          <div className="max-h-[min(28rem,70vh)] overflow-y-auto overflow-x-auto">
             <AdminTableShell tone="data">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>
-                      <button
-                        type="button"
-                        className="admin-table-sort-btn"
-                        onClick={() => toggleSort("label")}
-                      >
-                        Ekran
-                        {sortKey === "label" ? (
-                          sortDir === "asc" ? (
-                            <ArrowUpAZ className="h-3.5 w-3.5 opacity-70" aria-hidden />
-                          ) : (
-                            <ArrowDownAZ className="h-3.5 w-3.5 opacity-70" aria-hidden />
-                          )
-                        ) : null}
-                      </button>
-                    </TableHead>
-                    <TableHead className="text-right">
-                      <button
-                        type="button"
-                        className="admin-table-sort-btn w-full justify-end"
-                        onClick={() => toggleSort("views")}
-                      >
-                        Odsłony
-                        {sortKey === "views" ? (
-                          sortDir === "asc" ? (
-                            <ArrowUpAZ className="h-3.5 w-3.5 opacity-70" aria-hidden />
-                          ) : (
-                            <ArrowDownAZ className="h-3.5 w-3.5 opacity-70" aria-hidden />
-                          )
-                        ) : null}
-                      </button>
-                    </TableHead>
-                    <TableHead className="text-right">
-                      <button
-                        type="button"
-                        className="admin-table-sort-btn w-full justify-end"
-                        onClick={() => toggleSort("unique")}
-                      >
-                        Unikalni
-                        {sortKey === "unique" ? (
-                          sortDir === "asc" ? (
-                            <ArrowUpAZ className="h-3.5 w-3.5 opacity-70" aria-hidden />
-                          ) : (
-                            <ArrowDownAZ className="h-3.5 w-3.5 opacity-70" aria-hidden />
-                          )
-                        ) : null}
-                      </button>
-                    </TableHead>
+                    <TableHead className="whitespace-nowrap">Czas (PL)</TableHead>
+                    <TableHead className="min-w-[10rem]">Kto</TableHead>
+                    <TableHead>Czynność</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {data.screens.length === 0 ? (
+                  {(data.activity_events?.length ?? 0) === 0 ? (
                     <TableRow>
                       <TableCell colSpan={3} className="text-center text-sm admin-data-muted">
-                        Brak zapisanych wejść w tym okresie.
+                        Brak wpisów dziennika dla tego zakresu dat.
                       </TableCell>
                     </TableRow>
-                  ) : screensPrepared.length === 0 ? (
+                  ) : eventsPrepared.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={3} className="text-center text-sm admin-data-muted">
                         Brak wyników dla podanego filtra.
                       </TableCell>
                     </TableRow>
                   ) : (
-                    screensPrepared.map((row) => (
-                      <TableRow key={row.screen_key}>
-                        <TableCell>
-                          <span className="font-medium text-zinc-900 dark:text-zinc-50">{row.label}</span>
-                          <span className="admin-table-muted ml-2">{row.screen_key}</span>
+                    eventsPrepared.map((row) => (
+                      <TableRow key={row.id}>
+                        <TableCell className="whitespace-nowrap align-top text-xs tabular-nums text-zinc-500 dark:text-zinc-400">
+                          <time dateTime={row.timestamp} title={row.timestamp}>
+                            {row.time_display}
+                          </time>
                         </TableCell>
-                        <TableCell className="text-right tabular-nums font-medium">{row.total_views}</TableCell>
-                        <TableCell className="text-right tabular-nums font-medium">{row.unique_visitors}</TableCell>
+                        <TableCell className="align-top text-sm font-medium text-zinc-900 dark:text-zinc-50">
+                          {row.actor_label}
+                        </TableCell>
+                        <TableCell className="align-top text-sm admin-data-muted">{row.action}</TableCell>
                       </TableRow>
                     ))
                   )}
                 </TableBody>
               </Table>
             </AdminTableShell>
-          </AdminCard>
-
-          <AdminCard
-            tone="data"
-            title="Dziennik akcji"
-            description="Zdarzenia z serwera w wybranym zakresie (logowanie, zapisy, edycje profilu). Najnowsze na górze — do 400 wpisów."
-          >
-            <div className="relative mb-4 w-full min-w-[200px] sm:max-w-md">
-              <Search
-                className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400"
-                aria-hidden
-              />
-              <Input
-                className={adminDataSearchInputClass}
-                placeholder="Szukaj po osobie, treści akcji lub czasie…"
-                value={activityQuery}
-                onChange={(e) => setActivityQuery(e.target.value)}
-                aria-label="Filtruj dziennik akcji"
-              />
-            </div>
-            <div className="max-h-[min(28rem,70vh)] overflow-y-auto overflow-x-auto">
-              <AdminTableShell tone="data">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="whitespace-nowrap">Czas (PL)</TableHead>
-                      <TableHead className="min-w-[10rem]">Kto</TableHead>
-                      <TableHead>Czynność</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {(data.activity_events?.length ?? 0) === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={3} className="text-center text-sm admin-data-muted">
-                          Brak wpisów dziennika dla tego zakresu dat.
-                        </TableCell>
-                      </TableRow>
-                    ) : eventsPrepared.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={3} className="text-center text-sm admin-data-muted">
-                          Brak wyników dla podanego filtra.
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      eventsPrepared.map((row) => (
-                        <TableRow key={row.id}>
-                          <TableCell className="whitespace-nowrap align-top text-xs tabular-nums text-zinc-500 dark:text-zinc-400">
-                            <time dateTime={row.timestamp} title={row.timestamp}>
-                              {row.time_display}
-                            </time>
-                          </TableCell>
-                          <TableCell className="align-top text-sm font-medium text-zinc-900 dark:text-zinc-50">
-                            {row.actor_label}
-                          </TableCell>
-                          <TableCell className="align-top text-sm admin-data-muted">{row.action}</TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </AdminTableShell>
-            </div>
-          </AdminCard>
-
-          <details className="admin-analytics-help">
-            <summary>Jak czytać te liczby?</summary>
-            <div className="mt-3 space-y-2">
-              <p>
-                <strong>Gracze zalogowani vs bez aktywności</strong> — spośród kont z rolą gracza (bez
-                administratorów), ilu miało co najmniej jedno odsłonięcie strony zalogowane w wybranym
-                okresie.
-              </p>
-              <p>
-                <strong>Rejestracje (samodzielne)</strong> — wpisy z dziennika przy rejestracji z formularza
-                (nie obejmuje kont utworzonych przez administratora).
-              </p>
-              <p>
-                <strong>Terminarz → zapis na mecz</strong> — gracze, którzy w okresie oglądali terminarz
-                zalogowani i zapisali się na dowolny mecz.
-              </p>
-              <p>
-                <strong>Wejścia anonimowe vs zalogowane</strong> — udział surowych odsłon bez sesji vs z
-                aktywną sesją.
-              </p>
-              <p>
-                <strong>Wyświetlenia reklam</strong> — tylko sloty, które Google faktycznie wypełnił
-                (nie puste bloki). Osobno: żądania i % wypełnienia. Popup pokazuje się wyłącznie po
-                wypełnieniu reklamy (max. raz na 12 h).
-              </p>
-              <p>
-                <strong>Zgoda marketingowa</strong> — udział „Akceptuję” vs „Tylko niezbędne” w banerze
-                cookies (nowe wybory w okresie).
-              </p>
-              <p>
-                <strong>Dziennik akcji</strong> — konkretne czynności zapisane po stronie serwera (nie mylić z
-                samym otwarciem stron).
-              </p>
-            </div>
-          </details>
-        </>
+          </div>
+        </AdminCard>
       ) : null}
     </div>
   );
@@ -2264,23 +2181,25 @@ function DashboardView({
       <div className="mt-8 grid gap-4 sm:grid-cols-2">
         {shortcuts.map((block) => (
           <AdminCard key={block.category} title={block.category} description={block.description}>
-            <div className="flex flex-wrap gap-2">
+            <ul className="divide-y divide-white/10">
               {block.links.map((link) => {
                 const Icon = link.icon;
                 return (
-                  <Button
-                    key={link.tab}
-                    type="button"
-                    variant="stadium"
-                    size="sm"
-                    onClick={() => onGoToTab(link.tab)}
-                  >
-                    <Icon className="mr-1.5 h-4 w-4" aria-hidden />
-                    {link.label}
-                  </Button>
+                  <li key={link.tab}>
+                    <button
+                      type="button"
+                      onClick={() => onGoToTab(link.tab)}
+                      className="awp-focus-ring flex w-full items-center gap-3 px-1 py-2.5 text-left text-sm font-medium text-emerald-50 transition-colors hover:bg-white/5"
+                    >
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/20 bg-black/20">
+                        <Icon className="h-4 w-4 text-emerald-300" aria-hidden />
+                      </span>
+                      <span className="min-w-0 flex-1">{link.label}</span>
+                    </button>
+                  </li>
                 );
               })}
-            </div>
+            </ul>
           </AdminCard>
         ))}
       </div>
@@ -2341,6 +2260,7 @@ function UsersView({
   const [createOpen, setCreateOpen] = useState(false);
   const [delUser, setDelUser] = useState<UserRow | null>(null);
   const [q, setQ] = useState("");
+  const [pinFilter, setPinFilter] = useState<"all" | "pin">("all");
 
   useEffect(() => {
     if (highlightUserId == null || users.length === 0) return;
@@ -2350,17 +2270,75 @@ function UsersView({
     onHighlightConsumed?.();
   }, [highlightUserId, users, onHighlightConsumed]);
 
+  const pinAttentionCount = useMemo(
+    () =>
+      users.filter(
+        (u) => (u.pin_reset_requested ?? 0) === 1 || (u.pin_change_pending ?? 0) === 1
+      ).length,
+    [users]
+  );
+
   const filtered = useMemo(() => {
+    let list = users;
+    if (pinFilter === "pin") {
+      list = list.filter(
+        (u) => (u.pin_reset_requested ?? 0) === 1 || (u.pin_change_pending ?? 0) === 1
+      );
+    }
     const s = q.trim().toLowerCase();
-    if (!s) return users;
-    return users.filter(
+    if (!s) return list;
+    return list.filter(
       (u) =>
         u.first_name.toLowerCase().includes(s) ||
         u.last_name.toLowerCase().includes(s) ||
         u.zawodnik.toLowerCase().includes(s) ||
         String(u.id).includes(s)
     );
-  }, [users, q]);
+  }, [users, q, pinFilter]);
+
+  async function approvePin(u: UserRow) {
+    const ok = window.confirm(
+      `Zatwierdzić nowy PIN dla ${u.first_name} ${u.last_name}? Od tej chwili będzie obowiązywał tylko nowy PIN (stary przestanie działać).`
+    );
+    if (!ok) return;
+    const res = await fetch(API.approvePinChange(u.id), { method: "POST" });
+    if (!res.ok) {
+      const j = (await res.json().catch(() => ({}))) as { error?: string };
+      toast.error(typeof j.error === "string" ? j.error : "Nie udało się zatwierdzić");
+      return;
+    }
+    toast.success("Nowy PIN został zatwierdzony");
+    onReload();
+  }
+
+  async function rejectPin(u: UserRow) {
+    const ok = window.confirm(
+      `Odrzucić proponowany PIN dla ${u.first_name} ${u.last_name}? Pozostanie dotychczasowy PIN.`
+    );
+    if (!ok) return;
+    const res = await fetch(API.rejectPinChange(u.id), { method: "POST" });
+    if (!res.ok) {
+      const j = (await res.json().catch(() => ({}))) as { error?: string };
+      toast.error(typeof j.error === "string" ? j.error : "Nie udało się odrzucić");
+      return;
+    }
+    toast.success("Odrzucono — aktywny PIN bez zmian");
+    onReload();
+  }
+
+  async function resetPin(u: UserRow) {
+    const ok = window.confirm(
+      `Zresetować PIN dla ${u.first_name} ${u.last_name}? Użytkownik będzie musiał ustawić nowy PIN przy logowaniu.`
+    );
+    if (!ok) return;
+    const res = await fetch(API.resetPin(u.id), { method: "POST" });
+    if (!res.ok) {
+      toast.error("Nie udało się zresetować PIN-u");
+      return;
+    }
+    toast.success("PIN został zresetowany");
+    onReload();
+  }
 
   return (
     <div>
@@ -2388,6 +2366,16 @@ function UsersView({
           />
         </div>
       </AdminToolbar>
+
+      <AdminFilterChips
+        aria-label="Filtr PIN"
+        value={pinFilter}
+        onChange={(id) => setPinFilter(id as "all" | "pin")}
+        options={[
+          { id: "all", label: "Wszyscy", count: users.length },
+          { id: "pin", label: "PIN do obsługi", count: pinAttentionCount },
+        ]}
+      />
 
       <AdminTableShell>
         <Table>
@@ -2463,85 +2451,45 @@ function UsersView({
                     </div>
                   </TableCell>
                   <TableCell className="text-right">
-                    <div className="flex flex-wrap justify-end gap-2">
-                      {(u.pin_change_pending ?? 0) === 1 ? (
+                    <AdminRowActions
+                      primary={
                         <>
-                          <Button
-                            size="sm"
-                            className="bg-emerald-600 text-white hover:bg-emerald-700"
-                            onClick={async () => {
-                              const ok = window.confirm(
-                                `Zatwierdzić nowy PIN dla ${u.first_name} ${u.last_name}? Od tej chwili będzie obowiązywał tylko nowy PIN (stary przestanie działać).`
-                              );
-                              if (!ok) return;
-                              const res = await fetch(API.approvePinChange(u.id), {
-                                method: "POST",
-                              });
-                              if (!res.ok) {
-                                const j = (await res.json().catch(() => ({}))) as { error?: string };
-                                toast.error(
-                                  typeof j.error === "string" ? j.error : "Nie udało się zatwierdzić"
-                                );
-                                return;
-                              }
-                              toast.success("Nowy PIN został zatwierdzony");
-                              onReload();
-                            }}
-                          >
-                            Akceptuj PIN
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="border-amber-300 text-amber-950 hover:bg-amber-50"
-                            onClick={async () => {
-                              const ok = window.confirm(
-                                `Odrzucić proponowany PIN dla ${u.first_name} ${u.last_name}? Pozostanie dotychczasowy PIN.`
-                              );
-                              if (!ok) return;
-                              const res = await fetch(API.rejectPinChange(u.id), { method: "POST" });
-                              if (!res.ok) {
-                                const j = (await res.json().catch(() => ({}))) as { error?: string };
-                                toast.error(
-                                  typeof j.error === "string" ? j.error : "Nie udało się odrzucić"
-                                );
-                                return;
-                              }
-                              toast.success("Odrzucono — aktywny PIN bez zmian");
-                              onReload();
-                            }}
-                          >
-                            Odrzuć PIN
+                          {(u.pin_change_pending ?? 0) === 1 ? (
+                            <Button
+                              size="sm"
+                              className="bg-emerald-600 text-white hover:bg-emerald-700"
+                              onClick={() => void approvePin(u)}
+                            >
+                              Akceptuj PIN
+                            </Button>
+                          ) : null}
+                          <Button size="sm" variant="secondary" onClick={() => setEdit(u)}>
+                            Edytuj
                           </Button>
                         </>
-                      ) : null}
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="border-red-200 text-red-800 hover:bg-red-50"
-                        onClick={async () => {
-                          const ok = window.confirm(
-                            `Zresetować PIN dla ${u.first_name} ${u.last_name}? Użytkownik będzie musiał ustawić nowy PIN przy logowaniu.`
-                          );
-                          if (!ok) return;
-                          const res = await fetch(API.resetPin(u.id), { method: "POST" });
-                          if (!res.ok) {
-                            toast.error("Nie udało się zresetować PIN-u");
-                            return;
-                          }
-                          toast.success("PIN został zresetowany");
-                          onReload();
-                        }}
-                      >
-                        Resetuj PIN
-                      </Button>
-                      <Button size="sm" variant="secondary" onClick={() => setEdit(u)}>
-                        Edytuj
-                      </Button>
-                      <Button size="sm" variant="destructive" onClick={() => setDelUser(u)}>
-                        Usuń
-                      </Button>
-                    </div>
+                      }
+                      items={[
+                        ...((u.pin_change_pending ?? 0) === 1
+                          ? [
+                              {
+                                label: "Odrzuć PIN",
+                                onClick: () => void rejectPin(u),
+                              },
+                            ]
+                          : []),
+                        {
+                          label: "Resetuj PIN",
+                          onClick: () => void resetPin(u),
+                        },
+                      ]}
+                      dangerItems={[
+                        {
+                          label: "Usuń",
+                          onClick: () => setDelUser(u),
+                          destructive: true,
+                        },
+                      ]}
+                    />
                   </TableCell>
                 </TableRow>
               ))

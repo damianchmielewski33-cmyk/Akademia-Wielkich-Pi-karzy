@@ -57,9 +57,12 @@ export async function POST(req: Request, ctx: Ctx) {
   const realmGate = await requireMatchInApiRealm(req, mid);
   if (!realmGate.ok) return realmGate.response;
   const db = await getDb();
-  const match = (await db.prepare("SELECT * FROM matches WHERE id = ?").get(mid)) as
-    | MatchSignupRow
-    | undefined;
+  const match = (await db
+    .prepare(
+      `SELECT id, match_date, match_time, location, max_slots, signed_up, played, cancelled
+       FROM matches WHERE id = ?`
+    )
+    .get(mid)) as MatchSignupRow | undefined;
   if (!match) return NextResponse.json({ error: "Mecz nie istnieje" }, { status: 404 });
 
   const openErr = assertMatchOpenForSignup(match);

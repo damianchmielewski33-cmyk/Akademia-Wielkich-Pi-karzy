@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useEffect, useId, useState } from "react";
+import { Suspense, useEffect, useId, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { usePathname } from "next/navigation";
@@ -28,6 +28,8 @@ import {
 import { AnalyticsTracker } from "@/components/analytics-tracker";
 import { AndroidAppBanner } from "@/components/android-app-banner";
 import { AdminHeaderMessagesButton } from "@/components/admin-header-messages-button";
+import { GymBratCrossLink } from "@/components/gymbrat-cross-link";
+import { SisterSiteArrivalBanner } from "@/components/sister-site-arrival-banner";
 import { NavigationLoadingOverlay } from "@/components/navigation-loading-overlay";
 import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
 import { LogoutConfirmModal } from "@/components/logout-confirm-modal";
@@ -179,6 +181,9 @@ export function SiteShell({
       <AnalyticsTracker />
       <div className="pt-[env(safe-area-inset-top)]">
         <AndroidAppBanner />
+        <Suspense fallback={null}>
+          <SisterSiteArrivalBanner />
+        </Suspense>
         <header className="mundial-header relative z-30 border-b border-[var(--mundial-gold)]/30 text-white shadow-lg">
         <div
           className="pointer-events-none absolute inset-0 opacity-[0.12]"
@@ -497,6 +502,7 @@ export function SiteShell({
                 <Link href="/cookies" className="font-medium underline-offset-2 hover:underline">
                   Cookies
                 </Link>
+                <GymBratCrossLink variant="footer" />
               </p>
             </div>
           </div>

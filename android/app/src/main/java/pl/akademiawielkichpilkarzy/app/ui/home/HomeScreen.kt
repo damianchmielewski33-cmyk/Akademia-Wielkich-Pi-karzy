@@ -19,6 +19,7 @@ import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -29,7 +30,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import android.content.Intent
+import android.net.Uri
 import kotlinx.coroutines.launch
 import pl.akademiawielkichpilkarzy.app.data.api.ApiClient
 import pl.akademiawielkichpilkarzy.app.data.api.LineupSelected
@@ -232,6 +236,7 @@ private data class HomeTile(
 
 @Composable
 private fun HomeTileGrid(nav: HomeNavActions) {
+    val context = LocalContext.current
     val tiles = buildList {
         if (!nav.isBlocked("schedule")) {
             add(
@@ -299,6 +304,21 @@ private fun HomeTileGrid(nav: HomeNavActions) {
                 )
             )
         }
+        add(
+            HomeTile(
+                title = "GymBrat",
+                desc = "Trening i dieta — siostrzana aplikacja",
+                gold = false,
+                icon = Icons.Filled.FitnessCenter,
+                onClick = {
+                    val intent = Intent(
+                        Intent.ACTION_VIEW,
+                        Uri.parse("https://gym-brat.vercel.app/?from=awp")
+                    )
+                    context.startActivity(intent)
+                }
+            )
+        )
         if (nav.isAdmin) {
             add(
                 HomeTile(

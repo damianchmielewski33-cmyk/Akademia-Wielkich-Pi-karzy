@@ -101,9 +101,11 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     "/panel-admina/:path*",
+    /** Ustawia `x-pathname` dla `requireAdmin()` (ACL sekcji) — wcześniej matcher wykluczał `/api`. */
+    "/api/:path*",
     /*
      * Udostępnione linki mogą trafiać na dowolną stronę (terminarz, składy itd.).
-     * Wykluczamy API, pliki statyczne Next.js oraz zasoby z rozszerzeniem (np. .ico, .svg).
+     * Wykluczamy API (osobny wpis wyżej), pliki statyczne Next.js oraz zasoby z rozszerzeniem.
      */
     "/((?!api|_next/static|_next/image|favicon.ico|.*\\..*).*)",
   ],

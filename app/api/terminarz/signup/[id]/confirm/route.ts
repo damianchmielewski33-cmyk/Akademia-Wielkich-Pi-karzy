@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getDb, logActivity } from "@/lib/db";
-import { requireUser } from "@/lib/api-helpers";
+import { requireUser, requireMatchInApiRealm } from "@/lib/api-helpers";
 import { normalizeTransportFromBody, validateTransportBody, type SignupTransportRow } from "@/lib/transport";
 import {
   assertMatchOpenForSignup,
@@ -48,6 +48,9 @@ export async function POST(req: Request, ctx: Ctx) {
     return NextResponse.json({ error: "Invalid match" }, { status: 400 });
   }
 
+  const realmGate = await requireMatchInApiRealm(req, mid);
+  if (!realmGate.ok) return realmGate.response;
+
   let rawBody: unknown = {};
   try {
     rawBody = await req.json();
@@ -61,7 +64,12 @@ export async function POST(req: Request, ctx: Ctx) {
   const transport = tr as SignupTransportRow;
 
   const db = await getDb();
-  const match = (await db.prepare("SELECT * FROM matches WHERE id = ?").get(mid)) as MatchSignupRow | undefined;
+  const match = (await db
+    .prepare(
+      `SELECT id, match_date, match_time, location, max_slots, signed_up, played, cancelled
+       FROM matches WHERE id = ?`
+    )
+    .get(mid)) as MatchSignupRow | undefined;
   if (!match) return NextResponse.json({ error: "Mecz nie istnieje" }, { status: 404 });
 
   const openErr = assertMatchOpenForSignup(match);

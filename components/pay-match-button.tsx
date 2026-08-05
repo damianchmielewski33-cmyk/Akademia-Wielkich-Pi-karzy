@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Banknote, Loader2, Smartphone } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/app-toast";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {

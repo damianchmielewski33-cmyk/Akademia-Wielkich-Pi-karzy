@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Film, Loader2, Pencil, Plus, Trash2 } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/app-toast";
 import type { GalleryVideoPublic, GalleryVideoRow } from "@/lib/gallery-videos";
 import { galleryVideoIdFromStoredUrl } from "@/lib/gallery-videos";
 import {

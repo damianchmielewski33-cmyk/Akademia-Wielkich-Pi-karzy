@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getDb, logActivity } from "@/lib/db";
-import { requireUser } from "@/lib/api-helpers";
+import { requireUser, requireMatchInApiRealm } from "@/lib/api-helpers";
 
 export const runtime = "nodejs";
 
@@ -10,7 +10,7 @@ function todayISO() {
   return new Date().toISOString().slice(0, 10);
 }
 
-export async function POST(_req: Request, ctx: Ctx) {
+export async function POST(req: Request, ctx: Ctx) {
   const gate = await requireUser();
   if (!gate.ok) return gate.response;
   const { id } = await ctx.params;
@@ -18,8 +18,16 @@ export async function POST(_req: Request, ctx: Ctx) {
   if (!Number.isFinite(mid)) {
     return NextResponse.json({ error: "Invalid match" }, { status: 400 });
   }
+
+  const realmGate = await requireMatchInApiRealm(req, mid);
+  if (!realmGate.ok) return realmGate.response;
+
   const db = await getDb();
-  const match = await db.prepare("SELECT * FROM matches WHERE id = ?").get(mid) as
+  const match = (await db
+    .prepare(
+      "SELECT id, match_date, match_time, location, played FROM matches WHERE id = ?"
+    )
+    .get(mid)) as
     | { id: number; match_date: string; match_time: string; location: string; played: number }
     | undefined;
   if (!match) return NextResponse.json({ error: "Mecz nie istnieje" }, { status: 404 });

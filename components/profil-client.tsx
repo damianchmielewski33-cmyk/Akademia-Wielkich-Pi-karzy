@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type ComponentType } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/app-toast";
 import {
   Activity,
   Camera,

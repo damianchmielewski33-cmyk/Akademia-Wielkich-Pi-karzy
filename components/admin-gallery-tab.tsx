@@ -2,13 +2,14 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Film, Loader2, Pencil, Plus, Trash2 } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/app-toast";
 import {
   AdminCard,
   AdminTableShell,
+  AdminToolbar,
   adminEmptyStateClass,
-  adminOutlineBtnClass,
 } from "@/components/admin-ui";
+import { AdminRowActions } from "@/components/admin-row-actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -100,26 +101,19 @@ export function AdminGalleryTab() {
 
   return (
     <>
-      <AdminCard
+      <AdminToolbar
         title="Galeria meczów"
         description="Filmy z YouTube widoczne publicznie na stronie /galeria. Wyższa kolejność = wyżej na liście."
+        onReload={() => void load()}
+        loading={loading || busy}
       >
-        <div className="mb-4 flex flex-wrap gap-2">
-          <Button type="button" variant="stadium" className="gap-2" disabled={busy} onClick={openCreate}>
-            <Plus className="h-4 w-4 shrink-0" aria-hidden />
-            Dodaj link
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            className={adminOutlineBtnClass}
-            disabled={loading || busy}
-            onClick={() => void load()}
-          >
-            Odśwież
-          </Button>
-        </div>
+        <Button type="button" size="sm" className="gap-2" disabled={busy} onClick={openCreate}>
+          <Plus className="h-4 w-4 shrink-0" aria-hidden />
+          Dodaj link
+        </Button>
+      </AdminToolbar>
 
+      <AdminCard title="Filmy" description="Lista nagrania — edycja i publikacja.">
         {loading ? (
           <p className="flex items-center gap-2 text-sm pitch-muted">
             <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
@@ -150,12 +144,18 @@ export function AdminGalleryTab() {
                       <TableCell className="max-w-[16rem]">
                         <span className="font-medium text-white">{row.title}</span>
                         {ytId ? (
-                          <span className="mt-0.5 block truncate font-mono text-xs text-emerald-100/60">{ytId}</span>
+                          <span className="mt-0.5 block truncate font-mono text-xs text-emerald-100/60">
+                            {ytId}
+                          </span>
                         ) : (
-                          <span className="mt-0.5 block text-xs text-amber-300">Nieprawidłowy link YouTube</span>
+                          <span className="mt-0.5 block text-xs text-amber-300">
+                            Nieprawidłowy link YouTube
+                          </span>
                         )}
                       </TableCell>
-                      <TableCell className="whitespace-nowrap tabular-nums">{formatDateDisplay(row.match_date)}</TableCell>
+                      <TableCell className="whitespace-nowrap tabular-nums">
+                        {formatDateDisplay(row.match_date)}
+                      </TableCell>
                       <TableCell className="text-right tabular-nums">{row.sort_order}</TableCell>
                       <TableCell>
                         {row.published === 1 ? (
@@ -165,30 +165,29 @@ export function AdminGalleryTab() {
                         )}
                       </TableCell>
                       <TableCell className="text-right">
-                        <div className="flex justify-end gap-1">
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="ghost"
-                            className="h-8 w-8 p-0 text-emerald-100"
-                            disabled={busy}
-                            onClick={() => openEdit(row)}
-                            aria-label={`Edytuj ${row.title}`}
-                          >
-                            <Pencil className="h-4 w-4" aria-hidden />
-                          </Button>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="ghost"
-                            className="h-8 w-8 p-0 text-red-300 hover:text-red-200"
-                            disabled={busy}
-                            onClick={() => void deleteVideo(row)}
-                            aria-label={`Usuń ${row.title}`}
-                          >
-                            <Trash2 className="h-4 w-4" aria-hidden />
-                          </Button>
-                        </div>
+                        <AdminRowActions
+                          primary={
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="secondary"
+                              disabled={busy}
+                              onClick={() => openEdit(row)}
+                              className="gap-1.5"
+                            >
+                              <Pencil className="h-3.5 w-3.5" aria-hidden />
+                              Edytuj
+                            </Button>
+                          }
+                          dangerItems={[
+                            {
+                              label: "Usuń",
+                              destructive: true,
+                              disabled: busy,
+                              onClick: () => void deleteVideo(row),
+                            },
+                          ]}
+                        />
                       </TableCell>
                     </TableRow>
                   );

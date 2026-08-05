@@ -53,7 +53,9 @@ export function adminSectionForApiPath(pathname: string): AdminSectionId | null 
     p.includes("/api/admin/lineup") ||
     p.includes("/api/admin/stats") ||
     p.includes("/api/admin/stat/") ||
-    p.includes("/api/admin/ranking-seasons")
+    p.includes("/api/admin/ranking-seasons") ||
+    p.includes("/api/terminarz/add") ||
+    p.includes("/api/terminarz/edit")
   ) {
     return "matches";
   }

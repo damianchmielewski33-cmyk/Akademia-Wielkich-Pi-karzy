@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { usePathname } from "next/navigation";
 import { ArrowLeft, Loader2, MessageCircle, Plus, Send } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/app-toast";
 import {
   ChatAttachmentControls,
   ChatBubble,

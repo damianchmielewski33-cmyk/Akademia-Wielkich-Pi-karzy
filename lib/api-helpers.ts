@@ -11,7 +11,10 @@ export async function requireUser() {
   if (!session) {
     return {
       ok: false as const,
-      response: NextResponse.json({ error: "Wymagane logowanie" }, { status: 401 }),
+      response: NextResponse.json(
+        { error: "Wejdź na boisko — zaloguj się imieniem, nazwiskiem i PIN-em." },
+        { status: 401 }
+      ),
     };
   }
   if (session.needsPinSetup) {
@@ -19,7 +22,8 @@ export async function requireUser() {
       ok: false as const,
       response: NextResponse.json(
         {
-          error: "Musisz ustawić PIN — otwórz stronę ustawiania PIN-u lub wyloguj się i zaloguj ponownie.",
+          error:
+            "Najpierw ustaw PIN jak numer na koszulce — wejdź w ustawianie PIN-u albo wyloguj się i wejdź od nowa.",
           code: "NEEDS_PIN_SETUP" as const,
         },
         { status: 403 }
@@ -32,7 +36,7 @@ export async function requireUser() {
       response: NextResponse.json(
         {
           error:
-            "Zmiana PIN-u oczekuje na zatwierdzenie przez administratora. Do tego czasu korzystasz z witryny jak niezalogowany.",
+            "Twój nowy PIN czeka na gwizdek sztabu. Do decyzji grasz jak kibic bez karnetu.",
           code: "PIN_CHANGE_PENDING" as const,
         },
         { status: 403 }
@@ -51,7 +55,10 @@ export async function requireSessionForParticipationSurvey() {
   if (!session) {
     return {
       ok: false as const,
-      response: NextResponse.json({ error: "Wymagane logowanie" }, { status: 401 }),
+      response: NextResponse.json(
+        { error: "Wejdź na boisko — zaloguj się imieniem, nazwiskiem i PIN-em." },
+        { status: 401 }
+      ),
     };
   }
   if (session.pinChangePending) {
@@ -60,7 +67,7 @@ export async function requireSessionForParticipationSurvey() {
       response: NextResponse.json(
         {
           error:
-            "Zmiana PIN-u oczekuje na zatwierdzenie przez administratora. Do tego czasu korzystasz z witryny jak niezalogowany.",
+            "Twój nowy PIN czeka na gwizdek sztabu. Do decyzji grasz jak kibic bez karnetu.",
           code: "PIN_CHANGE_PENDING" as const,
         },
         { status: 403 }
@@ -76,7 +83,7 @@ export async function requireAdmin(requiredSection?: import("@/lib/admin-permiss
   if (!r.session.isAdmin) {
     return {
       ok: false as const,
-      response: NextResponse.json({ error: "Brak uprawnień administratora" }, { status: 403 }),
+      response: NextResponse.json({ error: "Tej części boiska pilnuje sztab — tylko dla admina." }, { status: 403 }),
     };
   }
 
@@ -88,7 +95,7 @@ export async function requireAdmin(requiredSection?: import("@/lib/admin-permiss
     return {
       ok: false as const,
       response: NextResponse.json(
-        { error: "Brak uprawnień do tej sekcji panelu administratora" },
+        { error: "Tej części szatni strzeże sztab — nie masz wejścia na tę sekcję." },
         { status: 403 }
       ),
     };
@@ -105,7 +112,7 @@ export async function requirePzuCupAccess() {
   if (!allowed) {
     return {
       ok: false as const,
-      response: NextResponse.json({ error: "Brak dostępu do sekcji PZU Cup" }, { status: 403 }),
+      response: NextResponse.json({ error: "Brak karnetu na PZU Cup — poproś sztab o dostęp." }, { status: 403 }),
     };
   }
   return { ok: true as const, session: r.session };
@@ -117,7 +124,7 @@ export async function requireMatchInApiRealm(req: Request, matchId: number) {
   if (!(await matchBelongsToRealm(db, matchId, realm))) {
     return {
       ok: false as const,
-      response: NextResponse.json({ error: "Nie znaleziono meczu" }, { status: 404 }),
+      response: NextResponse.json({ error: "Tego meczu nie ma na tej połowie boiska." }, { status: 404 }),
     };
   }
   return { ok: true as const, realm: realm as Realm };

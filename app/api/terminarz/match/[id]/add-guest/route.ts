@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { requireUser } from "@/lib/api-helpers";
+import { requireUser, requireMatchInApiRealm } from "@/lib/api-helpers";
 import { addMatchGuest } from "@/lib/add-match-guest";
 
 export const runtime = "nodejs";
@@ -26,6 +26,9 @@ export async function POST(req: Request, context: RouteContext) {
   if (!Number.isFinite(mid)) {
     return NextResponse.json({ error: "Invalid match id" }, { status: 400 });
   }
+
+  const realmGate = await requireMatchInApiRealm(req, mid);
+  if (!realmGate.ok) return realmGate.response;
 
   let json: unknown;
   try {

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Loader2, Pencil, UserMinus, UserPlus, Users, XCircle } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/app-toast";
 import { z } from "zod";
 import type { MatchRow } from "@/lib/db";
 import { MATCH_CANCEL_REASONS } from "@/lib/match-cancel-reasons";

@@ -1,5 +1,6 @@
 import { SignJWT, importPKCS8 } from "jose";
 import { getDb } from "@/lib/db";
+import { isWebPushConfigured, sendWebPushToUserIds } from "@/lib/web-push";
 
 type FirebaseServiceAccount = {
   project_id: string;
@@ -40,8 +41,17 @@ function readServiceAccount(): FirebaseServiceAccount | null {
   return null;
 }
 
-export function isPushConfigured(): boolean {
+export function isFcmConfigured(): boolean {
   return readServiceAccount() != null;
+}
+
+/** @deprecated Użyj isFcmConfigured — nazwa historyczna (tylko FCM). */
+export function isPushConfigured(): boolean {
+  return isFcmConfigured();
+}
+
+export function isAnyPushConfigured(): boolean {
+  return isFcmConfigured() || isWebPushConfigured();
 }
 
 async function getAccessToken(sa: FirebaseServiceAccount): Promise<string> {
@@ -146,65 +156,93 @@ async function sendFcmToToken(args: {
   }
 }
 
+function withClickUrl(data?: Record<string, string>): Record<string, string> | undefined {
+  if (!data) return undefined;
+  if (data.url) return data;
+  const matchId = data.match_id?.trim();
+  if (matchId && /^\d+$/.test(matchId)) {
+    return { ...data, url: `/zaproszenie/${matchId}` };
+  }
+  if (data.type === "match_cancelled") {
+    return { ...data, url: "/terminarz" };
+  }
+  return data;
+}
+
 export async function sendPushToUserIds(args: {
   userIds: number[];
   title: string;
   body: string;
   data?: Record<string, string>;
 }): Promise<void> {
-  if (!isPushConfigured() || args.userIds.length === 0) return;
-
   const uniqueIds = [...new Set(args.userIds.filter((id) => Number.isFinite(id) && id > 0))];
   if (uniqueIds.length === 0) return;
 
-  const db = await getDb();
-  const placeholders = uniqueIds.map(() => "?").join(",");
-  const rows = (await db
-    .prepare(
-      `SELECT d.fcm_token, d.user_id
-       FROM user_devices d
-       WHERE d.user_id IN (${placeholders})`
-    )
-    .all(...uniqueIds)) as { fcm_token: string; user_id: number }[];
+  const data = withClickUrl(args.data);
 
-  if (rows.length === 0) {
-    console.log("[push] Brak zarejestrowanych urządzeń dla wskazanych użytkowników.");
-    return;
-  }
+  if (isFcmConfigured()) {
+    const db = await getDb();
+    const placeholders = uniqueIds.map(() => "?").join(",");
+    const rows = (await db
+      .prepare(
+        `SELECT d.fcm_token, d.user_id
+         FROM user_devices d
+         WHERE d.user_id IN (${placeholders})`
+      )
+      .all(...uniqueIds)) as { fcm_token: string; user_id: number }[];
 
-  let sent = 0;
-  for (const row of rows) {
-    const result = await sendFcmToToken({
-      token: row.fcm_token,
-      title: args.title,
-      body: args.body,
-      data: args.data,
-    });
-    if (result === "ok") sent++;
-    if (result === "invalid") {
-      await db.prepare("DELETE FROM user_devices WHERE fcm_token = ?").run(row.fcm_token);
+    if (rows.length === 0) {
+      console.log("[push] Brak tokenów FCM dla wskazanych użytkowników.");
+    } else {
+      let sent = 0;
+      for (const row of rows) {
+        const result = await sendFcmToToken({
+          token: row.fcm_token,
+          title: args.title,
+          body: args.body,
+          data,
+        });
+        if (result === "ok") sent++;
+        if (result === "invalid") {
+          await db.prepare("DELETE FROM user_devices WHERE fcm_token = ?").run(row.fcm_token);
+        }
+      }
+      console.log(`[push] FCM: wysłano ${sent}/${rows.length}.`);
     }
   }
-  console.log(`[push] Wysłano ${sent}/${rows.length} powiadomień.`);
+
+  await sendWebPushToUserIds({
+    userIds: uniqueIds,
+    title: args.title,
+    body: args.body,
+    data,
+  });
 }
 
-/** Push do wszystkich użytkowników z zarejestrowanym urządzeniem (np. nowy mecz). */
+/** Push do wszystkich użytkowników z zarejestrowanym urządzeniem FCM lub subskrypcją Web Push. */
 export async function sendPushToConsentingUsers(args: {
   title: string;
   body: string;
   data?: Record<string, string>;
 }): Promise<void> {
-  if (!isPushConfigured()) {
-    console.log("[push] FCM nie skonfigurowane — pomijam wysyłkę.");
+  if (!isAnyPushConfigured()) {
+    console.log("[push] FCM i Web Push nie skonfigurowane — pomijam wysyłkę.");
     return;
   }
 
   const db = await getDb();
   const rows = (await db
     .prepare(
-      `SELECT DISTINCT user_id AS id FROM user_devices`
+      `SELECT user_id AS id FROM user_devices
+       UNION
+       SELECT user_id AS id FROM push_subscriptions`
     )
     .all()) as { id: number }[];
+
+  if (rows.length === 0) {
+    console.log("[push] Brak zarejestrowanych urządzeń / subskrypcji Web Push.");
+    return;
+  }
 
   await sendPushToUserIds({
     userIds: rows.map((r) => r.id),

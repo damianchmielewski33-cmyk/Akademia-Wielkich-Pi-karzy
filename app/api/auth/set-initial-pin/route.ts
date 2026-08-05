@@ -56,7 +56,8 @@ export async function POST(req: Request) {
   const db = await getDb();
   const user = (await db
     .prepare(
-      `SELECT id, first_name, last_name, player_alias, is_admin, pin_hash, auth_version
+      `SELECT id, first_name, last_name, player_alias, is_admin, pin_hash, auth_version,
+              COALESCE(is_temporary, 0) AS is_temporary
        FROM users WHERE lower(first_name) = lower(?) AND lower(last_name) = lower(?) AND player_alias = ?`
     )
     .get(first_name, last_name, canonical)) as
@@ -68,11 +69,20 @@ export async function POST(req: Request) {
         is_admin: number;
         pin_hash: string | null;
         auth_version: number;
+        is_temporary: number;
       }
     | undefined;
 
   if (!user) {
     return NextResponse.json({ error: "Nieprawidłowe dane. Sprawdź imię, nazwisko i pseudonim piłkarza." }, { status: 401 });
+  }
+
+  // Konta gości jednorazowych nie mogą „przejąć” tożsamości przez ustawienie PIN-u.
+  if (user.is_temporary === 1) {
+    return NextResponse.json(
+      { error: "To konto gościa nie może ustawić PIN-u. Zarejestruj się jako zawodnik albo poproś administratora." },
+      { status: 403 }
+    );
   }
 
   if (user.pin_hash) {

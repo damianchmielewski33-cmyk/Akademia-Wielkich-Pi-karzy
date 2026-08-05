@@ -36,6 +36,7 @@ export async function getHotpayPaymentBySessionId(
  * Idempotentnie księguje udaną płatność HotPay na portfelu użytkownika.
  * Najpierw atomowo „rezerwuje” wiersz (`pending` → `success`), żeby równoległe
  * webhooki nie zaksięgowały tej samej płatności dwukrotnie.
+ * Przy przegranej o `deposit_request_id` cofamy lokalny INSERT (kompensacja).
  */
 export async function applyHotpaySuccessCredit(
   db: AppDb,
@@ -64,25 +65,58 @@ export async function applyHotpaySuccessCredit(
       )
       .run(args.hotpayPaymentId, args.secure, payment.id);
     if (claim.changes === 0) {
-      // Inny worker przejął wiersz — nie wznawiaj księgowania tutaj (unikamy podwójnego INSERT).
+      const latest = await getHotpayPaymentBySessionId(db, payment.session_id);
+      if (latest?.deposit_request_id != null) {
+        return { ok: true, alreadyApplied: true };
+      }
+      // Inny worker w trakcie księgowania — nie wstawiaj drugiej wpłaty.
       return { ok: true, alreadyApplied: true };
     }
   } else if (payment.status === "success" && payment.deposit_request_id == null) {
-    // Wznów po crashu: tylko jeden worker może trzymać crediting-lock.
+    // Wznów po crashu: przejmij tylko gdy brak aktywnego locka (albo stary „crediting-lock”).
+    const lockToken = `lock:${crypto.randomUUID()}`;
     const lock = await db
       .prepare(
         `UPDATE hotpay_payments
-         SET error_message = 'crediting-lock',
+         SET error_message = ?,
              hotpay_payment_id = COALESCE(hotpay_payment_id, ?),
              secure = COALESCE(secure, ?)
          WHERE id = ? AND status = 'success' AND deposit_request_id IS NULL
-           AND IFNULL(error_message, '') != 'crediting-lock'`
+           AND (
+             IFNULL(error_message, '') = ''
+             OR error_message = 'crediting-lock'
+           )`
       )
-      .run(args.hotpayPaymentId, args.secure, payment.id);
+      .run(lockToken, args.hotpayPaymentId, args.secure, payment.id);
     if (lock.changes === 0) {
+      const latest = await getHotpayPaymentBySessionId(db, payment.session_id);
+      if (latest?.deposit_request_id != null) {
+        return { ok: true, alreadyApplied: true };
+      }
       return { ok: true, alreadyApplied: true };
     }
   } else {
+    return { ok: true, alreadyApplied: true };
+  }
+
+  // Idempotencja po partial-crash: ta sama sesja już ma wpłatę.
+  const existingBySession = (await db
+    .prepare(
+      `SELECT id FROM wallet_deposit_requests
+       WHERE user_id = ? AND note LIKE ? AND status = 'completed'
+       LIMIT 1`
+    )
+    .get(payment.user_id, `%(${payment.session_id})%`)) as { id: number } | undefined;
+  if (existingBySession) {
+    await db
+      .prepare(
+        `UPDATE hotpay_payments
+         SET deposit_request_id = ?, error_message = NULL,
+             hotpay_payment_id = COALESCE(hotpay_payment_id, ?),
+             secure = COALESCE(secure, ?)
+         WHERE id = ? AND deposit_request_id IS NULL`
+      )
+      .run(existingBySession.id, args.hotpayPaymentId, args.secure, payment.id);
     return { ok: true, alreadyApplied: true };
   }
 
@@ -121,6 +155,9 @@ export async function applyHotpaySuccessCredit(
     .run(depositId, args.hotpayPaymentId, args.secure, payment.id);
 
   if (linked.changes === 0) {
+    // Przegrana wyścigu — cofnij lokalną wpłatę, żeby nie było podwójnego salda.
+    await db.prepare(`DELETE FROM wallet_transactions WHERE deposit_request_id = ?`).run(depositId);
+    await db.prepare(`DELETE FROM wallet_deposit_requests WHERE id = ?`).run(depositId);
     return { ok: true, alreadyApplied: true };
   }
 

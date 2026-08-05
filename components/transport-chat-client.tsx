@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/app-toast";
 import { Send } from "lucide-react";
 import { PlayerAvatar } from "@/components/player-avatar";
 import {

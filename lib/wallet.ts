@@ -74,16 +74,29 @@ export async function completeDepositRequest(depositId: number, completedByUserI
     (dep.created_by === "admin" && Boolean(dep.admin_declared_received_at) && Boolean(dep.player_confirmed_amount_at));
   if (!confirmOk) return { ok: false as const, error: "NOT_CONFIRMED" as const };
 
-  await db.prepare(
-    `UPDATE wallet_deposit_requests
-     SET status = 'completed', completed_at = datetime('now')
-     WHERE id = ?`
-  ).run(depositId);
+  // Atomowe przejęcie wiersza — drugi równoległy confirm dostaje changes=0.
+  const claim = await db
+    .prepare(
+      `UPDATE wallet_deposit_requests
+       SET status = 'completed', completed_at = datetime('now')
+       WHERE id = ? AND status = 'pending'`
+    )
+    .run(depositId);
+  if (claim.changes === 0) {
+    return { ok: false as const, error: "NOT_PENDING" as const };
+  }
 
-  await db.prepare(
-    `INSERT INTO wallet_transactions (user_id, kind, amount_pln, deposit_request_id, note)
-     VALUES (?, 'deposit', ?, ?, ?)`
-  ).run(dep.user_id, Number(dep.amount_pln), dep.id, `Wpłata zaksięgowana (zakończone przez user ${completedByUserId})`);
+  await db
+    .prepare(
+      `INSERT INTO wallet_transactions (user_id, kind, amount_pln, deposit_request_id, note)
+       VALUES (?, 'deposit', ?, ?, ?)`
+    )
+    .run(
+      dep.user_id,
+      Number(dep.amount_pln),
+      dep.id,
+      `Wpłata zaksięgowana (zakończone przez user ${completedByUserId})`
+    );
 
   await tryRemoveTemporaryGuestIfBalanceZero({
     userId: dep.user_id,

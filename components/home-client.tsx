@@ -3,7 +3,7 @@
 import { useEffect, useState, type ComponentType } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { toast } from "sonner";
+import { toast } from "@/lib/app-toast";
 import {
   Activity,
   CalendarDays,
@@ -32,6 +32,7 @@ import type { MatchRow } from "@/lib/db";
 import type { HomeTopPlayer } from "@/lib/rankings-data";
 import { cn } from "@/lib/utils";
 import { useScreenBlocks } from "@/components/screen-blocks-provider";
+import { GymBratCrossLink } from "@/components/gymbrat-cross-link";
 
 type Props = {
   nextMatch: MatchRow | null;
@@ -226,12 +227,14 @@ export function HomeClient({
               variant="gold"
             />
           ) : null}
+          <GymBratCrossLink />
         </>
       )}
       {!isLoggedIn && (
         <>
           <PitchTile href="/login" icon={LogIn} title="Logowanie" desc="Wejdź do szatni" />
           <PitchTile href="/register" icon={UserPlus} title="Rejestracja" desc="Dołącz do drużyny" />
+          <GymBratCrossLink />
         </>
       )}
       {isLoggedIn && (

@@ -13,11 +13,25 @@ import {
   type CaptainLotteryRow,
 } from "@/lib/captain-lottery";
 
+/** PIN bramki tylko dla admina lub gracza z potwierdzonym zapisem — nigdy w surowym SELECT *. */
+function redactGatePins(
+  matches: MatchRow[],
+  opts: {
+    isAdmin: boolean;
+    userSignupKind: Record<number, "tentative" | "confirmed" | "declined">;
+  }
+): MatchRow[] {
+  if (opts.isAdmin) return matches;
+  return matches.map((m) =>
+    opts.userSignupKind[m.id] === "confirmed" ? m : { ...m, gate_pin: null }
+  );
+}
+
 export async function getTerminarzPageData(realm: Realm, session: AppSession | null) {
   const db = await getDb();
   const appSettings = await getAppSettings(db, realm);
 
-  const matches = (await db
+  const matchesRaw = (await db
     .prepare(
       "SELECT * FROM matches WHERE realm = ? ORDER BY match_date ASC, match_time ASC"
     )
@@ -36,8 +50,12 @@ export async function getTerminarzPageData(realm: Realm, session: AppSession | n
     )
     .all(realm)) as SignupRow[];
 
-  const playersData = buildPlayersData(matches, signups);
+  const playersData = buildPlayersData(matchesRaw, signups);
   const userSignupKind = userSignupKindMap(signups, session?.zawodnik);
+  const matches = redactGatePins(matchesRaw, {
+    isAdmin: Boolean(session?.isAdmin),
+    userSignupKind,
+  });
   const { upcoming, playedConfirmed } = categorizeMatches(matches);
 
   const captainLotteryRows = (await db

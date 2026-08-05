@@ -46,7 +46,7 @@ export function rateLimitKey(prefix: string, req: Request): string {
 
 export function rateLimitedResponse(retryAfterSec: number) {
   const res = NextResponse.json(
-    { error: "Zbyt wiele żądań. Spróbuj ponownie za chwilę." },
+    { error: "Za dużo sprintów naraz — złap oddech i spróbuj za chwilę." },
     { status: 429 }
   );
   res.headers.set("Retry-After", String(retryAfterSec));

@@ -2,6 +2,9 @@ from PIL import Image, ImageDraw
 import os
 
 ROOT = os.path.join("android", "app", "src", "main", "res")
+PUBLIC = "public"
+# Tło jak Android adaptive (`ic_launcher_background`)
+ANDROID_BG = (0x1A, 0x2D, 0x5A, 255)
 SOURCE_LOGO = os.path.join(
     os.path.expanduser("~"),
     ".cursor",
@@ -29,6 +32,18 @@ def fit_logo(source: Image.Image, size: int, padding_ratio: float = 0.06) -> Ima
     return canvas
 
 
+def icon_on_android_bg(source: Image.Image, size: int, padding_ratio: float = 0.12) -> Image.Image:
+    """Ikona PWA / iOS — ten sam crest + tło co adaptive icon Androida."""
+    canvas = Image.new("RGBA", (size, size), ANDROID_BG)
+    max_side = int(size * (1 - padding_ratio * 2))
+    logo = source.copy()
+    logo.thumbnail((max_side, max_side), Image.Resampling.LANCZOS)
+    x = (size - logo.width) // 2
+    y = (size - logo.height) // 2
+    canvas.alpha_composite(logo, (x, y))
+    return canvas.convert("RGB")
+
+
 def round_mask(img: Image.Image) -> Image.Image:
     size = img.size[0]
     mask = Image.new("L", (size, size), 0)
@@ -50,9 +65,16 @@ SIZES = {
 source = load_source_logo()
 
 public_logo = fit_logo(source, 512, 0.0)
-public_logo.save(os.path.join("public", "app-logo.png"), "PNG")
+os.makedirs(PUBLIC, exist_ok=True)
+public_logo.save(os.path.join(PUBLIC, "app-logo.png"), "PNG")
 os.makedirs(os.path.join(ROOT, "drawable-nodpi"), exist_ok=True)
 public_logo.save(os.path.join(ROOT, "drawable-nodpi", "app_logo.png"), "PNG")
+
+# iPhone / PWA — jak Android
+icon_on_android_bg(source, 180).save(os.path.join(PUBLIC, "apple-touch-icon.png"), "PNG")
+icon_on_android_bg(source, 192).save(os.path.join(PUBLIC, "icon-192.png"), "PNG")
+icon_on_android_bg(source, 512).save(os.path.join(PUBLIC, "icon-512.png"), "PNG")
+print("wrote public apple-touch-icon / icon-192 / icon-512")
 
 for folder, size in SIZES.items():
     path = os.path.join(ROOT, folder)

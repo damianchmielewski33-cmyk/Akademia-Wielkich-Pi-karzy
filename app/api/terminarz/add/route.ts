@@ -20,7 +20,7 @@ const bodySchema = z.object({
 });
 
 export async function POST(req: Request) {
-  const gate = await requireAdmin();
+  const gate = await requireAdmin("matches");
   if (!gate.ok) return gate.response;
   let json: unknown;
   try {

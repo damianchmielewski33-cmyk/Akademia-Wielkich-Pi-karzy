@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useState } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/app-toast";
 import { InlinePreloader } from "@/components/preloaders";
 import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
 import { Button } from "@/components/ui/button";

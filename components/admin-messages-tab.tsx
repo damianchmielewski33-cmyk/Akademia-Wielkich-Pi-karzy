@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowLeft, Loader2, MessageCircle, Plus, Send, Trash2, UserPlus, Users } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/app-toast";
 import {
   ChatAttachmentControls,
   ChatBubble,

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/app-toast";
 import {
   AdminCard,
   AdminToolbar,
@@ -504,43 +504,51 @@ export function AdminSettingsTab({
         id="settings-assets"
         hidden={!sectionVisible("settings-assets")}
         title="Logo i tła"
-        description="Wgraj własne grafiki albo zostaw domyślne. Poniżej tabela zalecanych rozmiarów — każde pole ma też szczegóły przy wgrywaniu."
+        description="Wgraj własne grafiki albo zostaw domyślne."
       >
-        <div className="space-y-3">
-          <p className="text-sm leading-relaxed text-emerald-100/80">
-            Aby grafika dobrze wypełniła dane miejsce na stronie, trzymaj się podanych wymiarów i proporcji. Zbyt mały
-            plik będzie rozmyty; zły kadr może zostać przycięty (np. tło stadionu na telefonie).
-          </p>
-          <AdminImageSpecsTable specs={ALL_ADMIN_IMAGE_SPECS} />
-        </div>
+        <div className="space-y-6">
+          <div className="rounded-xl border border-white/20 bg-black/10 p-4">
+            <p className="text-sm font-semibold text-white">Zalecane wymiary</p>
+            <p className="mt-1 text-sm leading-relaxed text-emerald-100/80">
+              Aby grafika dobrze wypełniła miejsce na stronie, trzymaj się podanych wymiarów. Zbyt mały plik będzie
+              rozmyty; zły kadr może zostać przycięty.
+            </p>
+            <div className="mt-3">
+              <AdminImageSpecsTable specs={ALL_ADMIN_IMAGE_SPECS} />
+            </div>
+          </div>
 
-        <div className="mt-6 grid gap-4 lg:grid-cols-2">
-          {SITE_ASSET_KEYS.map((key) => {
-            const customMap: Record<(typeof SITE_ASSET_KEYS)[number], string | null> = {
-              logo_header: settings.asset_logo_header_url,
-              logo_crest: settings.asset_logo_crest_url,
-              logo_login: settings.asset_logo_login_url,
-              logo_favicon: settings.asset_logo_favicon_url,
-              bg_soccer_ball: settings.asset_bg_soccer_ball_url,
-              bg_stadium: settings.asset_bg_stadium_url,
-              bg_pitch_lines: settings.asset_bg_pitch_lines_url,
-            };
-            return (
-              <AdminSiteAssetField
-                key={key}
-                assetKey={key}
-                currentUrl={settings.site_assets[key]}
-                customUrl={customMap[key]}
-                disabled={busy}
-                onUpdated={(next) => setSettings((prev) => (prev ? { ...next, system: prev.system } : prev))}
-              />
-            );
-          })}
-        </div>
+          <div className="rounded-xl border border-white/20 bg-black/10 p-4">
+            <p className="mb-3 text-sm font-semibold text-white">Grafiki witryny</p>
+            <div className="grid gap-4 lg:grid-cols-2">
+              {SITE_ASSET_KEYS.map((key) => {
+                const customMap: Record<(typeof SITE_ASSET_KEYS)[number], string | null> = {
+                  logo_header: settings.asset_logo_header_url,
+                  logo_crest: settings.asset_logo_crest_url,
+                  logo_login: settings.asset_logo_login_url,
+                  logo_favicon: settings.asset_logo_favicon_url,
+                  bg_soccer_ball: settings.asset_bg_soccer_ball_url,
+                  bg_stadium: settings.asset_bg_stadium_url,
+                  bg_pitch_lines: settings.asset_bg_pitch_lines_url,
+                };
+                return (
+                  <AdminSiteAssetField
+                    key={key}
+                    assetKey={key}
+                    currentUrl={settings.site_assets[key]}
+                    customUrl={customMap[key]}
+                    disabled={busy}
+                    onUpdated={(next) => setSettings((prev) => (prev ? { ...next, system: prev.system } : prev))}
+                  />
+                );
+              })}
+            </div>
+          </div>
 
-        <div className="mt-6">
-          <p className="mb-2 text-sm font-semibold text-white">Zdjęcia profilowe graczy</p>
-          <ImageUploadSpecDetails spec={PROFILE_PHOTO_SPEC} />
+          <div className="rounded-xl border border-white/20 bg-black/10 p-4">
+            <p className="mb-2 text-sm font-semibold text-white">Zdjęcia profilowe graczy</p>
+            <ImageUploadSpecDetails spec={PROFILE_PHOTO_SPEC} />
+          </div>
         </div>
       </SettingsSection>
 
@@ -972,15 +980,19 @@ export function AdminSettingsTab({
           W pierwszej kolumnie krótki kod (bez spacji, tylko dla systemu). W drugiej — tekst, który zobaczysz na liście
           przy anulowaniu.
         </p>
-        <div className="flex flex-wrap gap-2 px-0.5 text-xs font-semibold uppercase tracking-wide text-emerald-100/55">
-          <span className="min-w-[8rem] flex-1">Kod</span>
-          <span className="min-w-[10rem] flex-[2]">Opis powodu</span>
+        <div className="hidden grid-cols-[minmax(8rem,1fr)_minmax(12rem,2fr)_auto] gap-2 px-0.5 text-xs font-semibold uppercase tracking-wide text-emerald-100/55 sm:grid">
+          <span>Kod</span>
+          <span>Opis powodu</span>
+          <span className="sr-only">Akcja</span>
         </div>
         <div className="space-y-2">
           {cancelReasonsDraft.map((r, i) => (
-            <div key={i} className="flex flex-wrap gap-2">
+            <div
+              key={i}
+              className="grid grid-cols-1 gap-2 rounded-xl border border-white/15 bg-black/10 p-3 sm:grid-cols-[minmax(8rem,1fr)_minmax(12rem,2fr)_auto] sm:items-center sm:border-0 sm:bg-transparent sm:p-0"
+            >
               <Input
-                className={cn(adminFieldClass, "min-w-[8rem] flex-1 font-mono text-xs")}
+                className={cn(adminFieldClass, "font-mono text-xs")}
                 value={r.value}
                 disabled={busy}
                 placeholder="np. pogoda"
@@ -992,7 +1004,7 @@ export function AdminSettingsTab({
                 }}
               />
               <Input
-                className={cn(adminFieldClass, "min-w-[10rem] flex-[2]")}
+                className={adminFieldClass}
                 value={r.label}
                 disabled={busy}
                 placeholder="np. Zła pogoda"
@@ -1007,6 +1019,7 @@ export function AdminSettingsTab({
                 type="button"
                 variant="stadium"
                 size="sm"
+                className="sm:justify-self-end"
                 disabled={busy || cancelReasonsDraft.length <= 1}
                 onClick={() => setCancelReasonsDraft(cancelReasonsDraft.filter((_, j) => j !== i))}
               >

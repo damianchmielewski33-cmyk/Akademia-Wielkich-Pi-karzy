@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Crown, Link2, Users } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/app-toast";
 import type { MatchRow } from "@/lib/db";
 import type { CaptainLotteryEntry } from "@/lib/captain-lottery";
 import {

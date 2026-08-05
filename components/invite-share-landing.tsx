@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { SiteAssetImage } from "@/components/site-asset-image";
 import { CalendarDays, HelpCircle, KeyRound, Loader2, LogIn, MapPin, UserPlus, Users } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/app-toast";
 import { z } from "zod";
 import type { MatchRow } from "@/lib/db";
 import type { PlayersDataEntry } from "@/lib/terminarz-shared";

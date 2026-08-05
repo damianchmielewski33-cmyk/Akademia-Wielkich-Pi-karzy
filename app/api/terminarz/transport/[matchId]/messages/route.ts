@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getDb, type AppDb } from "@/lib/db";
-import { requireUser } from "@/lib/api-helpers";
+import { requireUser, requireMatchInApiRealm } from "@/lib/api-helpers";
 import { isTransportChatEligible, type SignupTransportRow } from "@/lib/transport";
 
 export const runtime = "nodejs";
@@ -20,7 +20,7 @@ async function getEligibleSignup(
   return row ?? null;
 }
 
-export async function GET(_req: Request, ctx: Ctx) {
+export async function GET(req: Request, ctx: Ctx) {
   const gate = await requireUser();
   if (!gate.ok) return gate.response;
   const { matchId: raw } = await ctx.params;
@@ -29,8 +29,11 @@ export async function GET(_req: Request, ctx: Ctx) {
     return NextResponse.json({ error: "Invalid match" }, { status: 400 });
   }
 
+  const realmGate = await requireMatchInApiRealm(req, matchId);
+  if (!realmGate.ok) return realmGate.response;
+
   const db = await getDb();
-  const match = await db.prepare("SELECT id, played FROM matches WHERE id = ?").get(matchId) as
+  const match = (await db.prepare("SELECT id, played FROM matches WHERE id = ?").get(matchId)) as
     | { id: number; played: number }
     | undefined;
   if (!match) return NextResponse.json({ error: "Mecz nie istnieje" }, { status: 404 });
@@ -43,7 +46,7 @@ export async function GET(_req: Request, ctx: Ctx) {
     return NextResponse.json({ error: "Brak dostępu do czatu transportowego." }, { status: 403 });
   }
 
-  const rows = await db
+  const rows = (await db
     .prepare(
       `SELECT m.id, m.body, m.created_at, m.user_id,
               u.first_name AS first_name, u.last_name AS last_name, u.player_alias AS zawodnik
@@ -52,7 +55,7 @@ export async function GET(_req: Request, ctx: Ctx) {
        WHERE m.match_id = ?
        ORDER BY m.created_at ASC`
     )
-    .all(matchId) as {
+    .all(matchId)) as {
     id: number;
     body: string;
     created_at: string;
@@ -84,6 +87,9 @@ export async function POST(req: Request, ctx: Ctx) {
     return NextResponse.json({ error: "Invalid match" }, { status: 400 });
   }
 
+  const realmGate = await requireMatchInApiRealm(req, matchId);
+  if (!realmGate.ok) return realmGate.response;
+
   let bodyText = "";
   try {
     const j = (await req.json()) as { body?: unknown };
@@ -96,7 +102,9 @@ export async function POST(req: Request, ctx: Ctx) {
   }
 
   const db = await getDb();
-  const match = await db.prepare("SELECT played FROM matches WHERE id = ?").get(matchId) as { played: number } | undefined;
+  const match = (await db.prepare("SELECT played FROM matches WHERE id = ?").get(matchId)) as
+    | { played: number }
+    | undefined;
   if (!match) return NextResponse.json({ error: "Mecz nie istnieje" }, { status: 404 });
   if (match.played === 1) {
     return NextResponse.json({ error: "Mecz rozegrany — czat niedostępny." }, { status: 400 });
@@ -108,9 +116,7 @@ export async function POST(req: Request, ctx: Ctx) {
   }
 
   const info = await db
-    .prepare(
-      `INSERT INTO match_transport_messages (match_id, user_id, body) VALUES (?, ?, ?)`
-    )
+    .prepare(`INSERT INTO match_transport_messages (match_id, user_id, body) VALUES (?, ?, ?)`)
     .run(matchId, gate.session.userId, bodyText);
 
   return NextResponse.json({ ok: true, id: Number(info.lastInsertRowid) });

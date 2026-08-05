@@ -4,16 +4,13 @@ import { useRouter } from "next/navigation";
 import { SiteAssetImage } from "@/components/site-asset-image";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Check, ClipboardCopy, Loader2, Search } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/app-toast";
 import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  AdminCard,
-  AdminToolbar,
-  adminPanelInnerClass,
-} from "@/components/admin-ui";
+import { AdminCard, AdminToolbar, adminPanelInnerClass } from "@/components/admin-ui";
+import { AdminFilterChips } from "@/components/admin-row-actions";
 import { PitchCardDecorations, pitchLabelClass } from "@/components/ui/pitch-card";
 import type { PlatnosciUserLite } from "@/components/platnosci-client";
 import { cn } from "@/lib/utils";
@@ -244,10 +241,13 @@ type AdminWalletsSaldoSectionProps = {
  */
 export function AdminWalletsSaldoSection({
   embedded = false,
-  showPublicLinks = false,
-  showTopUp = false,
+  showPublicLinks,
+  showTopUp,
 }: AdminWalletsSaldoSectionProps) {
   const router = useRouter();
+  const linksEnabled = showPublicLinks ?? !embedded;
+  const topUpEnabled = showTopUp ?? !embedded;
+  const [walletTab, setWalletTab] = useState<"balances" | "topup" | "adjust" | "links">("balances");
   const [adminOverview, setAdminOverview] = useState<AdminWalletOverview | null>(null);
   const [adminLoading, setAdminLoading] = useState(false);
   const [adminBalanceUserId, setAdminBalanceUserId] = useState<number | null>(null);
@@ -406,231 +406,192 @@ export function AdminWalletsSaldoSection({
     }
   }
 
-  const walletPanels = (
+  function selectSharedPlayer(id: number) {
+    setTopUpUserId(id);
+    setAdminBalanceUserId(id);
+    setTopUpUserQuery("");
+    setAdminBalanceUserQuery("");
+  }
+
+  function clearSharedPlayer() {
+    setTopUpUserId(null);
+    setAdminBalanceUserId(null);
+    setTopUpUserQuery("");
+    setAdminBalanceUserQuery("");
+  }
+
+  const topUpFormBody = (
     <>
-          {showTopUp ? (() => {
-            const topUpBody = (
-              <>
-                <section aria-labelledby="admin-topup-player-heading" className={cn(embedded ? "mt-1" : "mt-3")}>
-                  <p
-                    id="admin-topup-player-heading"
-                    className="text-xs font-semibold uppercase tracking-[0.12em] text-zinc-600 dark:text-zinc-400"
-                  >
-                    Zawodnik
-                  </p>
-                  <div className="mt-2">
-                    <WalletPlayerPicker
-                      players={balancePlayerList}
-                      selectedId={topUpUserId}
-                      query={topUpUserQuery}
-                      onQueryChange={setTopUpUserQuery}
-                      onSelectId={setTopUpUserId}
-                      onClearSelection={() => {
-                        setTopUpUserId(null);
-                        setTopUpUserQuery("");
-                      }}
-                      searchInputId="admin-topup-user-search"
-                    />
-                  </div>
-                </section>
+      <section aria-labelledby="admin-topup-player-heading" className={cn(embedded ? "mt-1" : "mt-3")}>
+        <p
+          id="admin-topup-player-heading"
+          className="text-xs font-semibold uppercase tracking-[0.12em] text-zinc-600 dark:text-zinc-400"
+        >
+          Zawodnik
+        </p>
+        <div className="mt-2">
+          <WalletPlayerPicker
+            players={balancePlayerList}
+            selectedId={topUpUserId}
+            query={topUpUserQuery}
+            onQueryChange={setTopUpUserQuery}
+            onSelectId={selectSharedPlayer}
+            onClearSelection={clearSharedPlayer}
+            searchInputId="admin-topup-user-search"
+          />
+        </div>
+      </section>
 
-                {selectedTopUpPlayer ? (
-                  <>
-                    <div className={cn("mt-4 grid gap-3 sm:grid-cols-2")}>
-                      <div>
-                        <Label htmlFor="admin-topup-amount">Kwota przelewu (PLN)</Label>
-                        <Input
-                          id="admin-topup-amount"
-                          type="text"
-                          inputMode="decimal"
-                          placeholder="np. 50"
-                          value={topUpAmount}
-                          onChange={(e) => setTopUpAmount(e.target.value)}
-                          className="mt-1"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="admin-topup-note">Opis (opcjonalnie)</Label>
-                        <Input
-                          id="admin-topup-note"
-                          type="text"
-                          placeholder="np. BLIK od Jana"
-                          value={topUpNote}
-                          onChange={(e) => setTopUpNote(e.target.value)}
-                          className="mt-1"
-                        />
-                      </div>
-                    </div>
-                    <div className="mt-3">
-                      <Button type="button" disabled={topUpSubmitting} onClick={() => void adminTopUpWallet()}>
-                        {topUpSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
-                        Dodaj do salda
-                      </Button>
-                    </div>
-                  </>
-                ) : (
-                  <p className="mt-3 rounded-lg border border-dashed border-zinc-200 bg-zinc-50/80 px-3 py-2.5 text-xs text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900/40 dark:text-zinc-400">
-                    Wyszukaj i wybierz zawodnika, aby dodać wpłatę do salda.
-                  </p>
-                )}
-              </>
-            );
-
-            if (embedded) {
-              return (
-                <PlatnosciCollapsible
-                  embedded={embedded}
-                  className="mb-0"
-                  title="Doładuj saldo"
-                  description="Po otrzymaniu przelewu wpisz kwotę — zostanie dodana do salda zawodnika jako wpłata."
-                >
-                  {topUpBody}
-                </PlatnosciCollapsible>
-              );
-            }
-
-            return (
-              <div className="mb-4 rounded-2xl border border-emerald-900/10 bg-emerald-50/30 p-4 dark:border-emerald-100/10 dark:bg-emerald-950/30">
-                <p className="text-sm font-semibold text-emerald-950 dark:text-emerald-100">Doładuj saldo</p>
-                <p className="mt-0.5 text-xs text-zinc-600 dark:text-zinc-400">
-                  Po otrzymaniu przelewu wpisz kwotę — zostanie dodana do salda zawodnika jako wpłata.
-                </p>
-                {topUpBody}
-              </div>
-            );
-          })() : null}
-
-          {(() => {
-            const balanceEditBody = (
-              <div className={cn("space-y-4", embedded ? "mt-1" : "mt-3")}>
-                <section aria-labelledby="admin-balance-player-heading">
-                  <p
-                    id="admin-balance-player-heading"
-                    className="text-xs font-semibold uppercase tracking-[0.12em] text-zinc-600 dark:text-zinc-400"
-                  >
-                    Zawodnik
-                  </p>
-
-                  <div className="mt-2">
-                    <WalletPlayerPicker
-                      players={balancePlayerList}
-                      selectedId={adminBalanceUserId}
-                      query={adminBalanceUserQuery}
-                      onQueryChange={setAdminBalanceUserQuery}
-                      onSelectId={setAdminBalanceUserId}
-                      onClearSelection={() => {
-                        setAdminBalanceUserId(null);
-                        setAdminBalanceUserQuery("");
-                      }}
-                      searchInputId="admin-balance-user"
-                    />
-                  </div>
-                </section>
-
-                {selectedBalancePlayer ? (
-                  <section
-                    aria-labelledby="admin-balance-form-heading"
-                    className="rounded-xl border border-amber-200/90 bg-amber-50/60 p-4 dark:border-amber-800/50 dark:bg-amber-950/25"
-                  >
-                    <p
-                      id="admin-balance-form-heading"
-                      className="text-xs font-semibold uppercase tracking-[0.12em] text-amber-900/80 dark:text-amber-200/90"
-                    >
-                      Docelowe saldo
-                    </p>
-                    <p className="mt-1 text-xs text-amber-950/75 dark:text-amber-100/75">
-                      Wpisz kwotę, na jaką ma zostać ustawione saldo — różnica trafi do historii jako korekta.
-                    </p>
-                    <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                      <div>
-                        <Label htmlFor="admin-balance-target">Nowe saldo (PLN)</Label>
-                        <Input
-                          id="admin-balance-target"
-                          type="text"
-                          inputMode="decimal"
-                          placeholder="np. 120,00"
-                          value={adminBalanceTarget}
-                          onChange={(e) => setAdminBalanceTarget(e.target.value)}
-                          className="mt-1 border-amber-300/80 bg-white font-semibold tabular-nums dark:border-amber-700/60 dark:bg-zinc-950"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="admin-balance-note">Opis korekty (opcjonalnie)</Label>
-                        <Input
-                          id="admin-balance-note"
-                          type="text"
-                          placeholder="np. korekta po gotówce"
-                          value={adminBalanceNote}
-                          onChange={(e) => setAdminBalanceNote(e.target.value)}
-                          className="mt-1 bg-white dark:bg-zinc-950"
-                        />
-                      </div>
-                    </div>
-                    <div className="mt-4">
-                      <Button type="button" disabled={adminBalanceSubmitting} onClick={() => void adminSetWalletBalance()}>
-                        {adminBalanceSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
-                        Ustaw saldo
-                      </Button>
-                    </div>
-                  </section>
-                ) : (
-                  <p className="rounded-lg border border-dashed border-zinc-200 bg-zinc-50/80 px-3 py-2.5 text-xs text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900/40 dark:text-zinc-400">
-                    Wybierz zawodnika z listy, aby ustawić docelowe saldo.
-                  </p>
-                )}
-              </div>
-            );
-
-            if (embedded) {
-              return (
-                <PlatnosciCollapsible
-                  embedded={embedded}
-                  className="mb-0"
-                  title="Ustaw saldo zawodnika"
-                  description='Wpisujesz docelowe saldo. System zapisze różnicę jako „Korekta” w historii portfela.'
-                >
-                  {balanceEditBody}
-                </PlatnosciCollapsible>
-              );
-            }
-
-            return (
-              <div className="mb-4 rounded-2xl border border-emerald-900/10 bg-white/70 p-4 dark:border-emerald-100/10 dark:bg-zinc-950/40">
-                <p className="text-sm font-semibold text-emerald-950 dark:text-emerald-100">Ustaw saldo zawodnika</p>
-                <p className="mt-0.5 text-xs text-zinc-600 dark:text-zinc-400">
-                  Wpisujesz docelowe saldo. System zapisze różnicę jako „Korekta” w historii portfela.
-                </p>
-                {balanceEditBody}
-              </div>
-            );
-          })()}
-
-          <div className={cn("flex flex-wrap items-center justify-between gap-2", embedded && "border-t border-zinc-200 pt-4 dark:border-zinc-700")}>
+      {selectedTopUpPlayer ? (
+        <>
+          <div className={cn("mt-4 grid gap-3 sm:grid-cols-2")}>
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-800 dark:text-emerald-300">
-                Lista sald
-              </p>
-              <p className="mt-0.5 text-xs text-zinc-600 dark:text-zinc-400">
-              {(() => {
-                const list = adminOverview?.walletUsers ?? adminOverview?.players ?? [];
-                return list.length ? `Użytkowników: ${list.length}` : "—";
-              })()}
-              </p>
+              <Label htmlFor="admin-topup-amount">Kwota przelewu (PLN)</Label>
+              <Input
+                id="admin-topup-amount"
+                type="text"
+                inputMode="decimal"
+                placeholder="np. 50"
+                value={topUpAmount}
+                onChange={(e) => setTopUpAmount(e.target.value)}
+                className="mt-1"
+              />
             </div>
+            <div>
+              <Label htmlFor="admin-topup-note">Opis (opcjonalnie)</Label>
+              <Input
+                id="admin-topup-note"
+                type="text"
+                placeholder="np. BLIK od Jana"
+                value={topUpNote}
+                onChange={(e) => setTopUpNote(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+          </div>
+          <div className="mt-3">
+            <Button type="button" disabled={topUpSubmitting} onClick={() => void adminTopUpWallet()}>
+              {topUpSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
+              Dodaj do salda
+            </Button>
+          </div>
+        </>
+      ) : (
+        <p className="mt-3 rounded-lg border border-dashed border-zinc-200 bg-zinc-50/80 px-3 py-2.5 text-xs text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900/40 dark:text-zinc-400">
+          Wyszukaj i wybierz zawodnika, aby dodać wpłatę do salda.
+        </p>
+      )}
+    </>
+  );
+
+  const adjustFormBody = (
+    <div className={cn("space-y-4", embedded ? "mt-1" : "mt-3")}>
+      <section aria-labelledby="admin-balance-player-heading">
+        <p
+          id="admin-balance-player-heading"
+          className="text-xs font-semibold uppercase tracking-[0.12em] text-zinc-600 dark:text-zinc-400"
+        >
+          Zawodnik
+        </p>
+        <div className="mt-2">
+          <WalletPlayerPicker
+            players={balancePlayerList}
+            selectedId={adminBalanceUserId}
+            query={adminBalanceUserQuery}
+            onQueryChange={setAdminBalanceUserQuery}
+            onSelectId={selectSharedPlayer}
+            onClearSelection={clearSharedPlayer}
+            searchInputId="admin-balance-user"
+          />
+        </div>
+      </section>
+
+      {selectedBalancePlayer ? (
+        <section
+          aria-labelledby="admin-balance-form-heading"
+          className="rounded-xl border border-amber-200/90 bg-amber-50/60 p-4 dark:border-amber-800/50 dark:bg-amber-950/25"
+        >
+          <p
+            id="admin-balance-form-heading"
+            className="text-xs font-semibold uppercase tracking-[0.12em] text-amber-900/80 dark:text-amber-200/90"
+          >
+            Docelowe saldo
+          </p>
+          <p className="mt-1 text-xs text-amber-950/75 dark:text-amber-100/75">
+            Wpisz kwotę, na jaką ma zostać ustawione saldo — różnica trafi do historii jako korekta.
+          </p>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <div>
+              <Label htmlFor="admin-balance-target">Nowe saldo (PLN)</Label>
+              <Input
+                id="admin-balance-target"
+                type="text"
+                inputMode="decimal"
+                placeholder="np. 120,00"
+                value={adminBalanceTarget}
+                onChange={(e) => setAdminBalanceTarget(e.target.value)}
+                className="mt-1 border-amber-300/80 bg-white font-semibold tabular-nums dark:border-amber-700/60 dark:bg-zinc-950"
+              />
+            </div>
+            <div>
+              <Label htmlFor="admin-balance-note">Opis korekty (opcjonalnie)</Label>
+              <Input
+                id="admin-balance-note"
+                type="text"
+                placeholder="np. korekta po gotówce"
+                value={adminBalanceNote}
+                onChange={(e) => setAdminBalanceNote(e.target.value)}
+                className="mt-1 bg-white dark:bg-zinc-950"
+              />
+            </div>
+          </div>
+          <div className="mt-4">
+            <Button type="button" disabled={adminBalanceSubmitting} onClick={() => void adminSetWalletBalance()}>
+              {adminBalanceSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
+              Ustaw saldo
+            </Button>
+          </div>
+        </section>
+      ) : (
+        <p className="rounded-lg border border-dashed border-zinc-200 bg-zinc-50/80 px-3 py-2.5 text-xs text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900/40 dark:text-zinc-400">
+          Wybierz zawodnika z listy, aby ustawić docelowe saldo.
+        </p>
+      )}
+    </div>
+  );
+
+  function renderBalancesList({ showReload }: { showReload: boolean }) {
+    const list = adminOverview?.walletUsers ?? adminOverview?.players ?? [];
+    return (
+      <>
+        <div
+          className={cn(
+            "flex flex-wrap items-center justify-between gap-2",
+            embedded && "border-t border-zinc-200 pt-4 dark:border-zinc-700"
+          )}
+        >
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-800 dark:text-emerald-300">
+              Lista sald
+            </p>
+            <p className="mt-0.5 text-xs text-zinc-600 dark:text-zinc-400">
+              {list.length ? `Użytkowników: ${list.length}` : "—"}
+            </p>
+          </div>
+          {showReload ? (
             <Button type="button" variant="secondary" disabled={adminLoading} onClick={() => void refresh()}>
               {adminLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
               Odśwież
             </Button>
-          </div>
-          {(() => {
-            const list = adminOverview?.walletUsers ?? adminOverview?.players ?? [];
-            return list.length ? (
-            <ul className="max-h-96 space-y-0 overflow-y-auto rounded-xl border border-zinc-200 bg-zinc-50/50 dark:border-zinc-700 dark:bg-zinc-950/40">
-              {list.map((p, i) => {
-                const bal = Number(p.balance_pln ?? 0);
-                const isNegative = bal < 0;
-                const isPositive = bal > 0;
-                return (
+          ) : null}
+        </div>
+        {list.length ? (
+          <ul className="max-h-96 space-y-0 overflow-y-auto rounded-xl border border-zinc-200 bg-zinc-50/50 dark:border-zinc-700 dark:bg-zinc-950/40">
+            {list.map((p, i) => {
+              const bal = Number(p.balance_pln ?? 0);
+              const isNegative = bal < 0;
+              const isPositive = bal > 0;
+              return (
                 <li
                   key={p.id}
                   className={cn(
@@ -696,100 +657,60 @@ export function AdminWalletsSaldoSection({
                     {formatPln(bal)}
                   </span>
                 </li>
-                );
-              })}
-            </ul>
-            ) : (
-            <p className="rounded-xl border border-dashed border-zinc-200 bg-zinc-50/50 px-4 py-6 text-center text-sm text-zinc-600 dark:border-zinc-700 dark:bg-zinc-950/30 dark:text-zinc-400">
-              {adminLoading ? "Wczytywanie…" : "Brak danych do wyświetlenia."}
-            </p>
-            );
-          })()}
+              );
+            })}
+          </ul>
+        ) : (
+          <p className="rounded-xl border border-dashed border-zinc-200 bg-zinc-50/50 px-4 py-6 text-center text-sm text-zinc-600 dark:border-zinc-700 dark:bg-zinc-950/30 dark:text-zinc-400">
+            {adminLoading ? "Wczytywanie…" : "Brak danych do wyświetlenia."}
+          </p>
+        )}
+      </>
+    );
+  }
 
-          {showPublicLinks ? (
-            embedded ? (
-              <PlatnosciCollapsible
-                embedded={embedded}
-                className="mt-0"
-                title="Linki do podsumowania płatności"
-                description="Wyślij zawodnikom link z podglądem sald — ostatni mecz lub zbiorcze salda wszystkich graczy."
-              >
-                <div className="mt-1 flex flex-wrap gap-2">
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    disabled={publicLinkBusy}
-                    onClick={() => void generatePublicLink("last_match_wallets")}
-                  >
-                    {publicLinkCopied === "last_match_wallets" ? (
-                      <Check className="mr-2 h-4 w-4" aria-hidden />
-                    ) : (
-                      <ClipboardCopy className="mr-2 h-4 w-4" aria-hidden />
-                    )}
-                    Ostatni mecz
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    disabled={publicLinkBusy}
-                    onClick={() => void generatePublicLink("all_wallets")}
-                  >
-                    {publicLinkCopied === "all_wallets" ? (
-                      <Check className="mr-2 h-4 w-4" aria-hidden />
-                    ) : (
-                      <ClipboardCopy className="mr-2 h-4 w-4" aria-hidden />
-                    )}
-                    Zbiorczo — wszystkie salda
-                  </Button>
-                </div>
-              </PlatnosciCollapsible>
-            ) : (
-            <details className="group mt-6 overflow-hidden rounded-2xl border border-emerald-900/10 bg-emerald-50/30 dark:border-emerald-100/10 dark:bg-emerald-950/30">
-              <summary className="awp-focus-ring cursor-pointer list-none px-4 py-3 text-sm font-semibold text-emerald-950 dark:text-emerald-100 [&::-webkit-details-marker]:hidden">
-                <span className="flex items-center justify-between gap-3">
-                  <span>Linki do podsumowania płatności</span>
-                  <span className="text-xs font-medium text-zinc-600 group-open:hidden dark:text-zinc-400">Rozwiń</span>
-                  <span className="hidden text-xs font-medium text-zinc-600 group-open:inline dark:text-zinc-400">Zwiń</span>
-                </span>
-                <span className="mt-1 block text-xs font-normal text-zinc-600 dark:text-zinc-400">
-                  Wyślij zawodnikom link z podglądem sald — ostatni mecz lub zbiorcze salda wszystkich graczy.
-                </span>
-              </summary>
-              <div className="px-4 pb-4">
-                <div className="mt-1 flex flex-wrap gap-2">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  disabled={publicLinkBusy}
-                  onClick={() => void generatePublicLink("last_match_wallets")}
-                >
-                  {publicLinkCopied === "last_match_wallets" ? (
-                    <Check className="mr-2 h-4 w-4" aria-hidden />
-                  ) : (
-                    <ClipboardCopy className="mr-2 h-4 w-4" aria-hidden />
-                  )}
-                  Ostatni mecz
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={publicLinkBusy}
-                  onClick={() => void generatePublicLink("all_wallets")}
-                >
-                  {publicLinkCopied === "all_wallets" ? (
-                    <Check className="mr-2 h-4 w-4" aria-hidden />
-                  ) : (
-                    <ClipboardCopy className="mr-2 h-4 w-4" aria-hidden />
-                  )}
-                  Zbiorczo — wszystkie salda
-                </Button>
-                </div>
-              </div>
-            </details>
-            )
-          ) : null}
-    </>
-  );
+  function renderPublicLinkButtons() {
+    return (
+      <div className="mt-1 flex flex-wrap gap-2">
+        <Button
+          type="button"
+          variant="secondary"
+          disabled={publicLinkBusy}
+          onClick={() => void generatePublicLink("last_match_wallets")}
+        >
+          {publicLinkCopied === "last_match_wallets" ? (
+            <Check className="mr-2 h-4 w-4" aria-hidden />
+          ) : (
+            <ClipboardCopy className="mr-2 h-4 w-4" aria-hidden />
+          )}
+          Ostatni mecz
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          disabled={publicLinkBusy}
+          onClick={() => void generatePublicLink("all_wallets")}
+        >
+          {publicLinkCopied === "all_wallets" ? (
+            <Check className="mr-2 h-4 w-4" aria-hidden />
+          ) : (
+            <ClipboardCopy className="mr-2 h-4 w-4" aria-hidden />
+          )}
+          Zbiorczo — wszystkie salda
+        </Button>
+      </div>
+    );
+  }
+
+  const walletTabOptions = [
+    { id: "balances" as const, label: "Salda" },
+    ...(topUpEnabled ? [{ id: "topup" as const, label: "Doładuj" }] : []),
+    { id: "adjust" as const, label: "Korekta" },
+    ...(linksEnabled ? [{ id: "links" as const, label: "Linki" }] : []),
+  ];
+
+  const activeWalletTab =
+    walletTabOptions.some((o) => o.id === walletTab) ? walletTab : "balances";
 
   return (
     <div>
@@ -831,12 +752,77 @@ export function AdminWalletsSaldoSection({
 
       {embedded ? (
         <div className="mx-auto max-w-4xl">
-          <div className={cn(platnosciPanelClass(true), "mt-4 space-y-4")}>{walletPanels}</div>
+          <div className={cn(platnosciPanelClass(true), "mt-4 space-y-4")}>
+            {topUpEnabled ? (
+              <PlatnosciCollapsible
+                embedded={embedded}
+                className="mb-0"
+                title="Doładuj saldo"
+                description="Po otrzymaniu przelewu wpisz kwotę — zostanie dodana do salda zawodnika jako wpłata."
+              >
+                {topUpFormBody}
+              </PlatnosciCollapsible>
+            ) : null}
+
+            <PlatnosciCollapsible
+              embedded={embedded}
+              className="mb-0"
+              title="Ustaw saldo zawodnika"
+              description='Wpisujesz docelowe saldo. System zapisze różnicę jako „Korekta” w historii portfela.'
+            >
+              {adjustFormBody}
+            </PlatnosciCollapsible>
+
+            {renderBalancesList({ showReload: true })}
+
+            {linksEnabled ? (
+              <PlatnosciCollapsible
+                embedded={embedded}
+                className="mt-0"
+                title="Linki do podsumowania płatności"
+                description="Wyślij zawodnikom link z podglądem sald — ostatni mecz lub zbiorcze salda wszystkich graczy."
+              >
+                {renderPublicLinkButtons()}
+              </PlatnosciCollapsible>
+            ) : null}
+          </div>
         </div>
       ) : (
-        <AdminCard title="Portfele graczy — saldo" description="Najważniejszy podgląd sald i korekty ręczne.">
-          <div className="space-y-4">{walletPanels}</div>
-        </AdminCard>
+        <>
+          <AdminFilterChips
+            options={walletTabOptions}
+            value={activeWalletTab}
+            onChange={(id) => setWalletTab(id as typeof walletTab)}
+            aria-label="Sekcja portfeli"
+          />
+          <AdminCard
+            title={
+              activeWalletTab === "topup"
+                ? "Doładuj saldo"
+                : activeWalletTab === "adjust"
+                  ? "Korekta salda"
+                  : activeWalletTab === "links"
+                    ? "Linki publiczne"
+                    : "Lista sald"
+            }
+            description={
+              activeWalletTab === "topup"
+                ? "Po otrzymaniu przelewu wpisz kwotę — zostanie dodana do salda zawodnika jako wpłata."
+                : activeWalletTab === "adjust"
+                  ? 'Wpisujesz docelowe saldo. System zapisze różnicę jako „Korekta” w historii portfela.'
+                  : activeWalletTab === "links"
+                    ? "Wyślij zawodnikom link z podglądem sald — ostatni mecz lub zbiorcze salda wszystkich graczy."
+                    : "Podgląd sald zarejestrowanych użytkowników."
+            }
+          >
+            <div className="space-y-4">
+              {activeWalletTab === "balances" ? renderBalancesList({ showReload: false }) : null}
+              {activeWalletTab === "topup" && topUpEnabled ? topUpFormBody : null}
+              {activeWalletTab === "adjust" ? adjustFormBody : null}
+              {activeWalletTab === "links" && linksEnabled ? renderPublicLinkButtons() : null}
+            </div>
+          </AdminCard>
+        </>
       )}
     </div>
   );

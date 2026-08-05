@@ -4,7 +4,7 @@ import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type React
 import Link from "next/link";
 import { SiteSectionHero } from "@/components/site-section-hero";
 import { useRouter } from "next/navigation";
-import { toast } from "sonner";
+import { toast } from "@/lib/app-toast";
 import {
   Activity,
   CalendarDays,

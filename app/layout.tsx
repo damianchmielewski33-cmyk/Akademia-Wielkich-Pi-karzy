@@ -6,6 +6,7 @@ import { Toaster } from "sonner";
 import { SiteShell } from "@/components/site-shell";
 import { ShareLinkClientCleanup } from "@/components/share-link-client-cleanup";
 import { PwaRegister } from "@/components/pwa-register";
+import { WebPushEnabler } from "@/components/web-push-enabler";
 import { MatchParticipationSurveyPrompt } from "@/components/match-participation-survey-prompt";
 import { MatchNotificationPrompt } from "@/components/match-notification-prompt";
 import { PinChangePendingBanner } from "@/components/pin-change-pending-banner";
@@ -73,8 +74,13 @@ export async function generateMetadata(): Promise<Metadata> {
     },
     description: siteDescription,
     icons: {
-      icon: [{ url: favicon, type: faviconType }],
-      apple: [{ url: favicon, type: faviconType }],
+      icon: [
+        { url: favicon, type: faviconType },
+        { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+        { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+      ],
+      // Jak Android (adaptive): crest na #1A2D5A — Safari / „Dodaj do ekranu początkowego”
+      apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
     },
     robots: {
       index: true,
@@ -257,6 +263,7 @@ export default async function RootLayout({
           logoUrl={siteAssets.logo_favicon}
         />
         <PwaRegister />
+        {loggedInFull ? <WebPushEnabler /> : null}
         <SessionIdleMonitor enabled={sessionIdleLogout} />
         <ShareLinkClientCleanup />
         <PinSetupGate>
