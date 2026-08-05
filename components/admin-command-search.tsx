@@ -240,6 +240,7 @@ export function AdminCommandSearch({ onJump, className }: Props) {
                     <button
                       type="button"
                       role="option"
+                      aria-selected={false}
                       onClick={() => select(r.jump)}
                       className="flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm transition-colors hover:bg-white/10"
                     >

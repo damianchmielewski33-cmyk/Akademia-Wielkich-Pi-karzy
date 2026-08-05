@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Film, Loader2, Pencil, Plus, Trash2 } from "lucide-react";
+import { Film, Loader2, Pencil, Plus } from "lucide-react";
 import { toast } from "@/lib/app-toast";
 import {
   AdminCard,
