@@ -23,6 +23,7 @@ export async function deleteUserAccountData(db: AppDb, userId: number): Promise<
   await db.prepare("DELETE FROM match_wallet_charges WHERE user_id = ?").run(userId);
 
   await db.prepare("UPDATE page_views SET user_id = NULL WHERE user_id = ?").run(userId);
+  await db.prepare("UPDATE ad_impressions SET user_id = NULL WHERE user_id = ?").run(userId);
   await db.prepare("UPDATE activity_log SET user_id = NULL WHERE user_id = ?").run(userId);
   await db.prepare("UPDATE admin_messages SET read_by_admin_id = NULL WHERE read_by_admin_id = ?").run(userId);
   await db.prepare("DELETE FROM admin_messages WHERE user_id = ?").run(userId);

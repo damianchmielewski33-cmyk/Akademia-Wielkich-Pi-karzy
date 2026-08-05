@@ -171,6 +171,37 @@ type AnalyticsPayload = {
     zaproszenie: { total_views: number; unique_visitors: number };
     platnosci_public: { total_views: number; unique_visitors: number };
   };
+  ads?: {
+    total_impressions: number;
+    requests?: number;
+    filled?: number;
+    unfilled?: number;
+    pending?: number;
+    fill_rate_pct?: number | null;
+    unique_visitors: number;
+    by_screen: {
+      screen_key: string;
+      label: string;
+      impressions: number;
+      requests?: number;
+      filled?: number;
+      unfilled?: number;
+      unique_visitors: number;
+    }[];
+    by_placement?: {
+      placement: string;
+      label: string;
+      requests: number;
+      filled: number;
+      unfilled: number;
+    }[];
+  };
+  cookie_consent?: {
+    total: number;
+    accept_all: number;
+    reject_marketing: number;
+    accept_pct: number | null;
+  };
   screens: { screen_key: string; label: string; total_views: number; unique_visitors: number }[];
   /** Zdarzenia z serwera (logowanie, zapisy, statystyki itd.) w wybranym zakresie dat. */
   activity_events: {
@@ -1252,7 +1283,7 @@ function AnalyticsView({
     <div className="space-y-6" aria-busy={loading}>
       <AdminToolbar
         title="Analityka wejść"
-        description="Odsłony stron, aktywność graczy i dziennik zdarzeń. Zakres dat to dni kalendarzowe (Europe/Warsaw)."
+        description="Odsłony stron, wyświetlenia reklam, aktywność graczy i dziennik zdarzeń. Zakres dat to dni kalendarzowe (Europe/Warsaw)."
         onReload={onReload}
         loading={loading}
       >
@@ -1460,6 +1491,47 @@ function AnalyticsView({
                 </p>
               </div>
             </AdminCard>
+            <AdminCard
+              tone="data"
+              title="Wyświetlenia reklam"
+              description="Wypełnione sloty AdSense (nie puste bloki)"
+            >
+              <p className="admin-analytics-kpi">{data.ads?.filled ?? data.ads?.total_impressions ?? 0}</p>
+              <p className="mt-2 text-sm admin-data-muted">
+                Unikalni:{" "}
+                <strong className="text-zinc-900 dark:text-zinc-50">
+                  {data.ads?.unique_visitors ?? 0}
+                </strong>
+                {data.ads?.fill_rate_pct != null ? (
+                  <span className="tabular-nums"> · wypełnienie {data.ads.fill_rate_pct}%</span>
+                ) : null}
+              </p>
+              <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                Żądania: {data.ads?.requests ?? 0} · puste: {data.ads?.unfilled ?? 0}
+              </p>
+            </AdminCard>
+            <AdminCard
+              tone="data"
+              title="Zgoda marketingowa"
+              description="Wybór w banerze cookies"
+            >
+              <p className="admin-analytics-kpi">
+                {data.cookie_consent?.accept_pct != null
+                  ? `${data.cookie_consent.accept_pct}%`
+                  : "–"}
+              </p>
+              <p className="mt-2 text-sm admin-data-muted">
+                Akceptacja:{" "}
+                <strong className="text-zinc-900 dark:text-zinc-50 tabular-nums">
+                  {data.cookie_consent?.accept_all ?? 0}
+                </strong>
+                {" · "}
+                tylko niezbędne:{" "}
+                <strong className="text-zinc-900 dark:text-zinc-50 tabular-nums">
+                  {data.cookie_consent?.reject_marketing ?? 0}
+                </strong>
+              </p>
+            </AdminCard>
           </div>
         </>
       ) : null}
@@ -1468,6 +1540,90 @@ function AnalyticsView({
 
       {data ? (
         <>
+          <AdminCard
+            tone="data"
+            title="Reklamy wg miejsca"
+            description="Stopka, treść (Start/Terminarz/Galeria) i popup — wypełnione vs puste."
+          >
+            <AdminTableShell tone="data">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Miejsce</TableHead>
+                    <TableHead className="text-right">Wypełnione</TableHead>
+                    <TableHead className="text-right">Puste</TableHead>
+                    <TableHead className="text-right">Żądania</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {(data.ads?.by_placement?.length ?? 0) === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center text-sm admin-data-muted">
+                        Brak danych o slotach w tym okresie.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    (data.ads?.by_placement ?? []).map((row) => (
+                      <TableRow key={row.placement}>
+                        <TableCell>
+                          <span className="font-medium text-zinc-900 dark:text-zinc-50">{row.label}</span>
+                          <span className="admin-table-muted ml-2">{row.placement}</span>
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums font-medium">{row.filled}</TableCell>
+                        <TableCell className="text-right tabular-nums font-medium">{row.unfilled}</TableCell>
+                        <TableCell className="text-right tabular-nums font-medium">{row.requests}</TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </AdminTableShell>
+          </AdminCard>
+
+          <AdminCard
+            tone="data"
+            title="Reklamy wg ekranu"
+            description="Wypełnione wyświetlenia reklam według strony."
+          >
+            <AdminTableShell tone="data">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Ekran</TableHead>
+                    <TableHead className="text-right">Wypełnione</TableHead>
+                    <TableHead className="text-right">Puste</TableHead>
+                    <TableHead className="text-right">Unikalni</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {(data.ads?.by_screen?.length ?? 0) === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center text-sm admin-data-muted">
+                        Brak wyświetleń reklam w tym okresie.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    (data.ads?.by_screen ?? []).map((row) => (
+                      <TableRow key={row.screen_key}>
+                        <TableCell>
+                          <span className="font-medium text-zinc-900 dark:text-zinc-50">{row.label}</span>
+                          <span className="admin-table-muted ml-2">{row.screen_key}</span>
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums font-medium">
+                          {row.filled ?? row.impressions}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums font-medium">
+                          {row.unfilled ?? 0}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums font-medium">{row.unique_visitors}</TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </AdminTableShell>
+          </AdminCard>
+
           <AdminCard
             tone="data"
             title="Wejścia wg ekranu"
@@ -1664,6 +1820,15 @@ function AnalyticsView({
               <p>
                 <strong>Wejścia anonimowe vs zalogowane</strong> — udział surowych odsłon bez sesji vs z
                 aktywną sesją.
+              </p>
+              <p>
+                <strong>Wyświetlenia reklam</strong> — tylko sloty, które Google faktycznie wypełnił
+                (nie puste bloki). Osobno: żądania i % wypełnienia. Popup pokazuje się wyłącznie po
+                wypełnieniu reklamy (max. raz na 12 h).
+              </p>
+              <p>
+                <strong>Zgoda marketingowa</strong> — udział „Akceptuję” vs „Tylko niezbędne” w banerze
+                cookies (nowe wybory w okresie).
               </p>
               <p>
                 <strong>Dziennik akcji</strong> — konkretne czynności zapisane po stronie serwera (nie mylić z

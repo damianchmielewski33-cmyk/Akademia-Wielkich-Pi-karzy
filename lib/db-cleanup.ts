@@ -22,6 +22,8 @@ function retentionDaysFromEnv(key: string, fallback: number, min = 30, max = 365
 
 export type DatabaseCleanupResult = {
   page_views_deleted: number;
+  ad_impressions_deleted: number;
+  cookie_consent_events_deleted: number;
   activity_log_deleted: number;
   transport_messages_deleted: number;
   admin_messages_deleted: number;
@@ -36,7 +38,7 @@ export type DatabaseCleanupResult = {
 /**
  * Usuwa stare rekordy (analityka, log aktywności, wiadomości czatu/transportu) oraz osierocone pliki.
  *
- * - `DATABASE_RETENTION_DAYS` — ile dni trzymać `page_views` i `activity_log` (domyślnie 400).
+ * - `DATABASE_RETENTION_DAYS` — ile dni trzymać `page_views`, `ad_impressions` i `activity_log` (domyślnie 400).
  * - `TRANSPORT_MESSAGES_MATCH_DAYS` — wiadomości transportu dla meczów starszych niż N dni (domyślnie 180).
  * - `CHAT_MESSAGES_RETENTION_DAYS` — wiadomości `admin_messages` (czat admin/DM) starsze niż N dni (domyślnie 7).
  */
@@ -63,6 +65,18 @@ export async function runDatabaseCleanup(): Promise<DatabaseCleanupResult> {
     cutoffIso
   );
   await db.prepare("DELETE FROM page_views WHERE created_at < ?").run(cutoffIso);
+
+  const adBefore = await countBefore(
+    "SELECT COUNT(*) AS c FROM ad_impressions WHERE created_at < ?",
+    cutoffIso
+  );
+  await db.prepare("DELETE FROM ad_impressions WHERE created_at < ?").run(cutoffIso);
+
+  const consentBefore = await countBefore(
+    "SELECT COUNT(*) AS c FROM cookie_consent_events WHERE created_at < ?",
+    cutoffIso
+  );
+  await db.prepare("DELETE FROM cookie_consent_events WHERE created_at < ?").run(cutoffIso);
 
   const alBefore = await countBefore(
     "SELECT COUNT(*) AS c FROM activity_log WHERE timestamp < datetime('now', ?)",
@@ -174,6 +188,8 @@ export async function runDatabaseCleanup(): Promise<DatabaseCleanupResult> {
 
   return {
     page_views_deleted: pvBefore,
+    ad_impressions_deleted: adBefore,
+    cookie_consent_events_deleted: consentBefore,
     activity_log_deleted: alBefore,
     transport_messages_deleted: tmBefore,
     admin_messages_deleted: amBefore,

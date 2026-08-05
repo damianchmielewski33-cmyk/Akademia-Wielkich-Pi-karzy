@@ -493,12 +493,58 @@ export function AdminSettingsTab({ loading, onReload, settingsRealm = "academy" 
             }}
           />
         </FieldRow>
+        <FieldRow
+          label="ID jednostki w treści (opcjonalnie)"
+          hint="Dodatkowy slot na Start, Terminarz i Galeria — osobna jednostka Display w AdSense."
+        >
+          <Input
+            type="text"
+            inputMode="numeric"
+            placeholder="np. 1234567890"
+            className={cn(adminFieldClass, "font-mono text-sm")}
+            defaultValue={settings.adsense_slot_inline ?? ""}
+            disabled={busy}
+            key={`adsense-inline-${settings.adsense_slot_inline ?? ""}`}
+            onBlur={(e) => {
+              const v = e.target.value.trim();
+              const cur = settings.adsense_slot_inline ?? "";
+              if (v !== cur) void save({ adsense_slot_inline: v });
+            }}
+          />
+        </FieldRow>
+        <YesNoSwitchRow
+          className={adminToggleRowClass}
+          label="Popup z reklamą"
+          hint="Po ~10 s na stronie ładuje reklamę i pokazuje okno dopiero gdy Google ją wypełni. Max. raz na 12 godzin na urządzenie."
+          checked={settings.adsense_popup_enabled}
+          disabled={busy}
+          onCheckedChange={(v) => void save({ adsense_popup_enabled: v })}
+        />
+        <FieldRow
+          label="ID jednostki popup (opcjonalnie)"
+          hint="Osobna jednostka Display (np. prostokąt 300×250). Wymagana, gdy popup jest włączony."
+        >
+          <Input
+            type="text"
+            inputMode="numeric"
+            placeholder="np. 1234567890"
+            className={cn(adminFieldClass, "font-mono text-sm")}
+            defaultValue={settings.adsense_slot_popup ?? ""}
+            disabled={busy}
+            key={`adsense-popup-${settings.adsense_slot_popup ?? ""}`}
+            onBlur={(e) => {
+              const v = e.target.value.trim();
+              const cur = settings.adsense_slot_popup ?? "";
+              if (v !== cur) void save({ adsense_slot_popup: v });
+            }}
+          />
+        </FieldRow>
         <p className="text-xs leading-relaxed pitch-muted">
-          Po akceptacji konta AdSense sprawdź też plik{" "}
+          Auto ads włączysz w panelu Google AdSense (Witryny → optymalizacja). Po akceptacji konta sprawdź też plik{" "}
           <a className="underline underline-offset-2" href="/ads.txt" target="_blank" rel="noreferrer">
             /ads.txt
           </a>
-          . Strony prawne:{" "}
+          . Statystyki wyświetleń: Analityka w panelu admina. Strony prawne:{" "}
           <a className="underline underline-offset-2" href="/regulamin" target="_blank" rel="noreferrer">
             regulamin
           </a>

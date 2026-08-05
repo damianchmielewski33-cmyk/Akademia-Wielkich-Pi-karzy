@@ -209,6 +209,109 @@ export async function GET(req: Request) {
     time_display: formatActivityTimePl(r.timestamp),
   }));
 
+  const adsTotals = (await db
+    .prepare(
+      `SELECT COUNT(*) AS requests,
+              SUM(CASE WHEN fill_status = 'filled' THEN 1 ELSE 0 END) AS filled,
+              SUM(CASE WHEN fill_status = 'unfilled' THEN 1 ELSE 0 END) AS unfilled,
+              SUM(CASE WHEN fill_status = 'pending' THEN 1 ELSE 0 END) AS pending,
+              COUNT(DISTINCT CASE WHEN fill_status = 'filled' THEN
+                CASE WHEN user_id IS NOT NULL THEN CAST(user_id AS TEXT) ELSE visitor_id END
+              END) AS unique_visitors_filled
+       FROM ad_impressions
+       WHERE created_at >= ? AND created_at <= ?`
+    )
+    .get(fromIso, toIso)) as {
+    requests: number;
+    filled: number;
+    unfilled: number;
+    pending: number;
+    unique_visitors_filled: number;
+  };
+
+  const adsScreenRows = (await db
+    .prepare(
+      `SELECT screen_key,
+              COUNT(*) AS requests,
+              SUM(CASE WHEN fill_status = 'filled' THEN 1 ELSE 0 END) AS filled,
+              SUM(CASE WHEN fill_status = 'unfilled' THEN 1 ELSE 0 END) AS unfilled,
+              COUNT(DISTINCT CASE WHEN fill_status = 'filled' THEN
+                CASE WHEN user_id IS NOT NULL THEN CAST(user_id AS TEXT) ELSE visitor_id END
+              END) AS unique_visitors
+       FROM ad_impressions
+       WHERE created_at >= ? AND created_at <= ?
+       GROUP BY screen_key
+       ORDER BY filled DESC, requests DESC`
+    )
+    .all(fromIso, toIso)) as {
+    screen_key: string;
+    requests: number;
+    filled: number;
+    unfilled: number;
+    unique_visitors: number;
+  }[];
+
+  const adsPlacementRows = (await db
+    .prepare(
+      `SELECT placement,
+              COUNT(*) AS requests,
+              SUM(CASE WHEN fill_status = 'filled' THEN 1 ELSE 0 END) AS filled,
+              SUM(CASE WHEN fill_status = 'unfilled' THEN 1 ELSE 0 END) AS unfilled
+       FROM ad_impressions
+       WHERE created_at >= ? AND created_at <= ?
+       GROUP BY placement
+       ORDER BY filled DESC`
+    )
+    .all(fromIso, toIso)) as {
+    placement: string;
+    requests: number;
+    filled: number;
+    unfilled: number;
+  }[];
+
+  const ads_by_screen = adsScreenRows.map((r) => ({
+    screen_key: r.screen_key,
+    label: SCREEN_LABELS[r.screen_key] ?? r.screen_key,
+    impressions: r.filled,
+    requests: r.requests,
+    filled: r.filled,
+    unfilled: r.unfilled,
+    unique_visitors: r.unique_visitors,
+  }));
+
+  const placementLabels: Record<string, string> = {
+    footer: "Stopka",
+    inline: "W treści",
+    popup: "Popup",
+  };
+  const ads_by_placement = adsPlacementRows.map((r) => ({
+    placement: r.placement,
+    label: placementLabels[r.placement] ?? r.placement,
+    requests: r.requests,
+    filled: r.filled,
+    unfilled: r.unfilled,
+  }));
+
+  const fillRate =
+    adsTotals.filled + adsTotals.unfilled > 0
+      ? Math.round((adsTotals.filled / (adsTotals.filled + adsTotals.unfilled)) * 1000) / 10
+      : null;
+
+  const consentTotals = (await db
+    .prepare(
+      `SELECT COUNT(*) AS total,
+              SUM(CASE WHEN choice = 'accept_all' THEN 1 ELSE 0 END) AS accept_all,
+              SUM(CASE WHEN choice = 'reject_marketing' THEN 1 ELSE 0 END) AS reject_marketing
+       FROM cookie_consent_events
+       WHERE created_at >= ? AND created_at <= ?`
+    )
+    .get(fromIso, toIso)) as { total: number; accept_all: number; reject_marketing: number };
+
+  const consentAcceptPct =
+    consentTotals.total > 0
+      ? Math.round((consentTotals.accept_all / consentTotals.total) * 1000) / 10
+      : null;
+
   return NextResponse.json({
     range: { from: fromDate, to: toDate },
     totals: {
@@ -239,6 +342,23 @@ export async function GET(req: Request) {
         total_views: paymentLinkStats.total_views,
         unique_visitors: paymentLinkStats.unique_visitors,
       },
+    },
+    ads: {
+      total_impressions: adsTotals.filled,
+      requests: adsTotals.requests,
+      filled: adsTotals.filled,
+      unfilled: adsTotals.unfilled,
+      pending: adsTotals.pending,
+      fill_rate_pct: fillRate,
+      unique_visitors: adsTotals.unique_visitors_filled,
+      by_screen: ads_by_screen,
+      by_placement: ads_by_placement,
+    },
+    cookie_consent: {
+      total: consentTotals.total,
+      accept_all: consentTotals.accept_all,
+      reject_marketing: consentTotals.reject_marketing,
+      accept_pct: consentAcceptPct,
     },
     screens,
     activity_events,

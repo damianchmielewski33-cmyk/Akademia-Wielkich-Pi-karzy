@@ -60,6 +60,7 @@ export const RATE = {
   /** Podpowiedzi piłkarzy (TheSportsDB) — limit na IP. */
   playersSearch: { limit: 40, windowMs: 60 * 1000 },
   pageView: { limit: 200, windowMs: 60 * 1000 },
+  adImpression: { limit: 120, windowMs: 60 * 1000 },
   /** Prognoza pogody — ogranicza nadużycia klucza Google Maps / zewnętrznych API. */
   weatherForecast: { limit: 30, windowMs: 60 * 1000 },
   /** Wiadomości do admina — limit na IP. */

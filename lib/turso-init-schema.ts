@@ -2,6 +2,7 @@ import type { Client } from "@libsql/client";
 import { isDuplicateColumnError, migrateAppSettingsColumnsLibsql } from "@/lib/app-settings";
 import { migrateRealmSchemaLibsql } from "@/lib/realm-migration";
 import { CAPTAIN_LOTTERY_CREATE_SQL, migrateCaptainLotterySchemaLibsql } from "@/lib/captain-lottery-schema";
+import { migrateAdImpressionsSchemaLibsql } from "@/lib/ad-impressions-schema";
 
 async function pragmaColumnNames(
   client: Client,
@@ -115,6 +116,32 @@ export async function initLibsqlSchema(client: Client) {
     CREATE INDEX IF NOT EXISTS idx_page_views_created ON page_views(created_at);
     CREATE INDEX IF NOT EXISTS idx_page_views_screen_created ON page_views(screen_key, created_at);
     CREATE INDEX IF NOT EXISTS idx_page_views_user_created ON page_views(user_id, created_at);
+
+    CREATE TABLE IF NOT EXISTS ad_impressions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      slot_id TEXT NOT NULL,
+      screen_key TEXT NOT NULL,
+      pathname TEXT NOT NULL,
+      user_id INTEGER,
+      visitor_id TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      placement TEXT NOT NULL DEFAULT 'footer',
+      fill_status TEXT NOT NULL DEFAULT 'pending',
+      FOREIGN KEY(user_id) REFERENCES users(id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_ad_impressions_created ON ad_impressions(created_at);
+    CREATE INDEX IF NOT EXISTS idx_ad_impressions_screen_created ON ad_impressions(screen_key, created_at);
+    CREATE INDEX IF NOT EXISTS idx_ad_impressions_placement_created ON ad_impressions(placement, created_at);
+
+    CREATE TABLE IF NOT EXISTS cookie_consent_events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      choice TEXT NOT NULL,
+      visitor_id TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_cookie_consent_created ON cookie_consent_events(created_at);
 
     CREATE INDEX IF NOT EXISTS idx_matches_played_date_time ON matches(played, match_date, match_time);
 
@@ -546,6 +573,7 @@ export async function initLibsqlSchema(client: Client) {
 
   await client.executeMultiple(CAPTAIN_LOTTERY_CREATE_SQL);
   await migrateCaptainLotterySchemaLibsql(client);
+  await migrateAdImpressionsSchemaLibsql(client);
 
   const rs = await client.execute("SELECT 1 AS ok FROM app_settings WHERE realm = 'academy'");
   if (rs.rows.length === 0) {

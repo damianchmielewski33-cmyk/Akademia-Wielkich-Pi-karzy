@@ -264,6 +264,9 @@ export default async function RootLayout({
             clientId={adsenseClientId}
             enabled={appSettings.adsense_enabled}
             slotFooter={appSettings.adsense_slot_footer}
+            slotInline={appSettings.adsense_slot_inline}
+            slotPopup={appSettings.adsense_slot_popup}
+            popupEnabled={appSettings.adsense_popup_enabled}
           >
             <SiteAssetsProvider assets={siteAssets}>
               <ScreenBlocksProvider

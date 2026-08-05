@@ -34,6 +34,7 @@ import { LogoutConfirmModal } from "@/components/logout-confirm-modal";
 import { SiteAssetImage } from "@/components/site-asset-image";
 import { useSiteAsset } from "@/components/site-assets-provider";
 import { AdsenseSlot } from "@/components/adsense-slot";
+import { isAdsenseInlinePath } from "@/lib/adsense";
 import { cn } from "@/lib/utils";
 import { SITE_NAME } from "@/lib/site";
 import { useScreenBlocks } from "@/components/screen-blocks-provider";
@@ -454,7 +455,10 @@ export function SiteShell({
           />
         </div>
         <div className="relative z-10 flex flex-1 flex-col">{children}</div>
-        <AdsenseSlot className="relative z-10 mt-auto" />
+        {isAdsenseInlinePath(pathname) ? (
+          <AdsenseSlot placement="inline" className="relative z-10" label="Reklama" />
+        ) : null}
+        <AdsenseSlot placement="footer" className="relative z-10 mt-auto" />
       </main>
 
       <footer className="relative z-20 border-t border-emerald-950/25 bg-gradient-to-b from-emerald-950 via-emerald-900 to-emerald-950 text-emerald-50 pb-[env(safe-area-inset-bottom)]">

@@ -45,6 +45,8 @@ export function isAdsensePathAllowed(pathname: string | null | undefined): boole
   return true;
 }
 
+export { isAdsenseInlinePath } from "@/lib/ad-analytics";
+
 export function buildAdsTxtBody(clientId: string): string {
   const pub = adsensePublisherIdFromClient(clientId);
   return [

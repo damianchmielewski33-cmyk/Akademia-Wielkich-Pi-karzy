@@ -16,7 +16,9 @@ import {
   rejectOptionalCookies,
   type CookieConsentState,
 } from "@/lib/cookie-consent";
+import { getAnalyticsVisitorId, sendCookieConsentBeacon } from "@/lib/ad-analytics";
 import { CookieConsentBanner } from "@/components/cookie-consent-banner";
+import { AdsensePopup } from "@/components/adsense-popup";
 
 declare global {
   interface Window {
@@ -28,6 +30,9 @@ type AdsenseContextValue = {
   clientId: string | null;
   enabled: boolean;
   slotFooter: string | null;
+  slotInline: string | null;
+  slotPopup: string | null;
+  popupEnabled: boolean;
   consent: CookieConsentState | null;
   marketingAllowed: boolean;
   analyticsAllowed: boolean;
@@ -63,6 +68,9 @@ type Props = {
   clientId: string | null;
   enabled: boolean;
   slotFooter?: string | null;
+  slotInline?: string | null;
+  slotPopup?: string | null;
+  popupEnabled?: boolean;
 };
 
 export function AdsenseProvider({
@@ -70,6 +78,9 @@ export function AdsenseProvider({
   clientId,
   enabled,
   slotFooter = null,
+  slotInline = null,
+  slotPopup = null,
+  popupEnabled = false,
 }: Props) {
   const [consent, setConsent] = useState<CookieConsentState | null>(null);
   const [hydrated, setHydrated] = useState(false);
@@ -92,8 +103,17 @@ export function AdsenseProvider({
     }
   }, []);
 
-  const acceptAll = useCallback(() => persist(acceptAllCookies()), [persist]);
-  const rejectOptional = useCallback(() => persist(rejectOptionalCookies()), [persist]);
+  const acceptAll = useCallback(() => {
+    persist(acceptAllCookies());
+    const visitorId = getAnalyticsVisitorId();
+    if (visitorId) sendCookieConsentBeacon("accept_all", visitorId);
+  }, [persist]);
+
+  const rejectOptional = useCallback(() => {
+    persist(rejectOptionalCookies());
+    const visitorId = getAnalyticsVisitorId();
+    if (visitorId) sendCookieConsentBeacon("reject_marketing", visitorId);
+  }, [persist]);
 
   const marketingAllowed = Boolean(enabled && clientId && consent?.marketing);
   const analyticsAllowed = Boolean(consent?.analytics);
@@ -108,6 +128,9 @@ export function AdsenseProvider({
       clientId,
       enabled,
       slotFooter: slotFooter?.trim() || null,
+      slotInline: slotInline?.trim() || null,
+      slotPopup: slotPopup?.trim() || null,
+      popupEnabled,
       consent: hydrated ? consent : null,
       marketingAllowed,
       analyticsAllowed,
@@ -118,6 +141,9 @@ export function AdsenseProvider({
       clientId,
       enabled,
       slotFooter,
+      slotInline,
+      slotPopup,
+      popupEnabled,
       hydrated,
       consent,
       marketingAllowed,
@@ -131,6 +157,7 @@ export function AdsenseProvider({
     <AdsenseContext.Provider value={value}>
       {children}
       {hydrated ? <CookieConsentBanner /> : null}
+      {hydrated ? <AdsensePopup /> : null}
     </AdsenseContext.Provider>
   );
 }

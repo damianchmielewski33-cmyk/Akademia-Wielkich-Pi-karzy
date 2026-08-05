@@ -7,6 +7,7 @@ import { initLibsqlSchema } from "@/lib/turso-init-schema";
 import { isDuplicateColumnError, migrateAppSettingsColumnsSqlite } from "@/lib/app-settings";
 import { migrateRealmSchemaSqlite } from "@/lib/realm-migration";
 import { CAPTAIN_LOTTERY_CREATE_SQL, migrateCaptainLotterySchemaSqlite } from "@/lib/captain-lottery-schema";
+import { migrateAdImpressionsSchemaSqlite } from "@/lib/ad-impressions-schema";
 import { withTransientNetworkRetries } from "@/lib/transient-network-retry";
 
 /** Lokalny plik SQLite (dev) lub Turso (gdy TURSO_DATABASE_URL). */
@@ -217,6 +218,32 @@ function initSchemaSync(db: Database.Database) {
     CREATE INDEX IF NOT EXISTS idx_page_views_created ON page_views(created_at);
     CREATE INDEX IF NOT EXISTS idx_page_views_screen_created ON page_views(screen_key, created_at);
     CREATE INDEX IF NOT EXISTS idx_page_views_user_created ON page_views(user_id, created_at);
+
+    CREATE TABLE IF NOT EXISTS ad_impressions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      slot_id TEXT NOT NULL,
+      screen_key TEXT NOT NULL,
+      pathname TEXT NOT NULL,
+      user_id INTEGER,
+      visitor_id TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      placement TEXT NOT NULL DEFAULT 'footer',
+      fill_status TEXT NOT NULL DEFAULT 'pending',
+      FOREIGN KEY(user_id) REFERENCES users(id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_ad_impressions_created ON ad_impressions(created_at);
+    CREATE INDEX IF NOT EXISTS idx_ad_impressions_screen_created ON ad_impressions(screen_key, created_at);
+    CREATE INDEX IF NOT EXISTS idx_ad_impressions_placement_created ON ad_impressions(placement, created_at);
+
+    CREATE TABLE IF NOT EXISTS cookie_consent_events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      choice TEXT NOT NULL,
+      visitor_id TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_cookie_consent_created ON cookie_consent_events(created_at);
 
     CREATE INDEX IF NOT EXISTS idx_matches_played_date_time ON matches(played, match_date, match_time);
 
@@ -521,6 +548,7 @@ function initSchemaSync(db: Database.Database) {
   db.exec(CAPTAIN_LOTTERY_CREATE_SQL);
 
   migrateCaptainLotterySchemaSqlite(db);
+  migrateAdImpressionsSchemaSqlite(db);
 
   const appSettingsCols = db.prepare("PRAGMA table_info(app_settings)").all() as { name: string }[];
   migrateAppSettingsColumnsSqlite(

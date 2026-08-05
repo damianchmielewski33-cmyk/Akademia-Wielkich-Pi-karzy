@@ -47,6 +47,12 @@ export type AppSettings = {
   adsense_enabled: boolean;
   /** Opcjonalny ID jednostki reklamowej nad stopką (z panelu AdSense). */
   adsense_slot_footer: string | null;
+  /** Jednostka w treści (Start / Terminarz / Galeria). */
+  adsense_slot_inline: string | null;
+  /** Jednostka w popupie interstitial. */
+  adsense_slot_popup: string | null;
+  /** Czy pokazywać popup z reklamą (tylko gdy Google wypełni slot). */
+  adsense_popup_enabled: boolean;
   site_name: string;
   site_description: string;
   contact_email: string;
@@ -104,6 +110,9 @@ export const APP_SETTINGS_DEFAULTS: AppSettings = {
   adsense_client_id: null,
   adsense_enabled: false,
   adsense_slot_footer: null,
+  adsense_slot_inline: null,
+  adsense_slot_popup: null,
+  adsense_popup_enabled: false,
   site_name: SITE_NAME,
   site_description: SITE_DESCRIPTION,
   contact_email: DEFAULT_PUBLIC_CONTACT_EMAIL,
@@ -167,6 +176,9 @@ type AppSettingsRow = {
   adsense_client_id?: string | null;
   adsense_enabled?: number | null;
   adsense_slot_footer?: string | null;
+  adsense_slot_inline?: string | null;
+  adsense_slot_popup?: string | null;
+  adsense_popup_enabled?: number | null;
   site_name?: string | null;
   site_description?: string | null;
   contact_email?: string | null;
@@ -211,6 +223,9 @@ function appSettingsSelectSql(): string {
     adsense_client_id,
     adsense_enabled,
     adsense_slot_footer,
+    adsense_slot_inline,
+    adsense_slot_popup,
+    adsense_popup_enabled,
     site_name,
     site_description,
     contact_email,
@@ -321,6 +336,9 @@ export function resolveAppSettings(
     adsense_client_id: row?.adsense_client_id?.trim() || null,
     adsense_enabled: (row?.adsense_enabled ?? 0) === 1,
     adsense_slot_footer: row?.adsense_slot_footer?.trim() || null,
+    adsense_slot_inline: row?.adsense_slot_inline?.trim() || null,
+    adsense_slot_popup: row?.adsense_slot_popup?.trim() || null,
+    adsense_popup_enabled: (row?.adsense_popup_enabled ?? 0) === 1,
     site_name: nonEmptyString(row?.site_name, d.site_name),
     site_description: nonEmptyString(row?.site_description, d.site_description),
     contact_email: nonEmptyString(row?.contact_email, d.contact_email),
@@ -460,6 +478,9 @@ export async function saveAppSettings(db: DbWriteLike, realm: Realm, settings: A
         adsense_client_id = ?,
         adsense_enabled = ?,
         adsense_slot_footer = ?,
+        adsense_slot_inline = ?,
+        adsense_slot_popup = ?,
+        adsense_popup_enabled = ?,
         site_name = ?,
         site_description = ?,
         contact_email = ?,
@@ -502,6 +523,9 @@ export async function saveAppSettings(db: DbWriteLike, realm: Realm, settings: A
       settings.adsense_client_id,
       settings.adsense_enabled ? 1 : 0,
       settings.adsense_slot_footer,
+      settings.adsense_slot_inline,
+      settings.adsense_slot_popup,
+      settings.adsense_popup_enabled ? 1 : 0,
       settings.site_name,
       settings.site_description,
       settings.contact_email,
@@ -566,6 +590,12 @@ const APP_SETTINGS_MIGRATION_COLUMNS: { name: string; ddl: string }[] = [
     ddl: "ALTER TABLE app_settings ADD COLUMN adsense_enabled INTEGER NOT NULL DEFAULT 0",
   },
   { name: "adsense_slot_footer", ddl: "ALTER TABLE app_settings ADD COLUMN adsense_slot_footer TEXT" },
+  { name: "adsense_slot_inline", ddl: "ALTER TABLE app_settings ADD COLUMN adsense_slot_inline TEXT" },
+  { name: "adsense_slot_popup", ddl: "ALTER TABLE app_settings ADD COLUMN adsense_slot_popup TEXT" },
+  {
+    name: "adsense_popup_enabled",
+    ddl: "ALTER TABLE app_settings ADD COLUMN adsense_popup_enabled INTEGER NOT NULL DEFAULT 0",
+  },
   { name: "site_name", ddl: "ALTER TABLE app_settings ADD COLUMN site_name TEXT" },
   { name: "site_description", ddl: "ALTER TABLE app_settings ADD COLUMN site_description TEXT" },
   { name: "contact_email", ddl: "ALTER TABLE app_settings ADD COLUMN contact_email TEXT" },

@@ -42,6 +42,9 @@ const putBodySchema = z
     adsense_client_id: z.string().max(64).optional(),
     adsense_enabled: z.boolean().optional(),
     adsense_slot_footer: z.string().max(32).optional(),
+    adsense_slot_inline: z.string().max(32).optional(),
+    adsense_slot_popup: z.string().max(32).optional(),
+    adsense_popup_enabled: z.boolean().optional(),
     site_name: z.string().trim().min(1).max(120).optional(),
     site_description: z.string().trim().max(500).optional(),
     contact_email: z.string().trim().email().max(200).optional(),
@@ -225,6 +228,38 @@ export async function PUT(req: Request) {
     } else {
       next.adsense_slot_footer = slot;
     }
+  }
+
+  if (body.adsense_slot_inline !== undefined) {
+    const slot = body.adsense_slot_inline.trim();
+    if (slot.length === 0) {
+      next.adsense_slot_inline = null;
+    } else if (!/^\d{1,20}$/.test(slot)) {
+      return NextResponse.json(
+        { error: "Nieprawidłowy ID jednostki w treści (same cyfry z panelu AdSense)" },
+        { status: 400 }
+      );
+    } else {
+      next.adsense_slot_inline = slot;
+    }
+  }
+
+  if (body.adsense_slot_popup !== undefined) {
+    const slot = body.adsense_slot_popup.trim();
+    if (slot.length === 0) {
+      next.adsense_slot_popup = null;
+    } else if (!/^\d{1,20}$/.test(slot)) {
+      return NextResponse.json(
+        { error: "Nieprawidłowy ID jednostki popup (same cyfry z panelu AdSense)" },
+        { status: 400 }
+      );
+    } else {
+      next.adsense_slot_popup = slot;
+    }
+  }
+
+  if (body.adsense_popup_enabled !== undefined) {
+    next.adsense_popup_enabled = body.adsense_popup_enabled;
   }
 
   if (body.site_name !== undefined) next.site_name = body.site_name;
