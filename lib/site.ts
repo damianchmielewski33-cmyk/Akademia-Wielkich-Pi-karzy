@@ -50,6 +50,16 @@ export const MATCH_BLIK_PHONE_COPY = "514924030";
 /** Numer w formacie E.164 (schema.org, JSON-LD). */
 export const MATCH_BLIK_PHONE_E164 = `+48${MATCH_BLIK_PHONE_COPY}`;
 
+/**
+ * Dane sprzedawcy / usługodawcy (wymóg weryfikacji HotPay — pełne dane w regulaminie).
+ * Osoba fizyczna prowadząca rozliczenia wpisowego akademii.
+ */
+export const SELLER_LEGAL_NAME = "Damian Chmielewski";
+export const SELLER_STREET = "Międzynarodowa 38/40A";
+export const SELLER_POSTAL_CITY = "03-922 Warszawa";
+/** Pełny adres w jednej linii (regulamin, dokumenty). */
+export const SELLER_FULL_ADDRESS = `${SELLER_STREET}, ${SELLER_POSTAL_CITY}`;
+
 export function getPublicContactEmail(): string | null {
   const v = process.env.NEXT_PUBLIC_CONTACT_EMAIL?.trim();
   return v || null;

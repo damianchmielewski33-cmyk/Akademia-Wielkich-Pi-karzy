@@ -3,7 +3,7 @@ import Link from "next/link";
 import { PitchCard, PitchPageHero, pitchLabelClass } from "@/components/ui/pitch-card";
 import { getAppSettings } from "@/lib/app-settings";
 import { getDb } from "@/lib/db";
-import { getSiteUrl } from "@/lib/site";
+import { getSiteUrl, SELLER_FULL_ADDRESS, SELLER_LEGAL_NAME } from "@/lib/site";
 
 export async function generateMetadata(): Promise<Metadata> {
   const db = await getDb();
@@ -17,7 +17,8 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function RegulaminPage() {
   const db = await getDb();
   const settings = await getAppSettings(db);
-  const email = settings.contact_email;
+  const email = settings.contact_email?.trim() || settings.organizer_damian_email?.trim() || "";
+  const sellerName = settings.organizer_damian_name?.trim() || SELLER_LEGAL_NAME;
   const siteName = settings.site_name;
   const siteUrl = getSiteUrl();
 
@@ -36,7 +37,7 @@ export default async function RegulaminPage() {
       <PitchCard className="mt-8 text-left" contentClassName="p-6 sm:p-8">
         <span className={pitchLabelClass}>Regulamin</span>
         <div className="mt-4 space-y-5 text-sm leading-relaxed text-emerald-100/90">
-          <p className="text-xs text-emerald-100/70">Ostatnia aktualizacja: 4 sierpnia 2026</p>
+          <p className="text-xs text-emerald-100/70">Ostatnia aktualizacja: 6 sierpnia 2026</p>
 
           <section>
             <h2 className="pitch-heading text-lg">1. Postanowienia ogólne</h2>
@@ -50,13 +51,25 @@ export default async function RegulaminPage() {
               akademii.
             </p>
             <p className="mt-2">
-              Organizatorem Serwisu i podmiotem odpowiedzialnym za świadczenie usług w ramach
-              akademii jest organizator Akademii Wielkich Piłkarzy. Kontakt:{" "}
-              <a className="pitch-link" href={`mailto:${email}`}>
-                {email}
-              </a>
-              .
+              <strong className="text-white">Sprzedawca / usługodawca</strong> (podmiot
+              oferujący usługi odpłatne w Serwisie, w tym wpisowe i doładowanie portfela):
             </p>
+            <ul className="mt-2 list-none space-y-1 rounded-xl border border-white/20 bg-black/15 px-4 py-3 text-emerald-50">
+              <li>
+                <span className="text-emerald-100/70">Imię i nazwisko: </span>
+                <strong className="text-white">{sellerName}</strong>
+              </li>
+              <li>
+                <span className="text-emerald-100/70">Adres: </span>
+                <strong className="text-white">{SELLER_FULL_ADDRESS}</strong>
+              </li>
+              <li>
+                <span className="text-emerald-100/70">Adres e-mail: </span>
+                <a className="pitch-link font-semibold" href={`mailto:${email}`}>
+                  {email}
+                </a>
+              </li>
+            </ul>
             <p className="mt-2">
               Korzystanie z Serwisu, w szczególności rejestracja konta, zapis na mecz lub dokonanie
               płatności, oznacza akceptację niniejszego Regulaminu.
@@ -144,7 +157,12 @@ export default async function RegulaminPage() {
           <section>
             <h2 className="pitch-heading text-lg">6. Płatności online (HotPay)</h2>
             <p className="mt-2">
-              Operatorem płatności online jest HotPay (ePłatności sp. z o.o. sp. k. / PayPro —
+              Płatności online przyjmowane są na rzecz sprzedawcy wskazanego w § 1 (
+              {sellerName}, {SELLER_FULL_ADDRESS}, e-mail:{" "}
+              <a className="pitch-link" href={`mailto:${email}`}>
+                {email}
+              </a>
+              ). Operatorem płatności online jest HotPay (ePłatności sp. z o.o. sp. k. / PayPro —
               zgodnie z aktualnymi danymi operatora prezentowanymi w procesie płatności).
             </p>
             <ul className="mt-2 list-disc space-y-1.5 pl-5">
