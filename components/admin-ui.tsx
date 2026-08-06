@@ -39,7 +39,7 @@ export const adminFieldClass =
   "border-white/25 bg-black/15 text-white placeholder:text-emerald-100/45 focus-visible:ring-emerald-400/60";
 
 export const adminTextareaClass =
-  "min-h-[80px] w-full rounded-xl border border-white/25 bg-black/15 px-3 py-2 text-sm text-white placeholder:text-emerald-100/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60";
+  "min-h-[80px] w-full rounded-xl border border-white/25 bg-black/15 px-3 py-2 text-base text-white placeholder:text-emerald-100/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60";
 
 export const adminInnerPanelClass =
   "rounded-xl border border-white/25 bg-black/10 p-4 backdrop-blur-sm";

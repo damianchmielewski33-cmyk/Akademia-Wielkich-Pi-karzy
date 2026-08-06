@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import type { CSSProperties } from "react";
 import { headers, cookies } from "next/headers";
 import { Geist, Geist_Mono, Teko } from "next/font/google";
@@ -57,6 +57,13 @@ const displayFont = Teko({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
 });
+
+/** iPhone / PWA: dopasowanie do ekranu + safe-area przy status barze translucent. */
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
 
 export async function generateMetadata(): Promise<Metadata> {
   const db = await getDb();

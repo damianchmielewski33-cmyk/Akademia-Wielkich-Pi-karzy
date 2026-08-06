@@ -932,13 +932,24 @@ body {
   color: var(--foreground);
   min-height: 100vh;
   min-height: 100dvh;
+  max-width: 100%;
   overflow-x: clip;
 }
 
 html {
+  max-width: 100%;
   overflow-x: clip;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
+}
+
+/* iOS: focus w polu <16px przybliża całą stronę i często zostawia zoom (PWA). */
+@media (hover: none) and (pointer: coarse) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="hidden"]):not([type="button"]):not([type="submit"]):not([type="reset"]),
+  textarea,
+  select {
+    font-size: 16px;
+  }
 }
 
 /* Wspólny kontener stron — spójne marginesy na wąskich ekranach */

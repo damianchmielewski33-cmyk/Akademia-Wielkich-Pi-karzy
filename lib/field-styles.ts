@@ -1,8 +1,9 @@
 import { cn } from "@/lib/utils";
 
-/** Wspólne klasy dla pól edytowalnych (input, textarea, select). */
+/** Wspólne klasy dla pól edytowalnych (input, textarea, select).
+ * `text-base` (16px): iOS nie zoomuje przy focusie — `text-sm` zostawiał „przybliżoną” PWA. */
 export const fieldBaseClasses =
-  "awp-focus-ring flex w-full rounded-xl border bg-zinc-50/90 px-3.5 py-2.5 text-sm text-zinc-900 shadow-[inset_0_1px_2px_rgba(15,23,42,0.04)] ring-offset-transparent transition-[border-color,box-shadow,background-color] file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-zinc-400 disabled:cursor-not-allowed disabled:opacity-55 dark:bg-zinc-900/70 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:shadow-[inset_0_1px_2px_rgba(0,0,0,0.2)]";
+  "awp-focus-ring flex w-full rounded-xl border bg-zinc-50/90 px-3.5 py-2.5 text-base text-zinc-900 shadow-[inset_0_1px_2px_rgba(15,23,42,0.04)] ring-offset-transparent transition-[border-color,box-shadow,background-color] file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-zinc-400 disabled:cursor-not-allowed disabled:opacity-55 dark:bg-zinc-900/70 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:shadow-[inset_0_1px_2px_rgba(0,0,0,0.2)]";
 
 /** Natywny `<select>` — spójny z polami formularza (lista rozwijana przez przeglądarkę). */
 export const nativeSelectClasses = cn(

@@ -216,7 +216,7 @@ export function AdminCommandSearch({ onJump, className }: Props) {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Użytkownik, mecz, ustawienie…"
-              className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-emerald-100/45"
+              className="min-w-0 flex-1 bg-transparent text-base text-white outline-none placeholder:text-emerald-100/45"
               aria-label="Fraza wyszukiwania"
             />
             {loading ? <Loader2 className="h-4 w-4 animate-spin text-emerald-100/70" aria-hidden /> : null}

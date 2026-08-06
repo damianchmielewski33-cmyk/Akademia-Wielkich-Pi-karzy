@@ -480,7 +480,7 @@ export function ChatComposerField({
       onChange={(e) => onChange(e.target.value)}
       onKeyDown={onKeyDown}
       className={cn(
-        "max-h-36 min-h-[2.5rem] flex-1 resize-none rounded-2xl border-0 bg-transparent px-3 py-2.5 text-sm leading-relaxed outline-none focus-visible:ring-0",
+        "max-h-36 min-h-[2.5rem] flex-1 resize-none rounded-2xl border-0 bg-transparent px-3 py-2.5 text-base leading-relaxed outline-none focus-visible:ring-0",
         light
           ? "text-zinc-900 placeholder:text-zinc-400 dark:text-zinc-50 dark:placeholder:text-zinc-500"
           : "text-white placeholder:text-emerald-100/45",

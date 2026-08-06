@@ -1,4 +1,4 @@
-const CACHE_NAME = "awp-v1";
+const CACHE_NAME = "awp-v2";
 const PRECACHE_URLS = ["/", "/offline"];
 
 self.addEventListener("install", (event) => {
