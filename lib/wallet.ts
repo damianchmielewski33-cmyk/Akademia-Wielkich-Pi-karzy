@@ -35,13 +35,112 @@ export type WalletDepositRequestRow = {
 export type WalletTransactionRow = {
   id: number;
   user_id: number;
-  kind: "deposit" | "match_charge" | "adjustment";
+  kind: "deposit" | "match_charge" | "adjustment" | "transfer";
   amount_pln: number;
   deposit_request_id: number | null;
   match_id: number | null;
+  related_user_id: number | null;
   note: string | null;
   created_at: string;
 };
+
+function roundPln(n: number): number {
+  return Math.round(n * 100) / 100;
+}
+
+function formatPlayerLabel(u: {
+  first_name: string;
+  last_name: string;
+  player_alias: string;
+}): string {
+  const name = [u.first_name, u.last_name].filter(Boolean).join(" ").trim();
+  return name || u.player_alias || "Gracz";
+}
+
+/**
+ * Przelew P2P: dwie pozycje ledgerowe (debit nadawcy, credit odbiorcy).
+ * Po debicie weryfikuje saldo — przy wyścigu równoległym cofa debet.
+ */
+export async function transferWalletFunds(args: {
+  fromUserId: number;
+  toUserId: number;
+  amountPln: number;
+  note?: string | null;
+}): Promise<
+  | { ok: true; amount_pln: number; balance_pln: number }
+  | {
+      ok: false;
+      error:
+        | "SELF_TRANSFER"
+        | "INVALID_AMOUNT"
+        | "RECIPIENT_NOT_FOUND"
+        | "INSUFFICIENT_FUNDS";
+    }
+> {
+  const amount = roundPln(Number(args.amountPln));
+  if (!Number.isFinite(amount) || amount < 1) {
+    return { ok: false, error: "INVALID_AMOUNT" };
+  }
+  if (args.fromUserId === args.toUserId) {
+    return { ok: false, error: "SELF_TRANSFER" };
+  }
+
+  const db = await getDb();
+  const recipient = (await db
+    .prepare(
+      `SELECT id, first_name, last_name, player_alias
+       FROM users WHERE id = ? AND COALESCE(is_temporary, 0) = 0`
+    )
+    .get(args.toUserId)) as
+    | { id: number; first_name: string; last_name: string; player_alias: string }
+    | undefined;
+  if (!recipient) {
+    return { ok: false, error: "RECIPIENT_NOT_FOUND" };
+  }
+
+  const sender = (await db
+    .prepare(
+      `SELECT id, first_name, last_name, player_alias FROM users WHERE id = ?`
+    )
+    .get(args.fromUserId)) as
+    | { id: number; first_name: string; last_name: string; player_alias: string }
+    | undefined;
+  if (!sender) {
+    return { ok: false, error: "RECIPIENT_NOT_FOUND" };
+  }
+
+  const balanceBefore = await getUserWalletBalancePln(args.fromUserId);
+  if (balanceBefore < amount) {
+    return { ok: false, error: "INSUFFICIENT_FUNDS" };
+  }
+
+  const toLabel = formatPlayerLabel(recipient);
+  const fromLabel = formatPlayerLabel(sender);
+  const extraNote = args.note?.trim() ? ` — ${args.note.trim()}` : "";
+
+  const debit = await db
+    .prepare(
+      `INSERT INTO wallet_transactions (user_id, kind, amount_pln, related_user_id, note)
+       VALUES (?, 'transfer', ?, ?, ?)`
+    )
+    .run(args.fromUserId, -amount, args.toUserId, `Przelew do ${toLabel}${extraNote}`);
+
+  const balanceAfterDebit = await getUserWalletBalancePln(args.fromUserId);
+  if (balanceAfterDebit < 0) {
+    await db.prepare(`DELETE FROM wallet_transactions WHERE id = ?`).run(Number(debit.lastInsertRowid));
+    return { ok: false, error: "INSUFFICIENT_FUNDS" };
+  }
+
+  await db
+    .prepare(
+      `INSERT INTO wallet_transactions (user_id, kind, amount_pln, related_user_id, note)
+       VALUES (?, 'transfer', ?, ?, ?)`
+    )
+    .run(args.toUserId, amount, args.fromUserId, `Przelew od ${fromLabel}${extraNote}`);
+
+  const balance_pln = await getUserWalletBalancePln(args.fromUserId);
+  return { ok: true, amount_pln: amount, balance_pln };
+}
 
 export async function completeDepositRequest(depositId: number, completedByUserId: number) {
   const db = await getDb();

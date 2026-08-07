@@ -76,6 +76,16 @@ export async function POST(req: Request, ctx: Ctx) {
   const skipped: { user_id: number; reason: string }[] = [];
 
   for (const c of parsed.data.charges) {
+    const signup = (await db
+      .prepare(
+        `SELECT COALESCE(paid, 0) AS paid FROM match_signups WHERE match_id = ? AND user_id = ?`
+      )
+      .get(matchId, c.user_id)) as { paid: number } | undefined;
+    if (signup && Number(signup.paid) === 1) {
+      skipped.push({ user_id: c.user_id, reason: "already_prepaid" });
+      continue;
+    }
+
     try {
       await createMatchCharge({
         matchId,

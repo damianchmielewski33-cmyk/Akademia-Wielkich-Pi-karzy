@@ -12,7 +12,7 @@ export const HOTPAY_NOTIFICATION_IPS = [
   "35.159.7.168",
 ] as const;
 
-export type HotpayPaymentKind = "match" | "topup";
+export type HotpayPaymentKind = "match" | "topup" | "match_cart";
 export type HotpayPaymentStatus = "pending" | "success" | "failure" | "cancelled";
 
 export type HotpayConfig = {

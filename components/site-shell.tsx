@@ -36,6 +36,7 @@ import { LogoutConfirmModal } from "@/components/logout-confirm-modal";
 import { SiteAssetImage } from "@/components/site-asset-image";
 import { useSiteAsset } from "@/components/site-assets-provider";
 import { AdsenseSlot } from "@/components/adsense-slot";
+import { CookieConsentFooterLink } from "@/components/cookie-consent-footer-link";
 import { isAdsenseInlinePath } from "@/lib/adsense";
 import { cn } from "@/lib/utils";
 import { SITE_NAME } from "@/lib/site";
@@ -502,6 +503,7 @@ export function SiteShell({
                 <Link href="/cookies" className="font-medium underline-offset-2 hover:underline">
                   Cookies
                 </Link>
+                <CookieConsentFooterLink />
                 <GymBratCrossLink variant="footer" />
               </p>
             </div>

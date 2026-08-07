@@ -25,6 +25,7 @@ export default async function PlatnosciPage() {
       <PlatnosciClient
         isLoggedIn={Boolean(session)}
         isAdmin={session?.isAdmin ?? false}
+        currentUserId={session?.userId ?? null}
         blikPhoneDisplay={appSettings.blik_phone}
         defaultMatchFeePln={appSettings.default_match_fee_pln}
         playerLabel={playerLabel}

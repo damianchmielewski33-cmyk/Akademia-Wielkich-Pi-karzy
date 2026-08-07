@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { CookieConsentManager } from "@/components/cookie-consent-manager";
 import { PitchCard, PitchPageHero, pitchLabelClass } from "@/components/ui/pitch-card";
 import { getAppSettings } from "@/lib/app-settings";
 import { getDb } from "@/lib/db";
@@ -34,7 +35,7 @@ export default async function CookiesPage() {
       <PitchCard className="mt-8 text-left" contentClassName="p-6 sm:p-8">
         <span className={pitchLabelClass}>Cookies</span>
         <div className="mt-4 space-y-5 text-sm leading-relaxed text-emerald-100/90">
-          <p className="text-xs text-emerald-100/70">Ostatnia aktualizacja: 3 sierpnia 2026</p>
+          <p className="text-xs text-emerald-100/70">Ostatnia aktualizacja: 7 sierpnia 2026</p>
 
           <section>
             <h2 className="pitch-heading text-lg">1. Czym są cookies</h2>
@@ -63,8 +64,9 @@ export default async function CookiesPage() {
           <section>
             <h2 className="pitch-heading text-lg">3. Google AdSense</h2>
             <p className="mt-2">
-              Po wyrażeniu zgody na cookies marketingowe ładujemy skrypt Google AdSense. Google może
-              używać cookies do personalizacji reklam lub pomiaru skuteczności. Szczegóły:{" "}
+              Skrypt Google AdSense ładujemy dopiero po wyrażeniu zgody na cookies marketingowe.
+              Google może używać cookies do personalizacji reklam lub pomiaru skuteczności.
+              Szczegóły:{" "}
               <a
                 className="pitch-link"
                 href="https://policies.google.com/technologies/ads"
@@ -84,10 +86,10 @@ export default async function CookiesPage() {
           <section>
             <h2 className="pitch-heading text-lg">4. Jak zarządzać zgodą</h2>
             <p className="mt-2">
-              Przy pierwszej wizycie (oraz po wyczyszczeniu danych strony) pojawia się baner. Możesz
-              wybrać „Akceptuję” albo „Tylko niezbędne”. Aby zmienić decyzję później, wyczyść dane
-              lokalne dla tej domeny w ustawieniach przeglądarki — baner pojawi się ponownie.
+              Przy pierwszej wizycie pojawia się baner. Możesz wybrać „Akceptuję” albo „Tylko
+              niezbędne”. Decyzję zmienisz w każdej chwili poniżej (albo w stopce strony):
             </p>
+            <CookieConsentManager />
           </section>
 
           <section>

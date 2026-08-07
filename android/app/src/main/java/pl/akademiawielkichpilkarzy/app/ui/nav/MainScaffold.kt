@@ -334,7 +334,13 @@ private fun NativeMainScaffold(
                 }
             }
             composable("wallet") {
-                BlockedOrContent(message = isBlocked("wallet")) { WalletScreen() }
+                BlockedOrContent(message = isBlocked("wallet")) {
+                    WalletScreen(
+                        onOpenWebPayments = {
+                            openPortal("Płatności", "/platnosci", requireAuth = true)
+                        }
+                    )
+                }
             }
             composable("stats") {
                 BlockedOrContent(message = isBlocked("stats")) { StatsScreen() }

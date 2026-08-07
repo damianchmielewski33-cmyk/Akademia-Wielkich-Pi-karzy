@@ -60,6 +60,7 @@ export default async function TerminarzPage({
         playedMissingStatsMatchIds={data.playedMissingStatsMatchIds}
         isLoggedIn={Boolean(session)}
         isAdmin={session?.isAdmin ?? false}
+        currentUserId={session?.userId ?? null}
         highlightMatchId={highlightMatchId}
         openStatsFromUrl={openStatsFromUrl}
         openStandaloneSurveyStats={openStandaloneSurveyStats}

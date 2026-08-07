@@ -103,6 +103,97 @@ function migratePublicShareLinksKind(db: Database.Database) {
   `);
 }
 
+/** Stare bazy: CHECK bez 'transfer' / brak related_user_id. */
+function migrateWalletTransactionsTransfer(db: Database.Database) {
+  const cols = db.prepare("PRAGMA table_info(wallet_transactions)").all() as { name: string }[];
+  if (!cols.length) return;
+
+  const hasRelated = cols.some((c) => c.name === "related_user_id");
+  if (!hasRelated) {
+    db.exec("ALTER TABLE wallet_transactions ADD COLUMN related_user_id INTEGER");
+  }
+
+  const row = db
+    .prepare(`SELECT sql FROM sqlite_master WHERE type='table' AND name='wallet_transactions'`)
+    .get() as { sql: string } | undefined;
+  const sql = row?.sql ?? "";
+  if (!sql.includes("CHECK") || !sql.includes("kind") || sql.includes("'transfer'")) return;
+
+  db.exec(`
+    CREATE TABLE wallet_transactions_migration (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      kind TEXT NOT NULL CHECK (kind IN ('deposit','match_charge','adjustment','transfer')),
+      amount_pln REAL NOT NULL,
+      deposit_request_id INTEGER,
+      match_id INTEGER,
+      related_user_id INTEGER,
+      note TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (user_id) REFERENCES users(id),
+      FOREIGN KEY (deposit_request_id) REFERENCES wallet_deposit_requests(id),
+      FOREIGN KEY (match_id) REFERENCES matches(id),
+      FOREIGN KEY (related_user_id) REFERENCES users(id)
+    );
+    INSERT INTO wallet_transactions_migration
+      (id, user_id, kind, amount_pln, deposit_request_id, match_id, related_user_id, note, created_at)
+    SELECT id, user_id, kind, amount_pln, deposit_request_id, match_id, related_user_id, note, created_at
+    FROM wallet_transactions;
+    DROP TABLE wallet_transactions;
+    ALTER TABLE wallet_transactions_migration RENAME TO wallet_transactions;
+    CREATE INDEX IF NOT EXISTS idx_wallet_transactions_user_created
+    ON wallet_transactions(user_id, created_at);
+    CREATE INDEX IF NOT EXISTS idx_wallet_transactions_match
+    ON wallet_transactions(match_id);
+  `);
+}
+
+/** Stare bazy: HotPay bez kind match_cart / bez cart_id. */
+function migrateHotpayPaymentsMatchCart(db: Database.Database) {
+  const cols = db.prepare("PRAGMA table_info(hotpay_payments)").all() as { name: string }[];
+  if (!cols.length) return;
+
+  if (!cols.some((c) => c.name === "cart_id")) {
+    db.exec("ALTER TABLE hotpay_payments ADD COLUMN cart_id INTEGER");
+  }
+
+  const row = db
+    .prepare(`SELECT sql FROM sqlite_master WHERE type='table' AND name='hotpay_payments'`)
+    .get() as { sql: string } | undefined;
+  const sql = row?.sql ?? "";
+  if (!sql.includes("CHECK") || !sql.includes("kind") || sql.includes("'match_cart'")) return;
+
+  db.exec(`
+    CREATE TABLE hotpay_payments_migration (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      session_id TEXT NOT NULL UNIQUE,
+      user_id INTEGER NOT NULL,
+      kind TEXT NOT NULL CHECK (kind IN ('match','topup','match_cart')),
+      amount_pln REAL NOT NULL,
+      status TEXT NOT NULL CHECK (status IN ('pending','success','failure','cancelled')) DEFAULT 'pending',
+      hotpay_payment_id TEXT,
+      secure TEXT,
+      deposit_request_id INTEGER,
+      cart_id INTEGER,
+      error_message TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      completed_at TEXT,
+      FOREIGN KEY (user_id) REFERENCES users(id),
+      FOREIGN KEY (deposit_request_id) REFERENCES wallet_deposit_requests(id)
+    );
+    INSERT INTO hotpay_payments_migration
+      (id, session_id, user_id, kind, amount_pln, status, hotpay_payment_id, secure,
+       deposit_request_id, cart_id, error_message, created_at, completed_at)
+    SELECT id, session_id, user_id, kind, amount_pln, status, hotpay_payment_id, secure,
+           deposit_request_id, cart_id, error_message, created_at, completed_at
+    FROM hotpay_payments;
+    DROP TABLE hotpay_payments;
+    ALTER TABLE hotpay_payments_migration RENAME TO hotpay_payments;
+    CREATE INDEX IF NOT EXISTS idx_hotpay_payments_user_created ON hotpay_payments(user_id, created_at);
+    CREATE INDEX IF NOT EXISTS idx_hotpay_payments_status_created ON hotpay_payments(status, created_at);
+  `);
+}
+
 /** Stare bazy: CHECK(slot_index <= 6) — potrzebne do 8 pozycji na połowę. */
 function migrateMatchLineupSlotsSlotIndexMax(db: Database.Database) {
   const row = db
@@ -286,15 +377,17 @@ function initSchemaSync(db: Database.Database) {
     CREATE TABLE IF NOT EXISTS wallet_transactions (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id INTEGER NOT NULL,
-      kind TEXT NOT NULL CHECK (kind IN ('deposit','match_charge','adjustment')),
+      kind TEXT NOT NULL CHECK (kind IN ('deposit','match_charge','adjustment','transfer')),
       amount_pln REAL NOT NULL,
       deposit_request_id INTEGER,
       match_id INTEGER,
+      related_user_id INTEGER,
       note TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       FOREIGN KEY (user_id) REFERENCES users(id),
       FOREIGN KEY (deposit_request_id) REFERENCES wallet_deposit_requests(id),
-      FOREIGN KEY (match_id) REFERENCES matches(id)
+      FOREIGN KEY (match_id) REFERENCES matches(id),
+      FOREIGN KEY (related_user_id) REFERENCES users(id)
     );
     CREATE INDEX IF NOT EXISTS idx_wallet_transactions_user_created
     ON wallet_transactions(user_id, created_at);
@@ -320,12 +413,13 @@ function initSchemaSync(db: Database.Database) {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       session_id TEXT NOT NULL UNIQUE,
       user_id INTEGER NOT NULL,
-      kind TEXT NOT NULL CHECK (kind IN ('match','topup')),
+      kind TEXT NOT NULL CHECK (kind IN ('match','topup','match_cart')),
       amount_pln REAL NOT NULL,
       status TEXT NOT NULL CHECK (status IN ('pending','success','failure','cancelled')) DEFAULT 'pending',
       hotpay_payment_id TEXT,
       secure TEXT,
       deposit_request_id INTEGER,
+      cart_id INTEGER,
       error_message TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       completed_at TEXT,
@@ -442,7 +536,38 @@ function initSchemaSync(db: Database.Database) {
   }
 
   migratePublicShareLinksKind(db);
+  migrateWalletTransactionsTransfer(db);
+  migrateHotpayPaymentsMatchCart(db);
   migrateMatchLineupSlotsSlotIndexMax(db);
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS wallet_match_carts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      payer_user_id INTEGER NOT NULL,
+      match_id INTEGER NOT NULL,
+      amount_pln REAL NOT NULL,
+      fee_per_person_pln REAL NOT NULL,
+      status TEXT NOT NULL CHECK (status IN ('pending','completed','cancelled')) DEFAULT 'pending',
+      hotpay_session_id TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      completed_at TEXT,
+      FOREIGN KEY (payer_user_id) REFERENCES users(id),
+      FOREIGN KEY (match_id) REFERENCES matches(id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_wallet_match_carts_payer_created
+    ON wallet_match_carts(payer_user_id, created_at);
+    CREATE INDEX IF NOT EXISTS idx_wallet_match_carts_match
+    ON wallet_match_carts(match_id);
+
+    CREATE TABLE IF NOT EXISTS wallet_match_cart_items (
+      cart_id INTEGER NOT NULL,
+      beneficiary_user_id INTEGER NOT NULL,
+      amount_pln REAL NOT NULL,
+      PRIMARY KEY (cart_id, beneficiary_user_id),
+      FOREIGN KEY (cart_id) REFERENCES wallet_match_carts(id) ON DELETE CASCADE,
+      FOREIGN KEY (beneficiary_user_id) REFERENCES users(id)
+    );
+  `);
 
   db.exec(`
     CREATE TABLE IF NOT EXISTS match_transport_messages (

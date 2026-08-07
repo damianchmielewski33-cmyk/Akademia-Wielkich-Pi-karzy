@@ -37,7 +37,7 @@ export default async function RegulaminPage() {
       <PitchCard className="mt-8 text-left" contentClassName="p-6 sm:p-8">
         <span className={pitchLabelClass}>Regulamin</span>
         <div className="mt-4 space-y-5 text-sm leading-relaxed text-emerald-100/90">
-          <p className="text-xs text-emerald-100/70">Ostatnia aktualizacja: 6 sierpnia 2026</p>
+          <p className="text-xs text-emerald-100/70">Ostatnia aktualizacja: 7 sierpnia 2026</p>
 
           <section>
             <h2 className="pitch-heading text-lg">1. Postanowienia ogólne</h2>
@@ -132,6 +132,16 @@ export default async function RegulaminPage() {
                 wskazanym w Serwisie (np. BLIK na telefon — po potwierdzeniu przez administratora);
               </li>
               <li>
+                zawodnik może przelać środki z własnego portfela na portfel innego zawodnika akademii
+                (przelew wewnętrzny P2P) — operacja jest nieodwracalna w Serwisie, z wyjątkiem
+                korekty przez administratora;
+              </li>
+              <li>
+                <strong className="text-white">koszyk meczowy</strong> pozwala opłacić wpisowe za
+                siebie i/lub innych zapisanych zawodników z portfela (lub HotPay przy braku środków);
+                po opłaceniu oznaczani są jako opłaceni na danym meczu;
+              </li>
+              <li>
                 <strong className="text-white">cena składki (wpisowego) za mecz zależy od liczby
                 zapisanych graczy</strong>
                 : łączny koszt organizacji meczu (np. wynajem boiska) jest dzielony między
@@ -141,11 +151,13 @@ export default async function RegulaminPage() {
               <li>
                 do czasu rozliczenia w Serwisie może być widoczna orientacyjna / domyślna kwota
                 wpisowego (np. z ustawień akademii lub niedopłaty na portfelu) — nie zawsze jest to
-                ostateczna składka za konkretny mecz;
+                ostateczna składka za konkretny mecz; kwota zapłacona w koszyku może różnić się od
+                ostatecznej składki — różnicę rozlicza administrator;
               </li>
               <li>
                 obciążenie portfela za mecz (rozliczenie) jest dokonywane przez administratora po
-                rozegraniu lub w ramach zasad akademii;
+                rozegraniu lub w ramach zasad akademii; osoby już opłacone koszykiem nie są
+                ponownie obciążane w rozliczeniu;
               </li>
               <li>
                 saldo portfela nie jest rachunkiem bankowym ani środkami depozytowymi w rozumieniu
@@ -167,12 +179,13 @@ export default async function RegulaminPage() {
             </p>
             <ul className="mt-2 list-disc space-y-1.5 pl-5">
               <li>
-                płatność inicjowana jest w Serwisie (np. „Zapłać za mecz” lub „Doładuj saldo”), a
-                następnie realizowana w bramce HotPay;
+                płatność inicjowana jest w Serwisie (np. „Ureguluj saldo”, „Doładuj saldo” lub
+                koszyk meczowy), a następnie realizowana w bramce HotPay;
               </li>
               <li>
                 po otrzymaniu potwierdzenia płatności od operatora środki są automatycznie
-                księgowane na saldzie portfela użytkownika;
+                księgowane na saldzie portfela użytkownika; w przypadku koszyka meczowego
+                Serwis dodatkowo oznacza wybranych zawodników jako opłaconych;
               </li>
               <li>
                 cena / kwota do zapłaty jest przedstawiana przed rozpoczęciem płatności; kwoty są
@@ -222,13 +235,18 @@ export default async function RegulaminPage() {
                 wynajem boiska) i nie stanowią klasycznej sprzedaży towaru;
               </li>
               <li>
-                zwrot niewykorzystanego salda lub wpłaty jest możliwy w uzasadnionych przypadkach po
-                kontakcie z organizatorem (np. oczywisty błąd płatności, podwójna wpłata), o ile
-                środki nie zostały już przeznaczone na rozliczenie meczu;
+                przy <strong className="text-white">wypisaniu się</strong> z meczu przed terminem,
+                jeśli wpisowe było opłacone koszykiem, Serwis automatycznie zwraca kwotę koszyka na
+                portfel płatnika;
               </li>
               <li>
-                w przypadku odwołania meczu przez organizatora zasady zwrotu lub przeniesienia
-                salda ustala organizator i komunikuje uczestnikom;
+                przy <strong className="text-white">odwołaniu meczu</strong> przez organizatora
+                Serwis zwraca na portfele płatników kwoty z ukończonych koszyków meczowych;
+              </li>
+              <li>
+                zwrot niewykorzystanego salda lub wpłaty poza powyższymi przypadkami jest możliwy w
+                uzasadnionych sytuacjach po kontakcie z organizatorem (np. oczywisty błąd płatności,
+                podwójna wpłata), o ile środki nie zostały już przeznaczone na rozliczenie meczu;
               </li>
               <li>
                 jeśli przepisy o prawach konsumenta mają zastosowanie do konkretnej płatności,

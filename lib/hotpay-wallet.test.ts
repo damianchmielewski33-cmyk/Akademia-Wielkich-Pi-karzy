@@ -60,6 +60,7 @@ function createTestDb(): { db: AppDb; sqlite: Database.Database; dbPath: string 
       hotpay_payment_id TEXT,
       secure TEXT,
       deposit_request_id INTEGER,
+      cart_id INTEGER,
       error_message TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       completed_at TEXT,

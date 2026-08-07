@@ -4,6 +4,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -29,9 +31,10 @@ import pl.akademiawielkichpilkarzy.app.ui.common.LoadingBlock
 import pl.akademiawielkichpilkarzy.app.ui.common.PitchCard
 import pl.akademiawielkichpilkarzy.app.ui.common.PitchLabel
 import pl.akademiawielkichpilkarzy.app.ui.common.ScreenScaffold
+import pl.akademiawielkichpilkarzy.app.ui.theme.AwpColors
 
 @Composable
-fun WalletScreen() {
+fun WalletScreen(onOpenWebPayments: () -> Unit = {}) {
     var wallet by remember { mutableStateOf<WalletResponse?>(null) }
     var loading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -56,7 +59,7 @@ fun WalletScreen() {
 
     LaunchedEffect(Unit) { reload() }
 
-    ScreenScaffold(title = "Portfel", subtitle = "Saldo i wpłaty BLIK") {
+    ScreenScaffold(title = "Portfel", subtitle = "Saldo, BLIK oraz płatności online") {
         when {
             loading -> LoadingBlock()
             error != null -> ErrorBlock(error!!) { reload() }
@@ -72,6 +75,20 @@ fun WalletScreen() {
                             "Oczekujące" to pending.size.toString()
                         )
                     )
+                }
+
+                PitchCard {
+                    PitchLabel("HotPay, koszyk i przelewy")
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        "Doładowanie HotPay, opłacenie meczu za innych i przelewy między graczami są na stronie płatności.",
+                        color = AwpColors.OnPitchMuted,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    AwpPrimaryButton("Otwórz płatności online") {
+                        onOpenWebPayments()
+                    }
                 }
 
                 PitchCard {

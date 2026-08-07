@@ -23,6 +23,7 @@ import {
   UserMinus,
   UserPlus,
   Users,
+  Wallet,
   X,
 } from "lucide-react";
 import type { MatchRow } from "@/lib/db";
@@ -85,6 +86,7 @@ type Props = {
   playedMissingStatsMatchIds: number[];
   isLoggedIn: boolean;
   isAdmin: boolean;
+  currentUserId?: number | null;
   /** Z URL (?mecz=) — wyróżnienie wiersza po wejściu z maila. */
   highlightMatchId?: number | null;
   /** Z URL (?statystyki=1 wraz z ?mecz=) — otwiera dialog statystyk po wejściu (mecz z bazy). */
@@ -172,6 +174,18 @@ function ActionNotice({
   return <p className={cn("rounded-lg border px-3 py-2.5 text-xs leading-snug", toneClass)}>{children}</p>;
 }
 
+function isConfirmedUnpaidForUser(
+  playersData: Record<number, PlayersDataEntry>,
+  matchId: number,
+  userId: number | null | undefined
+): boolean {
+  if (userId == null) return false;
+  const entry = playersData[matchId];
+  if (!entry) return false;
+  const me = entry.players.find((p) => p.userId === userId);
+  return me != null && Number(me.paid) !== 1;
+}
+
 export function TerminarzClient({
   upcoming,
   playedConfirmed,
@@ -181,6 +195,7 @@ export function TerminarzClient({
   playedMissingStatsMatchIds,
   isLoggedIn,
   isAdmin,
+  currentUserId = null,
   highlightMatchId = null,
   openStatsFromUrl = false,
   openStandaloneSurveyStats = false,
@@ -495,7 +510,16 @@ export function TerminarzClient({
         const feeForPlayers = String(settlePerPerson);
         setSettleDefaultAmount(feeForPlayers);
         const next: Record<number, string> = {};
-        for (const s of confirmed) next[s.user_id] = feeForPlayers;
+        for (const s of confirmed) {
+          // Już opłaceni koszykiem / flagą paid — nie obciążaj ponownie.
+          next[s.user_id] = Number(s.paid) === 1 ? "0" : feeForPlayers;
+        }
+        setSettleAmounts(next);
+      } else {
+        const next: Record<number, string> = {};
+        for (const s of confirmed) {
+          if (Number(s.paid) === 1) next[s.user_id] = "0";
+        }
         setSettleAmounts(next);
       }
     } finally {
@@ -506,7 +530,9 @@ export function TerminarzClient({
   function applyDefaultToAll() {
     const v = settleDefaultAmount.trim();
     const next: Record<number, string> = {};
-    for (const s of settleRows) next[s.user_id] = v;
+    for (const s of settleRows) {
+      next[s.user_id] = Number(s.paid) === 1 ? "0" : v;
+    }
     setSettleAmounts(next);
   }
 
@@ -873,21 +899,39 @@ export function TerminarzClient({
                 terminu meczu wypisu z poziomu aplikacji nie ma — w razie potrzeby napisz do administratora.
               </ActionNotice>
             ) : (
-              <Button
-                size="sm"
-                variant="ghost"
-                className={actionBtnDanger}
-                title="Usuwa Cię z listy i zwalnia miejsce dla innego zawodnika"
-                onClick={() => unsubscribe(m.id)}
-              >
-                <UserMinus className="shrink-0" aria-hidden />
-                <span>
-                  <span className="block leading-tight">Wypisz mnie z tego meczu</span>
-                  <span className="mt-1 block text-[11px] font-normal leading-snug text-red-700/90 dark:text-red-300">
-                    Zwolnisz miejsce w składzie na ten termin
+              <>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className={actionBtnDanger}
+                  title="Usuwa Cię z listy i zwalnia miejsce dla innego zawodnika"
+                  onClick={() => unsubscribe(m.id)}
+                >
+                  <UserMinus className="shrink-0" aria-hidden />
+                  <span>
+                    <span className="block leading-tight">Wypisz mnie z tego meczu</span>
+                    <span className="mt-1 block text-[11px] font-normal leading-snug text-red-700/90 dark:text-red-300">
+                      Zwolnisz miejsce w składzie na ten termin
+                    </span>
                   </span>
-                </span>
-              </Button>
+                </Button>
+                {m.cancelled !== 1 && isConfirmedUnpaidForUser(playersData, m.id, currentUserId) ? (
+                  <Button size="sm" variant="ghost" className={actionBtnPrimary} asChild>
+                    <Link
+                      href={`/platnosci?mecz=${m.id}`}
+                      title="Przejdź do płatności z tym meczem w koszyku"
+                    >
+                      <Wallet className="shrink-0" aria-hidden />
+                      <span>
+                        <span className="block leading-tight">Opłać ten mecz</span>
+                        <span className="mt-1 block text-[11px] font-normal leading-snug text-emerald-100/95">
+                          Portfel lub HotPay — otworzy koszyk na stronie Płatności
+                        </span>
+                      </span>
+                    </Link>
+                  </Button>
+                ) : null}
+              </>
             )
           ) : kind === "tentative" ? (
             past ? (
@@ -2020,7 +2064,14 @@ export function TerminarzClient({
                     />
                     <div className="min-w-0 flex-1">
                       <PlayerNameStack firstName={p.first_name} lastName={p.last_name} nick={p.zawodnik} />
-                      <p className="mt-0.5 text-xs text-zinc-500">ID: {p.user_id}</p>
+                      <p className="mt-0.5 text-xs text-zinc-500">
+                        ID: {p.user_id}
+                        {Number(p.paid) === 1 ? (
+                          <span className="ml-2 font-medium text-emerald-700 dark:text-emerald-300">
+                            · Opłacony (koszyk / flaga)
+                          </span>
+                        ) : null}
+                      </p>
                     </div>
                     <div className="w-32">
                       <Label className="sr-only" htmlFor={`settle-${p.user_id}`}>
@@ -2032,6 +2083,7 @@ export function TerminarzClient({
                         inputMode="decimal"
                         placeholder="0"
                         value={settleAmounts[p.user_id] ?? ""}
+                        disabled={Number(p.paid) === 1}
                         onChange={(e) =>
                           setSettleAmounts((prev) => ({ ...prev, [p.user_id]: e.target.value }))
                         }
@@ -2043,8 +2095,8 @@ export function TerminarzClient({
             )}
 
             <ModalAlert tone="warning" title="Uwaga">
-              Rozliczenie odejmuje kwoty z portfeli. Jeśli mecz był już częściowo rozliczony, API pominie osoby już
-              rozliczone dla tego meczu.
+              Rozliczenie odejmuje kwoty z portfeli. Osoby już opłacone koszykiem mają kwotę 0 i są pomijane.
+              API pominie też osoby wcześniej rozliczone dla tego meczu.
               {settleDefaultAmount.trim() ? (
                 <p className="mt-1">
                   Domyślna kwota:{" "}

@@ -210,7 +210,12 @@ export function HomeClient({
       {isLoggedIn && (
         <>
           {!isHiddenHref("/platnosci") ? (
-            <PitchTile href="/platnosci" icon={Wallet} title="Płatności" desc="BLIK i status wpłaty za mecz" />
+            <PitchTile
+              href="/platnosci"
+              icon={Wallet}
+              title="Płatności"
+              desc="Doładuj HotPay, opłać mecz koszykiem lub BLIK"
+            />
           ) : null}
           {!isHiddenHref("/statystyki") ? (
             <PitchTile href="/statystyki" icon={Activity} title="Statystyki" desc="Twoje liczby z boiska" />

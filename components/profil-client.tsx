@@ -15,6 +15,7 @@ import {
   Sun,
   Target,
   Trash2,
+  Wallet,
 } from "lucide-react";
 import { AppModal } from "@/components/ui/app-modal";
 import { modalPanelClass } from "@/components/ui/modal-shared";
@@ -33,14 +34,21 @@ import { Badge } from "@/components/ui/badge";
 import { InlinePreloader } from "@/components/preloaders";
 import { PlayerAliasPicker } from "@/components/player-alias-picker";
 import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
+import { formatWalletPln } from "@/components/player-wallet-panel";
 import { PitchPageHero } from "@/components/ui/pitch-card";
 import type { ProfileDashboard } from "@/lib/profile-data";
 import { normalizeUiTheme, type UiTheme } from "@/lib/ui-theme";
 import { cn } from "@/lib/utils";
 
-type Props = { initial: ProfileDashboard };
+type Props = {
+  initial: ProfileDashboard;
+  walletBalancePln: number;
+};
 
-export function ProfilClient({ initial }: Props) {
+export function ProfilClient({
+  initial,
+  walletBalancePln,
+}: Props) {
   const router = useRouter();
   const [data, setData] = useState<ProfileDashboard>(initial);
   const [firstName, setFirstName] = useState(initial.user.first_name);
@@ -222,7 +230,7 @@ export function ProfilClient({ initial }: Props) {
     <div className="awp-page awp-page--default">
       <PitchPageHero
         title="Mój profil"
-        subtitle="Dane konta, zdjęcie, awatar z listy oraz statystyki z ostatnich meczów (edycja i uzupełnianie przez 7 dni od daty meczu)."
+        subtitle="Dane konta, portfel, zdjęcie, awatar z listy oraz statystyki z ostatnich meczów (edycja i uzupełnianie przez 7 dni od daty meczu)."
       />
 
       <div className="mx-auto mt-10 grid gap-6 lg:grid-cols-[minmax(0,280px)_1fr]">
@@ -379,6 +387,45 @@ export function ProfilClient({ initial }: Props) {
                     </Button>
                   )}
                 </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="awp-card-surface">
+            <div>
+              <h2 className="flex items-center gap-2 text-lg font-bold text-white">
+                <Wallet className="h-5 w-5 text-[var(--mundial-gold,#f5c518)]" />
+                Portfel
+              </h2>
+              <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+                Podgląd salda — doładowania i opłaty meczów są na stronie Płatności.
+              </p>
+              <div
+                className={cn(
+                  "mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-900/80",
+                  walletBalancePln < 0 && "border-red-200 dark:border-red-800/50",
+                  walletBalancePln > 0 && "border-emerald-200 dark:border-emerald-800/50"
+                )}
+              >
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Saldo</p>
+                  <p
+                    className={cn(
+                      "mt-1 text-3xl font-bold tabular-nums text-emerald-950 dark:text-emerald-100",
+                      walletBalancePln < 0 && "text-red-700 dark:text-red-300"
+                    )}
+                  >
+                    {formatWalletPln(walletBalancePln)}
+                  </p>
+                  {walletBalancePln < 0 ? (
+                    <p className="mt-1 text-xs font-medium text-red-700 dark:text-red-300">
+                      Niedopłata do uregulowania
+                    </p>
+                  ) : null}
+                </div>
+                <Button asChild variant="pitch">
+                  <Link href="/platnosci">Doładuj / opłać</Link>
+                </Button>
               </div>
             </div>
           </div>

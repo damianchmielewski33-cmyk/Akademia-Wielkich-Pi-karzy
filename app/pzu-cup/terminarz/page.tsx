@@ -55,6 +55,7 @@ export default async function PzuCupTerminarzPage({ searchParams }: PageProps) {
         playedMissingStatsMatchIds={data.playedMissingStatsMatchIds}
         isLoggedIn
         isAdmin={session.isAdmin}
+        currentUserId={session.userId}
         highlightMatchId={highlightMatchId}
         openStatsFromUrl={openStatsFromUrl}
         openAttendanceFromUrl={openAttendanceFromUrl}

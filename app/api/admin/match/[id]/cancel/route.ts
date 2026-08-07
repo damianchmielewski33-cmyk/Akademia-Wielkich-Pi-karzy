@@ -4,6 +4,7 @@ import { getDb, logActivity } from "@/lib/db";
 import { requireAdmin } from "@/lib/api-helpers";
 import { notifySignedUpPlayersAboutCancelledMatch } from "@/lib/match-notifications";
 import { matchCancelReasonLabelFromSettings, getAppSettings } from "@/lib/app-settings";
+import { refundAllMatchCartsForMatch } from "@/lib/match-cart";
 
 export const runtime = "nodejs";
 
@@ -33,15 +34,26 @@ export async function POST(req: Request, context: RouteContext) {
   }
   const db = await getDb();
   const settings = await getAppSettings(db);
-  const row = await db
+  const row = (await db
     .prepare("SELECT match_date, match_time, location FROM matches WHERE id = ?")
-    .get(mid) as { match_date: string; match_time: string; location: string } | undefined;
+    .get(mid)) as { match_date: string; match_time: string; location: string } | undefined;
   if (!row) return NextResponse.json({ error: "Not found" }, { status: 404 });
   const reasonLabel = matchCancelReasonLabelFromSettings(parsed.data.reason, settings);
   await db.prepare("UPDATE matches SET cancelled = 1, cancellation_reason = ? WHERE id = ?").run(parsed.data.reason, mid);
+
+  const refunds = await refundAllMatchCartsForMatch({
+    matchId: mid,
+    actorUserId: gate.session.userId,
+    reason: `odwołanie meczu (${reasonLabel})`,
+  });
+
   await logActivity(
     gate.session.userId,
-    `Anulował mecz id ${mid}: ${row.match_date} ${row.match_time} (${row.location}), powód: ${reasonLabel}`
+    `Anulował mecz id ${mid}: ${row.match_date} ${row.match_time} (${row.location}), powód: ${reasonLabel}${
+      refunds.refunded_count > 0
+        ? ` · zwroty koszyka: ${refunds.refunded_count} os. / ${refunds.refunded_pln.toFixed(2)} PLN`
+        : ""
+    }`
   );
   await notifySignedUpPlayersAboutCancelledMatch({
     matchId: mid,
@@ -50,5 +62,5 @@ export async function POST(req: Request, context: RouteContext) {
     location: row.location,
     reason: reasonLabel,
   });
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, refunds });
 }

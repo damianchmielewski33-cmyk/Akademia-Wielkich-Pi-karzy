@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { CreditCard, Loader2, Wallet } from "lucide-react";
-import { toast } from "@/lib/app-toast";
+import { extractApiErrorMessage, useAppMessage } from "@/components/ui/app-message-modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -29,9 +29,9 @@ async function startHotpayPayment(body: { kind: "match" | "topup"; amount_pln?: 
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-  const data = (await res.json().catch(() => ({}))) as { error?: string; url?: string };
+  const data = (await res.json().catch(() => ({}))) as { error?: unknown; url?: string };
   if (!res.ok || !data.url) {
-    throw new Error(typeof data.error === "string" ? data.error : "Nie udało się rozpocząć płatności HotPay");
+    throw new Error(extractApiErrorMessage(data.error, "Nie udało się rozpocząć płatności HotPay"));
   }
   return data.url;
 }
@@ -45,19 +45,28 @@ export function HotpayPayButtons({
 }: Props) {
   const [topupAmount, setTopupAmount] = useState("");
   const [busyKind, setBusyKind] = useState<"match" | "topup" | null>(null);
+  const { showError, showInfo, MessageModal } = useAppMessage();
 
   const matchAmount = suggestPaymentAmountPln(balancePln, defaultMatchFeePln);
   const matchDisabled = !enabled || walletLoading || busyKind != null || matchAmount == null || matchAmount <= 0;
 
   async function payMatch() {
-    if (matchDisabled || matchAmount == null) return;
+    if (matchDisabled || matchAmount == null) {
+      if (matchAmount == null) {
+        showError(
+          "Brak kwoty wpisowego — ustaw domyślną opłatę w panelu albo masz już uregulowane saldo.",
+          "HotPay"
+        );
+      }
+      return;
+    }
     setBusyKind("match");
     try {
       const url = await startHotpayPayment({ kind: "match" });
-      toast.message("Przekierowanie do HotPay…", { duration: 4000 });
-      window.location.assign(url);
+      showInfo("Zaraz przekierujemy Cię do bramki HotPay.", "HotPay");
+      window.setTimeout(() => window.location.assign(url), 500);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Błąd płatności HotPay");
+      showError(e instanceof Error ? e.message : "Błąd płatności HotPay", "HotPay");
       setBusyKind(null);
     }
   }
@@ -65,20 +74,20 @@ export function HotpayPayButtons({
   async function payTopup() {
     const amount = Number.parseFloat(topupAmount.replace(",", "."));
     if (!Number.isFinite(amount) || amount < 0.01) {
-      toast.error("Podaj poprawną kwotę doładowania");
+      showError("Podaj poprawną kwotę doładowania (min. 0,01 PLN)", "Doładowanie");
       return;
     }
     if (amount > 10000) {
-      toast.error("Maksymalna kwota to 10 000 PLN");
+      showError("Maksymalna kwota doładowania to 10 000 PLN", "Doładowanie");
       return;
     }
     setBusyKind("topup");
     try {
       const url = await startHotpayPayment({ kind: "topup", amount_pln: amount });
-      toast.message("Przekierowanie do HotPay…", { duration: 4000 });
-      window.location.assign(url);
+      showInfo("Zaraz przekierujemy Cię do bramki HotPay.", "HotPay");
+      window.setTimeout(() => window.location.assign(url), 500);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Błąd płatności HotPay");
+      showError(e instanceof Error ? e.message : "Błąd płatności HotPay", "HotPay");
       setBusyKind(null);
     }
   }
@@ -102,24 +111,24 @@ export function HotpayPayButtons({
         </div>
         <div className="min-w-0 flex-1">
           <h3 className="text-base font-bold tracking-tight text-emerald-950 dark:text-emerald-100">
-            Płatność online (HotPay)
+            Doładuj saldo (HotPay)
           </h3>
           <p className="mt-0.5 text-sm text-zinc-600 dark:text-zinc-400">
-            Zapłać wpisowe lub doładuj saldo — po udanej płatności środki trafią automatycznie na portfel.
+            Ureguluj niedopłatę lub doładuj portfel online. Opłatę za konkretny mecz (za siebie lub innych) znajdziesz w sekcji „Opłać mecz (koszyk)”.
           </p>
         </div>
       </div>
 
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         <div className="rounded-xl border border-zinc-200 bg-zinc-50/80 p-3 dark:border-zinc-700 dark:bg-zinc-950/40">
-          <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Zapłać za mecz</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Ureguluj saldo</p>
           <p className="mt-1 text-lg font-bold tabular-nums text-zinc-900 dark:text-zinc-100">
             {matchAmount != null ? formatPln(matchAmount) : "—"}
           </p>
           <p className="mt-1 text-xs text-zinc-500">
             {balancePln != null && balancePln < 0
               ? "Kwota niedopłaty z portfela"
-              : "Domyślne wpisowe z ustawień"}
+              : "Domyślne wpisowe z ustawień (doładowanie)"}
           </p>
           <Button
             type="button"
@@ -129,7 +138,7 @@ export function HotpayPayButtons({
             onClick={() => void payMatch()}
           >
             {busyKind === "match" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
-            Zapłać za mecz
+            Ureguluj saldo
           </Button>
         </div>
 
@@ -165,6 +174,7 @@ export function HotpayPayButtons({
           </Button>
         </div>
       </div>
+      {MessageModal}
     </div>
   );
 }

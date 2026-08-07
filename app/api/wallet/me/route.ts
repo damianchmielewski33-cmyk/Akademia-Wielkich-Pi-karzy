@@ -35,7 +35,7 @@ export async function GET(req: Request) {
     .prepare(
       `
       SELECT
-        id, user_id, kind, amount_pln, deposit_request_id, match_id, note, created_at,
+        id, user_id, kind, amount_pln, deposit_request_id, match_id, related_user_id, note, created_at,
         SUM(amount_pln) OVER (
           PARTITION BY user_id
           ORDER BY datetime(created_at) ASC, id ASC

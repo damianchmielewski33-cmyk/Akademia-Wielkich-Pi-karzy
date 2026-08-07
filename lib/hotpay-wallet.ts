@@ -2,6 +2,7 @@ import type { AppDb } from "@/lib/db";
 import { tryRemoveTemporaryGuestIfBalanceZero } from "@/lib/guest-cleanup";
 import type { HotpayNotificationPayload, HotpayPaymentKind, HotpayPaymentStatus } from "@/lib/hotpay";
 import { formatHotpayAmount, timingSafeEqualString, verifyNotificationHash } from "@/lib/hotpay";
+import { applyPendingMatchCartAfterHotpay } from "@/lib/match-cart";
 
 export type HotpayPaymentRow = {
   id: number;
@@ -13,6 +14,7 @@ export type HotpayPaymentRow = {
   hotpay_payment_id: string | null;
   secure: string | null;
   deposit_request_id: number | null;
+  cart_id: number | null;
   error_message: string | null;
   created_at: string;
   completed_at: string | null;
@@ -25,7 +27,7 @@ export async function getHotpayPaymentBySessionId(
   const row = (await db
     .prepare(
       `SELECT id, session_id, user_id, kind, amount_pln, status, hotpay_payment_id, secure,
-              deposit_request_id, error_message, created_at, completed_at
+              deposit_request_id, cart_id, error_message, created_at, completed_at
        FROM hotpay_payments WHERE session_id = ?`
     )
     .get(sessionId)) as HotpayPaymentRow | undefined;
@@ -44,6 +46,9 @@ export async function applyHotpaySuccessCredit(
   args: { hotpayPaymentId: string; secure: string }
 ): Promise<{ ok: true; alreadyApplied: boolean } | { ok: false; error: string }> {
   if (payment.status === "success" && payment.deposit_request_id != null) {
+    if (payment.kind === "match_cart" && payment.cart_id != null) {
+      await applyPendingMatchCartAfterHotpay(payment.cart_id, payment.user_id);
+    }
     return { ok: true, alreadyApplied: true };
   }
 
@@ -123,7 +128,9 @@ export async function applyHotpaySuccessCredit(
   const note =
     payment.kind === "match"
       ? `HotPay — wpisowe / zapłata za mecz (${payment.session_id})`
-      : `HotPay — doładowanie portfela (${payment.session_id})`;
+      : payment.kind === "match_cart"
+        ? `HotPay — koszyk meczowy (${payment.session_id})`
+        : `HotPay — doładowanie portfela (${payment.session_id})`;
 
   const dep = await db
     .prepare(
@@ -165,6 +172,10 @@ export async function applyHotpaySuccessCredit(
     userId: payment.user_id,
     actorUserId: payment.user_id,
   });
+
+  if (payment.kind === "match_cart" && payment.cart_id != null) {
+    await applyPendingMatchCartAfterHotpay(payment.cart_id, payment.user_id);
+  }
 
   return { ok: true, alreadyApplied: false };
 }

@@ -15,6 +15,8 @@ async function pragmaColumnNames(
     | "public_share_links"
     | "standalone_match_stats"
     | "admin_messages"
+    | "wallet_transactions"
+    | "hotpay_payments"
 ): Promise<string[]> {
   const rs = await client.execute(`PRAGMA table_info(${table})`);
   let nameIdx = rs.columns.indexOf("name");
@@ -184,15 +186,17 @@ export async function initLibsqlSchema(client: Client) {
     CREATE TABLE IF NOT EXISTS wallet_transactions (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id INTEGER NOT NULL,
-      kind TEXT NOT NULL CHECK (kind IN ('deposit','match_charge','adjustment')),
+      kind TEXT NOT NULL CHECK (kind IN ('deposit','match_charge','adjustment','transfer')),
       amount_pln REAL NOT NULL,
       deposit_request_id INTEGER,
       match_id INTEGER,
+      related_user_id INTEGER,
       note TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       FOREIGN KEY (user_id) REFERENCES users(id),
       FOREIGN KEY (deposit_request_id) REFERENCES wallet_deposit_requests(id),
-      FOREIGN KEY (match_id) REFERENCES matches(id)
+      FOREIGN KEY (match_id) REFERENCES matches(id),
+      FOREIGN KEY (related_user_id) REFERENCES users(id)
     );
     CREATE INDEX IF NOT EXISTS idx_wallet_transactions_user_created
     ON wallet_transactions(user_id, created_at);
@@ -218,12 +222,13 @@ export async function initLibsqlSchema(client: Client) {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       session_id TEXT NOT NULL UNIQUE,
       user_id INTEGER NOT NULL,
-      kind TEXT NOT NULL CHECK (kind IN ('match','topup')),
+      kind TEXT NOT NULL CHECK (kind IN ('match','topup','match_cart')),
       amount_pln REAL NOT NULL,
       status TEXT NOT NULL CHECK (status IN ('pending','success','failure','cancelled')) DEFAULT 'pending',
       hotpay_payment_id TEXT,
       secure TEXT,
       deposit_request_id INTEGER,
+      cart_id INTEGER,
       error_message TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       completed_at TEXT,
@@ -234,6 +239,33 @@ export async function initLibsqlSchema(client: Client) {
     ON hotpay_payments(user_id, created_at);
     CREATE INDEX IF NOT EXISTS idx_hotpay_payments_status_created
     ON hotpay_payments(status, created_at);
+
+    CREATE TABLE IF NOT EXISTS wallet_match_carts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      payer_user_id INTEGER NOT NULL,
+      match_id INTEGER NOT NULL,
+      amount_pln REAL NOT NULL,
+      fee_per_person_pln REAL NOT NULL,
+      status TEXT NOT NULL CHECK (status IN ('pending','completed','cancelled')) DEFAULT 'pending',
+      hotpay_session_id TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      completed_at TEXT,
+      FOREIGN KEY (payer_user_id) REFERENCES users(id),
+      FOREIGN KEY (match_id) REFERENCES matches(id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_wallet_match_carts_payer_created
+    ON wallet_match_carts(payer_user_id, created_at);
+    CREATE INDEX IF NOT EXISTS idx_wallet_match_carts_match
+    ON wallet_match_carts(match_id);
+
+    CREATE TABLE IF NOT EXISTS wallet_match_cart_items (
+      cart_id INTEGER NOT NULL,
+      beneficiary_user_id INTEGER NOT NULL,
+      amount_pln REAL NOT NULL,
+      PRIMARY KEY (cart_id, beneficiary_user_id),
+      FOREIGN KEY (cart_id) REFERENCES wallet_match_carts(id) ON DELETE CASCADE,
+      FOREIGN KEY (beneficiary_user_id) REFERENCES users(id)
+    );
 
     CREATE TABLE IF NOT EXISTS public_share_links (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -490,6 +522,121 @@ export async function initLibsqlSchema(client: Client) {
       `);
     }
   }
+
+  const walletTxNames = await pragmaColumnNames(client, "wallet_transactions");
+  if (walletTxNames.length > 0 && !walletTxNames.includes("related_user_id")) {
+    await client.execute("ALTER TABLE wallet_transactions ADD COLUMN related_user_id INTEGER");
+  }
+  const walletTxSqlRs = await client.execute(
+    `SELECT sql FROM sqlite_master WHERE type='table' AND name='wallet_transactions'`
+  );
+  if (walletTxSqlRs.rows.length > 0) {
+    const walletTxSql = String((walletTxSqlRs.rows[0] as Record<string, unknown>).sql ?? "");
+    if (walletTxSql.includes("CHECK") && walletTxSql.includes("kind") && !walletTxSql.includes("'transfer'")) {
+      await client.executeMultiple(`
+        CREATE TABLE wallet_transactions_migration (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
+          kind TEXT NOT NULL CHECK (kind IN ('deposit','match_charge','adjustment','transfer')),
+          amount_pln REAL NOT NULL,
+          deposit_request_id INTEGER,
+          match_id INTEGER,
+          related_user_id INTEGER,
+          note TEXT,
+          created_at TEXT NOT NULL DEFAULT (datetime('now')),
+          FOREIGN KEY (user_id) REFERENCES users(id),
+          FOREIGN KEY (deposit_request_id) REFERENCES wallet_deposit_requests(id),
+          FOREIGN KEY (match_id) REFERENCES matches(id),
+          FOREIGN KEY (related_user_id) REFERENCES users(id)
+        );
+        INSERT INTO wallet_transactions_migration
+          (id, user_id, kind, amount_pln, deposit_request_id, match_id, related_user_id, note, created_at)
+        SELECT id, user_id, kind, amount_pln, deposit_request_id, match_id, related_user_id, note, created_at
+        FROM wallet_transactions;
+        DROP TABLE wallet_transactions;
+        ALTER TABLE wallet_transactions_migration RENAME TO wallet_transactions;
+        CREATE INDEX IF NOT EXISTS idx_wallet_transactions_user_created
+        ON wallet_transactions(user_id, created_at);
+        CREATE INDEX IF NOT EXISTS idx_wallet_transactions_match
+        ON wallet_transactions(match_id);
+      `);
+    }
+  }
+
+  const hotpayCols = await pragmaColumnNames(client, "hotpay_payments");
+  if (hotpayCols.length > 0 && !hotpayCols.includes("cart_id")) {
+    await client.execute("ALTER TABLE hotpay_payments ADD COLUMN cart_id INTEGER");
+  }
+  const hotpaySqlRs = await client.execute(
+    `SELECT sql FROM sqlite_master WHERE type='table' AND name='hotpay_payments'`
+  );
+  if (hotpaySqlRs.rows.length > 0) {
+    const hotpaySql = String((hotpaySqlRs.rows[0] as Record<string, unknown>).sql ?? "");
+    if (hotpaySql.includes("CHECK") && hotpaySql.includes("kind") && !hotpaySql.includes("'match_cart'")) {
+      await client.executeMultiple(`
+        CREATE TABLE hotpay_payments_migration (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          session_id TEXT NOT NULL UNIQUE,
+          user_id INTEGER NOT NULL,
+          kind TEXT NOT NULL CHECK (kind IN ('match','topup','match_cart')),
+          amount_pln REAL NOT NULL,
+          status TEXT NOT NULL CHECK (status IN ('pending','success','failure','cancelled')) DEFAULT 'pending',
+          hotpay_payment_id TEXT,
+          secure TEXT,
+          deposit_request_id INTEGER,
+          cart_id INTEGER,
+          error_message TEXT,
+          created_at TEXT NOT NULL DEFAULT (datetime('now')),
+          completed_at TEXT,
+          FOREIGN KEY (user_id) REFERENCES users(id),
+          FOREIGN KEY (deposit_request_id) REFERENCES wallet_deposit_requests(id)
+        );
+        INSERT INTO hotpay_payments_migration
+          (id, session_id, user_id, kind, amount_pln, status, hotpay_payment_id, secure,
+           deposit_request_id, cart_id, error_message, created_at, completed_at)
+        SELECT id, session_id, user_id, kind, amount_pln, status, hotpay_payment_id, secure,
+               deposit_request_id, cart_id, error_message, created_at, completed_at
+        FROM hotpay_payments;
+        DROP TABLE hotpay_payments;
+        ALTER TABLE hotpay_payments_migration RENAME TO hotpay_payments;
+        CREATE INDEX IF NOT EXISTS idx_hotpay_payments_user_created ON hotpay_payments(user_id, created_at);
+        CREATE INDEX IF NOT EXISTS idx_hotpay_payments_status_created ON hotpay_payments(status, created_at);
+      `);
+    }
+  }
+
+  await client.execute(`
+    CREATE TABLE IF NOT EXISTS wallet_match_carts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      payer_user_id INTEGER NOT NULL,
+      match_id INTEGER NOT NULL,
+      amount_pln REAL NOT NULL,
+      fee_per_person_pln REAL NOT NULL,
+      status TEXT NOT NULL CHECK (status IN ('pending','completed','cancelled')) DEFAULT 'pending',
+      hotpay_session_id TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      completed_at TEXT,
+      FOREIGN KEY (payer_user_id) REFERENCES users(id),
+      FOREIGN KEY (match_id) REFERENCES matches(id)
+    );
+  `);
+  await client.execute(`
+    CREATE INDEX IF NOT EXISTS idx_wallet_match_carts_payer_created
+    ON wallet_match_carts(payer_user_id, created_at);
+  `);
+  await client.execute(`
+    CREATE INDEX IF NOT EXISTS idx_wallet_match_carts_match ON wallet_match_carts(match_id);
+  `);
+  await client.execute(`
+    CREATE TABLE IF NOT EXISTS wallet_match_cart_items (
+      cart_id INTEGER NOT NULL,
+      beneficiary_user_id INTEGER NOT NULL,
+      amount_pln REAL NOT NULL,
+      PRIMARY KEY (cart_id, beneficiary_user_id),
+      FOREIGN KEY (cart_id) REFERENCES wallet_match_carts(id) ON DELETE CASCADE,
+      FOREIGN KEY (beneficiary_user_id) REFERENCES users(id)
+    );
+  `);
 
   const lineupSqlRs = await client.execute(
     `SELECT sql FROM sqlite_master WHERE type='table' AND name='match_lineup_slots'`

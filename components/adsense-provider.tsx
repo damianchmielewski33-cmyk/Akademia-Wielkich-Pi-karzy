@@ -6,6 +6,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -38,6 +39,8 @@ type AdsenseContextValue = {
   analyticsAllowed: boolean;
   acceptAll: () => void;
   rejectOptional: () => void;
+  /** Czyści zgodę i pokazuje baner ponownie. */
+  resetConsent: () => void;
 };
 
 const AdsenseContext = createContext<AdsenseContextValue | null>(null);
@@ -63,6 +66,25 @@ function setAdsensePause(paused: boolean) {
   }
 }
 
+/** Ładuje skrypt AdSense dopiero po zgodzie marketingowej (zgodnie z polityką cookies). */
+function ensureAdsenseScript(clientId: string) {
+  const src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${encodeURIComponent(clientId)}`;
+  if (document.querySelector(`script[src^="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"]`)) {
+    return;
+  }
+  try {
+    window.adsbygoogle = window.adsbygoogle || [];
+    window.adsbygoogle.pauseAdRequests = 0;
+  } catch {
+    /* ignore */
+  }
+  const s = document.createElement("script");
+  s.async = true;
+  s.src = src;
+  s.crossOrigin = "anonymous";
+  document.head.appendChild(s);
+}
+
 type Props = {
   children: ReactNode;
   clientId: string | null;
@@ -84,6 +106,7 @@ export function AdsenseProvider({
 }: Props) {
   const [consent, setConsent] = useState<CookieConsentState | null>(null);
   const [hydrated, setHydrated] = useState(false);
+  const scriptLoadedRef = useRef(false);
 
   useEffect(() => {
     try {
@@ -115,12 +138,30 @@ export function AdsenseProvider({
     if (visitorId) sendCookieConsentBeacon("reject_marketing", visitorId);
   }, [persist]);
 
+  const resetConsent = useCallback(() => {
+    try {
+      localStorage.removeItem(COOKIE_CONSENT_STORAGE_KEY);
+    } catch {
+      /* ignore */
+    }
+    setConsent(null);
+    setAdsensePause(true);
+  }, []);
+
   const marketingAllowed = Boolean(enabled && clientId && consent?.marketing);
   const analyticsAllowed = Boolean(consent?.analytics);
 
   useEffect(() => {
     if (!enabled || !clientId) return;
-    setAdsensePause(!marketingAllowed);
+    if (marketingAllowed) {
+      if (!scriptLoadedRef.current) {
+        ensureAdsenseScript(clientId);
+        scriptLoadedRef.current = true;
+      }
+      setAdsensePause(false);
+    } else {
+      setAdsensePause(true);
+    }
   }, [enabled, clientId, marketingAllowed]);
 
   const value = useMemo<AdsenseContextValue>(
@@ -136,6 +177,7 @@ export function AdsenseProvider({
       analyticsAllowed,
       acceptAll,
       rejectOptional,
+      resetConsent,
     }),
     [
       clientId,
@@ -150,6 +192,7 @@ export function AdsenseProvider({
       analyticsAllowed,
       acceptAll,
       rejectOptional,
+      resetConsent,
     ]
   );
 

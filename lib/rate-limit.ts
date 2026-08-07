@@ -78,4 +78,8 @@ export const RATE = {
   mobileConfig: { limit: 120, windowMs: 60 * 1000 },
   /** Zapis gościa przez link zaproszenia. */
   guestSignup: { limit: 12, windowMs: 60 * 60 * 1000 },
+  /** Przelewy P2P między portfelami. */
+  walletTransfer: { limit: 20, windowMs: 60 * 60 * 1000 },
+  /** Koszyk — opłata meczu za wielu graczy. */
+  walletMatchCart: { limit: 30, windowMs: 60 * 60 * 1000 },
 } as const;

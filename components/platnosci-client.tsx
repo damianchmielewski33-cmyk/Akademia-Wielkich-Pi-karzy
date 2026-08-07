@@ -2,19 +2,15 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { SiteAssetImage } from "@/components/site-asset-image";
 import { useEffect, useRef, useState } from "react";
-import { ArrowDownLeft, ArrowUpRight, Loader2, LogIn, SlidersHorizontal, UserPlus, Wallet } from "lucide-react";
-import { toast } from "@/lib/app-toast";
+import { LogIn, UserPlus } from "lucide-react";
 import { AdminWalletsSaldoSection } from "@/components/admin-wallets-saldo-section";
 import { HotpayPayButtons } from "@/components/hotpay-pay-buttons";
 import { PayMatchButton } from "@/components/pay-match-button";
-import { PitchCard, PitchPageHero, pitchLabelClass, pitchPanelClass } from "@/components/ui/pitch-card";
+import { formatWalletPln, PlayerWalletPanel } from "@/components/player-wallet-panel";
+import { useAppMessage } from "@/components/ui/app-message-modal";
+import { PitchCard, PitchPageHero, pitchLabelClass } from "@/components/ui/pitch-card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { cn } from "@/lib/utils";
-import type { WalletTransactionRow } from "@/lib/wallet";
 
 export type PlatnosciUserLite = {
   id: number;
@@ -24,204 +20,20 @@ export type PlatnosciUserLite = {
   profile_photo_path: string | null;
 };
 
-type WalletMeTransaction = WalletTransactionRow & { balance_after_pln: number };
-
-type WalletDepositPending = {
-  id: number;
-  amount_pln: number;
-  status: string;
-  note: string | null;
-  created_at: string;
-  player_declared_at: string | null;
-};
-
 type Props = {
   isLoggedIn: boolean;
   isAdmin: boolean;
+  currentUserId: number | null;
   blikPhoneDisplay: string;
   defaultMatchFeePln: number | null;
   playerLabel: string;
   hotpayEnabled: boolean;
 };
 
-const contentPanelClass =
-  "rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-900/80 sm:p-5";
-
-function formatPln(n: number) {
-  const v = Math.round(n * 100) / 100;
-  return new Intl.NumberFormat("pl-PL", { style: "currency", currency: "PLN" }).format(v);
-}
-
-function formatTxDateParts(raw: string) {
-  const normalized = raw.includes("T") ? raw : raw.replace(" ", "T");
-  const dt = new Date(normalized);
-  if (Number.isNaN(dt.getTime())) return { date: raw, time: "" };
-  return {
-    date: dt.toLocaleDateString("pl-PL", { day: "2-digit", month: "2-digit", year: "numeric" }),
-    time: dt.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" }),
-  };
-}
-
-function walletTxMeta(kind: WalletTransactionRow["kind"]) {
-  switch (kind) {
-    case "deposit":
-      return {
-        label: "Wpłata",
-        Icon: ArrowDownLeft,
-        badgeClass:
-          "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-800/60 dark:bg-emerald-950/50 dark:text-emerald-200",
-        borderClass: "border-l-emerald-500",
-      };
-    case "match_charge":
-      return {
-        label: "Mecz",
-        Icon: ArrowUpRight,
-        badgeClass: "border-red-200 bg-red-50 text-red-800 dark:border-red-800/60 dark:bg-red-950/50 dark:text-red-200",
-        borderClass: "border-l-red-500",
-      };
-    case "adjustment":
-      return {
-        label: "Korekta",
-        Icon: SlidersHorizontal,
-        badgeClass:
-          "border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-800/60 dark:bg-amber-950/50 dark:text-amber-200",
-        borderClass: "border-l-amber-500",
-      };
-    default:
-      return {
-        label: kind,
-        Icon: SlidersHorizontal,
-        badgeClass: "border-zinc-200 bg-zinc-50 text-zinc-800 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200",
-        borderClass: "border-l-zinc-400",
-      };
-  }
-}
-
-function WalletBalanceHistory({
-  loading,
-  transactions,
-}: {
-  loading: boolean;
-  transactions: WalletMeTransaction[];
-}) {
-  if (loading && transactions.length === 0) {
-    return (
-      <p className="mt-4 flex items-center gap-2 rounded-xl border border-zinc-200 bg-zinc-50/80 px-4 py-8 text-sm text-zinc-600 dark:border-zinc-700 dark:bg-zinc-950/40 dark:text-zinc-400">
-        <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-        Wczytywanie historii…
-      </p>
-    );
-  }
-
-  if (transactions.length === 0) {
-    return (
-      <p className="mt-4 rounded-xl border border-dashed border-zinc-200 bg-zinc-50/50 px-4 py-8 text-center text-sm text-zinc-600 dark:border-zinc-700 dark:bg-zinc-950/30 dark:text-zinc-400">
-        Brak operacji na koncie.
-      </p>
-    );
-  }
-
-  return (
-    <div className="mt-4 overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50/50 dark:border-zinc-700 dark:bg-zinc-950/40">
-      <div className="flex items-center justify-between gap-2 border-b border-zinc-200 bg-white px-4 py-2.5 dark:border-zinc-700 dark:bg-zinc-900/80">
-        <p className="text-xs font-semibold uppercase tracking-wide text-emerald-900 dark:text-emerald-200">
-          Ostatnie operacje
-        </p>
-        <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium tabular-nums text-zinc-600 ring-1 ring-emerald-900/10 dark:bg-zinc-900 dark:text-zinc-300 dark:ring-emerald-100/10">
-          {transactions.length}
-        </span>
-      </div>
-
-      <div
-        className="hidden grid-cols-[minmax(0,1.4fr)_5.5rem_5.5rem_5.5rem] gap-3 border-b border-zinc-200 bg-white px-4 py-2 text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:border-zinc-700 dark:bg-zinc-900/60 dark:text-zinc-400 sm:grid"
-        aria-hidden
-      >
-        <span>Operacja</span>
-        <span className="text-right">Data</span>
-        <span className="text-right">Zmiana</span>
-        <span className="text-right">Saldo</span>
-      </div>
-
-      <ul className="max-h-[52vh] divide-y divide-zinc-200 overflow-y-auto dark:divide-zinc-700">
-        {transactions.map((tx) => {
-          const amount = Number(tx.amount_pln ?? 0);
-          const balanceAfter = Number(tx.balance_after_pln ?? 0);
-          const isPositive = amount > 0;
-          const isNegative = amount < 0;
-          const { date, time } = formatTxDateParts(tx.created_at);
-          const meta = walletTxMeta(tx.kind);
-          const Icon = meta.Icon;
-
-          return (
-            <li
-              key={tx.id}
-              className={cn("border-l-4 bg-white px-4 py-3 dark:bg-zinc-900/70", meta.borderClass)}
-            >
-              <div className="grid gap-3 sm:grid-cols-[minmax(0,1.4fr)_5.5rem_5.5rem_5.5rem] sm:items-start">
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span
-                      className={cn(
-                        "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold",
-                        meta.badgeClass
-                      )}
-                    >
-                      <Icon className="h-3 w-3 shrink-0" aria-hidden />
-                      {meta.label}
-                    </span>
-                    <span className="text-[11px] tabular-nums text-zinc-500 sm:hidden">
-                      {date}
-                      {time ? ` · ${time}` : ""}
-                    </span>
-                  </div>
-                  {tx.note ? (
-                    <p className="mt-1.5 line-clamp-2 text-sm leading-snug text-zinc-700 dark:text-zinc-300">{tx.note}</p>
-                  ) : (
-                    <p className="mt-1.5 text-sm text-zinc-400 dark:text-zinc-500">—</p>
-                  )}
-                </div>
-
-                <div className="hidden text-right sm:block">
-                  <p className="text-sm font-medium tabular-nums text-zinc-800 dark:text-zinc-200">{date}</p>
-                  {time ? <p className="mt-0.5 text-xs tabular-nums text-zinc-500">{time}</p> : null}
-                </div>
-
-                <div className="flex items-baseline justify-between gap-3 sm:block sm:text-right">
-                  <span className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 sm:hidden">Zmiana</span>
-                  <p
-                    className={cn(
-                      "text-base font-bold tabular-nums leading-none",
-                      isPositive && "text-emerald-700 dark:text-emerald-300",
-                      isNegative && "text-red-700 dark:text-red-300",
-                      !isPositive && !isNegative && "text-zinc-700 dark:text-zinc-300"
-                    )}
-                  >
-                    {isPositive ? "+" : ""}
-                    {formatPln(amount)}
-                  </p>
-                </div>
-
-                <div className="flex items-baseline justify-between gap-3 sm:block sm:text-right">
-                  <span className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 sm:hidden">Saldo</span>
-                  <div>
-                    <p className="text-sm font-semibold tabular-nums text-zinc-800 dark:text-zinc-200">
-                      {formatPln(balanceAfter)}
-                    </p>
-                    <p className="mt-0.5 hidden text-[10px] uppercase tracking-wide text-zinc-400 sm:block">po operacji</p>
-                  </div>
-                </div>
-              </div>
-            </li>
-          );
-        })}
-      </ul>
-    </div>
-  );
-}
-
 export function PlatnosciClient({
   isLoggedIn,
   isAdmin,
+  currentUserId,
   blikPhoneDisplay,
   defaultMatchFeePln,
   playerLabel,
@@ -230,71 +42,32 @@ export function PlatnosciClient({
   const router = useRouter();
   const searchParams = useSearchParams();
   const paymentReturnHandled = useRef(false);
+  const [walletRefreshKey, setWalletRefreshKey] = useState(0);
+  const [adminBalancePln, setAdminBalancePln] = useState<number | null>(null);
+  const [adminWalletLoading, setAdminWalletLoading] = useState(false);
+  const { showError, showSuccess, showInfo, MessageModal } = useAppMessage();
 
-  const [walletBalancePln, setWalletBalancePln] = useState<number | null>(null);
-  const [walletTransactions, setWalletTransactions] = useState<WalletMeTransaction[]>([]);
-  const [walletPending, setWalletPending] = useState<WalletDepositPending[]>([]);
-  const [walletLoading, setWalletLoading] = useState(false);
-  const [depositAmount, setDepositAmount] = useState("");
-  const [depositNote, setDepositNote] = useState("");
-  const [depositSubmitting, setDepositSubmitting] = useState(false);
-  const [showBlikFallback, setShowBlikFallback] = useState(!hotpayEnabled);
+  const meczRaw = searchParams.get("mecz");
+  const initialMatchId = (() => {
+    if (!meczRaw) return null;
+    const n = Number.parseInt(meczRaw, 10);
+    return Number.isFinite(n) && n > 0 ? n : null;
+  })();
 
-  async function refreshWallet() {
-    if (!isLoggedIn) return;
-    setWalletLoading(true);
+  async function refreshAdminWallet() {
+    if (!isLoggedIn || !isAdmin) return;
+    setAdminWalletLoading(true);
     try {
       const res = await fetch("/api/wallet/me");
-      const json = (await res.json().catch(() => null)) as {
-        balance_pln?: unknown;
-        transactions?: WalletMeTransaction[];
-        pending?: WalletDepositPending[];
-        error?: unknown;
-      } | null;
-      if (!res.ok) {
-        const msg = json?.error;
-        toast.error(typeof msg === "string" ? msg : "Nie udało się wczytać salda");
-        return;
-      }
-      setWalletBalancePln(Number(json?.balance_pln ?? 0));
-      setWalletTransactions(Array.isArray(json?.transactions) ? json.transactions : []);
-      setWalletPending(Array.isArray(json?.pending) ? json.pending : []);
-    } catch {
-      toast.error("Błąd sieci");
+      const json = (await res.json().catch(() => null)) as { balance_pln?: unknown } | null;
+      if (res.ok) setAdminBalancePln(Number(json?.balance_pln ?? 0));
     } finally {
-      setWalletLoading(false);
-    }
-  }
-
-  async function submitDeposit() {
-    const amount = Number.parseFloat(depositAmount.replace(",", "."));
-    if (!Number.isFinite(amount) || amount <= 0) {
-      toast.error("Podaj poprawną kwotę wpłaty");
-      return;
-    }
-    setDepositSubmitting(true);
-    try {
-      const res = await fetch("/api/wallet/deposits", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount_pln: amount, note: depositNote.trim() || undefined }),
-      });
-      const data = (await res.json().catch(() => ({}))) as { error?: string };
-      if (!res.ok) {
-        toast.error(typeof data.error === "string" ? data.error : "Nie udało się zgłosić wpłaty");
-        return;
-      }
-      toast.success("Wpłata zgłoszona — administrator ją zaksięguje po otrzymaniu przelewu");
-      setDepositAmount("");
-      setDepositNote("");
-      await refreshWallet();
-    } finally {
-      setDepositSubmitting(false);
+      setAdminWalletLoading(false);
     }
   }
 
   useEffect(() => {
-    void refreshWallet();
+    void refreshAdminWallet();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoggedIn, isAdmin]);
 
@@ -311,25 +84,24 @@ export function PlatnosciClient({
 
     async function handleReturn() {
       if (payment === "error" || payment === "cancelled" || payment === "failure") {
-        toast.error(
-          payment === "cancelled"
-            ? "Płatność została anulowana"
-            : "Płatność HotPay nie powiodła się"
+        showError(
+          payment === "cancelled" ? "Płatność została anulowana" : "Płatność HotPay nie powiodła się",
+          "HotPay"
         );
         clearQuery();
         return;
       }
 
       if (payment === "success") {
-        toast.success("Wpłata zaksięgowana na portfelu", { duration: 6000 });
-        await refreshWallet();
+        showSuccess("Wpłata zaksięgowana na portfelu", "HotPay");
+        setWalletRefreshKey((k) => k + 1);
+        await refreshAdminWallet();
         clearQuery();
         return;
       }
 
-      // pending / default — odpytaj status (webhook może już zdążyć)
       if (sessionId) {
-        toast.message("Sprawdzamy status płatności HotPay…", { duration: 5000 });
+        showInfo("Sprawdzamy status płatności HotPay…", "HotPay");
         for (let i = 0; i < 5; i++) {
           try {
             const res = await fetch(`/api/wallet/hotpay/status?session_id=${encodeURIComponent(sessionId)}`);
@@ -339,18 +111,19 @@ export function PlatnosciClient({
               amount_pln?: number;
             } | null;
             if (res.ok && data?.status === "success") {
-              toast.success(
+              showSuccess(
                 typeof data.amount_pln === "number"
-                  ? `Wpłata ${formatPln(data.amount_pln)} zaksięgowana na portfelu`
+                  ? `Wpłata ${formatWalletPln(data.amount_pln)} zaksięgowana na portfelu`
                   : "Wpłata zaksięgowana na portfelu",
-                { duration: 7000 }
+                "HotPay"
               );
-              await refreshWallet();
+              setWalletRefreshKey((k) => k + 1);
+              await refreshAdminWallet();
               clearQuery();
               return;
             }
             if (res.ok && data?.status === "failure") {
-              toast.error(data.error_message || "Płatność HotPay nie powiodła się", { duration: 7000 });
+              showError(data.error_message || "Płatność HotPay nie powiodła się", "HotPay");
               clearQuery();
               return;
             }
@@ -359,19 +132,19 @@ export function PlatnosciClient({
           }
           await new Promise((r) => setTimeout(r, 1200));
         }
-        toast.message(
+        showInfo(
           "Płatność w toku — odśwież saldo za chwilę. Środki pojawią się po potwierdzeniu HotPay.",
-          { duration: 8000 }
+          "HotPay"
         );
-        await refreshWallet();
+        setWalletRefreshKey((k) => k + 1);
+        await refreshAdminWallet();
         clearQuery();
         return;
       }
 
-      toast.message("Wróciłeś z płatności — odśwież saldo, jeśli środki jeszcze nie widać.", {
-        duration: 7000,
-      });
-      await refreshWallet();
+      showInfo("Wróciłeś z płatności — odśwież saldo, jeśli środki jeszcze nie widać.", "HotPay");
+      setWalletRefreshKey((k) => k + 1);
+      await refreshAdminWallet();
       clearQuery();
     }
 
@@ -388,8 +161,8 @@ export function PlatnosciClient({
             ? "Salda portfeli, doładowania po przelewie i korekty — w stylu reszty akademii."
             : isLoggedIn
               ? hotpayEnabled
-                ? "Zapłać za mecz lub doładuj saldo online (HotPay). BLIK zostaje jako awaryjna metoda."
-                : "Twoje saldo portfela, historia operacji i wpłaty BLIK."
+                ? "Saldo → doładuj HotPay → opłać mecz. BLIK i przelewy są w zaawansowanych."
+                : "Saldo, opłata meczu i historia. BLIK oraz przelewy są w zaawansowanych."
               : "Zaloguj się, aby zobaczyć saldo portfela."
         }
       />
@@ -421,189 +194,33 @@ export function PlatnosciClient({
           <div className="mx-auto max-w-4xl space-y-4">
             <HotpayPayButtons
               enabled={hotpayEnabled}
-              balancePln={walletBalancePln}
+              balancePln={adminBalancePln}
               defaultMatchFeePln={defaultMatchFeePln}
-              walletLoading={walletLoading}
+              walletLoading={adminWalletLoading}
             />
             <PayMatchButton
               blikPhoneDisplay={blikPhoneDisplay}
               defaultMatchFeePln={defaultMatchFeePln}
-              balancePln={walletBalancePln}
+              balancePln={adminBalancePln}
               playerLabel={playerLabel}
             />
             <AdminWalletsSaldoSection embedded showPublicLinks showTopUp />
           </div>
         ) : (
-          <div className="mx-auto max-w-4xl space-y-4">
-            <PitchCard contentClassName="px-5 py-5 sm:px-6 sm:py-6">
-              <div className="mb-4 flex flex-col items-center gap-2 text-center">
-                <span className={pitchLabelClass}>Twój portfel</span>
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/15 ring-2 ring-white/30 backdrop-blur-[2px]">
-                  <SiteAssetImage
-                    asset="logo_crest"
-                    alt=""
-                    width={128}
-                    height={128}
-                    className="h-10 w-10 drop-shadow"
-                    sizes="40px"
-                  />
-                </div>
-                <h2 className="text-xl font-bold tracking-tight text-white drop-shadow-sm sm:text-2xl">Saldo konta</h2>
-                <p className="text-sm text-emerald-100/90">Aktualny stan portfela i szybki podgląd.</p>
-              </div>
-
-              <div
-                className={cn(
-                  pitchPanelClass,
-                  "flex flex-wrap items-center justify-between gap-3 px-4 py-4",
-                  walletBalancePln != null && walletBalancePln < 0 && "border-red-300/40 bg-red-950/30",
-                  walletBalancePln != null && walletBalancePln > 0 && "border-emerald-300/35 bg-emerald-500/15"
-                )}
-              >
-                <div>
-                  <p className={pitchLabelClass}>Saldo</p>
-                  <p
-                    className={cn(
-                      "mt-1 text-3xl font-bold tabular-nums text-white",
-                      walletBalancePln == null && "text-white/75",
-                      walletBalancePln != null && walletBalancePln < 0 && "text-red-200",
-                      walletBalancePln != null && walletBalancePln > 0 && "text-emerald-100"
-                    )}
-                  >
-                    {walletBalancePln === null ? "—" : formatPln(walletBalancePln)}
-                  </p>
-                  {walletBalancePln != null && walletBalancePln < 0 ? (
-                    <p className="mt-1 text-xs font-medium text-red-200">Niedopłata do uregulowania</p>
-                  ) : walletBalancePln != null && walletBalancePln > 0 ? (
-                    <p className="mt-1 text-xs font-medium text-emerald-100">Nadwyżka na koncie</p>
-                  ) : null}
-                </div>
-                <Button type="button" variant="pitch" disabled={walletLoading} onClick={() => void refreshWallet()}>
-                  {walletLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
-                  Odśwież
-                </Button>
-              </div>
-            </PitchCard>
-
-            <HotpayPayButtons
-              enabled={hotpayEnabled}
-              balancePln={walletBalancePln}
+          <div className="mx-auto max-w-4xl">
+            <PlayerWalletPanel
+              currentUserId={currentUserId}
+              blikPhoneDisplay={blikPhoneDisplay}
               defaultMatchFeePln={defaultMatchFeePln}
-              walletLoading={walletLoading}
+              playerLabel={playerLabel}
+              hotpayEnabled={hotpayEnabled}
+              refreshKey={walletRefreshKey}
+              initialMatchId={initialMatchId}
             />
-
-            <div className={contentPanelClass}>
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <h3 className="text-base font-bold text-emerald-950 dark:text-emerald-100">
-                    {hotpayEnabled ? "Inna metoda — BLIK" : "BLIK / przelew"}
-                  </h3>
-                  <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-                    {hotpayEnabled
-                      ? "Awaryjna płatność na telefon — wymaga potwierdzenia przez administratora."
-                      : "Skopiuj dane BLIK lub otwórz aplikację banku, potem zgłoś wpłatę."}
-                  </p>
-                </div>
-                {hotpayEnabled ? (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowBlikFallback((v) => !v)}
-                  >
-                    {showBlikFallback ? "Ukryj BLIK" : "Pokaż BLIK"}
-                  </Button>
-                ) : null}
-              </div>
-
-              {showBlikFallback ? (
-                <div className="mt-4 space-y-4">
-                  <PayMatchButton
-                    blikPhoneDisplay={blikPhoneDisplay}
-                    defaultMatchFeePln={defaultMatchFeePln}
-                    balancePln={walletBalancePln}
-                    playerLabel={playerLabel}
-                  />
-
-                  <div>
-                    <h4 className="text-sm font-bold text-emerald-950 dark:text-emerald-100">Zgłoś wpłatę BLIK</h4>
-                    <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-                      Po wykonaniu przelewu BLIK wpisz kwotę — administrator potwierdzi i zaksięguje ją na Twoim koncie.
-                    </p>
-                    {walletPending.length > 0 ? (
-                      <ul className="mt-3 space-y-2 rounded-lg border border-amber-200 bg-amber-50/80 p-3 text-sm dark:border-amber-800/50 dark:bg-amber-950/30">
-                        {walletPending.map((p) => (
-                          <li key={p.id} className="flex flex-wrap justify-between gap-2 text-amber-950 dark:text-amber-100">
-                            <span>
-                              Oczekuje: <strong className="tabular-nums">{formatPln(Number(p.amount_pln))}</strong>
-                              {p.note ? <span className="text-amber-800/80"> — {p.note}</span> : null}
-                            </span>
-                            <span className="text-xs text-amber-800/70">{formatTxDateParts(p.created_at).date}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : null}
-                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                      <div>
-                        <Label htmlFor="deposit-amount" className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                          Kwota (PLN)
-                        </Label>
-                        <Input
-                          id="deposit-amount"
-                          type="number"
-                          min={0.01}
-                          step={0.01}
-                          className="mt-1"
-                          value={depositAmount}
-                          onChange={(e) => setDepositAmount(e.target.value)}
-                          placeholder="np. 50"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="deposit-note" className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                          Notatka (opcjonalnie)
-                        </Label>
-                        <Input
-                          id="deposit-note"
-                          className="mt-1"
-                          value={depositNote}
-                          onChange={(e) => setDepositNote(e.target.value)}
-                          placeholder="np. przelew z mBanku"
-                        />
-                      </div>
-                    </div>
-                    <Button
-                      type="button"
-                      className="mt-4"
-                      variant="pitch"
-                      disabled={depositSubmitting || walletLoading}
-                      onClick={() => void submitDeposit()}
-                    >
-                      {depositSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
-                      Zgłosiłem wpłatę
-                    </Button>
-                  </div>
-                </div>
-              ) : null}
-            </div>
-
-            <div className={contentPanelClass}>
-              <div className="flex items-start gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-200">
-                  <Wallet className="h-5 w-5" strokeWidth={2.25} aria-hidden />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <h3 className="text-base font-bold tracking-tight text-emerald-950 dark:text-emerald-100">Historia salda</h3>
-                  <p className="mt-0.5 text-sm text-zinc-600 dark:text-zinc-400">
-                    Wpłaty, rozliczenia meczów i korekty — najnowsze operacje na górze listy.
-                  </p>
-                </div>
-              </div>
-              <WalletBalanceHistory loading={walletLoading} transactions={walletTransactions} />
-            </div>
           </div>
         )}
       </div>
+      {MessageModal}
     </div>
   );
 }

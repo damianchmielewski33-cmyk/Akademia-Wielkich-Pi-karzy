@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getDb, logActivity } from "@/lib/db";
 import { requireUser, requireMatchInApiRealm } from "@/lib/api-helpers";
+import { refundMatchCartBeneficiary } from "@/lib/match-cart";
 
 export const runtime = "nodejs";
 
@@ -41,9 +42,20 @@ export async function POST(req: Request, ctx: Ctx) {
 
   const signup = (await db
     .prepare(
-      "SELECT id, COALESCE(commitment, 1) AS commitment FROM match_signups WHERE user_id = ? AND match_id = ?"
+      "SELECT id, COALESCE(commitment, 1) AS commitment, COALESCE(paid, 0) AS paid FROM match_signups WHERE user_id = ? AND match_id = ?"
     )
-    .get(gate.session.userId, mid)) as { id: number; commitment: number } | undefined;
+    .get(gate.session.userId, mid)) as { id: number; commitment: number; paid: number } | undefined;
+
+  let refundedPln = 0;
+  if (signup && Number(signup.paid) === 1) {
+    const refund = await refundMatchCartBeneficiary({
+      matchId: mid,
+      beneficiaryUserId: gate.session.userId,
+      actorUserId: gate.session.userId,
+      reason: `wypisanie z meczu ${match.match_date}`,
+    });
+    if (refund.ok && refund.refunded_pln > 0) refundedPln = refund.refunded_pln;
+  }
 
   if (signup) {
     await db.prepare("DELETE FROM match_signups WHERE id = ?").run(signup.id);
@@ -52,9 +64,11 @@ export async function POST(req: Request, ctx: Ctx) {
     }
     await logActivity(
       gate.session.userId,
-      `Wypisał się z meczu ${match.match_date} ${match.match_time} (${match.location}), id ${mid}`
+      `Wypisał się z meczu ${match.match_date} ${match.match_time} (${match.location}), id ${mid}${
+        refundedPln > 0 ? ` · zwrot koszyka ${refundedPln.toFixed(2)} PLN` : ""
+      }`
     );
   }
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, refunded_pln: refundedPln });
 }
