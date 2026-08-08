@@ -9,19 +9,28 @@ import { processHotpayNotification } from "@/lib/hotpay-wallet";
 
 export const runtime = "nodejs";
 
-function clientIp(req: Request): string | null {
-  const forwarded = req.headers.get("x-forwarded-for");
-  if (forwarded) {
-    const first = forwarded.split(",")[0]?.trim();
-    if (first) return first;
-  }
-  const real = req.headers.get("x-real-ip")?.trim();
-  return real || null;
+/** Zbiera IP z nagłówków proxy (Vercel / XFF) — whitelista HotPay może być na dowolnej pozycji. */
+function clientIps(req: Request): string[] {
+  const ips: string[] = [];
+  const push = (raw: string | null | undefined) => {
+    if (!raw) return;
+    for (const part of raw.split(",")) {
+      const ip = part.trim().replace(/^::ffff:/i, "");
+      if (ip) ips.push(ip);
+    }
+  };
+  push(req.headers.get("x-forwarded-for"));
+  push(req.headers.get("x-vercel-forwarded-for"));
+  push(req.headers.get("x-real-ip"));
+  return [...new Set(ips)];
 }
 
 /**
  * Webhook HotPay (form-data POST). Adres w panelu:
  * {SITE_URL}/api/wallet/hotpay/notification
+ *
+ * Status (SUCCESS / PENDING / FAILURE) przychodzi wyłącznie tutaj —
+ * ADRES_WWW to tylko powrót przeglądarki, bez wyniku płatności (dokumentacja HotPay).
  */
 export async function POST(req: Request) {
   const config = getHotpayConfig();
@@ -38,8 +47,10 @@ export async function POST(req: Request) {
         ? true
         : process.env.NODE_ENV === "production";
   if (enforceIp) {
-    const ip = clientIp(req);
-    if (!isHotpayNotificationIp(ip)) {
+    const ips = clientIps(req);
+    const allowed = ips.some((ip) => isHotpayNotificationIp(ip));
+    if (!allowed) {
+      console.error("[hotpay/notification] Forbidden IP(s):", ips.join(", ") || "(brak)");
       return new NextResponse("Forbidden", { status: 403 });
     }
   }
@@ -53,8 +64,13 @@ export async function POST(req: Request) {
 
   const payload = parseNotificationFormData(form);
   if (!payload) {
+    console.error("[hotpay/notification] Missing fields");
     return new NextResponse("Missing fields", { status: 400 });
   }
+
+  console.info(
+    `[hotpay/notification] STATUS=${payload.STATUS} order=${payload.ID_ZAMOWIENIA} amount=${payload.KWOTA} ips=${clientIps(req).join("|") || "-"}`
+  );
 
   const db = await getDb();
   const result = await processHotpayNotification(
@@ -65,6 +81,9 @@ export async function POST(req: Request) {
   );
 
   if (!result.ok) {
+    console.error(
+      `[hotpay/notification] rejected STATUS=${payload.STATUS} order=${payload.ID_ZAMOWIENIA} error=${result.error}`
+    );
     const status =
       result.error === "BAD_HASH" || result.error === "BAD_SEKRET"
         ? 401
@@ -73,6 +92,10 @@ export async function POST(req: Request) {
           : 400;
     return new NextResponse(result.error, { status });
   }
+
+  console.info(
+    `[hotpay/notification] ok STATUS=${payload.STATUS} order=${payload.ID_ZAMOWIENIA} outcome=${result.outcome}`
+  );
 
   if (result.outcome === "credited") {
     await logActivity(

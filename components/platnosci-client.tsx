@@ -101,8 +101,9 @@ export function PlatnosciClient({
       }
 
       if (sessionId) {
+        // HotPay wraca zawsze na ADRES_WWW bez STATUS — wynik jest w notyfikacji (SUCCESS/PENDING/FAILURE).
         showInfo("Sprawdzamy status płatności HotPay…", "HotPay");
-        for (let i = 0; i < 5; i++) {
+        for (let i = 0; i < 12; i++) {
           try {
             const res = await fetch(`/api/wallet/hotpay/status?session_id=${encodeURIComponent(sessionId)}`);
             const data = (await res.json().catch(() => null)) as {
@@ -122,7 +123,7 @@ export function PlatnosciClient({
               clearQuery();
               return;
             }
-            if (res.ok && data?.status === "failure") {
+            if (res.ok && (data?.status === "failure" || data?.status === "cancelled")) {
               showError(data.error_message || "Płatność HotPay nie powiodła się", "HotPay");
               clearQuery();
               return;
@@ -130,10 +131,11 @@ export function PlatnosciClient({
           } catch {
             /* retry */
           }
-          await new Promise((r) => setTimeout(r, 1200));
+          await new Promise((r) => setTimeout(r, 1500));
         }
+        // Brak SUCCESS/FAILURE z webhooka — nie sugeruj, że środki „na pewno” dojdą (np. po odrzuceniu).
         showInfo(
-          "Płatność w toku — odśwież saldo za chwilę. Środki pojawią się po potwierdzeniu HotPay.",
+          "Brak jeszcze potwierdzenia z HotPay. Jeśli płatność się udała, saldo zaktualizuje się po notyfikacji. Po odrzuceniu lub anulowaniu saldo się nie zmieni — odśwież stronę za chwilę.",
           "HotPay"
         );
         setWalletRefreshKey((k) => k + 1);
