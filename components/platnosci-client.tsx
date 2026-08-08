@@ -102,8 +102,10 @@ export function PlatnosciClient({
 
       if (sessionId) {
         // HotPay wraca zawsze na ADRES_WWW bez STATUS — wynik jest w notyfikacji (SUCCESS/PENDING/FAILURE).
+        // Nie oznaczamy automatycznie „cancelled”: udana płatność też może chwilę czekać na webhook.
         showInfo("Sprawdzamy status płatności HotPay…", "HotPay");
-        for (let i = 0; i < 10; i++) {
+
+        const pollOnce = async (): Promise<"success" | "failure" | "cancelled" | "pending" | "error"> => {
           try {
             const res = await fetch(`/api/wallet/hotpay/status?session_id=${encodeURIComponent(sessionId)}`);
             const data = (await res.json().catch(() => null)) as {
@@ -111,7 +113,8 @@ export function PlatnosciClient({
               error_message?: string | null;
               amount_pln?: number;
             } | null;
-            if (res.ok && data?.status === "success") {
+            if (!res.ok || !data?.status) return "error";
+            if (data.status === "success") {
               showSuccess(
                 typeof data.amount_pln === "number"
                   ? `Wpłata ${formatWalletPln(data.amount_pln)} zaksięgowana na portfelu`
@@ -120,10 +123,9 @@ export function PlatnosciClient({
               );
               setWalletRefreshKey((k) => k + 1);
               await refreshAdminWallet();
-              clearQuery();
-              return;
+              return "success";
             }
-            if (res.ok && (data?.status === "failure" || data?.status === "cancelled")) {
+            if (data.status === "failure" || data.status === "cancelled") {
               showError(
                 data.error_message ||
                   (data.status === "cancelled"
@@ -131,32 +133,37 @@ export function PlatnosciClient({
                     : "Płatność HotPay została odrzucona"),
                 "HotPay"
               );
-              clearQuery();
-              return;
+              return data.status;
             }
+            return "pending";
           } catch {
-            /* retry */
+            return "error";
           }
-          await new Promise((r) => setTimeout(r, 1200));
+        };
+
+        for (let i = 0; i < 25; i++) {
+          const status = await pollOnce();
+          if (status === "success" || status === "failure" || status === "cancelled") {
+            clearQuery();
+            return;
+          }
+          await new Promise((r) => setTimeout(r, 1500));
         }
 
-        // Brak SUCCESS/FAILURE z webhooka (częste przy anulowaniu BLIK) — oznacz lokalnie i pokaż błąd.
-        try {
-          await fetch("/api/wallet/hotpay/abandon", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ session_id: sessionId }),
-          });
-        } catch {
-          /* ignore */
-        }
-        showError(
-          "Płatność nie została potwierdzona. Jeśli anulowałeś lub odrzuciłeś BLIK — transakcja nie przeszła i saldo się nie zmieni.",
+        showInfo(
+          "Czekamy na potwierdzenie z HotPay. Jeśli zapłaciłeś — saldo zaktualizuje się po notyfikacji (odśwież stronę za chwilę). Jeśli anulowałeś BLIK — saldo się nie zmieni.",
           "HotPay"
         );
         setWalletRefreshKey((k) => k + 1);
         await refreshAdminWallet();
         clearQuery();
+
+        // Dalsze odpytywanie w tle (webhook bywa opóźniony).
+        for (let i = 0; i < 40; i++) {
+          await new Promise((r) => setTimeout(r, 3000));
+          const status = await pollOnce();
+          if (status === "success" || status === "failure" || status === "cancelled") return;
+        }
         return;
       }
 

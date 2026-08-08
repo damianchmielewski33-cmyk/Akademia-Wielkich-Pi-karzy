@@ -240,7 +240,7 @@ export async function processHotpayNotification(
   if (!verifyNotificationHash(payload, notificationPassword)) {
     return { ok: false, error: "BAD_HASH" };
   }
-  if (!timingSafeEqualString(payload.SEKRET, expectedSekret)) {
+  if (!timingSafeEqualString(payload.SEKRET.trim(), expectedSekret.trim())) {
     return { ok: false, error: "BAD_SEKRET" };
   }
 

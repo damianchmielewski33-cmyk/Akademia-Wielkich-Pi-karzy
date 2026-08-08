@@ -109,10 +109,13 @@ export async function POST(req: Request) {
   );
 
   if (!init.ok) {
+    console.error(`[hotpay/create] INIT_FAIL userId=${userId} kind=${kind} amount=${amountPln} error=${init.error}`);
     await markHotpayPaymentFailure(db, paymentRowId, { errorMessage: init.error });
+    await logActivity(userId, `HotPay INIT FAILED (${kind}) ${amountPln.toFixed(2)} PLN: ${init.error} [${sessionId}]`);
     return NextResponse.json({ error: init.error, session_id: sessionId }, { status: 502 });
   }
 
+  console.info(`[hotpay/create] ok userId=${userId} kind=${kind} amount=${amountPln} session=${sessionId} url=${init.url}`);
   await logActivity(
     userId,
     `Rozpoczął płatność HotPay (${kind}): ${amountPln.toFixed(2)} PLN [${sessionId}]`

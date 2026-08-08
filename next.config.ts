@@ -11,7 +11,9 @@ const securityHeaders = [
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
   { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
-  { key: "Cross-Origin-Resource-Policy", value: "same-site" },
+  // same-site blokuje część serwerowych klientów płatności przy odczycie odpowiedzi;
+  // webhook HotPay musi móc swobodnie POST-ować na /api/.../notification.
+  { key: "Cross-Origin-Resource-Policy", value: "cross-origin" },
   { key: "X-DNS-Prefetch-Control", value: "off" },
   {
     key: "Content-Security-Policy",
