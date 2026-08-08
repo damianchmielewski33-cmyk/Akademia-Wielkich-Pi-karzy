@@ -39,6 +39,7 @@ export type HotpayNotificationPayload = {
   ID_PLATNOSCI: string;
   ID_ZAMOWIENIA: string;
   STATUS: string;
+  /** Obecne w API z walidacją; w starszym wariancie może być puste. */
   SECURE: string;
   SEKRET: string;
   HASH: string;
@@ -110,6 +111,26 @@ export function buildNotificationHash(args: {
   return createHash("sha256").update(raw, "utf8").digest("hex");
 }
 
+/** HASH notyfikacji bez SECURE (wariant „API bez walidacji” w dokumentacji HotPay). */
+export function buildNotificationHashWithoutSecure(args: {
+  notificationPassword: string;
+  amount: string;
+  paymentId: string;
+  orderId: string;
+  status: string;
+  sekret: string;
+}): string {
+  const raw = [
+    args.notificationPassword,
+    args.amount,
+    args.paymentId,
+    args.orderId,
+    args.status,
+    args.sekret,
+  ].join(";");
+  return createHash("sha256").update(raw, "utf8").digest("hex");
+}
+
 export function verifyNotificationHash(
   payload: HotpayNotificationPayload,
   notificationPassword: string
@@ -119,22 +140,33 @@ export function verifyNotificationHash(
     !payload.ID_PLATNOSCI ||
     !payload.ID_ZAMOWIENIA ||
     !payload.STATUS ||
-    !payload.SECURE ||
     !payload.SEKRET ||
     !payload.HASH
   ) {
     return false;
   }
-  const expected = buildNotificationHash({
+  // Dokumentacja: API z walidacją (z SECURE) oraz API bez walidacji (bez SECURE).
+  if (payload.SECURE) {
+    const withSecure = buildNotificationHash({
+      notificationPassword,
+      amount: payload.KWOTA,
+      paymentId: payload.ID_PLATNOSCI,
+      orderId: payload.ID_ZAMOWIENIA,
+      status: payload.STATUS,
+      secure: payload.SECURE,
+      sekret: payload.SEKRET,
+    });
+    if (timingSafeEqualHex(withSecure, payload.HASH)) return true;
+  }
+  const withoutSecure = buildNotificationHashWithoutSecure({
     notificationPassword,
     amount: payload.KWOTA,
     paymentId: payload.ID_PLATNOSCI,
     orderId: payload.ID_ZAMOWIENIA,
     status: payload.STATUS,
-    secure: payload.SECURE,
     sekret: payload.SEKRET,
   });
-  return timingSafeEqualHex(expected, payload.HASH);
+  return timingSafeEqualHex(withoutSecure, payload.HASH);
 }
 
 /** Porównanie hex bez wycieku czasu (różna długość → false). */
@@ -262,26 +294,32 @@ export async function initPayment(
   return { ok: false, error: message };
 }
 
+function getFormField(form: FormData, key: string): string {
+  const direct = form.get(key);
+  if (typeof direct === "string" && direct.length > 0) return direct;
+  const want = key.toUpperCase();
+  for (const [k, v] of form.entries()) {
+    if (k.toUpperCase() === want && typeof v === "string" && v.length > 0) return v;
+  }
+  return typeof direct === "string" ? direct : "";
+}
+
 export function parseNotificationFormData(form: FormData): HotpayNotificationPayload | null {
-  const get = (key: string) => {
-    const v = form.get(key);
-    return typeof v === "string" ? v : "";
-  };
   const payload: HotpayNotificationPayload = {
-    KWOTA: get("KWOTA"),
-    ID_PLATNOSCI: get("ID_PLATNOSCI"),
-    ID_ZAMOWIENIA: get("ID_ZAMOWIENIA"),
-    STATUS: get("STATUS"),
-    SECURE: get("SECURE"),
-    SEKRET: get("SEKRET"),
-    HASH: get("HASH"),
+    KWOTA: getFormField(form, "KWOTA"),
+    ID_PLATNOSCI: getFormField(form, "ID_PLATNOSCI"),
+    ID_ZAMOWIENIA: getFormField(form, "ID_ZAMOWIENIA"),
+    STATUS: getFormField(form, "STATUS"),
+    SECURE: getFormField(form, "SECURE"),
+    SEKRET: getFormField(form, "SEKRET"),
+    HASH: getFormField(form, "HASH"),
   };
+  // SECURE nie jest wymagane (starszy wariant API bez walidacji).
   if (
     !payload.KWOTA ||
     !payload.ID_PLATNOSCI ||
     !payload.ID_ZAMOWIENIA ||
     !payload.STATUS ||
-    !payload.SECURE ||
     !payload.SEKRET ||
     !payload.HASH
   ) {

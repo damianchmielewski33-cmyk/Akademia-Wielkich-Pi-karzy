@@ -32,20 +32,26 @@ function clientIps(req: Request): string[] {
  * Status (SUCCESS / PENDING / FAILURE) przychodzi wyłącznie tutaj —
  * ADRES_WWW to tylko powrót przeglądarki, bez wyniku płatności (dokumentacja HotPay).
  */
+export async function GET() {
+  // Tylko diagnostyka (wpisanie URL w przeglądarce). HotPay zawsze używa POST.
+  return new NextResponse("HotPay notification endpoint OK (użyj POST)", {
+    status: 200,
+    headers: { "Content-Type": "text/plain; charset=utf-8" },
+  });
+}
+
 export async function POST(req: Request) {
+  console.info("[hotpay/notification] POST received");
   const config = getHotpayConfig();
   if (!config) {
     return new NextResponse("HotPay not configured", { status: 503 });
   }
 
-  // W produkcji domyślnie wymuszamy whitelist IP HotPay; wyłączenie: HOTPAY_ENFORCE_IP=0
-  const enforceIpEnv = process.env.HOTPAY_ENFORCE_IP?.trim();
-  const enforceIp =
-    enforceIpEnv === "0" || enforceIpEnv?.toLowerCase() === "false"
-      ? false
-      : enforceIpEnv === "1" || enforceIpEnv?.toLowerCase() === "true"
-        ? true
-        : process.env.NODE_ENV === "production";
+  // Whitelist IP: tylko gdy HOTPAY_ENFORCE_IP=1 (domyślnie WYŁĄCZONA).
+  // Autentykacja notyfikacji to HASH + SEKRET — agresywna whitelista na Vercel często
+  // odcina prawdziwe webhooki HotPay (XFF / inne IP niż w dokumentacji).
+  const enforceIpEnv = process.env.HOTPAY_ENFORCE_IP?.trim()?.toLowerCase();
+  const enforceIp = enforceIpEnv === "1" || enforceIpEnv === "true";
   if (enforceIp) {
     const ips = clientIps(req);
     const allowed = ips.some((ip) => isHotpayNotificationIp(ip));
@@ -57,8 +63,24 @@ export async function POST(req: Request) {
 
   let form: FormData;
   try {
-    form = await req.formData();
-  } catch {
+    const contentType = req.headers.get("content-type") ?? "";
+    const rawBuf = await req.arrayBuffer();
+    if (contentType.includes("application/x-www-form-urlencoded")) {
+      form = new FormData();
+      const rawText = new TextDecoder().decode(rawBuf);
+      for (const [k, v] of new URLSearchParams(rawText)) {
+        form.append(k, v);
+      }
+    } else {
+      const rebuilt = new Request(req.url, {
+        method: "POST",
+        headers: req.headers,
+        body: rawBuf,
+      });
+      form = await rebuilt.formData();
+    }
+  } catch (err) {
+    console.error("[hotpay/notification] body parse failed:", err);
     return new NextResponse("Bad form", { status: 400 });
   }
 

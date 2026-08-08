@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildInitHash,
-  buildNotificationHash,
+  buildNotificationHashWithoutSecure,
   formatHotpayAmount,
   initPayment,
   isHotpayNotificationIp,
@@ -45,26 +45,26 @@ describe("hotpay hashing", () => {
     expect(timingSafeEqualHex("abcd", "abcd")).toBe(true);
   });
 
-  it("notification hash includes SECURE field", () => {
-    const withSecure = buildNotificationHash({
-      notificationPassword: HOTPAY_TEST_CONFIG.notificationPassword,
+  it("accepts notification hash without SECURE (API bez walidacji)", () => {
+    const password = HOTPAY_TEST_CONFIG.notificationPassword;
+    const hash = buildNotificationHashWithoutSecure({
+      notificationPassword: password,
       amount: HOTPAY_TEST_ORDER.amount,
       paymentId: HOTPAY_TEST_ORDER.paymentId,
       orderId: HOTPAY_TEST_ORDER.orderId,
       status: "SUCCESS",
-      secure: "aaa",
       sekret: HOTPAY_TEST_CONFIG.sekret,
     });
-    const otherSecure = buildNotificationHash({
-      notificationPassword: HOTPAY_TEST_CONFIG.notificationPassword,
-      amount: HOTPAY_TEST_ORDER.amount,
-      paymentId: HOTPAY_TEST_ORDER.paymentId,
-      orderId: HOTPAY_TEST_ORDER.orderId,
-      status: "SUCCESS",
-      secure: "bbb",
-      sekret: HOTPAY_TEST_CONFIG.sekret,
-    });
-    expect(withSecure).not.toBe(otherSecure);
+    const payload = {
+      KWOTA: HOTPAY_TEST_ORDER.amount,
+      ID_PLATNOSCI: HOTPAY_TEST_ORDER.paymentId,
+      ID_ZAMOWIENIA: HOTPAY_TEST_ORDER.orderId,
+      STATUS: "SUCCESS",
+      SECURE: "",
+      SEKRET: HOTPAY_TEST_CONFIG.sekret,
+      HASH: hash,
+    };
+    expect(verifyNotificationHash(payload, password)).toBe(true);
   });
 });
 
