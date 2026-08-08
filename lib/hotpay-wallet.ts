@@ -57,7 +57,9 @@ export async function applyHotpaySuccessCredit(
     return { ok: false, error: "INVALID_AMOUNT" };
   }
 
-  if (payment.status === "pending") {
+  if (payment.status === "pending" || payment.status === "failure" || payment.status === "cancelled") {
+    // pending = normalny flow; failure/cancelled = lokalne „porzucenie” po powrocie —
+    // późniejszy SUCCESS z HotPay i tak musi móc zaksięgować.
     const claim = await db
       .prepare(
         `UPDATE hotpay_payments
@@ -66,7 +68,7 @@ export async function applyHotpaySuccessCredit(
              secure = ?,
              error_message = 'crediting-lock',
              completed_at = datetime('now')
-         WHERE id = ? AND status = 'pending'`
+         WHERE id = ? AND status IN ('pending', 'failure', 'cancelled') AND deposit_request_id IS NULL`
       )
       .run(args.hotpayPaymentId, args.secure, payment.id);
     if (claim.changes === 0) {
@@ -196,6 +198,33 @@ export async function markHotpayPaymentFailure(
        WHERE id = ? AND status = 'pending'`
     )
     .run(args.hotpayPaymentId ?? null, args.secure ?? null, args.errorMessage, paymentId);
+}
+
+/** Oznacza pending jako cancelled po powrocie użytkownika bez potwierdzenia (np. anulowany BLIK). */
+export async function markHotpayPaymentCancelledByUser(
+  db: AppDb,
+  payment: HotpayPaymentRow
+): Promise<{ ok: true; status: HotpayPaymentStatus } | { ok: false; error: string }> {
+  if (payment.status === "success" && payment.deposit_request_id != null) {
+    return { ok: true, status: "success" };
+  }
+  if (payment.status === "failure" || payment.status === "cancelled") {
+    return { ok: true, status: payment.status };
+  }
+  if (payment.status !== "pending") {
+    return { ok: true, status: payment.status };
+  }
+  await db
+    .prepare(
+      `UPDATE hotpay_payments
+       SET status = 'cancelled',
+           error_message = ?,
+           completed_at = datetime('now')
+       WHERE id = ? AND status = 'pending'`
+    )
+    .run("Anulowano lub brak potwierdzenia po powrocie z bramki HotPay", payment.id);
+  const latest = await getHotpayPaymentBySessionId(db, payment.session_id);
+  return { ok: true, status: latest?.status ?? "cancelled" };
 }
 
 export type ProcessNotificationResult =

@@ -221,6 +221,30 @@ describe("processHotpayNotification", () => {
     expect(Number(balance.b)).toBe(0);
   });
 
+  it("credits SUCCESS even after local cancel/abandon", async () => {
+    const { markHotpayPaymentCancelledByUser, getHotpayPaymentBySessionId } = await import(
+      "@/lib/hotpay-wallet"
+    );
+    seedPendingPayment();
+    const pending = await getHotpayPaymentBySessionId(db, HOTPAY_TEST_ORDER.orderId);
+    expect(pending).toBeTruthy();
+    await markHotpayPaymentCancelledByUser(db, pending!);
+
+    const payload = buildMockNotification({ status: "SUCCESS" });
+    const result = await processHotpayNotification(
+      db,
+      payload,
+      HOTPAY_TEST_CONFIG.notificationPassword,
+      HOTPAY_TEST_CONFIG.sekret
+    );
+    expect(result).toEqual({ ok: true, outcome: "credited" });
+
+    const balance = sqlite
+      .prepare("SELECT COALESCE(SUM(amount_pln),0) AS b FROM wallet_transactions WHERE user_id = ?")
+      .get(userId) as { b: number };
+    expect(Number(balance.b)).toBe(50);
+  });
+
   it("rejects bad HASH", async () => {
     seedPendingPayment();
     const payload = buildMockNotification({ status: "SUCCESS", invalidHash: true });
