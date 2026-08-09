@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Calendar, Car, Clock, HelpCircle, KeyRound, LayoutGrid, Loader2, MapPin, Wallet } from "lucide-react";
+import { Calendar, Car, Clock, HelpCircle, KeyRound, LayoutGrid, MapPin, Wallet } from "lucide-react";
 import { SiteAssetImage } from "@/components/site-asset-image";
 import { Button } from "@/components/ui/button";
 import {

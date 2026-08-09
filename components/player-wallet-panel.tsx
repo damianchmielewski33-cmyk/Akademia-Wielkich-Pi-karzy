@@ -214,7 +214,6 @@ export function WalletBalanceHistory({
 }
 
 export function PlayerWalletPanel({
-  currentUserId: _currentUserId,
   hotpayEnabled,
   compact = false,
   refreshKey = 0,

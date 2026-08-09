@@ -7,7 +7,6 @@ import { toast } from "@/lib/app-toast";
 import {
   Activity,
   Camera,
-  Loader2,
   Moon,
   Pencil,
   Route,

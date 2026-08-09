@@ -315,7 +315,6 @@ export function TerminarzClient({
       .then((r) => r.json() as Promise<{ balance_pln?: unknown }>)
       .then((d) => setWalletBalancePln(Number(d.balance_pln ?? 0)))
       .catch(() => void 0);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoggedIn, hotpayEnabled]);
 
   useEffect(() => {
