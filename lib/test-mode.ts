@@ -72,29 +72,6 @@ export async function shouldUseTestDatabase(): Promise<boolean> {
   return isAdminTestModeActive();
 }
 
-/**
- * @deprecated Izolacja = wybór bazy; zostawione jako no-op dla kompatybilności.
- * Zawsze zwraca 0 — nie taguj wierszy w PROD/TEST flagą is_test.
- */
-export async function testModeFlag(): Promise<0 | 1> {
-  return 0;
-}
-
-/** @deprecated Filtry zbędne przy dual-DB — zawsze „wszystkie wiersze”. */
-export function sqlMatchTestFilter(_alias: string, _testMode: boolean): string {
-  return "1=1";
-}
-
-/** @deprecated */
-export function sqlUserTestFilter(_alias: string, _testMode: boolean): string {
-  return "1=1";
-}
-
-/** @deprecated */
-export function sqlWalletTestFilter(_alias: string, _testMode: boolean): string {
-  return "1=1";
-}
-
 export function testModeCookieOptions(enabled: boolean): {
   httpOnly: boolean;
   sameSite: "lax" | "none";
