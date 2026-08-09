@@ -1012,13 +1012,13 @@ export function TerminarzClient({
                         </span>
                       </span>
                     </Button>
-                  ) : (
+                  ) : hotpayEnabled ? (
                     <Button
                       size="sm"
                       variant="ghost"
                       className={actionBtnPrimary}
                       disabled={matchPayBusyId != null || debtBusy}
-                      title={hotpayEnabled ? "Opłać przez HotPay" : "Opłać z portfela"}
+                      title="Opłać przez HotPay"
                       onClick={() => void payMatchFee(m.id)}
                     >
                       {matchPayBusyId === m.id ? (
@@ -1031,13 +1031,12 @@ export function TerminarzClient({
                         <span className="mt-1 block text-[11px] font-normal leading-snug text-emerald-100/95">
                           {(() => {
                             const fee = perPersonMatchFeePln(m.fee_pln, m.signed_up);
-                            const via = hotpayEnabled ? "HotPay" : "portfel";
-                            return fee != null ? `${formatMatchFeePln(fee)} · ${via}` : via;
+                            return fee != null ? `${formatMatchFeePln(fee)} · HotPay` : "HotPay";
                           })()}
                         </span>
                       </span>
                     </Button>
-                  )
+                  ) : null
                 ) : null}
               </>
             )

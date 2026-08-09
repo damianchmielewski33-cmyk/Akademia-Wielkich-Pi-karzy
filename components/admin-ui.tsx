@@ -221,8 +221,8 @@ export function AdminShell({
           }}
           aria-hidden
         />
-        <div className="relative flex flex-col gap-3 p-3 xs:p-4 lg:sticky lg:top-0 lg:max-h-screen lg:gap-5 lg:overflow-y-auto lg:pt-[max(1rem,env(safe-area-inset-top))]">
-          <div className="flex items-center gap-3 border-b border-white/15 pb-3 lg:pb-4">
+        <div className="relative flex flex-col gap-3 p-3 xs:p-4 lg:sticky lg:top-0 lg:h-screen lg:max-h-screen lg:gap-3 lg:overflow-hidden lg:pt-[max(1rem,env(safe-area-inset-top))] lg:pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+          <div className="flex shrink-0 items-center gap-3 border-b border-white/15 pb-3 lg:pb-4">
             <span className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/10 shadow-inner ring-1 ring-[var(--mundial-gold)]/40 xs:h-11 xs:w-11">
               <SiteAssetImage
                 asset="logo_crest"
@@ -239,11 +239,11 @@ export function AdminShell({
             </div>
           </div>
 
-          {searchSlot ? <div className="relative z-40">{searchSlot}</div> : null}
+          {searchSlot ? <div className="relative z-40 shrink-0">{searchSlot}</div> : null}
 
           {/* Mobile: always-visible shortcuts */}
           {mobileShortcuts && mobileShortcuts.length > 0 ? (
-            <div className="flex gap-1.5 lg:hidden" aria-label="Szybkie skróty">
+            <div className="flex shrink-0 gap-1.5 lg:hidden" aria-label="Szybkie skróty">
               {mobileShortcuts.map((s) => {
                 const active = activeTab === s.id;
                 return (
@@ -273,7 +273,7 @@ export function AdminShell({
           ) : null}
 
           {/* Mobile: category chips + tabs of active category */}
-          <div className="flex flex-col gap-2 lg:hidden">
+          <div className="flex shrink-0 flex-col gap-2 lg:hidden">
             <nav
               className="-mx-3 flex gap-1.5 overflow-x-auto overscroll-x-contain px-3 pb-0.5 [scrollbar-width:thin]"
               aria-label="Kategorie panelu admina"
@@ -322,8 +322,11 @@ export function AdminShell({
             ) : null}
           </div>
 
-          {/* Desktop: collapsible category groups */}
-          <nav className="hidden flex-col gap-1 lg:flex" aria-label="Zakładki panelu admina">
+          {/* Desktop: collapsible category groups (scroll independently) */}
+          <nav
+            className="hidden min-h-0 flex-1 flex-col gap-1 overflow-y-auto overscroll-contain [scrollbar-width:thin] lg:flex"
+            aria-label="Zakładki panelu admina"
+          >
             {navGroups.map((g) => {
               const isLabeled = Boolean(g.label);
               const isOpen = !isLabeled || openGroups[g.id];
@@ -371,7 +374,7 @@ export function AdminShell({
                     ) : null}
                   </button>
                   {isOpen ? (
-                    <div className="mt-0.5 space-y-0.5 border-l border-white/10 pl-2 ml-2">
+                    <div className="mt-0.5 ml-2 space-y-0.5 border-l border-white/10 pl-2">
                       {g.items.map((t) => (
                         <NavTabButton
                           key={t.id}
@@ -387,12 +390,13 @@ export function AdminShell({
             })}
           </nav>
 
-          <div className="relative z-10 flex flex-col gap-3 lg:mt-auto">
-            <div className="grid grid-cols-2 gap-2">
+          {/* Zawsze widoczne: tryb testowy / HotPay + stopka (nie scrollują się z menu) */}
+          <div className="relative z-10 flex shrink-0 flex-col gap-3 border-t border-white/20 pt-3">
+            <div className="flex flex-col gap-1.5">
               <AdminTestModeSidebarButton />
               <AdminHotpaySidebarButton />
             </div>
-            <div className="flex flex-wrap gap-1 border-t border-white/15 pt-3 lg:flex-col">
+            <div className="flex flex-wrap gap-1 lg:flex-col">
             <button
               type="button"
               onClick={() => void toggleTheme()}

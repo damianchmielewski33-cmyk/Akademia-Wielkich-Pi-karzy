@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 type State = { enabled: boolean; configured: boolean } | null;
 
 /**
- * Duży przełącznik płatności HotPay — boczny panel admina (obok trybu testowego).
+ * Przełącznik płatności HotPay — boczny panel admina.
  */
 export function AdminHotpaySidebarButton({ className }: { className?: string }) {
   const [state, setState] = useState<State>(null);
@@ -71,12 +71,12 @@ export function AdminHotpaySidebarButton({ className }: { className?: string }) 
     return (
       <div
         className={cn(
-          "flex min-h-[3.25rem] items-center justify-center rounded-2xl border border-white/15 bg-black/20 px-3 py-3 text-sm text-emerald-100/60",
+          "flex h-10 items-center justify-center rounded-lg border border-white/15 bg-black/20 text-emerald-100/60",
           className
         )}
         aria-hidden
       >
-        <Loader2 className="h-4 w-4 animate-spin" />
+        <Loader2 className="h-3.5 w-3.5 animate-spin" />
       </div>
     );
   }
@@ -89,11 +89,11 @@ export function AdminHotpaySidebarButton({ className }: { className?: string }) 
       disabled={busy || !state.configured}
       onClick={() => void toggle()}
       className={cn(
-        "awp-focus-ring group relative w-full overflow-hidden rounded-2xl border-2 px-3 py-3.5 text-left shadow-lg transition-[transform,box-shadow,background-color] active:translate-y-px",
+        "awp-focus-ring group relative flex h-10 w-full items-center gap-2 overflow-hidden rounded-lg border px-2.5 text-left shadow-sm transition-[transform,box-shadow,background-color] active:translate-y-px",
         "disabled:pointer-events-none disabled:opacity-60",
         on
-          ? "border-emerald-300/60 bg-gradient-to-br from-emerald-500/85 via-teal-600/90 to-emerald-900/95 text-white shadow-emerald-950/35 hover:brightness-110"
-          : "border-zinc-400/45 bg-gradient-to-br from-zinc-500/35 via-zinc-700/45 to-zinc-950/60 text-white shadow-black/30 hover:from-zinc-400/40",
+          ? "border-emerald-300/70 bg-gradient-to-br from-emerald-500 via-teal-600 to-emerald-900 text-white shadow-emerald-950/35 hover:brightness-110"
+          : "border-white/55 bg-white/95 text-[var(--mundial-navy,#0a1628)] shadow-black/25 hover:bg-white",
         className
       )}
       aria-pressed={on}
@@ -105,33 +105,29 @@ export function AdminHotpaySidebarButton({ className }: { className?: string }) 
             : "Włącz płatności u operatora HotPay"
       }
     >
-      <span className="relative flex items-start gap-2.5">
+      <span
+        className={cn(
+          "flex h-6 w-6 shrink-0 items-center justify-center rounded-md ring-1",
+          on ? "bg-black/25 ring-white/35" : "bg-black/5 ring-black/15"
+        )}
+      >
+        {busy ? (
+          <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+        ) : (
+          <CreditCard className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />
+        )}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-xs font-bold leading-none tracking-tight">
+          Płatności HotPay
+        </span>
         <span
           className={cn(
-            "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ring-2",
-            on ? "bg-black/25 ring-white/35" : "bg-black/25 ring-white/20"
+            "mt-0.5 block truncate text-[10px] font-semibold uppercase tracking-wide",
+            on ? "text-white/85" : "text-[var(--mundial-navy,#0a1628)]/70"
           )}
         >
-          {busy ? (
-            <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
-          ) : (
-            <CreditCard className="h-5 w-5" strokeWidth={2.25} aria-hidden />
-          )}
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="block text-[0.65rem] font-bold uppercase tracking-[0.14em] text-white/75">
-            {on ? "Włączone" : "Wyłączone"}
-          </span>
-          <span className="mt-0.5 block text-sm font-extrabold leading-tight tracking-tight sm:text-base">
-            Płatności HotPay
-          </span>
-          <span className="mt-1 block text-[11px] font-medium leading-snug text-white/85">
-            {!state.configured
-              ? "Brak kluczy API w env"
-              : on
-                ? "Kliknij, aby wyłączyć bramkę"
-                : "Kliknij, aby włączyć bramkę"}
-          </span>
+          {!state.configured ? "Brak kluczy API" : on ? "Włączone" : "Wyłączone"}
         </span>
       </span>
     </button>

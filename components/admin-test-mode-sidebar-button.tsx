@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 type State = { enabled: boolean; configured: boolean } | null;
 
 /**
- * Duży przełącznik trybu testowego — boczny panel admina.
+ * Przełącznik trybu testowego — boczny panel admina.
  */
 export function AdminTestModeSidebarButton({ className }: { className?: string }) {
   const [state, setState] = useState<State>(null);
@@ -76,12 +76,12 @@ export function AdminTestModeSidebarButton({ className }: { className?: string }
     return (
       <div
         className={cn(
-          "flex min-h-[3.25rem] items-center justify-center rounded-2xl border border-white/15 bg-black/20 px-3 py-3 text-sm text-emerald-100/60",
+          "flex h-10 items-center justify-center rounded-lg border border-white/15 bg-black/20 text-emerald-100/60",
           className
         )}
         aria-hidden
       >
-        <Loader2 className="h-4 w-4 animate-spin" />
+        <Loader2 className="h-3.5 w-3.5 animate-spin" />
       </div>
     );
   }
@@ -94,11 +94,11 @@ export function AdminTestModeSidebarButton({ className }: { className?: string }
       disabled={busy || !state.configured}
       onClick={() => void toggle()}
       className={cn(
-        "awp-focus-ring group relative w-full overflow-hidden rounded-2xl border-2 px-3 py-3.5 text-left shadow-lg transition-[transform,box-shadow,background-color] active:translate-y-px",
+        "awp-focus-ring group relative flex h-10 w-full items-center gap-2 overflow-hidden rounded-lg border px-2.5 text-left shadow-sm transition-[transform,box-shadow,background-color] active:translate-y-px",
         "disabled:pointer-events-none disabled:opacity-60",
         on
-          ? "border-amber-300/70 bg-gradient-to-br from-amber-500/90 via-orange-600/95 to-red-700/90 text-white shadow-amber-950/40 hover:brightness-110"
-          : "border-[var(--mundial-gold,#f5c518)]/55 bg-gradient-to-br from-[var(--mundial-gold,#f5c518)]/25 via-amber-700/30 to-emerald-950/40 text-white shadow-black/30 hover:from-[var(--mundial-gold,#f5c518)]/35 hover:via-amber-600/35",
+          ? "border-amber-300/80 bg-gradient-to-br from-amber-500 via-orange-600 to-red-700 text-white shadow-amber-950/40 hover:brightness-110"
+          : "border-[var(--mundial-gold,#f5c518)] bg-[var(--mundial-gold,#f5c518)]/90 text-[var(--mundial-navy,#0a1628)] shadow-black/25 hover:bg-[var(--mundial-gold,#f5c518)]",
         className
       )}
       aria-pressed={on}
@@ -110,31 +110,29 @@ export function AdminTestModeSidebarButton({ className }: { className?: string }
             : "Włącz tryb testowy"
       }
     >
-      <span className="relative flex items-start gap-2.5">
+      <span
+        className={cn(
+          "flex h-6 w-6 shrink-0 items-center justify-center rounded-md ring-1",
+          on ? "bg-black/25 ring-white/35" : "bg-black/10 ring-black/20"
+        )}
+      >
+        {busy ? (
+          <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+        ) : (
+          <FlaskConical className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />
+        )}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-xs font-bold leading-none tracking-tight">
+          Tryb testowy
+        </span>
         <span
           className={cn(
-            "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ring-2",
-            on ? "bg-black/25 ring-white/35" : "bg-black/20 ring-[var(--mundial-gold,#f5c518)]/40"
+            "mt-0.5 block truncate text-[10px] font-semibold uppercase tracking-wide",
+            on ? "text-white/85" : "text-[var(--mundial-navy,#0a1628)]/75"
           )}
         >
-          {busy ? (
-            <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
-          ) : (
-            <FlaskConical className="h-5 w-5" strokeWidth={2.25} aria-hidden />
-          )}
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="block text-[0.65rem] font-bold uppercase tracking-[0.14em] text-white/75">
-            {on ? "Aktywny" : "Wyłączony"}
-          </span>
-          <span className="mt-0.5 block text-sm font-extrabold leading-tight tracking-tight sm:text-base">
-            Tryb testowy
-          </span>
-          <span className="mt-1 block text-[11px] font-medium leading-snug text-white/85">
-            {on
-              ? "Kliknij, aby wyłączyć i skasować dane testowe"
-              : "Kliknij, aby włączyć — nowe dane z flagą is_test"}
-          </span>
+          {on ? "Aktywny" : "Wyłączony"}
         </span>
       </span>
     </button>
