@@ -26,6 +26,21 @@ export function resolveDatabaseFilePath(): string {
   return path.join(process.cwd(), "data", "database.db");
 }
 
+/** Osobny plik SQLite dla trybu testowego admina (gdy brak TURSO_TEST_*). */
+export function resolveTestDatabaseFilePath(): string {
+  if (process.env.DATABASE_TEST_PATH) {
+    const raw = process.env.DATABASE_TEST_PATH;
+    if (path.isAbsolute(raw)) {
+      return raw;
+    }
+    return path.resolve(process.cwd(), raw);
+  }
+  if (isVercel()) {
+    return path.join(os.tmpdir(), TMP_APP, "database-test.db");
+  }
+  return path.join(process.cwd(), "data", "database-test.db");
+}
+
 export function profileUploadsDir(): string {
   if (isVercel()) {
     return path.join(os.tmpdir(), TMP_APP, "public", "uploads", "profiles");

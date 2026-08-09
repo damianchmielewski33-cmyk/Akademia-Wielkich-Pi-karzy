@@ -17,6 +17,7 @@ import android.webkit.WebViewClient
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -58,6 +59,28 @@ private fun normalizeSiteBase(): String {
     return if (raw.endsWith("/")) raw.dropLast(1) else raw
 }
 
+/** tel/mailto/intent itd. — Custom Tabs lub systemowy handler. */
+private fun openExternalUri(ctx: android.content.Context, uri: Uri): Boolean {
+    return try {
+        if (uri.scheme.equals("http", true) || uri.scheme.equals("https", true)) {
+            CustomTabsIntent.Builder()
+                .setShowTitle(true)
+                .build()
+                .launchUrl(ctx, uri)
+        } else {
+            ctx.startActivity(Intent(Intent.ACTION_VIEW, uri))
+        }
+        true
+    } catch (_: ActivityNotFoundException) {
+        try {
+            ctx.startActivity(Intent(Intent.ACTION_VIEW, uri))
+            true
+        } catch (_: ActivityNotFoundException) {
+            false
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
@@ -74,6 +97,7 @@ fun WebPortalScreen(
     var progress by remember { mutableFloatStateOf(0f) }
     var error by remember { mutableStateOf<String?>(null) }
     var startUrl by remember { mutableStateOf<String?>(null) }
+    var loadedStartUrl by remember { mutableStateOf<String?>(null) }
     var webView by remember { mutableStateOf<WebView?>(null) }
     var fileCallback by remember { mutableStateOf<ValueCallback<Array<Uri>>?>(null) }
 
@@ -89,6 +113,7 @@ fun WebPortalScreen(
         loading = true
         error = null
         startUrl = null
+        loadedStartUrl = null
         try {
             if (requireAuth) {
                 val bridge = ApiClient.api.appBridge(AppBridgeRequest(next = path))
@@ -109,6 +134,16 @@ fun WebPortalScreen(
             error = e.message ?: "Brak połączenia z serwerem"
         } finally {
             loading = false
+        }
+    }
+
+    // Deep link / zmiana path: ładuj nowy startUrl, ale nie wracaj z HotPay mid-flow przy rekompozycji.
+    LaunchedEffect(startUrl, webView) {
+        val target = startUrl ?: return@LaunchedEffect
+        val wv = webView ?: return@LaunchedEffect
+        if (loadedStartUrl != target) {
+            loadedStartUrl = target
+            wv.loadUrl(target)
         }
     }
 
@@ -224,19 +259,13 @@ fun WebPortalScreen(
                                     request: WebResourceRequest
                                 ): Boolean {
                                     val uri = request.url
-                                    val host = uri.host
-                                    val siteHost = Uri.parse(siteBase).host
-                                    if (host != null && siteHost != null &&
-                                        host.equals(siteHost, ignoreCase = true)
-                                    ) {
+                                    val scheme = uri.scheme?.lowercase().orEmpty()
+                                    // HotPay + 3DS banków muszą zostać w WebView — inaczej
+                                    // łańcuch redirectów (Custom Tabs / Chrome) nie wraca z session_id.
+                                    if (scheme == "http" || scheme == "https") {
                                         return false
                                     }
-                                    return try {
-                                        ctx.startActivity(Intent(Intent.ACTION_VIEW, uri))
-                                        true
-                                    } catch (_: ActivityNotFoundException) {
-                                        false
-                                    }
+                                    return openExternalUri(ctx, uri)
                                 }
 
                                 override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
@@ -281,21 +310,13 @@ fun WebPortalScreen(
                                     }
                                 }
                             }
-                            loadUrl(startUrl!!)
+                            // startUrl ładuje LaunchedEffect — nie tu, żeby nie zabić sesji HotPay przy rekompozycji.
                             webView = this
                         }
                     },
                     modifier = Modifier.fillMaxSize(),
                     update = { view ->
                         webView = view
-                        val target = startUrl
-                        if (target != null) {
-                            val current = view.url.orEmpty()
-                            // Przeładuj tylko gdy zmienił się docelowy mostek / ścieżka startowa.
-                            if (!current.contains(path) && current != target) {
-                                view.loadUrl(target)
-                            }
-                        }
                     }
                 )
             }

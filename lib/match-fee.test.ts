@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { ceilToHalfPln, perPersonMatchFeePln } from "@/lib/match-fee";
+import {
+  ceilToHalfPln,
+  matchCartRoundingMarkupPln,
+  matchChargeRoundingMarkupPln,
+  perPersonFeeRoundingMarkupPln,
+  perPersonMatchFeePln,
+} from "@/lib/match-fee";
 
 describe("ceilToHalfPln", () => {
   it("keeps exact half-złoty amounts", () => {
@@ -32,5 +38,28 @@ describe("perPersonMatchFeePln", () => {
     expect(perPersonMatchFeePln(null, 5)).toBeNull();
     expect(perPersonMatchFeePln(100, 0)).toBeNull();
     expect(perPersonMatchFeePln(undefined, 3)).toBeNull();
+  });
+});
+
+describe("perPersonFeeRoundingMarkupPln", () => {
+  it("returns difference between ceil fee and exact split", () => {
+    // 100/7 ≈ 14.2857 → 14.50, markup ≈ 0.21
+    expect(perPersonFeeRoundingMarkupPln(100, 7)).toBe(0.21);
+    // exact half — no markup
+    expect(perPersonFeeRoundingMarkupPln(90, 10)).toBe(0);
+  });
+});
+
+describe("matchChargeRoundingMarkupPln", () => {
+  it("credits only when charge matches standard ceil fee", () => {
+    expect(matchChargeRoundingMarkupPln(14.5, 100, 7)).toBe(0.21);
+    expect(matchChargeRoundingMarkupPln(20, 100, 7)).toBe(0); // manual amount
+  });
+});
+
+describe("matchCartRoundingMarkupPln", () => {
+  it("multiplies per-person markup by beneficiary count", () => {
+    expect(matchCartRoundingMarkupPln(100, 7, 3)).toBe(0.63);
+    expect(matchCartRoundingMarkupPln(90, 10, 2)).toBe(0);
   });
 });

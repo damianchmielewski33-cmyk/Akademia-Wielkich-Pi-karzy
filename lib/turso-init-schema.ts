@@ -16,6 +16,7 @@ async function pragmaColumnNames(
     | "standalone_match_stats"
     | "admin_messages"
     | "wallet_transactions"
+    | "wallet_deposit_requests"
     | "hotpay_payments"
 ): Promise<string[]> {
   const rs = await client.execute(`PRAGMA table_info(${table})`);
@@ -563,9 +564,25 @@ export async function initLibsqlSchema(client: Client) {
     }
   }
 
+  const walletTxCols = await pragmaColumnNames(client, "wallet_transactions");
+  if (walletTxCols.length > 0 && !walletTxCols.includes("wallet_kind")) {
+    await client.execute(
+      "ALTER TABLE wallet_transactions ADD COLUMN wallet_kind TEXT NOT NULL DEFAULT 'admin' CHECK (wallet_kind IN ('admin','operator'))"
+    );
+  }
+  const walletDrCols = await pragmaColumnNames(client, "wallet_deposit_requests");
+  if (walletDrCols.length > 0 && !walletDrCols.includes("wallet_kind")) {
+    await client.execute(
+      "ALTER TABLE wallet_deposit_requests ADD COLUMN wallet_kind TEXT NOT NULL DEFAULT 'admin' CHECK (wallet_kind IN ('admin','operator'))"
+    );
+  }
+
   const hotpayCols = await pragmaColumnNames(client, "hotpay_payments");
   if (hotpayCols.length > 0 && !hotpayCols.includes("cart_id")) {
     await client.execute("ALTER TABLE hotpay_payments ADD COLUMN cart_id INTEGER");
+  }
+  if (hotpayCols.length > 0 && !hotpayCols.includes("gross_amount_pln")) {
+    await client.execute("ALTER TABLE hotpay_payments ADD COLUMN gross_amount_pln REAL");
   }
   const hotpaySqlRs = await client.execute(
     `SELECT sql FROM sqlite_master WHERE type='table' AND name='hotpay_payments'`

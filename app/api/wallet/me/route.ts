@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { requireUser } from "@/lib/api-helpers";
 import { screenBlockApiResponse } from "@/lib/screen-block-api";
-import { getUserWalletBalancePln } from "@/lib/wallet";
+import { getWalletBalances } from "@/lib/wallet";
 
 export const runtime = "nodejs";
 
@@ -15,12 +15,12 @@ export async function GET(req: Request) {
 
   const db = await getDb();
   const userId = gate.session.userId;
-  const balance_pln = await getUserWalletBalancePln(userId);
+  const balances = await getWalletBalances(userId);
 
   const pending = await db
     .prepare(
       `
-      SELECT id, user_id, amount_pln, created_by, status, note,
+      SELECT id, user_id, amount_pln, created_by, status, wallet_kind, note,
              player_declared_at, admin_confirmed_received_at,
              admin_declared_received_at, player_confirmed_amount_at,
              completed_at, created_at
@@ -35,7 +35,7 @@ export async function GET(req: Request) {
     .prepare(
       `
       SELECT
-        id, user_id, kind, amount_pln, deposit_request_id, match_id, related_user_id, note, created_at,
+        id, user_id, kind, amount_pln, wallet_kind, deposit_request_id, match_id, related_user_id, note, created_at,
         SUM(amount_pln) OVER (
           PARTITION BY user_id
           ORDER BY datetime(created_at) ASC, id ASC
@@ -49,6 +49,11 @@ export async function GET(req: Request) {
     )
     .all(userId);
 
-  return NextResponse.json({ balance_pln, pending, transactions: tx });
+  return NextResponse.json({
+    balance_pln: balances.total,
+    admin_balance_pln: balances.admin,
+    operator_balance_pln: balances.operator,
+    pending,
+    transactions: tx,
+  });
 }
-

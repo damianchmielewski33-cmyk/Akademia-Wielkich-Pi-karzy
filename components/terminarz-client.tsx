@@ -66,13 +66,14 @@ import { z } from "zod";
 import { TerminarzMatchCard } from "@/components/terminarz-match-card";
 import { MatchSignupCountsBlock } from "@/components/terminarz-match-counts";
 import { appendShareSessionQuery, terminarzInviteRelativePath } from "@/lib/share-link";
-import { useAsyncAction } from "@/lib/use-async-action";
-import {
+import { useAsyncAction } from "@/lib/use-async-action";import {
   getStandaloneSurveyMatchRow,
   PARTICIPATION_SURVEY_KEY,
 } from "@/lib/match-participation-survey";
 import type { CaptainLotteryEntry } from "@/lib/captain-lottery";
 import { captainLotteryEntryFromApi } from "@/lib/captain-lottery";
+import { useHotpayPayment } from "@/hooks/use-hotpay-payment";
+import { PayButton } from "@/components/pay-button";
 import { hasMatchTimePassed } from "@/lib/transport";
 
 type Props = {
@@ -103,6 +104,7 @@ type Props = {
   cancelReasons?: { value: string; label: string }[];
   captainLotteryData?: Record<number, CaptainLotteryEntry>;
   captainLotteryHistory?: Record<number, CaptainLotteryEntry[]>;
+  hotpayEnabled?: boolean;
 };
 
 const todayISO = () => new Date().toISOString().slice(0, 10);
@@ -204,8 +206,11 @@ export function TerminarzClient({
   cancelReasons,
   captainLotteryData: initialCaptainLotteryData = {},
   captainLotteryHistory: initialCaptainLotteryHistory = {},
+  hotpayEnabled = false,
 }: Props) {
   const router = useRouter();
+  const [walletBalancePln, setWalletBalancePln] = useState<number | null>(null);
+  const { pay: payDebt, busy: debtBusy } = useHotpayPayment();
   const [view, setView] = useState<"list" | "cal">("list");
   const [listTab, setListTab] = useState<"active" | "archive">("active");
   const [filter, setFilter] = useState("all");
@@ -303,6 +308,15 @@ export function TerminarzClient({
       setAttendanceBusy(false);
     }
   }, [isAdmin]);
+
+  useEffect(() => {
+    if (!isLoggedIn || !hotpayEnabled) return;
+    fetch("/api/wallet/me")
+      .then((r) => r.json() as Promise<{ balance_pln?: unknown }>)
+      .then((d) => setWalletBalancePln(Number(d.balance_pln ?? 0)))
+      .catch(() => void 0);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoggedIn, hotpayEnabled]);
 
   useEffect(() => {
     if (highlightMatchId) setView("list");
@@ -893,11 +907,22 @@ export function TerminarzClient({
           <>
           {kind === "confirmed" ? (
             past ? (
-              <ActionNotice tone="muted">
-                <strong className="font-semibold text-zinc-800 dark:text-zinc-100">Jesteś na liście zapisanych.</strong>{" "}
-                Po upływie
-                terminu meczu wypisu z poziomu aplikacji nie ma — w razie potrzeby napisz do administratora.
-              </ActionNotice>
+              <>
+                <ActionNotice tone="muted">
+                  <strong className="font-semibold text-zinc-800 dark:text-zinc-100">Jesteś na liście zapisanych.</strong>{" "}
+                  Po upływie
+                  terminu meczu wypisu z poziomu aplikacji nie ma — w razie potrzeby napisz do administratora.
+                </ActionNotice>
+                {hotpayEnabled && walletBalancePln !== null && walletBalancePln < 0 ? (
+                  <PayButton
+                    variant="action"
+                    amountPln={walletBalancePln}
+                    label="Opłać zaległość za mecz"
+                    busy={debtBusy}
+                    onClick={() => void payDebt(Math.abs(walletBalancePln))}
+                  />
+                ) : null}
+              </>
             ) : (
               <>
                 <Button
@@ -916,21 +941,30 @@ export function TerminarzClient({
                   </span>
                 </Button>
                 {m.cancelled !== 1 && isConfirmedUnpaidForUser(playersData, m.id, currentUserId) ? (
-                  <Button size="sm" variant="ghost" className={actionBtnPrimary} asChild>
-                    <Link
-                      href={`/platnosci?mecz=${m.id}`}
-                      title="Przejdź do płatności z tym meczem w koszyku"
-                    >
-                      <Wallet className="shrink-0" aria-hidden />
-                      <span>
-                        <span className="block leading-tight">Opłać ten mecz</span>
-                        <span className="mt-1 block text-[11px] font-normal leading-snug text-emerald-100/95">
-                          Portfel lub HotPay — otworzy koszyk na stronie Płatności
+                  hotpayEnabled && walletBalancePln !== null && walletBalancePln < 0 ? (
+                    <PayButton
+                      variant="action"
+                      amountPln={walletBalancePln}
+                      label="Opłać zaległość"
+                      busy={debtBusy}
+                      onClick={() => void payDebt(Math.abs(walletBalancePln))}
+                    />
+                  ) : (
+                    <Button size="sm" variant="ghost" className={actionBtnPrimary} asChild>
+                      <Link
+                        href={`/platnosci?mecz=${m.id}`}
+                        title="Przejdź do płatności z tym meczem w koszyku"
+                      >
+                        <Wallet className="shrink-0" aria-hidden />
+                        <span>
+                          <span className="block leading-tight">Opłać ten mecz</span>
+                          <span className="mt-1 block text-[11px] font-normal leading-snug text-emerald-100/95">
+                            Przejdź do strony Płatności
+                          </span>
                         </span>
-                      </span>
-                    </Link>
-                  </Button>
-                ) : null}
+                      </Link>
+                    </Button>
+                  )                ) : null}
               </>
             )
           ) : kind === "tentative" ? (
@@ -945,7 +979,7 @@ export function TerminarzClient({
                 <ActionNotice tone="info">
                   <strong className="font-semibold text-emerald-900 dark:text-emerald-100">Jeszcze nie wiem</strong> — nie
                   zajmujesz miejsca w
-                  składzie. Gdy potwierdzisz, wybierzesz też transport.
+                  składzie. Gdy potwierdzisz{hotpayEnabled ? "" : ", wybierzesz też transport"}.
                 </ActionNotice>
                 {free > 0 ? (
                   <Button
@@ -997,7 +1031,7 @@ export function TerminarzClient({
               <>
                 <ActionNotice tone="muted">
                   <strong className="font-semibold text-zinc-800 dark:text-zinc-100">Nie bierzesz udziału</strong> w tym
-                  terminie — nie zajmujesz miejsca w składzie. Gdy zmienisz zdanie, potwierdź udział i wybierz transport.
+                  terminie — nie zajmujesz miejsca w składzie. Gdy zmienisz zdanie, potwierdź udział{hotpayEnabled ? "" : " i wybierz transport"}.
                 </ActionNotice>
                 {free > 0 ? (
                   <Button
@@ -1805,8 +1839,10 @@ export function TerminarzClient({
                 {selectedData.players.map((p, i) => (
                   <li
                     key={`c-${p.userId}-${i}`}
-                    className={`flex flex-wrap items-center gap-2 border-b border-emerald-100/90 px-3 py-2.5 text-sm last:border-b-0 dark:border-emerald-800/50 ${
-                      i % 2 === 0 ? "bg-white/60 dark:bg-zinc-900/40" : "bg-emerald-50/40 dark:bg-emerald-950/30"
+                    className={`flex flex-wrap items-center gap-2 border-b px-3 py-2.5 text-sm last:border-b-0 ${
+                      p.paid
+                        ? "border-l-4 border-l-green-600 border-b-green-200/80 bg-green-100/90 dark:border-l-green-500 dark:border-b-green-800/50 dark:bg-green-950/45"
+                        : "border-l-4 border-l-red-600 border-b-red-200/80 bg-red-100/90 dark:border-l-red-500 dark:border-b-red-800/50 dark:bg-red-950/45"
                     }`}
                   >
                     <PlayerAvatar
@@ -1814,7 +1850,11 @@ export function TerminarzClient({
                       firstName={p.firstName}
                       lastName={p.lastName}
                       size="sm"
-                      ringClassName="ring-2 ring-emerald-200/90 dark:ring-emerald-700/80"
+                      ringClassName={
+                        p.paid
+                          ? "ring-2 ring-green-600 dark:ring-green-500"
+                          : "ring-2 ring-red-600 dark:ring-red-500"
+                      }
                     />
                     <div className="min-w-0 flex-1">
                       <PlayerNameStack
@@ -1824,11 +1864,13 @@ export function TerminarzClient({
                       />
                     </div>
                     {p.paid ? (
-                      <Badge className="border-emerald-200 bg-emerald-100 text-emerald-900 dark:border-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-100">
+                      <Badge className="border-green-700 bg-green-600 text-white shadow-sm dark:border-green-500 dark:bg-green-500 dark:text-green-950">
                         Opłacone
                       </Badge>
                     ) : (
-                      <Badge variant="secondary">Do zapłaty</Badge>
+                      <Badge className="border-red-700 bg-red-600 text-white shadow-sm dark:border-red-500 dark:bg-red-500 dark:text-red-950">
+                        Nieopłacone
+                      </Badge>
                     )}
                   </li>
                 ))}
@@ -2053,24 +2095,37 @@ export function TerminarzClient({
                 {settleRows.map((p) => (
                   <div
                     key={p.user_id}
-                    className="flex items-center gap-3 rounded-xl border border-emerald-900/10 bg-white px-3 py-2 dark:bg-zinc-900"
+                    className={cn(
+                      "flex items-center gap-3 rounded-xl border px-3 py-2",
+                      Number(p.paid) === 1
+                        ? "border-green-600/40 bg-green-100/90 dark:border-green-500/50 dark:bg-green-950/40"
+                        : "border-red-600/40 bg-red-100/90 dark:border-red-500/50 dark:bg-red-950/40"
+                    )}
                   >
                     <PlayerAvatar
                       photoPath={p.profile_photo_path}
                       firstName={p.first_name}
                       lastName={p.last_name}
                       size="sm"
-                      ringClassName="ring-2 ring-emerald-200/90"
+                      ringClassName={
+                        Number(p.paid) === 1
+                          ? "ring-2 ring-green-600 dark:ring-green-500"
+                          : "ring-2 ring-red-600 dark:ring-red-500"
+                      }
                     />
                     <div className="min-w-0 flex-1">
                       <PlayerNameStack firstName={p.first_name} lastName={p.last_name} nick={p.zawodnik} />
                       <p className="mt-0.5 text-xs text-zinc-500">
                         ID: {p.user_id}
                         {Number(p.paid) === 1 ? (
-                          <span className="ml-2 font-medium text-emerald-700 dark:text-emerald-300">
-                            · Opłacony (koszyk / flaga)
+                          <span className="ml-2 font-bold text-green-700 dark:text-green-400">
+                            · Opłacony
                           </span>
-                        ) : null}
+                        ) : (
+                          <span className="ml-2 font-bold text-red-700 dark:text-red-400">
+                            · Nieopłacony
+                          </span>
+                        )}
                       </p>
                     </div>
                     <div className="w-32">
@@ -2228,6 +2283,7 @@ export function TerminarzClient({
           }}
           matchId={transportSignupMatchId}
           intent={transportSignupIntent === "confirm" ? "confirm" : "signup"}
+          hotpayEnabled={hotpayEnabled}
           onCompleted={() => {
             router.refresh();
           }}

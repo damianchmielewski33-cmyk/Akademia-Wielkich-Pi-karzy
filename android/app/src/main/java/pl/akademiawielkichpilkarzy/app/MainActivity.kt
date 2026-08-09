@@ -23,7 +23,7 @@ class MainActivity : FragmentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        deepLinkPathState.value = intent.invitePathOrNull()
+        deepLinkPathState.value = intent.deepLinkPathOrNull()
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
             navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
@@ -35,7 +35,8 @@ class MainActivity : FragmentActivity() {
                     val token by AwpApp.instance.sessionStore.tokenFlow.collectAsState(initial = null)
                     val deepLinkPath = deepLinkPathState.value
                     if (token.isNullOrBlank()) {
-                        if (deepLinkPath != null) {
+                        // Zaproszenia działają bez sesji; /platnosci wymaga logowania (potem MainScaffold dostaje path).
+                        if (deepLinkPath?.startsWith("/zaproszenie") == true) {
                             WebPortalScreen(
                                 title = "Zaproszenie",
                                 path = deepLinkPath,
@@ -59,12 +60,15 @@ class MainActivity : FragmentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        deepLinkPathState.value = intent.invitePathOrNull()
+        deepLinkPathState.value = intent.deepLinkPathOrNull()
     }
 
-    private fun Intent?.invitePathOrNull(): String? {
+    /** App Links: zaproszenia oraz powrót z HotPay na /platnosci. */
+    private fun Intent?.deepLinkPathOrNull(): String? {
         val uri = this?.data ?: return null
-        val path = uri.encodedPath?.takeIf { it.startsWith("/zaproszenie") } ?: return null
+        val path = uri.encodedPath?.takeIf {
+            it.startsWith("/zaproszenie") || it.startsWith("/platnosci")
+        } ?: return null
         val query = uri.encodedQuery?.takeIf { it.isNotBlank() }?.let { "?$it" }.orEmpty()
         return path + query
     }

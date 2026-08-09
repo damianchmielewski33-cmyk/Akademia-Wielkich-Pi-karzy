@@ -6,6 +6,8 @@ import { REALMS } from "@/lib/realm";
 import { formatPonderingPlayersPolish } from "@/lib/terminarz-shared";
 import { parseYoutubeVideoIdFromUserInput } from "@/lib/site";
 import { isLocalMatchDay } from "@/lib/transport";
+import { getAppSettings } from "@/lib/app-settings";
+import { isHotpayConfigured } from "@/lib/hotpay";
 
 export type HomePageClientProps = {
   nextMatch: MatchRow | null;
@@ -13,6 +15,7 @@ export type HomePageClientProps = {
   lineupPublicNextMatch: boolean;
   nextMatchSignup: "none" | "tentative" | "confirmed" | "declined";
   transportHomeActive: boolean;
+  hotpayEnabled: boolean;
   isLoggedIn: boolean;
   isAdmin: boolean;
   firstName: string;
@@ -91,12 +94,16 @@ export async function getHomePageClientProps(
   const topRankedPlayers =
     options?.pageVariant === "pzu-cup" ? [] : await getHomeTopPlayers(3);
 
+  const appSettings = await getAppSettings(db);
+  const hotpayEnabled = isHotpayConfigured() && appSettings.hotpay_enabled;
+
   return {
     nextMatch: nextMatchForClient,
     nextMatchTentativeLine,
     lineupPublicNextMatch,
     nextMatchSignup,
     transportHomeActive,
+    hotpayEnabled,
     isLoggedIn: Boolean(session),
     isAdmin: session?.isAdmin ?? false,
     firstName: session?.firstName ?? "",

@@ -71,6 +71,37 @@ export function formatHotpayAmount(amountPln: number): string {
   return n.toFixed(2);
 }
 
+/**
+ * Oblicza kwotę brutto (do operatora) z kwoty netto.
+ *
+ * Wzór bazowy: gross = ⌈ (net + fixed) / (1 − pct/100) × 100 ⌉ / 100
+ *
+ * `commissionOffsetPln` — kwota odjęta od prowizji zawodnika (np. zawyżenie składki
+ * meczu do pełnych 0,50 zł). Nie może obniżyć brutto poniżej netto.
+ *
+ * Gdy pct = 0 i fixed = 0 → gross = net (bez powiększania).
+ */
+export function grossUpHotpayAmount(
+  netPln: number,
+  commissionPct: number,
+  commissionFixedPln: number,
+  commissionOffsetPln = 0
+): number {
+  if ((commissionPct <= 0 || !Number.isFinite(commissionPct)) && commissionFixedPln <= 0) {
+    return netPln;
+  }
+  const pct = Math.max(0, Math.min(commissionPct, 99)); // 0–99%
+  const fixed = Math.max(0, commissionFixedPln);
+  const rate = pct / 100;
+  const rawGross = Math.ceil(((netPln + fixed) / (1 - rate)) * 100) / 100;
+  const commission = Math.round((rawGross - netPln) * 100) / 100;
+  const offset = Math.min(
+    Math.max(0, Number.isFinite(commissionOffsetPln) ? commissionOffsetPln : 0),
+    commission
+  );
+  return Math.round((netPln + commission - offset) * 100) / 100;
+}
+
 export function buildInitHash(args: {
   notificationPassword: string;
   amount: string;
@@ -206,10 +237,16 @@ export function isHotpayNotificationIp(ip: string | null | undefined): boolean {
   return (HOTPAY_NOTIFICATION_IPS as readonly string[]).includes(cleaned);
 }
 
-export function createHotpaySessionId(userId: number): string {
+export function createHotpaySessionId(userId: number, opts?: { testMode?: boolean }): string {
   const suffix = randomBytes(6).toString("hex");
-  const id = `hp_${userId}_${Date.now()}_${suffix}`;
+  const prefix = opts?.testMode ? "hp_t_" : "hp_";
+  const id = `${prefix}${userId}_${Date.now()}_${suffix}`;
   return id.slice(0, 64);
+}
+
+/** Prefiks sesji z trybu testowego admina — webhook księguje na bazie testowej. */
+export function isHotpayTestSessionId(sessionId: string): boolean {
+  return sessionId.startsWith("hp_t_");
 }
 
 export function buildHotpayReturnUrl(sessionId: string, paymentHint: "pending" | "error" = "pending"): string {

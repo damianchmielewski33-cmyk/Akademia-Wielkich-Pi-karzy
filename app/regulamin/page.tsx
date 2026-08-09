@@ -22,6 +22,18 @@ export default async function RegulaminPage() {
   const siteName = settings.site_name;
   const siteUrl = getSiteUrl();
 
+  const hasCommission =
+    (settings.hotpay_commission_pct > 0 || settings.hotpay_commission_fixed > 0);
+
+  // Przykład prowizji dla kwoty 50 PLN
+  const exampleNet = 50;
+  const pct = settings.hotpay_commission_pct;
+  const fixed = settings.hotpay_commission_fixed;
+  const exampleGross =
+    hasCommission
+      ? Math.ceil(((exampleNet + fixed) / (1 - pct / 100)) * 100) / 100
+      : exampleNet;
+
   return (
     <div className="awp-page awp-page--narrow">
       <PitchPageHero
@@ -37,7 +49,7 @@ export default async function RegulaminPage() {
       <PitchCard className="mt-8 text-left" contentClassName="p-6 sm:p-8">
         <span className={pitchLabelClass}>Regulamin</span>
         <div className="mt-4 space-y-5 text-sm leading-relaxed text-emerald-100/90">
-          <p className="text-xs text-emerald-100/70">Ostatnia aktualizacja: 7 sierpnia 2026</p>
+          <p className="text-xs text-emerald-100/70">Ostatnia aktualizacja: 9 sierpnia 2026</p>
 
           <section>
             <h2 className="pitch-heading text-lg">1. Postanowienia ogólne</h2>
@@ -191,6 +203,31 @@ export default async function RegulaminPage() {
                 cena / kwota do zapłaty jest przedstawiana przed rozpoczęciem płatności; kwoty są
                 wyrażone w PLN;
               </li>
+              {hasCommission && (
+                <li>
+                  <strong className="text-white">prowizja operatora płatności</strong> —
+                  kwota przekazywana do bramki płatniczej jest{" "}
+                  <strong className="text-white">wyższa</strong> niż kwota księgowana na portfelu,
+                  ponieważ zawiera koszt obsługi płatności online (prowizję operatora). Różnica ta
+                  nie jest zwracana — stanowi koszt realizacji płatności kartą / BLIK online.
+                  {pct > 0 && fixed > 0 && (
+                    <>
+                      {" "}Prowizja wynosi {pct.toFixed(pct % 1 === 0 ? 0 : 2)}% +{" "}
+                      {fixed.toFixed(2).replace(".", ",")} zł.{" "}
+                    </>
+                  )}
+                  {pct > 0 && fixed === 0 && (
+                    <> Prowizja wynosi {pct.toFixed(pct % 1 === 0 ? 0 : 2)}% kwoty. </>
+                  )}
+                  {pct === 0 && fixed > 0 && (
+                    <> Prowizja wynosi {fixed.toFixed(2).replace(".", ",")} zł (kwota stała). </>
+                  )}
+                  Przykład: aby zaksięgować{" "}
+                  <strong className="text-white">{exampleNet},00 zł</strong> na portfelu, kwota
+                  pobrana w bramce płatniczej wyniesie{" "}
+                  <strong className="text-white">{exampleGross.toFixed(2).replace(".", ",")} zł</strong>;
+                </li>
+              )}
               <li>
                 w razie problemów z płatnością użytkownik powinien skontaktować się z organizatorem
                 (e-mail powyżej) oraz — w razie potrzeby — z obsługą HotPay.
@@ -277,7 +314,40 @@ export default async function RegulaminPage() {
           </section>
 
           <section>
-            <h2 className="pitch-heading text-lg">10. Dane osobowe</h2>
+            <h2 className="pitch-heading text-lg">10. Wizerunek i media społecznościowe</h2>
+            <p className="mt-2">
+              Uczestnicząc w meczach i aktywnościach organizowanych przez akademię, zawodnik
+              wyraża zgodę na nieodpłatne utrwalenie i rozpowszechnianie swojego wizerunku
+              (zdjęcia, nagrania wideo) wykonanego podczas tych wydarzeń.
+            </p>
+            <ul className="mt-2 list-disc space-y-1.5 pl-5">
+              <li>
+                materiały mogą być publikowane na profilu akademii w serwisach społecznościowych,
+                w tym na <strong className="text-white">Instagramie</strong>, w celu dokumentacji
+                rozgrywek i promocji akademii;
+              </li>
+              <li>
+                wizerunek nie będzie wykorzystywany w celach komercyjnych na rzecz podmiotów
+                trzecich bez odrębnej zgody zawodnika;
+              </li>
+              <li>
+                zawodnik, który nie wyraża zgody na publikację swojego wizerunku, powinien
+                poinformować o tym organizatora przed lub podczas wydarzenia — na adres e-mail:{" "}
+                <a className="pitch-link" href={`mailto:${email}`}>
+                  {email}
+                </a>
+                ; organizator dołoży starań, aby materiały z wizerunkiem tej osoby nie były
+                publikowane;
+              </li>
+              <li>
+                w sprawach dotyczących usunięcia już opublikowanych materiałów z wizerunkiem
+                zawodnik może zwrócić się do organizatora na ww. adres e-mail.
+              </li>
+            </ul>
+          </section>
+
+          <section>
+            <h2 className="pitch-heading text-lg">11. Dane osobowe</h2>
             <p className="mt-2">
               Zasady przetwarzania danych osobowych określa{" "}
               <Link className="pitch-link" href="/polityka-prywatnosci">
@@ -292,7 +362,7 @@ export default async function RegulaminPage() {
           </section>
 
           <section>
-            <h2 className="pitch-heading text-lg">11. Zmiany regulaminu</h2>
+            <h2 className="pitch-heading text-lg">12. Zmiany regulaminu</h2>
             <p className="mt-2">
               Organizator może zmienić Regulamin z ważnych przyczyn (zmiany prawa, zmiana sposobu
               płatności, rozwój Serwisu). Aktualna treść jest zawsze dostępna pod adresem{" "}
@@ -304,7 +374,7 @@ export default async function RegulaminPage() {
           </section>
 
           <section>
-            <h2 className="pitch-heading text-lg">12. Postanowienia końcowe</h2>
+            <h2 className="pitch-heading text-lg">13. Postanowienia końcowe</h2>
             <p className="mt-2">
               W sprawach nieuregulowanych zastosowanie mają przepisy prawa polskiego. Ewentualne
               spory strony będą starały się rozwiązać polubownie, a w razie braku porozumienia —

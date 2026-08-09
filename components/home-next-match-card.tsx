@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Calendar, Car, Clock, HelpCircle, KeyRound, LayoutGrid, MapPin, Wallet } from "lucide-react";
+import { Calendar, Car, Clock, HelpCircle, KeyRound, LayoutGrid, Loader2, MapPin, Wallet } from "lucide-react";
 import { SiteAssetImage } from "@/components/site-asset-image";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,6 +14,7 @@ import { MatchLocationWeather } from "@/components/match-location-weather";
 import { cn, isValidMatchFee } from "@/lib/utils";
 import { formatMatchFeePln, perPersonMatchFeePln } from "@/lib/match-fee";
 import type { MatchRow } from "@/lib/db";
+import { PayButton } from "@/components/pay-button";
 
 type SignupState = "none" | "tentative" | "confirmed" | "declined";
 
@@ -23,8 +24,12 @@ type Props = {
   lineupPublic: boolean;
   signup: SignupState;
   transportActive: boolean;
+  hotpayEnabled?: boolean;
   isLoggedIn: boolean;
   tentativeBusy: boolean;
+  walletBalancePln?: number | null;
+  debtBusy?: boolean;
+  onPayDebt?: (amount: number) => void;
   onSignup: () => void;
   onTentative: () => void;
   onDeclined: () => void;
@@ -57,8 +62,12 @@ export function HomeNextMatchCard({
   lineupPublic,
   signup,
   transportActive,
+  hotpayEnabled = false,
   isLoggedIn,
   tentativeBusy,
+  walletBalancePln = null,
+  debtBusy = false,
+  onPayDebt,
   onSignup,
   onTentative,
   onDeclined,
@@ -286,7 +295,20 @@ export function HomeNextMatchCard({
           )}
         </div>
 
-        {isLoggedIn && signup === "confirmed" && (
+        {isLoggedIn && hotpayEnabled && walletBalancePln !== null && walletBalancePln < 0 && onPayDebt ? (
+          <div className="mx-auto mt-4 max-w-md space-y-2">
+            <span className={cn(pitchLabelClass, "block text-center")}>Zaległość</span>
+            <PayButton
+              variant="hero"
+              amountPln={walletBalancePln}
+              busy={debtBusy}
+              fullWidth
+              onClick={() => onPayDebt(Math.abs(walletBalancePln))}
+            />
+          </div>
+        ) : null}
+
+        {isLoggedIn && signup === "confirmed" && !hotpayEnabled && (
           <div className="mx-auto mt-4 max-w-md space-y-2">
             <span className={cn(pitchLabelClass, "block text-center")}>Transport</span>
             {transportActive ? (

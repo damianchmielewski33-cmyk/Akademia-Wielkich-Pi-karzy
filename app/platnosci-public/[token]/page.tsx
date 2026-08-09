@@ -6,6 +6,7 @@ import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { PayButton } from "@/components/pay-button";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
@@ -102,7 +103,11 @@ export default async function PlatnosciPublicPage(ctx: Ctx) {
       <Card className="border-emerald-900/10 shadow-sm">
         <CardHeader className="pb-2">
           <CardTitle className="text-lg">Salda</CardTitle>
-          <CardDescription>Ujemne saldo oznacza należność do uregulowania.</CardDescription>
+          <CardDescription>
+            {view.match
+              ? "Kolor wiersza: intensywna zieleń = opłacony za ten mecz, intensywna czerwień = nieopłacony."
+              : "Ujemne saldo oznacza należność do uregulowania."}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {view.rows.length === 0 ? (
@@ -113,18 +118,24 @@ export default async function PlatnosciPublicPage(ctx: Ctx) {
                 const bal = Number(p.balance_pln ?? 0);
                 const isNegative = bal < 0;
                 const isPositive = bal > 0;
+                const hasMatchPaid = typeof p.match_paid === "number" || view.match != null;
+                const matchPaid = Number(p.match_paid ?? 0) === 1;
                 return (
                   <li
                     key={p.id}
                     className={cn(
                       "flex flex-wrap items-center gap-2 border-b px-3 py-2.5 text-sm last:border-b-0",
-                      isNegative
-                        ? "border-l-4 border-l-red-600 bg-red-50/95 dark:border-l-red-500 dark:bg-red-950/40"
-                        : isPositive
-                          ? "border-l-4 border-l-emerald-600 bg-emerald-50/95 dark:border-l-emerald-500 dark:bg-emerald-950/45"
-                          : i % 2 === 0
-                            ? "bg-white/60 dark:bg-zinc-900/50"
-                            : "bg-emerald-50/40 dark:bg-zinc-900/30"
+                      hasMatchPaid
+                        ? matchPaid
+                          ? "border-l-4 border-l-green-600 bg-green-100/95 dark:border-l-green-500 dark:bg-green-950/50"
+                          : "border-l-4 border-l-red-600 bg-red-100/95 dark:border-l-red-500 dark:bg-red-950/50"
+                        : isNegative
+                          ? "border-l-4 border-l-red-600 bg-red-50/95 dark:border-l-red-500 dark:bg-red-950/40"
+                          : isPositive
+                            ? "border-l-4 border-l-green-600 bg-green-50/95 dark:border-l-green-500 dark:bg-green-950/45"
+                            : i % 2 === 0
+                              ? "bg-white/60 dark:bg-zinc-900/50"
+                              : "bg-emerald-50/40 dark:bg-zinc-900/30"
                     )}
                   >
                     <PlayerAvatar
@@ -132,21 +143,55 @@ export default async function PlatnosciPublicPage(ctx: Ctx) {
                       firstName={p.first_name}
                       lastName={p.last_name}
                       size="sm"
+                      ringClassName={
+                        hasMatchPaid
+                          ? matchPaid
+                            ? "ring-2 ring-green-600 dark:ring-green-500"
+                            : "ring-2 ring-red-600 dark:ring-red-500"
+                          : undefined
+                      }
                     />
                     <div className="min-w-0 flex-1">
                       <PlayerNameStack firstName={p.first_name} lastName={p.last_name} nick={p.zawodnik} />
                     </div>
+                    {hasMatchPaid ? (
+                      <span
+                        className={cn(
+                          "shrink-0 rounded border px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white shadow-sm",
+                          matchPaid
+                            ? "border-green-700 bg-green-600 dark:border-green-400 dark:bg-green-500 dark:text-green-950"
+                            : "border-red-700 bg-red-600 dark:border-red-400 dark:bg-red-500 dark:text-red-950"
+                        )}
+                      >
+                        {matchPaid ? "Opłacony" : "Nieopłacony"}
+                      </span>
+                    ) : null}
                     {p.match_charge_pln != null ? (
                       <span className="text-xs text-zinc-500">Mecz: {formatPln(-Math.abs(p.match_charge_pln))}</span>
                     ) : null}
                     <span
                       className={cn(
                         "shrink-0 font-semibold tabular-nums",
-                        isNegative ? "text-red-700 dark:text-red-200" : "text-emerald-800 dark:text-emerald-200"
+                        hasMatchPaid
+                          ? matchPaid
+                            ? "text-green-800 dark:text-green-200"
+                            : "text-red-800 dark:text-red-200"
+                          : isNegative
+                            ? "text-red-700 dark:text-red-200"
+                            : "text-green-800 dark:text-green-200"
                       )}
                     >
                       {formatPln(bal)}
                     </span>
+                    {isNegative ? (
+                      <PayButton
+                        variant="default"
+                        amountPln={bal}
+                        label="Opłać"
+                        href="/platnosci"
+                        className="shrink-0"
+                      />
+                    ) : null}
                   </li>
                 );
               })}

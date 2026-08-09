@@ -29,7 +29,7 @@ export default async function PlatnosciPage() {
         blikPhoneDisplay={appSettings.blik_phone}
         defaultMatchFeePln={appSettings.default_match_fee_pln}
         playerLabel={playerLabel}
-        hotpayEnabled={isHotpayConfigured()}
+        hotpayEnabled={isHotpayConfigured() && appSettings.hotpay_enabled}
       />
     </Suspense>
   );

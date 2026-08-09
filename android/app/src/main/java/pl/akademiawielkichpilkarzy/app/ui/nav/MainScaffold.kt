@@ -1,6 +1,7 @@
 package pl.akademiawielkichpilkarzy.app.ui.nav
 
 import android.net.Uri
+import android.util.Base64
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
@@ -93,6 +94,7 @@ fun MainScaffold(
     val barSelected = when {
         current == "stats" || current == "rankings" || current == "lineups" -> "home"
         current?.startsWith("web/") == true -> "home"
+        current?.startsWith("pay_return/") == true -> "wallet"
         current?.startsWith("transport/") == true -> "schedule"
         else -> current
     }
@@ -191,16 +193,30 @@ private fun NativeMainScaffold(
     fun openPortal(title: String, path: String, requireAuth: Boolean = true) {
         val route = when {
             path.startsWith("/profil") -> "profile"
+            // Query (?payment=&session_id=) nie może iść w route Nav jako zwykły Uri.encode —
+            // Navigation traktuje ? jako query string i gubi argumenty.
+            path.startsWith("/platnosci") && path.contains("?") -> {
+                val enc = Base64.encodeToString(
+                    path.toByteArray(Charsets.UTF_8),
+                    Base64.URL_SAFE or Base64.NO_WRAP
+                )
+                "pay_return/$enc"
+            }
             path.startsWith("/platnosci") -> "wallet"
             path.startsWith("/terminarz") -> "schedule"
-            else -> "web/${Uri.encode(title)}/${Uri.encode(path)}/${requireAuth}"
+            else -> "web/${Uri.encode(title)}/${Uri.encode(path)}/$requireAuth"
         }
         goTab(route)
     }
 
     LaunchedEffect(initialPath) {
-        if (initialPath?.startsWith("/zaproszenie") == true) {
-            openPortal("Zaproszenie", initialPath, requireAuth = false)
+        when {
+            initialPath?.startsWith("/zaproszenie") == true -> {
+                openPortal("Zaproszenie", initialPath, requireAuth = false)
+            }
+            initialPath?.startsWith("/platnosci") == true -> {
+                openPortal("Płatności", initialPath, requireAuth = true)
+            }
         }
     }
 
@@ -364,6 +380,26 @@ private fun NativeMainScaffold(
                             if (key != null && isBlocked(key) != null) return@ProfileScreen
                             openPortal(title, path, requireAuth = true)
                         }
+                    )
+                }
+            }
+            composable(
+                route = "pay_return/{encodedPath}",
+                arguments = listOf(
+                    navArgument("encodedPath") { type = NavType.StringType }
+                )
+            ) { entry ->
+                val encoded = entry.arguments?.getString("encodedPath").orEmpty()
+                val path = runCatching {
+                    String(Base64.decode(encoded, Base64.URL_SAFE or Base64.NO_WRAP), Charsets.UTF_8)
+                }.getOrNull()?.takeIf { it.startsWith("/platnosci") } ?: "/platnosci"
+                BlockedOrContent(message = isBlocked("wallet")) {
+                    WebPortalScreen(
+                        title = "Płatności",
+                        path = path,
+                        requireAuth = true,
+                        showTopBar = true,
+                        onBack = { navController.popBackStack() }
                     )
                 }
             }

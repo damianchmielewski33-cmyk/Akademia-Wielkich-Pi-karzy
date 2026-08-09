@@ -21,7 +21,9 @@ export async function GET() {
         u.player_alias AS zawodnik,
         u.profile_photo_path,
         COALESCE(u.is_admin, 0) AS is_admin,
-        COALESCE(ROUND(SUM(t.amount_pln), 2), 0) AS balance_pln
+        COALESCE(ROUND(SUM(t.amount_pln), 2), 0) AS balance_pln,
+        COALESCE(ROUND(SUM(CASE WHEN COALESCE(t.wallet_kind,'admin') = 'admin' THEN t.amount_pln ELSE 0 END), 2), 0) AS admin_balance_pln,
+        COALESCE(ROUND(SUM(CASE WHEN t.wallet_kind = 'operator' THEN t.amount_pln ELSE 0 END), 2), 0) AS operator_balance_pln
       FROM users u
       LEFT JOIN wallet_transactions t ON t.user_id = u.id
       GROUP BY u.id
@@ -40,7 +42,9 @@ export async function GET() {
         u.player_alias AS zawodnik,
         u.profile_photo_path,
         COALESCE(u.is_admin, 0) AS is_admin,
-        COALESCE(ROUND(SUM(t.amount_pln), 2), 0) AS balance_pln
+        COALESCE(ROUND(SUM(t.amount_pln), 2), 0) AS balance_pln,
+        COALESCE(ROUND(SUM(CASE WHEN COALESCE(t.wallet_kind,'admin') = 'admin' THEN t.amount_pln ELSE 0 END), 2), 0) AS admin_balance_pln,
+        COALESCE(ROUND(SUM(CASE WHEN t.wallet_kind = 'operator' THEN t.amount_pln ELSE 0 END), 2), 0) AS operator_balance_pln
       FROM users u
       LEFT JOIN wallet_transactions t ON t.user_id = u.id
       WHERE COALESCE(u.is_admin, 0) = 0
@@ -53,7 +57,7 @@ export async function GET() {
   const pendingDeposits = await db
     .prepare(
       `
-      SELECT d.id, d.user_id, d.amount_pln, d.created_by, d.status, d.note,
+      SELECT d.id, d.user_id, d.amount_pln, d.created_by, d.status, d.wallet_kind, d.note,
              d.player_declared_at, d.admin_confirmed_received_at,
              d.admin_declared_received_at, d.player_confirmed_amount_at,
              d.created_at,
@@ -80,4 +84,3 @@ export async function GET() {
 
   return NextResponse.json({ walletUsers, players, pendingDeposits, playedMatches });
 }
-

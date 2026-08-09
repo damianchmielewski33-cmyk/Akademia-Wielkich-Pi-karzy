@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireUser } from "@/lib/api-helpers";
-import { logActivity } from "@/lib/db";
+import { getAppSettings } from "@/lib/app-settings";
+import { getDb, logActivity } from "@/lib/db";
 import {
   applyMatchCartFromWallet,
   createPendingMatchCart,
@@ -12,12 +13,14 @@ import {
   buildHotpayReturnUrl,
   createHotpaySessionId,
   getHotpayConfig,
+  grossUpHotpayAmount,
   initPayment,
 } from "@/lib/hotpay";
+import { matchCartRoundingMarkupPln } from "@/lib/match-fee";
 import { markHotpayPaymentFailure } from "@/lib/hotpay-wallet";
-import { getDb } from "@/lib/db";
 import { checkRateLimit, rateLimitKey, rateLimitedResponse, RATE } from "@/lib/rate-limit";
 import { screenBlockApiResponse } from "@/lib/screen-block-api";
+import { isAdminTestModeActive } from "@/lib/test-mode";
 import { getUserWalletBalancePln } from "@/lib/wallet";
 
 export const runtime = "nodejs";
@@ -110,7 +113,19 @@ export async function POST(req: Request) {
   if (!config) {
     return NextResponse.json(
       {
-        error: "Niewystarczające saldo. Doładuj portfel lub skonfiguruj HotPay.",
+        error: "Niewystarczające saldo. Doładuj portfel lub skonfiguruj płatności online.",
+        code: "INSUFFICIENT_FUNDS",
+      },
+      { status: 409 }
+    );
+  }
+
+  const db = await getDb();
+  const appSettings = await getAppSettings(db);
+  if (!appSettings.hotpay_enabled) {
+    return NextResponse.json(
+      {
+        error: "Niewystarczające saldo. Płatności online są wyłączone — doładuj portfel BLIK-iem.",
         code: "INSUFFICIENT_FUNDS",
       },
       { status: 409 }
@@ -123,22 +138,42 @@ export async function POST(req: Request) {
     beneficiaryUserIds: user_ids,
   });
   if (!pending.ok) {
-    return NextResponse.json({ error: "Nie udało się przygotować koszyka HotPay.", code: pending.error }, { status: 400 });
+    return NextResponse.json(
+      { error: "Nie udało się przygotować koszyka płatności.", code: pending.error },
+      { status: 400 }
+    );
   }
 
-  const sessionId = createHotpaySessionId(payerId);
+  const matchRow = (await db
+    .prepare(`SELECT fee_pln, signed_up FROM matches WHERE id = ?`)
+    .get(match_id)) as { fee_pln: number | null; signed_up: number } | undefined;
+  const commissionOffsetPln = matchCartRoundingMarkupPln(
+    matchRow?.fee_pln,
+    Number(matchRow?.signed_up ?? 0),
+    pending.beneficiaries.length
+  );
+
+  const amountPln = pending.amount_pln;
+  const grossAmountPln = grossUpHotpayAmount(
+    amountPln,
+    appSettings.hotpay_commission_pct,
+    appSettings.hotpay_commission_fixed,
+    commissionOffsetPln
+  );
+  const hasCommission = grossAmountPln > amountPln;
+
+  const sessionId = createHotpaySessionId(payerId, { testMode: await isAdminTestModeActive() });
   const returnUrl = buildHotpayReturnUrl(sessionId, "pending");
   const playerLabel =
     [gate.session.firstName, gate.session.lastName].filter(Boolean).join(" ").trim() || gate.session.zawodnik;
   const serviceName = `${config.serviceName} — koszyk meczowy (${playerLabel})`;
 
-  const db = await getDb();
   const insert = await db
     .prepare(
-      `INSERT INTO hotpay_payments (session_id, user_id, kind, amount_pln, status, cart_id)
-       VALUES (?, ?, 'match_cart', ?, 'pending', ?)`
+      `INSERT INTO hotpay_payments (session_id, user_id, kind, amount_pln, gross_amount_pln, status, cart_id)
+       VALUES (?, ?, 'match_cart', ?, ?, 'pending', ?)`
     )
-    .run(sessionId, payerId, pending.amount_pln, pending.cart_id);
+    .run(sessionId, payerId, amountPln, hasCommission ? grossAmountPln : null, pending.cart_id);
 
   await linkHotpaySessionToCart(pending.cart_id, sessionId);
 
@@ -148,7 +183,7 @@ export async function POST(req: Request) {
 
   const init = await initPayment(
     {
-      amountPln: pending.amount_pln,
+      amountPln: grossAmountPln,
       orderId: sessionId,
       returnUrl,
       email: emailRow?.email ?? undefined,
@@ -168,7 +203,7 @@ export async function POST(req: Request) {
 
   await logActivity(
     payerId,
-    `Koszyk meczowy HotPay: ${pending.amount_pln.toFixed(2)} PLN · mecz ${match_id} [${sessionId}]`
+    `Koszyk meczowy HotPay: ${amountPln.toFixed(2)} PLN (brutto ${grossAmountPln.toFixed(2)}) · mecz ${match_id} [${sessionId}]`
   );
 
   return NextResponse.json({
@@ -177,6 +212,6 @@ export async function POST(req: Request) {
     url: init.url,
     session_id: sessionId,
     cart_id: pending.cart_id,
-    amount_pln: pending.amount_pln,
+    amount_pln: amountPln,
   });
 }

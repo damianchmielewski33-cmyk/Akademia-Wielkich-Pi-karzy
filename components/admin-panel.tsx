@@ -811,7 +811,11 @@ function MatchSignupsDialogContent({
                   {!s.is_temporary && (
                     <Button
                       size="sm"
-                      variant={s.paid ? "default" : "outline"}
+                      className={
+                        s.paid
+                          ? "bg-green-600 text-white hover:bg-green-700 focus-visible:ring-green-500"
+                          : "bg-red-600 text-white hover:bg-red-700 focus-visible:ring-red-500"
+                      }
                       onClick={() => togglePaid(s.user_id, s.paid)}
                       disabled={saving === s.user_id}
                     >

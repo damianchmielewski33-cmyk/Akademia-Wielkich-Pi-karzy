@@ -1,7 +1,14 @@
 import { getDb } from "@/lib/db";
 import { tryRemoveTemporaryGuestIfBalanceZero } from "@/lib/guest-cleanup";
+import { matchChargeRoundingMarkupPln } from "@/lib/match-fee";
 
 export type WalletBalanceRow = { balance_pln: number };
+
+export type WalletBalances = {
+  admin: number;
+  operator: number;
+  total: number;
+};
 
 export async function getUserWalletBalancePln(userId: number): Promise<number> {
   const db = await getDb();
@@ -17,12 +24,57 @@ export async function getUserWalletBalancePln(userId: number): Promise<number> {
   return Number(row?.balance_pln ?? 0);
 }
 
+/** Zwraca salda z podziałem na portfel admina i operatora. */
+export async function getWalletBalances(userId: number): Promise<WalletBalances> {
+  const db = await getDb();
+  const rows = (await db
+    .prepare(
+      `SELECT wallet_kind, COALESCE(ROUND(SUM(amount_pln), 2), 0) AS balance_pln
+       FROM wallet_transactions
+       WHERE user_id = ?
+       GROUP BY wallet_kind`
+    )
+    .all(userId)) as { wallet_kind: string; balance_pln: number }[];
+  let admin = 0;
+  let operator = 0;
+  for (const r of rows) {
+    if (r.wallet_kind === "operator") operator = Number(r.balance_pln);
+    else admin = Number(r.balance_pln);
+  }
+  return { admin, operator, total: Math.round((admin + operator) * 100) / 100 };
+}
+
+/**
+ * Suma zawyżeń składki (ceil do 0,50) z obciążeń meczowych gracza.
+ * Używana do obniżenia prowizji HotPay przy spłacie zaległości.
+ */
+export async function getMatchFeeRoundingCreditForUser(userId: number): Promise<number> {
+  const db = await getDb();
+  const rows = (await db
+    .prepare(
+      `
+      SELECT c.amount_pln, m.fee_pln, m.signed_up
+      FROM match_wallet_charges c
+      JOIN matches m ON m.id = c.match_id
+      WHERE c.user_id = ?
+    `
+    )
+    .all(userId)) as { amount_pln: number; fee_pln: number | null; signed_up: number }[];
+
+  let credit = 0;
+  for (const r of rows) {
+    credit += matchChargeRoundingMarkupPln(Number(r.amount_pln), r.fee_pln, Number(r.signed_up));
+  }
+  return Math.round(credit * 100) / 100;
+}
+
 export type WalletDepositRequestRow = {
   id: number;
   user_id: number;
   amount_pln: number;
   created_by: "player" | "admin";
   status: "pending" | "completed" | "cancelled";
+  wallet_kind: "admin" | "operator";
   note: string | null;
   player_declared_at: string | null;
   admin_confirmed_received_at: string | null;
@@ -37,6 +89,7 @@ export type WalletTransactionRow = {
   user_id: number;
   kind: "deposit" | "match_charge" | "adjustment" | "transfer";
   amount_pln: number;
+  wallet_kind: "admin" | "operator";
   deposit_request_id: number | null;
   match_id: number | null;
   related_user_id: number | null;
@@ -142,7 +195,11 @@ export async function transferWalletFunds(args: {
   return { ok: true, amount_pln: amount, balance_pln };
 }
 
-export async function completeDepositRequest(depositId: number, completedByUserId: number) {
+export async function completeDepositRequest(
+  depositId: number,
+  completedByUserId: number,
+  walletKind: "admin" | "operator" = "admin"
+) {
   const db = await getDb();
   const dep = (await db
     .prepare(
@@ -187,13 +244,14 @@ export async function completeDepositRequest(depositId: number, completedByUserI
 
   await db
     .prepare(
-      `INSERT INTO wallet_transactions (user_id, kind, amount_pln, deposit_request_id, note)
-       VALUES (?, 'deposit', ?, ?, ?)`
+      `INSERT INTO wallet_transactions (user_id, kind, amount_pln, deposit_request_id, wallet_kind, note)
+       VALUES (?, 'deposit', ?, ?, ?, ?)`
     )
     .run(
       dep.user_id,
       Number(dep.amount_pln),
       dep.id,
+      walletKind,
       `Wpłata zaksięgowana (zakończone przez user ${completedByUserId})`
     );
 
@@ -213,15 +271,40 @@ export async function createMatchCharge(args: {
   adminId: number;
 }) {
   const db = await getDb();
+  const fee = Math.abs(args.amountPln);
+  const chargeNote = args.note ?? `Rozliczenie meczu id ${args.matchId}`;
+
   await db.prepare(
     `INSERT INTO match_wallet_charges (match_id, user_id, amount_pln, note, created_by_admin_id)
      VALUES (?, ?, ?, ?, ?)`
-  ).run(args.matchId, args.userId, args.amountPln, args.note ?? null, args.adminId);
+  ).run(args.matchId, args.userId, fee, chargeNote, args.adminId);
 
-  await db.prepare(
-    `INSERT INTO wallet_transactions (user_id, kind, amount_pln, match_id, note)
-     VALUES (?, 'match_charge', ?, ?, ?)`
-  ).run(args.userId, -Math.abs(args.amountPln), args.matchId, args.note ?? `Rozliczenie meczu id ${args.matchId}`);
+  // Opłata pobierana najpierw z portfela admina, reszta z portfela operatora.
+  const balances = await getWalletBalances(args.userId);
+  const adminBalance = balances.admin;
+
+  if (adminBalance >= fee) {
+    await db.prepare(
+      `INSERT INTO wallet_transactions (user_id, kind, amount_pln, match_id, wallet_kind, note)
+       VALUES (?, 'match_charge', ?, ?, 'admin', ?)`
+    ).run(args.userId, -fee, args.matchId, chargeNote);
+  } else if (adminBalance > 0) {
+    const adminPart = Math.round(adminBalance * 100) / 100;
+    const operatorPart = Math.round((fee - adminPart) * 100) / 100;
+    await db.prepare(
+      `INSERT INTO wallet_transactions (user_id, kind, amount_pln, match_id, wallet_kind, note)
+       VALUES (?, 'match_charge', ?, ?, 'admin', ?)`
+    ).run(args.userId, -adminPart, args.matchId, chargeNote);
+    await db.prepare(
+      `INSERT INTO wallet_transactions (user_id, kind, amount_pln, match_id, wallet_kind, note)
+       VALUES (?, 'match_charge', ?, ?, 'operator', ?)`
+    ).run(args.userId, -operatorPart, args.matchId, chargeNote);
+  } else {
+    await db.prepare(
+      `INSERT INTO wallet_transactions (user_id, kind, amount_pln, match_id, wallet_kind, note)
+       VALUES (?, 'match_charge', ?, ?, 'operator', ?)`
+    ).run(args.userId, -fee, args.matchId, chargeNote);
+  }
 
   await tryRemoveTemporaryGuestIfBalanceZero({
     userId: args.userId,

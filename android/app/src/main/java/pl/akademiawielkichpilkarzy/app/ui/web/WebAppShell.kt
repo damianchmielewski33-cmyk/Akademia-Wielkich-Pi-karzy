@@ -40,7 +40,11 @@ fun WebAppShell(
     }
 
     WebPortalScreen(
-        title = if (startPath.startsWith("/zaproszenie")) "Zaproszenie" else "Akademia Wielkich Piłkarzy",
+        title = when {
+            startPath.startsWith("/zaproszenie") -> "Zaproszenie"
+            startPath.startsWith("/platnosci") -> "Płatności"
+            else -> "Akademia Wielkich Piłkarzy"
+        },
         path = startPath,
         requireAuth = !startPath.startsWith("/zaproszenie"),
         showTopBar = false,

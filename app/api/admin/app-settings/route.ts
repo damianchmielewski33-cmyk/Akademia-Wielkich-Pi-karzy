@@ -12,6 +12,7 @@ import { getDb } from "@/lib/db";
 import { isMailConfigured } from "@/lib/mail";
 import { parseYoutubeVideoIdFromUserInput } from "@/lib/site";
 import { normalizeAdsenseClientId } from "@/lib/adsense";
+import { isHotpayConfigured } from "@/lib/hotpay";
 import { parseRealm, REALMS } from "@/lib/realm";
 import { BLOCKABLE_SCREENS } from "@/lib/screen-blocks";
 import { BLOCKABLE_MOBILE_SCREENS } from "@/lib/screen-blocks-mobile";
@@ -69,6 +70,9 @@ const putBodySchema = z
     lineup_pitch_slots_min: z.number().int().min(1).max(32).optional(),
     lineup_pitch_slots_max: z.number().int().min(1).max(32).optional(),
     match_cancel_reasons: z.array(cancelReasonSchema).min(1).max(20).optional(),
+    hotpay_enabled: z.boolean().optional(),
+    hotpay_commission_pct: z.number().min(0).max(50).optional(),
+    hotpay_commission_fixed: z.number().min(0).max(100).optional(),
     screen_blocks: z.record(z.string(), screenBlockEntrySchema).optional(),
     screen_blocks_mobile: z.record(z.string(), screenBlockEntrySchema).optional(),
     mobile_settings: z
@@ -112,6 +116,7 @@ export type AppSettingsApiResponse = AppSettings & {
     smtp_configured: boolean;
     self_registration_env_override: boolean;
     is_production: boolean;
+    hotpay_configured: boolean;
   };
 };
 
@@ -122,6 +127,7 @@ function toApiResponse(settings: AppSettings): AppSettingsApiResponse {
       smtp_configured: isMailConfigured(),
       self_registration_env_override: process.env.ALLOW_SELF_REGISTRATION === "1",
       is_production: process.env.NODE_ENV === "production",
+      hotpay_configured: isHotpayConfigured(),
     },
   };
 }
@@ -309,6 +315,16 @@ export async function PUT(req: Request) {
 
   if (body.match_email_notifications_enabled !== undefined) {
     next.match_email_notifications_enabled = body.match_email_notifications_enabled;
+  }
+
+  if (body.hotpay_enabled !== undefined) {
+    next.hotpay_enabled = body.hotpay_enabled;
+  }
+  if (body.hotpay_commission_pct !== undefined) {
+    next.hotpay_commission_pct = Math.round(body.hotpay_commission_pct * 1000) / 1000;
+  }
+  if (body.hotpay_commission_fixed !== undefined) {
+    next.hotpay_commission_fixed = Math.round(body.hotpay_commission_fixed * 100) / 100;
   }
 
   if (body.lineup_pitch_slots_min !== undefined) next.lineup_pitch_slots_min = body.lineup_pitch_slots_min;

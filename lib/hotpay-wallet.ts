@@ -10,6 +10,8 @@ export type HotpayPaymentRow = {
   user_id: number;
   kind: HotpayPaymentKind;
   amount_pln: number;
+  /** Kwota brutto wysłana do operatora (po gross-up). NULL = brak prowizji (amount_pln = gross). */
+  gross_amount_pln: number | null;
   status: HotpayPaymentStatus;
   hotpay_payment_id: string | null;
   secure: string | null;
@@ -26,7 +28,7 @@ export async function getHotpayPaymentBySessionId(
 ): Promise<HotpayPaymentRow | null> {
   const row = (await db
     .prepare(
-      `SELECT id, session_id, user_id, kind, amount_pln, status, hotpay_payment_id, secure,
+      `SELECT id, session_id, user_id, kind, amount_pln, gross_amount_pln, status, hotpay_payment_id, secure,
               deposit_request_id, cart_id, error_message, created_at, completed_at
        FROM hotpay_payments WHERE session_id = ?`
     )
@@ -137,9 +139,9 @@ export async function applyHotpaySuccessCredit(
   const dep = await db
     .prepare(
       `INSERT INTO wallet_deposit_requests
-        (user_id, amount_pln, created_by, status, note,
+        (user_id, amount_pln, created_by, status, wallet_kind, note,
          player_declared_at, admin_confirmed_received_at, completed_at)
-       VALUES (?, ?, 'player', 'completed', ?, datetime('now'), datetime('now'), datetime('now'))`
+       VALUES (?, ?, 'player', 'completed', 'operator', ?, datetime('now'), datetime('now'), datetime('now'))`
     )
     .run(payment.user_id, amount, note);
 
@@ -147,8 +149,8 @@ export async function applyHotpaySuccessCredit(
 
   await db
     .prepare(
-      `INSERT INTO wallet_transactions (user_id, kind, amount_pln, deposit_request_id, note)
-       VALUES (?, 'deposit', ?, ?, ?)`
+      `INSERT INTO wallet_transactions (user_id, kind, amount_pln, deposit_request_id, wallet_kind, note)
+       VALUES (?, 'deposit', ?, ?, 'operator', ?)`
     )
     .run(payment.user_id, amount, depositId, note);
 
@@ -254,7 +256,9 @@ export async function processHotpayNotification(
 
   let expectedAmount: string;
   try {
-    expectedAmount = formatHotpayAmount(payment.amount_pln);
+    // Porównuj z kwotą brutto (wysłaną do operatora); jeśli nie ma gross — fallback do net.
+    const referenceAmount = payment.gross_amount_pln ?? payment.amount_pln;
+    expectedAmount = formatHotpayAmount(referenceAmount);
   } catch {
     return { ok: false, error: "INVALID_AMOUNT" };
   }
@@ -289,7 +293,7 @@ export async function processHotpayNotification(
   await markHotpayPaymentFailure(db, payment.id, {
     hotpayPaymentId: payload.ID_PLATNOSCI,
     secure: payload.SECURE,
-    errorMessage: status === "FAILURE" ? "Płatność odrzucona przez HotPay" : `Status HotPay: ${payload.STATUS}`,
+    errorMessage: status === "FAILURE" ? "Płatność została odrzucona" : `Nieznany status płatności: ${payload.STATUS}`,
   });
   return { ok: true, outcome: "failed" };
 }

@@ -63,6 +63,7 @@ export function adminSectionForApiPath(pathname: string): AdminSectionId | null 
     p.includes("/api/admin/gallery") ||
     p.includes("/api/admin/analytics") ||
     p.includes("/api/admin/app-settings") ||
+    p.includes("/api/admin/test-mode") ||
     p.includes("/api/admin/site-assets")
   ) {
     return "site";

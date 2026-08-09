@@ -8,12 +8,14 @@ import {
   buildHotpayReturnUrl,
   createHotpaySessionId,
   getHotpayConfig,
+  grossUpHotpayAmount,
   initPayment,
   type HotpayPaymentKind,
 } from "@/lib/hotpay";
 import { markHotpayPaymentFailure } from "@/lib/hotpay-wallet";
 import { screenBlockApiResponse } from "@/lib/screen-block-api";
-import { getUserWalletBalancePln } from "@/lib/wallet";
+import { isAdminTestModeActive } from "@/lib/test-mode";
+import { getMatchFeeRoundingCreditForUser, getUserWalletBalancePln } from "@/lib/wallet";
 
 export const runtime = "nodejs";
 
@@ -32,7 +34,16 @@ export async function POST(req: Request) {
   const config = getHotpayConfig();
   if (!config) {
     return NextResponse.json(
-      { error: "Płatności HotPay nie są skonfigurowane. Skorzystaj z BLIK lub skontaktuj się z administratorem." },
+      { error: "Płatności online są chwilowo niedostępne. Skorzystaj z BLIK lub skontaktuj się z administratorem." },
+      { status: 503 }
+    );
+  }
+
+  const db = await getDb();
+  const appSettings = await getAppSettings(db);
+  if (!appSettings.hotpay_enabled) {
+    return NextResponse.json(
+      { error: "Płatności online są chwilowo wyłączone. Skorzystaj z BLIK lub skontaktuj się z administratorem." },
       { status: 503 }
     );
   }
@@ -49,14 +60,12 @@ export async function POST(req: Request) {
   }
 
   const kind = parsed.data.kind as HotpayPaymentKind;
-  const db = await getDb();
   const userId = gate.session.userId;
+  const balance = await getUserWalletBalancePln(userId);
 
   let amountPln: number;
   if (kind === "match") {
-    const balance = await getUserWalletBalancePln(userId);
-    const settings = await getAppSettings(db);
-    const suggested = suggestPaymentAmountPln(balance, settings.default_match_fee_pln);
+    const suggested = suggestPaymentAmountPln(balance, appSettings.default_match_fee_pln);
     if (suggested == null || suggested <= 0) {
       return NextResponse.json(
         { error: "Brak kwoty wpisowego — ustaw domyślną opłatę lub masz już uregulowane saldo." },
@@ -75,9 +84,27 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Kwota musi być w zakresie 0,01–10 000 PLN" }, { status: 400 });
   }
 
-  const sessionId = createHotpaySessionId(userId);
+  /* Przy spłacie zaległości: zawyżenie składki (ceil do 0,50) obniża prowizję operatora. */
+  let commissionOffsetPln = 0;
+  const debtPln = balance < 0 ? Math.round(Math.abs(balance) * 100) / 100 : 0;
+  const isDebtPayment = debtPln > 0 && Math.abs(amountPln - debtPln) < 0.02;
+  if (isDebtPayment || kind === "match") {
+    commissionOffsetPln = await getMatchFeeRoundingCreditForUser(userId);
+  }
+
+  /* Kwota netto = do zaksięgowania na portfelu; gross = co widzi operator po doliczonej prowizji. */
+  const grossAmountPln = grossUpHotpayAmount(
+    amountPln,
+    appSettings.hotpay_commission_pct,
+    appSettings.hotpay_commission_fixed,
+    commissionOffsetPln
+  );
+  const hasCommission = grossAmountPln > amountPln;
+
+  const sessionId = createHotpaySessionId(userId, { testMode: await isAdminTestModeActive() });
   const returnUrl = buildHotpayReturnUrl(sessionId, "pending");
-  const playerLabel = [gate.session.firstName, gate.session.lastName].filter(Boolean).join(" ").trim() || gate.session.zawodnik;
+  const playerLabel =
+    [gate.session.firstName, gate.session.lastName].filter(Boolean).join(" ").trim() || gate.session.zawodnik;
   const serviceName =
     kind === "match"
       ? `${config.serviceName} — mecz (${playerLabel})`
@@ -85,10 +112,10 @@ export async function POST(req: Request) {
 
   const insert = await db
     .prepare(
-      `INSERT INTO hotpay_payments (session_id, user_id, kind, amount_pln, status)
-       VALUES (?, ?, ?, ?, 'pending')`
+      `INSERT INTO hotpay_payments (session_id, user_id, kind, amount_pln, gross_amount_pln, status)
+       VALUES (?, ?, ?, ?, ?, 'pending')`
     )
-    .run(sessionId, userId, kind, amountPln);
+    .run(sessionId, userId, kind, amountPln, hasCommission ? grossAmountPln : null);
 
   const paymentRowId = Number(insert.lastInsertRowid);
 
@@ -98,7 +125,7 @@ export async function POST(req: Request) {
 
   const init = await initPayment(
     {
-      amountPln,
+      amountPln: grossAmountPln,
       orderId: sessionId,
       returnUrl,
       email: emailRow?.email ?? undefined,
@@ -109,13 +136,17 @@ export async function POST(req: Request) {
   );
 
   if (!init.ok) {
-    console.error(`[hotpay/create] INIT_FAIL userId=${userId} kind=${kind} amount=${amountPln} error=${init.error}`);
+    console.error(
+      `[hotpay/create] INIT_FAIL userId=${userId} kind=${kind} net=${amountPln} gross=${grossAmountPln} offset=${commissionOffsetPln} error=${init.error}`
+    );
     await markHotpayPaymentFailure(db, paymentRowId, { errorMessage: init.error });
     await logActivity(userId, `HotPay INIT FAILED (${kind}) ${amountPln.toFixed(2)} PLN: ${init.error} [${sessionId}]`);
     return NextResponse.json({ error: init.error, session_id: sessionId }, { status: 502 });
   }
 
-  console.info(`[hotpay/create] ok userId=${userId} kind=${kind} amount=${amountPln} session=${sessionId} url=${init.url}`);
+  console.info(
+    `[hotpay/create] ok userId=${userId} kind=${kind} net=${amountPln} gross=${grossAmountPln} offset=${commissionOffsetPln} session=${sessionId}`
+  );
   await logActivity(
     userId,
     `Rozpoczął płatność HotPay (${kind}): ${amountPln.toFixed(2)} PLN [${sessionId}]`

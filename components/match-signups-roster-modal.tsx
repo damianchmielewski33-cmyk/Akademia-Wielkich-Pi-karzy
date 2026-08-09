@@ -47,8 +47,10 @@ export function MatchSignupsRosterModal({ open, onOpenChange, match, matchId, pl
             {data.players.map((p, i) => (
               <li
                 key={`c-${p.userId}-${i}`}
-                className={`flex flex-wrap items-center gap-2 border-b border-emerald-100/90 px-3 py-2.5 text-sm last:border-b-0 dark:border-emerald-800/50 ${
-                  i % 2 === 0 ? "bg-white/60 dark:bg-zinc-900/40" : "bg-emerald-50/40 dark:bg-emerald-950/30"
+                className={`flex flex-wrap items-center gap-2 border-b px-3 py-2.5 text-sm last:border-b-0 ${
+                  p.paid
+                    ? "border-l-4 border-l-green-600 border-b-green-200/80 bg-green-100/90 dark:border-l-green-500 dark:border-b-green-800/50 dark:bg-green-950/45"
+                    : "border-l-4 border-l-red-600 border-b-red-200/80 bg-red-100/90 dark:border-l-red-500 dark:border-b-red-800/50 dark:bg-red-950/45"
                 }`}
               >
                 <PlayerAvatar
@@ -56,17 +58,23 @@ export function MatchSignupsRosterModal({ open, onOpenChange, match, matchId, pl
                   firstName={p.firstName}
                   lastName={p.lastName}
                   size="sm"
-                  ringClassName="ring-2 ring-emerald-200/90 dark:ring-emerald-700/80"
+                  ringClassName={
+                    p.paid
+                      ? "ring-2 ring-green-600 dark:ring-green-500"
+                      : "ring-2 ring-red-600 dark:ring-red-500"
+                  }
                 />
                 <div className="min-w-0 flex-1">
                   <PlayerNameStack firstName={p.firstName} lastName={p.lastName} nick={p.zawodnik} />
                 </div>
                 {p.paid ? (
-                  <Badge className="border-emerald-200 bg-emerald-100 text-emerald-900 dark:border-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-100">
+                  <Badge className="border-green-700 bg-green-600 text-white shadow-sm dark:border-green-500 dark:bg-green-500 dark:text-green-950">
                     Opłacone
                   </Badge>
                 ) : (
-                  <Badge variant="secondary">Do zapłaty</Badge>
+                  <Badge className="border-red-700 bg-red-600 text-white shadow-sm dark:border-red-500 dark:bg-red-500 dark:text-red-950">
+                    Nieopłacone
+                  </Badge>
                 )}
               </li>
             ))}

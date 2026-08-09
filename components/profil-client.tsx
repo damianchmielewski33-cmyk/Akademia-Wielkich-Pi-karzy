@@ -7,6 +7,7 @@ import { toast } from "@/lib/app-toast";
 import {
   Activity,
   Camera,
+  Loader2,
   Moon,
   Pencil,
   Route,
@@ -39,18 +40,23 @@ import { PitchPageHero } from "@/components/ui/pitch-card";
 import type { ProfileDashboard } from "@/lib/profile-data";
 import { normalizeUiTheme, type UiTheme } from "@/lib/ui-theme";
 import { cn } from "@/lib/utils";
+import { useHotpayPayment } from "@/hooks/use-hotpay-payment";
+import { PayButton } from "@/components/pay-button";
 
 type Props = {
   initial: ProfileDashboard;
   walletBalancePln: number;
+  hotpayEnabled: boolean;
 };
 
 export function ProfilClient({
   initial,
   walletBalancePln,
+  hotpayEnabled,
 }: Props) {
   const router = useRouter();
   const [data, setData] = useState<ProfileDashboard>(initial);
+  const { pay: payDebt, busy: debtBusy } = useHotpayPayment();
   const [firstName, setFirstName] = useState(initial.user.first_name);
   const [lastName, setLastName] = useState(initial.user.last_name);
   const [zawodnik, setZawodnik] = useState(initial.user.zawodnik);
@@ -423,9 +429,18 @@ export function ProfilClient({
                     </p>
                   ) : null}
                 </div>
-                <Button asChild variant="pitch">
-                  <Link href="/platnosci">Doładuj / opłać</Link>
-                </Button>
+                {hotpayEnabled && walletBalancePln < 0 ? (
+                  <PayButton
+                    variant="default"
+                    amountPln={walletBalancePln}
+                    busy={debtBusy}
+                    onClick={() => void payDebt(Math.abs(walletBalancePln))}
+                  />
+                ) : (
+                  <Button asChild variant="pitch">
+                    <Link href="/platnosci">Doładuj / opłać</Link>
+                  </Button>
+                )}
               </div>
             </div>
           </div>

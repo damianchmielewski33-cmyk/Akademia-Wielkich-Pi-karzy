@@ -27,6 +27,13 @@ export const PREVIEW_BLOCKED_COOKIE = "awp_preview_blocked";
 /** Szkic zaślepek z panelu admina (sessionStorage) na czas podglądu przed odświeżeniem cache. */
 export const PREVIEW_BLOCKS_DRAFT_STORAGE_KEY = "awp_screen_blocks_preview_draft";
 
+/**
+ * Tryb testowy admina (osobna baza). Ustawiane wyłącznie przez API admina.
+ * Middleware przekazuje wartość jako `x-awp-test-mode`.
+ */
+export const TEST_MODE_COOKIE = "awp_test_mode";
+export const TEST_MODE_HEADER = "x-awp-test-mode";
+
 /** Klucz localStorage dla anonimowej analityki — zachowujemy przy czyszczeniu po udostępnionym linku. */
 export const VISITOR_ID_STORAGE_KEY = "awp_visitor_id";
 

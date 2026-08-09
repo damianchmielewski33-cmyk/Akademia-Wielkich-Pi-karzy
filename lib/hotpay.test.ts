@@ -81,6 +81,32 @@ describe("formatHotpayAmount", () => {
   });
 });
 
+describe("grossUpHotpayAmount", () => {
+  it("returns net when commission is zero", async () => {
+    const { grossUpHotpayAmount } = await import("@/lib/hotpay");
+    expect(grossUpHotpayAmount(50, 0, 0)).toBe(50);
+  });
+
+  it("grosses up with pct + fixed (DN: 2.45% + 0.30)", async () => {
+    const { grossUpHotpayAmount } = await import("@/lib/hotpay");
+    // (14.5 + 0.30) / (1 - 0.0245) ≈ 15.1719 → ceil to 15.18
+    expect(grossUpHotpayAmount(14.5, 2.45, 0.3)).toBe(15.18);
+  });
+
+  it("subtracts fee-rounding offset from commission", async () => {
+    const { grossUpHotpayAmount } = await import("@/lib/hotpay");
+    const full = grossUpHotpayAmount(14.5, 2.45, 0.3); // 15.18
+    const withOffset = grossUpHotpayAmount(14.5, 2.45, 0.3, 0.21); // commission 0.68 − 0.21 = 0.47
+    expect(full).toBe(15.18);
+    expect(withOffset).toBe(14.97);
+  });
+
+  it("does not reduce gross below net", async () => {
+    const { grossUpHotpayAmount } = await import("@/lib/hotpay");
+    expect(grossUpHotpayAmount(14.5, 2.45, 0.3, 99)).toBe(14.5);
+  });
+});
+
 describe("isHotpayNotificationIp", () => {
   it("accepts documented HotPay IPs", () => {
     expect(isHotpayNotificationIp("18.197.55.26")).toBe(true);

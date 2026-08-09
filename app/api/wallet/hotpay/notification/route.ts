@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getDb, logActivity } from "@/lib/db";
+import { getDbForHotpaySessionId, logActivity } from "@/lib/db";
 import {
   getHotpayConfig,
   isHotpayNotificationIp,
@@ -122,7 +122,7 @@ export async function POST(req: Request) {
     `[hotpay/notification] parsed STATUS=${payload.STATUS} order=${payload.ID_ZAMOWIENIA} amount=${payload.KWOTA} ips=${ips}`
   );
 
-  const db = await getDb();
+  const db = await getDbForHotpaySessionId(payload.ID_ZAMOWIENIA);
   // Ślad w panelu admina (Aktywność) — niezależnie od Vercel Logs.
   await logActivity(
     null,

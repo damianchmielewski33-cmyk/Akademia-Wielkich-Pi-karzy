@@ -13,17 +13,39 @@ function formatPln(n: number) {
 }
 
 type Props = {
-  balancePln: number;
+  /** Gdy true — pobiera saldo z /api/wallet/me (bez blokowania SSR layoutu). */
+  enabled?: boolean;
 };
 
-export function WalletBalanceFloat({ balancePln }: Props) {
+export function WalletBalanceFloat({ enabled = true }: Props) {
   const [mounted, setMounted] = useState(false);
-  const negative = balancePln < 0;
-  const positive = balancePln > 0;
+  const [balancePln, setBalancePln] = useState<number | null>(null);
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (!enabled) return;
+    let cancelled = false;
+    fetch("/api/wallet/me")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { balance_pln?: unknown } | null) => {
+        if (cancelled) return;
+        if (d && typeof d.balance_pln === "number") {
+          setBalancePln(d.balance_pln);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [enabled]);
+
+  if (!mounted || !enabled || balancePln == null) return null;
+
+  const negative = balancePln < 0;
+  const positive = balancePln > 0;
 
   const tile = (
     <Link
@@ -76,6 +98,5 @@ export function WalletBalanceFloat({ balancePln }: Props) {
     </Link>
   );
 
-  if (!mounted) return null;
   return createPortal(tile, document.body);
 }

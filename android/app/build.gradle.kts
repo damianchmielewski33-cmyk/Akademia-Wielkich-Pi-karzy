@@ -133,6 +133,7 @@ dependencies {
     implementation("androidx.biometric:biometric:1.1.0")
     implementation("androidx.security:security-crypto:1.0.0")
     implementation("androidx.fragment:fragment-ktx:1.8.5")
+    implementation("androidx.browser:browser:1.8.0")
 
     implementation("com.squareup.retrofit2:retrofit:2.11.0")
     implementation("com.squareup.retrofit2:converter-moshi:2.11.0")

@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { LogIn, UserPlus } from "lucide-react";
 import { AdminWalletsSaldoSection } from "@/components/admin-wallets-saldo-section";
 import { HotpayPayButtons } from "@/components/hotpay-pay-buttons";
+import { MatchCartPayPanel } from "@/components/match-cart-pay-panel";
 import { PayMatchButton } from "@/components/pay-match-button";
 import { formatWalletPln, PlayerWalletPanel } from "@/components/player-wallet-panel";
 import { useAppMessage } from "@/components/ui/app-message-modal";
@@ -47,13 +48,6 @@ export function PlatnosciClient({
   const [adminWalletLoading, setAdminWalletLoading] = useState(false);
   const { showError, showSuccess, showInfo, MessageModal } = useAppMessage();
 
-  const meczRaw = searchParams.get("mecz");
-  const initialMatchId = (() => {
-    if (!meczRaw) return null;
-    const n = Number.parseInt(meczRaw, 10);
-    return Number.isFinite(n) && n > 0 ? n : null;
-  })();
-
   async function refreshAdminWallet() {
     if (!isLoggedIn || !isAdmin) return;
     setAdminWalletLoading(true);
@@ -85,15 +79,15 @@ export function PlatnosciClient({
     async function handleReturn() {
       if (payment === "error" || payment === "cancelled" || payment === "failure") {
         showError(
-          payment === "cancelled" ? "Płatność została anulowana" : "Płatność HotPay nie powiodła się",
-          "HotPay"
+          payment === "cancelled" ? "Płatność została anulowana" : "Płatność nie powiodła się",
+          "Płatność"
         );
         clearQuery();
         return;
       }
 
       if (payment === "success") {
-        showSuccess("Wpłata zaksięgowana na portfelu", "HotPay");
+        showSuccess("Wpłata zaksięgowana na portfelu", "Płatność");
         setWalletRefreshKey((k) => k + 1);
         await refreshAdminWallet();
         clearQuery();
@@ -103,7 +97,7 @@ export function PlatnosciClient({
       if (sessionId) {
         // HotPay wraca zawsze na ADRES_WWW bez STATUS — wynik jest w notyfikacji (SUCCESS/PENDING/FAILURE).
         // Nie oznaczamy automatycznie „cancelled”: udana płatność też może chwilę czekać na webhook.
-        showInfo("Sprawdzamy status płatności HotPay…", "HotPay");
+        showInfo("Sprawdzamy status płatności…", "Płatność");
 
         const pollOnce = async (): Promise<"success" | "failure" | "cancelled" | "pending" | "error"> => {
           try {
@@ -119,7 +113,7 @@ export function PlatnosciClient({
                 typeof data.amount_pln === "number"
                   ? `Wpłata ${formatWalletPln(data.amount_pln)} zaksięgowana na portfelu`
                   : "Wpłata zaksięgowana na portfelu",
-                "HotPay"
+                "Płatność"
               );
               setWalletRefreshKey((k) => k + 1);
               await refreshAdminWallet();
@@ -130,8 +124,8 @@ export function PlatnosciClient({
                 data.error_message ||
                   (data.status === "cancelled"
                     ? "Płatność została anulowana"
-                    : "Płatność HotPay została odrzucona"),
-                "HotPay"
+                    : "Płatność została odrzucona"),
+                "Płatność"
               );
               return data.status;
             }
@@ -151,8 +145,8 @@ export function PlatnosciClient({
         }
 
         showInfo(
-          "Czekamy na potwierdzenie z HotPay. Jeśli zapłaciłeś — saldo zaktualizuje się po notyfikacji (odśwież stronę za chwilę). Jeśli anulowałeś BLIK — saldo się nie zmieni.",
-          "HotPay"
+          "Przetwarzamy płatność — to może chwilę potrwać. Jeśli zapłaciłeś, saldo zaktualizuje się automatycznie. Jeśli anulowałeś — saldo się nie zmieni.",
+          "Płatność"
         );
         setWalletRefreshKey((k) => k + 1);
         await refreshAdminWallet();
@@ -167,7 +161,7 @@ export function PlatnosciClient({
         return;
       }
 
-      showInfo("Wróciłeś z płatności — odśwież saldo, jeśli środki jeszcze nie widać.", "HotPay");
+      showInfo("Wróciłeś z płatności — odśwież saldo, jeśli środki jeszcze nie widać.", "Płatność");
       setWalletRefreshKey((k) => k + 1);
       await refreshAdminWallet();
       clearQuery();
@@ -184,10 +178,10 @@ export function PlatnosciClient({
         subtitle={
           isAdmin
             ? "Salda portfeli, doładowania po przelewie i korekty — w stylu reszty akademii."
-            : isLoggedIn
+              : isLoggedIn
               ? hotpayEnabled
-                ? "Saldo → doładuj HotPay → opłać mecz. BLIK i przelewy są w zaawansowanych."
-                : "Saldo, opłata meczu i historia. BLIK oraz przelewy są w zaawansowanych."
+                ? "Saldo, opłata meczu dla siebie i innych zawodników — szybko i wygodnie."
+                : "Saldo i historia. Możesz opłacić mecz dla siebie lub innych."
               : "Zaloguj się, aby zobaczyć saldo portfela."
         }
       />
@@ -219,28 +213,28 @@ export function PlatnosciClient({
           <div className="mx-auto max-w-4xl space-y-4">
             <HotpayPayButtons
               enabled={hotpayEnabled}
-              balancePln={adminBalancePln}
-              defaultMatchFeePln={defaultMatchFeePln}
               walletLoading={adminWalletLoading}
             />
-            <PayMatchButton
-              blikPhoneDisplay={blikPhoneDisplay}
-              defaultMatchFeePln={defaultMatchFeePln}
-              balancePln={adminBalancePln}
-              playerLabel={playerLabel}
-            />
+            {!hotpayEnabled && (
+              <PayMatchButton
+                blikPhoneDisplay={blikPhoneDisplay}
+                defaultMatchFeePln={defaultMatchFeePln}
+                balancePln={adminBalancePln}
+                playerLabel={playerLabel}
+              />
+            )}
             <AdminWalletsSaldoSection embedded showPublicLinks showTopUp />
           </div>
         ) : (
-          <div className="mx-auto max-w-4xl">
+          <div className="mx-auto max-w-4xl space-y-4">
             <PlayerWalletPanel
               currentUserId={currentUserId}
-              blikPhoneDisplay={blikPhoneDisplay}
-              defaultMatchFeePln={defaultMatchFeePln}
-              playerLabel={playerLabel}
               hotpayEnabled={hotpayEnabled}
               refreshKey={walletRefreshKey}
-              initialMatchId={initialMatchId}
+            />
+            <MatchCartPayPanel
+              hotpayEnabled={hotpayEnabled}
+              onPaid={() => setWalletRefreshKey((k) => k + 1)}
             />
           </div>
         )}

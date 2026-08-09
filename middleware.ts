@@ -7,6 +7,8 @@ import {
   PREVIEW_BLOCKED_QUERY_PARAM,
   SESSION_COOKIE,
   SHARE_LINK_QUERY_PARAM,
+  TEST_MODE_COOKIE,
+  TEST_MODE_HEADER,
 } from "@/lib/constants";
 import { getAuthSecretKey } from "@/lib/auth-secret";
 
@@ -23,6 +25,13 @@ function nextWithPathname(request: NextRequest, extraHeaders?: Record<string, st
   return NextResponse.next({ request: { headers: requestHeaders } });
 }
 
+function testModeExtraHeaders(request: NextRequest): Record<string, string> | undefined {
+  if (request.cookies.get(TEST_MODE_COOKIE)?.value === "1") {
+    return { [TEST_MODE_HEADER]: "1" };
+  }
+  return undefined;
+}
+
 /**
  * Udostępnione linki (?awp_share=1): unieważniamy ciasteczko sesji i przekierowujemy na ten sam URL bez parametru,
  * żeby odbiorca (inna przeglądarka / urządzenie) nie dziedziczył sesji z oryginału.
@@ -34,6 +43,10 @@ export async function middleware(request: NextRequest) {
   if (pathname.startsWith("/api")) {
     const requestHeaders = new Headers(request.headers);
     requestHeaders.set(PATHNAME_HEADER, pathname);
+    const tm = testModeExtraHeaders(request);
+    if (tm) {
+      for (const [k, v] of Object.entries(tm)) requestHeaders.set(k, v);
+    }
     return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
@@ -81,9 +94,10 @@ export async function middleware(request: NextRequest) {
     searchParams.get(PREVIEW_BLOCKED_QUERY_PARAM) === "1" ||
     request.cookies.get(PREVIEW_BLOCKED_COOKIE)?.value === "1";
 
-  const response = previewBlocked
-    ? nextWithPathname(request, { [PREVIEW_HEADER]: "1" })
-    : nextWithPathname(request);
+  const extra: Record<string, string> = { ...(testModeExtraHeaders(request) ?? {}) };
+  if (previewBlocked) extra[PREVIEW_HEADER] = "1";
+
+  const response = nextWithPathname(request, Object.keys(extra).length ? extra : undefined);
 
   if (searchParams.get(PREVIEW_BLOCKED_QUERY_PARAM) === "1") {
     response.cookies.set(PREVIEW_BLOCKED_COOKIE, "1", {

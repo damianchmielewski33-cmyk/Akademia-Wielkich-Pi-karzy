@@ -67,6 +67,8 @@ const WEB_SETTINGS_TOC: SettingsTocGroup[] = [
   {
     label: "Reklamy i rejestracja",
     items: [
+      { id: "settings-test-mode", label: "Tryb testowy" },
+      { id: "settings-payments", label: "Płatności (HotPay)" },
       { id: "settings-adsense", label: "Google AdSense" },
       { id: "settings-registration", label: "Rejestracja i powiadomienia" },
     ],
@@ -229,6 +231,8 @@ export function AdminSettingsTab({
   const [fetching, setFetching] = useState(true);
   const [cancelReasonsDraft, setCancelReasonsDraft] = useState<MatchCancelReasonEntry[]>([]);
   const [saveFlash, setSaveFlash] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [testMode, setTestMode] = useState<{ enabled: boolean; configured: boolean } | null>(null);
+  const [testModeBusy, setTestModeBusy] = useState(false);
 
   const activeTocGroups = channel === "mobile" ? MOBILE_SETTINGS_TOC : WEB_SETTINGS_TOC;
 
@@ -257,12 +261,68 @@ export function AdminSettingsTab({
       setCancelReasonsDraft(
         channel === "mobile" ? data.mobile_settings.match_cancel_reasons : data.match_cancel_reasons
       );
+      if (settingsRealm === "academy") {
+        try {
+          const tmRes = await fetch("/api/admin/test-mode");
+          if (tmRes.ok) {
+            const tm = (await tmRes.json()) as { enabled?: boolean; configured?: boolean };
+            setTestMode({
+              enabled: Boolean(tm.enabled),
+              configured: Boolean(tm.configured),
+            });
+          }
+        } catch {
+          /* ignore */
+        }
+      }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Błąd wczytywania ustawień");
     } finally {
       setFetching(false);
     }
   }, [settingsRealm, channel]);
+
+  const setTestModeEnabled = useCallback(
+    async (enabled: boolean) => {
+      setTestModeBusy(true);
+      const toastId = toast.loading(enabled ? "Włączanie trybu testowego…" : "Wyłączanie i czyszczenie bazy testowej…");
+      try {
+        const res = await fetch("/api/admin/test-mode", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ enabled }),
+        });
+        const j = (await res.json().catch(() => ({}))) as {
+          error?: string;
+          enabled?: boolean;
+          configured?: boolean;
+        };
+        if (!res.ok) {
+          toast.error(typeof j.error === "string" ? j.error : "Nie udało się przełączyć trybu", {
+            id: toastId,
+          });
+          return;
+        }
+        setTestMode({
+          enabled: Boolean(j.enabled),
+          configured: j.configured !== false,
+        });
+        toast.success(
+          enabled
+            ? "Tryb testowy włączony — widzisz osobną bazę (baner u góry)."
+            : "Tryb testowy wyłączony — dane testowe usunięte.",
+          { id: toastId }
+        );
+        // Pełne odświeżenie, żeby RSC / dane przeszły na właściwą bazę.
+        window.location.reload();
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Błąd trybu testowego", { id: toastId });
+      } finally {
+        setTestModeBusy(false);
+      }
+    },
+    []
+  );
 
   useEffect(() => {
     void load();
@@ -677,6 +737,128 @@ export function AdminSettingsTab({
             }}
           />
         </FieldRow>
+      </SettingsSection>
+
+      <SettingsSection
+        id="settings-test-mode"
+        hidden={channel !== "web" || settingsRealm !== "academy" || !sectionVisible("settings-test-mode")}
+        title="Tryb testowy"
+        description="Osobna baza danych tylko dla Twojej sesji admina. Gracze nadal widzą produkcję. Po wyłączeniu mecze, gracze i statystyki z testu są kasowane."
+      >
+        <ul className="mb-4 grid gap-2 text-sm sm:grid-cols-2">
+          <li className={adminStatusChipClass}>
+            <span className="text-emerald-100/70">Baza testowa:</span>{" "}
+            <strong className={testMode?.configured ? "text-emerald-300" : "text-amber-300"}>
+              {testMode == null
+                ? "…"
+                : testMode.configured
+                  ? "Skonfigurowana (TURSO_TEST_* lub lokalny plik)"
+                  : "Brak — ustaw TURSO_TEST_DATABASE_URL i TURSO_TEST_AUTH_TOKEN"}
+            </strong>
+          </li>
+        </ul>
+        <YesNoSwitchRow
+          className={adminToggleRowClass}
+          label="Włącz tryb testowy"
+          hint={
+            testMode?.configured
+              ? "Baner „TRYB TESTOWY” na stronie. HotPay w teście używa session_id z prefixem hp_t_ (księguje tylko na bazie testowej). W panelu HotPay włącz ich „Tryb testowy” na czas testów."
+              : "Na Vercel dodaj osobną bazę Turso i zmienne TURSO_TEST_DATABASE_URL / TURSO_TEST_AUTH_TOKEN, potem redeploy."
+          }
+          checked={Boolean(testMode?.enabled)}
+          disabled={busy || testModeBusy || !testMode?.configured}
+          onCheckedChange={(v) => void setTestModeEnabled(v)}
+        />
+      </SettingsSection>
+
+      <SettingsSection
+        id="settings-payments"
+        hidden={!sectionVisible("settings-payments")}
+        title="Płatności (HotPay)"
+        description="Włącz lub wyłącz bramkę płatności HotPay dla graczy. Wymaga skonfigurowania zmiennych HOTPAY_SEKRET i HOTPAY_NOTIFICATION_PASSWORD na serwerze."
+      >
+        <ul className="mb-4 grid gap-2 text-sm sm:grid-cols-2">
+          <li className={adminStatusChipClass}>
+            <span className="text-emerald-100/70">HotPay (env):</span>{" "}
+            <strong className={settings.system.hotpay_configured ? "text-emerald-300" : "text-amber-300"}>
+              {settings.system.hotpay_configured
+                ? "Skonfigurowany — klucze API ustawione"
+                : "Nieskonfigurowany — brak HOTPAY_SEKRET lub HOTPAY_NOTIFICATION_PASSWORD"}
+            </strong>
+          </li>
+        </ul>
+        <YesNoSwitchRow
+          className={adminToggleRowClass}
+          label="Włącz płatności HotPay"
+          hint={
+            settings.system.hotpay_configured
+              ? "Gracze zobaczą przyciski doładowania portfela przez HotPay na stronie Płatności."
+              : "Ustaw najpierw HOTPAY_SEKRET i HOTPAY_NOTIFICATION_PASSWORD w Vercel, żeby przełącznik miał efekt."
+          }
+          checked={settings.hotpay_enabled}
+          disabled={busy || !settings.system.hotpay_configured}
+          onCheckedChange={(v) => void save({ hotpay_enabled: v })}
+        />
+        <div className="grid gap-4 sm:grid-cols-2">
+          <FieldRow
+            label="Prowizja operatora (%)"
+            hint="Aktualny cennik HotPay dla dz. niezarejestrowanej: 2,45%. Kwota wysłana do operatora zostanie powiększona tak, aby gracz sfinansował prowizję."
+          >
+            <Input
+              type="number"
+              min={0}
+              max={50}
+              step={0.01}
+              className={adminFieldClass}
+              defaultValue={settings.hotpay_commission_pct}
+              disabled={busy}
+              key={`commission_pct-${settings.hotpay_commission_pct}`}
+              onBlur={(e) => {
+                const n = parseFloat(e.target.value);
+                if (!Number.isFinite(n) || n < 0) return;
+                if (n !== settings.hotpay_commission_pct) void save({ hotpay_commission_pct: n });
+              }}
+            />
+          </FieldRow>
+          <FieldRow
+            label="Stała opłata operatora (zł)"
+            hint="Aktualny cennik HotPay dla dz. niezarejestrowanej: 0,30 zł / transakcję. Wpisz 0, jeśli brak."
+          >
+            <Input
+              type="number"
+              min={0}
+              max={100}
+              step={0.01}
+              className={adminFieldClass}
+              defaultValue={settings.hotpay_commission_fixed}
+              disabled={busy}
+              key={`commission_fixed-${settings.hotpay_commission_fixed}`}
+              onBlur={(e) => {
+                const n = parseFloat(e.target.value);
+                if (!Number.isFinite(n) || n < 0) return;
+                if (n !== settings.hotpay_commission_fixed) void save({ hotpay_commission_fixed: n });
+              }}
+            />
+          </FieldRow>
+        </div>
+        {(settings.hotpay_commission_pct > 0 || settings.hotpay_commission_fixed > 0) && (
+          <p className="text-xs leading-relaxed pitch-muted">
+            Przykład: przy zaległości <strong>50,00 zł</strong> gracz zostanie przekierowany do operatora z kwotą{" "}
+            <strong>
+              {(
+                Math.ceil(
+                  ((50 + settings.hotpay_commission_fixed) /
+                    (1 - settings.hotpay_commission_pct / 100)) *
+                    100
+                ) / 100
+              ).toFixed(2)}{" "}
+              zł
+            </strong>
+            . Na portfelu zostanie zaksięgowane <strong>50,00 zł</strong>. Zawyżenie składki meczu (zaokrąglenie
+            w górę do 0,50 zł) jest odejmowane od prowizji — gracz płaci mniej, gdy składka była podniesiona
+            względem dokładnego podziału wynajmu.
+          </p>
+        )}
       </SettingsSection>
 
       <SettingsSection

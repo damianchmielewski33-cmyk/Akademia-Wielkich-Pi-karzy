@@ -3,6 +3,9 @@ import { redirect } from "next/navigation";
 import { getServerSession } from "@/lib/auth";
 import { REALMS } from "@/lib/realm";
 import { getTerminarzPageData } from "@/lib/realm-page-data";
+import { getDb } from "@/lib/db";
+import { getAppSettings } from "@/lib/app-settings";
+import { isHotpayConfigured } from "@/lib/hotpay";
 import { TerminarzClient } from "@/components/terminarz-client";
 
 export const metadata: Metadata = {
@@ -47,7 +50,11 @@ export default async function TerminarzPage({
   }
 
   const session = await getServerSession();
-  const data = await getTerminarzPageData(REALMS.ACADEMY, session);
+  const [data, db] = await Promise.all([
+    getTerminarzPageData(REALMS.ACADEMY, session),
+    getDb(),
+  ]);
+  const appSettings = await getAppSettings(db);
 
   return (
     <div className="container mx-auto max-w-7xl flex-1 px-4 py-8 sm:py-10">
@@ -73,6 +80,7 @@ export default async function TerminarzPage({
         cancelReasons={data.appSettings.match_cancel_reasons}
         captainLotteryData={data.captainLotteryData}
         captainLotteryHistory={data.captainLotteryHistory}
+        hotpayEnabled={isHotpayConfigured() && appSettings.hotpay_enabled}
       />
     </div>
   );

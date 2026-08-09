@@ -33,6 +33,7 @@ import type { HomeTopPlayer } from "@/lib/rankings-data";
 import { cn } from "@/lib/utils";
 import { useScreenBlocks } from "@/components/screen-blocks-provider";
 import { GymBratCrossLink } from "@/components/gymbrat-cross-link";
+import { useHotpayPayment } from "@/hooks/use-hotpay-payment";
 
 type Props = {
   nextMatch: MatchRow | null;
@@ -42,6 +43,7 @@ type Props = {
   nextMatchSignup: "none" | "tentative" | "confirmed" | "declined";
   /** Kafelek transportu zawsze widoczny po zapisie; link działa w lokalny dzień meczu. */
   transportHomeActive: boolean;
+  hotpayEnabled?: boolean;
   isLoggedIn: boolean;
   isAdmin: boolean;
   firstName: string;
@@ -62,6 +64,7 @@ export function HomeClient({
   lineupPublicNextMatch,
   nextMatchSignup,
   transportHomeActive,
+  hotpayEnabled,
   isLoggedIn,
   isAdmin,
   firstName,
@@ -81,6 +84,8 @@ export function HomeClient({
   const [signupOpen, setSignupOpen] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [statsOpen, setStatsOpen] = useState(false);
+  const [walletBalancePln, setWalletBalancePln] = useState<number | null>(null);
+  const { pay: payDebt, busy: debtBusy } = useHotpayPayment();
   const [pendingMatch, setPendingMatch] = useState<{
     match_id: number;
     date: string;
@@ -108,6 +113,18 @@ export function HomeClient({
       })
       .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (!isLoggedIn || !hotpayEnabled) return;
+    fetch("/api/wallet/me")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { balance_pln?: unknown } | null) => {
+        if (d && typeof d.balance_pln === "number") {
+          setWalletBalancePln(d.balance_pln);
+        }
+      })
+      .catch(() => {});
+  }, [isLoggedIn, hotpayEnabled]);
 
   function openTransportSignup() {
     if (!nextMatch) return;
@@ -309,8 +326,12 @@ export function HomeClient({
             lineupPublic={lineupPublicNextMatch}
             signup={nextMatchSignup}
             transportActive={transportHomeActive}
+            hotpayEnabled={hotpayEnabled}
             isLoggedIn={isLoggedIn}
             tentativeBusy={tentativeBusy}
+            walletBalancePln={walletBalancePln}
+            debtBusy={debtBusy}
+            onPayDebt={(amount) => void payDebt(amount)}
             onSignup={openTransportSignup}
             onTentative={() => void signupTentativeHome()}
             onDeclined={() => void signupDeclinedHome()}
@@ -378,6 +399,7 @@ export function HomeClient({
           onOpenChange={setTransportSignupOpen}
           matchId={nextMatch.id}
           intent={transportIntent === "confirm" ? "confirm" : "signup"}
+          hotpayEnabled={hotpayEnabled}
           onCompleted={() => {
             setSignupOpen(true);
             router.refresh();

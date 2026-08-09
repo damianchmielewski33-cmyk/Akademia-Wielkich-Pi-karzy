@@ -94,6 +94,12 @@ export type AppSettings = {
   screen_blocks_mobile: Record<BlockableMobileScreenKey, ScreenBlockEntry>;
   /** Pełna konfiguracja kanału „aplikacja” (osobno od strony). */
   mobile_settings: MobileChannelSettings;
+  /** Czy platnosci HotPay sa wlaczone przez admina (niezaleznie od konfiguracji env). */
+  hotpay_enabled: boolean;
+  /** Prowizja operatora w % (np. 1.8). 0 = brak powiększania kwoty. */
+  hotpay_commission_pct: number;
+  /** Stała opłata operatora w PLN (np. 0.40). */
+  hotpay_commission_fixed: number;
 };
 
 export const PZU_CUP_APP_SETTINGS_DEFAULTS: Partial<AppSettings> = {
@@ -156,6 +162,9 @@ export const APP_SETTINGS_DEFAULTS: AppSettings = {
   screen_blocks: emptyScreenBlocksMap(),
   screen_blocks_mobile: emptyMobileScreenBlocksMap(),
   mobile_settings: { ...MOBILE_CHANNEL_SETTINGS_DEFAULTS },
+  hotpay_enabled: true,
+  hotpay_commission_pct: 2.45,
+  hotpay_commission_fixed: 0.30,
 };
 
 type DbReadLike = {
@@ -213,6 +222,9 @@ type AppSettingsRow = {
   screen_blocks_json?: string | null;
   screen_blocks_mobile_json?: string | null;
   mobile_settings_json?: string | null;
+  hotpay_enabled?: number | null;
+  hotpay_commission_pct?: number | null;
+  hotpay_commission_fixed?: number | null;
 };
 
 function appSettingsSelectSql(): string {
@@ -259,7 +271,10 @@ function appSettingsSelectSql(): string {
     asset_bg_pitch_lines_url,
     screen_blocks_json,
     screen_blocks_mobile_json,
-    mobile_settings_json
+    mobile_settings_json,
+    hotpay_enabled,
+    hotpay_commission_pct,
+    hotpay_commission_fixed
   FROM app_settings WHERE realm = ?
 `;
 }
@@ -396,6 +411,15 @@ export function resolveAppSettings(
     site_assets: resolveSiteAssets(assetUrls),
     screen_blocks: parseScreenBlocksJson(row?.screen_blocks_json),
     screen_blocks_mobile: parseMobileScreenBlocksJson(row?.screen_blocks_mobile_json),
+    hotpay_enabled: (row?.hotpay_enabled ?? 0) === 1,
+    hotpay_commission_pct:
+      typeof row?.hotpay_commission_pct === "number" && row.hotpay_commission_pct >= 0
+        ? row.hotpay_commission_pct
+        : APP_SETTINGS_DEFAULTS.hotpay_commission_pct,
+    hotpay_commission_fixed:
+      typeof row?.hotpay_commission_fixed === "number" && row.hotpay_commission_fixed >= 0
+        ? row.hotpay_commission_fixed
+        : APP_SETTINGS_DEFAULTS.hotpay_commission_fixed,
     mobile_settings: parseMobileSettingsJson(
       row?.mobile_settings_json,
       mobileSettingsFromWeb({
@@ -514,7 +538,10 @@ export async function saveAppSettings(db: DbWriteLike, realm: Realm, settings: A
         asset_bg_pitch_lines_url = ?,
         screen_blocks_json = ?,
         screen_blocks_mobile_json = ?,
-        mobile_settings_json = ?
+        mobile_settings_json = ?,
+        hotpay_enabled = ?,
+        hotpay_commission_pct = ?,
+        hotpay_commission_fixed = ?
       WHERE realm = ?`
     )
     .run(
@@ -560,6 +587,9 @@ export async function saveAppSettings(db: DbWriteLike, realm: Realm, settings: A
       serializeScreenBlocksMap(settings.screen_blocks),
       serializeMobileScreenBlocksMap(settings.screen_blocks_mobile),
       serializeMobileSettings(settings.mobile_settings),
+      settings.hotpay_enabled ? 1 : 0,
+      settings.hotpay_commission_pct,
+      settings.hotpay_commission_fixed,
       realm
     );
 }
@@ -639,6 +669,9 @@ const APP_SETTINGS_MIGRATION_COLUMNS: { name: string; ddl: string }[] = [
     ddl: "ALTER TABLE app_settings ADD COLUMN screen_blocks_mobile_json TEXT",
   },
   { name: "mobile_settings_json", ddl: "ALTER TABLE app_settings ADD COLUMN mobile_settings_json TEXT" },
+  { name: "hotpay_enabled", ddl: "ALTER TABLE app_settings ADD COLUMN hotpay_enabled INTEGER NOT NULL DEFAULT 1" },
+  { name: "hotpay_commission_pct", ddl: "ALTER TABLE app_settings ADD COLUMN hotpay_commission_pct REAL NOT NULL DEFAULT 2.45" },
+  { name: "hotpay_commission_fixed", ddl: "ALTER TABLE app_settings ADD COLUMN hotpay_commission_fixed REAL NOT NULL DEFAULT 0.30" },
 ];
 
 /** True gdy SQLite/libSQL zgłasza „duplicate column” (także lokalizowane komunikaty). */

@@ -15,7 +15,11 @@ import { PitchCardDecorations, pitchLabelClass } from "@/components/ui/pitch-car
 import type { PlatnosciUserLite } from "@/components/platnosci-client";
 import { cn } from "@/lib/utils";
 
-type AdminWalletPlayerRow = PlatnosciUserLite & { balance_pln: number };
+type AdminWalletPlayerRow = PlatnosciUserLite & {
+  balance_pln: number;
+  admin_balance_pln?: number;
+  operator_balance_pln?: number;
+};
 
 type AdminWalletOverview = {
   players: AdminWalletPlayerRow[];
@@ -260,6 +264,8 @@ export function AdminWalletsSaldoSection({
   const [topUpAmount, setTopUpAmount] = useState("");
   const [topUpNote, setTopUpNote] = useState("");
   const [topUpSubmitting, setTopUpSubmitting] = useState(false);
+  const [topUpIsOperatorCorrection, setTopUpIsOperatorCorrection] = useState(false);
+  const [topUpOperatorReason, setTopUpOperatorReason] = useState("");
   const [publicLinkBusy, setPublicLinkBusy] = useState(false);
   const [publicLinkCopied, setPublicLinkCopied] = useState<string | null>(null);
 
@@ -337,6 +343,10 @@ export function AdminWalletsSaldoSection({
       toast.error("Podaj prawidłową kwotę");
       return;
     }
+    if (topUpIsOperatorCorrection && !topUpOperatorReason.trim()) {
+      toast.error("Podaj powód korekty portfela operatora");
+      return;
+    }
     setTopUpSubmitting(true);
     try {
       const r = await fetchJson<{ ok: true; id: number }>("/api/admin/wallet/deposits", {
@@ -346,6 +356,8 @@ export function AdminWalletsSaldoSection({
           user_id,
           amount_pln,
           note: topUpNote.trim() ? topUpNote.trim() : undefined,
+          wallet_kind: topUpIsOperatorCorrection ? "operator" : "admin",
+          ...(topUpIsOperatorCorrection ? { operator_correction_reason: topUpOperatorReason.trim() } : {}),
         }),
       });
       if (!r.ok) {
@@ -355,6 +367,8 @@ export function AdminWalletsSaldoSection({
       toast.success(`Dodano ${formatPln(amount_pln)} do salda zawodnika`);
       setTopUpAmount("");
       setTopUpNote("");
+      setTopUpIsOperatorCorrection(false);
+      setTopUpOperatorReason("");
       await refresh();
       router.refresh();
     } finally {
@@ -418,6 +432,8 @@ export function AdminWalletsSaldoSection({
     setAdminBalanceUserId(null);
     setTopUpUserQuery("");
     setAdminBalanceUserQuery("");
+    setTopUpIsOperatorCorrection(false);
+    setTopUpOperatorReason("");
   }
 
   const topUpFormBody = (
@@ -469,6 +485,39 @@ export function AdminWalletsSaldoSection({
               />
             </div>
           </div>
+          <div className="mt-3 flex items-center gap-2">
+            <input
+              id="admin-topup-operator-correction"
+              type="checkbox"
+              checked={topUpIsOperatorCorrection}
+              onChange={(e) => {
+                setTopUpIsOperatorCorrection(e.target.checked);
+                if (!e.target.checked) setTopUpOperatorReason("");
+              }}
+              className="h-4 w-4 rounded border-zinc-300 text-amber-600 dark:border-zinc-600"
+            />
+            <Label htmlFor="admin-topup-operator-correction" className="cursor-pointer text-sm text-amber-900 dark:text-amber-200">
+              Korekta portfela operatora (na wniosek gracza, w przypadku błędu)
+            </Label>
+          </div>
+          {topUpIsOperatorCorrection && (
+            <div className="mt-2">
+              <Label htmlFor="admin-topup-operator-reason">
+                Powód korekty portfela operatora <span className="text-red-600">*</span>
+              </Label>
+              <Input
+                id="admin-topup-operator-reason"
+                type="text"
+                placeholder="np. anulowana płatność HotPay, ID sesji ..."
+                value={topUpOperatorReason}
+                onChange={(e) => setTopUpOperatorReason(e.target.value)}
+                className="mt-1 border-amber-300 focus-visible:ring-amber-400 dark:border-amber-700"
+              />
+              <p className="mt-1 text-[11px] text-amber-700 dark:text-amber-300">
+                Korekta portfela operatora jest możliwa wyłącznie na wniosek gracza i wymaga uzasadnienia.
+              </p>
+            </div>
+          )}
           <div className="mt-3">
             <Button type="button" disabled={topUpSubmitting} onClick={() => void adminTopUpWallet()}>
               {topUpSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
@@ -656,6 +705,16 @@ export function AdminWalletsSaldoSection({
                   >
                     {formatPln(bal)}
                   </span>
+                  {"admin_balance_pln" in p && ("operator_balance_pln" in p) ? (
+                    <div className="flex shrink-0 flex-col items-end gap-0.5">
+                      <span className="text-[10px] tabular-nums text-zinc-500 dark:text-zinc-400">
+                        G: {formatPln(Number((p as AdminWalletPlayerRow).admin_balance_pln ?? 0))}
+                      </span>
+                      <span className="text-[10px] tabular-nums text-zinc-500 dark:text-zinc-400">
+                        O: {formatPln(Number((p as AdminWalletPlayerRow).operator_balance_pln ?? 0))}
+                      </span>
+                    </div>
+                  ) : null}
                 </li>
               );
             })}
