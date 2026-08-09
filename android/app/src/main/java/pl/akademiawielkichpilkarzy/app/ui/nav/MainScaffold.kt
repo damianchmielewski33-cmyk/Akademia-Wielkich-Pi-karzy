@@ -202,6 +202,13 @@ private fun NativeMainScaffold(
                 )
                 "pay_return/$enc"
             }
+            path.startsWith("/terminarz") && path.contains("?") -> {
+                val enc = Base64.encodeToString(
+                    path.toByteArray(Charsets.UTF_8),
+                    Base64.URL_SAFE or Base64.NO_WRAP
+                )
+                "pay_return/$enc"
+            }
             path.startsWith("/platnosci") -> "wallet"
             path.startsWith("/terminarz") -> "schedule"
             else -> "web/${Uri.encode(title)}/${Uri.encode(path)}/$requireAuth"
@@ -216,6 +223,9 @@ private fun NativeMainScaffold(
             }
             initialPath?.startsWith("/platnosci") == true -> {
                 openPortal("Płatności", initialPath, requireAuth = true)
+            }
+            initialPath?.startsWith("/terminarz") == true -> {
+                openPortal("Terminarz", initialPath, requireAuth = true)
             }
         }
     }
@@ -392,10 +402,14 @@ private fun NativeMainScaffold(
                 val encoded = entry.arguments?.getString("encodedPath").orEmpty()
                 val path = runCatching {
                     String(Base64.decode(encoded, Base64.URL_SAFE or Base64.NO_WRAP), Charsets.UTF_8)
-                }.getOrNull()?.takeIf { it.startsWith("/platnosci") } ?: "/platnosci"
-                BlockedOrContent(message = isBlocked("wallet")) {
+                }.getOrNull()?.takeIf {
+                    it.startsWith("/platnosci") || it.startsWith("/terminarz")
+                } ?: "/platnosci"
+                val title = if (path.startsWith("/terminarz")) "Terminarz" else "Płatności"
+                val blockKey = if (path.startsWith("/terminarz")) "schedule" else "wallet"
+                BlockedOrContent(message = isBlocked(blockKey)) {
                     WebPortalScreen(
-                        title = "Płatności",
+                        title = title,
                         path = path,
                         requireAuth = true,
                         showTopBar = true,

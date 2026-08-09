@@ -7,6 +7,7 @@ import { ArrowLeft, Calendar, ChevronDown, Loader2, LogOut, Moon, RefreshCw, Sun
 import { PitchCard, PitchCardDecorations, pitchLabelClass } from "@/components/ui/pitch-card";
 import { SiteSectionHero } from "@/components/site-section-hero";
 import { SiteAssetImage } from "@/components/site-asset-image";
+import { AdminTestModeSidebarButton } from "@/components/admin-test-mode-sidebar-button";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -385,7 +386,9 @@ export function AdminShell({
             })}
           </nav>
 
-          <div className="flex flex-wrap gap-1 border-t border-white/15 pt-3 lg:mt-auto lg:flex-col lg:pt-4">
+          <div className="relative z-10 flex flex-col gap-3 lg:mt-auto">
+            <AdminTestModeSidebarButton />
+            <div className="flex flex-wrap gap-1 border-t border-white/15 pt-3 lg:flex-col">
             <button
               type="button"
               onClick={() => void toggleTheme()}
@@ -416,6 +419,7 @@ export function AdminShell({
               <LogOut className="h-4 w-4 shrink-0" aria-hidden />
               Wyloguj
             </button>
+            </div>
           </div>
         </div>
       </aside>

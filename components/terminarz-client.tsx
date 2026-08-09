@@ -23,6 +23,7 @@ import {
   UserMinus,
   UserPlus,
   Users,
+  Wallet,
   X,
 } from "lucide-react";
 import type { MatchRow } from "@/lib/db";
@@ -72,8 +73,8 @@ import { useAsyncAction } from "@/lib/use-async-action";import {
 import type { CaptainLotteryEntry } from "@/lib/captain-lottery";
 import { captainLotteryEntryFromApi } from "@/lib/captain-lottery";
 import { useHotpayPayment } from "@/hooks/use-hotpay-payment";
+import { useHotpayPaymentReturn } from "@/hooks/use-hotpay-payment-return";
 import { payMatchCart } from "@/lib/hotpay-client";
-import { PayButton } from "@/components/pay-button";
 import { hasMatchTimePassed } from "@/lib/transport";
 
 type Props = {
@@ -212,6 +213,18 @@ export function TerminarzClient({
   const [walletBalancePln, setWalletBalancePln] = useState<number | null>(null);
   const { pay: payDebt, busy: debtBusy } = useHotpayPayment();
   const [matchPayBusyId, setMatchPayBusyId] = useState<number | null>(null);
+
+  useHotpayPaymentReturn({
+    enabled: isLoggedIn,
+    onSettled: () => {
+      if (!isLoggedIn || !hotpayEnabled) return;
+      fetch("/api/wallet/me")
+        .then((r) => r.json() as Promise<{ balance_pln?: unknown }>)
+        .then((d) => setWalletBalancePln(Number(d.balance_pln ?? 0)))
+        .catch(() => void 0);
+      router.refresh();
+    },
+  });
   const [view, setView] = useState<"list" | "cal">("list");
   const [listTab, setListTab] = useState<"active" | "archive">("active");
   const [filter, setFilter] = useState("all");
@@ -327,6 +340,7 @@ export function TerminarzClient({
           matchId,
           userIds: [currentUserId],
           allowHotpay: hotpayEnabled,
+          returnPath: `/terminarz?mecz=${matchId}`,
         });
         if (result.method === "hotpay") {
           toast.info("Trwa przekierowanie do płatności HotPay…");
@@ -939,13 +953,25 @@ export function TerminarzClient({
                   terminu meczu wypisu z poziomu aplikacji nie ma — w razie potrzeby napisz do administratora.
                 </ActionNotice>
                 {hotpayEnabled && walletBalancePln !== null && walletBalancePln < 0 ? (
-                  <PayButton
-                    variant="action"
-                    amountPln={walletBalancePln}
-                    label="Opłać zaległość za mecz"
-                    busy={debtBusy}
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className={actionBtnPrimary}
+                    disabled={debtBusy}
                     onClick={() => void payDebt(Math.abs(walletBalancePln))}
-                  />
+                  >
+                    {debtBusy ? (
+                      <Loader2 className="shrink-0 animate-spin" aria-hidden />
+                    ) : (
+                      <Wallet className="shrink-0" aria-hidden />
+                    )}
+                    <span>
+                      <span className="block leading-tight">Opłać zaległość za mecz</span>
+                      <span className="mt-1 block text-[11px] font-normal leading-snug text-emerald-100/95">
+                        {formatMatchFeePln(Math.abs(walletBalancePln))} · HotPay
+                      </span>
+                    </span>
+                  </Button>
                 ) : null}
               </>
             ) : (
@@ -967,23 +993,50 @@ export function TerminarzClient({
                 </Button>
                 {m.cancelled !== 1 && isConfirmedUnpaidForUser(playersData, m.id, currentUserId) ? (
                   hotpayEnabled && walletBalancePln !== null && walletBalancePln < 0 ? (
-                    <PayButton
-                      variant="action"
-                      amountPln={walletBalancePln}
-                      label="Opłać zaległość"
-                      busy={debtBusy}
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className={actionBtnPrimary}
+                      disabled={debtBusy || matchPayBusyId != null}
                       onClick={() => void payDebt(Math.abs(walletBalancePln))}
-                    />
+                    >
+                      {debtBusy ? (
+                        <Loader2 className="shrink-0 animate-spin" aria-hidden />
+                      ) : (
+                        <Wallet className="shrink-0" aria-hidden />
+                      )}
+                      <span>
+                        <span className="block leading-tight">Opłać zaległość</span>
+                        <span className="mt-1 block text-[11px] font-normal leading-snug text-emerald-100/95">
+                          {formatMatchFeePln(Math.abs(walletBalancePln))} · HotPay
+                        </span>
+                      </span>
+                    </Button>
                   ) : (
-                    <PayButton
-                      variant="action"
-                      amountPln={perPersonMatchFeePln(m.fee_pln, m.signed_up)}
-                      label="Opłać ten mecz"
-                      sublabel={hotpayEnabled ? "Przejdź do bramki HotPay" : "Zapłać z portfela"}
-                      busy={matchPayBusyId === m.id}
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className={actionBtnPrimary}
                       disabled={matchPayBusyId != null || debtBusy}
+                      title={hotpayEnabled ? "Opłać przez HotPay" : "Opłać z portfela"}
                       onClick={() => void payMatchFee(m.id)}
-                    />
+                    >
+                      {matchPayBusyId === m.id ? (
+                        <Loader2 className="shrink-0 animate-spin" aria-hidden />
+                      ) : (
+                        <Wallet className="shrink-0" aria-hidden />
+                      )}
+                      <span>
+                        <span className="block leading-tight">Opłać ten mecz</span>
+                        <span className="mt-1 block text-[11px] font-normal leading-snug text-emerald-100/95">
+                          {(() => {
+                            const fee = perPersonMatchFeePln(m.fee_pln, m.signed_up);
+                            const via = hotpayEnabled ? "HotPay" : "portfel";
+                            return fee != null ? `${formatMatchFeePln(fee)} · ${via}` : via;
+                          })()}
+                        </span>
+                      </span>
+                    </Button>
                   )
                 ) : null}
               </>

@@ -249,9 +249,41 @@ export function isHotpayTestSessionId(sessionId: string): boolean {
   return sessionId.startsWith("hp_t_");
 }
 
-export function buildHotpayReturnUrl(sessionId: string, paymentHint: "pending" | "error" = "pending"): string {
+/**
+ * Dozwolona ścieżka powrotu po HotPay (względna, bez open redirect).
+ * Domyślnie /platnosci.
+ */
+export function sanitizeHotpayReturnPath(raw: unknown): string {
+  if (typeof raw !== "string") return "/platnosci";
+  const trimmed = raw.trim();
+  if (!trimmed.startsWith("/")) return "/platnosci";
+  if (trimmed.startsWith("//")) return "/platnosci";
+  if (trimmed.includes("://")) return "/platnosci";
+  if (trimmed.includes("\\")) return "/platnosci";
+  if (trimmed.length > 512) return "/platnosci";
+  // Tylko znane sekcje aplikacji (nie dowolny deep-link).
+  const pathOnly = trimmed.split("?")[0] ?? trimmed;
+  const allowed =
+    pathOnly === "/" ||
+    pathOnly === "/platnosci" ||
+    pathOnly === "/terminarz" ||
+    pathOnly === "/profil" ||
+    pathOnly === "/pzu-cup" ||
+    pathOnly.startsWith("/pzu-cup/") ||
+    pathOnly.startsWith("/terminarz/") ||
+    pathOnly.startsWith("/transport/");
+  if (!allowed) return "/platnosci";
+  return trimmed;
+}
+
+export function buildHotpayReturnUrl(
+  sessionId: string,
+  paymentHint: "pending" | "error" = "pending",
+  returnPath?: string | null
+): string {
   const base = getSiteUrl().replace(/\/$/, "");
-  const url = new URL(`${base}/platnosci`);
+  const path = sanitizeHotpayReturnPath(returnPath);
+  const url = new URL(`${base}${path.startsWith("/") ? path : `/${path}`}`);
   url.searchParams.set("payment", paymentHint);
   url.searchParams.set("session_id", sessionId);
   return url.toString();

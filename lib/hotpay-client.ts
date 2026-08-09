@@ -3,11 +3,29 @@
  * This function is framework-agnostic and can be used both in React hooks
  * and in standalone async flows (e.g. inside dialog submit handlers).
  */
-export async function createHotpayTopup(amountPln: number): Promise<string> {
+
+/** Aktualna ścieżka (bez parametrów powrotu HotPay) — do ADRES_WWW po bramce. */
+export function currentHotpayReturnPath(fallback = "/platnosci"): string {
+  if (typeof window === "undefined") return fallback;
+  const u = new URL(window.location.href);
+  u.searchParams.delete("payment");
+  u.searchParams.delete("session_id");
+  const path = `${u.pathname}${u.search}`;
+  return path.startsWith("/") ? path : fallback;
+}
+
+export async function createHotpayTopup(
+  amountPln: number,
+  opts?: { returnPath?: string }
+): Promise<string> {
   const res = await fetch("/api/wallet/hotpay/create", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ kind: "topup", amount_pln: amountPln }),
+    body: JSON.stringify({
+      kind: "topup",
+      amount_pln: amountPln,
+      return_path: opts?.returnPath ?? currentHotpayReturnPath(),
+    }),
   });
   const data = (await res.json().catch(() => ({}))) as { url?: string; error?: unknown };
   if (!res.ok || !data.url) {
@@ -31,6 +49,7 @@ export async function payMatchCart(args: {
   matchId: number;
   userIds: number[];
   allowHotpay?: boolean;
+  returnPath?: string;
 }): Promise<MatchCartPayResult> {
   const res = await fetch("/api/wallet/match-cart", {
     method: "POST",
@@ -39,6 +58,7 @@ export async function payMatchCart(args: {
       match_id: args.matchId,
       user_ids: args.userIds,
       allow_hotpay: args.allowHotpay !== false,
+      return_path: args.returnPath ?? currentHotpayReturnPath(`/terminarz?mecz=${args.matchId}`),
     }),
   });
   const data = (await res.json().catch(() => ({}))) as {

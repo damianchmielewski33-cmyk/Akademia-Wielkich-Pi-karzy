@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { getServerSession } from "@/lib/auth";
 import { REALMS } from "@/lib/realm";
@@ -58,30 +59,32 @@ export default async function TerminarzPage({
 
   return (
     <div className="container mx-auto max-w-7xl flex-1 px-4 py-8 sm:py-10">
-      <TerminarzClient
-        upcoming={data.upcoming}
-        playedConfirmed={data.playedConfirmed}
-        allMatches={data.matches}
-        playersData={data.playersData}
-        userSignupKind={data.userSignupKind}
-        playedMissingStatsMatchIds={data.playedMissingStatsMatchIds}
-        isLoggedIn={Boolean(session)}
-        isAdmin={session?.isAdmin ?? false}
-        currentUserId={session?.userId ?? null}
-        highlightMatchId={highlightMatchId}
-        openStatsFromUrl={openStatsFromUrl}
-        openStandaloneSurveyStats={openStandaloneSurveyStats}
-        openAttendanceFromUrl={openAttendanceFromUrl}
-        matchDefaults={{
-          maxSlots: data.appSettings.default_match_max_slots,
-          location: data.appSettings.default_match_location,
-          feePln: data.appSettings.default_match_fee_pln,
-        }}
-        cancelReasons={data.appSettings.match_cancel_reasons}
-        captainLotteryData={data.captainLotteryData}
-        captainLotteryHistory={data.captainLotteryHistory}
-        hotpayEnabled={isHotpayConfigured() && appSettings.hotpay_enabled}
-      />
+      <Suspense fallback={<p className="text-center text-sm text-zinc-500">Ładowanie terminarza…</p>}>
+        <TerminarzClient
+          upcoming={data.upcoming}
+          playedConfirmed={data.playedConfirmed}
+          allMatches={data.matches}
+          playersData={data.playersData}
+          userSignupKind={data.userSignupKind}
+          playedMissingStatsMatchIds={data.playedMissingStatsMatchIds}
+          isLoggedIn={Boolean(session)}
+          isAdmin={session?.isAdmin ?? false}
+          currentUserId={session?.userId ?? null}
+          highlightMatchId={highlightMatchId}
+          openStatsFromUrl={openStatsFromUrl}
+          openStandaloneSurveyStats={openStandaloneSurveyStats}
+          openAttendanceFromUrl={openAttendanceFromUrl}
+          matchDefaults={{
+            maxSlots: data.appSettings.default_match_max_slots,
+            location: data.appSettings.default_match_location,
+            feePln: data.appSettings.default_match_fee_pln,
+          }}
+          cancelReasons={data.appSettings.match_cancel_reasons}
+          captainLotteryData={data.captainLotteryData}
+          captainLotteryHistory={data.captainLotteryHistory}
+          hotpayEnabled={isHotpayConfigured() && appSettings.hotpay_enabled}
+        />
+      </Suspense>
     </div>
   );
 }

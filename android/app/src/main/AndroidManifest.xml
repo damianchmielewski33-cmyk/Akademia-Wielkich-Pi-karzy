@@ -47,6 +47,10 @@
                     android:host="${appLinkHost}"
                     android:pathPrefix="/platnosci"
                     android:scheme="https" />
+                <data
+                    android:host="${appLinkHost}"
+                    android:pathPrefix="/terminarz"
+                    android:scheme="https" />
             </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
@@ -61,6 +65,10 @@
                 <data
                     android:host="${appLinkHost}"
                     android:pathPrefix="/platnosci"
+                    android:scheme="http" />
+                <data
+                    android:host="${appLinkHost}"
+                    android:pathPrefix="/terminarz"
                     android:scheme="http" />
             </intent-filter>
         </activity>

@@ -100,11 +100,7 @@ export async function middleware(request: NextRequest) {
   // Powrót z HotPay (session_id hp_t_*) — przywróć cookie i nagłówek trybu testowego dla admina.
   let restoreTestModeCookie = false;
   const hotpaySessionId = searchParams.get("session_id");
-  if (
-    pathname === "/platnosci" &&
-    hotpaySessionId?.startsWith("hp_t_") &&
-    request.cookies.get(SESSION_COOKIE)?.value
-  ) {
+  if (hotpaySessionId?.startsWith("hp_t_") && request.cookies.get(SESSION_COOKIE)?.value) {
     try {
       const { payload } = await jwtVerify(
         request.cookies.get(SESSION_COOKIE)!.value,

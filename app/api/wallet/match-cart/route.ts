@@ -30,6 +30,8 @@ const postSchema = z.object({
   user_ids: z.array(z.coerce.number().int().positive()).min(1).max(40),
   /** Gdy brak środków — spróbuj HotPay na pełną kwotę koszyka. */
   allow_hotpay: z.boolean().optional().default(true),
+  /** Ścieżka powrotu po bramce (np. /terminarz?mecz=12). */
+  return_path: z.string().trim().max(512).optional(),
 });
 
 export async function GET(req: Request) {
@@ -70,7 +72,7 @@ export async function POST(req: Request) {
   }
 
   const payerId = gate.session.userId;
-  const { match_id, user_ids, allow_hotpay } = parsed.data;
+  const { match_id, user_ids, allow_hotpay, return_path } = parsed.data;
 
   const walletPay = await applyMatchCartFromWallet({
     payerUserId: payerId,
@@ -164,7 +166,7 @@ export async function POST(req: Request) {
 
   const inTestMode = await isAdminTestModeActive();
   const sessionId = createHotpaySessionId(payerId, { testMode: inTestMode });
-  const returnUrl = buildHotpayReturnUrl(sessionId, "pending");
+  const returnUrl = buildHotpayReturnUrl(sessionId, "pending", return_path);
   const playerLabel =
     [gate.session.firstName, gate.session.lastName].filter(Boolean).join(" ").trim() || gate.session.zawodnik;
   const serviceName = `${config.serviceName} — koszyk meczowy (${playerLabel})`;

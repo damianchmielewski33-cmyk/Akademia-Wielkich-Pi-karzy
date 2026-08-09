@@ -22,6 +22,8 @@ export const runtime = "nodejs";
 const postSchema = z.object({
   kind: z.enum(["match", "topup"]),
   amount_pln: z.coerce.number().positive().max(10000).optional(),
+  /** Ścieżka powrotu po bramce (np. /terminarz?mecz=12). */
+  return_path: z.string().trim().max(512).optional(),
 });
 
 export async function POST(req: Request) {
@@ -103,7 +105,7 @@ export async function POST(req: Request) {
 
   const inTestMode = await isAdminTestModeActive();
   const sessionId = createHotpaySessionId(userId, { testMode: inTestMode });
-  const returnUrl = buildHotpayReturnUrl(sessionId, "pending");
+  const returnUrl = buildHotpayReturnUrl(sessionId, "pending", parsed.data.return_path);
   const playerLabel =
     [gate.session.firstName, gate.session.lastName].filter(Boolean).join(" ").trim() || gate.session.zawodnik;
   const serviceName =

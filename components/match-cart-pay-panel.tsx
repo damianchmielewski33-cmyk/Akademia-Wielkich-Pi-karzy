@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { formatMatchFeePln } from "@/lib/match-fee";
 import { cn } from "@/lib/utils";
 import type { MatchCartMatchOption } from "@/lib/match-cart";
+import { currentHotpayReturnPath } from "@/lib/hotpay-client";
 
 type Props = {
   hotpayEnabled: boolean;
@@ -154,6 +155,7 @@ export function MatchCartPayPanel({
           match_id: selectedMatch.match_id,
           user_ids: selectedIds,
           allow_hotpay: hotpayEnabled,
+          return_path: currentHotpayReturnPath("/platnosci"),
         }),
       });
       const data = (await res.json().catch(() => ({}))) as {

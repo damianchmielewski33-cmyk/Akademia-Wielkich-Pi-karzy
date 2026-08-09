@@ -63,11 +63,11 @@ class MainActivity : FragmentActivity() {
         deepLinkPathState.value = intent.deepLinkPathOrNull()
     }
 
-    /** App Links: zaproszenia oraz powrót z HotPay na /platnosci. */
+    /** App Links: zaproszenia oraz powrót z HotPay (/platnosci, /terminarz). */
     private fun Intent?.deepLinkPathOrNull(): String? {
         val uri = this?.data ?: return null
         val path = uri.encodedPath?.takeIf {
-            it.startsWith("/zaproszenie") || it.startsWith("/platnosci")
+            it.startsWith("/zaproszenie") || it.startsWith("/platnosci") || it.startsWith("/terminarz")
         } ?: return null
         val query = uri.encodedQuery?.takeIf { it.isNotBlank() }?.let { "?$it" }.orEmpty()
         return path + query
