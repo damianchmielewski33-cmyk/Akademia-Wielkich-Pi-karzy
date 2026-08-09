@@ -241,6 +241,9 @@ export async function processHotpayNotification(
     return { ok: false, error: "BAD_HASH" };
   }
   if (!timingSafeEqualString(payload.SEKRET.trim(), expectedSekret.trim())) {
+    console.error(
+      `[hotpay/notification] BAD_SEKRET payload_len=${payload.SEKRET.trim().length} env_len=${expectedSekret.trim().length} payload_prefix=${payload.SEKRET.trim().slice(0, 6)}... env_prefix=${expectedSekret.trim().slice(0, 6)}...`
+    );
     return { ok: false, error: "BAD_SEKRET" };
   }
 
