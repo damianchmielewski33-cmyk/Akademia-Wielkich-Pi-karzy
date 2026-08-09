@@ -311,11 +311,11 @@ export function AdminSettingsTab({
         });
         toast.success(
           enabled
-            ? "Tryb testowy włączony — dane z flagą is_test (baner u góry)."
-            : "Tryb testowy wyłączony — dane testowe usunięte.",
+            ? "Tryb testowy włączony — osobna baza TEST"
+            : "Tryb testowy wyłączony — baza TEST wyczyszczona",
           { id: toastId }
         );
-        // Pełne odświeżenie, żeby RSC / dane przeszły na właściwy widok (is_test).
+        // Pełne odświeżenie, żeby RSC / dane przeszły na właściwą bazę.
         window.location.reload();
       } catch (e) {
         toast.error(e instanceof Error ? e.message : "Błąd trybu testowego", { id: toastId });
@@ -530,20 +530,24 @@ export function AdminSettingsTab({
         id="settings-test-mode"
         hidden={channel !== "web" || settingsRealm !== "academy" || !sectionVisible("settings-test-mode")}
         title="Tryb testowy"
-        description="Ta sama baza co produkcja — dane testowe mają flagę is_test. Tylko Twoja sesja admina widzi tryb testowy. Po wyłączeniu mecze, gracze i płatności testowe są usuwane."
+        description="Osobna baza TEST (Turso lub lokalny plik). Tylko Twoja sesja admina przełącza się na bazę testową — gracze zawsze widzą produkcję. Po wyłączeniu baza TEST jest czyszczona."
       >
         <ul className="mb-4 grid gap-2 text-sm sm:grid-cols-2">
           <li className={adminStatusChipClass}>
             <span className="text-emerald-100/70">Tryb testowy:</span>{" "}
             <strong className="text-emerald-300">
-              {testMode == null ? "…" : "Gotowy (ta sama baza)"}
+              {testMode == null
+                ? "…"
+                : testMode.configured
+                  ? "Gotowy (osobna baza TEST)"
+                  : "Brak bazy TEST w env"}
             </strong>
           </li>
         </ul>
         <YesNoSwitchRow
           className={adminToggleRowClass}
           label="Włącz tryb testowy"
-          hint="Baner „TRYB TESTOWY” na stronie. HotPay w teście używa session_id z prefixem hp_t_ (księguje z flagą is_test). W panelu HotPay włącz ich „Tryb testowy” na czas testów. Wyłączenie kasuje dane testowe."
+          hint="Wymaga TURSO_TEST_DATABASE_URL (+ token) albo lokalnego SQLite bez Turso PROD. Baner „TRYB TESTOWY”. HotPay w teście: session_id z prefixem hp_t_ (księguje w bazie TEST). Wyłączenie czyści bazę TEST."
           checked={Boolean(testMode?.enabled)}
           disabled={busy || testModeBusy || !testMode?.configured}
           onCheckedChange={(v) => void setTestModeEnabled(v)}

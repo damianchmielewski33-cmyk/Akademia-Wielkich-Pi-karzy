@@ -38,14 +38,7 @@ export function HotpayPayButtons({
   }
 
   if (!enabled) {
-    return (
-      <div className={cn("rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-900/80 sm:p-5", className)}>
-        <h3 className="text-base font-bold text-emerald-950 dark:text-emerald-100">Płatność online</h3>
-        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-          Płatność online jest chwilowo niedostępna. Skontaktuj się z administratorem w sprawie doładowania.
-        </p>
-      </div>
-    );
+    return null;
   }
 
   return (

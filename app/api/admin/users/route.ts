@@ -4,7 +4,6 @@ import { getDb, logActivity } from "@/lib/db";
 import { requireAdmin } from "@/lib/api-helpers";
 import { normalizePlayerAlias } from "@/lib/player-alias";
 import { isUniqueConstraintError } from "@/lib/sql-errors";
-import { isAdminTestModeActive, sqlUserTestFilter, testModeFlag } from "@/lib/test-mode";
 
 export const runtime = "nodejs";
 
@@ -21,7 +20,6 @@ export async function GET() {
   const gate = await requireAdmin();
   if (!gate.ok) return gate.response;
   const db = await getDb();
-  const testMode = await isAdminTestModeActive();
   const rows = await db
     .prepare(`
       SELECT id, first_name, last_name, player_alias AS zawodnik,
@@ -33,7 +31,6 @@ export async function GET() {
              CASE WHEN pin_hash IS NOT NULL THEN 1 ELSE 0 END AS pin_set,
              CASE WHEN pin_hash_pending IS NOT NULL THEN 1 ELSE 0 END AS pin_change_pending
       FROM users
-      WHERE ${sqlUserTestFilter("", testMode)}
       ORDER BY first_name
     `)
     .all();
@@ -72,19 +69,17 @@ export async function POST(req: Request) {
   const isAdmin = role === "admin" ? 1 : 0;
   const pzuCup = can_pzu_cup ? 1 : 0;
   const perms = isAdmin ? (admin_permissions ?? null) : null;
-  // Konta adminów zawsze produkcyjne; gracze w trybie testowym → is_test=1.
-  const isTest = isAdmin ? 0 : await testModeFlag();
   try {
     const r = await db
       .prepare(
         `INSERT INTO users (first_name, last_name, player_alias, is_admin, can_pzu_cup, admin_permissions, pin_hash, auth_version, is_test)
          VALUES (?, ?, ?, ?, ?, ?, NULL, 0, ?)`
       )
-      .run(first_name, last_name, canonical, isAdmin, pzuCup, perms, isTest);
+      .run(first_name, last_name, canonical, isAdmin, pzuCup, perms, 0);
     const userId = Number(r.lastInsertRowid);
     await logActivity(
       gate.session.userId,
-      `Utworzył konto użytkownika id ${userId}: ${first_name} ${last_name} (${canonical}), rola: ${role === "admin" ? "administrator" : "zawodnik"}${isTest ? " [TEST]" : ""}`
+      `Utworzył konto użytkownika id ${userId}: ${first_name} ${last_name} (${canonical}), rola: ${role === "admin" ? "administrator" : "zawodnik"}`
     );
     return NextResponse.json(
       {

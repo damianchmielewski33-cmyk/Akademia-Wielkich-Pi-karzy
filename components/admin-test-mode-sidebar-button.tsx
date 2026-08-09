@@ -61,7 +61,7 @@ export function AdminTestModeSidebarButton({ className }: { className?: string }
         configured: j.configured !== false,
       });
       toast.success(
-        enabled ? "Tryb testowy włączony" : "Tryb testowy wyłączony — dane testowe usunięte",
+        enabled ? "Tryb testowy włączony" : "Tryb testowy wyłączony — baza TEST wyczyszczona",
         { id: toastId }
       );
       window.location.reload();
@@ -104,10 +104,10 @@ export function AdminTestModeSidebarButton({ className }: { className?: string }
       aria-pressed={on}
       title={
         !state.configured
-          ? "Tryb testowy niedostępny"
+          ? "Baza TEST nie skonfigurowana (TURSO_TEST_* lub lokalny SQLite)"
           : on
-            ? "Wyłącz tryb testowy (usunie dane testowe)"
-            : "Włącz tryb testowy"
+            ? "Wyłącz tryb testowy (wyczyści bazę TEST)"
+            : "Włącz tryb testowy (osobna baza TEST)"
       }
     >
       <span

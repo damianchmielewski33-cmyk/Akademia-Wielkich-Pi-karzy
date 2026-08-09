@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/api-helpers";
-import { getDb } from "@/lib/db";
+import { getDbForHotpaySession } from "@/lib/db";
 import {
   getHotpayPaymentBySessionId,
   markHotpayPaymentCancelledByUser,
@@ -32,7 +32,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Brak session_id" }, { status: 400 });
   }
 
-  const db = await getDb();
+  const db = await getDbForHotpaySession(sessionId);
   const payment = await getHotpayPaymentBySessionId(db, sessionId);
   if (!payment) {
     return NextResponse.json({ error: "Nie znaleziono płatności" }, { status: 404 });

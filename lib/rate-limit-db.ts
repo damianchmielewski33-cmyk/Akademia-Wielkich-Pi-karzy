@@ -1,14 +1,14 @@
-import { getDb } from "@/lib/db";
+import { getProdDb } from "@/lib/db";
 import { checkRateLimit as checkMemoryRateLimit } from "@/lib/rate-limit";
 
-/** Rate limit z fallbackiem: najpierw baza (współdzielona), potem pamięć procesu. */
+/** Rate limit z fallbackiem: najpierw baza PROD (współdzielona), potem pamięć procesu. */
 export async function checkRateLimitDistributed(
   key: string,
   limit: number,
   windowMs: number
 ): Promise<{ ok: true } | { ok: false; retryAfterSec: number }> {
   try {
-    const db = await getDb();
+    const db = await getProdDb();
     const now = Date.now();
     const resetAtIso = new Date(now + windowMs).toISOString();
 

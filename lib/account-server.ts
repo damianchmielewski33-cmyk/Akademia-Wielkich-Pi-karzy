@@ -1,5 +1,5 @@
 import { cache } from "react";
-import { getDb } from "@/lib/db";
+import { getProdDb } from "@/lib/db";
 import { normalizeUiTheme, type UiTheme } from "@/lib/ui-theme";
 
 /** Pola użytkownika z bazy — współdzielone w jednym żądaniu (layout + strony) przez React cache(). */
@@ -13,7 +13,8 @@ export type AccountNavRow = {
 
 export const getAccountNavFields = cache(
   async (userId: number): Promise<AccountNavRow | null> => {
-    const db = await getDb();
+    // Tożsamość / motyw zawsze z PROD (admin w trybie testowym też).
+    const db = await getProdDb();
     const row = (await db
       .prepare(
         "SELECT first_name, last_name, player_alias AS zawodnik, profile_photo_path, ui_theme FROM users WHERE id = ?"

@@ -1,12 +1,6 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { requireAdmin } from "@/lib/api-helpers";
-import {
-  isAdminTestModeActive,
-  sqlMatchTestFilter,
-  sqlUserTestFilter,
-  sqlWalletTestFilter,
-} from "@/lib/test-mode";
 
 export const runtime = "nodejs";
 
@@ -15,7 +9,6 @@ export async function GET() {
   if (!gate.ok) return gate.response;
 
   const db = await getDb();
-  const testMode = await isAdminTestModeActive();
 
   // Full list for admin tools that must include admin accounts (e.g. manual balance adjustment).
   const walletUsers = await db
@@ -32,8 +25,7 @@ export async function GET() {
         COALESCE(ROUND(SUM(CASE WHEN t.id IS NOT NULL AND COALESCE(t.wallet_kind,'admin') = 'admin' THEN t.amount_pln ELSE 0 END), 2), 0) AS admin_balance_pln,
         COALESCE(ROUND(SUM(CASE WHEN t.id IS NOT NULL AND t.wallet_kind = 'operator' THEN t.amount_pln ELSE 0 END), 2), 0) AS operator_balance_pln
       FROM users u
-      LEFT JOIN wallet_transactions t ON t.user_id = u.id AND ${sqlWalletTestFilter("t", testMode)}
-      WHERE ${sqlUserTestFilter("u", testMode)}
+      LEFT JOIN wallet_transactions t ON t.user_id = u.id
       GROUP BY u.id
       ORDER BY u.first_name, u.last_name
     `
@@ -54,8 +46,8 @@ export async function GET() {
         COALESCE(ROUND(SUM(CASE WHEN t.id IS NOT NULL AND COALESCE(t.wallet_kind,'admin') = 'admin' THEN t.amount_pln ELSE 0 END), 2), 0) AS admin_balance_pln,
         COALESCE(ROUND(SUM(CASE WHEN t.id IS NOT NULL AND t.wallet_kind = 'operator' THEN t.amount_pln ELSE 0 END), 2), 0) AS operator_balance_pln
       FROM users u
-      LEFT JOIN wallet_transactions t ON t.user_id = u.id AND ${sqlWalletTestFilter("t", testMode)}
-      WHERE COALESCE(u.is_admin, 0) = 0 AND ${sqlUserTestFilter("u", testMode)}
+      LEFT JOIN wallet_transactions t ON t.user_id = u.id
+      WHERE COALESCE(u.is_admin, 0) = 0
       GROUP BY u.id
       ORDER BY u.first_name, u.last_name
     `
@@ -72,7 +64,7 @@ export async function GET() {
              u.first_name, u.last_name, u.player_alias AS zawodnik, u.profile_photo_path
       FROM wallet_deposit_requests d
       JOIN users u ON u.id = d.user_id
-      WHERE d.status = 'pending' AND ${sqlUserTestFilter("u", testMode)}
+      WHERE d.status = 'pending'
       ORDER BY datetime(d.created_at) DESC
     `
     )
@@ -83,7 +75,7 @@ export async function GET() {
       `
       SELECT id, match_date, match_time, location, max_slots, signed_up, played, fee_pln
       FROM matches
-      WHERE played = 1 AND ${sqlMatchTestFilter("", testMode)}
+      WHERE played = 1
       ORDER BY match_date DESC, match_time DESC
       LIMIT 30
     `

@@ -3,7 +3,6 @@ import { tryRemoveTemporaryGuestIfBalanceZero } from "@/lib/guest-cleanup";
 import type { HotpayNotificationPayload, HotpayPaymentKind, HotpayPaymentStatus } from "@/lib/hotpay";
 import {
   formatHotpayAmount,
-  isHotpayTestSessionId,
   timingSafeEqualString,
   verifyNotificationHash,
 } from "@/lib/hotpay";
@@ -153,15 +152,13 @@ export async function applyHotpaySuccessCredit(
     .run(payment.user_id, amount, note);
 
   const depositId = Number(dep.lastInsertRowid);
-  const isTest =
-    Number(payment.is_test) === 1 || isHotpayTestSessionId(payment.session_id) ? 1 : 0;
 
   await db
     .prepare(
       `INSERT INTO wallet_transactions (user_id, kind, amount_pln, deposit_request_id, wallet_kind, note, is_test)
        VALUES (?, 'deposit', ?, ?, 'operator', ?, ?)`
     )
-    .run(payment.user_id, amount, depositId, note, isTest);
+    .run(payment.user_id, amount, depositId, note, 0);
 
   const linked = await db
     .prepare(

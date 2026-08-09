@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getDb, logActivity } from "@/lib/db";
+import { getDbForHotpaySession, getProdDb, logActivity } from "@/lib/db";
 import {
   getHotpayConfig,
   isHotpayNotificationIp,
@@ -122,12 +122,22 @@ export async function POST(req: Request) {
     `[hotpay/notification] parsed STATUS=${payload.STATUS} order=${payload.ID_ZAMOWIENIA} amount=${payload.KWOTA} ips=${ips}`
   );
 
-  const db = await getDb();
-  // Ślad w panelu admina (Aktywność) — niezależnie od Vercel Logs.
-  await logActivity(
-    null,
-    `HotPay webhook ${payload.STATUS} order=${payload.ID_ZAMOWIENIA} amount=${payload.KWOTA} ips=${ips}`
-  );
+  const db = await getDbForHotpaySession(payload.ID_ZAMOWIENIA);
+  // Ślad w panelu admina (Aktywność) — zawsze na PROD, niezależnie od bazy płatności.
+  try {
+    const prod = await getProdDb();
+    await prod
+      .prepare("INSERT INTO activity_log (user_id, action) VALUES (?, ?)")
+      .run(
+        null,
+        `HotPay webhook ${payload.STATUS} order=${payload.ID_ZAMOWIENIA} amount=${payload.KWOTA} ips=${ips}`
+      );
+  } catch {
+    await logActivity(
+      null,
+      `HotPay webhook ${payload.STATUS} order=${payload.ID_ZAMOWIENIA} amount=${payload.KWOTA} ips=${ips}`
+    );
+  }
 
   const result = await processHotpayNotification(
     db,

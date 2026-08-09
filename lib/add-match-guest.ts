@@ -35,7 +35,7 @@ export async function addMatchGuest(input: AddMatchGuestInput): Promise<AddMatch
   const match = (await db
     .prepare(
       `SELECT id, match_date, match_time, location, max_slots, signed_up, played,
-              COALESCE(cancelled, 0) AS cancelled, COALESCE(is_test, 0) AS is_test
+              COALESCE(cancelled, 0) AS cancelled
        FROM matches WHERE id = ?`
     )
     .get(input.matchId)) as
@@ -48,7 +48,6 @@ export async function addMatchGuest(input: AddMatchGuestInput): Promise<AddMatch
         signed_up: number;
         played: number;
         cancelled: number;
-        is_test: number;
       }
     | undefined;
 
@@ -74,7 +73,7 @@ export async function addMatchGuest(input: AddMatchGuestInput): Promise<AddMatch
     `INSERT INTO users (first_name, last_name, player_alias, is_admin, is_temporary, temporary_guest_match_id, is_test)
      VALUES (?, ?, ?, 0, 1, ?, ?)`
   );
-  const userResult = await createUser.run(firstName, lastName, playerAlias, input.matchId, match.is_test ? 1 : 0);
+  const userResult = await createUser.run(firstName, lastName, playerAlias, input.matchId, 0);
   const userId = Number(userResult.lastInsertRowid);
 
   const incremented = await tryIncrementMatchSignedUp(db, input.matchId);

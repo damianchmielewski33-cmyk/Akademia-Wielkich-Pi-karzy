@@ -3,7 +3,7 @@ import { cookies, headers } from "next/headers";
 import { cache } from "react";
 import { SESSION_COOKIE } from "@/lib/constants";
 import { getAuthSecretKey } from "@/lib/auth-secret";
-import { getDb } from "@/lib/db";
+import { getProdDb } from "@/lib/db";
 
 /** Token z cookie sesji albo nagłówka Authorization: Bearer (klienci mobile). */
 export async function readSessionTokenFromRequest(): Promise<string | null> {
@@ -88,7 +88,7 @@ export const getServerSession = cache(async (): Promise<AppSession | null> => {
   if (!token) return null;
   try {
     const session = await verifySessionToken(token);
-    const db = await getDb();
+    const db = await getProdDb();
     const row = (await db
       .prepare(
         "SELECT auth_version, pin_hash, pin_hash_pending, is_admin, admin_permissions FROM users WHERE id = ?"

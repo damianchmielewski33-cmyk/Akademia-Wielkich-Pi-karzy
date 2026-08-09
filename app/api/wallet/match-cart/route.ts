@@ -173,14 +173,13 @@ export async function POST(req: Request) {
   const playerLabel =
     [gate.session.firstName, gate.session.lastName].filter(Boolean).join(" ").trim() || gate.session.zawodnik;
   const serviceName = `${config.serviceName} — koszyk meczowy (${playerLabel})`;
-  const isTest = inTestMode ? 1 : 0;
 
   const insert = await db
     .prepare(
       `INSERT INTO hotpay_payments (session_id, user_id, kind, amount_pln, gross_amount_pln, status, cart_id, is_test)
        VALUES (?, ?, 'match_cart', ?, ?, 'pending', ?, ?)`
     )
-    .run(sessionId, payerId, amountPln, hasCommission ? grossAmountPln : null, pending.cart_id, isTest);
+    .run(sessionId, payerId, amountPln, hasCommission ? grossAmountPln : null, pending.cart_id, 0);
 
   await linkHotpaySessionToCart(pending.cart_id, sessionId);
 

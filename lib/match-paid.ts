@@ -1,5 +1,4 @@
 import type { AppDb } from "@/lib/db";
-import { testModeFlag } from "@/lib/test-mode";
 import { getUserWalletBalancePln } from "@/lib/wallet";
 
 /** Czy zawodnik ma oznaczoną opłatę (flaga lub dodatnie saldo portfela). */
@@ -31,7 +30,6 @@ export async function syncPaidFlagWithWallet(
 
   const topUp = Math.abs(balance);
   const fee = args.feePln != null && Number.isFinite(args.feePln) ? Math.max(args.feePln, topUp) : topUp;
-  const isTest = await testModeFlag();
 
   await db
     .prepare(
@@ -43,6 +41,6 @@ export async function syncPaidFlagWithWallet(
       fee,
       args.matchId,
       `Korekta salda przy oznaczeniu opłaty — ${args.matchLabel}`,
-      isTest
+      0
     );
 }

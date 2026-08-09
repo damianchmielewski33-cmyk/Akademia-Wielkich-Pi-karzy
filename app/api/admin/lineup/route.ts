@@ -4,7 +4,6 @@ import { getDb, logActivity } from "@/lib/db";
 import { getAppSettings } from "@/lib/app-settings";
 import { requireAdmin } from "@/lib/api-helpers";
 import { pitchHalfSlotCounts, pitchSlotTotalFromSignupCount } from "@/lib/lineup-pitch-slots";
-import { isAdminTestModeActive, sqlMatchTestFilter } from "@/lib/test-mode";
 
 export const runtime = "nodejs";
 
@@ -72,14 +71,12 @@ export async function GET(req: Request) {
     max: appSettings.lineup_pitch_slots_max,
   };
   const today = todayIso();
-  const testMode = await isAdminTestModeActive();
 
   const matchList = (await db
     .prepare(
       `SELECT id, match_date, match_time, location, lineup_public
        FROM matches
        WHERE played = 0 AND COALESCE(cancelled, 0) = 0 AND match_date >= ?
-         AND ${sqlMatchTestFilter("", testMode)}
        ORDER BY match_date ASC, match_time ASC`
     )
     .all(today)) as MatchListRow[];

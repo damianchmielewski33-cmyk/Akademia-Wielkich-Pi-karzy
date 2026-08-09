@@ -18,7 +18,6 @@ export async function GET(req: Request) {
   const publicMatches = (await db
     .prepare(
       `SELECT id, match_date, match_time, location FROM matches WHERE lineup_public = 1
-         AND COALESCE(is_test, 0) = 0
        ORDER BY match_date DESC, match_time DESC`
     )
     .all()) as Array<{
@@ -35,7 +34,6 @@ export async function GET(req: Request) {
   const defaultUpcoming = (await db
     .prepare(
       `SELECT id FROM matches WHERE lineup_public = 1
-       AND COALESCE(is_test, 0) = 0
        AND datetime(match_date || ' ' || match_time) > datetime('now', 'localtime')
        ORDER BY match_date ASC, match_time ASC
        LIMIT 1`
@@ -51,7 +49,7 @@ export async function GET(req: Request) {
 
   const row = (await db
     .prepare(
-      "SELECT id, match_date, match_time, location FROM matches WHERE id = ? AND lineup_public = 1 AND COALESCE(is_test, 0) = 0"
+      "SELECT id, match_date, match_time, location FROM matches WHERE id = ? AND lineup_public = 1"
     )
     .get(selectedId)) as MatchRow | undefined;
 

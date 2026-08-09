@@ -13,7 +13,7 @@ export function TestModeBanner() {
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-x-3 gap-y-1 px-3 py-2 text-center text-sm font-bold tracking-wide sm:justify-between sm:text-left">
         <span className="inline-flex items-center gap-2">
           <FlaskConical className="h-4 w-4 shrink-0" aria-hidden />
-          TRYB TESTOWY — dane nie są produkcyjne
+          TRYB TESTOWY — osobna baza (nie produkcja)
         </span>
         <Link
           href="/panel-admina"

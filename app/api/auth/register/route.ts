@@ -8,7 +8,6 @@ import { checkRateLimitDistributed } from "@/lib/rate-limit-db";
 import { rateLimitKey, rateLimitedResponse, RATE } from "@/lib/rate-limit";
 import { hashPin, isValidPinFormat, isWeakPin, WEAK_PIN_MESSAGE } from "@/lib/pin";
 import { parseRealm, REALMS } from "@/lib/realm";
-import { testModeFlag } from "@/lib/test-mode";
 
 export const runtime = "nodejs";
 
@@ -79,7 +78,6 @@ export async function POST(req: Request) {
   }
 
   const pinHash = await hashPin(pin);
-  const isTest = await testModeFlag();
   let userId: number;
   try {
     const r = await db
@@ -87,7 +85,7 @@ export async function POST(req: Request) {
         `INSERT INTO users (first_name, last_name, player_alias, is_admin, pin_hash, auth_version, realm, is_test)
          VALUES (?, ?, ?, ?, ?, 0, ?, ?)`
       )
-      .run(first_name, last_name, canonical, isAdmin, pinHash, realm, isTest);
+      .run(first_name, last_name, canonical, isAdmin, pinHash, realm, 0);
     userId = Number(r.lastInsertRowid);
   } catch (e) {
     if (isUniqueConstraintError(e)) {

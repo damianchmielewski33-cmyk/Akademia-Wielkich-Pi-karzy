@@ -2,7 +2,7 @@ import { createClient, type Client, type InArgs, type Row } from "@libsql/client
 import Database from "better-sqlite3";
 import fs from "fs";
 import * as path from "path";
-import { isVercel, resolveDatabaseFilePath } from "@/lib/runtime-paths";
+import { isVercel, resolveDatabaseFilePath, resolveTestDatabaseFilePath } from "@/lib/runtime-paths";
 import { initLibsqlSchema } from "@/lib/turso-init-schema";
 import { isDuplicateColumnError, migrateAppSettingsColumnsSqlite } from "@/lib/app-settings";
 import { migrateRealmSchemaSqlite } from "@/lib/realm-migration";
@@ -24,11 +24,40 @@ function hasTursoEnv(): boolean {
   return Boolean(process.env.TURSO_DATABASE_URL?.trim());
 }
 
-let sqliteInstance: Database.Database | null = null;
-let libsqlClient: Client | null = null;
-let libsqlSchemaReady = false;
-/** Jedna wspólna inicjalizacja schematu — unikamy wyścigu przy równoległym prerenderze. */
-let libsqlSchemaInitPromise: Promise<void> | null = null;
+function hasTursoTestEnv(): boolean {
+  return Boolean(process.env.TURSO_TEST_DATABASE_URL?.trim());
+}
+
+/**
+ * Osobna baza TEST: Turso TEST, albo lokalny SQLite gdy PROD też jest plikiem (nie na Vercelu).
+ */
+export function canOpenTestDatabase(): boolean {
+  if (hasTursoTestEnv()) return true;
+  if (hasTursoEnv()) return false;
+  if (isVercel()) return false;
+  return true;
+}
+
+type DbSlot = {
+  sqlite: Database.Database | null;
+  libsql: Client | null;
+  schemaReady: boolean;
+  schemaInitPromise: Promise<void> | null;
+};
+
+const prodSlot: DbSlot = {
+  sqlite: null,
+  libsql: null,
+  schemaReady: false,
+  schemaInitPromise: null,
+};
+
+const testSlot: DbSlot = {
+  sqlite: null,
+  libsql: null,
+  schemaReady: false,
+  schemaInitPromise: null,
+};
 
 function rowToRecord(row: Row, columns: string[]): Record<string, unknown> {
   const o: Record<string, unknown> = {};
@@ -803,65 +832,112 @@ function initSchemaSync(db: Database.Database) {
 }
 
 /**
- * Jedna baza aplikacji (prod + dane testowe oznaczone `is_test`).
+ * Otwiera bazę PROD lub TEST (Turso albo lokalny SQLite).
  */
-export async function getDb(): Promise<AppDb> {
-  if (isVercel() && !hasTursoEnv()) {
+async function openDbSlot(
+  slot: DbSlot,
+  opts: { kind: "prod" | "test" }
+): Promise<AppDb> {
+  const useTurso = opts.kind === "prod" ? hasTursoEnv() : hasTursoTestEnv();
+
+  if (opts.kind === "prod" && isVercel() && !hasTursoEnv()) {
     throw new Error(
       "Na Vercelu ustaw TURSO_DATABASE_URL (oraz TURSO_AUTH_TOKEN z panelu Turso). Lokalny plik SQLite nie działa poprawnie na serverless."
     );
   }
 
-  if (hasTursoEnv()) {
-    if (!libsqlClient) {
-      libsqlClient = createClient({
-        url: process.env.TURSO_DATABASE_URL!,
-        authToken: process.env.TURSO_AUTH_TOKEN?.trim() || undefined,
-      });
+  if (opts.kind === "test" && !canOpenTestDatabase()) {
+    throw new Error(
+      "Baza TEST nie jest skonfigurowana. Ustaw TURSO_TEST_DATABASE_URL (+ TURSO_TEST_AUTH_TOKEN) albo użyj lokalnego SQLite bez Turso PROD."
+    );
+  }
+
+  if (useTurso) {
+    const url =
+      opts.kind === "prod"
+        ? process.env.TURSO_DATABASE_URL!
+        : process.env.TURSO_TEST_DATABASE_URL!;
+    const authToken =
+      opts.kind === "prod"
+        ? process.env.TURSO_AUTH_TOKEN?.trim() || undefined
+        : process.env.TURSO_TEST_AUTH_TOKEN?.trim() || undefined;
+
+    if (!slot.libsql) {
+      slot.libsql = createClient({ url, authToken });
     }
-    if (!libsqlSchemaReady) {
-      if (!libsqlSchemaInitPromise) {
-        libsqlSchemaInitPromise = (async () => {
+    if (!slot.schemaReady) {
+      if (!slot.schemaInitPromise) {
+        slot.schemaInitPromise = (async () => {
           try {
             await withTransientNetworkRetries(
               async () => {
-                await initLibsqlSchema(libsqlClient!);
+                await initLibsqlSchema(slot.libsql!);
               },
               {
                 onBeforeRetry: () => {
-                  libsqlClient?.close();
-                  libsqlClient = createClient({
-                    url: process.env.TURSO_DATABASE_URL!,
-                    authToken: process.env.TURSO_AUTH_TOKEN?.trim() || undefined,
-                  });
+                  slot.libsql?.close();
+                  slot.libsql = createClient({ url, authToken });
                 },
               }
             );
-            libsqlSchemaReady = true;
+            slot.schemaReady = true;
           } catch (err) {
-            libsqlSchemaInitPromise = null;
+            slot.schemaInitPromise = null;
             throw err;
           }
         })();
       }
-      await libsqlSchemaInitPromise;
+      await slot.schemaInitPromise;
     }
-    return createLibsqlFacade(libsqlClient!);
+    return createLibsqlFacade(slot.libsql!);
   }
 
-  if (!sqliteInstance) {
-    const p = resolveDatabaseFilePath();
+  if (!slot.sqlite) {
+    const p = opts.kind === "prod" ? resolveDatabaseFilePath() : resolveTestDatabaseFilePath();
     fs.mkdirSync(path.dirname(p), { recursive: true });
-    sqliteInstance = new Database(p);
-    sqliteInstance.pragma(isVercel() ? "journal_mode = DELETE" : "journal_mode = WAL");
-    initSchemaSync(sqliteInstance);
+    slot.sqlite = new Database(p);
+    slot.sqlite.pragma(isVercel() ? "journal_mode = DELETE" : "journal_mode = WAL");
+    initSchemaSync(slot.sqlite);
   }
-  return createSqliteFacade(sqliteInstance);
+  return createSqliteFacade(slot.sqlite);
 }
 
-/** @deprecated Alias — zostawione dla starego kodu; zawsze ta sama baza. */
+/** Zawsze baza produkcyjna (auth, flaga trybu testowego, gracze). */
 export async function getProdDb(): Promise<AppDb> {
-  return getDb();
+  return openDbSlot(prodSlot, { kind: "prod" });
+}
+
+/** Osobna baza trybu testowego admina. */
+export async function getTestDb(): Promise<AppDb> {
+  return openDbSlot(testSlot, { kind: "test" });
+}
+
+/**
+ * Baza kontekstowa: TEST gdy admin ma aktywny tryb testowy, inaczej PROD.
+ * Auth / flaga trybu NIE powinny używać tej funkcji — tylko getProdDb().
+ */
+export async function getDb(): Promise<AppDb> {
+  try {
+    const { shouldUseTestDatabase } = await import("@/lib/test-mode");
+    if (await shouldUseTestDatabase()) {
+      return getTestDb();
+    }
+  } catch {
+    /* brak kontekstu requestu / trybu — PROD */
+  }
+  return getProdDb();
+}
+
+/**
+ * Baza po session_id HotPay: hp_t_* → TEST, inaczej PROD.
+ * Webhooki nie mają cookie admina.
+ */
+export async function getDbForHotpaySession(sessionId: string): Promise<AppDb> {
+  const { isHotpayTestSessionId } = await import("@/lib/hotpay");
+  if (isHotpayTestSessionId(sessionId) && canOpenTestDatabase()) {
+    return getTestDb();
+  }
+  return getProdDb();
 }
 
 export async function logActivity(userId: number | null, action: string) {

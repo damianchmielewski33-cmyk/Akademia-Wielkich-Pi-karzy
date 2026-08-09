@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { requireAdmin } from "@/lib/api-helpers";
 import { parseRealm, REALMS } from "@/lib/realm";
-import { isAdminTestModeActive, sqlMatchTestFilter } from "@/lib/test-mode";
 
 export const runtime = "nodejs";
 
@@ -12,13 +11,12 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const realm = parseRealm(url.searchParams.get("realm"), REALMS.ACADEMY);
   const db = await getDb();
-  const testMode = await isAdminTestModeActive();
   const rows = await db
     .prepare(`
       SELECT id, match_date AS date, match_time AS time,
              location, signed_up AS players_count, played, fee_pln, max_slots, cancelled
       FROM matches
-      WHERE realm = ? AND ${sqlMatchTestFilter("", testMode)}
+      WHERE realm = ?
       ORDER BY match_date DESC
     `)
     .all(realm);

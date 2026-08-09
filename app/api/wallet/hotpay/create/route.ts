@@ -115,14 +115,13 @@ export async function POST(req: Request) {
     kind === "match"
       ? `${config.serviceName} — mecz (${playerLabel})`
       : `${config.serviceName} — doładowanie (${playerLabel})`;
-  const isTest = inTestMode ? 1 : 0;
 
   const insert = await db
     .prepare(
       `INSERT INTO hotpay_payments (session_id, user_id, kind, amount_pln, gross_amount_pln, status, is_test)
        VALUES (?, ?, ?, ?, ?, 'pending', ?)`
     )
-    .run(sessionId, userId, kind, amountPln, hasCommission ? grossAmountPln : null, isTest);
+    .run(sessionId, userId, kind, amountPln, hasCommission ? grossAmountPln : null, 0);
 
   const paymentRowId = Number(insert.lastInsertRowid);
 

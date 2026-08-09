@@ -12,7 +12,6 @@ import {
   buildCaptainLotteryMaps,
   type CaptainLotteryRow,
 } from "@/lib/captain-lottery";
-import { isAdminTestModeActive, sqlMatchTestFilter, sqlUserTestFilter } from "@/lib/test-mode";
 
 /** PIN bramki tylko dla admina lub gracza z potwierdzonym zapisem — nigdy w surowym SELECT *. */
 function redactGatePins(
@@ -31,11 +30,10 @@ function redactGatePins(
 export async function getTerminarzPageData(realm: Realm, session: AppSession | null) {
   const db = await getDb();
   const appSettings = await getAppSettings(db, realm);
-  const testMode = Boolean(session?.isAdmin && (await isAdminTestModeActive()));
 
   const matchesRaw = (await db
     .prepare(
-      `SELECT * FROM matches WHERE realm = ? AND ${sqlMatchTestFilter("", testMode)} ORDER BY match_date ASC, match_time ASC`
+      `SELECT * FROM matches WHERE realm = ? ORDER BY match_date ASC, match_time ASC`
     )
     .all(realm)) as MatchRow[];
 
@@ -47,7 +45,7 @@ export async function getTerminarzPageData(realm: Realm, session: AppSession | n
        FROM match_signups ms
        JOIN users u ON u.id = ms.user_id
        JOIN matches m ON m.id = ms.match_id
-       WHERE m.realm = ? AND ${sqlMatchTestFilter("m", testMode)}
+       WHERE m.realm = ?
        ORDER BY u.first_name ASC`
     )
     .all(realm)) as SignupRow[];
@@ -68,7 +66,7 @@ export async function getTerminarzPageData(realm: Realm, session: AppSession | n
        FROM match_captain_lottery l
        LEFT JOIN users u ON u.id = l.drawn_by_user_id
        JOIN matches m ON m.id = l.match_id
-       WHERE m.realm = ? AND ${sqlMatchTestFilter("m", testMode)}
+       WHERE m.realm = ?
        ORDER BY l.match_id, l.round_number DESC`
     )
     .all(realm)) as CaptainLotteryRow[];
@@ -85,7 +83,6 @@ export async function getTerminarzPageData(realm: Realm, session: AppSession | n
          FROM matches m
          JOIN match_signups s ON s.match_id = m.id AND s.user_id = ? AND COALESCE(s.commitment, 1) = 1
          WHERE m.realm = ? AND m.played = 1
-           AND ${sqlMatchTestFilter("m", testMode)}
            AND NOT EXISTS (
              SELECT 1 FROM match_stats st
              WHERE st.user_id = ? AND st.match_id = m.id
@@ -110,13 +107,11 @@ export async function getTerminarzPageData(realm: Realm, session: AppSession | n
 
 export async function getPilkarzePageData(realm: Realm) {
   const db = await getDb();
-  const testMode = await isAdminTestModeActive();
   const gracze = (await db
     .prepare(
       `SELECT id, first_name, last_name, player_alias AS zawodnik, profile_photo_path
        FROM users
        WHERE COALESCE(realm, ?) = ? AND COALESCE(is_temporary, 0) = 0
-         AND ${sqlUserTestFilter("", testMode)}
        ORDER BY first_name ASC`
     )
     .all(REALMS.ACADEMY, realm)) as {

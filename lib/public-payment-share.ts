@@ -76,7 +76,7 @@ async function loadMatchWalletParticipantRows(matchId: number): Promise<PublicWa
          SELECT id AS user_id FROM users WHERE temporary_guest_match_id = ? AND COALESCE(is_temporary, 0) = 1
        ) participants
        JOIN users u ON u.id = participants.user_id
-       LEFT JOIN wallet_transactions t ON t.user_id = u.id AND COALESCE(t.is_test, 0) = 0
+       LEFT JOIN wallet_transactions t ON t.user_id = u.id
        LEFT JOIN match_wallet_charges c ON c.match_id = ? AND c.user_id = u.id
        LEFT JOIN match_signups ms ON ms.match_id = ? AND ms.user_id = u.id
        GROUP BY u.id
@@ -94,8 +94,8 @@ export async function loadPublicWalletRows(link: PublicShareLinkRow): Promise<Pu
         `SELECT u.id, u.first_name, u.last_name, u.player_alias AS zawodnik, u.profile_photo_path,
                 COALESCE(ROUND(SUM(t.amount_pln), 2), 0) AS balance_pln
          FROM users u
-         LEFT JOIN wallet_transactions t ON t.user_id = u.id AND COALESCE(t.is_test, 0) = 0
-         WHERE COALESCE(u.is_admin, 0) = 0 AND COALESCE(u.is_test, 0) = 0
+         LEFT JOIN wallet_transactions t ON t.user_id = u.id
+         WHERE COALESCE(u.is_admin, 0) = 0
          GROUP BY u.id
          ORDER BY u.first_name, u.last_name`
       )
@@ -134,7 +134,7 @@ export async function loadPublicWalletRows(link: PublicShareLinkRow): Promise<Pu
     if (!user) return { title: "Zawodnik nie znaleziony", subtitle: "", match: null, rows: [] };
 
     const balanceRow = (await db
-      .prepare("SELECT COALESCE(ROUND(SUM(amount_pln), 2), 0) AS balance_pln FROM wallet_transactions WHERE user_id = ? AND COALESCE(is_test, 0) = 0")
+      .prepare("SELECT COALESCE(ROUND(SUM(amount_pln), 2), 0) AS balance_pln FROM wallet_transactions WHERE user_id = ?")
       .get(link.user_id)) as { balance_pln: number };
 
     const matchRows = (await db

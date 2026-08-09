@@ -2,7 +2,6 @@ import type { AppDb } from "@/lib/db";
 import { getAppSettings } from "@/lib/app-settings";
 import { getDb } from "@/lib/db";
 import { formatMatchFeePln, perPersonMatchFeePln } from "@/lib/match-fee";
-import { isAdminTestModeActive, sqlMatchTestFilter } from "@/lib/test-mode";
 import { getUserWalletBalancePln } from "@/lib/wallet";
 
 export type MatchCartPlayer = {
@@ -48,7 +47,6 @@ export async function resolveMatchCartFeePerPerson(
 /** Nadchodzące mecze z nieopłaconymi zapisami (commitment=1). */
 export async function listMatchCartOptions(): Promise<MatchCartMatchOption[]> {
   const db = await getDb();
-  const testMode = await isAdminTestModeActive();
   const matches = (await db
     .prepare(
       `
@@ -56,7 +54,6 @@ export async function listMatchCartOptions(): Promise<MatchCartMatchOption[]> {
       FROM matches
       WHERE COALESCE(played, 0) = 0
         AND COALESCE(cancelled, 0) = 0
-        AND ${sqlMatchTestFilter("", testMode)}
         AND date(match_date) >= date('now', '-1 day')
       ORDER BY match_date ASC, match_time ASC
       LIMIT 20
@@ -133,8 +130,7 @@ async function loadOpenMatch(db: AppDb, matchId: number) {
     .prepare(
       `
       SELECT id, match_date, match_time, location, signed_up, fee_pln,
-             COALESCE(played, 0) AS played, COALESCE(cancelled, 0) AS cancelled,
-             COALESCE(is_test, 0) AS is_test
+             COALESCE(played, 0) AS played, COALESCE(cancelled, 0) AS cancelled
       FROM matches WHERE id = ?
     `
     )
@@ -148,7 +144,6 @@ async function loadOpenMatch(db: AppDb, matchId: number) {
         fee_pln: number | null;
         played: number;
         cancelled: number;
-        is_test: number;
       }
     | undefined;
 }
@@ -246,7 +241,7 @@ export async function applyMatchCartFromWallet(args: {
       -amountPln,
       args.matchId,
       `Koszyk meczowy — ${eligible.length}× ${formatMatchFeePln(fee)} · ${matchLabel}`,
-      match.is_test ? 1 : 0
+      0
     );
 
   const balanceAfterDebit = await getUserWalletBalancePln(args.payerUserId);
@@ -462,10 +457,6 @@ export async function refundMatchCartBeneficiary(args: {
   const amount = roundPln(Number(row.amount_pln));
   if (!(amount > 0)) return { ok: true, refunded_pln: 0 };
 
-  const matchMeta = (await db
-    .prepare(`SELECT COALESCE(is_test, 0) AS is_test FROM matches WHERE id = ?`)
-    .get(args.matchId)) as { is_test: number } | undefined;
-
   await db
     .prepare(
       `INSERT INTO wallet_transactions (user_id, kind, amount_pln, match_id, related_user_id, note, is_test)
@@ -477,7 +468,7 @@ export async function refundMatchCartBeneficiary(args: {
       args.matchId,
       args.beneficiaryUserId,
       `Zwrot koszyka meczowego — ${args.reason}`,
-      matchMeta?.is_test ? 1 : 0
+      0
     );
 
   await db

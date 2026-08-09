@@ -25,7 +25,7 @@ function playersAllTimeStatsSql() {
              SUM(saves) AS saves,
              COUNT(*) AS mecze
       FROM match_stats s
-      JOIN matches m ON m.id = s.match_id AND COALESCE(m.is_test, 0) = 0
+      JOIN matches m ON m.id = s.match_id
       GROUP BY user_id
     ) ms ON ms.user_id = u.id
     LEFT JOIN (
@@ -38,7 +38,7 @@ function playersAllTimeStatsSql() {
       FROM standalone_match_stats
       GROUP BY user_id
     ) sms ON sms.user_id = u.id
-    WHERE COALESCE(u.is_temporary, 0) = 0 AND COALESCE(u.is_test, 0) = 0 AND COALESCE(u.realm, ?) = ?
+    WHERE COALESCE(u.is_temporary, 0) = 0 AND COALESCE(u.realm, ?) = ?
   `;
 }
 
@@ -62,7 +62,7 @@ function playersStatsSql() {
              SUM(saves) AS saves,
              COUNT(*) AS mecze
       FROM match_stats s
-      JOIN matches m ON m.id = s.match_id AND COALESCE(m.is_test, 0) = 0
+      JOIN matches m ON m.id = s.match_id
       WHERE s.season_id = ?
       GROUP BY user_id
     ) ms ON ms.user_id = u.id
@@ -77,7 +77,7 @@ function playersStatsSql() {
       WHERE season_id = ?
       GROUP BY user_id
     ) sms ON sms.user_id = u.id
-    WHERE COALESCE(u.is_temporary, 0) = 0 AND COALESCE(u.is_test, 0) = 0 AND COALESCE(u.realm, ?) = ?
+    WHERE COALESCE(u.is_temporary, 0) = 0 AND COALESCE(u.realm, ?) = ?
   `;
 }
 

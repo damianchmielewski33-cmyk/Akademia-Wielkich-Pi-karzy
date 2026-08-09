@@ -1,13 +1,12 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireAdmin } from "@/lib/api-helpers";
-import { logActivity } from "@/lib/db";
+import { getProdDb } from "@/lib/db";
 import {
   applyTestModeCookie,
   isAdminTestModeActive,
   isTestModeConfigured,
   setAdminTestModeEnabled,
-  wipeTestModeData,
 } from "@/lib/test-mode";
 
 export const runtime = "nodejs";
@@ -25,7 +24,6 @@ export async function GET() {
     enabled,
     configured: isTestModeConfigured(),
   });
-  // Przywróć cookie gdy flaga w DB żyje, a ciasteczko zginęło (np. po HotPay).
   if (enabled) applyTestModeCookie(res, true);
   return res;
 }
@@ -51,20 +49,26 @@ export async function POST(req: Request) {
   try {
     if (enabled) {
       await setAdminTestModeEnabled(adminId, true);
-      await logActivity(adminId, "Tryb testowy WŁĄCZONY (ta sama baza, nowe dane z flagą is_test)");
+      // Log na PROD (getDb w trybie testowym wskazałby TEST — logujemy jawnie).
+      const prod = await getProdDb();
+      await prod
+        .prepare("INSERT INTO activity_log (user_id, action) VALUES (?, ?)")
+        .run(adminId, "Tryb testowy WŁĄCZONY (osobna baza TEST)");
       return NextResponse.json({ enabled: true, configured: true });
     }
 
-    const wiped = await wipeTestModeData();
-    await setAdminTestModeEnabled(adminId, false);
-    await logActivity(
-      adminId,
-      `Tryb testowy WYŁĄCZONY — usunięto testowe: mecze=${wiped.matches}, gracze=${wiped.users}, portfel=${wiped.wallet_tx}, hotpay=${wiped.hotpay}`
-    );
+    const result = await setAdminTestModeEnabled(adminId, false);
+    const prod = await getProdDb();
+    await prod
+      .prepare("INSERT INTO activity_log (user_id, action) VALUES (?, ?)")
+      .run(
+        adminId,
+        `Tryb testowy WYŁĄCZONY — wyczyszczono bazę TEST (tabele≈${result.wipedTables ?? 0}, wiersze≈${result.wipedRows ?? 0})`
+      );
     return NextResponse.json({
       enabled: false,
-      configured: true,
-      wiped,
+      configured: isTestModeConfigured(),
+      wiped: result,
     });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Nie udało się przełączyć trybu testowego";

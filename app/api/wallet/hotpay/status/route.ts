@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/api-helpers";
-import { getDb } from "@/lib/db";
+import { getDbForHotpaySession } from "@/lib/db";
 import { getHotpayPaymentBySessionId } from "@/lib/hotpay-wallet";
 import { screenBlockApiResponse } from "@/lib/screen-block-api";
 import {
@@ -24,7 +24,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Brak session_id" }, { status: 400 });
   }
 
-  const db = await getDb();
+  const db = await getDbForHotpaySession(sessionId);
   const payment = await getHotpayPaymentBySessionId(db, sessionId);
   if (!payment) {
     return NextResponse.json({ error: "Nie znaleziono płatności" }, { status: 404 });
@@ -43,11 +43,7 @@ export async function GET(req: Request) {
     completed_at: payment.completed_at,
   });
 
-  // Powrót z bramki w trybie testowym — przywróć cookie + flagę DB (polling statusu).
-  if (
-    gate.session.isAdmin &&
-    (isHotpayTestSessionId(sessionId) || Number(payment.is_test) === 1)
-  ) {
+  if (gate.session.isAdmin && isHotpayTestSessionId(sessionId)) {
     try {
       await persistAdminTestModeFlag(gate.session.userId);
       applyTestModeCookie(res, true);
