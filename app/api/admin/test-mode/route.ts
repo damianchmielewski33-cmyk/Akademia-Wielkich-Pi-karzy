@@ -5,7 +5,7 @@ import { logActivity } from "@/lib/db";
 import {
   isAdminTestModeActive,
   isTestModeConfigured,
-  setTestModeCookie,
+  setAdminTestModeEnabled,
   wipeTestModeData,
 } from "@/lib/test-mode";
 
@@ -45,13 +45,13 @@ export async function POST(req: Request) {
 
   try {
     if (enabled) {
-      await setTestModeCookie(true);
+      await setAdminTestModeEnabled(adminId, true);
       await logActivity(adminId, "Tryb testowy WŁĄCZONY (ta sama baza, nowe dane z flagą is_test)");
       return NextResponse.json({ enabled: true, configured: true });
     }
 
     const wiped = await wipeTestModeData();
-    await setTestModeCookie(false);
+    await setAdminTestModeEnabled(adminId, false);
     await logActivity(
       adminId,
       `Tryb testowy WYŁĄCZONY — usunięto testowe: mecze=${wiped.matches}, gracze=${wiped.users}, portfel=${wiped.wallet_tx}, hotpay=${wiped.hotpay}`

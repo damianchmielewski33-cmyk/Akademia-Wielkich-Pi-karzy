@@ -21,12 +21,10 @@ export async function isTestModeCookiePresent(): Promise<boolean> {
 }
 
 /**
- * Aktywny tryb testowy: cookie + ważna sesja admina.
- * Dane produkcyjne i testowe są w tej samej bazie (kolumna is_test).
+ * Aktywny tryb testowy: ważna sesja admina + (cookie albo flaga w bazie).
+ * Flaga w DB przetrwa powrót z HotPay, gdy cookie nie wraca z cross-site redirect.
  */
 export async function isAdminTestModeActive(): Promise<boolean> {
-  if (!(await isTestModeCookiePresent())) return false;
-
   const token = await readSessionTokenFromRequest();
   if (!token) return false;
 
@@ -36,10 +34,19 @@ export async function isAdminTestModeActive(): Promise<boolean> {
 
     const db = await getDb();
     const row = (await db
-      .prepare("SELECT is_admin, auth_version FROM users WHERE id = ?")
-      .get(session.userId)) as { is_admin: number; auth_version: number } | undefined;
+      .prepare(
+        "SELECT is_admin, auth_version, COALESCE(test_mode_enabled, 0) AS test_mode_enabled FROM users WHERE id = ?"
+      )
+      .get(session.userId)) as
+      | { is_admin: number; auth_version: number; test_mode_enabled: number }
+      | undefined;
 
-    return Boolean(row && row.is_admin === 1 && Number(row.auth_version) === session.authVersion);
+    if (!row || row.is_admin !== 1 || Number(row.auth_version) !== session.authVersion) {
+      return false;
+    }
+
+    if (Number(row.test_mode_enabled) === 1) return true;
+    return await isTestModeCookiePresent();
   } catch {
     return false;
   }
@@ -74,25 +81,40 @@ export function sqlWalletTestFilter(alias: string, testMode: boolean): string {
   return testMode ? `COALESCE(${col}, 0) = 1` : `COALESCE(${col}, 0) = 0`;
 }
 
+export function testModeCookieOptions(enabled: boolean): {
+  httpOnly: boolean;
+  sameSite: "lax" | "none";
+  path: string;
+  maxAge: number;
+  secure: boolean;
+} {
+  const isProd = process.env.NODE_ENV === "production";
+  return {
+    httpOnly: true,
+    // none+secure: cookie wraca z cross-site redirect HotPay; lokalnie zostaje lax.
+    sameSite: isProd ? "none" : "lax",
+    path: "/",
+    maxAge: enabled ? 60 * 60 * 24 * 30 : 0,
+    secure: isProd,
+  };
+}
+
 export async function setTestModeCookie(enabled: boolean) {
   const jar = await cookies();
   if (enabled) {
-    jar.set(TEST_MODE_COOKIE, "1", {
-      httpOnly: true,
-      sameSite: "lax",
-      path: "/",
-      maxAge: 60 * 60 * 24 * 30,
-      secure: process.env.NODE_ENV === "production",
-    });
+    jar.set(TEST_MODE_COOKIE, "1", testModeCookieOptions(true));
   } else {
-    jar.set(TEST_MODE_COOKIE, "", {
-      httpOnly: true,
-      sameSite: "lax",
-      path: "/",
-      maxAge: 0,
-      secure: process.env.NODE_ENV === "production",
-    });
+    jar.set(TEST_MODE_COOKIE, "", testModeCookieOptions(false));
   }
+}
+
+/** Włącza/wyłącza tryb testowy: flaga w DB (trwała) + cookie sesji przeglądarki. */
+export async function setAdminTestModeEnabled(adminUserId: number, enabled: boolean) {
+  const db = await getDb();
+  await db
+    .prepare("UPDATE users SET test_mode_enabled = ? WHERE id = ? AND COALESCE(is_admin, 0) = 1")
+    .run(enabled ? 1 : 0, adminUserId);
+  await setTestModeCookie(enabled);
 }
 
 /**

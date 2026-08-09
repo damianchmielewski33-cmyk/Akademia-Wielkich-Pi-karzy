@@ -97,6 +97,28 @@ export async function middleware(request: NextRequest) {
   const extra: Record<string, string> = { ...(testModeExtraHeaders(request) ?? {}) };
   if (previewBlocked) extra[PREVIEW_HEADER] = "1";
 
+  // Powrót z HotPay (session_id hp_t_*) — przywróć cookie i nagłówek trybu testowego dla admina.
+  let restoreTestModeCookie = false;
+  const hotpaySessionId = searchParams.get("session_id");
+  if (
+    pathname === "/platnosci" &&
+    hotpaySessionId?.startsWith("hp_t_") &&
+    request.cookies.get(SESSION_COOKIE)?.value
+  ) {
+    try {
+      const { payload } = await jwtVerify(
+        request.cookies.get(SESSION_COOKIE)!.value,
+        getAuthSecretKey()
+      );
+      if (payload.adm === 1) {
+        restoreTestModeCookie = true;
+        extra[TEST_MODE_HEADER] = "1";
+      }
+    } catch {
+      /* sesja nieważna */
+    }
+  }
+
   const response = nextWithPathname(request, Object.keys(extra).length ? extra : undefined);
 
   if (searchParams.get(PREVIEW_BLOCKED_QUERY_PARAM) === "1") {
@@ -106,6 +128,17 @@ export async function middleware(request: NextRequest) {
       sameSite: "lax",
       secure: process.env.NODE_ENV === "production",
       httpOnly: true,
+    });
+  }
+
+  if (restoreTestModeCookie) {
+    const isProd = process.env.NODE_ENV === "production";
+    response.cookies.set(TEST_MODE_COOKIE, "1", {
+      httpOnly: true,
+      sameSite: isProd ? "none" : "lax",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 30,
+      secure: isProd,
     });
   }
 

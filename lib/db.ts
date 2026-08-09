@@ -550,6 +550,9 @@ function initSchemaSync(db: Database.Database) {
   if (!userCols.some((c) => c.name === "is_test")) {
     db.exec("ALTER TABLE users ADD COLUMN is_test INTEGER NOT NULL DEFAULT 0");
   }
+  if (!userCols.some((c) => c.name === "test_mode_enabled")) {
+    db.exec("ALTER TABLE users ADD COLUMN test_mode_enabled INTEGER NOT NULL DEFAULT 0");
+  }
 
   const matchStatsCols = db.prepare("PRAGMA table_info(match_stats)").all() as { name: string }[];
   if (!matchStatsCols.some((c) => c.name === "season_id")) {

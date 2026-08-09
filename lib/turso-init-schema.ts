@@ -356,6 +356,9 @@ export async function initLibsqlSchema(client: Client) {
   if (!names.includes("is_test")) {
     await client.execute("ALTER TABLE users ADD COLUMN is_test INTEGER NOT NULL DEFAULT 0");
   }
+  if (!names.includes("test_mode_enabled")) {
+    await client.execute("ALTER TABLE users ADD COLUMN test_mode_enabled INTEGER NOT NULL DEFAULT 0");
+  }
 
   names = await pragmaColumnNames(client, "match_stats");
   if (!names.includes("season_id")) {
