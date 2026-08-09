@@ -1,14 +1,11 @@
 import { cookies, headers } from "next/headers";
 import { readSessionTokenFromRequest, verifySessionToken } from "@/lib/auth";
 import { TEST_MODE_COOKIE, TEST_MODE_HEADER } from "@/lib/constants";
-import { getProdDb, getTestDb, hasTestDbEnv, isTestDbAvailable, type AppDb } from "@/lib/db";
+import { getDb, type AppDb } from "@/lib/db";
 
+/** Zawsze dostępny — ta sama baza, dane testowe oznaczane `is_test=1`. */
 export function isTestModeConfigured(): boolean {
-  return isTestDbAvailable();
-}
-
-export function hasTursoTestEnv(): boolean {
-  return hasTestDbEnv();
+  return true;
 }
 
 /** Czy request ma flagę trybu testowego (cookie / header z middleware). */
@@ -24,10 +21,10 @@ export async function isTestModeCookiePresent(): Promise<boolean> {
 }
 
 /**
- * Aktywny tryb testowy: skonfigurowana baza testowa + cookie + ważna sesja admina (weryfikacja względem produkcji).
+ * Aktywny tryb testowy: cookie + ważna sesja admina.
+ * Dane produkcyjne i testowe są w tej samej bazie (kolumna is_test).
  */
 export async function isAdminTestModeActive(): Promise<boolean> {
-  if (!isTestModeConfigured()) return false;
   if (!(await isTestModeCookiePresent())) return false;
 
   const token = await readSessionTokenFromRequest();
@@ -37,8 +34,8 @@ export async function isAdminTestModeActive(): Promise<boolean> {
     const session = await verifySessionToken(token);
     if (!session.isAdmin) return false;
 
-    const prod = await getProdDb();
-    const row = (await prod
+    const db = await getDb();
+    const row = (await db
       .prepare("SELECT is_admin, auth_version FROM users WHERE id = ?")
       .get(session.userId)) as { is_admin: number; auth_version: number } | undefined;
 
@@ -46,6 +43,35 @@ export async function isAdminTestModeActive(): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+/** 1 gdy admin ma włączony tryb testowy — do INSERT. */
+export async function testModeFlag(): Promise<0 | 1> {
+  return (await isAdminTestModeActive()) ? 1 : 0;
+}
+
+/** Filtr meczy: w teście tylko is_test=1, poza testem tylko produkcja. */
+export function sqlMatchTestFilter(alias: string, testMode: boolean): string {
+  const col = alias ? `${alias}.is_test` : "is_test";
+  return testMode ? `COALESCE(${col}, 0) = 1` : `COALESCE(${col}, 0) = 0`;
+}
+
+/**
+ * Filtr użytkowników na listach:
+ * - produkcja: bez is_test
+ * - test: admini (produkcyjni) + gracze is_test=1
+ */
+export function sqlUserTestFilter(alias: string, testMode: boolean): string {
+  const a = alias ? `${alias}.` : "";
+  return testMode
+    ? `(COALESCE(${a}is_admin, 0) = 1 OR COALESCE(${a}is_test, 0) = 1)`
+    : `COALESCE(${a}is_test, 0) = 0`;
+}
+
+/** Filtr transakcji portfela / płatności HotPay wg trybu. */
+export function sqlWalletTestFilter(alias: string, testMode: boolean): string {
+  const col = alias ? `${alias}.is_test` : "is_test";
+  return testMode ? `COALESCE(${col}, 0) = 1` : `COALESCE(${col}, 0) = 0`;
 }
 
 export async function setTestModeCookie(enabled: boolean) {
@@ -69,89 +95,98 @@ export async function setTestModeCookie(enabled: boolean) {
   }
 }
 
-async function tableColumnNames(db: AppDb, table: string): Promise<string[]> {
-  const rows = (await db.prepare(`PRAGMA table_info(${table})`).all()) as { name: string }[];
-  return rows.map((r) => String(r.name)).filter(Boolean);
-}
+/**
+ * Usuwa dane oznaczone is_test=1 (mecze, gracze testowi, portfele/płatności testowe).
+ * Admini produkcyjni (is_test=0) zostają.
+ */
+export async function wipeTestModeData(db?: AppDb): Promise<{
+  matches: number;
+  users: number;
+  wallet_tx: number;
+  hotpay: number;
+}> {
+  const conn = db ?? (await getDb());
 
-async function listUserTables(db: AppDb): Promise<string[]> {
-  const rows = (await db
-    .prepare(
-      `SELECT name FROM sqlite_master
-       WHERE type = 'table'
-         AND name NOT LIKE 'sqlite_%'
-         AND name NOT LIKE '_litestream_%'`
-    )
-    .all()) as { name: string }[];
-  return rows.map((r) => String(r.name)).filter(Boolean);
-}
+  await conn.exec("PRAGMA foreign_keys = OFF");
 
-/** Kopiuje adminów (+ wiersze app_settings) z produkcji do bazy testowej. */
-export async function syncAdminsProdToTest(): Promise<{ admins: number }> {
-  const prod = await getProdDb();
-  const test = await getTestDb();
+  const del = async (sql: string) => {
+    const r = await conn.prepare(sql).run();
+    return Number(r.changes ?? 0);
+  };
 
-  const userCols = await tableColumnNames(prod, "users");
-  if (!userCols.includes("id") || !userCols.includes("is_admin")) {
-    throw new Error("Tabela users w produkcji nie ma wymaganych kolumn");
-  }
-
-  const admins = (await prod.prepare("SELECT * FROM users WHERE COALESCE(is_admin, 0) = 1").all()) as Record<
-    string,
-    unknown
-  >[];
-
-  const colList = userCols.join(", ");
-  const placeholders = userCols.map(() => "?").join(", ");
-
-  for (const admin of admins) {
-    const values = userCols.map((c) => admin[c] ?? null);
-    await test
-      .prepare(
-        `INSERT OR REPLACE INTO users (${colList}) VALUES (${placeholders})`
-      )
-      .run(...values);
-  }
-
-  // Ustawienia academy (m.in. hotpay_enabled), żeby test miał te same przełączniki co prod.
+  // Dzieci meczów testowych
+  await del(
+    `DELETE FROM match_signups WHERE match_id IN (SELECT id FROM matches WHERE COALESCE(is_test, 0) = 1)`
+  );
+  await del(
+    `DELETE FROM match_stats WHERE match_id IN (SELECT id FROM matches WHERE COALESCE(is_test, 0) = 1)`
+  );
   try {
-    const settingsCols = await tableColumnNames(prod, "app_settings");
-    if (settingsCols.length > 0) {
-      const settingsRows = (await prod.prepare("SELECT * FROM app_settings").all()) as Record<
-        string,
-        unknown
-      >[];
-      const sCols = settingsCols.join(", ");
-      const sPh = settingsCols.map(() => "?").join(", ");
-      for (const row of settingsRows) {
-        const values = settingsCols.map((c) => row[c] ?? null);
-        await test.prepare(`INSERT OR REPLACE INTO app_settings (${sCols}) VALUES (${sPh})`).run(...values);
-      }
-    }
+    await del(
+      `DELETE FROM match_lineup_slots WHERE match_id IN (SELECT id FROM matches WHERE COALESCE(is_test, 0) = 1)`
+    );
   } catch {
-    /* app_settings może nie istnieć w bardzo starej bazie — sync adminów i tak ważniejszy */
+    /* tabela może nie istnieć w starej bazie */
+  }
+  try {
+    await del(
+      `DELETE FROM match_wallet_charges WHERE match_id IN (SELECT id FROM matches WHERE COALESCE(is_test, 0) = 1)`
+    );
+  } catch {
+    /* */
+  }
+  try {
+    await del(
+      `DELETE FROM match_transport_messages WHERE match_id IN (SELECT id FROM matches WHERE COALESCE(is_test, 0) = 1)`
+    );
+  } catch {
+    /* */
+  }
+  try {
+    await del(
+      `DELETE FROM captain_lottery_spins WHERE match_id IN (SELECT id FROM matches WHERE COALESCE(is_test, 0) = 1)`
+    );
+  } catch {
+    /* */
   }
 
-  return { admins: admins.length };
-}
+  const matches = await del(`DELETE FROM matches WHERE COALESCE(is_test, 0) = 1`);
 
-/** Kasuje wszystkie tabele w bazie testowej, reinicjuje schemat i ponownie wgrywa adminów. */
-export async function wipeAndReseedTestDb(): Promise<{ admins: number }> {
-  const test = await getTestDb();
-  const tables = await listUserTables(test);
+  const hotpay = await del(`DELETE FROM hotpay_payments WHERE COALESCE(is_test, 0) = 1`);
+  const wallet_tx = await del(`DELETE FROM wallet_transactions WHERE COALESCE(is_test, 0) = 1`);
 
-  await test.exec("PRAGMA foreign_keys = OFF");
-  for (const name of tables) {
-    // Nazwy z sqlite_master — tylko [a-z0-9_].
-    if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(name)) continue;
-    await test.exec(`DROP TABLE IF EXISTS ${name}`);
+  // Dane powiązane z graczami testowymi
+  await del(
+    `DELETE FROM match_signups WHERE user_id IN (SELECT id FROM users WHERE COALESCE(is_test, 0) = 1)`
+  );
+  await del(
+    `DELETE FROM match_stats WHERE user_id IN (SELECT id FROM users WHERE COALESCE(is_test, 0) = 1)`
+  );
+  try {
+    await del(
+      `DELETE FROM wallet_deposit_requests WHERE user_id IN (SELECT id FROM users WHERE COALESCE(is_test, 0) = 1)`
+    );
+  } catch {
+    /* */
   }
-  await test.exec("PRAGMA foreign_keys = ON");
+  try {
+    await del(
+      `DELETE FROM push_subscriptions WHERE user_id IN (SELECT id FROM users WHERE COALESCE(is_test, 0) = 1)`
+    );
+  } catch {
+    /* */
+  }
+  try {
+    await del(
+      `DELETE FROM user_devices WHERE user_id IN (SELECT id FROM users WHERE COALESCE(is_test, 0) = 1)`
+    );
+  } catch {
+    /* */
+  }
 
-  // Wymuś ponowną inicjalizację schematu (reset flag w getTestDb).
-  const { resetTestDbSchemaFlag } = await import("@/lib/db");
-  resetTestDbSchemaFlag();
-  await getTestDb();
+  const users = await del(`DELETE FROM users WHERE COALESCE(is_test, 0) = 1`);
 
-  return syncAdminsProdToTest();
+  await conn.exec("PRAGMA foreign_keys = ON");
+
+  return { matches, users, wallet_tx, hotpay };
 }

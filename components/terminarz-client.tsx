@@ -23,7 +23,6 @@ import {
   UserMinus,
   UserPlus,
   Users,
-  Wallet,
   X,
 } from "lucide-react";
 import type { MatchRow } from "@/lib/db";
@@ -73,6 +72,7 @@ import { useAsyncAction } from "@/lib/use-async-action";import {
 import type { CaptainLotteryEntry } from "@/lib/captain-lottery";
 import { captainLotteryEntryFromApi } from "@/lib/captain-lottery";
 import { useHotpayPayment } from "@/hooks/use-hotpay-payment";
+import { payMatchCart } from "@/lib/hotpay-client";
 import { PayButton } from "@/components/pay-button";
 import { hasMatchTimePassed } from "@/lib/transport";
 
@@ -211,6 +211,7 @@ export function TerminarzClient({
   const router = useRouter();
   const [walletBalancePln, setWalletBalancePln] = useState<number | null>(null);
   const { pay: payDebt, busy: debtBusy } = useHotpayPayment();
+  const [matchPayBusyId, setMatchPayBusyId] = useState<number | null>(null);
   const [view, setView] = useState<"list" | "cal">("list");
   const [listTab, setListTab] = useState<"active" | "archive">("active");
   const [filter, setFilter] = useState("all");
@@ -317,6 +318,31 @@ export function TerminarzClient({
       .catch(() => void 0);
   }, [isLoggedIn, hotpayEnabled]);
 
+  const payMatchFee = useCallback(
+    async (matchId: number) => {
+      if (!currentUserId || matchPayBusyId != null) return;
+      setMatchPayBusyId(matchId);
+      try {
+        const result = await payMatchCart({
+          matchId,
+          userIds: [currentUserId],
+          allowHotpay: hotpayEnabled,
+        });
+        if (result.method === "hotpay") {
+          toast.info("Trwa przekierowanie do płatności HotPay…");
+          window.setTimeout(() => window.location.assign(result.url), 400);
+          return;
+        }
+        toast.success(`Opłacono mecz · ${formatMatchFeePln(result.amount_pln)}`);
+        router.refresh();
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Nie udało się opłacić meczu");
+      } finally {
+        setMatchPayBusyId(null);
+      }
+    },
+    [currentUserId, hotpayEnabled, matchPayBusyId, router]
+  );
   useEffect(() => {
     if (highlightMatchId) setView("list");
   }, [highlightMatchId]);
@@ -949,21 +975,17 @@ export function TerminarzClient({
                       onClick={() => void payDebt(Math.abs(walletBalancePln))}
                     />
                   ) : (
-                    <Button size="sm" variant="ghost" className={actionBtnPrimary} asChild>
-                      <Link
-                        href={`/platnosci?mecz=${m.id}`}
-                        title="Przejdź do płatności z tym meczem w koszyku"
-                      >
-                        <Wallet className="shrink-0" aria-hidden />
-                        <span>
-                          <span className="block leading-tight">Opłać ten mecz</span>
-                          <span className="mt-1 block text-[11px] font-normal leading-snug text-emerald-100/95">
-                            Przejdź do strony Płatności
-                          </span>
-                        </span>
-                      </Link>
-                    </Button>
-                  )                ) : null}
+                    <PayButton
+                      variant="action"
+                      amountPln={perPersonMatchFeePln(m.fee_pln, m.signed_up)}
+                      label="Opłać ten mecz"
+                      sublabel={hotpayEnabled ? "Przejdź do bramki HotPay" : "Zapłać z portfela"}
+                      busy={matchPayBusyId === m.id}
+                      disabled={matchPayBusyId != null || debtBusy}
+                      onClick={() => void payMatchFee(m.id)}
+                    />
+                  )
+                ) : null}
               </>
             )
           ) : kind === "tentative" ? (

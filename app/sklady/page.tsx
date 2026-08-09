@@ -20,7 +20,7 @@ export default async function SkladyPage({ searchParams }: PageProps) {
 
   const publicMatches = await db
     .prepare(
-      `SELECT * FROM matches WHERE lineup_public = 1
+      `SELECT * FROM matches WHERE lineup_public = 1 AND COALESCE(is_test, 0) = 0
        ORDER BY match_date DESC, match_time DESC`
     )
     .all() as MatchRow[];
@@ -28,7 +28,8 @@ export default async function SkladyPage({ searchParams }: PageProps) {
   const nextUpcomingAny = await db
     .prepare(
       `SELECT * FROM matches
-       WHERE datetime(match_date || ' ' || match_time) > datetime('now', 'localtime')
+       WHERE COALESCE(is_test, 0) = 0
+         AND datetime(match_date || ' ' || match_time) > datetime('now', 'localtime')
        ORDER BY match_date ASC, match_time ASC
        LIMIT 1`
     )
@@ -71,7 +72,7 @@ export default async function SkladyPage({ searchParams }: PageProps) {
 
   const defaultUpcoming = await db
     .prepare(
-      `SELECT id FROM matches WHERE lineup_public = 1
+      `SELECT id FROM matches WHERE lineup_public = 1 AND COALESCE(is_test, 0) = 0
        AND datetime(match_date || ' ' || match_time) > datetime('now', 'localtime')
        ORDER BY match_date ASC, match_time ASC
        LIMIT 1`
@@ -80,7 +81,7 @@ export default async function SkladyPage({ searchParams }: PageProps) {
 
   const defaultLatest = await db
     .prepare(
-      `SELECT id FROM matches WHERE lineup_public = 1
+      `SELECT id FROM matches WHERE lineup_public = 1 AND COALESCE(is_test, 0) = 0
        ORDER BY match_date DESC, match_time DESC
        LIMIT 1`
     )
@@ -156,7 +157,7 @@ async function SkladyContent({ matchId }: { matchId: number }) {
 
   const row = await db
     .prepare(
-      "SELECT id, match_date, match_time, location, lineup_public FROM matches WHERE id = ? AND lineup_public = 1"
+      "SELECT id, match_date, match_time, location, lineup_public FROM matches WHERE id = ? AND lineup_public = 1 AND COALESCE(is_test, 0) = 0"
     )
     .get(matchId) as
     | {

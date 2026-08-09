@@ -1,7 +1,12 @@
 import type { AppDb } from "@/lib/db";
 import { tryRemoveTemporaryGuestIfBalanceZero } from "@/lib/guest-cleanup";
 import type { HotpayNotificationPayload, HotpayPaymentKind, HotpayPaymentStatus } from "@/lib/hotpay";
-import { formatHotpayAmount, timingSafeEqualString, verifyNotificationHash } from "@/lib/hotpay";
+import {
+  formatHotpayAmount,
+  isHotpayTestSessionId,
+  timingSafeEqualString,
+  verifyNotificationHash,
+} from "@/lib/hotpay";
 import { applyPendingMatchCartAfterHotpay } from "@/lib/match-cart";
 
 export type HotpayPaymentRow = {
@@ -20,6 +25,7 @@ export type HotpayPaymentRow = {
   error_message: string | null;
   created_at: string;
   completed_at: string | null;
+  is_test: number;
 };
 
 export async function getHotpayPaymentBySessionId(
@@ -29,7 +35,8 @@ export async function getHotpayPaymentBySessionId(
   const row = (await db
     .prepare(
       `SELECT id, session_id, user_id, kind, amount_pln, gross_amount_pln, status, hotpay_payment_id, secure,
-              deposit_request_id, cart_id, error_message, created_at, completed_at
+              deposit_request_id, cart_id, error_message, created_at, completed_at,
+              COALESCE(is_test, 0) AS is_test
        FROM hotpay_payments WHERE session_id = ?`
     )
     .get(sessionId)) as HotpayPaymentRow | undefined;
@@ -146,13 +153,15 @@ export async function applyHotpaySuccessCredit(
     .run(payment.user_id, amount, note);
 
   const depositId = Number(dep.lastInsertRowid);
+  const isTest =
+    Number(payment.is_test) === 1 || isHotpayTestSessionId(payment.session_id) ? 1 : 0;
 
   await db
     .prepare(
-      `INSERT INTO wallet_transactions (user_id, kind, amount_pln, deposit_request_id, wallet_kind, note)
-       VALUES (?, 'deposit', ?, ?, 'operator', ?)`
+      `INSERT INTO wallet_transactions (user_id, kind, amount_pln, deposit_request_id, wallet_kind, note, is_test)
+       VALUES (?, 'deposit', ?, ?, 'operator', ?, ?)`
     )
-    .run(payment.user_id, amount, depositId, note);
+    .run(payment.user_id, amount, depositId, note, isTest);
 
   const linked = await db
     .prepare(

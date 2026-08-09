@@ -4,6 +4,7 @@ import { getDb, logActivity } from "@/lib/db";
 import { requireAdmin } from "@/lib/api-helpers";
 import { getWalletBalances } from "@/lib/wallet";
 import { tryRemoveTemporaryGuestIfBalanceZero } from "@/lib/guest-cleanup";
+import { testModeFlag } from "@/lib/test-mode";
 
 export const runtime = "nodejs";
 
@@ -68,12 +69,13 @@ export async function POST(req: Request) {
   const fullNote = note ? `${baseNote} · ${note}` : baseNote;
   const storedNote = fullNote.length > 200 ? `${fullNote.slice(0, 197)}...` : fullNote;
 
+  const isTest = await testModeFlag();
   const r = await db
     .prepare(
-      `INSERT INTO wallet_transactions (user_id, kind, amount_pln, wallet_kind, note)
-       VALUES (?, 'adjustment', ?, ?, ?)`
+      `INSERT INTO wallet_transactions (user_id, kind, amount_pln, wallet_kind, note, is_test)
+       VALUES (?, 'adjustment', ?, ?, ?, ?)`
     )
-    .run(user_id, delta, wallet_kind, storedNote);
+    .run(user_id, delta, wallet_kind, storedNote, isTest);
 
   const txId = Number(r.lastInsertRowid);
 

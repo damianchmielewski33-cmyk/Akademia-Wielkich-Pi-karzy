@@ -50,7 +50,10 @@ type SettingsTocGroup = { label: string; items: SettingsTocItem[] };
 const WEB_SETTINGS_TOC: SettingsTocGroup[] = [
   {
     label: "System",
-    items: [{ id: "settings-system", label: "Co działa na serwerze" }],
+    items: [
+      { id: "settings-test-mode", label: "Tryb testowy" },
+      { id: "settings-system", label: "Co działa na serwerze" },
+    ],
   },
   {
     label: "Marka i treści",
@@ -67,7 +70,6 @@ const WEB_SETTINGS_TOC: SettingsTocGroup[] = [
   {
     label: "Reklamy i rejestracja",
     items: [
-      { id: "settings-test-mode", label: "Tryb testowy" },
       { id: "settings-payments", label: "Płatności (HotPay)" },
       { id: "settings-adsense", label: "Google AdSense" },
       { id: "settings-registration", label: "Rejestracja i powiadomienia" },
@@ -309,11 +311,11 @@ export function AdminSettingsTab({
         });
         toast.success(
           enabled
-            ? "Tryb testowy włączony — widzisz osobną bazę (baner u góry)."
+            ? "Tryb testowy włączony — dane z flagą is_test (baner u góry)."
             : "Tryb testowy wyłączony — dane testowe usunięte.",
           { id: toastId }
         );
-        // Pełne odświeżenie, żeby RSC / dane przeszły na właściwą bazę.
+        // Pełne odświeżenie, żeby RSC / dane przeszły na właściwy widok (is_test).
         window.location.reload();
       } catch (e) {
         toast.error(e instanceof Error ? e.message : "Błąd trybu testowego", { id: toastId });
@@ -522,6 +524,30 @@ export function AdminSettingsTab({
             <strong className="text-white">{registrationStatusLabel}</strong>
           </li>
         </ul>
+      </SettingsSection>
+
+      <SettingsSection
+        id="settings-test-mode"
+        hidden={channel !== "web" || settingsRealm !== "academy" || !sectionVisible("settings-test-mode")}
+        title="Tryb testowy"
+        description="Ta sama baza co produkcja — dane testowe mają flagę is_test. Tylko Twoja sesja admina widzi tryb testowy. Po wyłączeniu mecze, gracze i płatności testowe są usuwane."
+      >
+        <ul className="mb-4 grid gap-2 text-sm sm:grid-cols-2">
+          <li className={adminStatusChipClass}>
+            <span className="text-emerald-100/70">Tryb testowy:</span>{" "}
+            <strong className="text-emerald-300">
+              {testMode == null ? "…" : "Gotowy (ta sama baza)"}
+            </strong>
+          </li>
+        </ul>
+        <YesNoSwitchRow
+          className={adminToggleRowClass}
+          label="Włącz tryb testowy"
+          hint="Baner „TRYB TESTOWY” na stronie. HotPay w teście używa session_id z prefixem hp_t_ (księguje z flagą is_test). W panelu HotPay włącz ich „Tryb testowy” na czas testów. Wyłączenie kasuje dane testowe."
+          checked={Boolean(testMode?.enabled)}
+          disabled={busy || testModeBusy || !testMode?.configured}
+          onCheckedChange={(v) => void setTestModeEnabled(v)}
+        />
       </SettingsSection>
 
       <SettingsSection
@@ -737,38 +763,6 @@ export function AdminSettingsTab({
             }}
           />
         </FieldRow>
-      </SettingsSection>
-
-      <SettingsSection
-        id="settings-test-mode"
-        hidden={channel !== "web" || settingsRealm !== "academy" || !sectionVisible("settings-test-mode")}
-        title="Tryb testowy"
-        description="Osobna baza danych tylko dla Twojej sesji admina. Gracze nadal widzą produkcję. Po wyłączeniu mecze, gracze i statystyki z testu są kasowane."
-      >
-        <ul className="mb-4 grid gap-2 text-sm sm:grid-cols-2">
-          <li className={adminStatusChipClass}>
-            <span className="text-emerald-100/70">Baza testowa:</span>{" "}
-            <strong className={testMode?.configured ? "text-emerald-300" : "text-amber-300"}>
-              {testMode == null
-                ? "…"
-                : testMode.configured
-                  ? "Skonfigurowana (TURSO_TEST_* lub lokalny plik)"
-                  : "Brak — ustaw TURSO_TEST_DATABASE_URL i TURSO_TEST_AUTH_TOKEN"}
-            </strong>
-          </li>
-        </ul>
-        <YesNoSwitchRow
-          className={adminToggleRowClass}
-          label="Włącz tryb testowy"
-          hint={
-            testMode?.configured
-              ? "Baner „TRYB TESTOWY” na stronie. HotPay w teście używa session_id z prefixem hp_t_ (księguje tylko na bazie testowej). W panelu HotPay włącz ich „Tryb testowy” na czas testów."
-              : "Na Vercel dodaj osobną bazę Turso i zmienne TURSO_TEST_DATABASE_URL / TURSO_TEST_AUTH_TOKEN, potem redeploy."
-          }
-          checked={Boolean(testMode?.enabled)}
-          disabled={busy || testModeBusy || !testMode?.configured}
-          onCheckedChange={(v) => void setTestModeEnabled(v)}
-        />
       </SettingsSection>
 
       <SettingsSection

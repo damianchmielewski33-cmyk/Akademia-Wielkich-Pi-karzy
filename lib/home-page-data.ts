@@ -8,6 +8,7 @@ import { parseYoutubeVideoIdFromUserInput } from "@/lib/site";
 import { isLocalMatchDay } from "@/lib/transport";
 import { getAppSettings } from "@/lib/app-settings";
 import { isHotpayConfigured } from "@/lib/hotpay";
+import { isAdminTestModeActive, sqlMatchTestFilter } from "@/lib/test-mode";
 
 export type HomePageClientProps = {
   nextMatch: MatchRow | null;
@@ -32,11 +33,13 @@ export async function getHomePageClientProps(
   options?: { showPzuCupTile?: boolean; pageVariant?: "home" | "pzu-cup" }
 ): Promise<HomePageClientProps> {
   const db = await getDb();
+  const testMode = Boolean(session?.isAdmin && (await isAdminTestModeActive()));
 
   const nextMatch = (await db
     .prepare(
       `SELECT * FROM matches
        WHERE realm = ? AND played = 0 AND COALESCE(cancelled, 0) = 0
+         AND ${sqlMatchTestFilter("", testMode)}
          AND datetime(match_date || ' ' || match_time) > datetime('now', 'localtime')
        ORDER BY match_date, match_time LIMIT 1`
     )

@@ -303,6 +303,9 @@ export async function initLibsqlSchema(client: Client) {
    if (!names.includes("gate_pin")) {
      await client.execute("ALTER TABLE matches ADD COLUMN gate_pin TEXT");
    }
+   if (!names.includes("is_test")) {
+     await client.execute("ALTER TABLE matches ADD COLUMN is_test INTEGER NOT NULL DEFAULT 0");
+   }
 
   names = await pragmaColumnNames(client, "users");
   if (!names.includes("profile_photo_path")) {
@@ -349,6 +352,9 @@ export async function initLibsqlSchema(client: Client) {
   }
   if (!names.includes("admin_permissions")) {
     await client.execute("ALTER TABLE users ADD COLUMN admin_permissions TEXT");
+  }
+  if (!names.includes("is_test")) {
+    await client.execute("ALTER TABLE users ADD COLUMN is_test INTEGER NOT NULL DEFAULT 0");
   }
 
   names = await pragmaColumnNames(client, "match_stats");
@@ -570,6 +576,12 @@ export async function initLibsqlSchema(client: Client) {
       "ALTER TABLE wallet_transactions ADD COLUMN wallet_kind TEXT NOT NULL DEFAULT 'admin' CHECK (wallet_kind IN ('admin','operator'))"
     );
   }
+  {
+    const cols = await pragmaColumnNames(client, "wallet_transactions");
+    if (cols.length > 0 && !cols.includes("is_test")) {
+      await client.execute("ALTER TABLE wallet_transactions ADD COLUMN is_test INTEGER NOT NULL DEFAULT 0");
+    }
+  }
   const walletDrCols = await pragmaColumnNames(client, "wallet_deposit_requests");
   if (walletDrCols.length > 0 && !walletDrCols.includes("wallet_kind")) {
     await client.execute(
@@ -583,6 +595,12 @@ export async function initLibsqlSchema(client: Client) {
   }
   if (hotpayCols.length > 0 && !hotpayCols.includes("gross_amount_pln")) {
     await client.execute("ALTER TABLE hotpay_payments ADD COLUMN gross_amount_pln REAL");
+  }
+  {
+    const cols = await pragmaColumnNames(client, "hotpay_payments");
+    if (cols.length > 0 && !cols.includes("is_test")) {
+      await client.execute("ALTER TABLE hotpay_payments ADD COLUMN is_test INTEGER NOT NULL DEFAULT 0");
+    }
   }
   const hotpaySqlRs = await client.execute(
     `SELECT sql FROM sqlite_master WHERE type='table' AND name='hotpay_payments'`

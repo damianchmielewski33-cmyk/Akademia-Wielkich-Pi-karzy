@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/api-helpers";
-import { getDbForHotpaySessionId } from "@/lib/db";
+import { getDb } from "@/lib/db";
 import { getHotpayPaymentBySessionId } from "@/lib/hotpay-wallet";
 import { screenBlockApiResponse } from "@/lib/screen-block-api";
 
@@ -19,7 +19,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Brak session_id" }, { status: 400 });
   }
 
-  const db = await getDbForHotpaySessionId(sessionId);
+  const db = await getDb();
   const payment = await getHotpayPaymentBySessionId(db, sessionId);
   if (!payment) {
     return NextResponse.json({ error: "Nie znaleziono płatności" }, { status: 404 });

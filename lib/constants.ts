@@ -28,7 +28,7 @@ export const PREVIEW_BLOCKED_COOKIE = "awp_preview_blocked";
 export const PREVIEW_BLOCKS_DRAFT_STORAGE_KEY = "awp_screen_blocks_preview_draft";
 
 /**
- * Tryb testowy admina (osobna baza). Ustawiane wyłącznie przez API admina.
+ * Tryb testowy admina (ta sama baza, flaga is_test). Ustawiane wyłącznie przez API admina.
  * Middleware przekazuje wartość jako `x-awp-test-mode`.
  */
 export const TEST_MODE_COOKIE = "awp_test_mode";

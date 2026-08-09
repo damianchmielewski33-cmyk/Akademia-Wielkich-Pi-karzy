@@ -4,6 +4,7 @@ import { getDb, logActivity, type MatchRow } from "@/lib/db";
 import { requireAdmin } from "@/lib/api-helpers";
 import { getApiRealm } from "@/lib/request-realm";
 import { notifySubscribersAboutNewMatch } from "@/lib/match-notifications";
+import { testModeFlag } from "@/lib/test-mode";
 
 export const runtime = "nodejs";
 
@@ -36,32 +37,33 @@ export async function POST(req: Request) {
   const db = await getDb();
   const realm = getApiRealm(req);
   const fee = fee_pln === undefined ? null : fee_pln;
+  const isTest = await testModeFlag();
 
   const existing = (await db
     .prepare(
       `SELECT id FROM matches
        WHERE realm = ? AND match_date = ? AND match_time = ? AND TRIM(location) = TRIM(?)
-         AND COALESCE(cancelled, 0) = 0
+         AND COALESCE(cancelled, 0) = 0 AND COALESCE(is_test, 0) = ?
        LIMIT 1`
     )
-    .get(realm, date, time, location)) as { id: number } | undefined;
+    .get(realm, date, time, location, isTest)) as { id: number } | undefined;
 
   if (existing) {
     return NextResponse.json({ status: "ok", id: existing.id, duplicate: true });
   }
 
   const ins = db.prepare(
-    `INSERT INTO matches (match_date, match_time, location, max_slots, signed_up, played, fee_pln, gate_pin, realm)
-     VALUES (?, ?, ?, ?, 0, 0, ?, ?, ?)`
+    `INSERT INTO matches (match_date, match_time, location, max_slots, signed_up, played, fee_pln, gate_pin, realm, is_test)
+     VALUES (?, ?, ?, ?, 0, 0, ?, ?, ?, ?)`
   );
-  const r = await ins.run(date, time, location, max_slots, fee, gate_pin, realm);
+  const r = await ins.run(date, time, location, max_slots, fee, gate_pin, realm, isTest);
   const newId = Number(r.lastInsertRowid);
   await logActivity(
     gate.session.userId,
-    `Dodał mecz do terminarza id ${newId}: ${date} ${time} (${location}), max. ${max_slots} miejsc${fee != null ? `, wynajem ${fee} zł` : ""}`
+    `Dodał mecz do terminarza id ${newId}: ${date} ${time} (${location}), max. ${max_slots} miejsc${fee != null ? `, wynajem ${fee} zł` : ""}${isTest ? " [TEST]" : ""}`
   );
-  const matchRow = await db.prepare("SELECT * FROM matches WHERE id = ?").get(newId) as MatchRow | undefined;
-  if (matchRow) {
+  const matchRow = (await db.prepare("SELECT * FROM matches WHERE id = ?").get(newId)) as MatchRow | undefined;
+  if (matchRow && !isTest) {
     try {
       /** Serverless kończy proces zaraz po odpowiedzi — bez await maile często w ogóle nie wychodzą. */
       await notifySubscribersAboutNewMatch(matchRow);

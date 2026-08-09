@@ -1,6 +1,7 @@
 import { getDb } from "@/lib/db";
 import { tryRemoveTemporaryGuestIfBalanceZero } from "@/lib/guest-cleanup";
 import { matchChargeRoundingMarkupPln } from "@/lib/match-fee";
+import { isAdminTestModeActive, sqlWalletTestFilter, testModeFlag } from "@/lib/test-mode";
 
 export type WalletBalanceRow = { balance_pln: number };
 
@@ -12,12 +13,13 @@ export type WalletBalances = {
 
 export async function getUserWalletBalancePln(userId: number): Promise<number> {
   const db = await getDb();
+  const testMode = await isAdminTestModeActive();
   const row = (await db
     .prepare(
       `
       SELECT COALESCE(ROUND(SUM(amount_pln), 2), 0) AS balance_pln
       FROM wallet_transactions
-      WHERE user_id = ?
+      WHERE user_id = ? AND ${sqlWalletTestFilter("", testMode)}
     `
     )
     .get(userId)) as WalletBalanceRow | undefined;
@@ -27,11 +29,12 @@ export async function getUserWalletBalancePln(userId: number): Promise<number> {
 /** Zwraca salda z podziałem na portfel admina i operatora. */
 export async function getWalletBalances(userId: number): Promise<WalletBalances> {
   const db = await getDb();
+  const testMode = await isAdminTestModeActive();
   const rows = (await db
     .prepare(
       `SELECT wallet_kind, COALESCE(ROUND(SUM(amount_pln), 2), 0) AS balance_pln
        FROM wallet_transactions
-       WHERE user_id = ?
+       WHERE user_id = ? AND ${sqlWalletTestFilter("", testMode)}
        GROUP BY wallet_kind`
     )
     .all(userId)) as { wallet_kind: string; balance_pln: number }[];
@@ -171,12 +174,13 @@ export async function transferWalletFunds(args: {
   const fromLabel = formatPlayerLabel(sender);
   const extraNote = args.note?.trim() ? ` — ${args.note.trim()}` : "";
 
+  const isTest = await testModeFlag();
   const debit = await db
     .prepare(
-      `INSERT INTO wallet_transactions (user_id, kind, amount_pln, related_user_id, note)
-       VALUES (?, 'transfer', ?, ?, ?)`
+      `INSERT INTO wallet_transactions (user_id, kind, amount_pln, related_user_id, note, is_test)
+       VALUES (?, 'transfer', ?, ?, ?, ?)`
     )
-    .run(args.fromUserId, -amount, args.toUserId, `Przelew do ${toLabel}${extraNote}`);
+    .run(args.fromUserId, -amount, args.toUserId, `Przelew do ${toLabel}${extraNote}`, isTest);
 
   const balanceAfterDebit = await getUserWalletBalancePln(args.fromUserId);
   if (balanceAfterDebit < 0) {
@@ -186,10 +190,10 @@ export async function transferWalletFunds(args: {
 
   await db
     .prepare(
-      `INSERT INTO wallet_transactions (user_id, kind, amount_pln, related_user_id, note)
-       VALUES (?, 'transfer', ?, ?, ?)`
+      `INSERT INTO wallet_transactions (user_id, kind, amount_pln, related_user_id, note, is_test)
+       VALUES (?, 'transfer', ?, ?, ?, ?)`
     )
-    .run(args.toUserId, amount, args.fromUserId, `Przelew od ${fromLabel}${extraNote}`);
+    .run(args.toUserId, amount, args.fromUserId, `Przelew od ${fromLabel}${extraNote}`, isTest);
 
   const balance_pln = await getUserWalletBalancePln(args.fromUserId);
   return { ok: true, amount_pln: amount, balance_pln };
@@ -242,17 +246,19 @@ export async function completeDepositRequest(
     return { ok: false as const, error: "NOT_PENDING" as const };
   }
 
+  const isTest = await testModeFlag();
   await db
     .prepare(
-      `INSERT INTO wallet_transactions (user_id, kind, amount_pln, deposit_request_id, wallet_kind, note)
-       VALUES (?, 'deposit', ?, ?, ?, ?)`
+      `INSERT INTO wallet_transactions (user_id, kind, amount_pln, deposit_request_id, wallet_kind, note, is_test)
+       VALUES (?, 'deposit', ?, ?, ?, ?, ?)`
     )
     .run(
       dep.user_id,
       Number(dep.amount_pln),
       dep.id,
       walletKind,
-      `Wpłata zaksięgowana (zakończone przez user ${completedByUserId})`
+      `Wpłata zaksięgowana (zakończone przez user ${completedByUserId})`,
+      isTest
     );
 
   await tryRemoveTemporaryGuestIfBalanceZero({
@@ -282,28 +288,29 @@ export async function createMatchCharge(args: {
   // Opłata pobierana najpierw z portfela admina, reszta z portfela operatora.
   const balances = await getWalletBalances(args.userId);
   const adminBalance = balances.admin;
+  const isTest = await testModeFlag();
 
   if (adminBalance >= fee) {
     await db.prepare(
-      `INSERT INTO wallet_transactions (user_id, kind, amount_pln, match_id, wallet_kind, note)
-       VALUES (?, 'match_charge', ?, ?, 'admin', ?)`
-    ).run(args.userId, -fee, args.matchId, chargeNote);
+      `INSERT INTO wallet_transactions (user_id, kind, amount_pln, match_id, wallet_kind, note, is_test)
+       VALUES (?, 'match_charge', ?, ?, 'admin', ?, ?)`
+    ).run(args.userId, -fee, args.matchId, chargeNote, isTest);
   } else if (adminBalance > 0) {
     const adminPart = Math.round(adminBalance * 100) / 100;
     const operatorPart = Math.round((fee - adminPart) * 100) / 100;
     await db.prepare(
-      `INSERT INTO wallet_transactions (user_id, kind, amount_pln, match_id, wallet_kind, note)
-       VALUES (?, 'match_charge', ?, ?, 'admin', ?)`
-    ).run(args.userId, -adminPart, args.matchId, chargeNote);
+      `INSERT INTO wallet_transactions (user_id, kind, amount_pln, match_id, wallet_kind, note, is_test)
+       VALUES (?, 'match_charge', ?, ?, 'admin', ?, ?)`
+    ).run(args.userId, -adminPart, args.matchId, chargeNote, isTest);
     await db.prepare(
-      `INSERT INTO wallet_transactions (user_id, kind, amount_pln, match_id, wallet_kind, note)
-       VALUES (?, 'match_charge', ?, ?, 'operator', ?)`
-    ).run(args.userId, -operatorPart, args.matchId, chargeNote);
+      `INSERT INTO wallet_transactions (user_id, kind, amount_pln, match_id, wallet_kind, note, is_test)
+       VALUES (?, 'match_charge', ?, ?, 'operator', ?, ?)`
+    ).run(args.userId, -operatorPart, args.matchId, chargeNote, isTest);
   } else {
     await db.prepare(
-      `INSERT INTO wallet_transactions (user_id, kind, amount_pln, match_id, wallet_kind, note)
-       VALUES (?, 'match_charge', ?, ?, 'operator', ?)`
-    ).run(args.userId, -fee, args.matchId, chargeNote);
+      `INSERT INTO wallet_transactions (user_id, kind, amount_pln, match_id, wallet_kind, note, is_test)
+       VALUES (?, 'match_charge', ?, ?, 'operator', ?, ?)`
+    ).run(args.userId, -fee, args.matchId, chargeNote, isTest);
   }
 
   await tryRemoveTemporaryGuestIfBalanceZero({

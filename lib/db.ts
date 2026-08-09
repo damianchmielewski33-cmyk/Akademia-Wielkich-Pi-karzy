@@ -2,7 +2,7 @@ import { createClient, type Client, type InArgs, type Row } from "@libsql/client
 import Database from "better-sqlite3";
 import fs from "fs";
 import * as path from "path";
-import { isVercel, resolveDatabaseFilePath, resolveTestDatabaseFilePath } from "@/lib/runtime-paths";
+import { isVercel, resolveDatabaseFilePath } from "@/lib/runtime-paths";
 import { initLibsqlSchema } from "@/lib/turso-init-schema";
 import { isDuplicateColumnError, migrateAppSettingsColumnsSqlite } from "@/lib/app-settings";
 import { migrateRealmSchemaSqlite } from "@/lib/realm-migration";
@@ -24,26 +24,11 @@ function hasTursoEnv(): boolean {
   return Boolean(process.env.TURSO_DATABASE_URL?.trim());
 }
 
-export function hasTestDbEnv(): boolean {
-  return Boolean(process.env.TURSO_TEST_DATABASE_URL?.trim());
-}
-
-/** Czy da się otworzyć bazę testową (Turso test albo lokalny SQLite poza Vercel). */
-export function isTestDbAvailable(): boolean {
-  if (hasTestDbEnv()) return true;
-  // Na Vercel bez TURSO_TEST_* nie używamy lokalnego pliku (nie współdzielony).
-  return !isVercel();
-}
-
 let sqliteInstance: Database.Database | null = null;
-let sqliteTestInstance: Database.Database | null = null;
 let libsqlClient: Client | null = null;
-let libsqlTestClient: Client | null = null;
 let libsqlSchemaReady = false;
-let libsqlTestSchemaReady = false;
 /** Jedna wspólna inicjalizacja schematu — unikamy wyścigu przy równoległym prerenderze. */
 let libsqlSchemaInitPromise: Promise<void> | null = null;
-let libsqlTestSchemaInitPromise: Promise<void> | null = null;
 
 function rowToRecord(row: Row, columns: string[]): Record<string, unknown> {
   const o: Record<string, unknown> = {};
@@ -175,6 +160,12 @@ function migrateHotpayPaymentsMatchCart(db: Database.Database) {
   if (!cols.some((c) => c.name === "gross_amount_pln")) {
     db.exec("ALTER TABLE hotpay_payments ADD COLUMN gross_amount_pln REAL");
   }
+  if (!cols.some((c) => c.name === "is_test")) {
+    const again = db.prepare("PRAGMA table_info(hotpay_payments)").all() as { name: string }[];
+    if (!again.some((c) => c.name === "is_test")) {
+      db.exec("ALTER TABLE hotpay_payments ADD COLUMN is_test INTEGER NOT NULL DEFAULT 0");
+    }
+  }
 
   const row = db
     .prepare(`SELECT sql FROM sqlite_master WHERE type='table' AND name='hotpay_payments'`)
@@ -220,6 +211,13 @@ function migrateWalletKindColumns(db: Database.Database) {
     db.exec(
       "ALTER TABLE wallet_transactions ADD COLUMN wallet_kind TEXT NOT NULL DEFAULT 'admin' CHECK (wallet_kind IN ('admin','operator'))"
     );
+  }
+  if (txCols.length > 0 && !txCols.some((c) => c.name === "is_test")) {
+    // odśwież listę po ewentualnym ALTER powyżej
+    const again = db.prepare("PRAGMA table_info(wallet_transactions)").all() as { name: string }[];
+    if (!again.some((c) => c.name === "is_test")) {
+      db.exec("ALTER TABLE wallet_transactions ADD COLUMN is_test INTEGER NOT NULL DEFAULT 0");
+    }
   }
   const drCols = db.prepare("PRAGMA table_info(wallet_deposit_requests)").all() as { name: string }[];
   if (drCols.length > 0 && !drCols.some((c) => c.name === "wallet_kind")) {
@@ -501,6 +499,9 @@ function initSchemaSync(db: Database.Database) {
    if (!matchCols.some((c) => c.name === "gate_pin")) {
      db.exec("ALTER TABLE matches ADD COLUMN gate_pin TEXT");
    }
+   if (!matchCols.some((c) => c.name === "is_test")) {
+     db.exec("ALTER TABLE matches ADD COLUMN is_test INTEGER NOT NULL DEFAULT 0");
+   }
 
   const userCols = db.prepare("PRAGMA table_info(users)").all() as { name: string }[];
   if (!userCols.some((c) => c.name === "profile_photo_path")) {
@@ -545,6 +546,9 @@ function initSchemaSync(db: Database.Database) {
   }
   if (!userCols.some((c) => c.name === "admin_permissions")) {
     db.exec("ALTER TABLE users ADD COLUMN admin_permissions TEXT");
+  }
+  if (!userCols.some((c) => c.name === "is_test")) {
+    db.exec("ALTER TABLE users ADD COLUMN is_test INTEGER NOT NULL DEFAULT 0");
   }
 
   const matchStatsCols = db.prepare("PRAGMA table_info(match_stats)").all() as { name: string }[];
@@ -796,10 +800,9 @@ function initSchemaSync(db: Database.Database) {
 }
 
 /**
- * Baza produkcyjna (zawsze ta sama, niezależnie od trybu testowego admina).
- * Używana m.in. do weryfikacji sesji JWT.
+ * Jedna baza aplikacji (prod + dane testowe oznaczone `is_test`).
  */
-export async function getProdDb(): Promise<AppDb> {
+export async function getDb(): Promise<AppDb> {
   if (isVercel() && !hasTursoEnv()) {
     throw new Error(
       "Na Vercelu ustaw TURSO_DATABASE_URL (oraz TURSO_AUTH_TOKEN z panelu Turso). Lokalny plik SQLite nie działa poprawnie na serverless."
@@ -853,99 +856,13 @@ export async function getProdDb(): Promise<AppDb> {
   return createSqliteFacade(sqliteInstance);
 }
 
-/** Po wipe — wymusza ponowne init schematu przy następnym getTestDb(). */
-export function resetTestDbSchemaFlag() {
-  libsqlTestSchemaReady = false;
-  libsqlTestSchemaInitPromise = null;
-  if (sqliteTestInstance) {
-    try {
-      sqliteTestInstance.close();
-    } catch {
-      /* ignore */
-    }
-    sqliteTestInstance = null;
-  }
-}
-
-/** Osobna baza trybu testowego (TURSO_TEST_* albo lokalny plik database-test.db). */
-export async function getTestDb(): Promise<AppDb> {
-  if (!isTestDbAvailable()) {
-    throw new Error(
-      "Baza testowa nie jest skonfigurowana. Ustaw TURSO_TEST_DATABASE_URL i TURSO_TEST_AUTH_TOKEN."
-    );
-  }
-
-  if (hasTestDbEnv()) {
-    if (!libsqlTestClient) {
-      libsqlTestClient = createClient({
-        url: process.env.TURSO_TEST_DATABASE_URL!,
-        authToken: process.env.TURSO_TEST_AUTH_TOKEN?.trim() || undefined,
-      });
-    }
-    if (!libsqlTestSchemaReady) {
-      if (!libsqlTestSchemaInitPromise) {
-        libsqlTestSchemaInitPromise = (async () => {
-          try {
-            await withTransientNetworkRetries(
-              async () => {
-                await initLibsqlSchema(libsqlTestClient!);
-              },
-              {
-                onBeforeRetry: () => {
-                  libsqlTestClient?.close();
-                  libsqlTestClient = createClient({
-                    url: process.env.TURSO_TEST_DATABASE_URL!,
-                    authToken: process.env.TURSO_TEST_AUTH_TOKEN?.trim() || undefined,
-                  });
-                },
-              }
-            );
-            libsqlTestSchemaReady = true;
-          } catch (err) {
-            libsqlTestSchemaInitPromise = null;
-            throw err;
-          }
-        })();
-      }
-      await libsqlTestSchemaInitPromise;
-    }
-    return createLibsqlFacade(libsqlTestClient!);
-  }
-
-  if (!sqliteTestInstance) {
-    const p = resolveTestDatabaseFilePath();
-    fs.mkdirSync(path.dirname(p), { recursive: true });
-    sqliteTestInstance = new Database(p);
-    sqliteTestInstance.pragma("journal_mode = WAL");
-    initSchemaSync(sqliteTestInstance);
-  }
-  return createSqliteFacade(sqliteTestInstance);
-}
-
-/** Wybór bazy po prefixie session_id HotPay (`hp_t_` = test). */
-export async function getDbForHotpaySessionId(sessionId: string): Promise<AppDb> {
-  if (sessionId.startsWith("hp_t_")) {
-    if (!isTestDbAvailable()) {
-      throw new Error("Płatność testowa, ale baza testowa nie jest skonfigurowana");
-    }
-    return getTestDb();
-  }
-  return getProdDb();
-}
-
-/**
- * Baza aktywna dla requestu: testowa gdy admin ma włączony tryb testowy, inaczej produkcja.
- */
-export async function getDb(): Promise<AppDb> {
-  const { isAdminTestModeActive } = await import("@/lib/test-mode");
-  if (await isAdminTestModeActive()) {
-    return getTestDb();
-  }
-  return getProdDb();
+/** @deprecated Alias — zostawione dla starego kodu; zawsze ta sama baza. */
+export async function getProdDb(): Promise<AppDb> {
+  return getDb();
 }
 
 export async function logActivity(userId: number | null, action: string) {
-  const db = await getProdDb();
+  const db = await getDb();
   await db.prepare("INSERT INTO activity_log (user_id, action) VALUES (?, ?)").run(userId, action);
 }
 

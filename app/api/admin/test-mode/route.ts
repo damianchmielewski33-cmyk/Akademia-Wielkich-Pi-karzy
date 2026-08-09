@@ -6,8 +6,7 @@ import {
   isAdminTestModeActive,
   isTestModeConfigured,
   setTestModeCookie,
-  syncAdminsProdToTest,
-  wipeAndReseedTestDb,
+  wipeTestModeData,
 } from "@/lib/test-mode";
 
 export const runtime = "nodejs";
@@ -20,28 +19,15 @@ export async function GET() {
   const gate = await requireAdmin();
   if (!gate.ok) return gate.response;
 
-  const configured = isTestModeConfigured();
-  const enabled = configured ? await isAdminTestModeActive() : false;
-
   return NextResponse.json({
-    enabled,
-    configured,
+    enabled: await isAdminTestModeActive(),
+    configured: isTestModeConfigured(),
   });
 }
 
 export async function POST(req: Request) {
   const gate = await requireAdmin();
   if (!gate.ok) return gate.response;
-
-  if (!isTestModeConfigured()) {
-    return NextResponse.json(
-      {
-        error:
-          "Baza testowa nie jest skonfigurowana. Ustaw TURSO_TEST_DATABASE_URL i TURSO_TEST_AUTH_TOKEN (lokalnie: plik data/database-test.db).",
-      },
-      { status: 503 }
-    );
-  }
 
   let json: unknown;
   try {
@@ -59,26 +45,21 @@ export async function POST(req: Request) {
 
   try {
     if (enabled) {
-      const { admins } = await syncAdminsProdToTest();
       await setTestModeCookie(true);
-      await logActivity(adminId, `Tryb testowy WŁĄCZONY (zsynchronizowano ${admins} adminów)`);
-      return NextResponse.json({
-        enabled: true,
-        configured: true,
-        synced_admins: admins,
-      });
+      await logActivity(adminId, "Tryb testowy WŁĄCZONY (ta sama baza, nowe dane z flagą is_test)");
+      return NextResponse.json({ enabled: true, configured: true });
     }
 
-    const { admins } = await wipeAndReseedTestDb();
+    const wiped = await wipeTestModeData();
     await setTestModeCookie(false);
     await logActivity(
       adminId,
-      `Tryb testowy WYŁĄCZONY — wipe bazy testowej, ponownie wgrano ${admins} adminów`
+      `Tryb testowy WYŁĄCZONY — usunięto testowe: mecze=${wiped.matches}, gracze=${wiped.users}, portfel=${wiped.wallet_tx}, hotpay=${wiped.hotpay}`
     );
     return NextResponse.json({
       enabled: false,
       configured: true,
-      synced_admins: admins,
+      wiped,
     });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Nie udało się przełączyć trybu testowego";

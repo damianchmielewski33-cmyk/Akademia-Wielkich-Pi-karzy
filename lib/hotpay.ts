@@ -244,7 +244,7 @@ export function createHotpaySessionId(userId: number, opts?: { testMode?: boolea
   return id.slice(0, 64);
 }
 
-/** Prefiks sesji z trybu testowego admina — webhook księguje na bazie testowej. */
+/** Prefiks sesji z trybu testowego admina — księgowanie tagowane is_test. */
 export function isHotpayTestSessionId(sessionId: string): boolean {
   return sessionId.startsWith("hp_t_");
 }

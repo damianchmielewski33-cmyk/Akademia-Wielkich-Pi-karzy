@@ -20,7 +20,7 @@ import { matchCartRoundingMarkupPln } from "@/lib/match-fee";
 import { markHotpayPaymentFailure } from "@/lib/hotpay-wallet";
 import { checkRateLimit, rateLimitKey, rateLimitedResponse, RATE } from "@/lib/rate-limit";
 import { screenBlockApiResponse } from "@/lib/screen-block-api";
-import { isAdminTestModeActive } from "@/lib/test-mode";
+import { isAdminTestModeActive, testModeFlag } from "@/lib/test-mode";
 import { getUserWalletBalancePln } from "@/lib/wallet";
 
 export const runtime = "nodejs";
@@ -162,18 +162,20 @@ export async function POST(req: Request) {
   );
   const hasCommission = grossAmountPln > amountPln;
 
-  const sessionId = createHotpaySessionId(payerId, { testMode: await isAdminTestModeActive() });
+  const inTestMode = await isAdminTestModeActive();
+  const sessionId = createHotpaySessionId(payerId, { testMode: inTestMode });
   const returnUrl = buildHotpayReturnUrl(sessionId, "pending");
   const playerLabel =
     [gate.session.firstName, gate.session.lastName].filter(Boolean).join(" ").trim() || gate.session.zawodnik;
   const serviceName = `${config.serviceName} — koszyk meczowy (${playerLabel})`;
+  const isTest = await testModeFlag();
 
   const insert = await db
     .prepare(
-      `INSERT INTO hotpay_payments (session_id, user_id, kind, amount_pln, gross_amount_pln, status, cart_id)
-       VALUES (?, ?, 'match_cart', ?, ?, 'pending', ?)`
+      `INSERT INTO hotpay_payments (session_id, user_id, kind, amount_pln, gross_amount_pln, status, cart_id, is_test)
+       VALUES (?, ?, 'match_cart', ?, ?, 'pending', ?, ?)`
     )
-    .run(sessionId, payerId, amountPln, hasCommission ? grossAmountPln : null, pending.cart_id);
+    .run(sessionId, payerId, amountPln, hasCommission ? grossAmountPln : null, pending.cart_id, isTest);
 
   await linkHotpaySessionToCart(pending.cart_id, sessionId);
 
