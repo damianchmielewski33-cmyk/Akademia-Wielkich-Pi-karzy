@@ -117,8 +117,15 @@ export async function persistAdminTestModeFlag(adminUserId: number) {
   await setProdTestModeFlag(adminUserId, true);
 }
 
+function mapSqlValue(v: unknown): unknown {
+  if (v === undefined) return null;
+  if (typeof v === "bigint") return Number(v);
+  return v;
+}
+
 /**
  * Kopiuje admina (i podstawowe app_settings) z PROD → TEST, żeby FK / sesja działały.
+ * Zakłada pustą (lub już wyczyszczoną) bazę TEST — bez DELETE, żeby uniknąć SQLITE_CONSTRAINT FK.
  */
 async function bootstrapTestDbFromProd(adminUserId: number) {
   const prod = await getProdDb();
@@ -135,7 +142,6 @@ async function bootstrapTestDbFromProd(adminUserId: number) {
     throw new Error("Schemat users w bazie TEST jest niekompletny (brak id)");
   }
 
-  const placeholders = cols.map(() => "?").join(", ");
   const selectSql = `SELECT ${cols.join(", ")} FROM users WHERE id = ?`;
   const admin = (await prod.prepare(selectSql).get(adminUserId)) as Record<string, unknown> | undefined;
   if (!admin) {
@@ -143,19 +149,29 @@ async function bootstrapTestDbFromProd(adminUserId: number) {
   }
 
   const values = cols.map((c) => {
-    const v = admin[c];
-    if (v === undefined) return null;
-    if (typeof v === "bigint") return Number(v);
     // Flaga trybu na kopii w TEST nie steruje routingiem (routing czyta PROD).
     if (c === "test_mode_enabled") return 0;
-    return v;
+    return mapSqlValue(admin[c]);
   });
 
-  await test.prepare("DELETE FROM users WHERE id = ?").run(adminUserId);
+  const updateCols = cols.filter((c) => c !== "id");
   try {
-    await test
-      .prepare(`INSERT INTO users (${cols.join(", ")}) VALUES (${placeholders})`)
-      .run(...values);
+    const existing = (await test.prepare("SELECT id FROM users WHERE id = ?").get(adminUserId)) as
+      | { id: number }
+      | undefined;
+    if (existing) {
+      if (updateCols.length > 0) {
+        await test
+          .prepare(
+            `UPDATE users SET ${updateCols.map((c) => `${c} = ?`).join(", ")} WHERE id = ?`
+          )
+          .run(...updateCols.map((c) => (c === "test_mode_enabled" ? 0 : mapSqlValue(admin[c]))), adminUserId);
+      }
+    } else {
+      await test
+        .prepare(`INSERT INTO users (${cols.join(", ")}) VALUES (${cols.map(() => "?").join(", ")})`)
+        .run(...values);
+    }
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     throw new Error(
@@ -181,27 +197,32 @@ async function bootstrapTestDbFromProd(adminUserId: number) {
   for (const row of settings) {
     const realm = row.realm;
     if (realm == null) continue;
-    await test.prepare("DELETE FROM app_settings WHERE realm = ?").run(realm);
+    const sValues = sCols.map((c) => mapSqlValue(row[c]));
     try {
-      await test
-        .prepare(
-          `INSERT INTO app_settings (${sCols.join(", ")}) VALUES (${sCols.map(() => "?").join(", ")})`
-        )
-        .run(
-          ...sCols.map((c) => {
-            const v = row[c];
-            if (v === undefined) return null;
-            if (typeof v === "bigint") return Number(v);
-            return v;
-          })
-        );
+      const existingRealm = (await test
+        .prepare("SELECT realm FROM app_settings WHERE realm = ?")
+        .get(realm)) as { realm: string } | undefined;
+      if (existingRealm) {
+        const upCols = sCols.filter((c) => c !== "realm");
+        if (upCols.length > 0) {
+          await test
+            .prepare(`UPDATE app_settings SET ${upCols.map((c) => `${c} = ?`).join(", ")} WHERE realm = ?`)
+            .run(...upCols.map((c) => mapSqlValue(row[c])), realm);
+        }
+      } else {
+        await test
+          .prepare(
+            `INSERT INTO app_settings (${sCols.join(", ")}) VALUES (${sCols.map(() => "?").join(", ")})`
+          )
+          .run(...sValues);
+      }
     } catch (e) {
       console.error("[test-mode] bootstrap app_settings realm=", realm, e);
     }
   }
 }
 
-/** Tabele aplikacji do pełnego wyczyszczenia w bazie TEST (kolejność: dzieci → rodzice). */
+/** Znane tabele (kolejność: dzieci → rodzice) — uzupełnienie gdy sqlite_master zawiedzie. */
 const TEST_WIPE_TABLES = [
   "match_signups",
   "match_stats",
@@ -209,7 +230,9 @@ const TEST_WIPE_TABLES = [
   "match_lineup_slots",
   "match_wallet_charges",
   "match_transport_messages",
-  "captain_lottery_spins",
+  "match_attendance",
+  "match_participation_survey",
+  "participation_survey_answer",
   "match_captain_lottery",
   "wallet_match_cart_items",
   "wallet_match_carts",
@@ -221,14 +244,46 @@ const TEST_WIPE_TABLES = [
   "user_devices",
   "activity_log",
   "admin_messages",
-  "match_participation_survey",
-  "gallery_videos",
+  "page_views",
   "ad_impressions",
+  "cookie_consent_events",
+  "gallery_videos",
+  "rate_limit_buckets",
   "matches",
-  "users",
   "ranking_seasons",
+  "users",
   "app_settings",
 ] as const;
+
+const SAFE_TABLE_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
+
+async function listTestWipeTables(conn: AppDb): Promise<string[]> {
+  try {
+    const rows = (await conn
+      .prepare(
+        `SELECT name FROM sqlite_master
+         WHERE type = 'table'
+           AND name NOT LIKE 'sqlite_%'
+           AND name NOT LIKE '%_migration'`
+      )
+      .all()) as { name: string }[];
+    const discovered = rows
+      .map((r) => String(r.name ?? ""))
+      .filter((n) => SAFE_TABLE_NAME.test(n));
+    if (discovered.length > 0) {
+      const parents = new Set(["users", "app_settings"]);
+      const preferred = TEST_WIPE_TABLES.filter((t) => discovered.includes(t) && !parents.has(t));
+      const rest = discovered.filter(
+        (t) => !(TEST_WIPE_TABLES as readonly string[]).includes(t) && !parents.has(t)
+      );
+      const trailing = [...parents].filter((t) => discovered.includes(t));
+      return [...preferred, ...rest, ...trailing];
+    }
+  } catch (e) {
+    console.warn("[test-mode] listTestWipeTables:", e);
+  }
+  return [...TEST_WIPE_TABLES];
+}
 
 /**
  * Czyści całą bazę TEST (nie PROD). Błędy pojedynczych tabel są ignorowane
@@ -245,9 +300,11 @@ export async function wipeTestDatabase(db?: AppDb): Promise<{ tables: number; ro
     /* */
   }
 
+  const wipeTables = await listTestWipeTables(conn);
   let tables = 0;
   let rows = 0;
-  for (const table of TEST_WIPE_TABLES) {
+  for (const table of wipeTables) {
+    if (!SAFE_TABLE_NAME.test(table)) continue;
     try {
       const r = await conn.prepare(`DELETE FROM ${table}`).run();
       tables += 1;
@@ -296,10 +353,24 @@ export async function setAdminTestModeEnabled(
       );
     }
     await getTestDb(); // schema init
+    // Zawsze czyść TEST przed bootstrapem — inaczej DELETE/INSERT admina pada na FK
+    // (np. page_views / match_attendance z poprzedniej sesji testowej).
+    let wipedTables = 0;
+    let wipedRows = 0;
+    try {
+      const wiped = await wipeTestDatabase();
+      wipedTables = wiped.tables;
+      wipedRows = wiped.rows;
+    } catch (e) {
+      console.error("[test-mode] wipe before enable:", e);
+      throw e instanceof Error
+        ? e
+        : new Error("Nie udało się wyczyścić bazy TEST przed włączeniem trybu testowego");
+    }
     await bootstrapTestDbFromProd(adminUserId);
     await setProdTestModeFlag(adminUserId, true);
     await setTestModeCookie(true);
-    return {};
+    return { wipedTables, wipedRows };
   }
 
   let wipedTables = 0;
