@@ -3,7 +3,7 @@ import Database from "better-sqlite3";
 import fs from "fs";
 import * as path from "path";
 import { isVercel, resolveDatabaseFilePath, resolveTestDatabaseFilePath } from "@/lib/runtime-paths";
-import { initLibsqlSchema } from "@/lib/turso-init-schema";
+import { ensureStandaloneMatchStatsLibsql, initLibsqlSchema } from "@/lib/turso-init-schema";
 import { isDuplicateColumnError, migrateAppSettingsColumnsSqlite } from "@/lib/app-settings";
 import { migrateRealmSchemaSqlite } from "@/lib/realm-migration";
 import { CAPTAIN_LOTTERY_CREATE_SQL, migrateCaptainLotterySchemaSqlite } from "@/lib/captain-lottery-schema";
@@ -29,10 +29,25 @@ function hasTursoTestEnv(): boolean {
 }
 
 /**
- * Osobna baza TEST: Turso TEST, albo lokalny SQLite gdy PROD też jest plikiem (nie na Vercelu).
+ * Osobna baza TEST: Turso TEST (inna niż PROD), albo lokalny SQLite gdy PROD też jest plikiem.
  */
 export function canOpenTestDatabase(): boolean {
-  if (hasTursoTestEnv()) return true;
+  if (hasTursoTestEnv()) {
+    const testUrl = (process.env.TURSO_TEST_DATABASE_URL ?? "")
+      .trim()
+      .replace(/^["']|["']$/g, "");
+    const prodUrl = (process.env.TURSO_DATABASE_URL ?? "")
+      .trim()
+      .replace(/^["']|["']$/g, "");
+    // Ta sama URL co PROD = ryzyko wipe produkcji — wyłącz TEST.
+    if (prodUrl && testUrl && prodUrl === testUrl) {
+      console.error(
+        "[db] TURSO_TEST_DATABASE_URL jest identyczny z TURSO_DATABASE_URL — tryb testowy wyłączony"
+      );
+      return false;
+    }
+    return Boolean(testUrl);
+  }
   if (hasTursoEnv()) return false;
   if (isVercel()) return false;
   return true;
@@ -898,6 +913,14 @@ async function openDbSlot(
     if (!slot.libsql) {
       slot.libsql = createClient({ url, authToken });
     }
+
+    // Najpierw upewnij się o krytycznej tabeli — nawet gdy pełny init jeszcze padnie.
+    try {
+      await ensureStandaloneMatchStatsLibsql(slot.libsql);
+    } catch (e) {
+      console.warn(`[db] early ensure standalone_match_stats (${opts.kind}):`, e);
+    }
+
     if (!slot.schemaReady) {
       if (!slot.schemaInitPromise) {
         slot.schemaInitPromise = (async () => {
@@ -916,11 +939,20 @@ async function openDbSlot(
             slot.schemaReady = true;
           } catch (err) {
             slot.schemaInitPromise = null;
-            throw err;
+            console.error(`[db] initLibsqlSchema failed (${opts.kind}):`, err);
+            // Nie blokuj PROD: pozwól serwować z częściowym schematem + ensure poniżej.
+            if (opts.kind === "test") throw err;
           }
         })();
       }
       await slot.schemaInitPromise;
+    }
+
+    try {
+      await ensureStandaloneMatchStatsLibsql(slot.libsql!);
+    } catch (e) {
+      console.error(`[db] ensure standalone_match_stats (${opts.kind}):`, e);
+      if (opts.kind === "test") throw e;
     }
     return createLibsqlFacade(slot.libsql!);
   }
@@ -953,14 +985,19 @@ export async function getTestDb(): Promise<AppDb> {
 }
 
 /**
- * Baza kontekstowa: TEST gdy admin ma aktywny tryb testowy, inaczej PROD.
- * Auth / flaga trybu NIE powinny używać tej funkcji — tylko getProdDb().
+ * Baza kontekstowa: domyślnie zawsze PROD.
+ * TEST tylko gdy admin ma aktywny tryb i baza TEST jest zdrowa — inaczej fallback PROD
+ * (produkcja nie może padać przez uszkodzony / pusty Turso TEST).
  */
 export async function getDb(): Promise<AppDb> {
   try {
     const { shouldUseTestDatabase } = await import("@/lib/test-mode");
     if (await shouldUseTestDatabase()) {
-      return getTestDb();
+      try {
+        return await getTestDb();
+      } catch (e) {
+        console.error("[getDb] baza TEST niedostępna — fallback na PROD:", e);
+      }
     }
   } catch {
     /* brak kontekstu requestu / trybu — PROD */

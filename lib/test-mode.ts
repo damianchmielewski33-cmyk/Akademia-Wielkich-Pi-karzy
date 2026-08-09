@@ -235,6 +235,9 @@ const TEST_WIPE_TABLES = [
  * (tabela może nie istnieć w starszym schemacie).
  */
 export async function wipeTestDatabase(db?: AppDb): Promise<{ tables: number; rows: number }> {
+  if (!canOpenTestDatabase()) {
+    throw new Error("Odmowa wipe: baza TEST nie jest bezpiecznie skonfigurowana (sprawdź TURSO_TEST_* ≠ PROD).");
+  }
   const conn = db ?? (await getTestDb());
   try {
     await conn.exec("PRAGMA foreign_keys = OFF");

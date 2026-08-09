@@ -446,6 +446,10 @@ export async function initLibsqlSchema(client: Client) {
       PRIMARY KEY (user_id, survey_key),
       FOREIGN KEY (user_id) REFERENCES users(id)
     );
+  `);
+
+  // Osobny execute — duże executeMultiple na Turso bywa zawodne (rollback całego batcha).
+  await client.execute(`
     CREATE TABLE IF NOT EXISTS standalone_match_stats (
       user_id INTEGER NOT NULL,
       survey_key TEXT NOT NULL,
@@ -456,8 +460,10 @@ export async function initLibsqlSchema(client: Client) {
       updated_at TEXT NOT NULL DEFAULT (datetime('now')),
       PRIMARY KEY (user_id, survey_key),
       FOREIGN KEY (user_id) REFERENCES users(id)
-    );
+    )
+  `);
 
+  await client.executeMultiple(`
     CREATE TABLE IF NOT EXISTS gallery_videos (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       title TEXT NOT NULL,
@@ -795,5 +801,34 @@ export async function initLibsqlSchema(client: Client) {
     await client.execute(
       "INSERT INTO app_settings (realm, match_notification_prompt_enabled) VALUES ('academy', 0)"
     );
+  }
+
+  await ensureStandaloneMatchStatsLibsql(client);
+}
+
+/** Idempotentnie tworzy standalone_match_stats (+ season_id) — krytyczne dla rankingów / TEST DB. */
+export async function ensureStandaloneMatchStatsLibsql(client: Client): Promise<void> {
+  // Bez FK — musi dać się utworzyć nawet gdy init jeszcze nie skończył CREATE users.
+  await client.execute(`
+    CREATE TABLE IF NOT EXISTS standalone_match_stats (
+      user_id INTEGER NOT NULL,
+      survey_key TEXT NOT NULL,
+      goals INTEGER NOT NULL DEFAULT 0,
+      assists INTEGER NOT NULL DEFAULT 0,
+      distance REAL NOT NULL DEFAULT 0,
+      saves INTEGER NOT NULL DEFAULT 0,
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      PRIMARY KEY (user_id, survey_key)
+    )
+  `);
+  const cols = await pragmaColumnNames(client, "standalone_match_stats");
+  if (cols.length > 0 && !cols.includes("season_id")) {
+    try {
+      await client.execute(
+        "ALTER TABLE standalone_match_stats ADD COLUMN season_id INTEGER"
+      );
+    } catch (err) {
+      if (!isDuplicateColumnError(err)) throw err;
+    }
   }
 }

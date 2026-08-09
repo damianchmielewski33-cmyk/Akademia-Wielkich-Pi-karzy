@@ -48,10 +48,21 @@ export async function backfillOrphanStatsToActiveSeason(
     )
     .get(realm)) as { id: number } | undefined;
   if (!row) return;
-  await db.prepare("UPDATE match_stats SET season_id = ? WHERE season_id IS NULL").run(row.id);
-  await db
-    .prepare("UPDATE standalone_match_stats SET season_id = ? WHERE season_id IS NULL")
-    .run(row.id);
+  try {
+    await db.prepare("UPDATE match_stats SET season_id = ? WHERE season_id IS NULL").run(row.id);
+  } catch (e) {
+    console.warn("[ranking-seasons] backfill match_stats:", e);
+  }
+  try {
+    await db
+      .prepare("UPDATE standalone_match_stats SET season_id = ? WHERE season_id IS NULL")
+      .run(row.id);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (!/no such table|nie ma takiej tabeli/i.test(msg)) {
+      console.warn("[ranking-seasons] backfill standalone_match_stats:", e);
+    }
+  }
 }
 
 /** Pierwszy start: jeden aktywny sezon + przypisanie dotychczasowych statystyk. */
@@ -77,8 +88,19 @@ export async function ensureRankingSeasonsInitialized(
   const seasonId = Number(insert.lastInsertRowid);
 
   if (realm === REALMS.ACADEMY) {
-    await db.prepare("UPDATE match_stats SET season_id = ? WHERE season_id IS NULL").run(seasonId);
-    await db.prepare("UPDATE standalone_match_stats SET season_id = ? WHERE season_id IS NULL").run(seasonId);
+    try {
+      await db.prepare("UPDATE match_stats SET season_id = ? WHERE season_id IS NULL").run(seasonId);
+    } catch (e) {
+      console.warn("[ranking-seasons] init match_stats:", e);
+    }
+    try {
+      await db.prepare("UPDATE standalone_match_stats SET season_id = ? WHERE season_id IS NULL").run(seasonId);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (!/no such table|nie ma takiej tabeli/i.test(msg)) {
+        console.warn("[ranking-seasons] init standalone_match_stats:", e);
+      }
+    }
   }
 }
 
