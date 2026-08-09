@@ -34,9 +34,26 @@ export function useHotpayPaymentReturn(options: Options = {}) {
       next.delete("session_id");
       const qs = next.toString();
       router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+      // RSC / baner trybu testowego po przywróceniu cookie z middleware / status API.
+      router.refresh();
     };
 
+    async function restoreTestModeIfNeeded() {
+      if (!sessionId?.startsWith("hp_t_")) return;
+      try {
+        // Status ustawia flagę DB + cookie dla admina (nawet przy anulowaniu).
+        await fetch(`/api/wallet/hotpay/status?session_id=${encodeURIComponent(sessionId)}`, {
+          credentials: "same-origin",
+        });
+        await fetch("/api/admin/test-mode", { credentials: "same-origin" });
+      } catch {
+        /* ignore */
+      }
+    }
+
     async function handleReturn() {
+      await restoreTestModeIfNeeded();
+
       if (payment === "error" || payment === "cancelled" || payment === "failure") {
         toast.error(payment === "cancelled" ? "Płatność została anulowana" : "Płatność nie powiodła się");
         clearQuery();
@@ -56,7 +73,9 @@ export function useHotpayPaymentReturn(options: Options = {}) {
 
         const pollOnce = async (): Promise<"success" | "failure" | "cancelled" | "pending" | "error"> => {
           try {
-            const res = await fetch(`/api/wallet/hotpay/status?session_id=${encodeURIComponent(sessionId)}`);
+            const res = await fetch(`/api/wallet/hotpay/status?session_id=${encodeURIComponent(sessionId)}`, {
+              credentials: "same-origin",
+            });
             const data = (await res.json().catch(() => null)) as {
               status?: string;
               error_message?: string | null;

@@ -8,6 +8,7 @@ import { PitchCard, PitchCardDecorations, pitchLabelClass } from "@/components/u
 import { SiteSectionHero } from "@/components/site-section-hero";
 import { SiteAssetImage } from "@/components/site-asset-image";
 import { AdminTestModeSidebarButton } from "@/components/admin-test-mode-sidebar-button";
+import { AdminHotpaySidebarButton } from "@/components/admin-hotpay-sidebar-button";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -387,7 +388,10 @@ export function AdminShell({
           </nav>
 
           <div className="relative z-10 flex flex-col gap-3 lg:mt-auto">
-            <AdminTestModeSidebarButton />
+            <div className="grid grid-cols-2 gap-2">
+              <AdminTestModeSidebarButton />
+              <AdminHotpaySidebarButton />
+            </div>
             <div className="flex flex-wrap gap-1 border-t border-white/15 pt-3 lg:flex-col">
             <button
               type="button"

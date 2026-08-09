@@ -47,7 +47,7 @@ export async function getTerminarzPageData(realm: Realm, session: AppSession | n
        FROM match_signups ms
        JOIN users u ON u.id = ms.user_id
        JOIN matches m ON m.id = ms.match_id
-       WHERE m.realm = ?
+       WHERE m.realm = ? AND ${sqlMatchTestFilter("m", testMode)}
        ORDER BY u.first_name ASC`
     )
     .all(realm)) as SignupRow[];
@@ -68,7 +68,7 @@ export async function getTerminarzPageData(realm: Realm, session: AppSession | n
        FROM match_captain_lottery l
        LEFT JOIN users u ON u.id = l.drawn_by_user_id
        JOIN matches m ON m.id = l.match_id
-       WHERE m.realm = ?
+       WHERE m.realm = ? AND ${sqlMatchTestFilter("m", testMode)}
        ORDER BY l.match_id, l.round_number DESC`
     )
     .all(realm)) as CaptainLotteryRow[];
@@ -85,6 +85,7 @@ export async function getTerminarzPageData(realm: Realm, session: AppSession | n
          FROM matches m
          JOIN match_signups s ON s.match_id = m.id AND s.user_id = ? AND COALESCE(s.commitment, 1) = 1
          WHERE m.realm = ? AND m.played = 1
+           AND ${sqlMatchTestFilter("m", testMode)}
            AND NOT EXISTS (
              SELECT 1 FROM match_stats st
              WHERE st.user_id = ? AND st.match_id = m.id

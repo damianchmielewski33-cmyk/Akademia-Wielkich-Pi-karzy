@@ -3,6 +3,11 @@ import { requireUser } from "@/lib/api-helpers";
 import { getDb } from "@/lib/db";
 import { getHotpayPaymentBySessionId } from "@/lib/hotpay-wallet";
 import { screenBlockApiResponse } from "@/lib/screen-block-api";
+import {
+  applyTestModeCookie,
+  persistAdminTestModeFlag,
+} from "@/lib/test-mode";
+import { isHotpayTestSessionId } from "@/lib/hotpay";
 
 export const runtime = "nodejs";
 
@@ -28,7 +33,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Brak dostępu" }, { status: 403 });
   }
 
-  return NextResponse.json({
+  const res = NextResponse.json({
     session_id: payment.session_id,
     kind: payment.kind,
     amount_pln: payment.amount_pln,
@@ -37,4 +42,19 @@ export async function GET(req: Request) {
     deposit_request_id: payment.deposit_request_id,
     completed_at: payment.completed_at,
   });
+
+  // Powrót z bramki w trybie testowym — przywróć cookie + flagę DB (polling statusu).
+  if (
+    gate.session.isAdmin &&
+    (isHotpayTestSessionId(sessionId) || Number(payment.is_test) === 1)
+  ) {
+    try {
+      await persistAdminTestModeFlag(gate.session.userId);
+      applyTestModeCookie(res, true);
+    } catch {
+      /* nie blokuj statusu płatności */
+    }
+  }
+
+  return res;
 }

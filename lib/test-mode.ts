@@ -1,7 +1,9 @@
 import { cookies, headers } from "next/headers";
+import { NextResponse } from "next/server";
 import { readSessionTokenFromRequest, verifySessionToken } from "@/lib/auth";
 import { TEST_MODE_COOKIE, TEST_MODE_HEADER } from "@/lib/constants";
 import { getDb, type AppDb } from "@/lib/db";
+import { isHotpayTestSessionId } from "@/lib/hotpay";
 
 /** Zawsze dostępny — ta sama baza, dane testowe oznaczane `is_test=1`. */
 export function isTestModeConfigured(): boolean {
@@ -33,19 +35,31 @@ export async function isAdminTestModeActive(): Promise<boolean> {
     if (!session.isAdmin) return false;
 
     const db = await getDb();
-    const row = (await db
-      .prepare(
-        "SELECT is_admin, auth_version, COALESCE(test_mode_enabled, 0) AS test_mode_enabled FROM users WHERE id = ?"
-      )
-      .get(session.userId)) as
-      | { is_admin: number; auth_version: number; test_mode_enabled: number }
-      | undefined;
+    let testModeEnabled = 0;
+    try {
+      const row = (await db
+        .prepare(
+          "SELECT is_admin, auth_version, COALESCE(test_mode_enabled, 0) AS test_mode_enabled FROM users WHERE id = ?"
+        )
+        .get(session.userId)) as
+        | { is_admin: number; auth_version: number; test_mode_enabled: number }
+        | undefined;
 
-    if (!row || row.is_admin !== 1 || Number(row.auth_version) !== session.authVersion) {
-      return false;
+      if (!row || row.is_admin !== 1 || Number(row.auth_version) !== session.authVersion) {
+        return false;
+      }
+      testModeEnabled = Number(row.test_mode_enabled) === 1 ? 1 : 0;
+    } catch {
+      // Brak kolumny / błąd odczytu — nie odrzucaj cookie (fallback poniżej).
+      const row = (await db
+        .prepare("SELECT is_admin, auth_version FROM users WHERE id = ?")
+        .get(session.userId)) as { is_admin: number; auth_version: number } | undefined;
+      if (!row || row.is_admin !== 1 || Number(row.auth_version) !== session.authVersion) {
+        return false;
+      }
     }
 
-    if (Number(row.test_mode_enabled) === 1) return true;
+    if (testModeEnabled === 1) return true;
     return await isTestModeCookiePresent();
   } catch {
     return false;
@@ -108,6 +122,15 @@ export async function setTestModeCookie(enabled: boolean) {
   }
 }
 
+/** Ustawia cookie trybu testowego na gotowej odpowiedzi Route Handler. */
+export function applyTestModeCookie(res: NextResponse, enabled: boolean) {
+  if (enabled) {
+    res.cookies.set(TEST_MODE_COOKIE, "1", testModeCookieOptions(true));
+  } else {
+    res.cookies.set(TEST_MODE_COOKIE, "", testModeCookieOptions(false));
+  }
+}
+
 /** Włącza/wyłącza tryb testowy: flaga w DB (trwała) + cookie sesji przeglądarki. */
 export async function setAdminTestModeEnabled(adminUserId: number, enabled: boolean) {
   const db = await getDb();
@@ -115,6 +138,34 @@ export async function setAdminTestModeEnabled(adminUserId: number, enabled: bool
     .prepare("UPDATE users SET test_mode_enabled = ? WHERE id = ? AND COALESCE(is_admin, 0) = 1")
     .run(enabled ? 1 : 0, adminUserId);
   await setTestModeCookie(enabled);
+}
+
+/**
+ * Utrwala flagę w DB (bez zmiany cookie) — np. przy tworzeniu płatności hp_t_
+ * albo zapisie meczu testowego, żeby powrót z bramki nie gubił trybu.
+ */
+export async function persistAdminTestModeFlag(adminUserId: number) {
+  const db = await getDb();
+  await db
+    .prepare("UPDATE users SET test_mode_enabled = 1 WHERE id = ? AND COALESCE(is_admin, 0) = 1")
+    .run(adminUserId);
+}
+
+/**
+ * Po powrocie z HotPay (session_id hp_t_*): przywróć flagę DB + cookie dla admina.
+ * Zwraca true, gdy tryb testowy jest aktywny po przywróceniu.
+ */
+export async function restoreAdminTestModeAfterHotpay(opts: {
+  adminUserId: number;
+  sessionId: string;
+  paymentIsTest?: number | null;
+}): Promise<boolean> {
+  const fromPrefix = isHotpayTestSessionId(opts.sessionId);
+  const fromPayment = Number(opts.paymentIsTest) === 1;
+  if (!fromPrefix && !fromPayment) return false;
+  await persistAdminTestModeFlag(opts.adminUserId);
+  await setTestModeCookie(true);
+  return true;
 }
 
 /**

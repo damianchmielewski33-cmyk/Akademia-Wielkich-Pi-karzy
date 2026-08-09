@@ -4,7 +4,7 @@ import { getDb, logActivity, type MatchRow } from "@/lib/db";
 import { requireAdmin } from "@/lib/api-helpers";
 import { getApiRealm } from "@/lib/request-realm";
 import { notifySubscribersAboutNewMatch } from "@/lib/match-notifications";
-import { testModeFlag } from "@/lib/test-mode";
+import { persistAdminTestModeFlag, testModeFlag } from "@/lib/test-mode";
 
 export const runtime = "nodejs";
 
@@ -38,6 +38,9 @@ export async function POST(req: Request) {
   const realm = getApiRealm(req);
   const fee = fee_pln === undefined ? null : fee_pln;
   const isTest = await testModeFlag();
+  if (isTest) {
+    await persistAdminTestModeFlag(gate.session.userId);
+  }
 
   const existing = (await db
     .prepare(

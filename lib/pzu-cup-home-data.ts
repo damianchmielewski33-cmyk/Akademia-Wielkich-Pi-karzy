@@ -6,6 +6,7 @@ import { REALMS } from "@/lib/realm";
 import { formatPonderingPlayersPolish } from "@/lib/terminarz-shared";
 import { parseYoutubeVideoIdFromUserInput } from "@/lib/site";
 import { isLocalMatchDay } from "@/lib/transport";
+import { isAdminTestModeActive, sqlMatchTestFilter } from "@/lib/test-mode";
 
 export type PzuCupHomeClientProps = {
   nextMatch: MatchRow | null;
@@ -27,12 +28,14 @@ export type PzuCupHomeClientProps = {
 export async function getPzuCupHomeClientProps(session: AppSession | null): Promise<PzuCupHomeClientProps> {
   const db = await getDb();
   const settings = await getAppSettings(db, REALMS.PZU_CUP);
+  const testMode = Boolean(session?.isAdmin && (await isAdminTestModeActive()));
 
   const nextMatch = (await db
     .prepare(
       `SELECT * FROM matches
        WHERE realm = ? AND played = 0 AND COALESCE(cancelled, 0) = 0
          AND datetime(match_date || ' ' || match_time) > datetime('now', 'localtime')
+         AND ${sqlMatchTestFilter("", testMode)}
        ORDER BY match_date, match_time LIMIT 1`
     )
     .get(REALMS.PZU_CUP)) as MatchRow | undefined;

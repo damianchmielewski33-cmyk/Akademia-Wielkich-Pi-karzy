@@ -20,7 +20,7 @@ import { matchCartRoundingMarkupPln } from "@/lib/match-fee";
 import { markHotpayPaymentFailure } from "@/lib/hotpay-wallet";
 import { checkRateLimit, rateLimitKey, rateLimitedResponse, RATE } from "@/lib/rate-limit";
 import { screenBlockApiResponse } from "@/lib/screen-block-api";
-import { isAdminTestModeActive, testModeFlag } from "@/lib/test-mode";
+import { isAdminTestModeActive, persistAdminTestModeFlag } from "@/lib/test-mode";
 import { getUserWalletBalancePln } from "@/lib/wallet";
 
 export const runtime = "nodejs";
@@ -165,12 +165,15 @@ export async function POST(req: Request) {
   const hasCommission = grossAmountPln > amountPln;
 
   const inTestMode = await isAdminTestModeActive();
+  if (inTestMode) {
+    await persistAdminTestModeFlag(payerId);
+  }
   const sessionId = createHotpaySessionId(payerId, { testMode: inTestMode });
   const returnUrl = buildHotpayReturnUrl(sessionId, "pending", return_path);
   const playerLabel =
     [gate.session.firstName, gate.session.lastName].filter(Boolean).join(" ").trim() || gate.session.zawodnik;
   const serviceName = `${config.serviceName} — koszyk meczowy (${playerLabel})`;
-  const isTest = await testModeFlag();
+  const isTest = inTestMode ? 1 : 0;
 
   const insert = await db
     .prepare(

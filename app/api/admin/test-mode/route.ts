@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireAdmin } from "@/lib/api-helpers";
 import { logActivity } from "@/lib/db";
 import {
+  applyTestModeCookie,
   isAdminTestModeActive,
   isTestModeConfigured,
   setAdminTestModeEnabled,
@@ -19,10 +20,14 @@ export async function GET() {
   const gate = await requireAdmin();
   if (!gate.ok) return gate.response;
 
-  return NextResponse.json({
-    enabled: await isAdminTestModeActive(),
+  const enabled = await isAdminTestModeActive();
+  const res = NextResponse.json({
+    enabled,
     configured: isTestModeConfigured(),
   });
+  // Przywróć cookie gdy flaga w DB żyje, a ciasteczko zginęło (np. po HotPay).
+  if (enabled) applyTestModeCookie(res, true);
+  return res;
 }
 
 export async function POST(req: Request) {

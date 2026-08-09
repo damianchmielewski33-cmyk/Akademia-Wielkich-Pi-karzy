@@ -14,7 +14,7 @@ import {
 } from "@/lib/hotpay";
 import { markHotpayPaymentFailure } from "@/lib/hotpay-wallet";
 import { screenBlockApiResponse } from "@/lib/screen-block-api";
-import { isAdminTestModeActive, testModeFlag } from "@/lib/test-mode";
+import { isAdminTestModeActive, persistAdminTestModeFlag } from "@/lib/test-mode";
 import { getMatchFeeRoundingCreditForUser, getUserWalletBalancePln } from "@/lib/wallet";
 
 export const runtime = "nodejs";
@@ -104,6 +104,9 @@ export async function POST(req: Request) {
   const hasCommission = grossAmountPln > amountPln;
 
   const inTestMode = await isAdminTestModeActive();
+  if (inTestMode) {
+    await persistAdminTestModeFlag(userId);
+  }
   const sessionId = createHotpaySessionId(userId, { testMode: inTestMode });
   const returnUrl = buildHotpayReturnUrl(sessionId, "pending", parsed.data.return_path);
   const playerLabel =
@@ -112,7 +115,7 @@ export async function POST(req: Request) {
     kind === "match"
       ? `${config.serviceName} — mecz (${playerLabel})`
       : `${config.serviceName} — doładowanie (${playerLabel})`;
-  const isTest = await testModeFlag();
+  const isTest = inTestMode ? 1 : 0;
 
   const insert = await db
     .prepare(
