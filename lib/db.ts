@@ -281,23 +281,36 @@ function migrateMatchLineupSlotsSlotIndexMax(db: Database.Database) {
 }
 
 function createLibsqlFacade(client: Client): AppDb {
+  /** Turso HTTP 400 przy bigint / undefined w args. */
+  const sanitize = (params: unknown[]): InArgs =>
+    params.map((v) => {
+      if (v === undefined) return null;
+      if (typeof v === "bigint") {
+        if (v > BigInt(Number.MAX_SAFE_INTEGER) || v < BigInt(Number.MIN_SAFE_INTEGER)) {
+          return v.toString();
+        }
+        return Number(v);
+      }
+      return v;
+    }) as InArgs;
+
   return {
     prepare(sql: string) {
       return {
         async run(...params: unknown[]) {
-          const rs = await client.execute({ sql, args: params as InArgs });
+          const rs = await client.execute({ sql, args: sanitize(params) });
           return {
             lastInsertRowid: rs.lastInsertRowid ?? BigInt(0),
             changes: Number(rs.rowsAffected ?? 0),
           };
         },
         async get<T = unknown>(...params: unknown[]) {
-          const rs = await client.execute({ sql, args: params as InArgs });
+          const rs = await client.execute({ sql, args: sanitize(params) });
           if (rs.rows.length === 0) return undefined;
           return rowToRecord(rs.rows[0], rs.columns) as T;
         },
         async all<T = unknown>(...params: unknown[]) {
-          const rs = await client.execute({ sql, args: params as InArgs });
+          const rs = await client.execute({ sql, args: sanitize(params) });
           return rs.rows.map((row) => rowToRecord(row, rs.columns) as T);
         },
       };
@@ -584,11 +597,14 @@ function initSchemaSync(db: Database.Database) {
   }
 
   const matchStatsCols = db.prepare("PRAGMA table_info(match_stats)").all() as { name: string }[];
-  if (!matchStatsCols.some((c) => c.name === "season_id")) {
+  if (matchStatsCols.length > 0 && !matchStatsCols.some((c) => c.name === "season_id")) {
     db.exec("ALTER TABLE match_stats ADD COLUMN season_id INTEGER REFERENCES ranking_seasons(id)");
   }
-  const standaloneStatsCols = db.prepare("PRAGMA table_info(standalone_match_stats)").all() as { name: string }[];
-  if (!standaloneStatsCols.some((c) => c.name === "season_id")) {
+  // standalone_match_stats tworzone niżej — ALTER tylko gdy tabela już istnieje.
+  const standaloneStatsCols = db.prepare("PRAGMA table_info(standalone_match_stats)").all() as {
+    name: string;
+  }[];
+  if (standaloneStatsCols.length > 0 && !standaloneStatsCols.some((c) => c.name === "season_id")) {
     db.exec("ALTER TABLE standalone_match_stats ADD COLUMN season_id INTEGER REFERENCES ranking_seasons(id)");
   }
 
@@ -745,6 +761,13 @@ function initSchemaSync(db: Database.Database) {
     CREATE INDEX IF NOT EXISTS idx_ranking_seasons_active ON ranking_seasons(ended_at, started_at DESC);
   `);
 
+  {
+    const smsCols = db.prepare("PRAGMA table_info(standalone_match_stats)").all() as { name: string }[];
+    if (smsCols.length > 0 && !smsCols.some((c) => c.name === "season_id")) {
+      db.exec("ALTER TABLE standalone_match_stats ADD COLUMN season_id INTEGER REFERENCES ranking_seasons(id)");
+    }
+  }
+
   db.exec(CAPTAIN_LOTTERY_CREATE_SQL);
 
   migrateCaptainLotterySchemaSqlite(db);
@@ -853,14 +876,24 @@ async function openDbSlot(
   }
 
   if (useTurso) {
-    const url =
+    const url = (
+      opts.kind === "prod" ? process.env.TURSO_DATABASE_URL! : process.env.TURSO_TEST_DATABASE_URL!
+    )
+      .trim()
+      .replace(/^["']|["']$/g, "");
+    const authTokenRaw =
       opts.kind === "prod"
-        ? process.env.TURSO_DATABASE_URL!
-        : process.env.TURSO_TEST_DATABASE_URL!;
-    const authToken =
-      opts.kind === "prod"
-        ? process.env.TURSO_AUTH_TOKEN?.trim() || undefined
-        : process.env.TURSO_TEST_AUTH_TOKEN?.trim() || undefined;
+        ? process.env.TURSO_AUTH_TOKEN
+        : process.env.TURSO_TEST_AUTH_TOKEN;
+    const authToken = authTokenRaw?.trim().replace(/^["']|["']$/g, "") || undefined;
+
+    if (!url) {
+      throw new Error(
+        opts.kind === "test"
+          ? "Brak TURSO_TEST_DATABASE_URL"
+          : "Brak TURSO_DATABASE_URL"
+      );
+    }
 
     if (!slot.libsql) {
       slot.libsql = createClient({ url, authToken });
@@ -909,7 +942,14 @@ export async function getProdDb(): Promise<AppDb> {
 
 /** Osobna baza trybu testowego admina. */
 export async function getTestDb(): Promise<AppDb> {
-  return openDbSlot(testSlot, { kind: "test" });
+  try {
+    return await openDbSlot(testSlot, { kind: "test" });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    throw new Error(
+      `Baza TEST niedostępna: ${msg}. Ustaw poprawne TURSO_TEST_DATABASE_URL i TURSO_TEST_AUTH_TOKEN (osobna baza Turso, token bez cudzysłowów w env).`
+    );
+  }
 }
 
 /**

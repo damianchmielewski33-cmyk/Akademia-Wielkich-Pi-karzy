@@ -361,11 +361,12 @@ export async function initLibsqlSchema(client: Client) {
   }
 
   names = await pragmaColumnNames(client, "match_stats");
-  if (!names.includes("season_id")) {
+  if (names.length > 0 && !names.includes("season_id")) {
     await client.execute("ALTER TABLE match_stats ADD COLUMN season_id INTEGER REFERENCES ranking_seasons(id)");
   }
+  // standalone_match_stats: CREATE jest niżej — ALTER tylko gdy tabela już istnieje.
   names = await pragmaColumnNames(client, "standalone_match_stats");
-  if (!names.includes("season_id")) {
+  if (names.length > 0 && !names.includes("season_id")) {
     await client.execute(
       "ALTER TABLE standalone_match_stats ADD COLUMN season_id INTEGER REFERENCES ranking_seasons(id)"
     );
@@ -496,6 +497,16 @@ export async function initLibsqlSchema(client: Client) {
 
     CREATE INDEX IF NOT EXISTS idx_ranking_seasons_active ON ranking_seasons(ended_at, started_at DESC);
   `);
+
+  // Po CREATE — dopnij season_id jeśli brakuje (świeża baza TEST / Turso).
+  {
+    const smsCols = await pragmaColumnNames(client, "standalone_match_stats");
+    if (smsCols.length > 0 && !smsCols.includes("season_id")) {
+      await client.execute(
+        "ALTER TABLE standalone_match_stats ADD COLUMN season_id INTEGER REFERENCES ranking_seasons(id)"
+      );
+    }
+  }
 
   names = await pragmaColumnNames(client, "public_share_links");
   if (!names.includes("match_id")) {

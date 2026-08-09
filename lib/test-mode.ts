@@ -124,45 +124,80 @@ async function bootstrapTestDbFromProd(adminUserId: number) {
   const prod = await getProdDb();
   const test = await getTestDb();
 
-  const admin = (await prod.prepare("SELECT * FROM users WHERE id = ?").get(adminUserId)) as
-    | Record<string, unknown>
-    | undefined;
+  const prodCols = (
+    (await prod.prepare("PRAGMA table_info(users)").all()) as { name: string }[]
+  ).map((c) => c.name);
+  const testCols = new Set(
+    ((await test.prepare("PRAGMA table_info(users)").all()) as { name: string }[]).map((c) => c.name)
+  );
+  const cols = prodCols.filter((c) => testCols.has(c));
+  if (!cols.includes("id")) {
+    throw new Error("Schemat users w bazie TEST jest niekompletny (brak id)");
+  }
+
+  const placeholders = cols.map(() => "?").join(", ");
+  const selectSql = `SELECT ${cols.join(", ")} FROM users WHERE id = ?`;
+  const admin = (await prod.prepare(selectSql).get(adminUserId)) as Record<string, unknown> | undefined;
   if (!admin) {
     throw new Error("Nie znaleziono konta admina w bazie produkcyjnej");
   }
 
-  // Usuń poprzednią kopię (ten sam id) i wstaw świeżą.
+  const values = cols.map((c) => {
+    const v = admin[c];
+    if (v === undefined) return null;
+    if (typeof v === "bigint") return Number(v);
+    // Flaga trybu na kopii w TEST nie steruje routingiem (routing czyta PROD).
+    if (c === "test_mode_enabled") return 0;
+    return v;
+  });
+
   await test.prepare("DELETE FROM users WHERE id = ?").run(adminUserId);
-
-  const cols = Object.keys(admin);
-  const placeholders = cols.map(() => "?").join(", ");
-  await test
-    .prepare(
-      `INSERT INTO users (${cols.join(", ")}) VALUES (${placeholders})`
-    )
-    .run(...cols.map((c) => admin[c]));
-
-  // Upewnij się, że flaga trybu na kopii w TEST nie steruje routingiem (routing czyta PROD).
   try {
-    await test.prepare("UPDATE users SET test_mode_enabled = 0 WHERE id = ?").run(adminUserId);
-  } catch {
-    /* kolumna może nie istnieć w starej TEST — schemat i tak migruje */
+    await test
+      .prepare(`INSERT INTO users (${cols.join(", ")}) VALUES (${placeholders})`)
+      .run(...values);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    throw new Error(
+      `Nie udało się skopiować admina do bazy TEST: ${msg}. Sprawdź TURSO_TEST_DATABASE_URL i TURSO_TEST_AUTH_TOKEN.`
+    );
   }
 
-  const settings = (await prod.prepare("SELECT * FROM app_settings").all()) as Record<
-    string,
-    unknown
-  >[];
+  const settingsProdCols = (
+    (await prod.prepare("PRAGMA table_info(app_settings)").all()) as { name: string }[]
+  ).map((c) => c.name);
+  const settingsTestCols = new Set(
+    ((await test.prepare("PRAGMA table_info(app_settings)").all()) as { name: string }[]).map(
+      (c) => c.name
+    )
+  );
+  const sCols = settingsProdCols.filter((c) => settingsTestCols.has(c));
+  if (sCols.length === 0 || !sCols.includes("realm")) return;
+
+  const settings = (await prod
+    .prepare(`SELECT ${sCols.join(", ")} FROM app_settings`)
+    .all()) as Record<string, unknown>[];
+
   for (const row of settings) {
     const realm = row.realm;
     if (realm == null) continue;
     await test.prepare("DELETE FROM app_settings WHERE realm = ?").run(realm);
-    const sCols = Object.keys(row);
-    await test
-      .prepare(
-        `INSERT INTO app_settings (${sCols.join(", ")}) VALUES (${sCols.map(() => "?").join(", ")})`
-      )
-      .run(...sCols.map((c) => row[c]));
+    try {
+      await test
+        .prepare(
+          `INSERT INTO app_settings (${sCols.join(", ")}) VALUES (${sCols.map(() => "?").join(", ")})`
+        )
+        .run(
+          ...sCols.map((c) => {
+            const v = row[c];
+            if (v === undefined) return null;
+            if (typeof v === "bigint") return Number(v);
+            return v;
+          })
+        );
+    } catch (e) {
+      console.error("[test-mode] bootstrap app_settings realm=", realm, e);
+    }
   }
 }
 
@@ -214,8 +249,11 @@ export async function wipeTestDatabase(db?: AppDb): Promise<{ tables: number; ro
       const r = await conn.prepare(`DELETE FROM ${table}`).run();
       tables += 1;
       rows += Number(r.changes ?? 0);
-    } catch {
-      /* brak tabeli */
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (!/no such table|nie ma takiej tabeli/i.test(msg)) {
+        console.warn(`[test-mode] wipe ${table}:`, msg);
+      }
     }
   }
 
