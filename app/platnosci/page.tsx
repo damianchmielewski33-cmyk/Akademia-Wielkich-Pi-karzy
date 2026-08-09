@@ -16,19 +16,12 @@ export default async function PlatnosciPage() {
   const db = await getDb();
   const appSettings = await getAppSettings(db);
 
-  const playerLabel = session
-    ? [session.firstName, session.lastName].filter(Boolean).join(" ").trim() || session.zawodnik
-    : "";
-
   return (
     <Suspense fallback={<div className="awp-page awp-page--default p-8 text-center text-sm text-zinc-500">Ładowanie płatności…</div>}>
       <PlatnosciClient
         isLoggedIn={Boolean(session)}
         isAdmin={session?.isAdmin ?? false}
         currentUserId={session?.userId ?? null}
-        blikPhoneDisplay={appSettings.blik_phone}
-        defaultMatchFeePln={appSettings.default_match_fee_pln}
-        playerLabel={playerLabel}
         hotpayEnabled={isHotpayConfigured() && appSettings.hotpay_enabled}
       />
     </Suspense>

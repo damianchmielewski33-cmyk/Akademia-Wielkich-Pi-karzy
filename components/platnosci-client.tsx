@@ -7,7 +7,6 @@ import { LogIn, UserPlus } from "lucide-react";
 import { AdminWalletsSaldoSection } from "@/components/admin-wallets-saldo-section";
 import { HotpayPayButtons } from "@/components/hotpay-pay-buttons";
 import { MatchCartPayPanel } from "@/components/match-cart-pay-panel";
-import { PayMatchButton } from "@/components/pay-match-button";
 import { formatWalletPln, PlayerWalletPanel } from "@/components/player-wallet-panel";
 import { useAppMessage } from "@/components/ui/app-message-modal";
 import { PitchCard, PitchPageHero, pitchLabelClass } from "@/components/ui/pitch-card";
@@ -25,9 +24,6 @@ type Props = {
   isLoggedIn: boolean;
   isAdmin: boolean;
   currentUserId: number | null;
-  blikPhoneDisplay: string;
-  defaultMatchFeePln: number | null;
-  playerLabel: string;
   hotpayEnabled: boolean;
 };
 
@@ -35,16 +31,12 @@ export function PlatnosciClient({
   isLoggedIn,
   isAdmin,
   currentUserId,
-  blikPhoneDisplay,
-  defaultMatchFeePln,
-  playerLabel,
   hotpayEnabled,
 }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const paymentReturnHandled = useRef(false);
   const [walletRefreshKey, setWalletRefreshKey] = useState(0);
-  const [adminBalancePln, setAdminBalancePln] = useState<number | null>(null);
   const [adminWalletLoading, setAdminWalletLoading] = useState(false);
   const { showError, showSuccess, showInfo, MessageModal } = useAppMessage();
 
@@ -52,9 +44,7 @@ export function PlatnosciClient({
     if (!isLoggedIn || !isAdmin) return;
     setAdminWalletLoading(true);
     try {
-      const res = await fetch("/api/wallet/me");
-      const json = (await res.json().catch(() => null)) as { balance_pln?: unknown } | null;
-      if (res.ok) setAdminBalancePln(Number(json?.balance_pln ?? 0));
+      await fetch("/api/wallet/me");
     } finally {
       setAdminWalletLoading(false);
     }
@@ -215,14 +205,6 @@ export function PlatnosciClient({
               enabled={hotpayEnabled}
               walletLoading={adminWalletLoading}
             />
-            {!hotpayEnabled && (
-              <PayMatchButton
-                blikPhoneDisplay={blikPhoneDisplay}
-                defaultMatchFeePln={defaultMatchFeePln}
-                balancePln={adminBalancePln}
-                playerLabel={playerLabel}
-              />
-            )}
             <AdminWalletsSaldoSection embedded showPublicLinks showTopUp />
           </div>
         ) : (
