@@ -360,16 +360,32 @@ export async function initLibsqlSchema(client: Client) {
     await client.execute("ALTER TABLE users ADD COLUMN test_mode_enabled INTEGER NOT NULL DEFAULT 0");
   }
 
+  // ranking_seasons PRZED migrateRealm / season_id — inaczej świeża baza TEST pada na
+  // ALTER TABLE ranking_seasons (no such table).
+  await client.execute(`
+    CREATE TABLE IF NOT EXISTS ranking_seasons (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      started_at TEXT NOT NULL DEFAULT (datetime('now')),
+      ended_at TEXT,
+      started_by_admin_id INTEGER NOT NULL,
+      ended_by_admin_id INTEGER,
+      FOREIGN KEY (started_by_admin_id) REFERENCES users(id),
+      FOREIGN KEY (ended_by_admin_id) REFERENCES users(id)
+    )
+  `);
+  await client.execute(
+    "CREATE INDEX IF NOT EXISTS idx_ranking_seasons_active ON ranking_seasons(ended_at, started_at DESC)"
+  );
+
   names = await pragmaColumnNames(client, "match_stats");
   if (names.length > 0 && !names.includes("season_id")) {
-    await client.execute("ALTER TABLE match_stats ADD COLUMN season_id INTEGER REFERENCES ranking_seasons(id)");
+    await client.execute("ALTER TABLE match_stats ADD COLUMN season_id INTEGER");
   }
   // standalone_match_stats: CREATE jest niżej — ALTER tylko gdy tabela już istnieje.
   names = await pragmaColumnNames(client, "standalone_match_stats");
   if (names.length > 0 && !names.includes("season_id")) {
-    await client.execute(
-      "ALTER TABLE standalone_match_stats ADD COLUMN season_id INTEGER REFERENCES ranking_seasons(id)"
-    );
+    await client.execute("ALTER TABLE standalone_match_stats ADD COLUMN season_id INTEGER");
   }
 
   names = await pragmaColumnNames(client, "match_signups");
@@ -489,28 +505,13 @@ export async function initLibsqlSchema(client: Client) {
     );
 
     CREATE INDEX IF NOT EXISTS idx_admin_messages_status_created ON admin_messages(status, created_at DESC);
-
-    CREATE TABLE IF NOT EXISTS ranking_seasons (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL,
-      started_at TEXT NOT NULL DEFAULT (datetime('now')),
-      ended_at TEXT,
-      started_by_admin_id INTEGER NOT NULL,
-      ended_by_admin_id INTEGER,
-      FOREIGN KEY (started_by_admin_id) REFERENCES users(id),
-      FOREIGN KEY (ended_by_admin_id) REFERENCES users(id)
-    );
-
-    CREATE INDEX IF NOT EXISTS idx_ranking_seasons_active ON ranking_seasons(ended_at, started_at DESC);
   `);
 
-  // Po CREATE — dopnij season_id jeśli brakuje (świeża baza TEST / Turso).
+  // ranking_seasons tworzone wcześniej; dopnij season_id jeśli brakuje (świeża baza TEST / Turso).
   {
     const smsCols = await pragmaColumnNames(client, "standalone_match_stats");
     if (smsCols.length > 0 && !smsCols.includes("season_id")) {
-      await client.execute(
-        "ALTER TABLE standalone_match_stats ADD COLUMN season_id INTEGER REFERENCES ranking_seasons(id)"
-      );
+      await client.execute("ALTER TABLE standalone_match_stats ADD COLUMN season_id INTEGER");
     }
   }
 

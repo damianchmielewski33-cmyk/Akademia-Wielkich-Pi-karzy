@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import Link from "next/link";
 import { SiteSectionHero } from "@/components/site-section-hero";
 import { loadPublicShareLink, loadPublicWalletRows } from "@/lib/public-payment-share";
@@ -7,6 +8,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PayButton } from "@/components/pay-button";
+import { PlatnosciPublicPayButton } from "@/components/platnosci-public-pay-button";
+import { PlatnosciPublicPaymentReturn } from "@/components/platnosci-public-payment-return";
+import { getAppSettings } from "@/lib/app-settings";
+import { getDb } from "@/lib/db";
+import { isHotpayConfigured } from "@/lib/hotpay";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
@@ -48,10 +54,17 @@ export default async function PlatnosciPublicPage(ctx: Ctx) {
     );
   }
 
+  const db = await getDb();
+  const appSettings = await getAppSettings(db);
+  const hotpayEnabled = isHotpayConfigured() && appSettings.hotpay_enabled;
   const view = await loadPublicWalletRows(link);
 
   return (
     <div className="container mx-auto max-w-2xl flex-1 space-y-6 px-4 py-10">
+      <Suspense fallback={null}>
+        <PlatnosciPublicPaymentReturn />
+      </Suspense>
+
       <SiteSectionHero
         kicker="Portfel"
         title={view.title}
@@ -184,13 +197,22 @@ export default async function PlatnosciPublicPage(ctx: Ctx) {
                       {formatPln(bal)}
                     </span>
                     {isNegative ? (
-                      <PayButton
-                        variant="default"
-                        amountPln={bal}
-                        label="Opłać"
-                        href="/platnosci"
-                        className="shrink-0"
-                      />
+                      hotpayEnabled ? (
+                        <PlatnosciPublicPayButton
+                          token={link.token}
+                          userId={p.id}
+                          amountPln={bal}
+                          className="shrink-0"
+                        />
+                      ) : (
+                        <PayButton
+                          variant="default"
+                          amountPln={bal}
+                          label="Opłać"
+                          href="/platnosci"
+                          className="shrink-0"
+                        />
+                      )
                     ) : null}
                   </li>
                 );

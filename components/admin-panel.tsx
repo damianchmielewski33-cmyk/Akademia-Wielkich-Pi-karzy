@@ -10,6 +10,7 @@ import {
   BarChart3,
   Calendar,
   Construction,
+  CreditCard,
   Download,
   Film,
   LayoutDashboard,
@@ -75,6 +76,7 @@ import {
   type AnalyticsHourlyPayload,
 } from "@/components/admin-analytics-hourly-charts";
 import { AdminWalletsSaldoSection } from "@/components/admin-wallets-saldo-section";
+import { AdminOperatorPaymentsTab } from "@/components/admin-operator-payments-tab";
 import { AdminSettingsTab } from "@/components/admin-settings-tab";
 import { AdminScreenBlocksTab } from "@/components/admin-screen-blocks-tab";
 import { AdminPzuCupTab } from "@/components/admin-pzu-cup-tab";
@@ -305,7 +307,10 @@ const navGroupDefs = [
   {
     id: "finance",
     label: "Finanse",
-    items: [{ id: "wallets", label: "Portfele", icon: Wallet }],
+    items: [
+      { id: "wallets", label: "Portfele", icon: Wallet },
+      { id: "operator-payments", label: "Płatności operatora", icon: CreditCard },
+    ],
   },
   {
     id: "site",
@@ -1196,7 +1201,16 @@ export function AdminPanel() {
     if (tab === "users") void loadUsers();
     if (tab === "matches") void loadMatches();
     if (tab === "stats") void loadStats();
-    if (tab === "lineups" || tab === "wallets" || tab === "settings" || tab === "gallery" || tab === "messages" || tab === "rankings" || tab === "pzu-cup")
+    if (
+      tab === "lineups" ||
+      tab === "wallets" ||
+      tab === "operator-payments" ||
+      tab === "settings" ||
+      tab === "gallery" ||
+      tab === "messages" ||
+      tab === "rankings" ||
+      tab === "pzu-cup"
+    )
       setLoading(false);
   }, [tab, loadDashboard, loadUsers, loadMatches, loadStats]);
 
@@ -1239,7 +1253,15 @@ export function AdminPanel() {
   }, [tab, analyticsRange, analyticsFetchNonce]);
 
   const shellLoading =
-    tab === "lineups" || tab === "wallets" || tab === "settings" || tab === "gallery" || tab === "messages" || tab === "rankings" || tab === "pzu-cup" || tab === "screen-blocks"
+    tab === "lineups" ||
+    tab === "wallets" ||
+    tab === "operator-payments" ||
+    tab === "settings" ||
+    tab === "gallery" ||
+    tab === "messages" ||
+    tab === "rankings" ||
+    tab === "pzu-cup" ||
+    tab === "screen-blocks"
       ? false
       : tab === "analytics"
         ? analyticsLoading
@@ -1324,6 +1346,7 @@ export function AdminPanel() {
         )}
         {tab === "messages" && <AdminMessagesTab onUnreadChange={loadSummaryOnly} />}
         {tab === "wallets" && <AdminWalletsSaldoSection />}
+        {tab === "operator-payments" && <AdminOperatorPaymentsTab />}
         {tab === "matches" && (
           <MatchesView
             matches={matches}
@@ -2042,8 +2065,11 @@ function DashboardView({
     },
     {
       category: "Finanse",
-      description: "Salda graczy i doładowania.",
-      links: [{ tab: "wallets", label: "Portfele", icon: Wallet }],
+      description: "Salda graczy, doładowania i płatności u operatora.",
+      links: [
+        { tab: "wallets", label: "Portfele", icon: Wallet },
+        { tab: "operator-payments", label: "Płatności operatora", icon: CreditCard },
+      ],
     },
     {
       category: "Treść i witryna",

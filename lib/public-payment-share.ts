@@ -192,3 +192,18 @@ export async function loadPublicWalletRows(link: PublicShareLinkRow): Promise<Pu
     rows,
   };
 }
+
+/**
+ * Kwota zaległości (PLN > 0) gracza widocznego na publicznym linku, albo null gdy brak należności / poza listą.
+ */
+export async function getPublicLinkDebtAmountPln(
+  link: PublicShareLinkRow,
+  userId: number
+): Promise<number | null> {
+  const view = await loadPublicWalletRows(link);
+  const row = view.rows.find((r) => Number(r.id) === Number(userId));
+  if (!row) return null;
+  const bal = Number(row.balance_pln ?? 0);
+  if (!(bal < 0)) return null;
+  return Math.round(Math.abs(bal) * 100) / 100;
+}

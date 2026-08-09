@@ -271,7 +271,8 @@ export function sanitizeHotpayReturnPath(raw: unknown): string {
     pathOnly === "/pzu-cup" ||
     pathOnly.startsWith("/pzu-cup/") ||
     pathOnly.startsWith("/terminarz/") ||
-    pathOnly.startsWith("/transport/");
+    pathOnly.startsWith("/transport/") ||
+    pathOnly.startsWith("/platnosci-public/");
   if (!allowed) return "/platnosci";
   return trimmed;
 }

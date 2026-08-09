@@ -46,6 +46,7 @@ const TAB_HITS: { tab: string; label: string; keywords: string }[] = [
   { tab: "rankings", label: "Rankingi", keywords: "sezon punkty" },
   { tab: "pzu-cup", label: "PZU Cup", keywords: "turniej pzu" },
   { tab: "wallets", label: "Portfele", keywords: "saldo płatności" },
+  { tab: "operator-payments", label: "Płatności operatora", keywords: "hotpay operator prowizja bramka" },
   { tab: "gallery", label: "Galeria", keywords: "youtube film" },
   { tab: "screen-blocks", label: "Zaślepki", keywords: "blokada ekran" },
   { tab: "analytics", label: "Analityka", keywords: "odsłony ruch" },

@@ -8,7 +8,6 @@ import { PitchCard, PitchCardDecorations, pitchLabelClass } from "@/components/u
 import { SiteSectionHero } from "@/components/site-section-hero";
 import { SiteAssetImage } from "@/components/site-asset-image";
 import { AdminTestModeSidebarButton } from "@/components/admin-test-mode-sidebar-button";
-import { AdminHotpaySidebarButton } from "@/components/admin-hotpay-sidebar-button";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -390,11 +389,10 @@ export function AdminShell({
             })}
           </nav>
 
-          {/* Zawsze widoczne: tryb testowy / HotPay + stopka (nie scrollują się z menu) */}
+          {/* Zawsze widoczne: tryb testowy + stopka (nie scrollują się z menu) */}
           <div className="relative z-10 flex shrink-0 flex-col gap-3 border-t border-white/20 pt-3">
             <div className="flex flex-col gap-1.5">
               <AdminTestModeSidebarButton />
-              <AdminHotpaySidebarButton />
             </div>
             <div className="flex flex-wrap gap-1 lg:flex-col">
             <button

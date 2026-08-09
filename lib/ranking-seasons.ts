@@ -70,9 +70,19 @@ export async function ensureRankingSeasonsInitialized(
   db: AppDb,
   realm: Realm = REALMS.ACADEMY
 ): Promise<void> {
-  const count = (await db
-    .prepare("SELECT COUNT(*) AS c FROM ranking_seasons WHERE realm = ?")
-    .get(realm)) as { c: number };
+  let count: { c: number };
+  try {
+    count = (await db
+      .prepare("SELECT COUNT(*) AS c FROM ranking_seasons WHERE realm = ?")
+      .get(realm)) as { c: number };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (/no such table|nie ma takiej tabeli/i.test(msg)) {
+      console.warn("[ranking-seasons] brak tabeli ranking_seasons — pomijam init");
+      return;
+    }
+    throw e;
+  }
   if (count.c > 0) {
     await backfillOrphanStatsToActiveSeason(db, realm);
     return;

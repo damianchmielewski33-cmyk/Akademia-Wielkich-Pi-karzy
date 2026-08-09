@@ -96,6 +96,8 @@ function seedPzuCupSettingsSqlite(db: Database.Database) {
 
 function addRealmColumnSqlite(db: Database.Database, table: string) {
   const cols = db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
+  // Tabela jeszcze nie istnieje (np. ranking_seasons przed CREATE w init) — pomiń.
+  if (cols.length === 0) return;
   if (cols.some((c) => c.name === "realm")) return;
   db.exec(`ALTER TABLE ${table} ADD COLUMN realm TEXT NOT NULL DEFAULT '${REALMS.ACADEMY}'`);
   db.exec(`CREATE INDEX IF NOT EXISTS idx_${table}_realm ON ${table}(realm)`);
@@ -152,6 +154,8 @@ async function migrateAppSettingsTableLibsql(client: Client) {
 async function addRealmColumnLibsql(client: Client, table: string) {
   const rs = await client.execute(`PRAGMA table_info(${table})`);
   const names = rs.rows.map((row) => String((row as Record<string, unknown>).name ?? row[1] ?? ""));
+  // Tabela jeszcze nie istnieje (świeża baza TEST) — pomiń; CREATE zrobi ją później.
+  if (names.length === 0 || (names.length === 1 && names[0] === "")) return;
   if (names.includes("realm")) return;
   await client.execute(`ALTER TABLE ${table} ADD COLUMN realm TEXT NOT NULL DEFAULT '${REALMS.ACADEMY}'`);
   await client.execute(`CREATE INDEX IF NOT EXISTS idx_${table}_realm ON ${table}(realm)`);

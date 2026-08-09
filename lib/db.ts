@@ -611,16 +611,31 @@ function initSchemaSync(db: Database.Database) {
     db.exec("ALTER TABLE users ADD COLUMN test_mode_enabled INTEGER NOT NULL DEFAULT 0");
   }
 
+  // ranking_seasons przed season_id / migrateRealm (świeża baza TEST).
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS ranking_seasons (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      started_at TEXT NOT NULL DEFAULT (datetime('now')),
+      ended_at TEXT,
+      started_by_admin_id INTEGER NOT NULL,
+      ended_by_admin_id INTEGER,
+      FOREIGN KEY (started_by_admin_id) REFERENCES users(id),
+      FOREIGN KEY (ended_by_admin_id) REFERENCES users(id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_ranking_seasons_active ON ranking_seasons(ended_at, started_at DESC);
+  `);
+
   const matchStatsCols = db.prepare("PRAGMA table_info(match_stats)").all() as { name: string }[];
   if (matchStatsCols.length > 0 && !matchStatsCols.some((c) => c.name === "season_id")) {
-    db.exec("ALTER TABLE match_stats ADD COLUMN season_id INTEGER REFERENCES ranking_seasons(id)");
+    db.exec("ALTER TABLE match_stats ADD COLUMN season_id INTEGER");
   }
   // standalone_match_stats tworzone niżej — ALTER tylko gdy tabela już istnieje.
   const standaloneStatsCols = db.prepare("PRAGMA table_info(standalone_match_stats)").all() as {
     name: string;
   }[];
   if (standaloneStatsCols.length > 0 && !standaloneStatsCols.some((c) => c.name === "season_id")) {
-    db.exec("ALTER TABLE standalone_match_stats ADD COLUMN season_id INTEGER REFERENCES ranking_seasons(id)");
+    db.exec("ALTER TABLE standalone_match_stats ADD COLUMN season_id INTEGER");
   }
 
   const signupCols = db.prepare("PRAGMA table_info(match_signups)").all() as { name: string }[];
@@ -761,25 +776,12 @@ function initSchemaSync(db: Database.Database) {
     );
 
     CREATE INDEX IF NOT EXISTS idx_admin_messages_status_created ON admin_messages(status, created_at DESC);
-
-    CREATE TABLE IF NOT EXISTS ranking_seasons (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL,
-      started_at TEXT NOT NULL DEFAULT (datetime('now')),
-      ended_at TEXT,
-      started_by_admin_id INTEGER NOT NULL,
-      ended_by_admin_id INTEGER,
-      FOREIGN KEY (started_by_admin_id) REFERENCES users(id),
-      FOREIGN KEY (ended_by_admin_id) REFERENCES users(id)
-    );
-
-    CREATE INDEX IF NOT EXISTS idx_ranking_seasons_active ON ranking_seasons(ended_at, started_at DESC);
   `);
 
   {
     const smsCols = db.prepare("PRAGMA table_info(standalone_match_stats)").all() as { name: string }[];
     if (smsCols.length > 0 && !smsCols.some((c) => c.name === "season_id")) {
-      db.exec("ALTER TABLE standalone_match_stats ADD COLUMN season_id INTEGER REFERENCES ranking_seasons(id)");
+      db.exec("ALTER TABLE standalone_match_stats ADD COLUMN season_id INTEGER");
     }
   }
 

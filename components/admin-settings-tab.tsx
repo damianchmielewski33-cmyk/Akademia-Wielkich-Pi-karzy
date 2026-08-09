@@ -70,7 +70,6 @@ const WEB_SETTINGS_TOC: SettingsTocGroup[] = [
   {
     label: "Reklamy i rejestracja",
     items: [
-      { id: "settings-payments", label: "Płatności (HotPay)" },
       { id: "settings-adsense", label: "Google AdSense" },
       { id: "settings-registration", label: "Rejestracja i powiadomienia" },
     ],
@@ -767,96 +766,6 @@ export function AdminSettingsTab({
             }}
           />
         </FieldRow>
-      </SettingsSection>
-
-      <SettingsSection
-        id="settings-payments"
-        hidden={!sectionVisible("settings-payments")}
-        title="Płatności (HotPay)"
-        description="Włącz lub wyłącz bramkę płatności HotPay dla graczy. Wymaga skonfigurowania zmiennych HOTPAY_SEKRET i HOTPAY_NOTIFICATION_PASSWORD na serwerze."
-      >
-        <ul className="mb-4 grid gap-2 text-sm sm:grid-cols-2">
-          <li className={adminStatusChipClass}>
-            <span className="text-emerald-100/70">HotPay (env):</span>{" "}
-            <strong className={settings.system.hotpay_configured ? "text-emerald-300" : "text-amber-300"}>
-              {settings.system.hotpay_configured
-                ? "Skonfigurowany — klucze API ustawione"
-                : "Nieskonfigurowany — brak HOTPAY_SEKRET lub HOTPAY_NOTIFICATION_PASSWORD"}
-            </strong>
-          </li>
-        </ul>
-        <YesNoSwitchRow
-          className={adminToggleRowClass}
-          label="Włącz płatności HotPay"
-          hint={
-            settings.system.hotpay_configured
-              ? "Gracze zobaczą przyciski doładowania portfela przez HotPay na stronie Płatności."
-              : "Ustaw najpierw HOTPAY_SEKRET i HOTPAY_NOTIFICATION_PASSWORD w Vercel, żeby przełącznik miał efekt."
-          }
-          checked={settings.hotpay_enabled}
-          disabled={busy || !settings.system.hotpay_configured}
-          onCheckedChange={(v) => void save({ hotpay_enabled: v })}
-        />
-        <div className="grid gap-4 sm:grid-cols-2">
-          <FieldRow
-            label="Prowizja operatora (%)"
-            hint="Aktualny cennik HotPay dla dz. niezarejestrowanej: 2,45%. Kwota wysłana do operatora zostanie powiększona tak, aby gracz sfinansował prowizję."
-          >
-            <Input
-              type="number"
-              min={0}
-              max={50}
-              step={0.01}
-              className={adminFieldClass}
-              defaultValue={settings.hotpay_commission_pct}
-              disabled={busy}
-              key={`commission_pct-${settings.hotpay_commission_pct}`}
-              onBlur={(e) => {
-                const n = parseFloat(e.target.value);
-                if (!Number.isFinite(n) || n < 0) return;
-                if (n !== settings.hotpay_commission_pct) void save({ hotpay_commission_pct: n });
-              }}
-            />
-          </FieldRow>
-          <FieldRow
-            label="Stała opłata operatora (zł)"
-            hint="Aktualny cennik HotPay dla dz. niezarejestrowanej: 0,30 zł / transakcję. Wpisz 0, jeśli brak."
-          >
-            <Input
-              type="number"
-              min={0}
-              max={100}
-              step={0.01}
-              className={adminFieldClass}
-              defaultValue={settings.hotpay_commission_fixed}
-              disabled={busy}
-              key={`commission_fixed-${settings.hotpay_commission_fixed}`}
-              onBlur={(e) => {
-                const n = parseFloat(e.target.value);
-                if (!Number.isFinite(n) || n < 0) return;
-                if (n !== settings.hotpay_commission_fixed) void save({ hotpay_commission_fixed: n });
-              }}
-            />
-          </FieldRow>
-        </div>
-        {(settings.hotpay_commission_pct > 0 || settings.hotpay_commission_fixed > 0) && (
-          <p className="text-xs leading-relaxed pitch-muted">
-            Przykład: przy zaległości <strong>50,00 zł</strong> gracz zostanie przekierowany do operatora z kwotą{" "}
-            <strong>
-              {(
-                Math.ceil(
-                  ((50 + settings.hotpay_commission_fixed) /
-                    (1 - settings.hotpay_commission_pct / 100)) *
-                    100
-                ) / 100
-              ).toFixed(2)}{" "}
-              zł
-            </strong>
-            . Na portfelu zostanie zaksięgowane <strong>50,00 zł</strong>. Zawyżenie składki meczu (zaokrąglenie
-            w górę do 0,50 zł) jest odejmowane od prowizji — gracz płaci mniej, gdy składka była podniesiona
-            względem dokładnego podziału wynajmu.
-          </p>
-        )}
       </SettingsSection>
 
       <SettingsSection
