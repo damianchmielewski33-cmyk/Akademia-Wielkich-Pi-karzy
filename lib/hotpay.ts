@@ -157,6 +157,9 @@ export function verifyNotificationHash(
       sekret: payload.SEKRET,
     });
     if (timingSafeEqualHex(withSecure, payload.HASH)) return true;
+    console.error(
+      `[hotpay/hash] withSecure MISMATCH computed=${withSecure.slice(0, 16)}... expected=${payload.HASH.slice(0, 16)}... pwd_len=${notificationPassword.length} pwd_prefix=${notificationPassword.slice(0, 6)}... sekret_len=${payload.SEKRET.length}`
+    );
   }
   const withoutSecure = buildNotificationHashWithoutSecure({
     notificationPassword,
@@ -166,7 +169,11 @@ export function verifyNotificationHash(
     status: payload.STATUS,
     sekret: payload.SEKRET,
   });
-  return timingSafeEqualHex(withoutSecure, payload.HASH);
+  if (timingSafeEqualHex(withoutSecure, payload.HASH)) return true;
+  console.error(
+    `[hotpay/hash] withoutSecure MISMATCH computed=${withoutSecure.slice(0, 16)}... expected=${payload.HASH.slice(0, 16)}... pwd_len=${notificationPassword.length} pwd_prefix=${notificationPassword.slice(0, 6)}...`
+  );
+  return false;
 }
 
 /** Porównanie hex bez wycieku czasu (różna długość → false). */
