@@ -4,7 +4,7 @@ import fs from "fs";
 import path from "path";
 import { getServerSession } from "@/lib/auth";
 import { imageMimeMatchesMagicBytes } from "@/lib/image-magic";
-import { isProfileBlobStorageEnabled } from "@/lib/profile-blob";
+import { BLOB_REQUIRED_ON_VERCEL_MSG, isEphemeralUploadStorage, isProfileBlobStorageEnabled } from "@/lib/profile-blob";
 import { checkRateLimit, rateLimitKey, rateLimitedResponse, RATE } from "@/lib/rate-limit";
 import { chatAttachmentPublicUrl, chatUploadsDir } from "@/lib/runtime-paths";
 
@@ -71,6 +71,8 @@ export async function POST(req: Request) {
       contentType: mime,
     });
     publicPath = blob.url;
+  } else if (isEphemeralUploadStorage()) {
+    return NextResponse.json({ error: BLOB_REQUIRED_ON_VERCEL_MSG }, { status: 503 });
   } else {
     fs.mkdirSync(chatUploadsDir(), { recursive: true });
     publicPath = chatAttachmentPublicUrl(filename);

@@ -5,7 +5,13 @@ import path from "path";
 import { getDb, logActivity } from "@/lib/db";
 import { requireUser } from "@/lib/api-helpers";
 import { imageMimeMatchesMagicBytes } from "@/lib/image-magic";
-import { deleteProfileBlobIfAny, isProfileBlobStorageEnabled, isVercelBlobUrl } from "@/lib/profile-blob";
+import {
+  BLOB_REQUIRED_ON_VERCEL_MSG,
+  deleteProfileBlobIfAny,
+  isEphemeralUploadStorage,
+  isProfileBlobStorageEnabled,
+  isVercelBlobUrl,
+} from "@/lib/profile-blob";
 import {
   profilePhotoPublicUrl,
   profileUploadsDir,
@@ -96,6 +102,8 @@ export async function POST(req: Request) {
       contentType: mime,
     });
     publicPath = blob.url;
+  } else if (isEphemeralUploadStorage()) {
+    return NextResponse.json({ error: BLOB_REQUIRED_ON_VERCEL_MSG }, { status: 503 });
   } else {
     fs.mkdirSync(profileUploadsDir(), { recursive: true });
     const filename = `${session.userId}-${Date.now()}${ext}`;

@@ -5,6 +5,14 @@ export function isProfileBlobStorageEnabled(): boolean {
   return Boolean(process.env.BLOB_READ_WRITE_TOKEN?.trim());
 }
 
+/** Vercel bez Blob: zapis do `/tmp` jest nietrwały między instancjami → 404 przy odczycie. */
+export function isEphemeralUploadStorage(): boolean {
+  return Boolean(process.env.VERCEL) && !isProfileBlobStorageEnabled();
+}
+
+export const BLOB_REQUIRED_ON_VERCEL_MSG =
+  "Na Vercel upload wymaga trwałego magazynu: dodaj BLOB_READ_WRITE_TOKEN (Vercel → Storage → Blob), potem wgraj plik ponownie.";
+
 export function isVercelBlobUrl(url: string): boolean {
   try {
     const u = new URL(url.trim());

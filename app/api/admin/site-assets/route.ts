@@ -6,7 +6,13 @@ import { requireAdmin } from "@/lib/api-helpers";
 import { getAppSettings } from "@/lib/app-settings";
 import { getDb } from "@/lib/db";
 import { imageMimeMatchesMagicBytes } from "@/lib/image-magic";
-import { deleteProfileBlobIfAny, isProfileBlobStorageEnabled, isVercelBlobUrl } from "@/lib/profile-blob";
+import {
+  BLOB_REQUIRED_ON_VERCEL_MSG,
+  deleteProfileBlobIfAny,
+  isEphemeralUploadStorage,
+  isProfileBlobStorageEnabled,
+  isVercelBlobUrl,
+} from "@/lib/profile-blob";
 import {
   resolveSiteAssetAbsolute,
   siteAssetPublicUrl,
@@ -145,6 +151,8 @@ export async function POST(req: Request) {
       contentType: mime,
     });
     publicPath = blob.url;
+  } else if (isEphemeralUploadStorage()) {
+    return NextResponse.json({ error: BLOB_REQUIRED_ON_VERCEL_MSG }, { status: 503 });
   } else {
     fs.mkdirSync(siteUploadsDir(), { recursive: true });
     const filename = `${assetKey}-${Date.now()}${ext}`;

@@ -1,8 +1,13 @@
 "use client";
 
 import Image from "next/image";
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
-import { siteAssetNeedsUnoptimized, type SiteAssetKey } from "@/lib/site-assets";
+import {
+  SITE_ASSET_DEFAULTS,
+  siteAssetNeedsUnoptimized,
+  type SiteAssetKey,
+} from "@/lib/site-assets";
 import { useSiteAsset } from "@/components/site-assets-provider";
 
 type SiteAssetImageProps = {
@@ -22,6 +27,7 @@ type SiteAssetImageProps = {
 /**
  * Obraz grafiki witryny z konfiguracji admina.
  * Domyślnie `object-contain` — grafika zachowuje proporcje w każdym kontenerze.
+ * Przy 404 (np. zniknięty plik z `/tmp` na Vercel) wraca do domyślnej grafiki.
  */
 export function SiteAssetImage({
   asset,
@@ -35,11 +41,21 @@ export function SiteAssetImage({
   decorative,
   unoptimized,
 }: SiteAssetImageProps) {
-  const src = useSiteAsset(asset);
+  const configured = useSiteAsset(asset);
+  const defaultSrc = SITE_ASSET_DEFAULTS[asset];
+  const [src, setSrc] = useState(configured);
+
+  useEffect(() => {
+    setSrc(configured);
+  }, [configured]);
+
   const resolvedAlt = decorative ? "" : alt;
   const needsUnopt = unoptimized ?? siteAssetNeedsUnoptimized(src);
-
   const objectClass = cn("object-contain object-center", className);
+
+  const onError = () => {
+    if (src !== defaultSrc) setSrc(defaultSrc);
+  };
 
   if (fill) {
     return (
@@ -52,6 +68,7 @@ export function SiteAssetImage({
         sizes={sizes ?? "100vw"}
         unoptimized={needsUnopt}
         aria-hidden={decorative || undefined}
+        onError={onError}
       />
     );
   }
@@ -67,6 +84,7 @@ export function SiteAssetImage({
       sizes={sizes}
       unoptimized={needsUnopt}
       aria-hidden={decorative || undefined}
+      onError={onError}
     />
   );
 }
