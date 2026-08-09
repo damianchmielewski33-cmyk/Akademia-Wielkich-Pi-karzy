@@ -985,22 +985,20 @@ export async function getTestDb(): Promise<AppDb> {
 }
 
 /**
- * Baza kontekstowa: domyślnie zawsze PROD.
- * TEST tylko gdy admin ma aktywny tryb i baza TEST jest zdrowa — inaczej fallback PROD
- * (produkcja nie może padać przez uszkodzony / pusty Turso TEST).
+ * Baza kontekstowa: PROD domyślnie; TEST gdy admin ma aktywny tryb testowy.
+ * W trybie testowym NIGDY nie fallbackujemy na PROD (żeby nie pisać meczy/płatności na produkcję).
  */
 export async function getDb(): Promise<AppDb> {
+  let wantTest = false;
   try {
     const { shouldUseTestDatabase } = await import("@/lib/test-mode");
-    if (await shouldUseTestDatabase()) {
-      try {
-        return await getTestDb();
-      } catch (e) {
-        console.error("[getDb] baza TEST niedostępna — fallback na PROD:", e);
-      }
-    }
+    wantTest = await shouldUseTestDatabase();
   } catch {
-    /* brak kontekstu requestu / trybu — PROD */
+    wantTest = false;
+  }
+
+  if (wantTest) {
+    return getTestDb();
   }
   return getProdDb();
 }

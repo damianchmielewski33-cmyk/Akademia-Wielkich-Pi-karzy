@@ -2584,14 +2584,20 @@ function AddMatchDialog({
         }),
       });
       if (!res.ok) {
-        toast.error("Nie dodano meczu");
+        const data = (await res.json().catch(() => ({}))) as { error?: string };
+        toast.error(
+          typeof data.error === "string" && data.error
+            ? data.error
+            : "Nie dodano meczu"
+        );
         return;
       }
+      const data = (await res.json().catch(() => ({}))) as { test_mode?: boolean };
       form.reset();
       setFeeInput(matchFeeToInputString(defaults.feePln));
       onOpenChange(false);
       onDone();
-      toast.success("Mecz dodany");
+      toast.success(data.test_mode ? "Mecz dodany (baza TEST)" : "Mecz dodany");
     });
   }
 

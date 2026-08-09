@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getDb, logActivity, type MatchRow } from "@/lib/db";
+import { getDb, getProdDb, logActivity, type MatchRow } from "@/lib/db";
 import { requireAdmin } from "@/lib/api-helpers";
 import { getApiRealm } from "@/lib/request-realm";
 import { notifySubscribersAboutNewMatch } from "@/lib/match-notifications";
+import { isAdminTestModeActive } from "@/lib/test-mode";
 
 export const runtime = "nodejs";
 
@@ -33,7 +34,21 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
   const { date, time, location, max_slots, gate_pin, fee_pln } = parsed.data;
-  const db = await getDb();
+  const inTestMode = await isAdminTestModeActive();
+  let db;
+  try {
+    db = await getDb();
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "Baza niedostępna";
+    return NextResponse.json(
+      {
+        error: inTestMode
+          ? `Tryb testowy: nie można zapisać meczu w bazie TEST. ${message}`
+          : message,
+      },
+      { status: 503 }
+    );
+  }
   const realm = getApiRealm(req);
   const fee = fee_pln === undefined ? null : fee_pln;
 
@@ -56,18 +71,31 @@ export async function POST(req: Request) {
   );
   const r = await ins.run(date, time, location, max_slots, fee, gate_pin, realm, 0);
   const newId = Number(r.lastInsertRowid);
-  await logActivity(
-    gate.session.userId,
-    `Dodał mecz do terminarza id ${newId}: ${date} ${time} (${location}), max. ${max_slots} miejsc${fee != null ? `, wynajem ${fee} zł` : ""}`
-  );
+
+  // Log aktywności trybu na PROD (widoczny w panelu), treść z oznaczeniem TEST.
+  try {
+    const prod = await getProdDb();
+    await prod
+      .prepare("INSERT INTO activity_log (user_id, action) VALUES (?, ?)")
+      .run(
+        gate.session.userId,
+        `Dodał mecz do terminarza id ${newId}: ${date} ${time} (${location}), max. ${max_slots} miejsc${fee != null ? `, wynajem ${fee} zł` : ""}${inTestMode ? " [TEST DB]" : ""}`
+      );
+  } catch {
+    await logActivity(
+      gate.session.userId,
+      `Dodał mecz do terminarza id ${newId}${inTestMode ? " [TEST DB]" : ""}`
+    );
+  }
+
   const matchRow = (await db.prepare("SELECT * FROM matches WHERE id = ?").get(newId)) as MatchRow | undefined;
-  if (matchRow) {
+  // Powiadomienia e-mail tylko z produkcji — nie spamuj z meczy testowych.
+  if (matchRow && !inTestMode) {
     try {
-      /** Serverless kończy proces zaraz po odpowiedzi — bez await maile często w ogóle nie wychodzą. */
       await notifySubscribersAboutNewMatch(matchRow);
     } catch (e) {
       console.error("[terminarz/add] notifySubscribersAboutNewMatch:", e);
     }
   }
-  return NextResponse.json({ status: "ok", id: newId });
+  return NextResponse.json({ status: "ok", id: newId, test_mode: inTestMode });
 }

@@ -54,7 +54,12 @@ export async function POST(req: Request) {
       await prod
         .prepare("INSERT INTO activity_log (user_id, action) VALUES (?, ?)")
         .run(adminId, "Tryb testowy WŁĄCZONY (osobna baza TEST)");
-      return NextResponse.json({ enabled: true, configured: true });
+      const res = NextResponse.json({
+        enabled: true,
+        configured: isTestModeConfigured(),
+      });
+      applyTestModeCookie(res, true);
+      return res;
     }
 
     const result = await setAdminTestModeEnabled(adminId, false);
@@ -65,11 +70,13 @@ export async function POST(req: Request) {
         adminId,
         `Tryb testowy WYŁĄCZONY — wyczyszczono bazę TEST (tabele≈${result.wipedTables ?? 0}, wiersze≈${result.wipedRows ?? 0})`
       );
-    return NextResponse.json({
+    const res = NextResponse.json({
       enabled: false,
       configured: isTestModeConfigured(),
       wiped: result,
     });
+    applyTestModeCookie(res, false);
+    return res;
   } catch (e) {
     const message = e instanceof Error ? e.message : "Nie udało się przełączyć trybu testowego";
     return NextResponse.json({ error: message }, { status: 500 });
