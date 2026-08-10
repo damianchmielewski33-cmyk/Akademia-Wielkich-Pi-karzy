@@ -434,7 +434,7 @@
 
   /* Modal — nagłówek formularza (Mundial) */
   .awp-modal-form-header {
-    @apply relative overflow-hidden border-b border-[var(--mundial-gold)]/25 px-6 py-5 text-white;
+    @apply relative overflow-hidden border-b border-[var(--mundial-gold)]/25 px-5 py-4 text-white;
     background: linear-gradient(
       105deg,
       var(--mundial-navy) 0%,

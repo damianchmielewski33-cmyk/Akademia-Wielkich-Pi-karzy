@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getDb, logActivity } from "@/lib/db";
 import { requireAdmin } from "@/lib/api-helpers";
 import { tryRemoveTemporaryGuestIfBalanceZero } from "@/lib/guest-cleanup";
+import { getPrepaidMatchCartAmount, refundMatchCartBeneficiary } from "@/lib/match-cart";
 import { syncPaidFlagWithWallet } from "@/lib/match-paid";
 import {
   assertMatchOpenForSignup,
@@ -109,18 +110,43 @@ export async function PATCH(req: Request, context: RouteContext) {
   if (!match) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const signup = await db
-    .prepare("SELECT id FROM match_signups WHERE match_id = ? AND user_id = ?")
-    .get(mid, parsed.data.user_id) as { id: number } | undefined;
+    .prepare(
+      "SELECT id, COALESCE(paid, 0) AS paid FROM match_signups WHERE match_id = ? AND user_id = ?"
+    )
+    .get(mid, parsed.data.user_id) as { id: number; paid: number } | undefined;
   if (!signup) {
     return NextResponse.json({ error: "Brak zapisu dla tego zawodnika" }, { status: 404 });
   }
 
   const paid = parsed.data.paid ? 1 : 0;
-  await db.prepare("UPDATE match_signups SET paid = ? WHERE match_id = ? AND user_id = ?").run(
-    paid,
-    mid,
-    parsed.data.user_id
-  );
+  let refundedPln = 0;
+
+  // Cofnięcie „opłacone” przy koszyku — najpierw zwrot, żeby nie dało się obciążyć drugi raz.
+  if (paid === 0 && Number(signup.paid) === 1) {
+    const prepaid = await getPrepaidMatchCartAmount(mid, parsed.data.user_id);
+    if (prepaid) {
+      const refund = await refundMatchCartBeneficiary({
+        matchId: mid,
+        beneficiaryUserId: parsed.data.user_id,
+        actorUserId: gate.session.userId,
+        reason: `admin cofnął oznaczenie opłaty — mecz ${match.match_date}`,
+      });
+      if (!refund.ok) {
+        return NextResponse.json({ error: refund.error }, { status: 409 });
+      }
+      refundedPln = refund.refunded_pln;
+    } else {
+      await db
+        .prepare("UPDATE match_signups SET paid = 0 WHERE match_id = ? AND user_id = ?")
+        .run(mid, parsed.data.user_id);
+    }
+  } else {
+    await db.prepare("UPDATE match_signups SET paid = ? WHERE match_id = ? AND user_id = ?").run(
+      paid,
+      mid,
+      parsed.data.user_id
+    );
+  }
 
   const matchLabel = `${match.match_date} ${match.match_time} (${match.location})`;
   if (paid === 1) {
@@ -137,9 +163,11 @@ export async function PATCH(req: Request, context: RouteContext) {
     .prepare("SELECT first_name, last_name FROM users WHERE id = ?")
     .get(parsed.data.user_id) as { first_name: string; last_name: string } | undefined;
 
-  logActivity(
+  await logActivity(
     gate.session.userId,
-    `${paid ? "Oznaczył opłatę" : "Cofnął oznaczenie opłaty"} dla ${who?.first_name ?? "?"} ${who?.last_name ?? "?"} — mecz ${match.match_date} ${match.match_time} (${match.location}), id ${mid}`
+    `${paid ? "Oznaczył opłatę" : "Cofnął oznaczenie opłaty"} dla ${who?.first_name ?? "?"} ${who?.last_name ?? "?"} — mecz ${match.match_date} ${match.match_time} (${match.location}), id ${mid}${
+      refundedPln > 0 ? ` · zwrot koszyka ${refundedPln.toFixed(2)} PLN` : ""
+    }`
   );
 
   if (paid === 1) {
@@ -150,7 +178,7 @@ export async function PATCH(req: Request, context: RouteContext) {
     });
   }
 
-  return NextResponse.json({ status: "ok", paid });
+  return NextResponse.json({ status: "ok", paid, refunded_pln: refundedPln });
 }
 
 const postSchema = z.object({
@@ -275,9 +303,25 @@ export async function DELETE(req: Request, context: RouteContext) {
 
   const uid = parsed.data.user_id;
   const signup = (await db
-    .prepare("SELECT id, COALESCE(commitment, 1) AS commitment FROM match_signups WHERE user_id = ? AND match_id = ?")
-    .get(uid, mid)) as { id: number; commitment: number } | undefined;
+    .prepare(
+      "SELECT id, COALESCE(commitment, 1) AS commitment, COALESCE(paid, 0) AS paid FROM match_signups WHERE user_id = ? AND match_id = ?"
+    )
+    .get(uid, mid)) as { id: number; commitment: number; paid: number } | undefined;
   if (!signup) return NextResponse.json({ ok: true, missing: true }, { status: 200 });
+
+  let refundedPln = 0;
+  if (Number(signup.paid) === 1) {
+    const refund = await refundMatchCartBeneficiary({
+      matchId: mid,
+      beneficiaryUserId: uid,
+      actorUserId: gate.session.userId,
+      reason: `admin wypisał z meczu ${match.match_date}`,
+    });
+    if (!refund.ok) {
+      return NextResponse.json({ error: refund.error }, { status: 409 });
+    }
+    refundedPln = refund.refunded_pln;
+  }
 
   await db.prepare("DELETE FROM match_signups WHERE id = ?").run(signup.id);
   if (signup.commitment === 1) {
@@ -288,10 +332,12 @@ export async function DELETE(req: Request, context: RouteContext) {
     .prepare("SELECT first_name, last_name FROM users WHERE id = ?")
     .get(uid)) as { first_name: string; last_name: string } | undefined;
 
-  logActivity(
+  await logActivity(
     gate.session.userId,
-    `Wypisał ręcznie z meczu ${match.match_date} ${match.match_time} (${match.location}), id ${mid}: ${who?.first_name ?? "?"} ${who?.last_name ?? "?"} (id ${uid})`
+    `Wypisał ręcznie z meczu ${match.match_date} ${match.match_time} (${match.location}), id ${mid}: ${who?.first_name ?? "?"} ${who?.last_name ?? "?"} (id ${uid})${
+      refundedPln > 0 ? ` · zwrot koszyka ${refundedPln.toFixed(2)} PLN` : ""
+    }`
   );
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, refunded_pln: refundedPln });
 }

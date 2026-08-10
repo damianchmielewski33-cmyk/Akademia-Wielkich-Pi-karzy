@@ -5,13 +5,14 @@ import { Calendar, Clock, Info, Loader2, MapPin, TriangleAlert, Users, XCircle }
 import { cn } from "@/lib/utils";
 
 export const modalPanelClass =
-  "rounded-2xl border border-zinc-200/85 bg-zinc-50/75 px-4 py-4 shadow-sm shadow-zinc-950/[0.03] dark:border-zinc-700/55 dark:bg-zinc-800/40";
+  "rounded-xl border border-zinc-200/85 bg-zinc-50/75 px-3.5 py-3 shadow-sm shadow-zinc-950/[0.03] dark:border-zinc-700/55 dark:bg-zinc-800/40";
 
 export const modalEmptyStateClass =
-  "rounded-2xl border border-dashed border-zinc-200 bg-zinc-50/80 px-4 py-10 text-center text-sm text-zinc-600 dark:border-zinc-600 dark:bg-zinc-800/50 dark:text-zinc-400";
+  "rounded-xl border border-dashed border-zinc-200 bg-zinc-50/80 px-4 py-6 text-center text-sm text-zinc-600 dark:border-zinc-600 dark:bg-zinc-800/50 dark:text-zinc-400";
 
+/** Lista w modalu — bez własnego max-h (przewija cały AppModal `scrollable`). */
 export const modalListClass =
-  "space-y-0 overflow-y-auto rounded-2xl border border-zinc-200/85 bg-zinc-50/60 dark:border-zinc-700/55 dark:bg-zinc-800/35";
+  "space-y-0 overflow-hidden rounded-xl border border-zinc-200/85 bg-zinc-50/60 dark:border-zinc-700/55 dark:bg-zinc-800/35";
 
 export const modalTabListClass =
   "grid h-auto w-full gap-1 rounded-xl bg-zinc-100/80 p-1 dark:bg-zinc-800/60";
@@ -93,7 +94,7 @@ export function ModalFormHeader({
   kicker?: string;
 }) {
   return (
-    <div className="awp-modal-form-header">
+    <div className="awp-modal-form-header shrink-0">
       <div className="relative flex items-start gap-3.5 pr-10 text-left">
         <div className="awp-modal-form-header__icon">{icon}</div>
         <div className="min-w-0 flex-1">

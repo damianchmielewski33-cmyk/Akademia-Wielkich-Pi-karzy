@@ -762,7 +762,7 @@ export function MatchManageDialog({
             {filteredAdminUsers.length === 0 ? (
               <p className={modalEmptyStateClass}>Brak wyników.</p>
             ) : (
-              <div className={cn(modalListClass, "max-h-[55vh] space-y-2 p-1")}>
+              <div className={cn(modalListClass, "space-y-2 p-1")}>
                 {filteredAdminUsers.map((u) => {
                   const isSigned = signupUserIds.has(u.id);
                   return (

@@ -177,7 +177,7 @@ export function PilkarzeClient({ players }: { players: PlayerListItem[] }) {
             <PlayerStatsBarChart data={chartData ?? []} />
             <h4 className="font-bold tracking-tight text-emerald-950 dark:text-emerald-100">Historia meczów</h4>
             <div className="pitch-rule mb-2 mt-2 w-20 opacity-60" />
-            <ul className={cn(modalListClass, "mt-1 max-h-48 text-sm text-emerald-950 dark:text-emerald-100")}>
+            <ul className={cn(modalListClass, "mt-1 text-sm text-emerald-950 dark:text-emerald-100")}>
               {data.games.map((g, i) => (
                 <li
                   key={i}

@@ -258,6 +258,8 @@ export function AdminWalletsSaldoSection({
   const [adminBalanceUserQuery, setAdminBalanceUserQuery] = useState("");
   const [adminBalanceTarget, setAdminBalanceTarget] = useState("");
   const [adminBalanceNote, setAdminBalanceNote] = useState("");
+  /** admin = gotówka/BLIK (G), operator = płatności online HotPay (O) */
+  const [adminBalanceWalletKind, setAdminBalanceWalletKind] = useState<"admin" | "operator">("admin");
   const [adminBalanceSubmitting, setAdminBalanceSubmitting] = useState(false);
   const [topUpUserId, setTopUpUserId] = useState<number | null>(null);
   const [topUpUserQuery, setTopUpUserQuery] = useState("");
@@ -387,6 +389,10 @@ export function AdminWalletsSaldoSection({
       toast.error("Podaj prawidłowe saldo");
       return;
     }
+    if (adminBalanceWalletKind === "operator" && !adminBalanceNote.trim()) {
+      toast.error("Przy korekcie portfela online podaj powód (np. na wniosek gracza)");
+      return;
+    }
     setAdminBalanceSubmitting(true);
     try {
       const r = await fetchJson<{
@@ -399,6 +405,7 @@ export function AdminWalletsSaldoSection({
         body: JSON.stringify({
           user_id,
           balance_pln,
+          wallet_kind: adminBalanceWalletKind,
           note: adminBalanceNote.trim() ? adminBalanceNote.trim() : undefined,
         }),
       });
@@ -409,7 +416,11 @@ export function AdminWalletsSaldoSection({
       if (r.data.noChange) {
         toast.message("Saldo bez zmian");
       } else {
-        toast.success("Ustawiono saldo (korekta zapisana w historii)");
+        toast.success(
+          adminBalanceWalletKind === "operator"
+            ? "Ustawiono saldo online (korekta w historii)"
+            : "Ustawiono saldo gotówka/BLIK (korekta w historii)"
+        );
       }
       setAdminBalanceTarget("");
       setAdminBalanceNote("");
@@ -434,6 +445,7 @@ export function AdminWalletsSaldoSection({
     setAdminBalanceUserQuery("");
     setTopUpIsOperatorCorrection(false);
     setTopUpOperatorReason("");
+    setAdminBalanceWalletKind("admin");
   }
 
   const topUpFormBody = (
@@ -462,7 +474,7 @@ export function AdminWalletsSaldoSection({
         <>
           <div className={cn("mt-4 grid gap-3 sm:grid-cols-2")}>
             <div>
-              <Label htmlFor="admin-topup-amount">Kwota przelewu (PLN)</Label>
+              <Label htmlFor="admin-topup-amount">Kwota wpłaty (PLN)</Label>
               <Input
                 id="admin-topup-amount"
                 type="text"
@@ -478,7 +490,7 @@ export function AdminWalletsSaldoSection({
               <Input
                 id="admin-topup-note"
                 type="text"
-                placeholder="np. BLIK od Jana"
+                placeholder="np. BLIK / gotówka od Jana"
                 value={topUpNote}
                 onChange={(e) => setTopUpNote(e.target.value)}
                 className="mt-1"
@@ -567,8 +579,42 @@ export function AdminWalletsSaldoSection({
             Docelowe saldo
           </p>
           <p className="mt-1 text-xs text-amber-950/75 dark:text-amber-100/75">
-            Wpisz kwotę, na jaką ma zostać ustawione saldo — różnica trafi do historii jako korekta.
+            Wybierz portfel i wpisz docelową kwotę — różnica trafi do historii jako korekta.
           </p>
+          <div className="mt-3 flex flex-wrap gap-2" role="group" aria-label="Który portfel korygować">
+            <Button
+              type="button"
+              size="sm"
+              variant={adminBalanceWalletKind === "admin" ? "default" : "outline"}
+              onClick={() => setAdminBalanceWalletKind("admin")}
+            >
+              Gotówka / BLIK (G)
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={adminBalanceWalletKind === "operator" ? "default" : "outline"}
+              onClick={() => setAdminBalanceWalletKind("operator")}
+            >
+              Płatności online (O)
+            </Button>
+          </div>
+          <p className="mt-2 text-xs tabular-nums text-amber-950/80 dark:text-amber-100/80">
+            Aktualnie:{" "}
+            <span className="font-semibold">
+              {formatPln(
+                adminBalanceWalletKind === "operator"
+                  ? Number(selectedBalancePlayer.operator_balance_pln ?? 0)
+                  : Number(selectedBalancePlayer.admin_balance_pln ?? selectedBalancePlayer.balance_pln ?? 0)
+              )}
+            </span>
+            {" · "}łącznie {formatPln(Number(selectedBalancePlayer.balance_pln ?? 0))}
+          </p>
+          {adminBalanceWalletKind === "operator" ? (
+            <p className="mt-2 rounded-lg border border-amber-300/80 bg-amber-100/70 px-3 py-2 text-xs text-amber-950 dark:border-amber-700/60 dark:bg-amber-950/40 dark:text-amber-100">
+              Korekta portfela online — tylko na wniosek gracza lub przy błędzie księgowania HotPay. Powód jest wymagany.
+            </p>
+          ) : null}
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
             <div>
               <Label htmlFor="admin-balance-target">Nowe saldo (PLN)</Label>
@@ -583,11 +629,23 @@ export function AdminWalletsSaldoSection({
               />
             </div>
             <div>
-              <Label htmlFor="admin-balance-note">Opis korekty (opcjonalnie)</Label>
+              <Label htmlFor="admin-balance-note">
+                {adminBalanceWalletKind === "operator" ? (
+                  <>
+                    Powód korekty <span className="text-red-600">*</span>
+                  </>
+                ) : (
+                  "Opis korekty (opcjonalnie)"
+                )}
+              </Label>
               <Input
                 id="admin-balance-note"
                 type="text"
-                placeholder="np. korekta po gotówce"
+                placeholder={
+                  adminBalanceWalletKind === "operator"
+                    ? "np. na wniosek gracza — błędne doładowanie HotPay"
+                    : "np. korekta po gotówce"
+                }
                 value={adminBalanceNote}
                 onChange={(e) => setAdminBalanceNote(e.target.value)}
                 className="mt-1 bg-white dark:bg-zinc-950"
@@ -624,7 +682,9 @@ export function AdminWalletsSaldoSection({
               Lista sald
             </p>
             <p className="mt-0.5 text-xs text-zinc-600 dark:text-zinc-400">
-              {list.length ? `Użytkowników: ${list.length}` : "—"}
+              {list.length
+                ? `Użytkowników: ${list.length} · G = gotówka/BLIK · O = online`
+                : "—"}
             </p>
           </div>
           {showReload ? (
@@ -707,10 +767,10 @@ export function AdminWalletsSaldoSection({
                   </span>
                   {"admin_balance_pln" in p && ("operator_balance_pln" in p) ? (
                     <div className="flex shrink-0 flex-col items-end gap-0.5">
-                      <span className="text-[10px] tabular-nums text-zinc-500 dark:text-zinc-400">
+                      <span className="text-[10px] tabular-nums text-zinc-500 dark:text-zinc-400" title="Gotówka / BLIK">
                         G: {formatPln(Number((p as AdminWalletPlayerRow).admin_balance_pln ?? 0))}
                       </span>
-                      <span className="text-[10px] tabular-nums text-zinc-500 dark:text-zinc-400">
+                      <span className="text-[10px] tabular-nums text-zinc-500 dark:text-zinc-400" title="Płatności online">
                         O: {formatPln(Number((p as AdminWalletPlayerRow).operator_balance_pln ?? 0))}
                       </span>
                     </div>
@@ -776,7 +836,7 @@ export function AdminWalletsSaldoSection({
       {!embedded ? (
         <AdminToolbar
           title="Portfele graczy"
-          description="Salda zarejestrowanych użytkowników i ręczne korekty — docelowe saldo zapisuje się jako transakcja korygująca w historii portfela."
+          description="Salda graczy (G = gotówka/BLIK, O = online). Doładuj wpłatę albo ustaw docelowe saldo osobno dla każdego portfela."
           onReload={() => void refresh()}
           loading={adminLoading}
         />
@@ -817,7 +877,7 @@ export function AdminWalletsSaldoSection({
                 embedded={embedded}
                 className="mb-0"
                 title="Doładuj saldo"
-                description="Po otrzymaniu przelewu wpisz kwotę — zostanie dodana do salda zawodnika jako wpłata."
+                description="Wpłata gotówką lub BLIK (portfel G). Zaznacz korektę operatora, jeśli trzeba poprawić saldo online (O)."
               >
                 {topUpFormBody}
               </PlatnosciCollapsible>
@@ -827,7 +887,7 @@ export function AdminWalletsSaldoSection({
               embedded={embedded}
               className="mb-0"
               title="Ustaw saldo zawodnika"
-              description='Wpisujesz docelowe saldo. System zapisze różnicę jako „Korekta” w historii portfela.'
+              description="Korekta docelowego salda: Gotówka/BLIK (G) albo płatności online (O). Różnica trafia do historii jako „Korekta”."
             >
               {adjustFormBody}
             </PlatnosciCollapsible>
@@ -866,12 +926,12 @@ export function AdminWalletsSaldoSection({
             }
             description={
               activeWalletTab === "topup"
-                ? "Po otrzymaniu przelewu wpisz kwotę — zostanie dodana do salda zawodnika jako wpłata."
+                ? "Wpłata gotówką lub BLIK (portfel G). Zaznacz korektę operatora, jeśli trzeba poprawić saldo online (O)."
                 : activeWalletTab === "adjust"
-                  ? 'Wpisujesz docelowe saldo. System zapisze różnicę jako „Korekta” w historii portfela.'
+                  ? "Korekta docelowego salda: Gotówka/BLIK (G) albo płatności online (O). Różnica trafia do historii jako „Korekta”."
                   : activeWalletTab === "links"
                     ? "Wyślij zawodnikom link z podglądem sald — ostatni mecz lub zbiorcze salda wszystkich graczy."
-                    : "Podgląd sald zarejestrowanych użytkowników."
+                    : "Podgląd sald: łącznie oraz G (gotówka/BLIK) i O (online)."
             }
           >
             <div className="space-y-4">

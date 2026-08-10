@@ -7,7 +7,6 @@ import { MatchSignupCountsBlock } from "@/components/terminarz-match-counts";
 import { AppModal } from "@/components/ui/app-modal";
 import { Badge } from "@/components/ui/badge";
 import { ModalMatchSummary, modalListClass } from "@/components/ui/modal-shared";
-import { cn } from "@/lib/utils";
 
 type Props = {
   open: boolean;
@@ -43,7 +42,7 @@ export function MatchSignupsRosterModal({ open, onOpenChange, match, matchId, pl
               «Jeszcze nie wiem» i «nie biorę udziału» nie zajmują miejsca w składzie.
             </p>
           </div>
-          <ul className={cn(modalListClass, "max-h-[min(24rem,55vh)]")}>
+          <ul className={modalListClass}>
             {data.players.map((p, i) => (
               <li
                 key={`c-${p.userId}-${i}`}

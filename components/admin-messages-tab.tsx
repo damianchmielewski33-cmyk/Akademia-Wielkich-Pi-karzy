@@ -597,14 +597,14 @@ export function AdminMessagesTab({ onUnreadChange, mode = "page", active = true 
 
       <div
         className={cn(
-          isPopup ? "min-h-0 flex-1" : "max-h-[min(380px,48vh)] min-h-[16rem]"
+          isPopup ? "min-h-0 flex-1" : "max-h-[min(380px,48vh)] min-h-[8rem]"
         )}
       >
         <ChatTranscript
           tone={chatTone}
           className={cn(
             "h-full",
-            isPopup ? "max-h-[min(42vh,22rem)] min-h-[12rem] lg:max-h-none lg:min-h-[18rem]" : "max-h-[inherit] min-h-[inherit]"
+            isPopup ? "max-h-[min(42vh,22rem)] min-h-[5rem] lg:max-h-none lg:min-h-[10rem]" : "max-h-[inherit] min-h-[inherit]"
           )}
           empty={
             loadingThread ? (

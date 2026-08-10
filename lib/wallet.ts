@@ -112,6 +112,8 @@ function formatPlayerLabel(u: {
 
 /**
  * Przelew P2P: dwie pozycje ledgerowe (debit nadawcy, credit odbiorcy).
+ * Debet/kredyt dzielone proporcjonalnie między portfele G (admin) i O (operator),
+ * żeby nie psuć rozrachunku gotówka vs online.
  * Po debicie weryfikuje saldo — przy wyścigu równoległym cofa debet.
  */
 export async function transferWalletFunds(args: {
@@ -162,8 +164,8 @@ export async function transferWalletFunds(args: {
     return { ok: false, error: "RECIPIENT_NOT_FOUND" };
   }
 
-  const balanceBefore = await getUserWalletBalancePln(args.fromUserId);
-  if (balanceBefore < amount) {
+  const balancesBefore = await getWalletBalances(args.fromUserId);
+  if (balancesBefore.total < amount) {
     return { ok: false, error: "INSUFFICIENT_FUNDS" };
   }
 
@@ -171,25 +173,57 @@ export async function transferWalletFunds(args: {
   const fromLabel = formatPlayerLabel(sender);
   const extraNote = args.note?.trim() ? ` — ${args.note.trim()}` : "";
 
-  const debit = await db
-    .prepare(
-      `INSERT INTO wallet_transactions (user_id, kind, amount_pln, related_user_id, note, is_test)
-       VALUES (?, 'transfer', ?, ?, ?, ?)`
-    )
-    .run(args.fromUserId, -amount, args.toUserId, `Przelew do ${toLabel}${extraNote}`, 0);
-
-  const balanceAfterDebit = await getUserWalletBalancePln(args.fromUserId);
-  if (balanceAfterDebit < 0) {
-    await db.prepare(`DELETE FROM wallet_transactions WHERE id = ?`).run(Number(debit.lastInsertRowid));
+  // Najpierw z operatora (online), reszta z admina (gotówka/BLIK) — jak przy koszyku.
+  const fromOperator = roundPln(Math.min(Math.max(0, balancesBefore.operator), amount));
+  const fromAdmin = roundPln(amount - fromOperator);
+  const debitParts: { wallet_kind: "admin" | "operator"; amount_pln: number }[] = [];
+  if (fromOperator > 0) debitParts.push({ wallet_kind: "operator", amount_pln: fromOperator });
+  if (fromAdmin > 0) debitParts.push({ wallet_kind: "admin", amount_pln: fromAdmin });
+  if (debitParts.length === 0) {
     return { ok: false, error: "INSUFFICIENT_FUNDS" };
   }
 
-  await db
-    .prepare(
-      `INSERT INTO wallet_transactions (user_id, kind, amount_pln, related_user_id, note, is_test)
-       VALUES (?, 'transfer', ?, ?, ?, ?)`
-    )
-    .run(args.toUserId, amount, args.fromUserId, `Przelew od ${fromLabel}${extraNote}`, 0);
+  const debitIds: number[] = [];
+  for (const part of debitParts) {
+    const debit = await db
+      .prepare(
+        `INSERT INTO wallet_transactions (user_id, kind, amount_pln, related_user_id, wallet_kind, note, is_test)
+         VALUES (?, 'transfer', ?, ?, ?, ?, ?)`
+      )
+      .run(
+        args.fromUserId,
+        -part.amount_pln,
+        args.toUserId,
+        part.wallet_kind,
+        `Przelew do ${toLabel}${extraNote}`,
+        0
+      );
+    debitIds.push(Number(debit.lastInsertRowid));
+  }
+
+  const balanceAfterDebit = await getUserWalletBalancePln(args.fromUserId);
+  if (balanceAfterDebit < 0) {
+    for (const id of debitIds) {
+      await db.prepare(`DELETE FROM wallet_transactions WHERE id = ?`).run(id);
+    }
+    return { ok: false, error: "INSUFFICIENT_FUNDS" };
+  }
+
+  for (const part of debitParts) {
+    await db
+      .prepare(
+        `INSERT INTO wallet_transactions (user_id, kind, amount_pln, related_user_id, wallet_kind, note, is_test)
+         VALUES (?, 'transfer', ?, ?, ?, ?, ?)`
+      )
+      .run(
+        args.toUserId,
+        part.amount_pln,
+        args.fromUserId,
+        part.wallet_kind,
+        `Przelew od ${fromLabel}${extraNote}`,
+        0
+      );
+  }
 
   const balance_pln = await getUserWalletBalancePln(args.fromUserId);
   return { ok: true, amount_pln: amount, balance_pln };
@@ -306,6 +340,11 @@ export async function createMatchCharge(args: {
        VALUES (?, 'match_charge', ?, ?, 'operator', ?, ?)`
     ).run(args.userId, -fee, args.matchId, chargeNote, 0);
   }
+
+  // Spójnie z koszykiem: po obciążeniu flaga paid=1 (blokuje ponowne obciążenie koszykiem).
+  await db
+    .prepare(`UPDATE match_signups SET paid = 1 WHERE match_id = ? AND user_id = ?`)
+    .run(args.matchId, args.userId);
 
   await tryRemoveTemporaryGuestIfBalanceZero({
     userId: args.userId,

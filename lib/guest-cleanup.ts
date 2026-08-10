@@ -37,6 +37,14 @@ export async function tryRemoveTemporaryGuestIfBalanceZero(args: {
   const mid = args.matchId ?? user.temporary_guest_match_id;
   if (!mid) return false;
 
+  const matchRow = (await db
+    .prepare(`SELECT COALESCE(played, 0) AS played FROM matches WHERE id = ?`)
+    .get(mid)) as { played: number } | undefined;
+  // Po rozegranym meczu nie kasujemy gościa ani signed_up — historyczny skład / zaokrąglenia składek.
+  if (matchRow && Number(matchRow.played) === 1) {
+    return false;
+  }
+
   const uid = args.userId;
 
   await db.prepare("DELETE FROM match_signups WHERE user_id = ? AND match_id = ?").run(uid, mid);

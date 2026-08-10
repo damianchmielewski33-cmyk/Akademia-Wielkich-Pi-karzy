@@ -99,7 +99,7 @@ export function TransportChatClient({ matchId, currentUserId, initialMessages }:
     <div className="flex flex-col gap-3 overflow-hidden rounded-2xl border border-emerald-200/80 bg-white/95 p-3 shadow-sm dark:border-emerald-900/40 dark:bg-zinc-950/40 sm:p-4">
       <ChatTranscript
         tone="light"
-        className="max-h-[min(420px,55vh)] min-h-[14rem]"
+        className="max-h-[min(420px,55vh)] min-h-[6rem]"
         empty={
           items.length === 0 ? (
             <p className="text-center text-sm text-zinc-500 dark:text-zinc-400">

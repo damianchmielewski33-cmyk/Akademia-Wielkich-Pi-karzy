@@ -15,12 +15,26 @@ export async function POST(_req: Request, ctx: Ctx) {
     return NextResponse.json({ error: "Invalid id" }, { status: 400 });
   }
   const db = await getDb();
-  const row = await db
+  const row = (await db
     .prepare("SELECT match_date, match_time, location FROM matches WHERE id = ?")
-    .get(mid) as { match_date: string; match_time: string; location: string } | undefined;
+    .get(mid)) as { match_date: string; match_time: string; location: string } | undefined;
   if (!row) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  const charges = (await db
+    .prepare(`SELECT COUNT(*) AS c FROM match_wallet_charges WHERE match_id = ?`)
+    .get(mid)) as { c: number } | undefined;
+  if (Number(charges?.c ?? 0) > 0) {
+    return NextResponse.json(
+      {
+        error:
+          "Nie można cofnąć statusu rozegranego — mecz ma już rozliczenia w portfelach. Anuluj mecz (ze zwrotami) albo skoryguj salda ręcznie.",
+      },
+      { status: 409 }
+    );
+  }
+
   await db.prepare("UPDATE matches SET played = 0 WHERE id = ?").run(mid);
-  logActivity(
+  await logActivity(
     gate.session.userId,
     `Cofnął status rozegranego meczu: ${row.match_date} ${row.match_time} (${row.location}), id ${mid}`
   );

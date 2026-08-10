@@ -3,13 +3,13 @@
 import { useEffect, useState } from "react";
 import { toast } from "@/lib/app-toast";
 import { Car, Loader2, TrainFront, Wallet } from "lucide-react";
-import { createHotpayTopup } from "@/lib/hotpay-client";
+import { currentHotpayReturnPath, payMatchCart } from "@/lib/hotpay-client";
 import type { SignupTransportRow } from "@/lib/transport";
 import { AppModal } from "@/components/ui/app-modal";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { PayButton } from "@/components/pay-button";
-import { MATCH_PREPAYMENT_PLN } from "@/lib/match-fee";
+import { formatMatchFeePln, MATCH_PREPAYMENT_PLN } from "@/lib/match-fee";
 
 type Mode = "car" | "public" | null;
 
@@ -57,7 +57,7 @@ export function MatchTransportSignupDialog({
     setNeedsTransport(null);
   }, [open, initial, intent]);
 
-  /** Zapisuje (bez danych transportu) i opcjonalnie inicjuje płatność HotPay. */
+  /** Zapisuje (bez danych transportu) i opcjonalnie opłaca zaliczkę koszykiem (portfel / HotPay). */
   async function signupNoTransport(pay: boolean) {
     setBusy(true);
     try {
@@ -70,7 +70,7 @@ export function MatchTransportSignupDialog({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ drivesCar: false, needsTransport: false }),
       });
-      const data = await res.json().catch(() => ({})) as { error?: string };
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
       if (res.status === 401) {
         window.location.href = "/login";
         return;
@@ -88,10 +88,38 @@ export function MatchTransportSignupDialog({
       }
 
       try {
-        const hotpayUrl = await createHotpayTopup(MATCH_PREPAYMENT_PLN);
+        const meRes = await fetch("/api/wallet/me");
+        const me = (await meRes.json().catch(() => ({}))) as { user_id?: number };
+        const myId = Number(me.user_id);
+        if (!Number.isFinite(myId) || myId <= 0) {
+          toast.success("Zapisano na mecz. Opłatę uregulujesz w zakładce Płatności.");
+          onOpenChange(false);
+          onCompleted();
+          return;
+        }
+
+        const result = await payMatchCart({
+          matchId,
+          userIds: [myId],
+          allowHotpay: true,
+          returnPath: currentHotpayReturnPath(`/terminarz?mecz=${matchId}`),
+        });
+
+        if (result.method === "hotpay") {
+          toast.info("Trwa przekierowanie do płatności…");
+          onOpenChange(false);
+          onCompleted();
+          window.location.assign(result.url);
+          return;
+        }
+
+        toast.success(
+          intent === "confirm"
+            ? `Potwierdzono i opłacono · ${formatMatchFeePln(result.amount_pln)}`
+            : `Zapisano i opłacono · ${formatMatchFeePln(result.amount_pln)}`
+        );
         onOpenChange(false);
         onCompleted();
-        window.location.assign(hotpayUrl);
       } catch {
         toast.success("Zapisano na mecz. Opłatę możesz uregulować z portfela w zakładce Płatności.");
         onOpenChange(false);
@@ -169,8 +197,8 @@ export function MatchTransportSignupDialog({
         title={intent === "confirm" ? "Potwierdź udział w meczu" : "Zapisz się na mecz"}
         description={
           intent === "confirm"
-            ? "Potwierdzasz udział — czy chcesz od razu opłacić wpisowe?"
-            : "Zajmujesz miejsce w składzie — czy chcesz od razu opłacić wpisowe?"
+            ? "Potwierdzasz udział — czy chcesz od razu opłacić zaliczkę na wpisowe (koszyk)?"
+            : "Zajmujesz miejsce w składzie — czy chcesz od razu opłacić zaliczkę na wpisowe (koszyk)?"
         }
       >
         <div className="rounded-xl border border-emerald-200/80 bg-emerald-50/50 p-4 dark:border-emerald-800/60 dark:bg-emerald-950/40">

@@ -698,7 +698,7 @@ export function WriteToAdminFloat({ defaults, recipients, hideFloat = false }: P
 
             <ChatTranscript
               tone="pitch"
-              className="max-h-[min(300px,40vh)] min-h-[11rem]"
+              className="max-h-[min(300px,40vh)] min-h-[4.5rem]"
               empty={
                 loadingThread && messages.length === 0 ? (
                   <Loader2 className="h-5 w-5 animate-spin text-emerald-100/70" aria-hidden />
@@ -845,7 +845,7 @@ export function WriteToAdminFloat({ defaults, recipients, hideFloat = false }: P
 
             <ChatTranscript
               tone="pitch"
-              className="max-h-[min(320px,42vh)] min-h-[12rem]"
+              className="max-h-[min(320px,42vh)] min-h-[4.5rem]"
               empty={
                 loadingThread && messages.length === 0 ? (
                   <Loader2 className="h-5 w-5 animate-spin text-emerald-100/70" aria-hidden />

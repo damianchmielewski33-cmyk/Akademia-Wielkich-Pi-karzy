@@ -92,6 +92,7 @@ export async function POST(req: Request, ctx: Ctx) {
     final_fee_pln: number;
     credited_pln: number;
     payer_user_id: number | null;
+    source: "cart" | "flag";
   }[] = [];
   const skipped: { user_id: number; reason: string }[] = [];
 
@@ -135,6 +136,7 @@ export async function POST(req: Request, ctx: Ctx) {
       final_fee_pln: finalFee,
       credited_pln: result.credited_pln,
       payer_user_id: result.payer_user_id,
+      source: result.source,
     });
   }
 

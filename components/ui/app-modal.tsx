@@ -20,6 +20,8 @@ const sizeClasses = {
   full: "sm:max-w-[min(96vw,56rem)]",
 } as const;
 
+const modalMaxH = "max-h-[min(90dvh,calc(100dvh-2rem))]";
+
 export type AppModalProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -48,6 +50,7 @@ export type AppModalProps = {
 
 /**
  * Ujednolicony modal aplikacji — nagłówek, opis, treść i stopka w jednym miejscu.
+ * Wysokość zawsze dopasowuje się do treści (bez pustego czarnego pola).
  */
 export function AppModal({
   open,
@@ -81,8 +84,11 @@ export function AppModal({
         className={cn(
           sizeClasses[size],
           formHeader && "awp-modal-content--form gap-0 p-0 pt-0",
-          scrollable && !formHeader && "max-h-[min(90dvh,calc(100dvh-2rem))] overflow-y-auto",
-          scrollable && formHeader && "max-h-[min(90dvh,calc(100dvh-2rem))] grid-rows-[auto_1fr_auto] overflow-hidden",
+          // Przy długiej treści: sztywny max-h, środek się kurczy i przewija; przy krótkiej — h-fit
+          scrollable && !formHeader && cn("h-fit", modalMaxH, "overflow-y-auto"),
+          scrollable &&
+            formHeader &&
+            cn(modalMaxH, "overflow-hidden"),
           hideCloseButton && "[&>button]:hidden",
           className
         )}
@@ -107,7 +113,7 @@ export function AppModal({
             </DialogHeader>
           </>
         ) : (
-          <DialogHeader className={cn("relative", description ? undefined : "pb-0.5")}>
+          <DialogHeader className={cn("relative shrink-0", description ? undefined : "pb-0.5")}>
             <DialogTitle>{title}</DialogTitle>
             {description ? (
               typeof description === "string" ? (
@@ -122,9 +128,10 @@ export function AppModal({
         {children ? (
           <div
             className={cn(
-              "space-y-4",
-              formHeader ? "overflow-y-auto px-6 py-5" : "py-0.5",
-              scrollable && formHeader && "min-h-0",
+              "space-y-3",
+              formHeader
+                ? cn("min-h-0 overflow-y-auto px-5 py-4", scrollable && "flex-1")
+                : "py-0.5",
               contentClassName
             )}
           >
@@ -135,8 +142,9 @@ export function AppModal({
         {footer ? (
           <DialogFooter
             className={cn(
-              "gap-2 border-t border-zinc-200/90 bg-zinc-50/50 pt-4 dark:border-zinc-700/60 dark:bg-zinc-900/40 sm:justify-end",
-              formHeader && "px-6 pb-6",
+              "shrink-0 gap-2 border-t border-zinc-200/90 bg-zinc-50/50 pt-3 dark:border-zinc-700/60 dark:bg-zinc-900/40 sm:justify-end",
+              formHeader && "px-5 pb-4",
+              !formHeader && "pb-0",
               footerClassName
             )}
           >

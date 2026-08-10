@@ -146,7 +146,7 @@ export function LineupPlayerStatsDialog({ userId, open, onOpenChange }: Props) {
           {data.games.length === 0 ? (
             <p className={modalEmptyStateClass}>Brak zapisanych statystyk z rozegranych meczów.</p>
           ) : (
-            <ul className={cn(modalListClass, "mt-1 max-h-48 text-sm text-emerald-950 dark:text-emerald-100")}>
+            <ul className={cn(modalListClass, "mt-1 text-sm text-emerald-950 dark:text-emerald-100")}>
               {data.games.map((g, i) => (
                 <li
                   key={`${g.date}-${g.time}-${i}`}

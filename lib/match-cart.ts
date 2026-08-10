@@ -79,6 +79,10 @@ export async function listMatchCartOptions(): Promise<MatchCartMatchOption[]> {
           AND COALESCE(ms.commitment, 1) = 1
           AND COALESCE(ms.paid, 0) = 0
           AND COALESCE(u.is_temporary, 0) = 0
+          AND NOT EXISTS (
+            SELECT 1 FROM match_wallet_charges mwc
+            WHERE mwc.match_id = ms.match_id AND mwc.user_id = ms.user_id
+          )
         ORDER BY u.first_name ASC, u.last_name ASC
       `
       )
@@ -155,6 +159,8 @@ function resolveMatchCartDebitParts(
 ): { ok: true; parts: { wallet_kind: "admin" | "operator"; amount_pln: number }[] } | { ok: false } {
   if (balances.total < amountPln) return { ok: false };
   if (forcedKind) {
+    const bucket = forcedKind === "operator" ? balances.operator : balances.admin;
+    if (bucket + 1e-9 < amountPln) return { ok: false };
     return { ok: true, parts: [{ wallet_kind: forcedKind, amount_pln: amountPln }] };
   }
   if (balances.operator >= amountPln) {
@@ -208,6 +214,10 @@ export async function applyMatchCartFromWallet(args: {
         AND COALESCE(ms.commitment, 1) = 1
         AND COALESCE(ms.paid, 0) = 0
         AND COALESCE(u.is_temporary, 0) = 0
+        AND NOT EXISTS (
+          SELECT 1 FROM match_wallet_charges mwc
+          WHERE mwc.match_id = ms.match_id AND mwc.user_id = ms.user_id
+        )
     `
     )
     .all(args.matchId, ...uniqueIds)) as {
@@ -366,6 +376,10 @@ export async function createPendingMatchCart(args: {
         AND COALESCE(ms.commitment, 1) = 1
         AND COALESCE(ms.paid, 0) = 0
         AND COALESCE(u.is_temporary, 0) = 0
+        AND NOT EXISTS (
+          SELECT 1 FROM match_wallet_charges mwc
+          WHERE mwc.match_id = ms.match_id AND mwc.user_id = ms.user_id
+        )
     `
     )
     .all(args.matchId, ...uniqueIds)) as { user_id: number }[];
@@ -496,6 +510,8 @@ export async function settlePrepaidPlayerWithoutCharge(args: {
       credited_pln: number;
       payer_user_id: number | null;
       prepaid_pln: number;
+      /** cart = realna wpłata koszykiem; flag = sama flaga paid bez pozycji koszyka */
+      source: "cart" | "flag";
       already_settled?: boolean;
     }
   | { ok: false; error: "ALREADY_CHARGED" | "ERROR"; message?: string }
@@ -504,10 +520,11 @@ export async function settlePrepaidPlayerWithoutCharge(args: {
   const finalFee = roundPln(Math.max(0, Number(args.finalFeePln) || 0));
   const prepaid = await getPrepaidMatchCartAmount(args.matchId, args.beneficiaryUserId);
   const prepaidPln = prepaid?.amount_pln ?? 0;
+  const source: "cart" | "flag" = prepaidPln > 0 ? "cart" : "flag";
   const note =
-    prepaidPln > 0
+    source === "cart"
       ? `Rozliczenie — opłacone z góry (koszyk ${formatMatchFeePln(prepaidPln)})`
-      : `Rozliczenie — opłacone z góry (flaga paid)`;
+      : `Rozliczenie — opłacone z góry (ręczna flaga paid, bez koszyka)`;
 
   try {
     await db
@@ -519,14 +536,27 @@ export async function settlePrepaidPlayerWithoutCharge(args: {
   } catch (e) {
     const msg = String((e as { message?: string } | undefined)?.message ?? "");
     if (msg.includes("UNIQUE") || msg.includes("constraint") || msg.includes("PRIMARY")) {
-      return { ok: true, credited_pln: 0, payer_user_id: null, prepaid_pln: prepaidPln, already_settled: true };
+      return {
+        ok: true,
+        credited_pln: 0,
+        payer_user_id: null,
+        prepaid_pln: prepaidPln,
+        source,
+        already_settled: true,
+      };
     }
     return { ok: false, error: "ERROR", message: msg };
   }
 
   // Brak koszyka albo składka ≥ wpłaty — bez korekty salda.
   if (!prepaid || prepaidPln <= finalFee) {
-    return { ok: true, credited_pln: 0, payer_user_id: prepaid?.payer_user_id ?? null, prepaid_pln: prepaidPln };
+    return {
+      ok: true,
+      credited_pln: 0,
+      payer_user_id: prepaid?.payer_user_id ?? null,
+      prepaid_pln: prepaidPln,
+      source,
+    };
   }
 
   const surplus = roundPln(prepaidPln - finalFee);
@@ -562,6 +592,7 @@ export async function settlePrepaidPlayerWithoutCharge(args: {
     credited_pln: surplus,
     payer_user_id: prepaid.payer_user_id,
     prepaid_pln: prepaidPln,
+    source,
   };
 }
 

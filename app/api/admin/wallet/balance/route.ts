@@ -9,10 +9,10 @@ export const runtime = "nodejs";
 
 const postSchema = z.object({
   user_id: z.coerce.number().int().positive(),
-  /** Docelowe saldo łączne (PLN). */
+  /** Docelowe saldo wybranego portfela (PLN). */
   balance_pln: z.coerce.number().finite().min(-10000).max(10000),
   note: z.string().trim().max(200).optional(),
-  /** Domyślnie 'admin'. Korekta 'operator' tylko na wniosek gracza. */
+  /** admin = gotówka/BLIK; operator = płatności online (HotPay). */
   wallet_kind: z.enum(["admin", "operator"]).default("admin"),
 });
 
@@ -21,7 +21,7 @@ function round2(n: number) {
 }
 
 /**
- * Admin ustawia docelowe saldo portfela zawodnika.
+ * Admin ustawia docelowe saldo portfela zawodnika (G lub O).
  * Realizowane jako transakcja typu "adjustment" (audytowalne), a nie podmiana agregatu.
  */
 export async function POST(req: Request) {
@@ -43,6 +43,13 @@ export async function POST(req: Request) {
   const db = await getDb();
   const { user_id, balance_pln, note, wallet_kind } = parsed.data;
 
+  if (wallet_kind === "operator" && !note) {
+    return NextResponse.json(
+      { error: "Przy korekcie portfela online (płatności operatora) podaj powód." },
+      { status: 400 }
+    );
+  }
+
   const user = (await db
     .prepare("SELECT id, COALESCE(is_admin, 0) AS is_admin FROM users WHERE id = ?")
     .get(user_id)) as { id: number; is_admin: number } | undefined;
@@ -63,7 +70,7 @@ export async function POST(req: Request) {
     });
   }
 
-  const walletLabel = wallet_kind === "operator" ? "operatora" : "admina";
+  const walletLabel = wallet_kind === "operator" ? "online (operator)" : "gotówka/BLIK (admin)";
   const baseNote = `Ustawienie salda portfela ${walletLabel} na ${target} PLN (było ${current} PLN)`;
   const fullNote = note ? `${baseNote} · ${note}` : baseNote;
   const storedNote = fullNote.length > 200 ? `${fullNote.slice(0, 197)}...` : fullNote;

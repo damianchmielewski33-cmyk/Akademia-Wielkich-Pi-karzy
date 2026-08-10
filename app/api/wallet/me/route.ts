@@ -98,6 +98,7 @@ export async function GET(req: Request) {
   }
 
   return NextResponse.json({
+    user_id: userId,
     balance_pln: balances.total,
     admin_balance_pln: balances.admin,
     operator_balance_pln: balances.operator,

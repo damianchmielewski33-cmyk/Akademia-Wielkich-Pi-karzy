@@ -517,7 +517,12 @@ export function TerminarzClient({
     const path = played ? "set-played" : "unset-played";
     const res = await fetch(`/api/admin/match/${id}/${path}`, { method: "POST" });
     if (!res.ok) {
-      toast.error("Brak uprawnień lub błąd");
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      toast.error(
+        typeof data.error === "string" && data.error
+          ? data.error
+          : "Brak uprawnień lub błąd"
+      );
       return;
     }
     toast.success("Zaktualizowano");
@@ -1900,7 +1905,7 @@ export function TerminarzClient({
                 </p>
               </div>
             ) : null}
-            <ul className={cn(modalListClass, "max-h-[min(24rem,55vh)]")}>
+            <ul className={modalListClass}>
                 {selectedData.players.map((p, i) => (
                   <li
                     key={`c-${p.userId}-${i}`}
@@ -2041,7 +2046,7 @@ export function TerminarzClient({
       {attendanceRows.length === 0 ? (
         <p className={modalEmptyStateClass}>Brak zapisanych (potwierdzonych) zawodników do zaznaczenia.</p>
       ) : (
-        <div className={cn(modalListClass, "max-h-[55vh] space-y-2 p-1")}>
+        <div className={cn(modalListClass, "space-y-2 p-1")}>
           {attendanceRows.map((p) => {
             const checked = attendancePresent.has(p.user_id);
             return (
@@ -2156,7 +2161,7 @@ export function TerminarzClient({
             {settleRows.length === 0 ? (
               <p className={modalEmptyStateClass}>Brak zapisanych (potwierdzonych) zawodników do rozliczenia.</p>
             ) : (
-              <div className={cn(modalListClass, "max-h-[50vh] space-y-2 p-1")}>
+              <div className={cn(modalListClass, "space-y-2 p-1")}>
                 {settleRows.map((p) => (
                   <div
                     key={p.user_id}
