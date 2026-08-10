@@ -86,7 +86,7 @@ export function HomeNextMatchCard({
   return (
     <PitchCard
       as="section"
-      className="mx-auto mt-8 max-w-2xl"
+      className="mt-0"
       contentClassName="px-5 py-5 sm:px-6 sm:py-6"
       aria-labelledby="home-next-match-heading"
     >
@@ -242,7 +242,7 @@ export function HomeNextMatchCard({
                   Status: jeszcze nie wiem (bez miejsca w składzie)
                 </div>
                 {slots.free > 0 ? (
-                  <Button variant="pitch" className="w-full" onClick={onConfirmFromTentative}>
+                  <Button variant="gold" className="w-full" onClick={onConfirmFromTentative}>
                     Potwierdzam — wpadam na mecz
                   </Button>
                 ) : (
@@ -257,7 +257,7 @@ export function HomeNextMatchCard({
                   Nie bierzesz udziału w tym terminie (bez miejsca w składzie)
                 </div>
                 {slots.free > 0 ? (
-                  <Button variant="pitch" className="w-full" onClick={onConfirmFromTentative}>
+                  <Button variant="gold" className="w-full" onClick={onConfirmFromTentative}>
                     Zmieniam zdanie — wpadam na mecz
                   </Button>
                 ) : (
@@ -269,7 +269,7 @@ export function HomeNextMatchCard({
             ) : (
               <>
                 {slots.free > 0 ? (
-                  <Button variant="pitch" className="w-full" onClick={onSignup}>
+                  <Button variant="gold" className="w-full" onClick={onSignup}>
                     Zapisz się na mecz
                   </Button>
                 ) : (
@@ -289,7 +289,7 @@ export function HomeNextMatchCard({
               </>
             )
           ) : (
-            <Button variant="pitch" className="w-full" asChild>
+            <Button variant="gold" className="w-full" asChild>
               <Link href="/login">Zaloguj się, aby się zapisać</Link>
             </Button>
           )}
@@ -312,7 +312,7 @@ export function HomeNextMatchCard({
           <div className="mx-auto mt-4 max-w-md space-y-2">
             <span className={cn(pitchLabelClass, "block text-center")}>Transport</span>
             {transportActive ? (
-              <Button variant="pitch" className="w-full" asChild>
+              <Button variant="gold" className="w-full" asChild>
                 <Link href={`/transport/${match.id}`} className="inline-flex items-center justify-center gap-2">
                   <Car className="h-4 w-4 shrink-0" aria-hidden />
                   Transport na mecz
@@ -341,7 +341,7 @@ export function HomeNextMatchCard({
         <div className="mx-auto mt-4 max-w-md space-y-2 border-t border-white/20 pt-4">
           <span className={cn(pitchLabelClass, "block text-center")}>Składy</span>
           {lineupPublic ? (
-            <Button variant="pitch" className="w-full" asChild>
+            <Button variant="gold" className="w-full" asChild>
               <Link href="/sklady" className="inline-flex items-center justify-center gap-2">
                 <LayoutGrid className="h-4 w-4 shrink-0" aria-hidden />
                 Zobacz składy na mecz

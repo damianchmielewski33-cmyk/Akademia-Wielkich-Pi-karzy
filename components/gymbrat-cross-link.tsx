@@ -39,7 +39,7 @@ export function GymBratCrossLink({
       target="_blank"
       rel="noopener noreferrer"
       className={cn(
-        "group relative block h-full min-h-[5.5rem] overflow-hidden rounded-2xl border-2 border-rose-300/35 shadow-md shadow-rose-950/20 ring-1 ring-rose-950/15 transition-[transform,box-shadow] motion-safe:hover:-translate-y-0.5 hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-400 focus-visible:ring-offset-2",
+        "group awp-focus-ring relative block h-full min-h-[7rem] overflow-hidden rounded-2xl border-2 border-rose-300/35 text-left shadow-md shadow-rose-950/20 ring-1 ring-rose-950/15 transition-[transform,box-shadow] motion-safe:hover:-translate-y-0.5 hover:shadow-lg focus-visible:ring-offset-2 focus-visible:ring-offset-transparent",
         className
       )}
     >
@@ -51,20 +51,23 @@ export function GymBratCrossLink({
         className="pointer-events-none absolute inset-0 opacity-40 bg-[repeating-linear-gradient(115deg,transparent,transparent_12px,rgba(255,255,255,0.05)_12px,rgba(255,255,255,0.05)_24px)]"
         aria-hidden
       />
-      <div className="relative flex h-full items-center gap-3 px-4 py-3.5 text-left sm:gap-4 sm:px-4 sm:py-4">
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-rose-500/25 ring-2 ring-rose-300/40 sm:h-12 sm:w-12">
-          <Dumbbell className="h-5 w-5 text-rose-100 sm:h-6 sm:w-6" aria-hidden />
+      <div className="relative flex h-full flex-col justify-between p-5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-white">{GYMBRAT_SITE_NAME}</p>
+            <p className="mt-0.5 text-xs leading-snug text-rose-50/90">{GYMBRAT_SITE_TAGLINE}</p>
+          </div>
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-rose-500/25 ring-2 ring-rose-300/40">
+            <Dumbbell className="h-5 w-5 text-rose-100" aria-hidden />
+          </div>
         </div>
-        <div className="min-w-0 flex-1">
-          <p className="text-base font-bold tracking-tight text-white drop-shadow-sm sm:text-[1.05rem]">
-            {GYMBRAT_SITE_NAME}
-          </p>
-          <p className="mt-0.5 text-xs leading-snug text-rose-50/90 sm:text-sm">{GYMBRAT_SITE_TAGLINE}</p>
+        <div className="mt-3 flex items-center justify-between gap-2">
+          <span className="text-xs font-semibold uppercase tracking-wide text-rose-200/90">Otwórz</span>
+          <ExternalLink
+            className="h-5 w-5 shrink-0 text-white/50 transition-all group-hover:translate-x-0.5 group-hover:text-white/90"
+            aria-hidden
+          />
         </div>
-        <ExternalLink
-          className="h-5 w-5 shrink-0 text-white/50 transition-all group-hover:translate-x-0.5 group-hover:text-white/90"
-          aria-hidden
-        />
       </div>
     </a>
   );

@@ -20,7 +20,6 @@ import {
 } from "lucide-react";
 import { HomeNextMatchCard } from "@/components/home-next-match-card";
 import { HomeTopRankings } from "@/components/home-top-rankings";
-import { SiteSectionHero } from "@/components/site-section-hero";
 import { PlayerAvatar } from "@/components/player-avatar";
 import { MatchTransportSignupDialog } from "@/components/match-transport-signup-dialog";
 import { LogoutConfirmModal } from "@/components/logout-confirm-modal";
@@ -28,6 +27,8 @@ import { Button } from "@/components/ui/button";
 import { AppModal } from "@/components/ui/app-modal";
 import { FormInput } from "@/components/ui/form-field";
 import { ModalMatchSummary, modalPanelClass } from "@/components/ui/modal-shared";
+import { AdminCard, AdminToolbar, adminInnerPanelClass } from "@/components/admin-ui";
+import { PitchCardDecorations } from "@/components/ui/pitch-card";
 import type { MatchRow } from "@/lib/db";
 import type { HomeTopPlayer } from "@/lib/rankings-data";
 import { cn } from "@/lib/utils";
@@ -217,7 +218,7 @@ export function HomeClient({
   }
 
   const tiles = (
-    <div className="mx-auto grid max-w-3xl grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-3">
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
       {!isHiddenHref("/terminarz") ? (
         <PitchTile href="/terminarz" icon={CalendarDays} title="Terminarz" desc="Mecze, zapisy, terminy" />
       ) : null}
@@ -270,11 +271,40 @@ export function HomeClient({
     </div>
   );
 
+  const toolbarTitle =
+    pageVariant === "pzu-cup"
+      ? "Organizacja turnieju"
+      : isLoggedIn
+        ? "Co dziś na boisku?"
+        : "Akademia Wielkich Piłkarzy";
+
+  const toolbarKicker =
+    pageVariant === "pzu-cup"
+      ? "PZU Cup 2026"
+      : isAdmin
+        ? "Panel admina"
+        : "Akademia Wielkich Piłkarzy";
+
+  const toolbarSubtitle =
+    pageVariant === "pzu-cup"
+      ? "Panel roboczy turnieju — ta strona startuje jako kopia ekranu głównego; będzie dostosowana do potrzeb PZU Cup."
+      : isLoggedIn
+        ? "Wybierz sekcję poniżej — terminarz, składy, statystyki i portfel."
+        : "Terminarz meczów, zapisy na boisko, statystyki i rankingi — dołącz do drużyny lub zaloguj się.";
+
   return (
-    <div className="flex flex-1 flex-col">
-      <div className="awp-page awp-page--default text-center">
-        {isLoggedIn && (
-          <div className="mb-8 flex items-center justify-center gap-4">
+    <div className="relative flex flex-1 flex-col text-white">
+      <div className="relative z-10 mx-auto w-full min-w-0 max-w-6xl p-3 xs:p-4 sm:p-6 lg:p-8">
+        <AdminToolbar
+          title={toolbarTitle}
+          kicker={toolbarKicker}
+          description={toolbarSubtitle}
+          onReload={() => router.refresh()}
+          loading={false}
+        />
+
+        {isLoggedIn ? (
+          <div className={cn(adminInnerPanelClass, "mb-6 flex flex-wrap items-center gap-4")}>
             <PlayerAvatar
               photoPath={profilePhotoPath}
               firstName={firstName}
@@ -282,42 +312,17 @@ export function HomeClient({
               size="lg"
               className="shadow-md ring-2 ring-white/40"
             />
-            <div className="text-left">
-              <h2 className="text-2xl font-bold tracking-tight text-white drop-shadow-sm">Witaj!</h2>
-              <p className="text-lg font-semibold text-emerald-100">
+            <div className="min-w-0 text-left">
+              <p className="text-xs font-semibold uppercase tracking-wide text-emerald-100/70">Witaj</p>
+              <p className="text-lg font-bold text-white">
                 {`${firstName} ${lastName}`.trim() || zawodnik}
               </p>
               {zawodnik && `${firstName} ${lastName}`.trim() ? (
-                <p className="text-sm text-emerald-100/80">{zawodnik}</p>
+                <p className="text-sm pitch-muted">{zawodnik}</p>
               ) : null}
             </div>
           </div>
-        )}
-
-        {pageVariant === "pzu-cup" ? (
-          <SiteSectionHero
-            kicker="PZU Cup 2026"
-            title="Organizacja turnieju"
-            subtitle="Panel roboczy turnieju — ta strona startuje jako kopia ekranu głównego; będzie dostosowana do potrzeb PZU Cup."
-            showCrest={false}
-            align="left"
-          />
-        ) : isLoggedIn ? (
-          <SiteSectionHero
-            kicker="Start"
-            title="Co dziś na boisku?"
-            subtitle="Wybierz sekcję poniżej — terminarz, składy, statystyki i portfel."
-            showCrest={false}
-            align="left"
-          />
-        ) : (
-          <SiteSectionHero
-            kicker="Mundial 2026"
-            title="Akademia Wielkich Piłkarzy"
-            subtitle="Terminarz meczów, zapisy na boisko, statystyki i rankingi — dołącz do drużyny lub zaloguj się."
-            align="center"
-          />
-        )}
+        ) : null}
 
         {nextMatch ? (
           <HomeNextMatchCard
@@ -339,57 +344,46 @@ export function HomeClient({
           />
         ) : null}
 
-        <div className="mt-8">{tiles}</div>
+        <div className="mt-6">{tiles}</div>
 
         {pageVariant === "home" ? (
           <HomeTopRankings players={topRankedPlayers} isLoggedIn={isLoggedIn} />
         ) : null}
 
         {youtubeLiveVideoId ? (
-          <section
-            className="mx-auto mt-10 max-w-3xl text-left"
-            aria-labelledby="home-live-heading"
-          >
-            <div className="overflow-hidden rounded-2xl border-2 border-emerald-200/80 bg-emerald-950/[0.03] shadow-lg shadow-emerald-950/10 ring-1 ring-emerald-900/10 dark:border-emerald-800/60 dark:bg-emerald-950/30 dark:ring-emerald-500/10">
-              <div className="border-b border-emerald-200/60 bg-gradient-to-r from-emerald-800/10 to-emerald-600/5 px-4 py-3 dark:border-emerald-800/50 dark:from-emerald-900/40 dark:to-emerald-950/20 sm:px-5">
-                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                  <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-red-600 text-white shadow-sm ring-2 ring-red-500/30">
-                    <Radio className="h-4 w-4" strokeWidth={2.5} aria-hidden />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <h2
-                      id="home-live-heading"
-                      className="text-lg font-bold tracking-tight text-emerald-950 dark:text-emerald-100 sm:text-xl"
-                    >
-                      Mecz na żywo
-                    </h2>
-                    <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                      Transmisja z YouTube — oglądaj prosto z Akademii Wielkich Piłkarzy
-                    </p>
-                  </div>
+          <AdminCard
+            className="mt-6"
+            title="Mecz na żywo"
+            description="Transmisja z YouTube — oglądaj prosto z Akademii Wielkich Piłkarzy"
+            headerExtra={
+              <div className="flex items-center gap-2">
+                <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-red-600 text-white shadow-sm ring-2 ring-red-500/30">
+                  <Radio className="h-4 w-4" strokeWidth={2.5} aria-hidden />
+                </span>
+                <Button asChild variant="gold" size="sm">
                   <Link
                     href={`https://www.youtube.com/watch?v=${encodeURIComponent(youtubeLiveVideoId)}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="shrink-0 text-sm font-semibold text-emerald-800 underline decoration-emerald-800/30 underline-offset-2 hover:text-emerald-950 dark:text-emerald-300 dark:decoration-emerald-400/40 dark:hover:text-emerald-200"
                   >
-                    Otwórz w YouTube
+                    YouTube
                   </Link>
-                </div>
+                </Button>
               </div>
-              <div className="relative aspect-video w-full bg-black">
-                <iframe
-                  title="Transmisja meczu na żywo — YouTube"
-                  className="absolute inset-0 h-full w-full"
-                  src={`https://www.youtube.com/embed/${encodeURIComponent(youtubeLiveVideoId)}?rel=0`}
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                  allowFullScreen
-                  loading="lazy"
-                  referrerPolicy="strict-origin-when-cross-origin"
-                />
-              </div>
+            }
+          >
+            <div className="relative aspect-video w-full overflow-hidden rounded-xl border border-white/20 bg-black">
+              <iframe
+                title="Transmisja meczu na żywo — YouTube"
+                className="absolute inset-0 h-full w-full"
+                src={`https://www.youtube.com/embed/${encodeURIComponent(youtubeLiveVideoId)}?rel=0`}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+                loading="lazy"
+                referrerPolicy="strict-origin-when-cross-origin"
+              />
             </div>
-          </section>
+          </AdminCard>
         ) : null}
       </div>
 
@@ -414,7 +408,7 @@ export function HomeClient({
         title="Zostałeś zapisany na mecz"
         description="Termin jest w terminarzu — możesz wrócić do szczegółów w każdej chwili."
         footer={
-          <Button type="button" variant="pitch" onClick={() => setSignupOpen(false)}>
+          <Button type="button" variant="gold" onClick={() => setSignupOpen(false)}>
             Zamknij
           </Button>
         }
@@ -448,7 +442,7 @@ export function HomeClient({
             <Button type="button" variant="outline" onClick={() => setStatsOpen(false)}>
               Anuluj
             </Button>
-            <Button type="button" variant="pitch" onClick={saveStats}>
+            <Button type="button" variant="gold" onClick={saveStats}>
               Zapisz statystyki
             </Button>
           </>
@@ -494,35 +488,38 @@ function PitchTile({ href, icon: Icon, title, desc, variant = "pitch" }: PitchTi
   const tileFrame =
     variant === "gold"
       ? "shadow-md shadow-amber-950/20 ring-1 ring-amber-950/20 hover:shadow-amber-950/35"
-      : "shadow-md shadow-emerald-950/12 ring-1 ring-emerald-950/10 hover:shadow-emerald-950/22";
-  const descMuted = variant === "gold" ? "text-amber-50/95" : "text-emerald-50/90";
+      : "shadow-md shadow-emerald-950/20 ring-1 ring-emerald-950/10 hover:shadow-emerald-950/30";
+  const descMuted = variant === "gold" ? "text-amber-50/95" : "text-emerald-100/80";
   return (
     <Link
       href={href}
-      className={`group relative block h-full min-h-[5.5rem] overflow-hidden rounded-2xl border-2 border-white/30 transition-[transform,box-shadow] motion-safe:hover:-translate-y-0.5 hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 ${tileFrame}`}
+      className={cn(
+        "group awp-focus-ring relative block h-full min-h-[7rem] overflow-hidden rounded-2xl border-2 border-white/30 text-left transition-[transform,box-shadow] motion-safe:hover:-translate-y-0.5 hover:shadow-lg focus-visible:ring-offset-2 focus-visible:ring-offset-transparent",
+        tileFrame
+      )}
     >
-      <div className={`absolute inset-0 ${bgClass}`} aria-hidden />
-      <div
-        className="pointer-events-none absolute inset-x-0 bottom-0 h-0.5 bg-white/45"
-        aria-hidden
-      />
-      <div
-        className="pointer-events-none absolute left-0 top-0 h-7 w-7 rounded-br-md border-b-2 border-r-2 border-white/40"
-        aria-hidden
-      />
-      <div className="relative flex h-full items-center gap-3 px-4 py-3.5 text-left sm:gap-4 sm:px-4 sm:py-4">
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/15 ring-2 ring-white/35 backdrop-blur-[2px] sm:h-12 sm:w-12">
-          <Icon className="h-5 w-5 text-white sm:h-6 sm:w-6" strokeWidth={2.25} />
+      <div className={cn("absolute inset-0", bgClass)} aria-hidden />
+      <PitchCardDecorations />
+      <div className="relative flex h-full flex-col justify-between p-5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-white">{title}</p>
+            <p className={cn("mt-0.5 text-xs leading-snug", descMuted)}>{desc}</p>
+          </div>
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/15 ring-2 ring-white/30">
+            <Icon className="h-5 w-5 text-white" strokeWidth={2.25} />
+          </div>
         </div>
-        <div className="min-w-0 flex-1">
-          <p className="text-base font-bold tracking-tight text-white drop-shadow-sm sm:text-[1.05rem]">{title}</p>
-          <p className={`mt-0.5 text-xs leading-snug sm:text-sm ${descMuted}`}>{desc}</p>
+        <div className="mt-3 flex items-center justify-between gap-2">
+          <span className="text-xs font-semibold uppercase tracking-wide text-[var(--mundial-gold,#f5c518)]">
+            Otwórz
+          </span>
+          <ChevronRight
+            className="h-5 w-5 shrink-0 text-white/50 transition-all group-hover:translate-x-0.5 group-hover:text-white/90"
+            strokeWidth={2.5}
+            aria-hidden
+          />
         </div>
-        <ChevronRight
-          className="h-5 w-5 shrink-0 text-white/50 transition-all group-hover:translate-x-0.5 group-hover:text-white/90"
-          strokeWidth={2.5}
-          aria-hidden
-        />
       </div>
     </Link>
   );
@@ -533,25 +530,30 @@ function LogoutPitchTile({ onClick }: { onClick: () => void }) {
     <button
       type="button"
       onClick={onClick}
-      className="group relative block h-full min-h-[5.5rem] w-full overflow-hidden rounded-2xl border-2 border-dashed border-white/35 bg-emerald-950/25 text-left shadow-md shadow-emerald-950/10 ring-1 ring-white/15 transition-[transform,box-shadow] motion-safe:hover:-translate-y-0.5 hover:bg-emerald-950/35 hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2"
+      className="group awp-focus-ring relative block h-full min-h-[7rem] w-full overflow-hidden rounded-2xl border-2 border-dashed border-white/35 bg-emerald-950/25 text-left shadow-md shadow-emerald-950/10 ring-1 ring-white/15 transition-[transform,box-shadow] motion-safe:hover:-translate-y-0.5 hover:bg-emerald-950/35 hover:shadow-lg focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
     >
       <div
         className="pointer-events-none absolute inset-0 opacity-80 bg-[repeating-linear-gradient(105deg,transparent,transparent_10px,rgba(255,255,255,0.04)_10px,rgba(255,255,255,0.04)_20px)]"
         aria-hidden
       />
-      <div className="relative flex h-full items-center gap-3 px-4 py-3.5 sm:gap-4 sm:px-4 sm:py-4">
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/10 ring-2 ring-white/25 sm:h-12 sm:w-12">
-          <LogOut className="h-5 w-5 text-white/90 sm:h-6 sm:w-6" strokeWidth={2.25} />
+      <div className="relative flex h-full flex-col justify-between p-5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-white">Wyloguj się</p>
+            <p className="mt-0.5 text-xs text-emerald-100/80">Zakończ sesję</p>
+          </div>
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/10 ring-2 ring-white/25">
+            <LogOut className="h-5 w-5 text-white/90" strokeWidth={2.25} />
+          </div>
         </div>
-        <div className="min-w-0 flex-1">
-          <p className="text-base font-bold tracking-tight text-white sm:text-[1.05rem]">Wyloguj się</p>
-          <p className="mt-0.5 text-xs text-emerald-100/80 sm:text-sm">Zakończ sesję</p>
+        <div className="mt-3 flex items-center justify-between gap-2">
+          <span className="text-xs font-semibold uppercase tracking-wide text-emerald-100/70">Sesja</span>
+          <ChevronRight
+            className="h-5 w-5 shrink-0 text-white/40 transition-all group-hover:translate-x-0.5 group-hover:text-white/75"
+            strokeWidth={2.5}
+            aria-hidden
+          />
         </div>
-        <ChevronRight
-          className="h-5 w-5 shrink-0 text-white/40 transition-all group-hover:translate-x-0.5 group-hover:text-white/75"
-          strokeWidth={2.5}
-          aria-hidden
-        />
       </div>
     </button>
   );

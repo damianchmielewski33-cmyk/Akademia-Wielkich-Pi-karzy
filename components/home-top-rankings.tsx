@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { ChevronRight, Trophy } from "lucide-react";
 import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
+import { AdminCard } from "@/components/admin-ui";
+import { Button } from "@/components/ui/button";
 import type { HomeTopPlayer } from "@/lib/rankings-data";
 import { cn } from "@/lib/utils";
 
@@ -92,39 +94,36 @@ export function HomeTopRankings({ players, isLoggedIn }: Props) {
     players.length >= 3 ? [players[1], players[0], players[2]] : players;
 
   return (
-    <section className="mx-auto mt-8 max-w-3xl text-left" aria-labelledby="home-top-rankings-heading">
-      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <div className="flex items-center gap-2">
-            <Trophy className="h-5 w-5 text-[var(--mundial-gold)]" strokeWidth={2.25} aria-hidden />
-            <h2
-              id="home-top-rankings-heading"
-              className="text-lg font-bold tracking-tight text-white drop-shadow-sm sm:text-xl"
-            >
-              Top 3 rankingu
-            </h2>
-          </div>
-          <p className="mt-1 text-sm text-emerald-100/80">Najlepsi zawodnicy według punktów łącznie ze wszystkich meczów.</p>
+    <AdminCard
+      className="mt-6"
+      title="Top 3 rankingu"
+      description="Najlepsi zawodnicy według punktów łącznie ze wszystkich meczów."
+      headerExtra={
+        <div className="flex items-center gap-2">
+          <Trophy className="h-5 w-5 text-[var(--mundial-gold)]" strokeWidth={2.25} aria-hidden />
+          <Button asChild variant="gold" size="sm">
+            <Link href={isLoggedIn ? "/rankingi" : "/login?next=/rankingi"}>
+              Pełne rankingi
+              <ChevronRight className="h-4 w-4" aria-hidden />
+            </Link>
+          </Button>
         </div>
-        <Link
-          href={isLoggedIn ? "/rankingi" : "/login?next=/rankingi"}
-          className="inline-flex items-center gap-1 text-sm font-semibold text-emerald-200 underline-offset-2 hover:text-white hover:underline"
-        >
-          Pełne rankingi
-          <ChevronRight className="h-4 w-4" aria-hidden />
-        </Link>
-      </div>
-
+      }
+    >
       <div
         className={cn(
           "grid gap-3",
-          ordered.length === 1 ? "grid-cols-1" : ordered.length === 2 ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1 sm:grid-cols-3 sm:items-end"
+          ordered.length === 1
+            ? "grid-cols-1"
+            : ordered.length === 2
+              ? "grid-cols-1 sm:grid-cols-2"
+              : "grid-cols-1 sm:grid-cols-3 sm:items-end"
         )}
       >
         {ordered.map((player) => (
           <PodiumCard key={player.userId} player={player} />
         ))}
       </div>
-    </section>
+    </AdminCard>
   );
 }
