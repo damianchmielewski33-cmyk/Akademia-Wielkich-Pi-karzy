@@ -72,7 +72,7 @@ export async function GET(req: Request) {
         m.match_time AS match_time,
         m.location AS match_location,
         CASE WHEN COALESCE(m.cancelled, 0) = 1 THEN 1 ELSE 0 END AS match_cancelled,
-        ru.zawodnik AS related_zawodnik,
+        ru.player_alias AS related_zawodnik,
         ru.first_name AS related_first_name,
         ru.last_name AS related_last_name
       FROM wallet_transactions t
