@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getDb, logActivity } from "@/lib/db";
 import { requireAdmin } from "@/lib/api-helpers";
-import { getPrepaidMatchCartAmount, settlePrepaidPlayerWithoutCharge } from "@/lib/match-cart";
+import { getPrepaidMatchCartAmount, refundMatchCartBeneficiary, settlePrepaidPlayerWithoutCharge } from "@/lib/match-cart";
 import { createMatchCharge } from "@/lib/wallet";
 
 export const runtime = "nodejs";
@@ -47,15 +47,22 @@ const postSchema = z
     fee_per_person_pln: z.coerce.number().min(0).max(1000).optional(),
     /** Zawodnicy z paid=1 w rozliczeniu — bez debetu; ewentualny zwrot nadpłaty. */
     prepaid_user_ids: z.array(z.coerce.number().int().positive()).default([]),
+    /** Nieobecni z zaliczką koszykową — pełny zwrot do portfela płatnika. */
+    absent_prepaid_user_ids: z.array(z.coerce.number().int().positive()).default([]),
   })
-  .refine((d) => d.charges.length > 0 || d.prepaid_user_ids.length > 0, {
-    message: "Brak zawodników do rozliczenia",
-  });
+  .refine(
+    (d) =>
+      d.charges.length > 0 || d.prepaid_user_ids.length > 0 || d.absent_prepaid_user_ids.length > 0,
+    {
+      message: "Brak zawodników do rozliczenia",
+    }
+  );
 
 /**
  * Admin dzieli koszt rozegranego meczu i odejmuje z portfeli zawodników.
  * Osoby już opłacone koszykiem: bez ponownego obciążenia; gdy składka < wpłata —
  * różnica wraca na portfel płatnika koszyka.
+ * Nieobecni z zaliczką (`absent_prepaid_user_ids`): pełny zwrot zaliczki.
  * Każdy zawodnik może być rozliczony maksymalnie raz per mecz (PK: match_id+user_id).
  */
 export async function POST(req: Request, ctx: Ctx) {
@@ -94,6 +101,11 @@ export async function POST(req: Request, ctx: Ctx) {
     payer_user_id: number | null;
     source: "cart" | "flag";
   }[] = [];
+  const absentRefunded: {
+    user_id: number;
+    refunded_pln: number;
+    payer_user_id: number | null;
+  }[] = [];
   const skipped: { user_id: number; reason: string }[] = [];
 
   const feePerPerson =
@@ -101,7 +113,69 @@ export async function POST(req: Request, ctx: Ctx) {
       ? Math.round(Number(parsed.data.fee_per_person_pln) * 100) / 100
       : null;
 
-  const prepaidIds = [...new Set(parsed.data.prepaid_user_ids.map((x) => Number(x)).filter((x) => x > 0))];
+  const absentIds = [
+    ...new Set(parsed.data.absent_prepaid_user_ids.map((x) => Number(x)).filter((x) => x > 0)),
+  ];
+  const presentIds = new Set(
+    (await db
+      .prepare(`SELECT user_id FROM match_attendance WHERE match_id = ? AND COALESCE(present, 0) = 1`)
+      .all(matchId) as { user_id: number }[]).map((r) => Number(r.user_id))
+  );
+  const attendanceTaken = presentIds.size > 0;
+
+  // 1) Nieobecni z zaliczką — pełny zwrot (przed rozliczeniem obecnych).
+  for (const userId of absentIds) {
+    if (attendanceTaken && presentIds.has(userId)) {
+      skipped.push({ user_id: userId, reason: "marked_present" });
+      continue;
+    }
+    const signup = (await db
+      .prepare(
+        `SELECT COALESCE(paid, 0) AS paid, COALESCE(commitment, 1) AS commitment
+         FROM match_signups WHERE match_id = ? AND user_id = ?`
+      )
+      .get(matchId, userId)) as { paid: number; commitment: number } | undefined;
+    if (!signup || Number(signup.commitment) !== 1) {
+      skipped.push({ user_id: userId, reason: "not_confirmed" });
+      continue;
+    }
+
+    const cart = await getPrepaidMatchCartAmount(matchId, userId);
+    if (cart) {
+      const refund = await refundMatchCartBeneficiary({
+        matchId,
+        beneficiaryUserId: userId,
+        actorUserId: gate.session.userId,
+        reason: "nieobecność — zwrot zaliczki",
+      });
+      if (!refund.ok) {
+        skipped.push({ user_id: userId, reason: "error" });
+        continue;
+      }
+      absentRefunded.push({
+        user_id: userId,
+        refunded_pln: refund.refunded_pln,
+        payer_user_id: refund.payer_user_id ?? cart.payer_user_id,
+      });
+      continue;
+    }
+
+    // Flaga paid bez koszyka — tylko zdejmij „opłacone” (brak środków do zwrotu).
+    if (Number(signup.paid) === 1) {
+      await db
+        .prepare(`UPDATE match_signups SET paid = 0 WHERE match_id = ? AND user_id = ?`)
+        .run(matchId, userId);
+      absentRefunded.push({ user_id: userId, refunded_pln: 0, payer_user_id: null });
+    } else {
+      skipped.push({ user_id: userId, reason: "not_prepaid" });
+    }
+  }
+
+  const absentIdSet = new Set(absentIds);
+  const prepaidIds = [
+    ...new Set(parsed.data.prepaid_user_ids.map((x) => Number(x)).filter((x) => x > 0)),
+  ].filter((id) => !absentIdSet.has(id));
+
   for (const userId of prepaidIds) {
     const signup = (await db
       .prepare(`SELECT COALESCE(paid, 0) AS paid FROM match_signups WHERE match_id = ? AND user_id = ?`)
@@ -141,8 +215,8 @@ export async function POST(req: Request, ctx: Ctx) {
   }
 
   for (const c of parsed.data.charges) {
-    if (prepaidIds.includes(c.user_id)) {
-      skipped.push({ user_id: c.user_id, reason: "already_prepaid" });
+    if (prepaidIds.includes(c.user_id) || absentIdSet.has(c.user_id)) {
+      skipped.push({ user_id: c.user_id, reason: absentIdSet.has(c.user_id) ? "absent_refunded" : "already_prepaid" });
       continue;
     }
     const signup = (await db
@@ -174,10 +248,17 @@ export async function POST(req: Request, ctx: Ctx) {
   }
 
   const creditedTotal = prepaidSettled.reduce((s, p) => s + p.credited_pln, 0);
+  const absentRefundTotal = absentRefunded.reduce((s, p) => s + p.refunded_pln, 0);
   await logActivity(
     gate.session.userId,
-    `Rozliczył mecz ${match.match_date} ${match.match_time} (${match.location}), id ${matchId}. Obciążenia: ${applied.length}, opłaceni z góry: ${prepaidSettled.length}, zwroty nadpłat: ${creditedTotal.toFixed(2)} PLN, pominięte: ${skipped.length}`
+    `Rozliczył mecz ${match.match_date} ${match.match_time} (${match.location}), id ${matchId}. Obciążenia: ${applied.length}, opłaceni z góry: ${prepaidSettled.length}, zwroty nadpłat: ${creditedTotal.toFixed(2)} PLN, zwroty nieobecnych: ${absentRefundTotal.toFixed(2)} PLN (${absentRefunded.length} os.), pominięte: ${skipped.length}`
   );
 
-  return NextResponse.json({ ok: true, applied, prepaid_settled: prepaidSettled, skipped });
+  return NextResponse.json({
+    ok: true,
+    applied,
+    prepaid_settled: prepaidSettled,
+    absent_refunded: absentRefunded,
+    skipped,
+  });
 }

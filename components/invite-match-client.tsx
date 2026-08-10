@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { Suspense, useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "@/lib/app-toast";
 import type { MatchRow } from "@/lib/db";
 import type { PlayersDataEntry } from "@/lib/terminarz-shared";
 import { InviteShareLanding } from "@/components/invite-share-landing";
 import { MatchTransportSignupDialog } from "@/components/match-transport-signup-dialog";
+import { useHotpayPaymentReturn } from "@/hooks/use-hotpay-payment-return";
 
 type Props = {
   matchId: number;
@@ -14,7 +15,13 @@ type Props = {
   playersData: Record<number, PlayersDataEntry>;
   isLoggedIn: boolean;
   userSignupKind: Record<number, "tentative" | "confirmed" | "declined">;
+  hotpayEnabled?: boolean;
 };
+
+function InviteHotpayReturnHandler({ onSettled }: { onSettled: () => void }) {
+  useHotpayPaymentReturn({ onSettled });
+  return null;
+}
 
 export function InviteMatchClient({
   matchId,
@@ -22,6 +29,7 @@ export function InviteMatchClient({
   playersData,
   isLoggedIn,
   userSignupKind,
+  hotpayEnabled = false,
 }: Props) {
   const router = useRouter();
   const [transportSignupOpen, setTransportSignupOpen] = useState(false);
@@ -34,6 +42,10 @@ export function InviteMatchClient({
     setTransportSignupIntent("signup");
     setTransportSignupOpen(true);
   }, []);
+
+  const onPaymentSettled = useCallback(() => {
+    router.refresh();
+  }, [router]);
 
   async function signupTentative() {
     setTentativeBusy(true);
@@ -97,6 +109,9 @@ export function InviteMatchClient({
 
   return (
     <>
+      <Suspense fallback={null}>
+        <InviteHotpayReturnHandler onSettled={onPaymentSettled} />
+      </Suspense>
       <InviteShareLanding
         highlightMatchId={matchId}
         match={match}
@@ -113,12 +128,14 @@ export function InviteMatchClient({
         onParticipationTentative={() => void signupTentative()}
         onParticipationNie={() => void signupDeclined()}
         onAuthenticated={() => setInviteLoginInline(false)}
+        hotpayEnabled={hotpayEnabled}
       />
       <MatchTransportSignupDialog
         open={transportSignupOpen}
         onOpenChange={setTransportSignupOpen}
         matchId={matchId}
         intent={transportSignupIntent === "confirm" ? "confirm" : "signup"}
+        hotpayEnabled={hotpayEnabled}
         onCompleted={() => {
           router.refresh();
         }}

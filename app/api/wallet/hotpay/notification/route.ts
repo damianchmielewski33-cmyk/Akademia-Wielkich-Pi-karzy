@@ -57,9 +57,17 @@ export async function POST(req: Request) {
     return plain("HotPay not configured", 503);
   }
 
-  // Whitelist IP: tylko gdy HOTPAY_ENFORCE_IP=1 (domyślnie WYŁĄCZONA).
+  // Whitelist IP: w produkcji włączona domyślnie; wyłącz: HOTPAY_ENFORCE_IP=0.
+  // Poza produkcją: włącz przez HOTPAY_ENFORCE_IP=1.
   const enforceIpEnv = process.env.HOTPAY_ENFORCE_IP?.trim()?.toLowerCase();
-  const enforceIp = enforceIpEnv === "1" || enforceIpEnv === "true";
+  const isProd =
+    process.env.VERCEL_ENV === "production" || process.env.NODE_ENV === "production";
+  const enforceIp =
+    enforceIpEnv === "1" || enforceIpEnv === "true"
+      ? true
+      : enforceIpEnv === "0" || enforceIpEnv === "false"
+        ? false
+        : isProd;
   if (enforceIp) {
     const list = clientIps(req);
     const allowed = list.some((ip) => isHotpayNotificationIp(ip));

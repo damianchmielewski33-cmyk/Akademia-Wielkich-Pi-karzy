@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { getServerSession } from "@/lib/auth";
 import { HomeClient } from "@/components/home-client";
 import { getHomePageClientProps } from "@/lib/home-page-data";
@@ -21,5 +22,9 @@ export default async function HomePage() {
     pageVariant: "home",
   });
 
-  return <HomeClient {...props} />;
+  return (
+    <Suspense fallback={<p className="p-8 text-center text-sm text-emerald-100/80">Ładowanie…</p>}>
+      <HomeClient {...props} />
+    </Suspense>
+  );
 }

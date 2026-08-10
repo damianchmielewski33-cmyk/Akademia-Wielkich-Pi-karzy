@@ -23,11 +23,18 @@ export async function POST(_req: Request, ctx: Ctx) {
   const charges = (await db
     .prepare(`SELECT COUNT(*) AS c FROM match_wallet_charges WHERE match_id = ?`)
     .get(mid)) as { c: number } | undefined;
-  if (Number(charges?.c ?? 0) > 0) {
+  // Także korekty przy ręcznym „opłacone” (adjustment z match_id) — bez wiersza w match_wallet_charges.
+  const adjustments = (await db
+    .prepare(
+      `SELECT COUNT(*) AS c FROM wallet_transactions
+       WHERE match_id = ? AND kind = 'adjustment'`
+    )
+    .get(mid)) as { c: number } | undefined;
+  if (Number(charges?.c ?? 0) > 0 || Number(adjustments?.c ?? 0) > 0) {
     return NextResponse.json(
       {
         error:
-          "Nie można cofnąć statusu rozegranego — mecz ma już rozliczenia w portfelach. Anuluj mecz (ze zwrotami) albo skoryguj salda ręcznie.",
+          "Nie można cofnąć statusu rozegranego — mecz ma już rozliczenia lub korekty w portfelach. Anuluj mecz (ze zwrotami) albo skoryguj salda ręcznie.",
       },
       { status: 409 }
     );

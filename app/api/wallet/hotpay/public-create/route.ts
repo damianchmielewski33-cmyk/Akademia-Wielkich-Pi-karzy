@@ -14,6 +14,8 @@ import {
   getPublicLinkDebtAmountPln,
   loadPublicShareLink,
 } from "@/lib/public-payment-share";
+import { checkRateLimitDistributed } from "@/lib/rate-limit-db";
+import { rateLimitKey, rateLimitedResponse, RATE } from "@/lib/rate-limit";
 import { screenBlockApiResponse } from "@/lib/screen-block-api";
 import { getMatchFeeRoundingCreditForUser } from "@/lib/wallet";
 
@@ -31,6 +33,13 @@ const postSchema = z.object({
 export async function POST(req: Request) {
   const blocked = await screenBlockApiResponse(req);
   if (blocked) return blocked;
+
+  const rl = await checkRateLimitDistributed(
+    rateLimitKey("hotpay_public_create", req),
+    RATE.hotpayPublicCreate.limit,
+    RATE.hotpayPublicCreate.windowMs
+  );
+  if (!rl.ok) return rateLimitedResponse(rl.retryAfterSec);
 
   const config = getHotpayConfig();
   if (!config) {

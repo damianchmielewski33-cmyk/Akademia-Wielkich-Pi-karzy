@@ -271,12 +271,12 @@ export function AdminWalletsSaldoSection({
   const [publicLinkBusy, setPublicLinkBusy] = useState(false);
   const [publicLinkCopied, setPublicLinkCopied] = useState<string | null>(null);
 
-  async function refresh() {
-    setAdminLoading(true);
+  async function refresh(opts?: { quiet?: boolean }) {
+    if (!opts?.quiet) setAdminLoading(true);
     try {
       const r = await fetchJson<AdminWalletOverview>("/api/admin/wallet/overview");
       if (!r.ok) {
-        toast.error(r.error);
+        if (!opts?.quiet) toast.error(r.error);
         return;
       }
       setAdminOverview(r.data);
@@ -286,12 +286,25 @@ export function AdminWalletsSaldoSection({
         setAdminBalanceUserQuery("");
       }
     } finally {
-      setAdminLoading(false);
+      if (!opts?.quiet) setAdminLoading(false);
     }
   }
 
   useEffect(() => {
     void refresh();
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void refresh({ quiet: true });
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onVisible);
+    const id = window.setInterval(() => {
+      if (document.visibilityState === "visible") void refresh({ quiet: true });
+    }, 30_000);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", onVisible);
+      window.clearInterval(id);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -667,7 +680,7 @@ export function AdminWalletsSaldoSection({
     </div>
   );
 
-  function renderBalancesList({ showReload }: { showReload: boolean }) {
+  function renderBalancesList() {
     const list = adminOverview?.walletUsers ?? adminOverview?.players ?? [];
     return (
       <>
@@ -685,14 +698,9 @@ export function AdminWalletsSaldoSection({
               {list.length
                 ? `Użytkowników: ${list.length} · G = gotówka/BLIK · O = online`
                 : "—"}
+              {adminLoading ? " · aktualizacja…" : ""}
             </p>
           </div>
-          {showReload ? (
-            <Button type="button" variant="gold" disabled={adminLoading} onClick={() => void refresh()}>
-              {adminLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
-              Odśwież
-            </Button>
-          ) : null}
         </div>
         {list.length ? (
           <ul className="max-h-96 space-y-0 overflow-y-auto rounded-xl border border-zinc-200 bg-zinc-50/50 dark:border-zinc-700 dark:bg-zinc-950/40">
@@ -892,7 +900,7 @@ export function AdminWalletsSaldoSection({
               {adjustFormBody}
             </PlatnosciCollapsible>
 
-            {renderBalancesList({ showReload: true })}
+            {renderBalancesList()}
 
             {linksEnabled ? (
               <PlatnosciCollapsible
@@ -935,7 +943,7 @@ export function AdminWalletsSaldoSection({
             }
           >
             <div className="space-y-4">
-              {activeWalletTab === "balances" ? renderBalancesList({ showReload: false }) : null}
+              {activeWalletTab === "balances" ? renderBalancesList() : null}
               {activeWalletTab === "topup" && topUpEnabled ? topUpFormBody : null}
               {activeWalletTab === "adjust" ? adjustFormBody : null}
               {activeWalletTab === "links" && linksEnabled ? renderPublicLinkButtons() : null}

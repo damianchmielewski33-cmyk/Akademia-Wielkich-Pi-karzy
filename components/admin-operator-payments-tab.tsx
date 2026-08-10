@@ -17,6 +17,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import type { AppSettingsApiResponse } from "@/app/api/admin/app-settings/route";
+import { AdminHotpayConfirmPanel } from "@/components/admin-hotpay-confirm-panel";
+import { grossUpHotpayAmount } from "@/lib/hotpay";
 
 type HotpaySettings = Pick<
   AppSettingsApiResponse,
@@ -26,9 +28,7 @@ type HotpaySettings = Pick<
 };
 
 function formatExampleGross(net: number, pct: number, fixed: number) {
-  if (pct <= 0 && fixed <= 0) return net.toFixed(2);
-  const rate = Math.min(Math.max(pct, 0), 99) / 100;
-  return (Math.ceil(((net + Math.max(0, fixed)) / (1 - rate)) * 100) / 100).toFixed(2);
+  return grossUpHotpayAmount(net, pct, fixed).toFixed(2);
 }
 
 /**
@@ -196,6 +196,10 @@ export function AdminOperatorPaymentsTab() {
                 if (!Number.isFinite(n) || n < 0) return;
                 if (n !== settings.hotpay_commission_pct) void save({ hotpay_commission_pct: n });
               }}
+              onKeyDown={(e) => {
+                if (e.key !== "Enter") return;
+                e.currentTarget.blur();
+              }}
             />
           </div>
           <div className="space-y-1.5">
@@ -218,6 +222,10 @@ export function AdminOperatorPaymentsTab() {
                 if (!Number.isFinite(n) || n < 0) return;
                 if (n !== settings.hotpay_commission_fixed) void save({ hotpay_commission_fixed: n });
               }}
+              onKeyDown={(e) => {
+                if (e.key !== "Enter") return;
+                e.currentTarget.blur();
+              }}
             />
           </div>
         </div>
@@ -235,6 +243,10 @@ export function AdminOperatorPaymentsTab() {
           </p>
         )}
       </AdminCard>
+
+      <div className="mt-6">
+        <AdminHotpayConfirmPanel />
+      </div>
     </div>
   );
 }

@@ -131,7 +131,6 @@ export function MatchManageDialog({
   const [removingGuestId, setRemovingGuestId] = useState<number | null>(null);
 
   const [adminUsers, setAdminUsers] = useState<AdminUserRow[]>([]);
-  const [adminUsersLoaded, setAdminUsersLoaded] = useState(false);
   const [signupsQuery, setSignupsQuery] = useState("");
   const [confirmedSignups, setConfirmedSignups] = useState<MatchSignupRow[]>([]);
   const [signupsLoading, setSignupsLoading] = useState(false);
@@ -200,7 +199,6 @@ export function MatchManageDialog({
   }
 
   async function ensureAdminUsersLoaded() {
-    if (adminUsersLoaded) return;
     const r = await fetchJson<AdminUserRow[]>("/api/admin/users");
     if (!r.ok) {
       toast.error(r.error);
@@ -215,7 +213,6 @@ export function MatchManageDialog({
         profile_photo_path: u.profile_photo_path ?? null,
       }))
     );
-    setAdminUsersLoaded(true);
   }
 
   async function loadSignupsTab() {
@@ -350,7 +347,7 @@ export function MatchManageDialog({
 
     setRemovingGuestId(userId);
     try {
-      const r = await fetchJson<{ ok: true }>(`/api/admin/match/${match.id}/remove-guest`, {
+      const r = await fetchJson<{ ok: true; refunded_pln?: number }>(`/api/admin/match/${match.id}/remove-guest`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ user_id: userId }),
@@ -359,7 +356,12 @@ export function MatchManageDialog({
         toast.error(r.error);
         return;
       }
-      toast.success("Gość usunięty");
+      const refunded = Number(r.data?.refunded_pln ?? 0);
+      toast.success(
+        refunded > 0
+          ? `Gość usunięty · zwrot koszyka ${refunded.toFixed(2)} PLN`
+          : "Gość usunięty"
+      );
       onDone();
       await loadGuests();
     } finally {
@@ -743,16 +745,6 @@ export function MatchManageDialog({
                   value={signupsQuery}
                   onChange={(e) => setSignupsQuery(e.target.value)}
                 />
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={() => {
-                    setAdminUsersLoaded(false);
-                    void ensureAdminUsersLoaded();
-                  }}
-                >
-                  Odśwież bazę
-                </Button>
               </div>
               <p className="text-xs text-zinc-600 dark:text-zinc-400">
                 Zapisani (potwierdzeni): <strong className="tabular-nums">{confirmedSignups.length}</strong>

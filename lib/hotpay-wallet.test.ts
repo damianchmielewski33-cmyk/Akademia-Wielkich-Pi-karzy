@@ -29,6 +29,7 @@ function createTestDb(): { db: AppDb; sqlite: Database.Database; dbPath: string 
       amount_pln REAL NOT NULL,
       created_by TEXT NOT NULL,
       status TEXT NOT NULL DEFAULT 'pending',
+      wallet_kind TEXT NOT NULL DEFAULT 'operator',
       note TEXT,
       player_declared_at TEXT,
       admin_confirmed_received_at TEXT,
@@ -45,7 +46,9 @@ function createTestDb(): { db: AppDb; sqlite: Database.Database; dbPath: string 
       amount_pln REAL NOT NULL,
       deposit_request_id INTEGER,
       match_id INTEGER,
+      wallet_kind TEXT NOT NULL DEFAULT 'operator',
       note TEXT,
+      is_test INTEGER NOT NULL DEFAULT 0,
       created_at TEXT DEFAULT (datetime('now')),
       FOREIGN KEY (user_id) REFERENCES users(id),
       FOREIGN KEY (deposit_request_id) REFERENCES wallet_deposit_requests(id)
@@ -56,6 +59,7 @@ function createTestDb(): { db: AppDb; sqlite: Database.Database; dbPath: string 
       user_id INTEGER NOT NULL,
       kind TEXT NOT NULL,
       amount_pln REAL NOT NULL,
+      gross_amount_pln REAL,
       status TEXT NOT NULL DEFAULT 'pending',
       hotpay_payment_id TEXT,
       secure TEXT,
@@ -64,6 +68,7 @@ function createTestDb(): { db: AppDb; sqlite: Database.Database; dbPath: string 
       error_message TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       completed_at TEXT,
+      is_test INTEGER NOT NULL DEFAULT 0,
       FOREIGN KEY (user_id) REFERENCES users(id),
       FOREIGN KEY (deposit_request_id) REFERENCES wallet_deposit_requests(id)
     );
@@ -245,6 +250,71 @@ describe("processHotpayNotification", () => {
     expect(Number(balance.b)).toBe(50);
   });
 
+  it("admin-style credit recovers cancelled and failure without deposit", async () => {
+    const {
+      applyHotpaySuccessCredit,
+      canManualCreditHotpayPayment,
+      getHotpayPaymentBySessionId,
+      markHotpayPaymentCancelledByUser,
+      markHotpayPaymentFailure,
+    } = await import("@/lib/hotpay-wallet");
+
+    seedPendingPayment();
+    const pending = await getHotpayPaymentBySessionId(db, HOTPAY_TEST_ORDER.orderId);
+    expect(pending).toBeTruthy();
+    await markHotpayPaymentCancelledByUser(db, pending!);
+    const cancelled = await getHotpayPaymentBySessionId(db, HOTPAY_TEST_ORDER.orderId);
+    expect(cancelled?.status).toBe("cancelled");
+    expect(canManualCreditHotpayPayment(cancelled!)).toBe(true);
+
+    const creditCancelled = await applyHotpaySuccessCredit(db, cancelled!, {
+      hotpayPaymentId: "admin-manual-1",
+      secure: "admin-confirm",
+    });
+    expect(creditCancelled).toEqual({ ok: true, alreadyApplied: false });
+    expect(
+      Number(
+        (
+          sqlite
+            .prepare("SELECT COALESCE(SUM(amount_pln),0) AS b FROM wallet_transactions WHERE user_id = ?")
+            .get(userId) as { b: number }
+        ).b
+      )
+    ).toBe(50);
+
+    // Druga sesja: failure → ręczne księgowanie
+    const order2 = `${HOTPAY_TEST_ORDER.orderId}_fail`;
+    sqlite
+      .prepare(
+        `INSERT INTO hotpay_payments (session_id, user_id, kind, amount_pln, status)
+         VALUES (?, ?, 'topup', ?, 'pending')`
+      )
+      .run(order2, userId, 25);
+    const failPending = await getHotpayPaymentBySessionId(db, order2);
+    await markHotpayPaymentFailure(db, failPending!.id, {
+      hotpayPaymentId: "hp-fail",
+      secure: "sec",
+      errorMessage: "Płatność została odrzucona",
+    });
+    const failed = await getHotpayPaymentBySessionId(db, order2);
+    expect(failed?.status).toBe("failure");
+    expect(canManualCreditHotpayPayment(failed!)).toBe(true);
+    const creditFailed = await applyHotpaySuccessCredit(db, failed!, {
+      hotpayPaymentId: "admin-manual-2",
+      secure: "admin-confirm",
+    });
+    expect(creditFailed).toEqual({ ok: true, alreadyApplied: false });
+    expect(
+      Number(
+        (
+          sqlite
+            .prepare("SELECT COALESCE(SUM(amount_pln),0) AS b FROM wallet_transactions WHERE user_id = ?")
+            .get(userId) as { b: number }
+        ).b
+      )
+    ).toBe(75);
+  });
+
   it("rejects bad HASH", async () => {
     seedPendingPayment();
     const payload = buildMockNotification({ status: "SUCCESS", invalidHash: true });
@@ -284,5 +354,34 @@ describe("processHotpayNotification", () => {
       .get(HOTPAY_TEST_ORDER.orderId) as { status: string; hotpay_payment_id: string };
     expect(payment.status).toBe("pending");
     expect(payment.hotpay_payment_id).toBe(HOTPAY_TEST_ORDER.paymentId);
+  });
+});
+
+describe("diagnoseHotpayPayment / canManualCreditHotpayPayment", () => {
+  it("exposes credit recovery for failure and cancelled without deposit", async () => {
+    const { canManualCreditHotpayPayment, diagnoseHotpayPayment } = await import("@/lib/hotpay-wallet");
+
+    expect(
+      canManualCreditHotpayPayment({ status: "failure", deposit_request_id: null })
+    ).toBe(true);
+    expect(
+      canManualCreditHotpayPayment({ status: "cancelled", deposit_request_id: null })
+    ).toBe(true);
+    expect(
+      canManualCreditHotpayPayment({ status: "success", deposit_request_id: 12 })
+    ).toBe(false);
+
+    expect(diagnoseHotpayPayment({ status: "failure", deposit_request_id: null, error_message: "x" })).toContain(
+      'action:"credit"'
+    );
+    expect(diagnoseHotpayPayment({ status: "cancelled", deposit_request_id: null })).toContain(
+      'action:"credit"'
+    );
+    expect(diagnoseHotpayPayment({ status: "pending", created_at: "2099-01-01 00:00:00" })).toContain(
+      'action:"credit"'
+    );
+    expect(
+      diagnoseHotpayPayment({ status: "success", deposit_request_id: 1 })
+    ).toBe("OK — zaksięgowano");
   });
 });

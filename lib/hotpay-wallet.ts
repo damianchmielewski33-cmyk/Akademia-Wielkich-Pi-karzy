@@ -1,4 +1,4 @@
-import type { AppDb } from "@/lib/db";
+import { logActivity, type AppDb } from "@/lib/db";
 import { tryRemoveTemporaryGuestIfBalanceZero } from "@/lib/guest-cleanup";
 import type { HotpayNotificationPayload, HotpayPaymentKind, HotpayPaymentStatus } from "@/lib/hotpay";
 import {
@@ -58,7 +58,7 @@ export async function applyHotpaySuccessCredit(
   args: { hotpayPaymentId: string; secure: string }
 ): Promise<{ ok: true; alreadyApplied: boolean } | { ok: false; error: string }> {
   if (payment.status === "success" && payment.deposit_request_id != null) {
-    await settleMatchCartAfterCredit(payment);
+    await settleMatchCartAfterCredit(db, payment);
     return { ok: true, alreadyApplied: true };
   }
 
@@ -84,7 +84,7 @@ export async function applyHotpaySuccessCredit(
     if (claim.changes === 0) {
       const latest = await getHotpayPaymentBySessionId(db, payment.session_id);
       if (latest?.deposit_request_id != null) {
-        await settleMatchCartAfterCredit(latest);
+        await settleMatchCartAfterCredit(db, latest);
         return { ok: true, alreadyApplied: true };
       }
       // Inny worker w trakcie księgowania — nie wstawiaj drugiej wpłaty.
@@ -109,7 +109,7 @@ export async function applyHotpaySuccessCredit(
     if (lock.changes === 0) {
       const latest = await getHotpayPaymentBySessionId(db, payment.session_id);
       if (latest?.deposit_request_id != null) {
-        await settleMatchCartAfterCredit(latest);
+        await settleMatchCartAfterCredit(db, latest);
         return { ok: true, alreadyApplied: true };
       }
       return { ok: true, alreadyApplied: true };
@@ -136,7 +136,7 @@ export async function applyHotpaySuccessCredit(
          WHERE id = ? AND deposit_request_id IS NULL`
       )
       .run(existingBySession.id, args.hotpayPaymentId, args.secure, payment.id);
-    await settleMatchCartAfterCredit(payment);
+    await settleMatchCartAfterCredit(db, payment);
     return { ok: true, alreadyApplied: true };
   }
 
@@ -188,20 +188,62 @@ export async function applyHotpaySuccessCredit(
     actorUserId: payment.user_id,
   });
 
-  await settleMatchCartAfterCredit(payment);
+  await settleMatchCartAfterCredit(db, payment);
 
   return { ok: true, alreadyApplied: false };
 }
 
-/** Po kredycie HotPay: koszyk meczowy schodzi z portfela jako zapłata za mecz (nie zostaje w saldzie). */
-async function settleMatchCartAfterCredit(payment: HotpayPaymentRow): Promise<void> {
-  if (payment.kind !== "match_cart" || payment.cart_id == null) return;
-  const result = await applyPendingMatchCartAfterHotpay(payment.cart_id, payment.user_id);
-  if (!result.ok) {
+/**
+ * Po kredycie HotPay: koszyk meczowy schodzi z portfela jako zapłata za mecz.
+ * Przy błędzie: retry + wpis w error_message / activity_log (admin może POST /confirm).
+ */
+export async function settleMatchCartAfterCredit(
+  db: AppDb,
+  payment: HotpayPaymentRow
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (payment.kind !== "match_cart" || payment.cart_id == null) return { ok: true };
+
+  let lastError = "UNKNOWN";
+
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    const result = await applyPendingMatchCartAfterHotpay(payment.cart_id, payment.user_id);
+    if (result.ok) {
+      if (attempt > 1 || (payment.error_message ?? "").startsWith("CART_SETTLE_FAILED")) {
+        await db
+          .prepare(
+            `UPDATE hotpay_payments SET error_message = NULL WHERE id = ? AND IFNULL(error_message, '') LIKE 'CART_SETTLE_FAILED%'`
+          )
+          .run(payment.id);
+        try {
+          await logActivity(
+            null,
+            `HotPay CART_SETTLE recovered session=${payment.session_id} cart=${payment.cart_id} attempt=${attempt}`
+          );
+        } catch {
+          /* ignore — np. test DB bez activity_log */
+        }
+      }
+      return { ok: true };
+    }
+    lastError = result.error;
     console.error(
-      `[hotpay] match_cart settle failed session=${payment.session_id} cart=${payment.cart_id} error=${result.error}`
+      `[hotpay] match_cart settle failed session=${payment.session_id} cart=${payment.cart_id} attempt=${attempt} error=${result.error}`
     );
   }
+
+  const msg = `CART_SETTLE_FAILED: ${lastError}`;
+  await db
+    .prepare(`UPDATE hotpay_payments SET error_message = ? WHERE id = ?`)
+    .run(msg, payment.id);
+  try {
+    await logActivity(
+      null,
+      `HotPay CART_SETTLE_FAILED session=${payment.session_id} cart=${payment.cart_id} user=${payment.user_id} error=${lastError}`
+    );
+  } catch {
+    /* ignore */
+  }
+  return { ok: false, error: lastError };
 }
 
 export async function markHotpayPaymentFailure(
@@ -316,4 +358,49 @@ export async function processHotpayNotification(
     errorMessage: status === "FAILURE" ? "Płatność została odrzucona" : `Nieznany status płatności: ${payload.STATUS}`,
   });
   return { ok: true, outcome: "failed" };
+}
+
+/** Czy admin może awaryjnie zaksięgować sesję (brak deposit + status odzyskiwalny). */
+export function canManualCreditHotpayPayment(
+  payment: Pick<HotpayPaymentRow, "status" | "deposit_request_id">
+): boolean {
+  return (
+    payment.deposit_request_id == null &&
+    (payment.status === "pending" ||
+      payment.status === "cancelled" ||
+      payment.status === "failure" ||
+      payment.status === "success")
+  );
+}
+
+/** Krótka diagnoza sesji HotPay dla panelu admina / API confirm. */
+export function diagnoseHotpayPayment(r: Partial<HotpayPaymentRow>): string {
+  if ((r.error_message ?? "").startsWith("CART_SETTLE_FAILED")) {
+    return `BŁĄD — wpłata OK, koszyk niezaaplikowany — POST {action:"retry_cart"}`;
+  }
+  if (r.status === "success" && r.deposit_request_id != null) return "OK — zaksięgowano";
+  if (r.status === "success" && r.deposit_request_id == null) {
+    return 'BŁĄD — success w bazie, brak wpłaty — POST /confirm {session_id, action:"credit"}';
+  }
+  if (r.status === "pending") {
+    const ageMin = r.created_at
+      ? Math.round((Date.now() - new Date(r.created_at + "Z").getTime()) / 60000)
+      : null;
+    return `PENDING${ageMin != null ? ` (${ageMin} min)` : ""} — webhook nie doszedł; POST /confirm {session_id, action:"credit"}`;
+  }
+  if (r.status === "failure") {
+    const detail = r.error_message ?? "brak szczegółów";
+    if (r.deposit_request_id == null) {
+      return `ODRZUCONA — ${detail}; jeśli HotPay pokazuje SUCCESS — POST /confirm {session_id, action:"credit"}`;
+    }
+    return `ODRZUCONA — ${detail}`;
+  }
+  if (r.status === "cancelled") {
+    const detail = r.error_message ?? "użytkownik";
+    if (r.deposit_request_id == null) {
+      return `ANULOWANA — ${detail}; jeśli HotPay pokazuje SUCCESS — POST /confirm {session_id, action:"credit"}`;
+    }
+    return `ANULOWANA — ${detail}`;
+  }
+  return r.status ?? "nieznany";
 }

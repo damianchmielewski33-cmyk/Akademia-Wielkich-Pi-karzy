@@ -13,6 +13,8 @@ import {
   type HotpayPaymentKind,
 } from "@/lib/hotpay";
 import { markHotpayPaymentFailure } from "@/lib/hotpay-wallet";
+import { checkRateLimitDistributed } from "@/lib/rate-limit-db";
+import { rateLimitKey, rateLimitedResponse, RATE } from "@/lib/rate-limit";
 import { screenBlockApiResponse } from "@/lib/screen-block-api";
 import { isAdminTestModeActive, persistAdminTestModeFlag } from "@/lib/test-mode";
 import { getMatchFeeRoundingCreditForUser, getUserWalletBalancePln } from "@/lib/wallet";
@@ -32,6 +34,13 @@ export async function POST(req: Request) {
 
   const gate = await requireUser();
   if (!gate.ok) return gate.response;
+
+  const rl = await checkRateLimitDistributed(
+    rateLimitKey(`hotpay_create:${gate.session.userId}`, req),
+    RATE.hotpayCreate.limit,
+    RATE.hotpayCreate.windowMs
+  );
+  if (!rl.ok) return rateLimitedResponse(rl.retryAfterSec);
 
   const config = getHotpayConfig();
   if (!config) {

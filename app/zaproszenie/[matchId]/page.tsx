@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { InviteMatchClient } from "@/components/invite-match-client";
+import { getAppSettings } from "@/lib/app-settings";
 import { getServerSession } from "@/lib/auth";
 import { getDb, type MatchRow } from "@/lib/db";
+import { isHotpayConfigured } from "@/lib/hotpay";
 import {
   buildPlayersData,
   userSignupKindMap,
@@ -63,6 +65,8 @@ export default async function ZaproszeniePage({ params }: PageProps) {
 
   const playersData = match ? buildPlayersData([match], signups) : {};
   const userSignupKind = userSignupKindMap(signups, session?.zawodnik);
+  const appSettings = await getAppSettings(db);
+  const hotpayEnabled = isHotpayConfigured() && appSettings.hotpay_enabled;
 
   const matchForClient =
     match && userSignupKind[matchId] === "confirmed"
@@ -79,6 +83,7 @@ export default async function ZaproszeniePage({ params }: PageProps) {
         playersData={playersData}
         isLoggedIn={Boolean(session)}
         userSignupKind={userSignupKind}
+        hotpayEnabled={hotpayEnabled}
       />
     </div>
   );

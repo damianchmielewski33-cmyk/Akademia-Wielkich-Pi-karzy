@@ -4,6 +4,7 @@ import { useEffect, useState, type ComponentType } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "@/lib/app-toast";
+import { useHotpayPaymentReturn } from "@/hooks/use-hotpay-payment-return";
 import {
   Activity,
   CalendarDays,
@@ -115,7 +116,7 @@ export function HomeClient({
       .catch(() => {});
   }, []);
 
-  useEffect(() => {
+  function refreshWalletBalance() {
     if (!isLoggedIn || !hotpayEnabled) return;
     fetch("/api/wallet/me")
       .then((r) => (r.ok ? r.json() : null))
@@ -125,7 +126,34 @@ export function HomeClient({
         }
       })
       .catch(() => {});
+  }
+
+  useEffect(() => {
+    refreshWalletBalance();
+    if (!isLoggedIn || !hotpayEnabled) return;
+    const onVisible = () => {
+      if (document.visibilityState === "visible") refreshWalletBalance();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onVisible);
+    const id = window.setInterval(() => {
+      if (document.visibilityState === "visible") refreshWalletBalance();
+    }, 30_000);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", onVisible);
+      window.clearInterval(id);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoggedIn, hotpayEnabled]);
+
+  useHotpayPaymentReturn({
+    enabled: isLoggedIn && hotpayEnabled,
+    onSettled: () => {
+      refreshWalletBalance();
+      router.refresh();
+    },
+  });
 
   function openTransportSignup() {
     if (!nextMatch) return;

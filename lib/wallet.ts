@@ -1,4 +1,4 @@
-import { getDb } from "@/lib/db";
+import { getDb, type AppDb } from "@/lib/db";
 import { tryRemoveTemporaryGuestIfBalanceZero } from "@/lib/guest-cleanup";
 import { matchChargeRoundingMarkupPln } from "@/lib/match-fee";
 
@@ -10,9 +10,9 @@ export type WalletBalances = {
   total: number;
 };
 
-export async function getUserWalletBalancePln(userId: number): Promise<number> {
-  const db = await getDb();
-  const row = (await db
+export async function getUserWalletBalancePln(userId: number, db?: AppDb): Promise<number> {
+  const database = db ?? (await getDb());
+  const row = (await database
     .prepare(
       `
       SELECT COALESCE(ROUND(SUM(amount_pln), 2), 0) AS balance_pln
@@ -25,9 +25,9 @@ export async function getUserWalletBalancePln(userId: number): Promise<number> {
 }
 
 /** Zwraca salda z podziałem na portfel admina i operatora. */
-export async function getWalletBalances(userId: number): Promise<WalletBalances> {
-  const db = await getDb();
-  const rows = (await db
+export async function getWalletBalances(userId: number, db?: AppDb): Promise<WalletBalances> {
+  const database = db ?? (await getDb());
+  const rows = (await database
     .prepare(
       `SELECT wallet_kind, COALESCE(ROUND(SUM(amount_pln), 2), 0) AS balance_pln
        FROM wallet_transactions

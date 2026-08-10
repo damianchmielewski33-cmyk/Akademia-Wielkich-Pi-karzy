@@ -1,22 +1,11 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getDb, logActivity } from "@/lib/db";
 import { requireAdmin } from "@/lib/api-helpers";
+import { adminRemoveTemporaryGuest } from "@/lib/guest-cleanup";
 
 export const runtime = "nodejs";
 
 type RouteContext = { params: Promise<{ id: string }> };
-
-type UserRow = {
-  id: number;
-  first_name: string;
-  last_name: string;
-  is_temporary: number;
-};
-
-type BalanceRow = {
-  balance: number;
-};
 
 const bodySchema = z.object({
   user_id: z.coerce.number().int().positive(),
@@ -45,52 +34,28 @@ export async function POST(req: Request, context: RouteContext) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const db = await getDb();
-  const userId = parsed.data.user_id;
+  const result = await adminRemoveTemporaryGuest({
+    userId: parsed.data.user_id,
+    matchId: mid,
+    actorUserId: gate.session.userId,
+    checkBalanceOnly: parsed.data.check_balance === true,
+  });
 
-  const user = await db
-    .prepare("SELECT id, first_name, last_name, is_temporary FROM users WHERE id = ?")
-    .get(userId) as UserRow | undefined;
-
-  if (!user) {
-    return NextResponse.json({ error: "Użytkownik nie znaleziony" }, { status: 404 });
+  if (!result.ok) {
+    return NextResponse.json({ error: result.error }, { status: result.status });
   }
 
-  if (!user.is_temporary) {
-    return NextResponse.json({ error: "To nie jest tymczasowy piłkarz" }, { status: 400 });
+  if ("check" in result && result.check) {
+    return NextResponse.json({
+      balance: result.balance,
+      can_delete: result.can_delete,
+      prepaid_cart_pln: result.prepaid_cart_pln,
+    });
   }
 
-  const balanceRow = await db
-    .prepare(`SELECT COALESCE(SUM(amount_pln), 0) as balance FROM wallet_transactions WHERE user_id = ?`)
-    .get(userId) as BalanceRow | undefined;
-
-  const balance = balanceRow?.balance ?? 0;
-  const balanceIsZero = Math.abs(balance) < 0.005;
-
-  if (parsed.data.check_balance) {
-    return NextResponse.json({ balance, can_delete: balanceIsZero });
+  if ("deleted" in result && result.deleted) {
+    return NextResponse.json({ ok: true, refunded_pln: result.refunded_pln });
   }
 
-  if (!balanceIsZero) {
-    return NextResponse.json({ error: "Gość może zostać usunięty dopiero gdy saldo portfela wynosi 0" }, { status: 400 });
-  }
-
-
-  await db.prepare("DELETE FROM match_signups WHERE user_id = ? AND match_id = ?").run(userId, mid);
-  await db.prepare("UPDATE matches SET signed_up = signed_up - 1 WHERE id = ? AND signed_up > 0").run(mid);
-  await db.prepare("DELETE FROM match_stats WHERE user_id = ? AND match_id = ?").run(userId, mid);
-  await db.prepare("DELETE FROM wallet_transactions WHERE user_id = ?").run(userId);
-  await db.prepare("DELETE FROM match_wallet_charges WHERE user_id = ?").run(userId);
-  await db.prepare("DELETE FROM match_lineup_slots WHERE user_id = ?").run(userId);
-  await db.prepare("DELETE FROM match_attendance WHERE user_id = ?").run(userId);
-  await db.prepare("DELETE FROM match_participation_survey WHERE user_id = ?").run(userId);
-  await db.prepare("DELETE FROM match_transport_messages WHERE user_id = ?").run(userId);
-  await db.prepare("DELETE FROM users WHERE id = ?").run(userId);
-
-  await logActivity(
-    gate.session.userId,
-    `Usunął tymczasowego piłkarza ${user.first_name} ${user.last_name}`
-  );
-
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ error: "Nie udało się usunąć gościa" }, { status: 500 });
 }

@@ -74,7 +74,17 @@ export function GaleriaClient({ videos: initialVideos, isAdmin }: Props) {
 
   useEffect(() => {
     void loadAdmin();
-  }, [loadAdmin]);
+    if (!isAdmin) return;
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void loadAdmin();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onVisible);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", onVisible);
+    };
+  }, [loadAdmin, isAdmin]);
 
   function openCreate() {
     setEditingId(null);
@@ -146,15 +156,12 @@ export function GaleriaClient({ videos: initialVideos, isAdmin }: Props) {
                 <Plus className="h-4 w-4 shrink-0" aria-hidden />
                 Dodaj link
               </Button>
-              <Button
-                type="button"
-                variant="outline"
-                className="border-white/25 bg-black/15 text-white hover:bg-white/10"
-                disabled={loadingAdmin || busy}
-                onClick={() => void loadAdmin()}
-              >
-                {loadingAdmin ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : "Odśwież"}
-              </Button>
+              {loadingAdmin ? (
+                <span className="inline-flex items-center gap-2 text-sm text-emerald-100/80">
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                  Aktualizacja…
+                </span>
+              ) : null}
             </div>
           </div>
         </PitchCard>

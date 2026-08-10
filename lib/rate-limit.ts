@@ -82,4 +82,14 @@ export const RATE = {
   walletTransfer: { limit: 20, windowMs: 60 * 60 * 1000 },
   /** Koszyk — opłata meczu za wielu graczy. */
   walletMatchCart: { limit: 30, windowMs: 60 * 60 * 1000 },
+  /** Zalogowany init HotPay (match/topup) — limit na użytkownika+IP. */
+  hotpayCreate: { limit: 30, windowMs: 60 * 60 * 1000 },
+  /** Publiczny status HotPay (gość bez sesji) — limit na IP. */
+  hotpayPublicStatus: { limit: 60, windowMs: 60 * 1000 },
+  /** Publiczne rozpoczęcie płatności z linku — limit na IP. */
+  hotpayPublicCreate: { limit: 15, windowMs: 60 * 60 * 1000 },
+  /** Anulowanie sesji HotPay (session_id) — limit na IP. */
+  hotpayAbandon: { limit: 40, windowMs: 60 * 1000 },
+  /** Ręczne domknięcie HotPay przez admina (finance). */
+  hotpayAdminConfirm: { limit: 40, windowMs: 60 * 60 * 1000 },
 } as const;

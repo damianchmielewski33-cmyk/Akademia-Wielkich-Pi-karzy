@@ -421,8 +421,8 @@ export function PlayerWalletPanel({
   const { showError, MessageModal } = useAppMessage();
   const { pay: startPayment, busy: topupBusy } = useHotpayPayment();
 
-  async function refreshWallet() {
-    setWalletLoading(true);
+  async function refreshWallet(opts?: { quiet?: boolean }) {
+    if (!opts?.quiet) setWalletLoading(true);
     try {
       const res = await fetch(`/api/wallet/me?limit=${HISTORY_PAGE_SIZE}&offset=0`);
       const json = (await res.json().catch(() => null)) as {
@@ -435,7 +435,9 @@ export function PlayerWalletPanel({
         error?: unknown;
       } | null;
       if (!res.ok) {
-        showError(extractApiErrorMessage(json?.error, "Nie udało się wczytać salda"), "Portfel");
+        if (!opts?.quiet) {
+          showError(extractApiErrorMessage(json?.error, "Nie udało się wczytać salda"), "Portfel");
+        }
         return;
       }
       setWalletBalancePln(Number(json?.balance_pln ?? 0));
@@ -445,9 +447,9 @@ export function PlayerWalletPanel({
       setTransactionsTotal(Number(json?.transactions_total ?? 0));
       setHasMore(Boolean(json?.transactions_has_more));
     } catch {
-      showError("Błąd sieci", "Portfel");
+      if (!opts?.quiet) showError("Błąd sieci", "Portfel");
     } finally {
-      setWalletLoading(false);
+      if (!opts?.quiet) setWalletLoading(false);
     }
   }
 
@@ -496,6 +498,19 @@ export function PlayerWalletPanel({
 
   useEffect(() => {
     void refreshWallet();
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void refreshWallet({ quiet: true });
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onVisible);
+    const id = window.setInterval(() => {
+      if (document.visibilityState === "visible") void refreshWallet({ quiet: true });
+    }, 30_000);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", onVisible);
+      window.clearInterval(id);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refreshKey]);
 
@@ -547,6 +562,9 @@ export function PlayerWalletPanel({
                   )}
                 >
                   {walletBalancePln === null ? "—" : formatWalletPln(walletBalancePln)}
+                  {walletLoading ? (
+                    <Loader2 className="ml-2 inline h-5 w-5 animate-spin text-white/60" aria-hidden />
+                  ) : null}
                 </p>
                 {walletBalancePln != null && walletBalancePln < 0 ? (
                   <p className="mt-1 text-xs font-medium text-red-200">Niedopłata do uregulowania</p>
@@ -554,16 +572,6 @@ export function PlayerWalletPanel({
                   <p className="mt-1 text-xs font-medium text-emerald-100">Nadwyżka na koncie</p>
                 ) : null}
               </div>
-                <Button
-                type="button"
-                variant="gold"
-                size="sm"
-                disabled={walletLoading}
-                onClick={() => void refreshWallet()}
-              >
-                {walletLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
-                Odśwież
-              </Button>
             </div>
 
             {adminBalancePln !== null && operatorBalancePln !== null && (
@@ -675,12 +683,11 @@ export function PlayerWalletPanel({
               )}
             >
               {walletBalancePln === null ? "—" : formatWalletPln(walletBalancePln)}
+              {walletLoading ? (
+                <Loader2 className="ml-2 inline h-5 w-5 animate-spin text-white/60" aria-hidden />
+              ) : null}
             </p>
           </div>
-          <Button type="button" variant="gold" disabled={walletLoading} onClick={() => void refreshWallet()}>
-            {walletLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
-            Odśwież
-          </Button>
         </div>
       )}
 

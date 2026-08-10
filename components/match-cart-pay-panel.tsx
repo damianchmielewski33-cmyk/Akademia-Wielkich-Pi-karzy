@@ -22,6 +22,8 @@ type Props = {
   initialMatchId?: number | null;
   /** Przy deep-linku zaznacz tego gracza w koszyku (jeśli nieopłacony). */
   preferUserId?: number | null;
+  /** Wymusza ponowne wczytanie (np. po powrocie z HotPay). */
+  refreshKey?: number;
   onPaid?: () => void;
   className?: string;
 };
@@ -30,6 +32,7 @@ export function MatchCartPayPanel({
   hotpayEnabled,
   initialMatchId = null,
   preferUserId = null,
+  refreshKey = 0,
   onPaid,
   className,
 }: Props) {
@@ -43,8 +46,8 @@ export function MatchCartPayPanel({
   const autoSelectedRef = useRef(false);
   const { showError, showSuccess, showInfo, MessageModal } = useAppMessage();
 
-  async function refresh() {
-    setLoading(true);
+  async function refresh(opts?: { quiet?: boolean }) {
+    if (!opts?.quiet) setLoading(true);
     try {
       const res = await fetch("/api/wallet/match-cart");
       const json = (await res.json().catch(() => null)) as {
@@ -53,7 +56,9 @@ export function MatchCartPayPanel({
         error?: unknown;
       } | null;
       if (!res.ok) {
-        showError(extractApiErrorMessage(json?.error, "Nie udało się wczytać koszyka"), "Koszyk meczowy");
+        if (!opts?.quiet) {
+          showError(extractApiErrorMessage(json?.error, "Nie udało się wczytać koszyka"), "Koszyk meczowy");
+        }
         return;
       }
       const list = Array.isArray(json?.matches) ? json.matches : [];
@@ -67,16 +72,29 @@ export function MatchCartPayPanel({
         return list[0]?.match_id ?? null;
       });
     } catch {
-      showError("Błąd sieci", "Koszyk meczowy");
+      if (!opts?.quiet) showError("Błąd sieci", "Koszyk meczowy");
     } finally {
-      setLoading(false);
+      if (!opts?.quiet) setLoading(false);
     }
   }
 
   useEffect(() => {
     void refresh();
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void refresh({ quiet: true });
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onVisible);
+    const id = window.setInterval(() => {
+      if (document.visibilityState === "visible") void refresh({ quiet: true });
+    }, 30_000);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", onVisible);
+      window.clearInterval(id);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [refreshKey]);
 
   useEffect(() => {
     if (initialMatchId == null || loading) return;
@@ -254,6 +272,9 @@ export function MatchCartPayPanel({
                         />
                         <span className="min-w-0 flex-1 truncate text-white">
                           {label}
+                          {Number(p.is_temporary) === 1 ? (
+                            <span className="text-amber-200/90"> · gość</span>
+                          ) : null}
                           {p.zawodnik ? <span className="text-emerald-100/70"> · {p.zawodnik}</span> : null}
                         </span>
                         <span className="tabular-nums text-xs text-emerald-100/70">

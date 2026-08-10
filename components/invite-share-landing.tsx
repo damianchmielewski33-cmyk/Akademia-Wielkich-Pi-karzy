@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { SiteAssetImage } from "@/components/site-asset-image";
-import { CalendarDays, HelpCircle, KeyRound, Loader2, LogIn, MapPin, UserPlus, Users } from "lucide-react";
+import { CalendarDays, HelpCircle, KeyRound, Loader2, LogIn, MapPin, UserPlus, Users, Wallet } from "lucide-react";
 import { toast } from "@/lib/app-toast";
 import { z } from "zod";
 import type { MatchRow } from "@/lib/db";
@@ -11,10 +11,13 @@ import type { PlayersDataEntry } from "@/lib/terminarz-shared";
 import { LoginForm } from "@/components/login-form";
 import { MatchSignupsRosterModal } from "@/components/match-signups-roster-modal";
 import { MatchSignupCountsBlock } from "@/components/terminarz-match-counts";
+import { PayButton } from "@/components/pay-button";
 import { SiteSectionHero } from "@/components/site-section-hero";
+import { AppModal } from "@/components/ui/app-modal";
 import { Button } from "@/components/ui/button";
 import { FormInput } from "@/components/ui/form-field";
 import { formSchemas, useValidatedForm } from "@/lib/form-validation";
+import { MATCH_PREPAYMENT_PLN } from "@/lib/match-fee";
 import { terminarzInviteRelativePath } from "@/lib/share-link";
 import { cn } from "@/lib/utils";
 
@@ -209,6 +212,8 @@ type InviteShareLandingProps = {
   onParticipationTentative: () => void | Promise<void>;
   onParticipationNie: () => void | Promise<void>;
   onAuthenticated: () => void;
+  /** Gdy operator płatności włączony — po formularzu gościa pytanie o zaliczkę. */
+  hotpayEnabled?: boolean;
 };
 
 export function InviteShareLanding({
@@ -227,10 +232,12 @@ export function InviteShareLanding({
   onParticipationTentative,
   onParticipationNie,
   onAuthenticated,
+  hotpayEnabled = false,
 }: InviteShareLandingProps) {
   const signupToastShownRef = useRef(false);
   const [rosterOpen, setRosterOpen] = useState(false);
   const [guestBusy, setGuestBusy] = useState(false);
+  const [guestPayOpen, setGuestPayOpen] = useState(false);
   const guestForm = useValidatedForm({
     initialValues: { guestFirst: "", guestLast: "", guestAlias: "" },
     schema: guestSchema,
@@ -258,10 +265,20 @@ export function InviteShareLanding({
   function backToAuthChoices() {
     setInviteLoginInline(false);
     setInviteGuestInline(false);
+    setGuestPayOpen(false);
     resetGuestForm();
   }
 
-  async function submitGuestSignup() {
+  function openGuestPayPrompt() {
+    if (!match || !guestForm.validate()) return;
+    if (hotpayEnabled) {
+      setGuestPayOpen(true);
+      return;
+    }
+    void submitGuestSignup(false);
+  }
+
+  async function submitGuestSignup(pay: boolean) {
     if (!match || !guestForm.validate()) return;
     const { guestFirst, guestLast, guestAlias } = guestForm.values;
     setGuestBusy(true);
@@ -273,14 +290,37 @@ export function InviteShareLanding({
           first_name: guestFirst.trim(),
           last_name: guestLast.trim(),
           player_alias: guestAlias.trim(),
+          pay,
+          return_path: `/zaproszenie/${highlightMatchId}`,
         }),
       });
-      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      const data = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        url?: string;
+        method?: string;
+        pay_error?: string;
+      };
       if (!res.ok) {
         toast.error(typeof data.error === "string" ? data.error : "Nie udało się zapisać gościa");
         return;
       }
-      toast.success("Gość zapisany na mecz");
+
+      setGuestPayOpen(false);
+
+      if (pay && data.method === "hotpay" && data.url) {
+        toast.info("Zapisano — przekierowanie do płatności zaliczki…");
+        resetGuestForm();
+        setInviteGuestInline(false);
+        onGuestSignedUp?.();
+        window.location.assign(data.url);
+        return;
+      }
+
+      if (pay && data.pay_error) {
+        toast.success("Gość zapisany na mecz. Opłatę uregulujesz później (np. przez organizatora).");
+      } else {
+        toast.success("Gość zapisany na mecz");
+      }
       resetGuestForm();
       setInviteGuestInline(false);
       onGuestSignedUp?.();
@@ -426,14 +466,14 @@ export function InviteShareLanding({
                     type="button"
                     className="w-full gap-2"
                     disabled={guestBusy || matchFull}
-                    onClick={() => void submitGuestSignup()}
+                    onClick={() => openGuestPayPrompt()}
                   >
                     {guestBusy ? (
                       <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
                     ) : (
                       <UserPlus className="h-4 w-4 shrink-0" aria-hidden />
                     )}
-                    Zapisz się jako gość
+                    {hotpayEnabled ? "Dalej — zapis gościa" : "Zapisz się jako gość"}
                   </Button>
                   {matchFull ? (
                     <p className="text-center text-sm text-amber-800 dark:text-amber-200">
@@ -559,6 +599,50 @@ export function InviteShareLanding({
           className="h-12 w-12 opacity-90 drop-shadow"
         />
       </div>
+
+      <AppModal
+        open={guestPayOpen}
+        onOpenChange={(open) => {
+          if (!guestBusy) setGuestPayOpen(open);
+        }}
+        size="sm"
+        title="Zapisz się jako gość"
+        description="Zajmujesz miejsce w składzie — czy chcesz od razu opłacić zaliczkę na wpisowe?"
+      >
+        <div className="rounded-xl border border-emerald-200/80 bg-emerald-50/50 p-4 dark:border-emerald-800/60 dark:bg-emerald-950/40">
+          <div className="flex items-start gap-3">
+            <Wallet className="mt-0.5 h-5 w-5 shrink-0 text-emerald-700 dark:text-emerald-300" aria-hidden />
+            <div>
+              <p className="text-sm font-semibold text-emerald-950 dark:text-emerald-100">
+                Zaliczka na wpisowe:{" "}
+                <span className="tabular-nums">{MATCH_PREPAYMENT_PLN},00 zł</span>
+              </p>
+              <p className="mt-1 text-xs leading-relaxed text-zinc-600 dark:text-zinc-400">
+                Płatność online (karta / Blik). Jeśli ostateczna składka będzie niższa, różnica wróci na portfel
+                powiązany z tym zapisem.
+              </p>
+            </div>
+          </div>
+        </div>
+        <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
+          <Button
+            type="button"
+            variant="outline"
+            disabled={guestBusy}
+            onClick={() => void submitGuestSignup(false)}
+          >
+            {guestBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
+            Zapisz bez opłaty
+          </Button>
+          <PayButton
+            variant="default"
+            amountPln={MATCH_PREPAYMENT_PLN}
+            label="Zapisz i zapłać"
+            busy={guestBusy}
+            onClick={() => void submitGuestSignup(true)}
+          />
+        </div>
+      </AppModal>
     </div>
   );
 }

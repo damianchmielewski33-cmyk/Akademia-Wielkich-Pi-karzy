@@ -18,6 +18,11 @@ export type AppDb = {
     all<T = unknown>(...params: unknown[]): Promise<T[]>;
   };
   exec(sql: string): Promise<void>;
+  /**
+   * Atomowa transakcja zapisu. Na SQLite: BEGIN IMMEDIATE.
+   * Na Turso: interaktywna transakcja libsql — wszystkie zapytania muszą iść przez `tx`.
+   */
+  transaction?<T>(fn: (tx: AppDb) => Promise<T>): Promise<T>;
 };
 
 function hasTursoEnv(): boolean {
@@ -85,7 +90,7 @@ function rowToRecord(row: Row, columns: string[]): Record<string, unknown> {
 }
 
 function createSqliteFacade(db: Database.Database): AppDb {
-  return {
+  const facade: AppDb = {
     prepare(sql: string) {
       const stmt = db.prepare(sql);
       return {
@@ -108,7 +113,23 @@ function createSqliteFacade(db: Database.Database): AppDb {
       db.exec(sql);
       return Promise.resolve();
     },
+    async transaction<T>(fn: (tx: AppDb) => Promise<T>): Promise<T> {
+      db.exec("BEGIN IMMEDIATE");
+      try {
+        const result = await fn(facade);
+        db.exec("COMMIT");
+        return result;
+      } catch (e) {
+        try {
+          db.exec("ROLLBACK");
+        } catch {
+          /* ignore */
+        }
+        throw e;
+      }
+    },
   };
+  return facade;
 }
 
 /** Stare bazy: CHECK(kind IN ('last_match_wallets')) — blokowało all_wallets / match_wallets / player_wallets. */
@@ -311,31 +332,59 @@ function createLibsqlFacade(client: Client): AppDb {
       return v;
     }) as InArgs;
 
-  return {
-    prepare(sql: string) {
-      return {
-        async run(...params: unknown[]) {
-          const rs = await client.execute({ sql, args: sanitize(params) });
-          return {
-            lastInsertRowid: rs.lastInsertRowid ?? BigInt(0),
-            changes: Number(rs.rowsAffected ?? 0),
-          };
-        },
-        async get<T = unknown>(...params: unknown[]) {
-          const rs = await client.execute({ sql, args: sanitize(params) });
-          if (rs.rows.length === 0) return undefined;
-          return rowToRecord(rs.rows[0], rs.columns) as T;
-        },
-        async all<T = unknown>(...params: unknown[]) {
-          const rs = await client.execute({ sql, args: sanitize(params) });
-          return rs.rows.map((row) => rowToRecord(row, rs.columns) as T);
-        },
-      };
-    },
-    exec(sql: string) {
-      return client.executeMultiple(sql);
-    },
+  type Executor = {
+    execute: Client["execute"];
+    executeMultiple?: Client["executeMultiple"];
   };
+
+  function facadeFor(executor: Executor, withTransaction: boolean): AppDb {
+    const facade: AppDb = {
+      prepare(sql: string) {
+        return {
+          async run(...params: unknown[]) {
+            const rs = await executor.execute({ sql, args: sanitize(params) });
+            return {
+              lastInsertRowid: rs.lastInsertRowid ?? BigInt(0),
+              changes: Number(rs.rowsAffected ?? 0),
+            };
+          },
+          async get<T = unknown>(...params: unknown[]) {
+            const rs = await executor.execute({ sql, args: sanitize(params) });
+            if (rs.rows.length === 0) return undefined;
+            return rowToRecord(rs.rows[0], rs.columns) as T;
+          },
+          async all<T = unknown>(...params: unknown[]) {
+            const rs = await executor.execute({ sql, args: sanitize(params) });
+            return rs.rows.map((row) => rowToRecord(row, rs.columns) as T);
+          },
+        };
+      },
+      exec(sql: string) {
+        if (executor.executeMultiple) return executor.executeMultiple(sql);
+        return executor.execute(sql).then(() => undefined);
+      },
+    };
+    if (withTransaction) {
+      facade.transaction = async <T>(fn: (tx: AppDb) => Promise<T>): Promise<T> => {
+        const tx = await client.transaction("write");
+        try {
+          const result = await fn(facadeFor(tx, false));
+          await tx.commit();
+          return result;
+        } catch (e) {
+          try {
+            await tx.rollback();
+          } catch {
+            /* ignore */
+          }
+          throw e;
+        }
+      };
+    }
+    return facade;
+  }
+
+  return facadeFor(client, true);
 }
 
 function initSchemaSync(db: Database.Database) {

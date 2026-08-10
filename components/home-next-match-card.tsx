@@ -308,7 +308,7 @@ export function HomeNextMatchCard({
           </div>
         ) : null}
 
-        {isLoggedIn && signup === "confirmed" && !hotpayEnabled && (
+        {isLoggedIn && signup === "confirmed" && (
           <div className="mx-auto mt-4 max-w-md space-y-2">
             <span className={cn(pitchLabelClass, "block text-center")}>Transport</span>
             {transportActive ? (

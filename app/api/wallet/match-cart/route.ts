@@ -18,7 +18,8 @@ import {
 } from "@/lib/hotpay";
 import { matchCartRoundingMarkupPln } from "@/lib/match-fee";
 import { markHotpayPaymentFailure } from "@/lib/hotpay-wallet";
-import { checkRateLimit, rateLimitKey, rateLimitedResponse, RATE } from "@/lib/rate-limit";
+import { checkRateLimitDistributed } from "@/lib/rate-limit-db";
+import { rateLimitKey, rateLimitedResponse, RATE } from "@/lib/rate-limit";
 import { screenBlockApiResponse } from "@/lib/screen-block-api";
 import { isAdminTestModeActive, persistAdminTestModeFlag } from "@/lib/test-mode";
 import { getUserWalletBalancePln } from "@/lib/wallet";
@@ -53,7 +54,7 @@ export async function POST(req: Request) {
   const gate = await requireUser();
   if (!gate.ok) return gate.response;
 
-  const rl = checkRateLimit(
+  const rl = await checkRateLimitDistributed(
     rateLimitKey(`wallet_match_cart:${gate.session.userId}`, req),
     RATE.walletMatchCart.limit,
     RATE.walletMatchCart.windowMs

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, type ComponentType, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Calendar, ChevronDown, Loader2, LogOut, Moon, RefreshCw, Sun } from "lucide-react";
+import { ArrowLeft, Calendar, ChevronDown, Loader2, LogOut, Moon, Sun } from "lucide-react";
 import { PitchCard, PitchCardDecorations, pitchLabelClass } from "@/components/ui/pitch-card";
 import { SiteSectionHero } from "@/components/site-section-hero";
 import { SiteAssetImage } from "@/components/site-asset-image";
@@ -534,11 +534,14 @@ export function AdminToolbar({
 }: {
   title: string;
   description?: string;
-  onReload: () => void;
-  loading: boolean;
+  /** @deprecated Przycisk Odśwież usunięty — dane odświeżają się automatycznie / po akcji. */
+  onReload?: () => void;
+  loading?: boolean;
   children?: ReactNode;
   kicker?: string;
 }) {
+  void onReload;
+  void loading;
   return (
     <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
       <SiteSectionHero
@@ -550,19 +553,9 @@ export function AdminToolbar({
         align="left"
         className="min-w-0 flex-1 lg:max-w-2xl"
       />
-      <div className="flex shrink-0 flex-wrap items-center gap-2 lg:pt-2">
-        {children}
-        <Button
-          type="button"
-          variant="gold"
-          size="sm"
-          onClick={onReload}
-          disabled={loading}
-        >
-          <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} aria-hidden />
-          Odśwież
-        </Button>
-      </div>
+      {children ? (
+        <div className="flex shrink-0 flex-wrap items-center gap-2 lg:pt-2">{children}</div>
+      ) : null}
     </div>
   );
 }

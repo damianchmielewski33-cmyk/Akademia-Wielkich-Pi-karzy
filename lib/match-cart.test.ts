@@ -269,6 +269,59 @@ describe("applyMatchCartFromWallet", () => {
     expect(paid2.paid).toBe(0);
   });
 
+  it("przy zwrocie dzieli G/O proporcjonalnie do debetu koszyka", async () => {
+    sqlite.prepare(`DELETE FROM wallet_transactions`).run();
+    // Ani O (10), ani G (20) nie pokrywa 25 sam — koszyk musi zsplitować.
+    sqlite
+      .prepare(
+        `INSERT INTO wallet_transactions (user_id, kind, amount_pln, wallet_kind) VALUES (1, 'deposit', 10, 'operator')`
+      )
+      .run();
+    sqlite
+      .prepare(
+        `INSERT INTO wallet_transactions (user_id, kind, amount_pln, wallet_kind) VALUES (1, 'deposit', 20, 'admin')`
+      )
+      .run();
+
+    const pay = await applyMatchCartFromWallet({
+      payerUserId: 1,
+      matchId: 10,
+      beneficiaryUserIds: [2],
+    });
+    expect(pay.ok).toBe(true);
+
+    const { getWalletBalances } = await import("@/lib/wallet");
+    expect(await getWalletBalances(1)).toEqual({ admin: 5, operator: 0, total: 5 });
+
+    const { refundMatchCartBeneficiary } = await import("@/lib/match-cart");
+    const refund = await refundMatchCartBeneficiary({
+      matchId: 10,
+      beneficiaryUserId: 2,
+      actorUserId: 1,
+      reason: "split test",
+    });
+    expect(refund.ok).toBe(true);
+    if (!refund.ok) return;
+    expect(refund.refunded_pln).toBe(25);
+
+    const balances = await getWalletBalances(1);
+    expect(balances.operator).toBe(10);
+    expect(balances.admin).toBe(20);
+    expect(balances.total).toBe(30);
+
+    const adjustments = sqlite
+      .prepare(
+        `SELECT wallet_kind, amount_pln FROM wallet_transactions
+         WHERE user_id = 1 AND kind = 'adjustment' AND match_id = 10
+         ORDER BY wallet_kind`
+      )
+      .all() as { wallet_kind: string; amount_pln: number }[];
+    expect(adjustments).toEqual([
+      { wallet_kind: "admin", amount_pln: 15 },
+      { wallet_kind: "operator", amount_pln: 10 },
+    ]);
+  });
+
   it("przy rozliczeniu nie obciąża opłaconego i zwraca nadpłatę gdy składka niższa", async () => {
     const pay = await applyMatchCartFromWallet({
       payerUserId: 1,
@@ -337,5 +390,66 @@ describe("applyMatchCartFromWallet", () => {
     // Zwraca pozostałe 20 (5 już wróciło jako nadpłata) → z powrotem 200
     expect(refunds.refunded_pln).toBe(20);
     expect(await getUserWalletBalancePln(1)).toBe(200);
+  });
+
+  it("przy nieobecności zwraca całą zaliczkę koszyka", async () => {
+    const pay = await applyMatchCartFromWallet({
+      payerUserId: 1,
+      matchId: 10,
+      beneficiaryUserIds: [2],
+    });
+    expect(pay.ok).toBe(true);
+    expect(await getUserWalletBalancePln(1)).toBe(175);
+
+    const { refundMatchCartBeneficiary } = await import("@/lib/match-cart");
+    const refund = await refundMatchCartBeneficiary({
+      matchId: 10,
+      beneficiaryUserId: 2,
+      actorUserId: 1,
+      reason: "nieobecność — zwrot zaliczki",
+    });
+    expect(refund.ok).toBe(true);
+    if (!refund.ok) return;
+    expect(refund.refunded_pln).toBe(25);
+    expect(await getUserWalletBalancePln(1)).toBe(200);
+
+    const paid2 = sqlite.prepare(`SELECT paid FROM match_signups WHERE user_id = 2 AND match_id = 10`).get() as {
+      paid: number;
+    };
+    expect(paid2.paid).toBe(0);
+  });
+
+  it("opłaca gościa tymczasowego z koszyka", async () => {
+    sqlite
+      .prepare(
+        `INSERT INTO users (id, first_name, last_name, player_alias, is_temporary)
+         VALUES (9, 'Gość', 'Test', 'guest9', 1)`
+      )
+      .run();
+    sqlite.prepare(`INSERT INTO match_signups (user_id, match_id, paid) VALUES (9, 10, 0)`).run();
+
+    const result = await applyMatchCartFromWallet({
+      payerUserId: 1,
+      matchId: 10,
+      beneficiaryUserIds: [9],
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.amount_pln).toBe(25);
+    expect(await getUserWalletBalancePln(1)).toBe(175);
+
+    const paidGuest = sqlite
+      .prepare(`SELECT paid FROM match_signups WHERE user_id = 9 AND match_id = 10`)
+      .get() as { paid: number };
+    expect(paidGuest.paid).toBe(1);
+
+    const item = sqlite
+      .prepare(
+        `SELECT i.beneficiary_user_id FROM wallet_match_cart_items i
+         JOIN wallet_match_carts c ON c.id = i.cart_id
+         WHERE c.match_id = 10 AND i.beneficiary_user_id = 9 AND c.status = 'completed'`
+      )
+      .get() as { beneficiary_user_id: number } | undefined;
+    expect(item?.beneficiary_user_id).toBe(9);
   });
 });

@@ -113,6 +113,7 @@ export function PlatnosciClient({
             />
             <MatchCartPayPanel
               hotpayEnabled={hotpayEnabled}
+              refreshKey={walletRefreshKey}
               onPaid={() => setWalletRefreshKey((k) => k + 1)}
             />
             <AdminWalletsSaldoSection showPublicLinks showTopUp />
@@ -126,6 +127,7 @@ export function PlatnosciClient({
             />
             <MatchCartPayPanel
               hotpayEnabled={hotpayEnabled}
+              refreshKey={walletRefreshKey}
               onPaid={() => setWalletRefreshKey((k) => k + 1)}
             />
           </div>

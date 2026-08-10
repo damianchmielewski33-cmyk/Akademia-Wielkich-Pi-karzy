@@ -1,8 +1,13 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { addMatchGuest } from "@/lib/add-match-guest";
+import { getAppSettings } from "@/lib/app-settings";
+import { getDb } from "@/lib/db";
+import { getHotpayConfig } from "@/lib/hotpay";
+import { startHotpayMatchCartPayment } from "@/lib/match-cart-hotpay";
 import { checkRateLimitDistributed } from "@/lib/rate-limit-db";
 import { rateLimitKey, rateLimitedResponse, RATE } from "@/lib/rate-limit";
+import { screenBlockApiResponse } from "@/lib/screen-block-api";
 
 export const runtime = "nodejs";
 
@@ -12,6 +17,9 @@ const bodySchema = z.object({
   first_name: z.string().min(1).max(100),
   last_name: z.string().min(1).max(100),
   player_alias: z.string().min(1).max(120),
+  /** Gdy true — po zapisie od razu sesja HotPay na zaliczkę koszyka (gość = płatnik i beneficjent). */
+  pay: z.boolean().optional().default(false),
+  return_path: z.string().trim().max(512).optional(),
 });
 
 function todayISO() {
@@ -19,6 +27,9 @@ function todayISO() {
 }
 
 export async function POST(req: Request, context: RouteContext) {
+  const blocked = await screenBlockApiResponse(req);
+  if (blocked) return blocked;
+
   const rl = await checkRateLimitDistributed(
     rateLimitKey("guest_signup", req),
     RATE.guestSignup.limit,
@@ -44,7 +55,6 @@ export async function POST(req: Request, context: RouteContext) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const { getDb } = await import("@/lib/db");
   const db = await getDb();
   const match = (await db
     .prepare("SELECT id, match_date, played, cancelled FROM matches WHERE id = ?")
@@ -65,7 +75,18 @@ export async function POST(req: Request, context: RouteContext) {
     );
   }
 
-  const { first_name, last_name, player_alias } = parsed.data;
+  const { first_name, last_name, player_alias, pay, return_path } = parsed.data;
+
+  if (pay) {
+    const appSettings = await getAppSettings(db);
+    if (!getHotpayConfig() || !appSettings.hotpay_enabled) {
+      return NextResponse.json(
+        { error: "Płatności online są niedostępne. Zapisz się bez opłaty albo skontaktuj się z organizatorem." },
+        { status: 503 }
+      );
+    }
+  }
+
   const result = await addMatchGuest({
     matchId: mid,
     firstName: first_name,
@@ -79,9 +100,42 @@ export async function POST(req: Request, context: RouteContext) {
     return NextResponse.json({ error: result.error }, { status: result.status });
   }
 
+  if (!pay) {
+    return NextResponse.json({
+      ok: true,
+      user_id: result.userId,
+      message: "Gość zapisany na mecz",
+    });
+  }
+
+  const payerLabel =
+    [first_name.trim(), last_name.trim()].filter(Boolean).join(" ") || player_alias.trim();
+  const hotpay = await startHotpayMatchCartPayment({
+    payerUserId: result.userId,
+    matchId: mid,
+    beneficiaryUserIds: [result.userId],
+    returnPath: return_path?.startsWith("/") ? return_path : `/zaproszenie/${mid}`,
+    payerLabel,
+  });
+
+  if (!hotpay.ok) {
+    // Gość już zapisany — nie cofamy zapisu; klient pokaże sukces + informację o płatności.
+    return NextResponse.json({
+      ok: true,
+      user_id: result.userId,
+      message: "Gość zapisany na mecz",
+      pay_error: hotpay.error,
+    });
+  }
+
   return NextResponse.json({
     ok: true,
     user_id: result.userId,
-    message: "Gość zapisany na mecz",
+    method: "hotpay",
+    url: hotpay.url,
+    session_id: hotpay.session_id,
+    cart_id: hotpay.cart_id,
+    amount_pln: hotpay.amount_pln,
+    message: "Gość zapisany — przekierowanie do płatności",
   });
 }

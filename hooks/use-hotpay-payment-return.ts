@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { formatWalletPln } from "@/components/player-wallet-panel";
+import { abandonHotpayPayment } from "@/lib/hotpay-client";
 import { toast } from "@/lib/app-toast";
 
 type Options = {
@@ -10,8 +11,51 @@ type Options = {
   onSettled?: () => void;
 };
 
+type StatusPayload = {
+  status?: string;
+  error_message?: string | null;
+  amount_pln?: number;
+  kind?: string;
+};
+
+async function fetchHotpayStatus(sessionId: string): Promise<{
+  ok: boolean;
+  data: StatusPayload | null;
+}> {
+  const qs = `session_id=${encodeURIComponent(sessionId)}`;
+  const authed = await fetch(`/api/wallet/hotpay/status?${qs}`, {
+    credentials: "same-origin",
+  });
+  if (authed.ok) {
+    const data = (await authed.json().catch(() => null)) as StatusPayload | null;
+    return { ok: true, data };
+  }
+  // Gość bez sesji (zaproszenie) — publiczny status tylko dla is_temporary.
+  if (authed.status === 401 || authed.status === 403) {
+    const pub = await fetch(`/api/wallet/hotpay/public-status?${qs}`, {
+      credentials: "same-origin",
+    });
+    if (!pub.ok) return { ok: false, data: null };
+    const data = (await pub.json().catch(() => null)) as StatusPayload | null;
+    return { ok: true, data };
+  }
+  return { ok: false, data: null };
+}
+
+function successToastText(data: StatusPayload): string {
+  const amount =
+    typeof data.amount_pln === "number" ? formatWalletPln(data.amount_pln) : null;
+  if (data.kind === "match_cart") {
+    return amount ? `Zaliczka ${amount} została opłacona` : "Zaliczka na mecz została opłacona";
+  }
+  return amount
+    ? `Wpłata ${amount} zaksięgowana na portfelu`
+    : "Wpłata zaksięgowana na portfelu";
+}
+
 /**
  * Obsługa powrotu z HotPay (?payment=&session_id=) na dowolnej stronie.
+ * Działa też dla niezalogowanego gościa (public-status).
  * Czyści query do ścieżki bazowej (bez parametrów płatności).
  */
 export function useHotpayPaymentReturn(options: Options = {}) {
@@ -55,6 +99,7 @@ export function useHotpayPaymentReturn(options: Options = {}) {
       await restoreTestModeIfNeeded();
 
       if (payment === "error" || payment === "cancelled" || payment === "failure") {
+        if (sessionId) void abandonHotpayPayment(sessionId);
         toast.error(payment === "cancelled" ? "Płatność została anulowana" : "Płatność nie powiodła się");
         clearQuery();
         onSettled?.();
@@ -62,7 +107,7 @@ export function useHotpayPaymentReturn(options: Options = {}) {
       }
 
       if (payment === "success") {
-        toast.success("Wpłata zaksięgowana na portfelu");
+        toast.success("Płatność zakończona pomyślnie");
         clearQuery();
         onSettled?.();
         return;
@@ -73,22 +118,10 @@ export function useHotpayPaymentReturn(options: Options = {}) {
 
         const pollOnce = async (): Promise<"success" | "failure" | "cancelled" | "pending" | "error"> => {
           try {
-            const res = await fetch(`/api/wallet/hotpay/status?session_id=${encodeURIComponent(sessionId)}`, {
-              credentials: "same-origin",
-            });
-            const data = (await res.json().catch(() => null)) as {
-              status?: string;
-              error_message?: string | null;
-              amount_pln?: number;
-            } | null;
-            if (!res.ok || !data?.status) return "error";
+            const { ok, data } = await fetchHotpayStatus(sessionId);
+            if (!ok || !data?.status) return "error";
             if (data.status === "success") {
-              toast.success(
-                typeof data.amount_pln === "number"
-                  ? `Wpłata ${formatWalletPln(data.amount_pln)} zaksięgowana na portfelu`
-                  : "Wpłata zaksięgowana na portfelu",
-                { id: toastId }
-              );
+              toast.success(successToastText(data), { id: toastId });
               onSettled?.();
               return "success";
             }
@@ -117,10 +150,9 @@ export function useHotpayPaymentReturn(options: Options = {}) {
           await new Promise((r) => setTimeout(r, 1500));
         }
 
-        toast.info(
-          "Przetwarzamy płatność — to może chwilę potrwać. Jeśli zapłaciłeś, saldo zaktualizuje się automatycznie.",
-          { id: toastId }
-        );
+        toast.info("Przetwarzamy płatność — status zaktualizuje się automatycznie.", {
+          id: toastId,
+        });
         onSettled?.();
         clearQuery();
 
@@ -132,7 +164,7 @@ export function useHotpayPaymentReturn(options: Options = {}) {
         return;
       }
 
-      toast.info("Wróciłeś z płatności — odśwież saldo, jeśli środki jeszcze nie widać.");
+      toast.info("Wróciłeś z płatności — sprawdzamy status automatycznie.");
       onSettled?.();
       clearQuery();
     }

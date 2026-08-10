@@ -10,6 +10,7 @@ export type MatchCartPlayer = {
   zawodnik: string;
   paid: number;
   commitment: number;
+  is_temporary?: number;
 };
 
 export type MatchCartMatchOption = {
@@ -29,6 +30,78 @@ function roundPln(n: number): number {
 function playerLabel(p: { first_name: string; last_name: string; zawodnik?: string; player_alias?: string }) {
   const name = [p.first_name, p.last_name].filter(Boolean).join(" ").trim();
   return name || p.zawodnik || p.player_alias || "Gracz";
+}
+
+/**
+ * Kredytuje zwrot proporcjonalnie do oryginalnych debetów `match_charge` (admin/operator).
+ * Unika błędu „ostatni wallet_kind wygrywa” przy splitcie G/O lub wielu koszykach na ten sam mecz.
+ */
+async function creditRefundSplitByMatchCharges(args: {
+  db: AppDb;
+  payerUserId: number;
+  matchId: number;
+  amountPln: number;
+  relatedUserId?: number | null;
+  note: string;
+}): Promise<void> {
+  const amount = roundPln(args.amountPln);
+  if (!(amount > 0)) return;
+
+  const parts = (await args.db
+    .prepare(
+      `
+      SELECT wallet_kind, COALESCE(SUM(amount_pln), 0) AS s
+      FROM wallet_transactions
+      WHERE user_id = ? AND match_id = ? AND kind = 'match_charge' AND amount_pln < 0
+      GROUP BY wallet_kind
+    `
+    )
+    .all(args.payerUserId, args.matchId)) as { wallet_kind: string; s: number }[];
+
+  const weights = parts
+    .map((p) => ({
+      wallet_kind: (p.wallet_kind === "operator" ? "operator" : "admin") as "admin" | "operator",
+      abs: roundPln(Math.abs(Number(p.s))),
+    }))
+    .filter((p) => p.abs > 0);
+
+  const totalDebited = roundPln(weights.reduce((sum, w) => sum + w.abs, 0));
+
+  const credits: { wallet_kind: "admin" | "operator"; amount_pln: number }[] = [];
+  if (totalDebited <= 0 || weights.length === 0) {
+    credits.push({ wallet_kind: "admin", amount_pln: amount });
+  } else if (weights.length === 1) {
+    credits.push({ wallet_kind: weights[0].wallet_kind, amount_pln: amount });
+  } else {
+    let remaining = amount;
+    for (let i = 0; i < weights.length; i++) {
+      const isLast = i === weights.length - 1;
+      const share = isLast ? remaining : roundPln((amount * weights[i].abs) / totalDebited);
+      if (!(share > 0)) continue;
+      credits.push({ wallet_kind: weights[i].wallet_kind, amount_pln: share });
+      remaining = roundPln(remaining - share);
+    }
+    if (credits.length === 0) {
+      credits.push({ wallet_kind: "admin", amount_pln: amount });
+    }
+  }
+
+  for (const c of credits) {
+    await args.db
+      .prepare(
+        `INSERT INTO wallet_transactions (user_id, kind, amount_pln, match_id, related_user_id, wallet_kind, note, is_test)
+         VALUES (?, 'adjustment', ?, ?, ?, ?, ?, ?)`
+      )
+      .run(
+        args.payerUserId,
+        c.amount_pln,
+        args.matchId,
+        args.relatedUserId ?? null,
+        c.wallet_kind,
+        args.note,
+        0
+      );
+  }
 }
 
 /**
@@ -72,18 +145,18 @@ export async function listMatchCartOptions(): Promise<MatchCartMatchOption[]> {
       .prepare(
         `
         SELECT u.id AS user_id, u.first_name, u.last_name, u.player_alias AS zawodnik,
-               COALESCE(ms.paid, 0) AS paid, COALESCE(ms.commitment, 1) AS commitment
+               COALESCE(ms.paid, 0) AS paid, COALESCE(ms.commitment, 1) AS commitment,
+               COALESCE(u.is_temporary, 0) AS is_temporary
         FROM match_signups ms
         JOIN users u ON u.id = ms.user_id
         WHERE ms.match_id = ?
           AND COALESCE(ms.commitment, 1) = 1
           AND COALESCE(ms.paid, 0) = 0
-          AND COALESCE(u.is_temporary, 0) = 0
           AND NOT EXISTS (
             SELECT 1 FROM match_wallet_charges mwc
             WHERE mwc.match_id = ms.match_id AND mwc.user_id = ms.user_id
           )
-        ORDER BY u.first_name ASC, u.last_name ASC
+        ORDER BY COALESCE(u.is_temporary, 0) DESC, u.first_name ASC, u.last_name ASC
       `
       )
       .all(m.id)) as MatchCartPlayer[];
@@ -180,8 +253,8 @@ function resolveMatchCartDebitParts(
 
 /**
  * Opłaca wybranych zawodników z salda płatnika: debet portfela + paid=1 na zapisach.
- * Atomowość przez kompensację przy braku środków po debecie.
- * Środki schodzą z portfela jako zapłata za mecz — nie zostają jako doładowanie.
+ * W transakcji DB (gdy dostępna): zajęcie paid=1 + debet atomowo —
+ * chroni przed podwójnym obciążeniem przy równoległych requestach.
  */
 export async function applyMatchCartFromWallet(args: {
   payerUserId: number;
@@ -192,6 +265,22 @@ export async function applyMatchCartFromWallet(args: {
   walletKind?: "admin" | "operator";
 }): Promise<ApplyMatchCartResult> {
   const db = await getDb();
+  if (typeof db.transaction === "function") {
+    return db.transaction((tx) => applyMatchCartFromWalletTx(tx, args));
+  }
+  return applyMatchCartFromWalletTx(db, args);
+}
+
+async function applyMatchCartFromWalletTx(
+  db: AppDb,
+  args: {
+    payerUserId: number;
+    matchId: number;
+    beneficiaryUserIds: number[];
+    existingCartId?: number;
+    walletKind?: "admin" | "operator";
+  }
+): Promise<ApplyMatchCartResult> {
   const match = await loadOpenMatch(db, args.matchId);
   if (!match) return { ok: false, error: "MATCH_NOT_FOUND" };
   if (match.played === 1 || match.cancelled === 1) return { ok: false, error: "MATCH_CLOSED" };
@@ -213,7 +302,6 @@ export async function applyMatchCartFromWallet(args: {
         AND ms.user_id IN (${placeholders})
         AND COALESCE(ms.commitment, 1) = 1
         AND COALESCE(ms.paid, 0) = 0
-        AND COALESCE(u.is_temporary, 0) = 0
         AND NOT EXISTS (
           SELECT 1 FROM match_wallet_charges mwc
           WHERE mwc.match_id = ms.match_id AND mwc.user_id = ms.user_id
@@ -227,16 +315,12 @@ export async function applyMatchCartFromWallet(args: {
     zawodnik: string;
   }[];
 
-  if (eligible.length !== uniqueIds.length) {
-    return { ok: false, error: "INVALID_BENEFICIARIES" };
-  }
+  if (eligible.length !== uniqueIds.length) return { ok: false, error: "INVALID_BENEFICIARIES" };
 
   const amountPln = roundPln(fee * eligible.length);
-  const balances = await getWalletBalances(args.payerUserId);
+  const balances = await getWalletBalances(args.payerUserId, db);
   const debitPlan = resolveMatchCartDebitParts(balances, amountPln, args.walletKind);
-  if (!debitPlan.ok) {
-    return { ok: false, error: "INSUFFICIENT_FUNDS" };
-  }
+  if (!debitPlan.ok) return { ok: false, error: "INSUFFICIENT_FUNDS" };
 
   const matchLabel = `${match.match_date} ${match.match_time} · ${match.location}`;
   let cartId = args.existingCartId;
@@ -269,6 +353,26 @@ export async function applyMatchCartFromWallet(args: {
     if (cart.payer_user_id !== args.payerUserId) return { ok: false, error: "CART_NOT_FOUND" };
   }
 
+  // Atomowe zajęcie miejsc (paid=1) przed debetem — drugi równoległy request dostanie 0 changes.
+  const paidUserIds: number[] = [];
+  for (const p of eligible) {
+    const upd = await db
+      .prepare(
+        `UPDATE match_signups SET paid = 1
+         WHERE match_id = ? AND user_id = ? AND COALESCE(paid, 0) = 0`
+      )
+      .run(args.matchId, p.user_id);
+    if (upd.changes > 0) paidUserIds.push(p.user_id);
+  }
+  if (paidUserIds.length !== eligible.length) {
+    for (const uid of paidUserIds) {
+      await db
+        .prepare(`UPDATE match_signups SET paid = 0 WHERE match_id = ? AND user_id = ?`)
+        .run(args.matchId, uid);
+    }
+    return { ok: false, error: "INVALID_BENEFICIARIES" };
+  }
+
   const baseNote = `Koszyk meczowy — ${eligible.length}× ${formatMatchFeePln(fee)} · ${matchLabel}`;
   const debitIds: number[] = [];
   for (const part of debitPlan.parts) {
@@ -281,26 +385,8 @@ export async function applyMatchCartFromWallet(args: {
     debitIds.push(Number(debit.lastInsertRowid));
   }
 
-  const balanceAfterDebit = await getUserWalletBalancePln(args.payerUserId);
+  const balanceAfterDebit = await getUserWalletBalancePln(args.payerUserId, db);
   if (balanceAfterDebit < 0) {
-    for (const id of debitIds) {
-      await db.prepare(`DELETE FROM wallet_transactions WHERE id = ?`).run(id);
-    }
-    return { ok: false, error: "INSUFFICIENT_FUNDS" };
-  }
-
-  const paidUserIds: number[] = [];
-  for (const p of eligible) {
-    const upd = await db
-      .prepare(
-        `UPDATE match_signups SET paid = 1
-         WHERE match_id = ? AND user_id = ? AND COALESCE(paid, 0) = 0`
-      )
-      .run(args.matchId, p.user_id);
-    if (upd.changes > 0) paidUserIds.push(p.user_id);
-  }
-
-  if (paidUserIds.length !== eligible.length) {
     for (const id of debitIds) {
       await db.prepare(`DELETE FROM wallet_transactions WHERE id = ?`).run(id);
     }
@@ -309,7 +395,7 @@ export async function applyMatchCartFromWallet(args: {
         .prepare(`UPDATE match_signups SET paid = 0 WHERE match_id = ? AND user_id = ?`)
         .run(args.matchId, uid);
     }
-    return { ok: false, error: "INVALID_BENEFICIARIES" };
+    return { ok: false, error: "INSUFFICIENT_FUNDS" };
   }
 
   const names = eligible.map((p) => playerLabel(p)).join(", ");
@@ -318,15 +404,26 @@ export async function applyMatchCartFromWallet(args: {
     await db.prepare(`UPDATE wallet_transactions SET note = ? WHERE id = ?`).run(finalNote, id);
   }
 
-  await db
+  const cartDone = await db
     .prepare(
       `UPDATE wallet_match_carts
        SET status = 'completed', completed_at = datetime('now')
        WHERE id = ? AND status = 'pending'`
     )
     .run(cartId);
+  if (cartDone.changes === 0 && args.existingCartId != null) {
+    for (const id of debitIds) {
+      await db.prepare(`DELETE FROM wallet_transactions WHERE id = ?`).run(id);
+    }
+    for (const uid of paidUserIds) {
+      await db
+        .prepare(`UPDATE match_signups SET paid = 0 WHERE match_id = ? AND user_id = ?`)
+        .run(args.matchId, uid);
+    }
+    return { ok: false, error: "CART_NOT_PENDING" };
+  }
 
-  const balance_pln = await getUserWalletBalancePln(args.payerUserId);
+  const balance_pln = await getUserWalletBalancePln(args.payerUserId, db);
   return {
     ok: true,
     cart_id: cartId,
@@ -375,7 +472,6 @@ export async function createPendingMatchCart(args: {
         AND ms.user_id IN (${placeholders})
         AND COALESCE(ms.commitment, 1) = 1
         AND COALESCE(ms.paid, 0) = 0
-        AND COALESCE(u.is_temporary, 0) = 0
         AND NOT EXISTS (
           SELECT 1 FROM match_wallet_charges mwc
           WHERE mwc.match_id = ms.match_id AND mwc.user_id = ms.user_id
@@ -560,32 +656,14 @@ export async function settlePrepaidPlayerWithoutCharge(args: {
   }
 
   const surplus = roundPln(prepaidPln - finalFee);
-  const chargeKind = (await db
-    .prepare(
-      `
-      SELECT wallet_kind FROM wallet_transactions
-      WHERE user_id = ? AND match_id = ? AND kind = 'match_charge' AND amount_pln < 0
-      ORDER BY id DESC
-      LIMIT 1
-    `
-    )
-    .get(prepaid.payer_user_id, args.matchId)) as { wallet_kind: string } | undefined;
-  const walletKind = chargeKind?.wallet_kind === "operator" ? "operator" : "admin";
-
-  await db
-    .prepare(
-      `INSERT INTO wallet_transactions (user_id, kind, amount_pln, match_id, related_user_id, wallet_kind, note, is_test)
-       VALUES (?, 'adjustment', ?, ?, ?, ?, ?, ?)`
-    )
-    .run(
-      prepaid.payer_user_id,
-      surplus,
-      args.matchId,
-      args.beneficiaryUserId,
-      walletKind,
-      `Zwrot nadpłaty koszyka — składka ${formatMatchFeePln(finalFee)} (było ${formatMatchFeePln(prepaidPln)})`,
-      0
-    );
+  await creditRefundSplitByMatchCharges({
+    db,
+    payerUserId: prepaid.payer_user_id,
+    matchId: args.matchId,
+    amountPln: surplus,
+    relatedUserId: args.beneficiaryUserId,
+    note: `Zwrot nadpłaty koszyka — składka ${formatMatchFeePln(finalFee)} (było ${formatMatchFeePln(prepaidPln)})`,
+  });
 
   return {
     ok: true,
@@ -645,32 +723,14 @@ export async function refundMatchCartBeneficiary(args: {
     : prepaidPln;
 
   if (amount > 0) {
-    const chargeKind = (await db
-      .prepare(
-        `
-        SELECT wallet_kind FROM wallet_transactions
-        WHERE user_id = ? AND match_id = ? AND kind = 'match_charge' AND amount_pln < 0
-        ORDER BY id DESC
-        LIMIT 1
-      `
-      )
-      .get(row.payer_user_id, args.matchId)) as { wallet_kind: string } | undefined;
-    const walletKind = chargeKind?.wallet_kind === "operator" ? "operator" : "admin";
-
-    await db
-      .prepare(
-        `INSERT INTO wallet_transactions (user_id, kind, amount_pln, match_id, related_user_id, wallet_kind, note, is_test)
-         VALUES (?, 'adjustment', ?, ?, ?, ?, ?, ?)`
-      )
-      .run(
-        row.payer_user_id,
-        amount,
-        args.matchId,
-        args.beneficiaryUserId,
-        walletKind,
-        `Zwrot koszyka meczowego — ${args.reason}`,
-        0
-      );
+    await creditRefundSplitByMatchCharges({
+      db,
+      payerUserId: row.payer_user_id,
+      matchId: args.matchId,
+      amountPln: amount,
+      relatedUserId: args.beneficiaryUserId,
+      note: `Zwrot koszyka meczowego — ${args.reason}`,
+    });
   }
 
   await db

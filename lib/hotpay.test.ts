@@ -5,6 +5,7 @@ import {
   formatHotpayAmount,
   initPayment,
   isHotpayNotificationIp,
+  sanitizeHotpayReturnPath,
   verifyNotificationHash,
 } from "@/lib/hotpay";
 import {
@@ -14,6 +15,18 @@ import {
   HOTPAY_TEST_ORDER,
   mockHotpayFetch,
 } from "@/lib/hotpay-fixtures";
+
+describe("sanitizeHotpayReturnPath", () => {
+  it("pozwala na powrót na stronę zaproszenia (gość)", () => {
+    expect(sanitizeHotpayReturnPath("/zaproszenie/12")).toBe("/zaproszenie/12");
+    expect(sanitizeHotpayReturnPath("/zaproszenie/12?foo=1")).toBe("/zaproszenie/12?foo=1");
+  });
+
+  it("odrzuca obce ścieżki", () => {
+    expect(sanitizeHotpayReturnPath("https://evil.test/")).toBe("/platnosci");
+    expect(sanitizeHotpayReturnPath("//evil.test")).toBe("/platnosci");
+  });
+});
 
 describe("hotpay hashing", () => {
   it("buildInitHash is stable and matches fixture helper", () => {

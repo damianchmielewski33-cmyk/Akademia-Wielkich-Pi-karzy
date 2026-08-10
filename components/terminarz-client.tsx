@@ -249,6 +249,7 @@ export function TerminarzClient({
   const [settleMatch, setSettleMatch] = useState<MatchRow | null>(null);
   const [settleLoading, setSettleLoading] = useState(false);
   const [settleRows, setSettleRows] = useState<AdminMatchSignupRow[]>([]);
+  const [settleAbsentPrepaid, setSettleAbsentPrepaid] = useState<AdminMatchSignupRow[]>([]);
   const [settleDefaultAmount, setSettleDefaultAmount] = useState("");
   const [settleAmounts, setSettleAmounts] = useState<Record<number, string>>({});
   const [settleSubmitting, setSettleSubmitting] = useState(false);
@@ -539,6 +540,7 @@ export function TerminarzClient({
     setSettleMatch(m);
     setSettleLoading(true);
     setSettleRows([]);
+    setSettleAbsentPrepaid([]);
     setSettleAmounts({});
     setSettleDefaultAmount("");
     try {
@@ -551,11 +553,19 @@ export function TerminarzClient({
         return;
       }
       const present = new Set((attR.ok ? attR.data.present_user_ids : []).map((x) => Number(x)));
-      let confirmed = (signupsR.data.signups ?? []).filter((s) => Number(s.commitment ?? 1) === 1);
+      const allConfirmed = (signupsR.data.signups ?? []).filter((s) => Number(s.commitment ?? 1) === 1);
+      let confirmed = allConfirmed;
+      let absentPrepaid: AdminMatchSignupRow[] = [];
       if (present.size > 0) {
-        confirmed = confirmed.filter((s) => present.has(s.user_id));
+        confirmed = allConfirmed.filter((s) => present.has(s.user_id));
+        absentPrepaid = allConfirmed.filter((s) => {
+          if (present.has(s.user_id)) return false;
+          const prepaidAmt = Number(s.prepaid_amount_pln ?? 0);
+          return Number(s.paid) === 1 || prepaidAmt > 0;
+        });
       }
       setSettleRows(confirmed);
+      setSettleAbsentPrepaid(absentPrepaid);
       const settlePerPerson = perPersonMatchFeePln(m.fee_pln, confirmed.length);
       if (settlePerPerson != null) {
         const feeForPlayers = String(settlePerPerson);
@@ -596,6 +606,8 @@ export function TerminarzClient({
       .filter((s) => Number(s.paid) === 1)
       .map((s) => s.user_id);
 
+    const absent_prepaid_user_ids = settleAbsentPrepaid.map((s) => s.user_id);
+
     const charges = settleRows
       .filter((s) => Number(s.paid) !== 1)
       .map((s) => ({
@@ -604,7 +616,7 @@ export function TerminarzClient({
       }))
       .filter((x) => Number.isFinite(x.amount_pln) && x.amount_pln > 0);
 
-    if (charges.length === 0 && prepaid_user_ids.length === 0) {
+    if (charges.length === 0 && prepaid_user_ids.length === 0 && absent_prepaid_user_ids.length === 0) {
       toast.error("Podaj kwotę dla przynajmniej jednego zawodnika");
       return;
     }
@@ -614,6 +626,7 @@ export function TerminarzClient({
         ok: true;
         applied: unknown[];
         prepaid_settled?: { credited_pln: number }[];
+        absent_refunded?: { refunded_pln: number }[];
         skipped: unknown[];
       }>(`/api/admin/wallet/match/${settleMatch.id}/charges`, {
         method: "POST",
@@ -621,6 +634,7 @@ export function TerminarzClient({
         body: JSON.stringify({
           charges,
           prepaid_user_ids,
+          absent_prepaid_user_ids,
           ...(feeOk ? { fee_per_person_pln: feePerPerson } : {}),
         }),
       });
@@ -632,18 +646,20 @@ export function TerminarzClient({
         (sum, p) => sum + (Number(p.credited_pln) || 0),
         0
       );
+      const absentRefund = (r.data.absent_refunded ?? []).reduce(
+        (sum, p) => sum + (Number(p.refunded_pln) || 0),
+        0
+      );
       const charged = (r.data.applied ?? []).length;
-      if (credited > 0 && charged > 0) {
-        toast.success(`Rozliczono — obciążenia: ${charged}, zwrot nadpłat: ${formatPln(credited)}`);
-      } else if (credited > 0) {
-        toast.success(`Rozliczono mecz — zwrot nadpłat: ${formatPln(credited)}`);
-      } else if (charged > 0) {
-        toast.success("Rozliczono mecz — kwoty odjęte z portfeli");
-      } else {
-        toast.success("Rozliczono mecz — opłaceni z góry bez obciążenia portfela");
-      }
+      const parts: string[] = [];
+      if (charged > 0) parts.push(`obciążenia: ${charged}`);
+      if (credited > 0) parts.push(`zwrot nadpłat: ${formatPln(credited)}`);
+      if (absentRefund > 0) parts.push(`zwrot nieobecnych: ${formatPln(absentRefund)}`);
+      else if ((r.data.absent_refunded ?? []).length > 0) parts.push("nieobecni: zdjęto opłacenie");
+      toast.success(parts.length > 0 ? `Rozliczono — ${parts.join(", ")}` : "Rozliczono mecz");
       setSettleOpen(false);
       setSettleMatch(null);
+      setSettleAbsentPrepaid([]);
       router.refresh();
     } finally {
       setSettleSubmitting(false);
@@ -2103,6 +2119,7 @@ export function TerminarzClient({
           if (!open) {
             setSettleMatch(null);
             setSettleRows([]);
+            setSettleAbsentPrepaid([]);
             setSettleAmounts({});
             setSettleDefaultAmount("");
           }
@@ -2110,7 +2127,7 @@ export function TerminarzClient({
         size="lg"
         scrollable
         title="Rozlicz mecz"
-        description="Domyślnie wpisuje równą składkę na osobę (wynajem boiska ÷ liczba obecnych, zaokrąglenie w górę do 0,50 zł)."
+        description="Domyślnie wpisuje równą składkę na osobę (wynajem boiska ÷ liczba obecnych, zaokrąglenie w górę do 0,50 zł). Nieobecni z zaliczką dostają pełny zwrot do portfela."
         footer={
           <>
             <Button type="button" variant="outline" onClick={() => setSettleOpen(false)}>
@@ -2158,8 +2175,48 @@ export function TerminarzClient({
               </p>
             </div>
 
+            {settleAbsentPrepaid.length > 0 ? (
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-amber-900 dark:text-amber-100">
+                  Nieobecni z zaliczką — przy zapisie pełny zwrot do portfela ({settleAbsentPrepaid.length})
+                </p>
+                <div className={cn(modalListClass, "space-y-2 p-1")}>
+                  {settleAbsentPrepaid.map((p) => (
+                    <div
+                      key={`absent-${p.user_id}`}
+                      className="flex items-center gap-3 rounded-xl border border-amber-500/40 bg-amber-50/90 px-3 py-2 dark:border-amber-600/50 dark:bg-amber-950/35"
+                    >
+                      <PlayerAvatar
+                        photoPath={p.profile_photo_path}
+                        firstName={p.first_name}
+                        lastName={p.last_name}
+                        size="sm"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <PlayerNameStack
+                          firstName={p.first_name}
+                          lastName={p.last_name}
+                          nick={p.zawodnik}
+                        />
+                        <p className="text-xs text-amber-800 dark:text-amber-200">
+                          Zwrot{" "}
+                          {typeof p.prepaid_amount_pln === "number" && p.prepaid_amount_pln > 0
+                            ? formatPln(p.prepaid_amount_pln)
+                            : "zaliczki"}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
             {settleRows.length === 0 ? (
-              <p className={modalEmptyStateClass}>Brak zapisanych (potwierdzonych) zawodników do rozliczenia.</p>
+              <p className={modalEmptyStateClass}>
+                {settleAbsentPrepaid.length > 0
+                  ? "Brak obecnych do obciążenia — zapisze tylko zwroty dla nieobecnych."
+                  : "Brak zapisanych (potwierdzonych) zawodników do rozliczenia."}
+              </p>
             ) : (
               <div className={cn(modalListClass, "space-y-2 p-1")}>
                 {settleRows.map((p) => (

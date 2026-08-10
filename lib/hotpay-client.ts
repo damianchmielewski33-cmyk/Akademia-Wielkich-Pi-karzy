@@ -38,6 +38,22 @@ export async function createHotpayTopup(
   return data.url;
 }
 
+/** Oznacza lokalnie sesję HotPay jako cancelled (np. po anulowaniu w bramce). */
+export async function abandonHotpayPayment(sessionId: string): Promise<void> {
+  const id = sessionId.trim();
+  if (!id) return;
+  try {
+    await fetch("/api/wallet/hotpay/abandon", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "same-origin",
+      body: JSON.stringify({ session_id: id }),
+    });
+  } catch {
+    /* ignore — webhook SUCCESS i tak może zaksięgować */
+  }
+}
+
 export type MatchCartPayResult =
   | { method: "wallet"; amount_pln: number; paid_user_ids: number[] }
   | { method: "hotpay"; url: string; amount_pln: number };
