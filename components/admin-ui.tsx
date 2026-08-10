@@ -71,7 +71,7 @@ export const adminStatusChipClass =
 export type AdminTab = {
   id: string;
   label: string;
-  icon: ComponentType<{ className?: string; "aria-hidden"?: boolean }>;
+  icon: ComponentType<{ className?: string; strokeWidth?: number; "aria-hidden"?: boolean }>;
   /** Czerwona kropka bez liczby (np. zgłoszenia PIN). */
   badge?: boolean;
   /** Liczba na czerwonym badge (np. nieprzeczytane wiadomości). */
