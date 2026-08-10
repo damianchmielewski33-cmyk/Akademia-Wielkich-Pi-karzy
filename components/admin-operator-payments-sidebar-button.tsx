@@ -50,6 +50,22 @@ export function AdminOperatorPaymentsSidebarButton({
     if (active) void load();
   }, [active, load]);
 
+  useEffect(() => {
+    function onChanged(ev: Event) {
+      const detail = (ev as CustomEvent<{ enabled?: boolean; configured?: boolean }>).detail;
+      if (!detail) {
+        void load();
+        return;
+      }
+      setState({
+        enabled: Boolean(detail.enabled),
+        configured: detail.configured !== undefined ? Boolean(detail.configured) : true,
+      });
+    }
+    window.addEventListener("awp-hotpay-settings-changed", onChanged);
+    return () => window.removeEventListener("awp-hotpay-settings-changed", onChanged);
+  }, [load]);
+
   if (state == null) {
     return (
       <div

@@ -284,6 +284,12 @@ function nonEmptyString(v: string | null | undefined, fallback: string): string 
   return t ? t : fallback;
 }
 
+/** Flagi INTEGER z SQLite/Turso (number | bigint | 0/1). */
+function sqlFlagOn(v: unknown, defaultOn = false): boolean {
+  if (v === null || v === undefined) return defaultOn;
+  return Number(v) === 1;
+}
+
 function parseCancelReasonsJson(raw: string | null | undefined): MatchCancelReasonEntry[] {
   if (!raw?.trim()) return APP_SETTINGS_DEFAULTS.match_cancel_reasons;
   try {
@@ -346,14 +352,14 @@ export function resolveAppSettings(
   const allowRaw = row?.allow_self_registration;
   const assetUrls = siteAssetUrlsFromRow(row);
   return {
-    match_notification_prompt_enabled: (row?.match_notification_prompt_enabled ?? 0) === 1,
+    match_notification_prompt_enabled: sqlFlagOn(row?.match_notification_prompt_enabled, false),
     home_youtube_url: row?.home_youtube_url?.trim() || null,
     adsense_client_id: row?.adsense_client_id?.trim() || null,
-    adsense_enabled: (row?.adsense_enabled ?? 0) === 1,
+    adsense_enabled: sqlFlagOn(row?.adsense_enabled, false),
     adsense_slot_footer: row?.adsense_slot_footer?.trim() || null,
     adsense_slot_inline: row?.adsense_slot_inline?.trim() || null,
     adsense_slot_popup: row?.adsense_slot_popup?.trim() || null,
-    adsense_popup_enabled: (row?.adsense_popup_enabled ?? 0) === 1,
+    adsense_popup_enabled: sqlFlagOn(row?.adsense_popup_enabled, false),
     site_name: nonEmptyString(row?.site_name, d.site_name),
     site_description: nonEmptyString(row?.site_description, d.site_description),
     contact_email: nonEmptyString(row?.contact_email, d.contact_email),
@@ -367,7 +373,7 @@ export function resolveAppSettings(
     facebook_damian_url: nonEmptyString(row?.facebook_damian_url, d.facebook_damian_url),
     facebook_mateusz_url: nonEmptyString(row?.facebook_mateusz_url, d.facebook_mateusz_url),
     allow_self_registration:
-      allowRaw === null || allowRaw === undefined ? true : allowRaw === 1,
+      allowRaw === null || allowRaw === undefined ? true : sqlFlagOn(allowRaw, true),
     default_match_max_slots:
       typeof row?.default_match_max_slots === "number" && row.default_match_max_slots >= 1
         ? row.default_match_max_slots
@@ -391,7 +397,7 @@ export function resolveAppSettings(
       typeof row?.ranking_pt_save === "number" && row.ranking_pt_save >= 0
         ? row.ranking_pt_save
         : d.ranking_pt_save,
-    match_email_notifications_enabled: (row?.match_email_notifications_enabled ?? 1) === 1,
+    match_email_notifications_enabled: sqlFlagOn(row?.match_email_notifications_enabled, true),
     lineup_pitch_slots_min:
       typeof row?.lineup_pitch_slots_min === "number" && row.lineup_pitch_slots_min >= 1
         ? row.lineup_pitch_slots_min
@@ -411,7 +417,7 @@ export function resolveAppSettings(
     site_assets: resolveSiteAssets(assetUrls),
     screen_blocks: parseScreenBlocksJson(row?.screen_blocks_json),
     screen_blocks_mobile: parseMobileScreenBlocksJson(row?.screen_blocks_mobile_json),
-    hotpay_enabled: (row?.hotpay_enabled ?? 0) === 1,
+    hotpay_enabled: sqlFlagOn(row?.hotpay_enabled, true),
     hotpay_commission_pct:
       typeof row?.hotpay_commission_pct === "number" && row.hotpay_commission_pct >= 0
         ? row.hotpay_commission_pct
@@ -424,7 +430,7 @@ export function resolveAppSettings(
       row?.mobile_settings_json,
       mobileSettingsFromWeb({
         ...APP_SETTINGS_DEFAULTS,
-        match_notification_prompt_enabled: (row?.match_notification_prompt_enabled ?? 0) === 1,
+        match_notification_prompt_enabled: sqlFlagOn(row?.match_notification_prompt_enabled, false),
         home_youtube_url: row?.home_youtube_url?.trim() || null,
         site_name: nonEmptyString(row?.site_name, d.site_name),
         site_description: nonEmptyString(row?.site_description, d.site_description),
@@ -439,7 +445,7 @@ export function resolveAppSettings(
         facebook_damian_url: nonEmptyString(row?.facebook_damian_url, d.facebook_damian_url),
         facebook_mateusz_url: nonEmptyString(row?.facebook_mateusz_url, d.facebook_mateusz_url),
         allow_self_registration:
-          allowRaw === null || allowRaw === undefined ? true : allowRaw === 1,
+          allowRaw === null || allowRaw === undefined ? true : sqlFlagOn(allowRaw, true),
         default_match_max_slots:
           typeof row?.default_match_max_slots === "number" && row.default_match_max_slots >= 1
             ? row.default_match_max_slots
@@ -463,7 +469,7 @@ export function resolveAppSettings(
           typeof row?.ranking_pt_save === "number" && row.ranking_pt_save >= 0
             ? row.ranking_pt_save
             : d.ranking_pt_save,
-        match_email_notifications_enabled: (row?.match_email_notifications_enabled ?? 1) === 1,
+        match_email_notifications_enabled: sqlFlagOn(row?.match_email_notifications_enabled, true),
         lineup_pitch_slots_min:
           typeof row?.lineup_pitch_slots_min === "number" && row.lineup_pitch_slots_min >= 1
             ? row.lineup_pitch_slots_min

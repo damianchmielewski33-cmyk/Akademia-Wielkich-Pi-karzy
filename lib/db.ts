@@ -77,7 +77,9 @@ const testSlot: DbSlot = {
 function rowToRecord(row: Row, columns: string[]): Record<string, unknown> {
   const o: Record<string, unknown> = {};
   for (const c of columns) {
-    o[c] = row[c];
+    const v = row[c];
+    // libSQL/Turso często zwraca INTEGER jako bigint — `1n === 1` jest false.
+    o[c] = typeof v === "bigint" ? Number(v) : v;
   }
   return o;
 }

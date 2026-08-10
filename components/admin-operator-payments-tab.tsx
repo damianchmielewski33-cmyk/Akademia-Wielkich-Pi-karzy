@@ -66,6 +66,10 @@ export function AdminOperatorPaymentsTab() {
     async (patch: Partial<Pick<HotpaySettings, "hotpay_enabled" | "hotpay_commission_pct" | "hotpay_commission_fixed">>) => {
       if (busy) return;
       setBusy(true);
+      const previous = settings;
+      if (previous && patch.hotpay_enabled !== undefined) {
+        setSettings({ ...previous, hotpay_enabled: patch.hotpay_enabled });
+      }
       const toastId = toast.loading("Zapisywanie…");
       try {
         const res = await fetch("/api/admin/app-settings", {
@@ -75,6 +79,7 @@ export function AdminOperatorPaymentsTab() {
         });
         const data = (await res.json().catch(() => ({}))) as AppSettingsApiResponse & { error?: string };
         if (!res.ok) {
+          if (previous) setSettings(previous);
           toast.error(typeof data.error === "string" ? data.error : "Nie udało się zapisać", { id: toastId });
           return;
         }
@@ -84,14 +89,20 @@ export function AdminOperatorPaymentsTab() {
           hotpay_commission_fixed: data.hotpay_commission_fixed,
           system: { hotpay_configured: data.system.hotpay_configured },
         });
+        window.dispatchEvent(
+          new CustomEvent("awp-hotpay-settings-changed", {
+            detail: { enabled: data.hotpay_enabled, configured: data.system.hotpay_configured },
+          })
+        );
         toast.success("Zapisano ustawienia płatności operatora", { id: toastId });
       } catch (e) {
+        if (previous) setSettings(previous);
         toast.error(e instanceof Error ? e.message : "Błąd zapisu", { id: toastId });
       } finally {
         setBusy(false);
       }
     },
-    [busy]
+    [busy, settings]
   );
 
   if (fetching && !settings) {
