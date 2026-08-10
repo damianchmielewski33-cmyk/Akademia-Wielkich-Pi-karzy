@@ -19,6 +19,8 @@ const EXACT: Record<string, string> = {
   "Brak uprawnień lub błąd": "Faul techniczny albo brak przepustki — spróbuj ponownie.",
   "Brak uprawnień": "Brak przepustki na boisko — ta akcja jest zablokowana.",
   "Nie udało się wykonać operacji": "Akcja nie doszła do bramki — spróbuj jeszcze raz.",
+  "Nie udało się wgrać grafiki":
+    "Grafika nie weszła do szatni — plik max 3,5 MB (JPG/PNG/WebP), bez HEIC.",
   "Nie udało się zapisać": "Zapis nie wpadł do siatki — spróbuj ponownie.",
   "Nie udało się skopiować linku": "Link nie wszedł do schowka — spróbuj jeszcze raz.",
   "Nie udało się wczytać przeglądu": "Przegląd nie wyszedł z szatni — odśwież panel.",

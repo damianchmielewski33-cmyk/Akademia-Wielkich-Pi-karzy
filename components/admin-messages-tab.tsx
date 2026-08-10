@@ -679,7 +679,7 @@ export function AdminMessagesTab({ onUnreadChange, mode = "page", active = true 
           <Button
             type="submit"
             size="icon"
-            variant="stadium"
+            variant="gold"
             className="h-10 w-10 shrink-0 rounded-full"
             disabled={sending || uploadingAttachment || !canSend}
             aria-label="Odpisz"
@@ -747,7 +747,7 @@ export function AdminMessagesTab({ onUnreadChange, mode = "page", active = true 
             <Button
               type="button"
               size="sm"
-              variant="stadium"
+              variant="gold"
               className="h-9 shrink-0 gap-1.5 rounded-xl px-3"
               onClick={() => {
                 setComposingNew(true);

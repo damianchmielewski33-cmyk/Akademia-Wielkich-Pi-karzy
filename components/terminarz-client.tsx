@@ -31,7 +31,7 @@ import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
 import type { PlayersDataEntry } from "@/lib/terminarz-shared";
 import { formatPonderingPlayersPolish, isMatchCancelled, tentativeSignupCount } from "@/lib/terminarz-shared";
 import { cn, matchFeeToInputString, parseMatchFeeInput } from "@/lib/utils";
-import { formatMatchFeePln, perPersonMatchFeePln } from "@/lib/match-fee";
+import { formatMatchFeePln, MATCH_PREPAYMENT_PLN, perPersonMatchFeePln } from "@/lib/match-fee";
 import { nativeSelectClasses } from "@/lib/field-styles";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -66,10 +66,7 @@ import { z } from "zod";
 import { TerminarzMatchCard } from "@/components/terminarz-match-card";
 import { MatchSignupCountsBlock } from "@/components/terminarz-match-counts";
 import { appendShareSessionQuery, terminarzInviteRelativePath } from "@/lib/share-link";
-import { useAsyncAction } from "@/lib/use-async-action";import {
-  getStandaloneSurveyMatchRow,
-  PARTICIPATION_SURVEY_KEY,
-} from "@/lib/match-participation-survey";
+import { useAsyncAction } from "@/lib/use-async-action";
 import type { CaptainLotteryEntry } from "@/lib/captain-lottery";
 import { captainLotteryEntryFromApi } from "@/lib/captain-lottery";
 import { useHotpayPayment } from "@/hooks/use-hotpay-payment";
@@ -93,8 +90,6 @@ type Props = {
   highlightMatchId?: number | null;
   /** Z URL (?statystyki=1 wraz z ?mecz=) — otwiera dialog statystyk po wejściu (mecz z bazy). */
   openStatsFromUrl?: boolean;
-  /** Z URL (?statystyki_ankiety=1) — mecz spoza bazy (ankieta 27.03). */
-  openStandaloneSurveyStats?: boolean;
   /** Z URL (?obecnosc=1 wraz z ?mecz=) — otwiera dialog obecności (admin). */
   openAttendanceFromUrl?: boolean;
   matchDefaults?: {
@@ -118,6 +113,7 @@ type AdminMatchSignupRow = {
   last_name: string;
   zawodnik: string;
   profile_photo_path: string | null;
+  prepaid_amount_pln?: number | null;
 };
 
 function formatPln(n: number) {
@@ -201,7 +197,6 @@ export function TerminarzClient({
   currentUserId = null,
   highlightMatchId = null,
   openStatsFromUrl = false,
-  openStandaloneSurveyStats = false,
   openAttendanceFromUrl = false,
   matchDefaults = { maxSlots: 14, location: "" },
   cancelReasons,
@@ -244,13 +239,11 @@ export function TerminarzClient({
   const [statsAssists, setStatsAssists] = useState("");
   const [statsDistance, setStatsDistance] = useState("");
   const [statsSaves, setStatsSaves] = useState("");
-  const [statsStandaloneSurveyKey, setStatsStandaloneSurveyKey] = useState<string | null>(null);
   const [transportSignupOpen, setTransportSignupOpen] = useState(false);
   const [transportSignupMatchId, setTransportSignupMatchId] = useState<number | null>(null);
   const [transportSignupIntent, setTransportSignupIntent] = useState<"signup" | "confirm">("signup");
   const [tentativeBusyId, setTentativeBusyId] = useState<number | null>(null);
   const statsOpenedFromUrlRef = useRef(false);
-  const standaloneStatsOpenedFromUrlRef = useRef(false);
   const attendanceOpenedFromUrlRef = useRef(false);
   const [settleOpen, setSettleOpen] = useState(false);
   const [settleMatch, setSettleMatch] = useState<MatchRow | null>(null);
@@ -343,7 +336,7 @@ export function TerminarzClient({
           returnPath: `/terminarz?mecz=${matchId}`,
         });
         if (result.method === "hotpay") {
-          toast.info("Trwa przekierowanie do płatności HotPay…");
+          toast.info("Trwa przekierowanie do płatności kartą lub Blikiem…");
           window.setTimeout(() => window.location.assign(result.url), 400);
           return;
         }
@@ -591,32 +584,59 @@ export function TerminarzClient({
 
   async function submitSettlement() {
     if (!settleMatch) return;
+    const feePerPerson = Number(String(settleDefaultAmount ?? "").replace(",", "."));
+    const feeOk = Number.isFinite(feePerPerson) && feePerPerson >= 0;
+
+    const prepaid_user_ids = settleRows
+      .filter((s) => Number(s.paid) === 1)
+      .map((s) => s.user_id);
+
     const charges = settleRows
+      .filter((s) => Number(s.paid) !== 1)
       .map((s) => ({
         user_id: s.user_id,
         amount_pln: Number(String(settleAmounts[s.user_id] ?? "").replace(",", ".")),
       }))
       .filter((x) => Number.isFinite(x.amount_pln) && x.amount_pln > 0);
 
-    if (charges.length === 0) {
+    if (charges.length === 0 && prepaid_user_ids.length === 0) {
       toast.error("Podaj kwotę dla przynajmniej jednego zawodnika");
       return;
     }
     setSettleSubmitting(true);
     try {
-      const r = await fetchJson<{ ok: true; applied: unknown[]; skipped: unknown[] }>(
-        `/api/admin/wallet/match/${settleMatch.id}/charges`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ charges }),
-        }
-      );
+      const r = await fetchJson<{
+        ok: true;
+        applied: unknown[];
+        prepaid_settled?: { credited_pln: number }[];
+        skipped: unknown[];
+      }>(`/api/admin/wallet/match/${settleMatch.id}/charges`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          charges,
+          prepaid_user_ids,
+          ...(feeOk ? { fee_per_person_pln: feePerPerson } : {}),
+        }),
+      });
       if (!r.ok) {
         toast.error(r.error);
         return;
       }
-      toast.success("Rozliczono mecz — kwoty odjęte z portfeli");
+      const credited = (r.data.prepaid_settled ?? []).reduce(
+        (sum, p) => sum + (Number(p.credited_pln) || 0),
+        0
+      );
+      const charged = (r.data.applied ?? []).length;
+      if (credited > 0 && charged > 0) {
+        toast.success(`Rozliczono — obciążenia: ${charged}, zwrot nadpłat: ${formatPln(credited)}`);
+      } else if (credited > 0) {
+        toast.success(`Rozliczono mecz — zwrot nadpłat: ${formatPln(credited)}`);
+      } else if (charged > 0) {
+        toast.success("Rozliczono mecz — kwoty odjęte z portfeli");
+      } else {
+        toast.success("Rozliczono mecz — opłaceni z góry bez obciążenia portfela");
+      }
       setSettleOpen(false);
       setSettleMatch(null);
       router.refresh();
@@ -637,32 +657,12 @@ export function TerminarzClient({
   }
 
   const openStatsForMatch = useCallback((m: MatchRow) => {
-    setStatsStandaloneSurveyKey(null);
     setStatsMatch(m);
     setStatsGoals("");
     setStatsAssists("");
     setStatsDistance("");
     setStatsSaves("");
   }, []);
-
-  useEffect(() => {
-    if (!openStandaloneSurveyStats || !isLoggedIn) return;
-    if (standaloneStatsOpenedFromUrlRef.current) return;
-    standaloneStatsOpenedFromUrlRef.current = true;
-    setView("list");
-    setListTab("archive");
-    setStatsStandaloneSurveyKey(PARTICIPATION_SURVEY_KEY);
-    setStatsMatch(getStandaloneSurveyMatchRow());
-    setStatsGoals("");
-    setStatsAssists("");
-    setStatsDistance("");
-    setStatsSaves("");
-    if (typeof window !== "undefined") {
-      const u = new URL(window.location.href);
-      u.searchParams.delete("statystyki_ankiety");
-      router.replace(u.pathname + u.search, { scroll: false });
-    }
-  }, [openStandaloneSurveyStats, isLoggedIn, router]);
 
   useEffect(() => {
     if (!openStatsFromUrl || highlightMatchId == null || !isLoggedIn) return;
@@ -775,11 +775,7 @@ export function TerminarzClient({
     setStatsBusy(true);
     try {
       const fd = new FormData();
-      if (statsStandaloneSurveyKey) {
-        fd.set("survey_key", statsStandaloneSurveyKey);
-      } else {
-        fd.set("match_id", String(statsMatch.id));
-      }
+      fd.set("match_id", String(statsMatch.id));
       const nz = (s: string) => (s.trim() === "" ? "0" : s);
       fd.set("goals", nz(statsGoals));
       fd.set("assists", nz(statsAssists));
@@ -790,7 +786,6 @@ export function TerminarzClient({
       if (res.ok && text === "OK") {
         toast.success("Statystyki zapisane");
         setStatsMatch(null);
-        setStatsStandaloneSurveyKey(null);
         router.refresh();
         return;
       }
@@ -968,7 +963,7 @@ export function TerminarzClient({
                     <span>
                       <span className="block leading-tight">Opłać zaległość za mecz</span>
                       <span className="mt-1 block text-[11px] font-normal leading-snug text-emerald-100/95">
-                        {formatMatchFeePln(Math.abs(walletBalancePln))} · HotPay
+                        {formatMatchFeePln(Math.abs(walletBalancePln))} · karta / BLIK
                       </span>
                     </span>
                   </Button>
@@ -1008,7 +1003,7 @@ export function TerminarzClient({
                       <span>
                         <span className="block leading-tight">Opłać zaległość</span>
                         <span className="mt-1 block text-[11px] font-normal leading-snug text-emerald-100/95">
-                          {formatMatchFeePln(Math.abs(walletBalancePln))} · HotPay
+                          {formatMatchFeePln(Math.abs(walletBalancePln))} · karta / BLIK
                         </span>
                       </span>
                     </Button>
@@ -1018,7 +1013,7 @@ export function TerminarzClient({
                       variant="ghost"
                       className={actionBtnPrimary}
                       disabled={matchPayBusyId != null || debtBusy}
-                      title="Opłać przez HotPay"
+                      title={`Zaliczka ${MATCH_PREPAYMENT_PLN} zł — zwrot, jeśli ostateczna składka będzie niższa`}
                       onClick={() => void payMatchFee(m.id)}
                     >
                       {matchPayBusyId === m.id ? (
@@ -1029,10 +1024,7 @@ export function TerminarzClient({
                       <span>
                         <span className="block leading-tight">Opłać ten mecz</span>
                         <span className="mt-1 block text-[11px] font-normal leading-snug text-emerald-100/95">
-                          {(() => {
-                            const fee = perPersonMatchFeePln(m.fee_pln, m.signed_up);
-                            return fee != null ? `${formatMatchFeePln(fee)} · HotPay` : "HotPay";
-                          })()}
+                          {formatMatchFeePln(MATCH_PREPAYMENT_PLN)} · zwrot, jeśli składka będzie niższa
                         </span>
                       </span>
                     </Button>
@@ -2192,7 +2184,10 @@ export function TerminarzClient({
                         ID: {p.user_id}
                         {Number(p.paid) === 1 ? (
                           <span className="ml-2 font-bold text-green-700 dark:text-green-400">
-                            · Opłacony
+                            · Opłacony z góry
+                            {typeof p.prepaid_amount_pln === "number" && p.prepaid_amount_pln > 0
+                              ? ` (${formatPln(p.prepaid_amount_pln)})`
+                              : ""}
                           </span>
                         ) : (
                           <span className="ml-2 font-bold text-red-700 dark:text-red-400">
@@ -2200,6 +2195,24 @@ export function TerminarzClient({
                           </span>
                         )}
                       </p>
+                      {Number(p.paid) === 1 &&
+                      typeof p.prepaid_amount_pln === "number" &&
+                      p.prepaid_amount_pln > 0 &&
+                      Number.isFinite(Number(String(settleDefaultAmount).replace(",", "."))) &&
+                      p.prepaid_amount_pln >
+                        Number(String(settleDefaultAmount).replace(",", ".")) ? (
+                        <p className="mt-0.5 text-xs text-emerald-700 dark:text-emerald-400">
+                          Zwrot nadpłaty:{" "}
+                          {formatPln(
+                            Math.round(
+                              (p.prepaid_amount_pln -
+                                Number(String(settleDefaultAmount).replace(",", "."))) *
+                                100
+                            ) / 100
+                          )}{" "}
+                          na portfel płatnika
+                        </p>
+                      ) : null}
                     </div>
                     <div className="w-32">
                       <Label className="sr-only" htmlFor={`settle-${p.user_id}`}>
@@ -2223,8 +2236,9 @@ export function TerminarzClient({
             )}
 
             <ModalAlert tone="warning" title="Uwaga">
-              Rozliczenie odejmuje kwoty z portfeli. Osoby już opłacone koszykiem mają kwotę 0 i są pomijane.
-              API pominie też osoby wcześniej rozliczone dla tego meczu.
+              Osoby opłacone koszykiem nie są ponownie obciążane. Gdy ostateczna składka jest niższa niż
+              wpłata z koszyka, różnica wraca na portfel płatnika. Pozostałym kwoty są odejmowane z
+              portfeli. API pominie też osoby wcześniej rozliczone dla tego meczu.
               {settleDefaultAmount.trim() ? (
                 <p className="mt-1">
                   Domyślna kwota:{" "}
@@ -2241,19 +2255,14 @@ export function TerminarzClient({
       <AppModal
         open={Boolean(statsMatch)}
         onOpenChange={(open) => {
-          if (!open) {
-            setStatsMatch(null);
-            setStatsStandaloneSurveyKey(null);
-          }
+          if (!open) setStatsMatch(null);
         }}
         size="lg"
         scrollable
         title="Statystyki z meczu"
         description={
           statsMatch
-            ? statsStandaloneSurveyKey
-              ? "Wpisz swoje liczby z tego spotkania (mecz spoza terminarza). Możesz zapisać lub później zmienić dane tutaj albo w profilu — bez limitu 7 dni od daty meczu."
-              : "Wpisz swoje liczby z tego spotkania. Możesz to zrobić tylko raz — później zmiany wykona administrator."
+            ? "Wpisz swoje liczby z tego spotkania. Możesz to zrobić tylko raz — później zmiany wykona administrator."
             : undefined
         }
         footer={
@@ -2597,7 +2606,7 @@ function AddMatchDialog({
       setFeeInput(matchFeeToInputString(defaults.feePln));
       onOpenChange(false);
       onDone();
-      toast.success(data.test_mode ? "Mecz dodany (baza TEST)" : "Mecz dodany");
+      toast.success(data.test_mode ? "Mecz dodany (sandbox)" : "Mecz dodany");
     });
   }
 

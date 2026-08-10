@@ -64,11 +64,11 @@ export function PlatnosciClient({
         title="Płatności"
         subtitle={
           isAdmin
-            ? "Salda portfeli, doładowania po przelewie i korekty — w stylu reszty akademii."
+            ? "Twoje saldo i historia, salda graczy, doładowania oraz korekty."
             : isLoggedIn
               ? hotpayEnabled
-                ? "Saldo, opłata meczu dla siebie i innych zawodników — szybko i wygodnie."
-                : "Saldo i historia. Możesz opłacić mecz dla siebie lub innych."
+                ? "Saldo, pełna historia transakcji i opłata meczu — dla siebie i innych."
+                : "Saldo, pełna historia transakcji i opłata meczu dla siebie lub innych."
               : "Zaloguj się, aby zobaczyć saldo portfela."
         }
       />
@@ -101,6 +101,16 @@ export function PlatnosciClient({
             <HotpayPayButtons
               enabled={hotpayEnabled}
               walletLoading={adminWalletLoading}
+            />
+            <PlayerWalletPanel
+              currentUserId={currentUserId}
+              hotpayEnabled={hotpayEnabled}
+              showTopup={false}
+              refreshKey={walletRefreshKey}
+            />
+            <MatchCartPayPanel
+              hotpayEnabled={hotpayEnabled}
+              onPaid={() => setWalletRefreshKey((k) => k + 1)}
             />
             <AdminWalletsSaldoSection embedded showPublicLinks showTopUp />
           </div>

@@ -46,7 +46,7 @@ export function PlatnosciPublicPayButton({ token, userId, amountPln, className }
     <PayButton
       variant="default"
       amountPln={amountPln}
-      label="Zapłać"
+      label="Zapłać kartą lub Blikiem"
       busy={busy}
       onClick={() => void pay()}
       className={className}

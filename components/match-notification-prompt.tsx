@@ -22,7 +22,6 @@ type MeUser = {
 export function MatchNotificationPrompt() {
   const pathname = usePathname();
   const [user, setUser] = useState<MeUser | null | undefined>(undefined);
-  const [participationSurveyPending, setParticipationSurveyPending] = useState(false);
   const [consent, setConsent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [email, setEmail] = useState("");
@@ -30,27 +29,16 @@ export function MatchNotificationPrompt() {
 
   const load = useCallback(async () => {
     try {
-      const [meRes, surveyRes] = await Promise.all([
-        fetch("/api/auth/me", { credentials: "include" }),
-        fetch("/api/user/match-participation-survey", { credentials: "include" }),
-      ]);
+      const meRes = await fetch("/api/auth/me", { credentials: "include" });
       const data = (await meRes.json()) as { user: MeUser | null };
       if (!data.user) {
         setUser(null);
-        setParticipationSurveyPending(false);
         return;
       }
       setUser(data.user);
       if (data.user.email) setEmail(data.user.email);
-      if (surveyRes.ok) {
-        const s = (await surveyRes.json()) as { pending?: boolean };
-        setParticipationSurveyPending(s.pending === true);
-      } else {
-        setParticipationSurveyPending(false);
-      }
     } catch {
       setUser(null);
-      setParticipationSurveyPending(false);
     }
   }, []);
 
@@ -64,12 +52,7 @@ export function MatchNotificationPrompt() {
     return () => window.removeEventListener("post-login-prompts-updated", onUp);
   }, [load]);
 
-  const open = Boolean(
-    user &&
-      user.notification_prompt_completed === 0 &&
-      !user.pin_change_pending &&
-      !participationSurveyPending
-  );
+  const open = Boolean(user && user.notification_prompt_completed === 0 && !user.pin_change_pending);
 
   const dismiss = async () => {
     setBusy(true);

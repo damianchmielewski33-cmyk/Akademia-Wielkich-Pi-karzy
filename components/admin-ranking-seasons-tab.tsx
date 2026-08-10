@@ -132,7 +132,7 @@ export function AdminRankingSeasonsTab() {
               </div>
               <Button
                 type="button"
-                variant="stadium"
+                variant="gold"
                 className="mt-4"
                 disabled={busy}
                 onClick={() => setEndConfirmId(activeSeason.id)}
@@ -159,7 +159,7 @@ export function AdminRankingSeasonsTab() {
               disabled={busy}
               onChange={(e) => setNewSeasonName(e.target.value)}
             />
-            <Button type="button" variant="stadium" disabled={busy} onClick={() => setStartConfirmOpen(true)}>
+            <Button type="button" variant="gold" disabled={busy} onClick={() => setStartConfirmOpen(true)}>
               <Play className="mr-2 h-4 w-4" aria-hidden />
               Rozpocznij nowy sezon (restart rankingu)
             </Button>
@@ -219,7 +219,7 @@ export function AdminRankingSeasonsTab() {
             <Button type="button" variant="outline" disabled={busy} onClick={() => setStartConfirmOpen(false)}>
               Anuluj
             </Button>
-            <Button type="button" variant="stadium" disabled={busy} onClick={() => void startSeason()}>
+            <Button type="button" variant="gold" disabled={busy} onClick={() => void startSeason()}>
               {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
               Rozpocznij sezon
             </Button>
@@ -242,7 +242,7 @@ export function AdminRankingSeasonsTab() {
             </Button>
             <Button
               type="button"
-              variant="stadium"
+              variant="gold"
               disabled={busy || endConfirmId == null}
               onClick={() => endConfirmId != null && void endSeason(endConfirmId)}
             >

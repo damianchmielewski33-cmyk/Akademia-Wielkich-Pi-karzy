@@ -27,11 +27,11 @@ export function HotpayPayButtons({
   async function payTopup() {
     const amount = Number.parseFloat(topupAmount.replace(",", "."));
     if (!Number.isFinite(amount) || amount < 0.01) {
-      showError("Podaj poprawną kwotę doładowania (min. 0,01 PLN)", "Doładowanie");
+      showError("Podaj poprawną kwotę (min. 0,01 PLN)", "Płatność");
       return;
     }
     if (amount > 10000) {
-      showError("Maksymalna kwota doładowania to 10 000 PLN", "Doładowanie");
+      showError("Maksymalna kwota płatności to 10 000 PLN", "Płatność");
       return;
     }
     await pay(amount);
@@ -48,18 +48,18 @@ export function HotpayPayButtons({
           <Wallet className="h-5 w-5" strokeWidth={2.25} aria-hidden />
         </div>
         <div className="min-w-0 flex-1">
-          <h3 className="text-base font-bold text-emerald-950 dark:text-emerald-100">Doładuj saldo online</h3>
+          <h3 className="text-base font-bold text-emerald-950 dark:text-emerald-100">Zapłać kartą lub Blikiem</h3>
           <p className="mt-0.5 text-sm text-zinc-600 dark:text-zinc-400">
-            Ureguluj niedopłatę lub doładuj portfel online. Opłatę za konkretny mecz (za siebie lub innych) znajdziesz w sekcji „Opłać mecz (koszyk)”.
+            Ureguluj niedopłatę lub wpłać środki online (karta lub BLIK). Opłatę za konkretny mecz (za siebie lub innych) znajdziesz w sekcji „Opłać mecz (koszyk)”.
           </p>
         </div>
       </div>
 
       <div className="mt-4">
         <div className="rounded-xl border border-zinc-200 bg-zinc-50/80 p-3 dark:border-zinc-700 dark:bg-zinc-950/40">
-          <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Doładuj saldo</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Zapłać kartą lub Blikiem</p>
           <Label htmlFor="hotpay-topup-amount" className="sr-only">
-            Kwota doładowania
+            Kwota płatności
           </Label>
           <Input
             id="hotpay-topup-amount"
@@ -74,7 +74,7 @@ export function HotpayPayButtons({
           />
           <PayButton
             variant="default"
-            label="Doładuj saldo"
+            label="Zapłać kartą lub Blikiem"
             busy={busy}
             disabled={!enabled || walletLoading}
             fullWidth

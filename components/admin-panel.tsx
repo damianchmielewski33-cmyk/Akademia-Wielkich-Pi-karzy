@@ -307,10 +307,7 @@ const navGroupDefs = [
   {
     id: "finance",
     label: "Finanse",
-    items: [
-      { id: "wallets", label: "Portfele", icon: Wallet },
-      { id: "operator-payments", label: "Płatności operatora", icon: CreditCard },
-    ],
+    items: [{ id: "wallets", label: "Portfele", icon: Wallet }],
   },
   {
     id: "site",
@@ -324,7 +321,13 @@ const navGroupDefs = [
   },
 ] as const;
 
-const allTabIds = navGroupDefs.flatMap((g) => g.items.map((t) => t.id));
+/** Zakładki dostępne ze stałego skrótu w stopce sidebara (obok trybu testowego). */
+const sidebarPinnedTabs = [{ id: "operator-payments", label: "Płatności operatora", icon: CreditCard }] as const;
+
+const allTabIds = [
+  ...navGroupDefs.flatMap((g) => g.items.map((t) => t.id)),
+  ...sidebarPinnedTabs.map((t) => t.id),
+] as const;
 
 type TabId = (typeof allTabIds)[number];
 
@@ -439,7 +442,7 @@ function MatchesView({
                     ) : (
                       <AdminRowActions
                         primary={
-                          <Button size="sm" variant="stadium" onClick={() => handleSignupsClick(m)}>
+                          <Button size="sm" variant="gold" onClick={() => handleSignupsClick(m)}>
                             Zapisy
                           </Button>
                         }
@@ -864,7 +867,7 @@ function MatchSignupsDialogContent({
             <Button type="button" variant="outline" onClick={() => setAddGuestOpen(false)} disabled={addingGuest}>
               Anuluj
             </Button>
-            <Button type="button" variant="pitch" onClick={() => void handleAddGuest()} disabled={addingGuest}>
+            <Button type="button" variant="gold" onClick={() => void handleAddGuest()} disabled={addingGuest}>
               {addingGuest ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               Dodaj
             </Button>
@@ -1531,7 +1534,7 @@ function AnalyticsView({
               <Button
                 key={p.label}
                 type="button"
-                variant="stadium"
+                variant="gold"
                 size="sm"
                 className={adminOutlineBtnClass}
                 disabled={loading}
@@ -1804,7 +1807,7 @@ function AnalyticsView({
           headerExtra={
             <Button
               type="button"
-              variant="stadium"
+              variant="gold"
               size="sm"
               className={adminDataOutlineBtnClass}
               disabled={loading || screensPrepared.length === 0}
@@ -2153,7 +2156,7 @@ function DashboardView({
               <p className="mt-1 opacity-90">{a.body}</p>
               <Button
                 type="button"
-                variant="stadium"
+                variant="gold"
                 size="sm"
                 className="mt-3"
                 onClick={() => onGoToTab(a.tab)}
@@ -2719,7 +2722,7 @@ function UserCreateForm({
           </Button>
           <Button
             type="button"
-            variant="pitch"
+            variant="gold"
             disabled={saving}
             onClick={async () => {
               if (!form.validate()) return;
@@ -2861,7 +2864,7 @@ function UserEditForm({
           </Button>
           <Button
             type="button"
-            variant="pitch"
+            variant="gold"
             disabled={saving}
             onClick={async () => {
               setSaving(true);
@@ -3017,7 +3020,7 @@ function MatchEditDialogContent({
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
             Zamknij
           </Button>
-          <Button type="button" variant="pitch" onClick={() => void handleSave()} disabled={saving}>
+          <Button type="button" variant="gold" onClick={() => void handleSave()} disabled={saving}>
             {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
             Zapisz zmiany
           </Button>

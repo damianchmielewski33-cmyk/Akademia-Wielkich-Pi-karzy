@@ -1,8 +1,7 @@
 import type { AppDb } from "@/lib/db";
-import { getAppSettings } from "@/lib/app-settings";
 import { getDb } from "@/lib/db";
-import { formatMatchFeePln, perPersonMatchFeePln } from "@/lib/match-fee";
-import { getUserWalletBalancePln } from "@/lib/wallet";
+import { formatMatchFeePln, MATCH_PREPAYMENT_PLN } from "@/lib/match-fee";
+import { getUserWalletBalancePln, getWalletBalances } from "@/lib/wallet";
 
 export type MatchCartPlayer = {
   user_id: number;
@@ -32,16 +31,15 @@ function playerLabel(p: { first_name: string; last_name: string; zawodnik?: stri
   return name || p.zawodnik || p.player_alias || "Gracz";
 }
 
+/**
+ * Kwota koszyka / zaliczki na osobę przed meczem.
+ * Stała zaliczka — ostateczna składka przy rozliczeniu może być niższa (zwrot nadpłaty).
+ */
 export async function resolveMatchCartFeePerPerson(
-  db: AppDb,
-  match: { fee_pln: number | null; signed_up: number }
+  _db: AppDb,
+  _match: { fee_pln: number | null; signed_up: number }
 ): Promise<number | null> {
-  const fromRental = perPersonMatchFeePln(match.fee_pln, match.signed_up);
-  if (fromRental != null && fromRental > 0) return fromRental;
-  const settings = await getAppSettings(db);
-  const def = settings.default_match_fee_pln;
-  if (def != null && Number.isFinite(def) && def > 0) return roundPln(def);
-  return null;
+  return MATCH_PREPAYMENT_PLN;
 }
 
 /** Nadchodzące mecze z nieopłaconymi zapisami (commitment=1). */
@@ -149,14 +147,46 @@ async function loadOpenMatch(db: AppDb, matchId: number) {
 }
 
 /**
+ * Dobiera portfel do debetu koszyka.
+ * HotPay księguje na `operator` — debet musi iść na ten sam kind, inaczej
+ * saldo operatora rośnie jak „doładowanie”, a admin idzie w minus.
+ */
+function resolveMatchCartDebitParts(
+  balances: { admin: number; operator: number; total: number },
+  amountPln: number,
+  forcedKind?: "admin" | "operator"
+): { ok: true; parts: { wallet_kind: "admin" | "operator"; amount_pln: number }[] } | { ok: false } {
+  if (balances.total < amountPln) return { ok: false };
+  if (forcedKind) {
+    return { ok: true, parts: [{ wallet_kind: forcedKind, amount_pln: amountPln }] };
+  }
+  if (balances.operator >= amountPln) {
+    return { ok: true, parts: [{ wallet_kind: "operator", amount_pln: amountPln }] };
+  }
+  if (balances.admin >= amountPln) {
+    return { ok: true, parts: [{ wallet_kind: "admin", amount_pln: amountPln }] };
+  }
+  const fromOperator = roundPln(Math.max(0, balances.operator));
+  const fromAdmin = roundPln(amountPln - fromOperator);
+  const parts: { wallet_kind: "admin" | "operator"; amount_pln: number }[] = [];
+  if (fromOperator > 0) parts.push({ wallet_kind: "operator", amount_pln: fromOperator });
+  if (fromAdmin > 0) parts.push({ wallet_kind: "admin", amount_pln: fromAdmin });
+  if (parts.length === 0) return { ok: false };
+  return { ok: true, parts };
+}
+
+/**
  * Opłaca wybranych zawodników z salda płatnika: debet portfela + paid=1 na zapisach.
  * Atomowość przez kompensację przy braku środków po debecie.
+ * Środki schodzą z portfela jako zapłata za mecz — nie zostają jako doładowanie.
  */
 export async function applyMatchCartFromWallet(args: {
   payerUserId: number;
   matchId: number;
   beneficiaryUserIds: number[];
   existingCartId?: number;
+  /** Po HotPay (wpłata na operator) — wymusza debet z tego samego portfela. */
+  walletKind?: "admin" | "operator";
 }): Promise<ApplyMatchCartResult> {
   const db = await getDb();
   const match = await loadOpenMatch(db, args.matchId);
@@ -195,8 +225,9 @@ export async function applyMatchCartFromWallet(args: {
   }
 
   const amountPln = roundPln(fee * eligible.length);
-  const balanceBefore = await getUserWalletBalancePln(args.payerUserId);
-  if (balanceBefore < amountPln) {
+  const balances = await getWalletBalances(args.payerUserId);
+  const debitPlan = resolveMatchCartDebitParts(balances, amountPln, args.walletKind);
+  if (!debitPlan.ok) {
     return { ok: false, error: "INSUFFICIENT_FUNDS" };
   }
 
@@ -231,22 +262,23 @@ export async function applyMatchCartFromWallet(args: {
     if (cart.payer_user_id !== args.payerUserId) return { ok: false, error: "CART_NOT_FOUND" };
   }
 
-  const debit = await db
-    .prepare(
-      `INSERT INTO wallet_transactions (user_id, kind, amount_pln, match_id, note, is_test)
-       VALUES (?, 'match_charge', ?, ?, ?, ?)`
-    )
-    .run(
-      args.payerUserId,
-      -amountPln,
-      args.matchId,
-      `Koszyk meczowy — ${eligible.length}× ${formatMatchFeePln(fee)} · ${matchLabel}`,
-      0
-    );
+  const baseNote = `Koszyk meczowy — ${eligible.length}× ${formatMatchFeePln(fee)} · ${matchLabel}`;
+  const debitIds: number[] = [];
+  for (const part of debitPlan.parts) {
+    const debit = await db
+      .prepare(
+        `INSERT INTO wallet_transactions (user_id, kind, amount_pln, match_id, wallet_kind, note, is_test)
+         VALUES (?, 'match_charge', ?, ?, ?, ?, ?)`
+      )
+      .run(args.payerUserId, -part.amount_pln, args.matchId, part.wallet_kind, baseNote, 0);
+    debitIds.push(Number(debit.lastInsertRowid));
+  }
 
   const balanceAfterDebit = await getUserWalletBalancePln(args.payerUserId);
   if (balanceAfterDebit < 0) {
-    await db.prepare(`DELETE FROM wallet_transactions WHERE id = ?`).run(Number(debit.lastInsertRowid));
+    for (const id of debitIds) {
+      await db.prepare(`DELETE FROM wallet_transactions WHERE id = ?`).run(id);
+    }
     return { ok: false, error: "INSUFFICIENT_FUNDS" };
   }
 
@@ -262,7 +294,9 @@ export async function applyMatchCartFromWallet(args: {
   }
 
   if (paidUserIds.length !== eligible.length) {
-    await db.prepare(`DELETE FROM wallet_transactions WHERE id = ?`).run(Number(debit.lastInsertRowid));
+    for (const id of debitIds) {
+      await db.prepare(`DELETE FROM wallet_transactions WHERE id = ?`).run(id);
+    }
     for (const uid of paidUserIds) {
       await db
         .prepare(`UPDATE match_signups SET paid = 0 WHERE match_id = ? AND user_id = ?`)
@@ -272,12 +306,10 @@ export async function applyMatchCartFromWallet(args: {
   }
 
   const names = eligible.map((p) => playerLabel(p)).join(", ");
-  await db
-    .prepare(`UPDATE wallet_transactions SET note = ? WHERE id = ?`)
-    .run(
-      `Koszyk meczowy — opłacono: ${names} (${eligible.length}× ${formatMatchFeePln(fee)}) · ${matchLabel}`,
-      Number(debit.lastInsertRowid)
-    );
+  const finalNote = `Koszyk meczowy — opłacono: ${names} (${eligible.length}× ${formatMatchFeePln(fee)}) · ${matchLabel}`;
+  for (const id of debitIds) {
+    await db.prepare(`UPDATE wallet_transactions SET note = ? WHERE id = ?`).run(finalNote, id);
+  }
 
   await db
     .prepare(
@@ -403,6 +435,8 @@ export async function applyPendingMatchCartAfterHotpay(
     matchId: cart.match_id,
     beneficiaryUserIds: items.map((i) => i.beneficiary_user_id),
     existingCartId: cartId,
+    // Wpłata HotPay zawsze na portfel operatora — debet musi zneutralizować tę samą półkę.
+    walletKind: "operator",
   });
 }
 
@@ -421,9 +455,123 @@ export async function getCartIdByHotpaySession(sessionId: string): Promise<numbe
   return row?.id ?? null;
 }
 
+/** Kwota koszyka zapłacona z góry za beneficjenta (completed), albo null. */
+export async function getPrepaidMatchCartAmount(
+  matchId: number,
+  beneficiaryUserId: number
+): Promise<{ payer_user_id: number; amount_pln: number; cart_id: number } | null> {
+  const db = await getDb();
+  const row = (await db
+    .prepare(
+      `
+      SELECT c.id AS cart_id, c.payer_user_id, i.amount_pln
+      FROM wallet_match_cart_items i
+      JOIN wallet_match_carts c ON c.id = i.cart_id
+      WHERE c.match_id = ?
+        AND c.status = 'completed'
+        AND i.beneficiary_user_id = ?
+      ORDER BY c.id DESC
+      LIMIT 1
+    `
+    )
+    .get(matchId, beneficiaryUserId)) as
+    | { cart_id: number; payer_user_id: number; amount_pln: number }
+    | undefined;
+  if (!row) return null;
+  const amount = roundPln(Number(row.amount_pln));
+  if (!(amount > 0)) return null;
+  return { cart_id: row.cart_id, payer_user_id: row.payer_user_id, amount_pln: amount };
+}
+
 /**
- * Zwrot opłaty koszykowej za jednego beneficjenta (np. wypisanie z meczu).
- * Kredytuje płatnika koszyka, kasuje pozycję, stawia paid=0 jeśli zapis jeszcze istnieje.
+ * Przy rozliczeniu meczu: gracz z paid=1 nie jest obciążany ponownie.
+ * Jeśli zapłacił koszykiem więcej niż ostateczna składka — różnica wraca na portfel płatnika.
+ * Zapisuje wiersz match_wallet_charges (bez debetu), żeby nie rozliczać dwa razy.
+ */
+export async function settlePrepaidPlayerWithoutCharge(args: {
+  matchId: number;
+  beneficiaryUserId: number;
+  finalFeePln: number;
+  adminId: number;
+}): Promise<
+  | {
+      ok: true;
+      credited_pln: number;
+      payer_user_id: number | null;
+      prepaid_pln: number;
+      already_settled?: boolean;
+    }
+  | { ok: false; error: "ALREADY_CHARGED" | "ERROR"; message?: string }
+> {
+  const db = await getDb();
+  const finalFee = roundPln(Math.max(0, Number(args.finalFeePln) || 0));
+  const prepaid = await getPrepaidMatchCartAmount(args.matchId, args.beneficiaryUserId);
+  const prepaidPln = prepaid?.amount_pln ?? 0;
+  const note =
+    prepaidPln > 0
+      ? `Rozliczenie — opłacone z góry (koszyk ${formatMatchFeePln(prepaidPln)})`
+      : `Rozliczenie — opłacone z góry (flaga paid)`;
+
+  try {
+    await db
+      .prepare(
+        `INSERT INTO match_wallet_charges (match_id, user_id, amount_pln, note, created_by_admin_id)
+         VALUES (?, ?, ?, ?, ?)`
+      )
+      .run(args.matchId, args.beneficiaryUserId, finalFee, note, args.adminId);
+  } catch (e) {
+    const msg = String((e as { message?: string } | undefined)?.message ?? "");
+    if (msg.includes("UNIQUE") || msg.includes("constraint") || msg.includes("PRIMARY")) {
+      return { ok: true, credited_pln: 0, payer_user_id: null, prepaid_pln: prepaidPln, already_settled: true };
+    }
+    return { ok: false, error: "ERROR", message: msg };
+  }
+
+  // Brak koszyka albo składka ≥ wpłaty — bez korekty salda.
+  if (!prepaid || prepaidPln <= finalFee) {
+    return { ok: true, credited_pln: 0, payer_user_id: prepaid?.payer_user_id ?? null, prepaid_pln: prepaidPln };
+  }
+
+  const surplus = roundPln(prepaidPln - finalFee);
+  const chargeKind = (await db
+    .prepare(
+      `
+      SELECT wallet_kind FROM wallet_transactions
+      WHERE user_id = ? AND match_id = ? AND kind = 'match_charge' AND amount_pln < 0
+      ORDER BY id DESC
+      LIMIT 1
+    `
+    )
+    .get(prepaid.payer_user_id, args.matchId)) as { wallet_kind: string } | undefined;
+  const walletKind = chargeKind?.wallet_kind === "operator" ? "operator" : "admin";
+
+  await db
+    .prepare(
+      `INSERT INTO wallet_transactions (user_id, kind, amount_pln, match_id, related_user_id, wallet_kind, note, is_test)
+       VALUES (?, 'adjustment', ?, ?, ?, ?, ?, ?)`
+    )
+    .run(
+      prepaid.payer_user_id,
+      surplus,
+      args.matchId,
+      args.beneficiaryUserId,
+      walletKind,
+      `Zwrot nadpłaty koszyka — składka ${formatMatchFeePln(finalFee)} (było ${formatMatchFeePln(prepaidPln)})`,
+      0
+    );
+
+  return {
+    ok: true,
+    credited_pln: surplus,
+    payer_user_id: prepaid.payer_user_id,
+    prepaid_pln: prepaidPln,
+  };
+}
+
+/**
+ * Zwrot opłaty koszykowej za jednego beneficjenta (np. wypisanie / odwołanie meczu).
+ * Kredytuje płatnika koszyka. Jeśli mecz był już rozliczony (match_wallet_charges),
+ * zwraca tylko pozostałą składkę (nadpłata mogła wrócić wcześniej przy rozliczeniu).
  */
 export async function refundMatchCartBeneficiary(args: {
   matchId: number;
@@ -454,22 +602,48 @@ export async function refundMatchCartBeneficiary(args: {
 
   if (!row) return { ok: true, refunded_pln: 0 };
 
-  const amount = roundPln(Number(row.amount_pln));
-  if (!(amount > 0)) return { ok: true, refunded_pln: 0 };
+  const prepaidPln = roundPln(Number(row.amount_pln));
+  if (!(prepaidPln > 0)) return { ok: true, refunded_pln: 0 };
 
-  await db
+  // Po rozliczeniu prepaid: w charges jest ostateczna składka (bez debetu) —
+  // nadpłata mogła już wrócić; przy anulowaniu zwracamy tylko tę składkę.
+  const settled = (await db
     .prepare(
-      `INSERT INTO wallet_transactions (user_id, kind, amount_pln, match_id, related_user_id, note, is_test)
-       VALUES (?, 'adjustment', ?, ?, ?, ?, ?)`
+      `SELECT amount_pln FROM match_wallet_charges WHERE match_id = ? AND user_id = ?`
     )
-    .run(
-      row.payer_user_id,
-      amount,
-      args.matchId,
-      args.beneficiaryUserId,
-      `Zwrot koszyka meczowego — ${args.reason}`,
-      0
-    );
+    .get(args.matchId, args.beneficiaryUserId)) as { amount_pln: number } | undefined;
+  const amount = settled
+    ? roundPln(Math.min(prepaidPln, Math.max(0, Number(settled.amount_pln))))
+    : prepaidPln;
+
+  if (amount > 0) {
+    const chargeKind = (await db
+      .prepare(
+        `
+        SELECT wallet_kind FROM wallet_transactions
+        WHERE user_id = ? AND match_id = ? AND kind = 'match_charge' AND amount_pln < 0
+        ORDER BY id DESC
+        LIMIT 1
+      `
+      )
+      .get(row.payer_user_id, args.matchId)) as { wallet_kind: string } | undefined;
+    const walletKind = chargeKind?.wallet_kind === "operator" ? "operator" : "admin";
+
+    await db
+      .prepare(
+        `INSERT INTO wallet_transactions (user_id, kind, amount_pln, match_id, related_user_id, wallet_kind, note, is_test)
+         VALUES (?, 'adjustment', ?, ?, ?, ?, ?, ?)`
+      )
+      .run(
+        row.payer_user_id,
+        amount,
+        args.matchId,
+        args.beneficiaryUserId,
+        walletKind,
+        `Zwrot koszyka meczowego — ${args.reason}`,
+        0
+      );
+  }
 
   await db
     .prepare(`DELETE FROM wallet_match_cart_items WHERE cart_id = ? AND beneficiary_user_id = ?`)
@@ -478,6 +652,12 @@ export async function refundMatchCartBeneficiary(args: {
   await db
     .prepare(`UPDATE match_signups SET paid = 0 WHERE match_id = ? AND user_id = ?`)
     .run(args.matchId, args.beneficiaryUserId);
+
+  if (settled) {
+    await db
+      .prepare(`DELETE FROM match_wallet_charges WHERE match_id = ? AND user_id = ?`)
+      .run(args.matchId, args.beneficiaryUserId);
+  }
 
   const remaining = (await db
     .prepare(`SELECT COUNT(*) AS n FROM wallet_match_cart_items WHERE cart_id = ?`)
@@ -523,5 +703,92 @@ export async function refundAllMatchCartsForMatch(args: {
       refunded_pln = roundPln(refunded_pln + r.refunded_pln);
     }
   }
+  return { refunded_count, refunded_pln };
+}
+
+/**
+ * Przy odwołaniu meczu: zwrot koszyków + cofnięcie obciążeń z rozliczenia (match_wallet_charges).
+ * Środki wracają na portfel gracza / płatnika.
+ */
+export async function refundAllMatchPaymentsOnCancel(args: {
+  matchId: number;
+  actorUserId: number | null;
+  reason: string;
+}): Promise<{ refunded_count: number; refunded_pln: number }> {
+  const cart = await refundAllMatchCartsForMatch(args);
+  const db = await getDb();
+
+  const charges = (await db
+    .prepare(
+      `SELECT user_id, amount_pln FROM match_wallet_charges WHERE match_id = ?`
+    )
+    .all(args.matchId)) as { user_id: number; amount_pln: number }[];
+
+  let refunded_count = cart.refunded_count;
+  let refunded_pln = cart.refunded_pln;
+
+  for (const c of charges) {
+    const amount = roundPln(Number(c.amount_pln));
+    if (!(amount > 0)) {
+      await db
+        .prepare(`DELETE FROM match_wallet_charges WHERE match_id = ? AND user_id = ?`)
+        .run(args.matchId, c.user_id);
+      continue;
+    }
+
+    // Odtwórz podział portfeli z oryginalnych match_charge (admin/operator).
+    const parts = (await db
+      .prepare(
+        `
+        SELECT wallet_kind, COALESCE(SUM(amount_pln), 0) AS s
+        FROM wallet_transactions
+        WHERE user_id = ? AND match_id = ? AND kind = 'match_charge' AND amount_pln < 0
+        GROUP BY wallet_kind
+      `
+      )
+      .all(c.user_id, args.matchId)) as { wallet_kind: string; s: number }[];
+
+    if (parts.length > 0) {
+      for (const p of parts) {
+        const credit = roundPln(Math.abs(Number(p.s)));
+        if (!(credit > 0)) continue;
+        const walletKind = p.wallet_kind === "operator" ? "operator" : "admin";
+        await db
+          .prepare(
+            `INSERT INTO wallet_transactions (user_id, kind, amount_pln, match_id, wallet_kind, note, is_test)
+             VALUES (?, 'adjustment', ?, ?, ?, ?, ?)`
+          )
+          .run(
+            c.user_id,
+            credit,
+            args.matchId,
+            walletKind,
+            `Zwrot obciążenia meczu — ${args.reason}`,
+            0
+          );
+      }
+    } else {
+      await db
+        .prepare(
+          `INSERT INTO wallet_transactions (user_id, kind, amount_pln, match_id, wallet_kind, note, is_test)
+           VALUES (?, 'adjustment', ?, ?, 'admin', ?, ?)`
+        )
+        .run(
+          c.user_id,
+          amount,
+          args.matchId,
+          `Zwrot obciążenia meczu — ${args.reason}`,
+          0
+        );
+    }
+
+    await db
+      .prepare(`DELETE FROM match_wallet_charges WHERE match_id = ? AND user_id = ?`)
+      .run(args.matchId, c.user_id);
+
+    refunded_count += 1;
+    refunded_pln = roundPln(refunded_pln + amount);
+  }
+
   return { refunded_count, refunded_pln };
 }

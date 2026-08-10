@@ -64,7 +64,9 @@ function createTestDb(): { db: AppDb; sqlite: Database.Database; dbPath: string 
       deposit_request_id INTEGER,
       match_id INTEGER,
       related_user_id INTEGER,
+      wallet_kind TEXT NOT NULL DEFAULT 'admin',
       note TEXT,
+      is_test INTEGER NOT NULL DEFAULT 0,
       created_at TEXT DEFAULT (datetime('now'))
     );
     CREATE TABLE wallet_match_carts (
@@ -83,6 +85,15 @@ function createTestDb(): { db: AppDb; sqlite: Database.Database; dbPath: string 
       beneficiary_user_id INTEGER NOT NULL,
       amount_pln REAL NOT NULL,
       PRIMARY KEY (cart_id, beneficiary_user_id)
+    );
+    CREATE TABLE match_wallet_charges (
+      match_id INTEGER NOT NULL,
+      user_id INTEGER NOT NULL,
+      amount_pln REAL NOT NULL,
+      note TEXT,
+      created_by_admin_id INTEGER NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      PRIMARY KEY (match_id, user_id)
     );
   `);
 
@@ -151,7 +162,7 @@ describe("applyMatchCartFromWallet", () => {
   });
 
   it("opłaca wybranych graczy z portfela płatnika", async () => {
-    // 120 / 3 = 40 per person, ceil to 0.5 → 40
+    // Stała zaliczka MATCH_PREPAYMENT_PLN = 25
     const result = await applyMatchCartFromWallet({
       payerUserId: 1,
       matchId: 10,
@@ -159,9 +170,9 @@ describe("applyMatchCartFromWallet", () => {
     });
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.amount_pln).toBe(80);
+    expect(result.amount_pln).toBe(50);
     expect(result.paid_user_ids.sort()).toEqual([2, 3]);
-    expect(await getUserWalletBalancePln(1)).toBe(120);
+    expect(await getUserWalletBalancePln(1)).toBe(150);
 
     const paid2 = sqlite.prepare(`SELECT paid FROM match_signups WHERE user_id = 2 AND match_id = 10`).get() as {
       paid: number;
@@ -179,7 +190,7 @@ describe("applyMatchCartFromWallet", () => {
 
   it("odrzuca brak środków", async () => {
     sqlite.prepare(`DELETE FROM wallet_transactions`).run();
-    sqlite.prepare(`INSERT INTO wallet_transactions (user_id, kind, amount_pln) VALUES (1, 'deposit', 50)`).run();
+    sqlite.prepare(`INSERT INTO wallet_transactions (user_id, kind, amount_pln) VALUES (1, 'deposit', 40)`).run();
 
     const fail = await applyMatchCartFromWallet({
       payerUserId: 1,
@@ -187,7 +198,7 @@ describe("applyMatchCartFromWallet", () => {
       beneficiaryUserIds: [1, 2],
     });
     expect(fail).toEqual({ ok: false, error: "INSUFFICIENT_FUNDS" });
-    expect(await getUserWalletBalancePln(1)).toBe(50);
+    expect(await getUserWalletBalancePln(1)).toBe(40);
   });
 
   it("odrzuca już opłaconych", async () => {
@@ -198,6 +209,38 @@ describe("applyMatchCartFromWallet", () => {
       beneficiaryUserIds: [2, 3],
     });
     expect(result).toEqual({ ok: false, error: "INVALID_BENEFICIARIES" });
+  });
+
+  it("po HotPay (walletKind=operator) nie zostawia salda na portfelu operatora", async () => {
+    sqlite.prepare(`DELETE FROM wallet_transactions`).run();
+    sqlite
+      .prepare(
+        `INSERT INTO wallet_transactions (user_id, kind, amount_pln, wallet_kind) VALUES (1, 'deposit', 25, 'operator')`
+      )
+      .run();
+
+    const result = await applyMatchCartFromWallet({
+      payerUserId: 1,
+      matchId: 10,
+      beneficiaryUserIds: [1],
+      walletKind: "operator",
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    const { getWalletBalances } = await import("@/lib/wallet");
+    const balances = await getWalletBalances(1);
+    expect(balances.operator).toBe(0);
+    expect(balances.admin).toBe(0);
+    expect(balances.total).toBe(0);
+
+    const charge = sqlite
+      .prepare(
+        `SELECT wallet_kind, amount_pln FROM wallet_transactions WHERE kind = 'match_charge' AND user_id = 1`
+      )
+      .get() as { wallet_kind: string; amount_pln: number };
+    expect(charge.wallet_kind).toBe("operator");
+    expect(Number(charge.amount_pln)).toBe(-25);
   });
 
   it("zwraca koszyk przy refundMatchCartBeneficiary", async () => {
@@ -217,12 +260,82 @@ describe("applyMatchCartFromWallet", () => {
     });
     expect(refund.ok).toBe(true);
     if (!refund.ok) return;
-    expect(refund.refunded_pln).toBe(40);
+    expect(refund.refunded_pln).toBe(25);
     expect(await getUserWalletBalancePln(1)).toBe(200);
 
     const paid2 = sqlite.prepare(`SELECT paid FROM match_signups WHERE user_id = 2 AND match_id = 10`).get() as {
       paid: number;
     };
     expect(paid2.paid).toBe(0);
+  });
+
+  it("przy rozliczeniu nie obciąża opłaconego i zwraca nadpłatę gdy składka niższa", async () => {
+    const pay = await applyMatchCartFromWallet({
+      payerUserId: 1,
+      matchId: 10,
+      beneficiaryUserIds: [2],
+    });
+    expect(pay.ok).toBe(true);
+    // Po koszyku: 200 - 25 = 175
+    expect(await getUserWalletBalancePln(1)).toBe(175);
+
+    const { settlePrepaidPlayerWithoutCharge } = await import("@/lib/match-cart");
+    const settle = await settlePrepaidPlayerWithoutCharge({
+      matchId: 10,
+      beneficiaryUserId: 2,
+      finalFeePln: 20,
+      adminId: 1,
+    });
+    expect(settle.ok).toBe(true);
+    if (!settle.ok) return;
+    expect(settle.credited_pln).toBe(5);
+    expect(settle.payer_user_id).toBe(1);
+    // 175 + 5 zwrotu = 180
+    expect(await getUserWalletBalancePln(1)).toBe(180);
+
+    const chargeRow = sqlite
+      .prepare(`SELECT amount_pln FROM match_wallet_charges WHERE match_id = 10 AND user_id = 2`)
+      .get() as { amount_pln: number };
+    expect(Number(chargeRow.amount_pln)).toBe(20);
+
+    const again = await settlePrepaidPlayerWithoutCharge({
+      matchId: 10,
+      beneficiaryUserId: 2,
+      finalFeePln: 20,
+      adminId: 1,
+    });
+    expect(again.ok).toBe(true);
+    if (!again.ok) return;
+    expect(again.already_settled).toBe(true);
+    expect(await getUserWalletBalancePln(1)).toBe(180);
+  });
+
+  it("przy anulowaniu meczu zwraca środki na portfel (także po rozliczeniu prepaid)", async () => {
+    const pay = await applyMatchCartFromWallet({
+      payerUserId: 1,
+      matchId: 10,
+      beneficiaryUserIds: [2],
+    });
+    expect(pay.ok).toBe(true);
+
+    const { settlePrepaidPlayerWithoutCharge, refundAllMatchPaymentsOnCancel } = await import(
+      "@/lib/match-cart"
+    );
+    await settlePrepaidPlayerWithoutCharge({
+      matchId: 10,
+      beneficiaryUserId: 2,
+      finalFeePln: 20,
+      adminId: 1,
+    });
+    expect(await getUserWalletBalancePln(1)).toBe(180);
+
+    const refunds = await refundAllMatchPaymentsOnCancel({
+      matchId: 10,
+      actorUserId: 1,
+      reason: "odwołanie meczu",
+    });
+    // Zwraca pozostałe 20 (5 już wróciło jako nadpłata) → z powrotem 200
+    expect(refunds.refunded_pln).toBe(20);
+    expect(await getUserWalletBalancePln(1)).toBe(200);
   });
 });

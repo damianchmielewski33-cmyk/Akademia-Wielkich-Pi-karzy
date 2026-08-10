@@ -48,6 +48,13 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ["better-sqlite3"],
   experimental: {
     optimizePackageImports: ["lucide-react"],
+    /**
+     * Upload grafik (tło stadionu itd.) idzie przez middleware (`/api/:path*`).
+     * Bez podniesienia limitu Next 15.5+ ucina body (~1 MB) → FormData/plik psuje się
+     * i admin widzi ogólny błąd „nie udało się wgrać grafiki”.
+     */
+    middlewareClientMaxBodySize: "5mb",
+    proxyClientMaxBodySize: "5mb",
   },
   async headers() {
     const headers = [...securityHeaders] as { key: string; value: string }[];

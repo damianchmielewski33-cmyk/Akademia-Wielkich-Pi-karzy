@@ -53,7 +53,7 @@ export async function POST(req: Request) {
       const prod = await getProdDb();
       await prod
         .prepare("INSERT INTO activity_log (user_id, action) VALUES (?, ?)")
-        .run(adminId, "Tryb testowy WŁĄCZONY (osobna baza TEST)");
+        .run(adminId, "Sandbox WŁĄCZONY — mecze i płatności bez wpływu na graczy");
       const res = NextResponse.json({
         enabled: true,
         configured: isTestModeConfigured(),
@@ -68,7 +68,7 @@ export async function POST(req: Request) {
       .prepare("INSERT INTO activity_log (user_id, action) VALUES (?, ?)")
       .run(
         adminId,
-        `Tryb testowy WYŁĄCZONY — wyczyszczono bazę TEST (tabele≈${result.wipedTables ?? 0}, wiersze≈${result.wipedRows ?? 0})`
+        `Sandbox WYŁĄCZONY — skasowano dane testowe (tabele≈${result.wipedTables ?? 0}, wiersze≈${result.wipedRows ?? 0})`
       );
     const res = NextResponse.json({
       enabled: false,

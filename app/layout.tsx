@@ -7,7 +7,6 @@ import { SiteShell } from "@/components/site-shell";
 import { ShareLinkClientCleanup } from "@/components/share-link-client-cleanup";
 import { PwaRegister } from "@/components/pwa-register";
 import { WebPushEnabler } from "@/components/web-push-enabler";
-import { MatchParticipationSurveyPrompt } from "@/components/match-participation-survey-prompt";
 import { MatchNotificationPrompt } from "@/components/match-notification-prompt";
 import { PinChangePendingBanner } from "@/components/pin-change-pending-banner";
 import { TestModeBanner } from "@/components/test-mode-banner";
@@ -343,7 +342,6 @@ export default async function RootLayout({
             hideFloat={shellIsAdmin}
           />
         ) : null}
-        {!isPzuCupSection ? <MatchParticipationSurveyPrompt /> : null}
         {!isPzuCupSection && matchNotificationPromptEnabled ? <MatchNotificationPrompt /> : null}
         <Toaster
           position="top-center"

@@ -115,7 +115,7 @@ export async function POST(req: Request) {
   if (!config) {
     return NextResponse.json(
       {
-        error: "Niewystarczające saldo. Doładuj portfel lub skonfiguruj płatności online.",
+        error: "Niewystarczające saldo. Zapłać kartą lub Blikiem albo skonfiguruj płatności online.",
         code: "INSUFFICIENT_FUNDS",
       },
       { status: 409 }
@@ -127,7 +127,7 @@ export async function POST(req: Request) {
   if (!appSettings.hotpay_enabled) {
     return NextResponse.json(
       {
-        error: "Niewystarczające saldo. Płatności online są wyłączone — doładuj portfel BLIK-iem.",
+        error: "Niewystarczające saldo. Płatności online są wyłączone — skorzystaj z BLIK na telefon.",
         code: "INSUFFICIENT_FUNDS",
       },
       { status: 409 }

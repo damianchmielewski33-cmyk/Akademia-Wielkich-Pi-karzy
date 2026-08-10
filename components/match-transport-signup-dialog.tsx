@@ -9,9 +9,7 @@ import { AppModal } from "@/components/ui/app-modal";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { PayButton } from "@/components/pay-button";
-
-/** Kwota zaliczki pobierana z góry przy płatnościach operatorem. */
-const PREPAYMENT_PLN = 25;
+import { MATCH_PREPAYMENT_PLN } from "@/lib/match-fee";
 
 type Mode = "car" | "public" | null;
 
@@ -90,7 +88,7 @@ export function MatchTransportSignupDialog({
       }
 
       try {
-        const hotpayUrl = await createHotpayTopup(PREPAYMENT_PLN);
+        const hotpayUrl = await createHotpayTopup(MATCH_PREPAYMENT_PLN);
         onOpenChange(false);
         onCompleted();
         window.location.assign(hotpayUrl);
@@ -181,10 +179,10 @@ export function MatchTransportSignupDialog({
             <div>
               <p className="text-sm font-semibold text-emerald-950 dark:text-emerald-100">
                 Zaliczka na wpisowe:{" "}
-                <span className="tabular-nums">{PREPAYMENT_PLN},00 zł</span>
+                <span className="tabular-nums">{MATCH_PREPAYMENT_PLN},00 zł</span>
               </p>
               <p className="mt-1 text-xs leading-relaxed text-zinc-600 dark:text-zinc-400">
-                Jeśli ostateczna składka okaże się niższa niż {PREPAYMENT_PLN} zł, różnica zostanie
+                Jeśli ostateczna składka okaże się niższa niż {MATCH_PREPAYMENT_PLN} zł, różnica zostanie
                 automatycznie dopisana do Twojego portfela.
               </p>
             </div>
@@ -203,7 +201,7 @@ export function MatchTransportSignupDialog({
           </Button>
           <PayButton
             variant="default"
-            amountPln={PREPAYMENT_PLN}
+            amountPln={MATCH_PREPAYMENT_PLN}
             label="Zapisz i zapłać"
             busy={busy}
             onClick={() => void signupNoTransport(true)}

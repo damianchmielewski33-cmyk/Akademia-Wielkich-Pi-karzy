@@ -11,11 +11,11 @@ function playersAllTimeStatsSql() {
            u.first_name, u.last_name,
            u.player_alias AS zawodnik,
            u.profile_photo_path,
-           COALESCE(ms.goals, 0) + COALESCE(sms.goals, 0) AS goals,
-           COALESCE(ms.assists, 0) + COALESCE(sms.assists, 0) AS assists,
-           COALESCE(ms.distance, 0) + COALESCE(sms.distance, 0) AS distance,
-           COALESCE(ms.saves, 0) + COALESCE(sms.saves, 0) AS saves,
-           COALESCE(ms.mecze, 0) + COALESCE(sms.mecze, 0) AS mecze
+           COALESCE(ms.goals, 0) AS goals,
+           COALESCE(ms.assists, 0) AS assists,
+           COALESCE(ms.distance, 0) AS distance,
+           COALESCE(ms.saves, 0) AS saves,
+           COALESCE(ms.mecze, 0) AS mecze
     FROM users u
     LEFT JOIN (
       SELECT user_id,
@@ -28,16 +28,6 @@ function playersAllTimeStatsSql() {
       JOIN matches m ON m.id = s.match_id
       GROUP BY user_id
     ) ms ON ms.user_id = u.id
-    LEFT JOIN (
-      SELECT user_id,
-             SUM(goals) AS goals,
-             SUM(assists) AS assists,
-             SUM(distance) AS distance,
-             SUM(saves) AS saves,
-             COUNT(*) AS mecze
-      FROM standalone_match_stats
-      GROUP BY user_id
-    ) sms ON sms.user_id = u.id
     WHERE COALESCE(u.is_temporary, 0) = 0 AND COALESCE(u.realm, ?) = ?
   `;
 }
@@ -48,11 +38,11 @@ function playersStatsSql() {
            u.first_name, u.last_name,
            u.player_alias AS zawodnik,
            u.profile_photo_path,
-           COALESCE(ms.goals, 0) + COALESCE(sms.goals, 0) AS goals,
-           COALESCE(ms.assists, 0) + COALESCE(sms.assists, 0) AS assists,
-           COALESCE(ms.distance, 0) + COALESCE(sms.distance, 0) AS distance,
-           COALESCE(ms.saves, 0) + COALESCE(sms.saves, 0) AS saves,
-           COALESCE(ms.mecze, 0) + COALESCE(sms.mecze, 0) AS mecze
+           COALESCE(ms.goals, 0) AS goals,
+           COALESCE(ms.assists, 0) AS assists,
+           COALESCE(ms.distance, 0) AS distance,
+           COALESCE(ms.saves, 0) AS saves,
+           COALESCE(ms.mecze, 0) AS mecze
     FROM users u
     LEFT JOIN (
       SELECT user_id,
@@ -66,17 +56,6 @@ function playersStatsSql() {
       WHERE s.season_id = ?
       GROUP BY user_id
     ) ms ON ms.user_id = u.id
-    LEFT JOIN (
-      SELECT user_id,
-             SUM(goals) AS goals,
-             SUM(assists) AS assists,
-             SUM(distance) AS distance,
-             SUM(saves) AS saves,
-             COUNT(*) AS mecze
-      FROM standalone_match_stats
-      WHERE season_id = ?
-      GROUP BY user_id
-    ) sms ON sms.user_id = u.id
     WHERE COALESCE(u.is_temporary, 0) = 0 AND COALESCE(u.realm, ?) = ?
   `;
 }
@@ -144,7 +123,7 @@ export async function getRankablePlayers(
 
   const rows = (await db
     .prepare(playersStatsSql())
-    .all(seasonId, seasonId, REALMS.ACADEMY, realm)) as PlayerStatsRow[];
+    .all(seasonId, REALMS.ACADEMY, realm)) as PlayerStatsRow[];
 
   return rows.map((r) => {
     const g = Number(r.goals) || 0;

@@ -324,7 +324,7 @@ export function MatchLineupAdmin() {
         <Button
           type="button"
           size="sm"
-          variant="pitch"
+          variant="gold"
           className="w-full sm:w-auto"
           onClick={() => void save()}
           disabled={saving || selectedId == null || loading}
@@ -375,7 +375,7 @@ export function MatchLineupAdmin() {
             </div>
             <Button
               type="button"
-              variant={lineupPublic ? "stadium" : "pitch"}
+              variant="gold"
               className="h-auto min-h-11 w-full shrink-0 whitespace-normal px-3 py-2.5 text-center text-sm leading-snug sm:w-auto sm:min-h-10 sm:max-w-[280px]"
               disabled={publishSaving || selectedId == null}
               onClick={() => void togglePublish(!lineupPublic)}

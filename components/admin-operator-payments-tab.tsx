@@ -151,7 +151,7 @@ export function AdminOperatorPaymentsTab() {
           label="Włącz płatności HotPay"
           hint={
             configured
-              ? "Gracze zobaczą przyciski Zapłać / doładowania (terminarz, portfel, linki podsumowania meczu)."
+              ? "Gracze zobaczą przyciski „Zapłać kartą lub Blikiem” (terminarz, portfel, linki podsumowania meczu)."
               : "Ustaw najpierw HOTPAY_SEKRET i HOTPAY_NOTIFICATION_PASSWORD w env, żeby przełącznik miał efekt."
           }
           checked={settings.hotpay_enabled}

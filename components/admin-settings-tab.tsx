@@ -286,7 +286,7 @@ export function AdminSettingsTab({
   const setTestModeEnabled = useCallback(
     async (enabled: boolean) => {
       setTestModeBusy(true);
-      const toastId = toast.loading(enabled ? "Włączanie trybu testowego…" : "Wyłączanie i czyszczenie bazy testowej…");
+      const toastId = toast.loading(enabled ? "Włączanie sandboxu…" : "Wyłączanie — czyszczenie testów…");
       try {
         const res = await fetch("/api/admin/test-mode", {
           method: "POST",
@@ -299,7 +299,7 @@ export function AdminSettingsTab({
           configured?: boolean;
         };
         if (!res.ok) {
-          toast.error(typeof j.error === "string" ? j.error : "Nie udało się przełączyć trybu", {
+          toast.error(typeof j.error === "string" ? j.error : "Nie udało się przełączyć", {
             id: toastId,
           });
           return;
@@ -309,15 +309,13 @@ export function AdminSettingsTab({
           configured: j.configured !== false,
         });
         toast.success(
-          enabled
-            ? "Tryb testowy włączony — osobna baza TEST"
-            : "Tryb testowy wyłączony — baza TEST wyczyszczona",
+          enabled ? "Sandbox włączony — gracze bez zmian" : "Sandbox wyłączony — testy skasowane",
           { id: toastId }
         );
         // Pełne odświeżenie, żeby RSC / dane przeszły na właściwą bazę.
         window.location.reload();
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Błąd trybu testowego", { id: toastId });
+        toast.error(e instanceof Error ? e.message : "Błąd sandboxu", { id: toastId });
       } finally {
         setTestModeBusy(false);
       }
@@ -529,24 +527,20 @@ export function AdminSettingsTab({
         id="settings-test-mode"
         hidden={channel !== "web" || settingsRealm !== "academy" || !sectionVisible("settings-test-mode")}
         title="Tryb testowy"
-        description="Osobna baza TEST (Turso lub lokalny plik). Tylko Twoja sesja admina przełącza się na bazę testową — gracze zawsze widzą produkcję. Po wyłączeniu baza TEST jest czyszczona."
+        description="Ćwicz mecze i płatności bez wpływu na graczy. Po wyłączeniu testy są kasowane."
       >
         <ul className="mb-4 grid gap-2 text-sm sm:grid-cols-2">
           <li className={adminStatusChipClass}>
-            <span className="text-emerald-100/70">Tryb testowy:</span>{" "}
+            <span className="text-emerald-100/70">Sandbox:</span>{" "}
             <strong className="text-emerald-300">
-              {testMode == null
-                ? "…"
-                : testMode.configured
-                  ? "Gotowy (osobna baza TEST)"
-                  : "Brak bazy TEST w env"}
+              {testMode == null ? "…" : testMode.configured ? "Gotowy" : "Niedostępny"}
             </strong>
           </li>
         </ul>
         <YesNoSwitchRow
           className={adminToggleRowClass}
-          label="Włącz tryb testowy"
-          hint="Wymaga TURSO_TEST_DATABASE_URL (+ token) albo lokalnego SQLite bez Turso PROD. Baner „TRYB TESTOWY”. HotPay w teście: session_id z prefixem hp_t_ (księguje w bazie TEST). Wyłączenie czyści bazę TEST."
+          label="Włącz sandbox"
+          hint="Tylko Ty widzisz testy. Gracze nadal na produkcji. Wyłączenie kasuje dane testowe."
           checked={Boolean(testMode?.enabled)}
           disabled={busy || testModeBusy || !testMode?.configured}
           onCheckedChange={(v) => void setTestModeEnabled(v)}
@@ -1106,7 +1100,7 @@ export function AdminSettingsTab({
               />
               <Button
                 type="button"
-                variant="stadium"
+                variant="gold"
                 size="sm"
                 className="sm:justify-self-end"
                 disabled={busy || cancelReasonsDraft.length <= 1}
@@ -1120,7 +1114,7 @@ export function AdminSettingsTab({
         <div className="flex flex-wrap gap-2 pt-2">
           <Button
             type="button"
-            variant="stadium"
+            variant="gold"
             size="sm"
             disabled={busy || cancelReasonsDraft.length >= 20}
             onClick={() =>
@@ -1129,7 +1123,7 @@ export function AdminSettingsTab({
           >
             Dodaj powód
           </Button>
-          <Button type="button" variant="pitch" size="sm" disabled={busy} onClick={() => void save({ match_cancel_reasons: cancelReasonsDraft })}>
+          <Button type="button" variant="gold" size="sm" disabled={busy} onClick={() => void save({ match_cancel_reasons: cancelReasonsDraft })}>
             Zapisz powody
           </Button>
         </div>
@@ -1363,7 +1357,7 @@ function MobileSettingsEditor({
         </div>
         <Button
           type="button"
-          variant="pitch"
+          variant="gold"
           size="sm"
           className="mt-3"
           disabled={busy}

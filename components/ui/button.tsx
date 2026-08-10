@@ -24,8 +24,9 @@ const buttonVariants = cva(
           "border border-white/35 bg-white/14 text-white shadow-[0_10px_30px_-14px_rgba(0,0,0,0.55)] backdrop-blur-md hover:bg-white/20 hover:shadow-[0_14px_40px_-16px_rgba(0,0,0,0.6)] dark:border-white/18 dark:bg-white/10 dark:hover:bg-white/14",
         pitch:
           "bg-emerald-100 text-emerald-950 shadow-md shadow-emerald-950/20 hover:bg-white dark:bg-emerald-800/90 dark:text-emerald-50 dark:hover:bg-emerald-700/90",
+        /** Styl jak przycisk „Tryb testowy” w panelu admina. */
         gold:
-          "bg-amber-300 text-amber-950 shadow-md shadow-amber-950/25 hover:bg-amber-200 dark:bg-amber-300/90 dark:hover:bg-amber-200/95",
+          "border border-[var(--mundial-gold,#f5c518)] bg-[var(--mundial-gold,#f5c518)]/90 text-[var(--mundial-navy,#0a1628)] shadow-md shadow-black/25 hover:bg-[var(--mundial-gold,#f5c518)]",
       },
       size: {
         default: "h-10 px-4",

@@ -3,12 +3,6 @@ import { redirect } from "next/navigation";
 import { getAccountNavFields } from "@/lib/account-server";
 import { getServerSession } from "@/lib/auth";
 import { getDb } from "@/lib/db";
-import {
-  PARTICIPATION_SURVEY_KEY,
-  PARTICIPATION_SURVEY_LOCATION,
-  PARTICIPATION_SURVEY_MATCH_DATE,
-  PARTICIPATION_SURVEY_MATCH_TIME,
-} from "@/lib/match-participation-survey";
 import { StatystykiClient } from "@/components/statystyki-client";
 import { PitchPageHero } from "@/components/ui/pitch-card";
 
@@ -43,24 +37,13 @@ export default async function StatystykiPage() {
 
   const userStats = (await db
     .prepare(
-      `SELECT * FROM (
-        SELECT m.match_date, m.match_time, m.location, s.goals, s.assists, s.distance, s.saves
-        FROM match_stats s JOIN matches m ON m.id = s.match_id WHERE s.user_id = ?
-        UNION ALL
-        SELECT ? AS match_date, ? AS match_time, ? AS location,
-               sms.goals, sms.assists, sms.distance, sms.saves
-        FROM standalone_match_stats sms
-        WHERE sms.user_id = ? AND sms.survey_key = ?
-      ) ORDER BY match_date DESC, match_time DESC`
+      `SELECT m.match_date, m.match_time, m.location, s.goals, s.assists, s.distance, s.saves
+       FROM match_stats s
+       JOIN matches m ON m.id = s.match_id
+       WHERE s.user_id = ?
+       ORDER BY m.match_date DESC, m.match_time DESC`
     )
-    .all(
-      session.userId,
-      PARTICIPATION_SURVEY_MATCH_DATE,
-      PARTICIPATION_SURVEY_MATCH_TIME,
-      PARTICIPATION_SURVEY_LOCATION,
-      session.userId,
-      PARTICIPATION_SURVEY_KEY
-    )) as {
+    .all(session.userId)) as {
     match_date: string;
     match_time: string;
     location: string;

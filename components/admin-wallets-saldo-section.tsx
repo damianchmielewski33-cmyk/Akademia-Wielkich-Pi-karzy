@@ -628,7 +628,7 @@ export function AdminWalletsSaldoSection({
             </p>
           </div>
           {showReload ? (
-            <Button type="button" variant="secondary" disabled={adminLoading} onClick={() => void refresh()}>
+            <Button type="button" variant="gold" disabled={adminLoading} onClick={() => void refresh()}>
               {adminLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
               Odśwież
             </Button>
@@ -733,7 +733,7 @@ export function AdminWalletsSaldoSection({
       <div className="mt-1 flex flex-wrap gap-2">
         <Button
           type="button"
-          variant="secondary"
+          variant="gold"
           disabled={publicLinkBusy}
           onClick={() => void generatePublicLink("last_match_wallets")}
         >

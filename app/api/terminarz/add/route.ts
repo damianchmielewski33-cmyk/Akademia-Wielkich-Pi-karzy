@@ -43,7 +43,7 @@ export async function POST(req: Request) {
     return NextResponse.json(
       {
         error: inTestMode
-          ? `Tryb testowy: nie można zapisać meczu w bazie TEST. ${message}`
+          ? `Sandbox: nie udało się zapisać meczu. ${message}`
           : message,
       },
       { status: 503 }

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getDb, logActivity } from "@/lib/db";
 import { requireAdmin } from "@/lib/api-helpers";
+import { getPrepaidMatchCartAmount, settlePrepaidPlayerWithoutCharge } from "@/lib/match-cart";
 import { createMatchCharge } from "@/lib/wallet";
 
 export const runtime = "nodejs";
@@ -31,20 +32,30 @@ export async function GET(_req: Request, ctx: Ctx) {
   return NextResponse.json({ charges });
 }
 
-const postSchema = z.object({
-  charges: z
-    .array(
-      z.object({
-        user_id: z.coerce.number().int().positive(),
-        amount_pln: z.coerce.number().positive().max(1000),
-        note: z.string().trim().max(200).optional(),
-      })
-    )
-    .min(1),
-});
+const postSchema = z
+  .object({
+    charges: z
+      .array(
+        z.object({
+          user_id: z.coerce.number().int().positive(),
+          amount_pln: z.coerce.number().positive().max(1000),
+          note: z.string().trim().max(200).optional(),
+        })
+      )
+      .default([]),
+    /** Ostateczna składka na osobę — do porównania z wpłatą koszykową. */
+    fee_per_person_pln: z.coerce.number().min(0).max(1000).optional(),
+    /** Zawodnicy z paid=1 w rozliczeniu — bez debetu; ewentualny zwrot nadpłaty. */
+    prepaid_user_ids: z.array(z.coerce.number().int().positive()).default([]),
+  })
+  .refine((d) => d.charges.length > 0 || d.prepaid_user_ids.length > 0, {
+    message: "Brak zawodników do rozliczenia",
+  });
 
 /**
  * Admin dzieli koszt rozegranego meczu i odejmuje z portfeli zawodników.
+ * Osoby już opłacone koszykiem: bez ponownego obciążenia; gdy składka < wpłata —
+ * różnica wraca na portfel płatnika koszyka.
  * Każdy zawodnik może być rozliczony maksymalnie raz per mecz (PK: match_id+user_id).
  */
 export async function POST(req: Request, ctx: Ctx) {
@@ -66,20 +77,74 @@ export async function POST(req: Request, ctx: Ctx) {
   }
 
   const db = await getDb();
-  const match = await db.prepare("SELECT played, match_date, match_time, location FROM matches WHERE id = ?").get(
-    matchId
-  ) as { played: number; match_date: string; match_time: string; location: string } | undefined;
+  const match = (await db
+    .prepare("SELECT played, match_date, match_time, location FROM matches WHERE id = ?")
+    .get(matchId)) as
+    | { played: number; match_date: string; match_time: string; location: string }
+    | undefined;
   if (!match) return NextResponse.json({ error: "Not found" }, { status: 404 });
   if (match.played !== 1) return NextResponse.json({ error: "Match not played" }, { status: 409 });
 
   const applied: { user_id: number; amount_pln: number }[] = [];
+  const prepaidSettled: {
+    user_id: number;
+    prepaid_pln: number;
+    final_fee_pln: number;
+    credited_pln: number;
+    payer_user_id: number | null;
+  }[] = [];
   const skipped: { user_id: number; reason: string }[] = [];
 
-  for (const c of parsed.data.charges) {
+  const feePerPerson =
+    parsed.data.fee_per_person_pln != null && Number.isFinite(parsed.data.fee_per_person_pln)
+      ? Math.round(Number(parsed.data.fee_per_person_pln) * 100) / 100
+      : null;
+
+  const prepaidIds = [...new Set(parsed.data.prepaid_user_ids.map((x) => Number(x)).filter((x) => x > 0))];
+  for (const userId of prepaidIds) {
     const signup = (await db
-      .prepare(
-        `SELECT COALESCE(paid, 0) AS paid FROM match_signups WHERE match_id = ? AND user_id = ?`
-      )
+      .prepare(`SELECT COALESCE(paid, 0) AS paid FROM match_signups WHERE match_id = ? AND user_id = ?`)
+      .get(matchId, userId)) as { paid: number } | undefined;
+    if (!signup || Number(signup.paid) !== 1) {
+      skipped.push({ user_id: userId, reason: "not_prepaid" });
+      continue;
+    }
+    // Bez podanej składki — nie zwracaj całej wpłaty; traktuj jako „składka = wpłata”.
+    let finalFee = feePerPerson;
+    if (finalFee == null) {
+      const prepaidInfo = await getPrepaidMatchCartAmount(matchId, userId);
+      finalFee = prepaidInfo?.amount_pln ?? 0;
+    }
+    const result = await settlePrepaidPlayerWithoutCharge({
+      matchId,
+      beneficiaryUserId: userId,
+      finalFeePln: finalFee,
+      adminId: gate.session.userId,
+    });
+    if (!result.ok) {
+      skipped.push({ user_id: userId, reason: result.error === "ALREADY_CHARGED" ? "already_charged" : "error" });
+      continue;
+    }
+    if (result.already_settled) {
+      skipped.push({ user_id: userId, reason: "already_charged" });
+      continue;
+    }
+    prepaidSettled.push({
+      user_id: userId,
+      prepaid_pln: result.prepaid_pln,
+      final_fee_pln: finalFee,
+      credited_pln: result.credited_pln,
+      payer_user_id: result.payer_user_id,
+    });
+  }
+
+  for (const c of parsed.data.charges) {
+    if (prepaidIds.includes(c.user_id)) {
+      skipped.push({ user_id: c.user_id, reason: "already_prepaid" });
+      continue;
+    }
+    const signup = (await db
+      .prepare(`SELECT COALESCE(paid, 0) AS paid FROM match_signups WHERE match_id = ? AND user_id = ?`)
       .get(matchId, c.user_id)) as { paid: number } | undefined;
     if (signup && Number(signup.paid) === 1) {
       skipped.push({ user_id: c.user_id, reason: "already_prepaid" });
@@ -97,7 +162,6 @@ export async function POST(req: Request, ctx: Ctx) {
       applied.push({ user_id: c.user_id, amount_pln: c.amount_pln });
     } catch (e) {
       const msg = String((e as { message?: string } | undefined)?.message ?? "");
-      // SQLite unique constraint / Turso error message variations
       if (msg.includes("UNIQUE") || msg.includes("constraint") || msg.includes("PRIMARY")) {
         skipped.push({ user_id: c.user_id, reason: "already_charged" });
       } else {
@@ -107,11 +171,11 @@ export async function POST(req: Request, ctx: Ctx) {
     }
   }
 
+  const creditedTotal = prepaidSettled.reduce((s, p) => s + p.credited_pln, 0);
   await logActivity(
     gate.session.userId,
-    `Rozliczył mecz ${match.match_date} ${match.match_time} (${match.location}), id ${matchId}. Obciążenia: ${applied.length}, pominięte: ${skipped.length}`
+    `Rozliczył mecz ${match.match_date} ${match.match_time} (${match.location}), id ${matchId}. Obciążenia: ${applied.length}, opłaceni z góry: ${prepaidSettled.length}, zwroty nadpłat: ${creditedTotal.toFixed(2)} PLN, pominięte: ${skipped.length}`
   );
 
-  return NextResponse.json({ ok: true, applied, skipped });
+  return NextResponse.json({ ok: true, applied, prepaid_settled: prepaidSettled, skipped });
 }
-

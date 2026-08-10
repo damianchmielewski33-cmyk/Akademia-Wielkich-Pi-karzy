@@ -231,7 +231,7 @@ export function HomeClient({
               href="/platnosci"
               icon={Wallet}
               title="Płatności"
-              desc="Doładuj HotPay, opłać mecz koszykiem lub BLIK"
+              desc="Zapłać kartą lub Blikiem, opłać mecz koszykiem"
             />
           ) : null}
           {!isHiddenHref("/statystyki") ? (

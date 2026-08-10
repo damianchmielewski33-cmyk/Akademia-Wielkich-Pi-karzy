@@ -30,7 +30,7 @@ export async function GET(_req: Request, context: RouteContext) {
   const exists = await db.prepare("SELECT 1 FROM matches WHERE id = ?").get(mid);
   if (!exists) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const signups = await db
+  const signups = (await db
     .prepare(
       `SELECT ms.user_id AS user_id, ms.paid, COALESCE(ms.commitment, 1) AS commitment,
               u.first_name AS first_name, u.last_name AS last_name,
@@ -41,9 +41,41 @@ export async function GET(_req: Request, context: RouteContext) {
        WHERE ms.match_id = ?
        ORDER BY u.is_temporary DESC, ms.commitment DESC, u.first_name, u.last_name`
     )
-    .all(mid);
+    .all(mid)) as {
+    user_id: number;
+    paid: number;
+    commitment: number;
+    first_name: string;
+    last_name: string;
+    zawodnik: string;
+    profile_photo_path: string | null;
+    is_temporary: number;
+  }[];
 
-  return NextResponse.json({ signups });
+  const prepaidRows = (await db
+    .prepare(
+      `
+      SELECT i.beneficiary_user_id AS user_id, i.amount_pln
+      FROM wallet_match_cart_items i
+      JOIN wallet_match_carts c ON c.id = i.cart_id
+      WHERE c.match_id = ? AND c.status = 'completed'
+      ORDER BY c.id DESC
+    `
+    )
+    .all(mid)) as { user_id: number; amount_pln: number }[];
+  const prepaidByUser = new Map<number, number>();
+  for (const r of prepaidRows) {
+    if (!prepaidByUser.has(r.user_id)) {
+      prepaidByUser.set(r.user_id, Math.round(Number(r.amount_pln) * 100) / 100);
+    }
+  }
+
+  return NextResponse.json({
+    signups: signups.map((s) => ({
+      ...s,
+      prepaid_amount_pln: prepaidByUser.get(s.user_id) ?? null,
+    })),
+  });
 }
 
 const patchSchema = z.object({

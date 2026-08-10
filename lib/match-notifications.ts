@@ -91,6 +91,7 @@ export async function notifySignedUpPlayersAboutCancelledMatch(args: {
   matchTime: string;
   location: string;
   reason: string;
+  refundedPln?: number;
 }): Promise<void> {
   const db = await getDb();
   const settings = await getAppSettings(db);
@@ -106,6 +107,11 @@ export async function notifySignedUpPlayersAboutCancelledMatch(args: {
 
   if (players.length === 0) return;
 
+  const refundLine =
+    args.refundedPln != null && args.refundedPln > 0
+      ? "Jeśli opłaciłeś wpisowe (koszyk lub rozliczenie), środki wróciły na portfel w Serwisie."
+      : null;
+
   if (isMailConfigured() && settings.match_email_notifications_enabled) {
     const subject = `Mecz odwołany — ${args.matchDate} ${args.matchTime}`;
     for (const row of players) {
@@ -120,6 +126,7 @@ export async function notifySignedUpPlayersAboutCancelledMatch(args: {
         `• Miejsce: ${args.location}`,
         `• Powód: ${args.reason}`,
         "",
+        ...(refundLine ? [refundLine, ""] : []),
         `Sprawdź terminarz na stronie akademii.`,
         "",
         `— ${settings.site_name}`,
@@ -135,7 +142,10 @@ export async function notifySignedUpPlayersAboutCancelledMatch(args: {
   await sendPushToUserIds({
     userIds: players.map((p) => p.id),
     title: "Mecz odwołany",
-    body: `${args.matchDate} ${args.matchTime} · ${args.reason}`,
+    body:
+      args.refundedPln != null && args.refundedPln > 0
+        ? `${args.matchDate} ${args.matchTime} · zwrot na portfel · ${args.reason}`
+        : `${args.matchDate} ${args.matchTime} · ${args.reason}`,
     data: {
       type: "match_cancelled",
       match_id: String(args.matchId),

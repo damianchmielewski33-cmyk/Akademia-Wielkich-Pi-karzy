@@ -140,7 +140,7 @@ export default async function RegulaminPage() {
                 każdy zawodnik posiada w Serwisie saldo portfela służące do rozliczeń wpisowego;
               </li>
               <li>
-                doładowanie salda może nastąpić płatnością online (HotPay) albo innym sposobem
+                doładowanie salda może nastąpić płatnością online (karta lub BLIK) albo innym sposobem
                 wskazanym w Serwisie (np. BLIK na telefon — po potwierdzeniu przez administratora);
               </li>
               <li>
@@ -150,7 +150,7 @@ export default async function RegulaminPage() {
               </li>
               <li>
                 <strong className="text-white">koszyk meczowy</strong> pozwala opłacić wpisowe za
-                siebie i/lub innych zapisanych zawodników z portfela (lub HotPay przy braku środków);
+                siebie i/lub innych zapisanych zawodników z portfela (lub kartą / Blikiem przy braku środków);
                 po opłaceniu oznaczani są jako opłaceni na danym meczu;
               </li>
               <li>
@@ -163,8 +163,8 @@ export default async function RegulaminPage() {
               <li>
                 do czasu rozliczenia w Serwisie może być widoczna orientacyjna / domyślna kwota
                 wpisowego (np. z ustawień akademii lub niedopłaty na portfelu) — nie zawsze jest to
-                ostateczna składka za konkretny mecz; kwota zapłacona w koszyku może różnić się od
-                ostatecznej składki — różnicę rozlicza administrator;
+                ostateczna składka za konkretny mecz; jeśli kwota zapłacona w koszyku jest wyższa niż
+                ostateczna składka przy rozliczeniu, różnica wraca automatycznie na portfel płatnika;
               </li>
               <li>
                 obciążenie portfela za mecz (rozliczenie) jest dokonywane przez administratora po
@@ -191,8 +191,8 @@ export default async function RegulaminPage() {
             </p>
             <ul className="mt-2 list-disc space-y-1.5 pl-5">
               <li>
-                płatność inicjowana jest w Serwisie (np. „Ureguluj saldo”, „Doładuj saldo” lub
-                koszyk meczowy), a następnie realizowana w bramce HotPay;
+                płatność inicjowana jest w Serwisie (np. „Opłać zaległość”, „Zapłać kartą lub Blikiem” lub
+                koszyk meczowy), a następnie realizowana w bramce płatności operatora;
               </li>
               <li>
                 po otrzymaniu potwierdzenia płatności od operatora środki są automatycznie

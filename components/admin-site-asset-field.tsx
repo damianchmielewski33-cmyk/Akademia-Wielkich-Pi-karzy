@@ -34,15 +34,36 @@ export function AdminSiteAssetField({ assetKey, currentUrl, customUrl, disabled,
   const router = useRouter();
 
   async function upload(file: File) {
+    const maxBytes = 3.5 * 1024 * 1024;
+    if (file.size > maxBytes) {
+      toast.error("Plik jest za duży (max 3,5 MB). Skompresuj tło (WebP/JPG ~80%) i wgraj ponownie.");
+      if (inputRef.current) inputRef.current.value = "";
+      return;
+    }
+
     setBusy(true);
     try {
       const form = new FormData();
       form.set("asset", assetKey);
       form.set("file", file);
       const res = await fetch("/api/admin/site-assets", { method: "POST", body: form });
-      const j = (await res.json().catch(() => ({}))) as { error?: string; settings?: AppSettings };
+      const raw = await res.text();
+      let j: { error?: string; settings?: AppSettings } = {};
+      try {
+        j = raw ? (JSON.parse(raw) as { error?: string; settings?: AppSettings }) : {};
+      } catch {
+        /* odpowiedź nie-JSON (np. limity platformy) */
+      }
       if (!res.ok) {
-        toast.error(typeof j.error === "string" ? j.error : "Nie udało się wgrać grafiki");
+        if (typeof j.error === "string" && j.error.trim()) {
+          toast.error(j.error);
+        } else if (res.status === 413) {
+          toast.error("Plik za duży dla serwera — skompresuj do max 3,5 MB.");
+        } else if (res.status === 503) {
+          toast.error("Magazyn grafik niedostępny — na Vercel dodaj BLOB_READ_WRITE_TOKEN.");
+        } else {
+          toast.error(`Nie udało się wgrać grafiki (HTTP ${res.status}).`);
+        }
         return;
       }
       if (j.settings) {
@@ -131,7 +152,7 @@ export function AdminSiteAssetField({ assetKey, currentUrl, customUrl, disabled,
           <div className="flex flex-wrap gap-2">
             <Button
               type="button"
-              variant="stadium"
+              variant="gold"
               size="sm"
               disabled={disabled || busy}
               onClick={() => inputRef.current?.click()}
@@ -145,7 +166,7 @@ export function AdminSiteAssetField({ assetKey, currentUrl, customUrl, disabled,
             </Button>
             <Button
               type="button"
-              variant="pitch"
+              variant="gold"
               size="sm"
               disabled={disabled || busy || !isCustom}
               onClick={() => void resetToDefault()}
@@ -155,7 +176,8 @@ export function AdminSiteAssetField({ assetKey, currentUrl, customUrl, disabled,
             </Button>
           </div>
           <p className="text-xs text-emerald-100/60">
-            Akceptowane: {spec.formats} · maks. {spec.maxFileSize}
+            Akceptowane: {spec.formats} · maks. 3,5 MB
+            {assetKey.startsWith("bg_") ? " · duże tła skompresuj do WebP/JPG" : ""}
           </p>
         </div>
       </div>

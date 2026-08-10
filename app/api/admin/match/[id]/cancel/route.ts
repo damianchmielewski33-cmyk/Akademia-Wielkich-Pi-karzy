@@ -4,7 +4,7 @@ import { getDb, logActivity } from "@/lib/db";
 import { requireAdmin } from "@/lib/api-helpers";
 import { notifySignedUpPlayersAboutCancelledMatch } from "@/lib/match-notifications";
 import { matchCancelReasonLabelFromSettings, getAppSettings } from "@/lib/app-settings";
-import { refundAllMatchCartsForMatch } from "@/lib/match-cart";
+import { refundAllMatchPaymentsOnCancel } from "@/lib/match-cart";
 
 export const runtime = "nodejs";
 
@@ -41,7 +41,7 @@ export async function POST(req: Request, context: RouteContext) {
   const reasonLabel = matchCancelReasonLabelFromSettings(parsed.data.reason, settings);
   await db.prepare("UPDATE matches SET cancelled = 1, cancellation_reason = ? WHERE id = ?").run(parsed.data.reason, mid);
 
-  const refunds = await refundAllMatchCartsForMatch({
+  const refunds = await refundAllMatchPaymentsOnCancel({
     matchId: mid,
     actorUserId: gate.session.userId,
     reason: `odwołanie meczu (${reasonLabel})`,
@@ -51,7 +51,7 @@ export async function POST(req: Request, context: RouteContext) {
     gate.session.userId,
     `Anulował mecz id ${mid}: ${row.match_date} ${row.match_time} (${row.location}), powód: ${reasonLabel}${
       refunds.refunded_count > 0
-        ? ` · zwroty koszyka: ${refunds.refunded_count} os. / ${refunds.refunded_pln.toFixed(2)} PLN`
+        ? ` · zwroty na portfele: ${refunds.refunded_count} os. / ${refunds.refunded_pln.toFixed(2)} PLN`
         : ""
     }`
   );
@@ -61,6 +61,7 @@ export async function POST(req: Request, context: RouteContext) {
     matchTime: row.match_time,
     location: row.location,
     reason: reasonLabel,
+    refundedPln: refunds.refunded_pln,
   });
   return NextResponse.json({ ok: true, refunds });
 }

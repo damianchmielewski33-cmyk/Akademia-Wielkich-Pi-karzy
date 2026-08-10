@@ -21,7 +21,6 @@ export default async function TerminarzPage({
     mecz?: string;
     zaproszenie?: string;
     statystyki?: string;
-    statystyki_ankiety?: string;
     obecnosc?: string;
     losowanie?: string;
   }>;
@@ -41,8 +40,6 @@ export default async function TerminarzPage({
   const statystyki = sp.statystyki;
   const openStatsFromUrl =
     Boolean(highlightMatchId) && (statystyki === "1" || statystyki === "true");
-  const openStandaloneSurveyStats =
-    sp.statystyki_ankiety === "1" || sp.statystyki_ankiety === "true";
   const openAttendanceFromUrl =
     Boolean(highlightMatchId) && (sp.obecnosc === "1" || sp.obecnosc === "true");
 
@@ -72,7 +69,6 @@ export default async function TerminarzPage({
           currentUserId={session?.userId ?? null}
           highlightMatchId={highlightMatchId}
           openStatsFromUrl={openStatsFromUrl}
-          openStandaloneSurveyStats={openStandaloneSurveyStats}
           openAttendanceFromUrl={openAttendanceFromUrl}
           matchDefaults={{
             maxSlots: data.appSettings.default_match_max_slots,

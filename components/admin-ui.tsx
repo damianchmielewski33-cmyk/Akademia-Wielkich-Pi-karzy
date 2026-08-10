@@ -8,7 +8,14 @@ import { PitchCard, PitchCardDecorations, pitchLabelClass } from "@/components/u
 import { SiteSectionHero } from "@/components/site-section-hero";
 import { SiteAssetImage } from "@/components/site-asset-image";
 import { AdminTestModeSidebarButton } from "@/components/admin-test-mode-sidebar-button";
+import { AdminOperatorPaymentsSidebarButton } from "@/components/admin-operator-payments-sidebar-button";
 import { Button } from "@/components/ui/button";
+import {
+  adminChromeBtnActiveClass,
+  adminChromeBtnBaseClass,
+  adminChromeBtnIdleClass,
+  adminGoldBtnClass,
+} from "@/lib/admin-chrome-button";
 import { cn } from "@/lib/utils";
 
 /* ========== Klasy pomocnicze (tabele, pola) ========== */
@@ -26,7 +33,15 @@ export const adminDataSearchInputClass =
 export const adminDataOutlineBtnClass =
   "border-zinc-300 bg-white text-zinc-800 hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800";
 
-export const adminOutlineBtnClass = "border-white/30 bg-black/10 text-white hover:bg-white/15 dark:border-white/20";
+export {
+  adminChromeBtnActiveClass,
+  adminChromeBtnBaseClass,
+  adminChromeBtnIdleClass,
+  adminGoldBtnActiveClass,
+  adminGoldBtnClass,
+} from "@/lib/admin-chrome-button";
+
+export const adminOutlineBtnClass = adminGoldBtnClass;
 
 export const adminPanelInnerClass = "rounded-xl border border-white/25 bg-black/10 p-4 backdrop-blur-sm sm:p-5";
 
@@ -111,6 +126,25 @@ function TabBadge({ tab }: { tab: AdminTab }) {
   return null;
 }
 
+function AdminChromeIcon({
+  active,
+  children,
+}: {
+  active?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <span
+      className={cn(
+        "flex h-6 w-6 shrink-0 items-center justify-center rounded-md ring-1",
+        active ? "bg-black/25 ring-white/35" : "bg-black/10 ring-black/20"
+      )}
+    >
+      {children}
+    </span>
+  );
+}
+
 function NavTabButton({
   tab,
   active,
@@ -128,16 +162,16 @@ function NavTabButton({
       type="button"
       onClick={onSelect}
       className={cn(
-        "awp-focus-ring flex touch-manipulation items-center gap-2 rounded-xl text-left text-sm font-semibold transition-[background-color,color,box-shadow]",
-        compact ? "shrink-0 px-3 py-2" : "w-full px-3 py-2",
-        active
-          ? "bg-white/15 text-white shadow-sm ring-1 ring-white/20"
-          : "text-emerald-100/85 hover:bg-white/10 hover:text-white"
+        adminChromeBtnBaseClass,
+        active ? adminChromeBtnActiveClass : adminChromeBtnIdleClass,
+        compact ? "w-auto min-w-[7.5rem] shrink-0" : "w-full"
       )}
     >
-      <Icon className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
-      <span className="flex min-w-0 flex-1 items-center justify-between gap-2 whitespace-nowrap">
-        {tab.label}
+      <AdminChromeIcon active={active}>
+        <Icon className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />
+      </AdminChromeIcon>
+      <span className="flex min-w-0 flex-1 items-center justify-between gap-2">
+        <span className="block truncate text-xs font-bold leading-none tracking-tight">{tab.label}</span>
         <TabBadge tab={tab} />
       </span>
     </button>
@@ -251,13 +285,12 @@ export function AdminShell({
                     type="button"
                     onClick={() => onTabChange(s.id)}
                     className={cn(
-                      "awp-focus-ring relative flex min-h-9 flex-1 items-center justify-center gap-1 rounded-xl px-2 py-1.5 text-xs font-semibold transition-colors",
-                      active
-                        ? "bg-white/20 text-white ring-1 ring-white/25"
-                        : "bg-white/10 text-emerald-100/90 hover:bg-white/15 hover:text-white"
+                      adminChromeBtnBaseClass,
+                      "min-h-9 flex-1 justify-center px-2",
+                      active ? adminChromeBtnActiveClass : adminChromeBtnIdleClass
                     )}
                   >
-                    <span className="truncate">{s.label}</span>
+                    <span className="truncate text-xs font-bold leading-none tracking-tight">{s.label}</span>
                     {s.badgeCount != null && s.badgeCount > 0 ? (
                       <span className="inline-flex min-h-[1.1rem] min-w-[1.1rem] items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white">
                         {s.badgeCount > 99 ? "99+" : s.badgeCount}
@@ -289,13 +322,12 @@ export function AdminShell({
                       if (!selected && g.items[0]) onTabChange(g.items[0].id);
                     }}
                     className={cn(
-                      "awp-focus-ring relative flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors",
-                      selected
-                        ? "bg-[var(--mundial-gold)]/25 text-white ring-1 ring-[var(--mundial-gold)]/50"
-                        : "bg-white/10 text-emerald-100/85 hover:bg-white/15 hover:text-white"
+                      adminChromeBtnBaseClass,
+                      "w-auto shrink-0 rounded-full px-3",
+                      selected ? adminChromeBtnActiveClass : adminChromeBtnIdleClass
                     )}
                   >
-                    {chipLabel}
+                    <span className="truncate text-xs font-bold leading-none tracking-tight">{chipLabel}</span>
                     {groupAlert && !selected ? (
                       <span className="h-1.5 w-1.5 rounded-full bg-red-500" aria-hidden />
                     ) : null}
@@ -389,42 +421,66 @@ export function AdminShell({
             })}
           </nav>
 
-          {/* Zawsze widoczne: tryb testowy + stopka (nie scrollują się z menu) */}
+          {/* Zawsze widoczne: tryb testowy + płatności operatora + stopka */}
           <div className="relative z-10 flex shrink-0 flex-col gap-3 border-t border-white/20 pt-3">
             <div className="flex flex-col gap-1.5">
               <AdminTestModeSidebarButton />
+              <AdminOperatorPaymentsSidebarButton
+                active={activeTab === "operator-payments"}
+                onOpen={() => onTabChange("operator-payments")}
+              />
             </div>
-            <div className="flex flex-wrap gap-1 lg:flex-col">
-            <button
-              type="button"
-              onClick={() => void toggleTheme()}
-              className="awp-focus-ring flex min-h-10 flex-1 items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-emerald-100/90 transition-colors hover:bg-white/10 hover:text-white lg:flex-none"
-            >
-              {isDarkNow ? <Sun className="h-4 w-4" aria-hidden /> : <Moon className="h-4 w-4" aria-hidden />}
-              <span className="truncate">{isDarkNow ? "Jasny motyw" : "Ciemny motyw"}</span>
-            </button>
-            <Link
-              href="/terminarz"
-              className="awp-focus-ring flex min-h-10 flex-1 items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-emerald-100/90 transition-colors hover:bg-white/10 hover:text-white lg:flex-none"
-            >
-              <Calendar className="h-4 w-4 shrink-0" aria-hidden />
-              <span className="truncate">Terminarz</span>
-            </Link>
-            <Link
-              href="/"
-              className="awp-focus-ring flex min-h-10 flex-1 items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-emerald-100/90 transition-colors hover:bg-white/10 hover:text-white lg:flex-none"
-            >
-              <ArrowLeft className="h-4 w-4 shrink-0" aria-hidden />
-              <span className="truncate">Strona główna</span>
-            </Link>
-            <button
-              type="button"
-              onClick={onLogout}
-              className="awp-focus-ring flex min-h-10 flex-1 items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-emerald-100/90 transition-colors hover:bg-white/10 hover:text-white lg:flex-none"
-            >
-              <LogOut className="h-4 w-4 shrink-0" aria-hidden />
-              Wyloguj
-            </button>
+            <div className="flex flex-wrap gap-1.5 lg:flex-col">
+              <button
+                type="button"
+                onClick={() => void toggleTheme()}
+                className={cn(adminChromeBtnBaseClass, adminChromeBtnIdleClass, "flex-1 lg:flex-none")}
+              >
+                <AdminChromeIcon>
+                  {isDarkNow ? (
+                    <Sun className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />
+                  ) : (
+                    <Moon className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />
+                  )}
+                </AdminChromeIcon>
+                <span className="min-w-0 flex-1 truncate text-xs font-bold leading-none tracking-tight">
+                  {isDarkNow ? "Jasny motyw" : "Ciemny motyw"}
+                </span>
+              </button>
+              <Link
+                href="/terminarz"
+                className={cn(adminChromeBtnBaseClass, adminChromeBtnIdleClass, "flex-1 lg:flex-none")}
+              >
+                <AdminChromeIcon>
+                  <Calendar className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />
+                </AdminChromeIcon>
+                <span className="min-w-0 flex-1 truncate text-xs font-bold leading-none tracking-tight">
+                  Terminarz
+                </span>
+              </Link>
+              <Link
+                href="/"
+                className={cn(adminChromeBtnBaseClass, adminChromeBtnIdleClass, "flex-1 lg:flex-none")}
+              >
+                <AdminChromeIcon>
+                  <ArrowLeft className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />
+                </AdminChromeIcon>
+                <span className="min-w-0 flex-1 truncate text-xs font-bold leading-none tracking-tight">
+                  Strona główna
+                </span>
+              </Link>
+              <button
+                type="button"
+                onClick={onLogout}
+                className={cn(adminChromeBtnBaseClass, adminChromeBtnIdleClass, "flex-1 lg:flex-none")}
+              >
+                <AdminChromeIcon>
+                  <LogOut className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />
+                </AdminChromeIcon>
+                <span className="min-w-0 flex-1 truncate text-xs font-bold leading-none tracking-tight">
+                  Wyloguj
+                </span>
+              </button>
             </div>
           </div>
         </div>
@@ -496,7 +552,7 @@ export function AdminToolbar({
         {children}
         <Button
           type="button"
-          variant="stadium"
+          variant="gold"
           size="sm"
           onClick={onReload}
           disabled={loading}

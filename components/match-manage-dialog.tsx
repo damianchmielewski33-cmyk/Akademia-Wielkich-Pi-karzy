@@ -290,7 +290,10 @@ export function MatchManageDialog({
     if (!match) return;
     setBusy(true);
     try {
-      const r = await fetchJson<{ ok: true }>(`/api/admin/match/${match.id}/cancel`, {
+      const r = await fetchJson<{
+        ok: true;
+        refunds?: { refunded_count: number; refunded_pln: number };
+      }>(`/api/admin/match/${match.id}/cancel`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ reason: cancelReason }),
@@ -299,7 +302,13 @@ export function MatchManageDialog({
         toast.error(r.error);
         return;
       }
-      toast.success("Mecz anulowany");
+      const refunded = Number(r.data.refunds?.refunded_pln ?? 0);
+      const refundCount = Number(r.data.refunds?.refunded_count ?? 0);
+      toast.success(
+        refunded > 0
+          ? `Mecz anulowany — zwrot na portfele: ${refundCount} os. / ${refunded.toFixed(2)} PLN`
+          : "Mecz anulowany"
+      );
       handleOpenChange(false);
       onDone();
     } finally {
@@ -804,7 +813,9 @@ export function MatchManageDialog({
 
           <TabsContent value="cancel" className="mt-4 space-y-3">
             <ModalAlert tone="danger">
-              Anulowanie oznacza termin jako odwołany. Zapisani zawodnicy zostaną poinformowani o powodzie — tej operacji nie cofniesz z tego okna.
+              Anulowanie oznacza termin jako odwołany. Środki z koszyka meczowego i rozliczenia wracają
+              automatycznie na portfele. Zapisani zawodnicy zostaną poinformowani o powodzie — tej operacji
+              nie cofniesz z tego okna.
             </ModalAlert>
             <div className={panelClass}>
               <FormSelectField id="mm-reason" label="Powód anulacji" required>

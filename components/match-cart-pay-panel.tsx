@@ -5,7 +5,7 @@ import { Loader2, ShoppingCart } from "lucide-react";
 import { AppModal } from "@/components/ui/app-modal";
 import { extractApiErrorMessage, useAppMessage } from "@/components/ui/app-message-modal";
 import { Button } from "@/components/ui/button";
-import { formatMatchFeePln } from "@/lib/match-fee";
+import { formatMatchFeePln, MATCH_PREPAYMENT_PLN } from "@/lib/match-fee";
 import { cn } from "@/lib/utils";
 import type { MatchCartMatchOption } from "@/lib/match-cart";
 import { currentHotpayReturnPath } from "@/lib/hotpay-client";
@@ -136,7 +136,7 @@ export function MatchCartPayPanel({
     }
     if (needsHotpay && !hotpayEnabled) {
       showError(
-        "Niewystarczające saldo na portfelu. Doładuj środki albo poproś administratora o włączenie HotPay.",
+        "Niewystarczające saldo na portfelu. Zapłać kartą lub Blikiem albo poproś administratora o włączenie płatności online.",
         "Koszyk meczowy"
       );
       return;
@@ -172,7 +172,10 @@ export function MatchCartPayPanel({
       }
       if (data.method === "hotpay" && data.url) {
         setConfirmOpen(false);
-        showInfo("Zaraz przekierujemy Cię do bramki HotPay — po płatności zawodnicy zostaną oznaczeni jako opłaceni.", "HotPay");
+        showInfo(
+          "Zaraz przekierujemy Cię do płatności kartą lub Blikiem — po płatności zawodnicy zostaną oznaczeni jako opłaceni.",
+          "Płatność"
+        );
         window.setTimeout(() => {
           window.location.assign(data.url!);
         }, 600);
@@ -205,8 +208,9 @@ export function MatchCartPayPanel({
             Opłać mecz (koszyk)
           </h3>
           <p className="mt-0.5 text-sm text-zinc-600 dark:text-zinc-400">
-            Wybierz mecz i zawodników — możesz opłacić wpisowe za siebie i innych z portfela
-            {hotpayEnabled ? " lub HotPay" : ""}.
+            Zaliczka {formatMatchFeePln(MATCH_PREPAYMENT_PLN)} na osobę — jeśli ostateczna składka będzie
+            niższa, różnica wraca na portfel płatnika. Możesz opłacić siebie i innych z portfela
+            {hotpayEnabled ? " albo kartą / Blikiem" : ""}.
           </p>
         </div>
       </div>
@@ -313,7 +317,7 @@ export function MatchCartPayPanel({
         description={
           selectedMatch && selectedIds.length > 0
             ? needsHotpay && hotpayEnabled
-              ? `Opłacisz ${selectedIds.length} os. za ${formatMatchFeePln(totalPln)}. Brakuje środków na portfelu — nastąpi płatność HotPay, a potem automatyczne oznaczenie opłat.`
+              ? `Opłacisz ${selectedIds.length} os. za ${formatMatchFeePln(totalPln)}. Brakuje środków na portfelu — zapłacisz kartą lub Blikiem, a potem opłaty zostaną oznaczone automatycznie.`
               : `Opłacisz ${selectedIds.length} os. za ${formatMatchFeePln(totalPln)} z portfela. Zawodnicy zostaną oznaczeni jako opłaceni.`
             : "Sprawdź wybór."
         }
@@ -324,7 +328,7 @@ export function MatchCartPayPanel({
           </Button>
           <Button type="button" variant="pitch" disabled={submitting} onClick={() => void submitCart()}>
             {submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
-            {needsHotpay && hotpayEnabled ? "Zapłać HotPay" : "Potwierdź opłatę"}
+            {needsHotpay && hotpayEnabled ? "Zapłać kartą lub Blikiem" : "Potwierdź opłatę"}
           </Button>
         </div>
       </AppModal>

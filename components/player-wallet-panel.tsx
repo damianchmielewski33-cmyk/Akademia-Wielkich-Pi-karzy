@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ArrowDownLeft,
   ArrowLeftRight,
@@ -20,18 +20,34 @@ import { cn } from "@/lib/utils";
 import { useHotpayPayment } from "@/hooks/use-hotpay-payment";
 import { PayButton } from "@/components/pay-button";
 
-export type WalletMeTransaction = WalletTransactionRow & { balance_after_pln: number };
+export type WalletMeTransaction = WalletTransactionRow & {
+  balance_after_pln: number;
+  is_test?: number | boolean | null;
+  match_date?: string | null;
+  match_time?: string | null;
+  match_location?: string | null;
+  match_cancelled?: number | boolean | null;
+  related_zawodnik?: string | null;
+  related_first_name?: string | null;
+  related_last_name?: string | null;
+};
+
+type HistoryFilter = "all" | "deposit" | "match_charge" | "transfer" | "adjustment";
 
 type Props = {
   currentUserId: number | null;
   hotpayEnabled: boolean;
   compact?: boolean;
+  /** Ukrywa formularz doładowania (np. admin ma już HotpayPayButtons). */
+  showTopup?: boolean;
   refreshKey?: number;
   className?: string;
 };
 
 const contentPanelClass =
   "rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-900/80 sm:p-5";
+
+const HISTORY_PAGE_SIZE = 100;
 
 export function formatWalletPln(n: number) {
   const v = Math.round(n * 100) / 100;
@@ -48,11 +64,39 @@ function formatTxDateParts(raw: string) {
   };
 }
 
-function walletTxMeta(kind: WalletTransactionRow["kind"]) {
-  switch (kind) {
+function relatedUserLabel(tx: WalletMeTransaction): string | null {
+  const nick = tx.related_zawodnik?.trim();
+  if (nick) return nick;
+  const name = [tx.related_first_name, tx.related_last_name].filter(Boolean).join(" ").trim();
+  return name || null;
+}
+
+function matchLabel(tx: WalletMeTransaction): string | null {
+  if (!tx.match_id) return null;
+  const parts: string[] = [];
+  if (tx.match_date) {
+    const d = String(tx.match_date);
+    const pretty = /^\d{4}-\d{2}-\d{2}/.test(d)
+      ? new Date(`${d.slice(0, 10)}T12:00:00`).toLocaleDateString("pl-PL", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+        })
+      : d;
+    parts.push(pretty);
+  }
+  if (tx.match_time) parts.push(String(tx.match_time).slice(0, 5));
+  if (tx.match_location?.trim()) parts.push(tx.match_location.trim());
+  const base = parts.length ? parts.join(" · ") : `Mecz #${tx.match_id}`;
+  return tx.match_cancelled ? `${base} (odwołany)` : base;
+}
+
+function walletTxMeta(tx: WalletMeTransaction) {
+  const amount = Number(tx.amount_pln ?? 0);
+  switch (tx.kind) {
     case "deposit":
       return {
-        label: "Wpłata",
+        label: amount >= 0 ? "Doładowanie" : "Korekta wpłaty",
         Icon: ArrowDownLeft,
         badgeClass:
           "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-800/60 dark:bg-emerald-950/50 dark:text-emerald-200",
@@ -60,14 +104,14 @@ function walletTxMeta(kind: WalletTransactionRow["kind"]) {
       };
     case "match_charge":
       return {
-        label: "Mecz",
+        label: amount < 0 ? "Opłata za mecz" : "Zwrot / uznanie meczu",
         Icon: ArrowUpRight,
         badgeClass: "border-red-200 bg-red-50 text-red-800 dark:border-red-800/60 dark:bg-red-950/50 dark:text-red-200",
         borderClass: "border-l-red-500",
       };
     case "adjustment":
       return {
-        label: "Korekta",
+        label: amount > 0 ? "Zwrot / uznanie" : "Korekta (obciążenie)",
         Icon: SlidersHorizontal,
         badgeClass:
           "border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-800/60 dark:bg-amber-950/50 dark:text-amber-200",
@@ -75,7 +119,7 @@ function walletTxMeta(kind: WalletTransactionRow["kind"]) {
       };
     case "transfer":
       return {
-        label: "Przelew",
+        label: amount > 0 ? "Przelew otrzymany" : "Przelew wysłany",
         Icon: ArrowLeftRight,
         badgeClass:
           "border-sky-200 bg-sky-50 text-sky-900 dark:border-sky-800/60 dark:bg-sky-950/50 dark:text-sky-200",
@@ -83,7 +127,7 @@ function walletTxMeta(kind: WalletTransactionRow["kind"]) {
       };
     default:
       return {
-        label: kind,
+        label: String(tx.kind),
         Icon: SlidersHorizontal,
         badgeClass: "border-zinc-200 bg-zinc-50 text-zinc-800 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200",
         borderClass: "border-l-zinc-400",
@@ -91,13 +135,58 @@ function walletTxMeta(kind: WalletTransactionRow["kind"]) {
   }
 }
 
+function walletKindLabel(kind: WalletTransactionRow["wallet_kind"] | null | undefined) {
+  if (kind === "operator") return "Online (HotPay)";
+  return "Gotówka / BLIK";
+}
+
 export function WalletBalanceHistory({
   loading,
   transactions,
+  total,
+  hasMore,
+  loadingMore,
+  onLoadMore,
 }: {
   loading: boolean;
   transactions: WalletMeTransaction[];
+  total: number;
+  hasMore: boolean;
+  loadingMore?: boolean;
+  onLoadMore?: () => void;
 }) {
+  const [filter, setFilter] = useState<HistoryFilter>("all");
+  const [query, setQuery] = useState("");
+
+  const counts = useMemo(() => {
+    const c = { all: transactions.length, deposit: 0, match_charge: 0, transfer: 0, adjustment: 0 };
+    for (const tx of transactions) {
+      if (tx.kind in c) c[tx.kind as Exclude<HistoryFilter, "all">] += 1;
+    }
+    return c;
+  }, [transactions]);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return transactions.filter((tx) => {
+      if (filter !== "all" && tx.kind !== filter) return false;
+      if (!q) return true;
+      const hay = [
+        tx.note,
+        tx.kind,
+        matchLabel(tx),
+        relatedUserLabel(tx),
+        String(tx.id),
+        String(tx.match_id ?? ""),
+        walletKindLabel(tx.wallet_kind),
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      return hay.includes(q);
+    });
+  }, [transactions, filter, query]);
+
   if (loading && transactions.length === 0) {
     return (
       <p className="mt-4 flex items-center gap-2 rounded-xl border border-zinc-200 bg-zinc-50/80 px-4 py-8 text-sm text-zinc-600 dark:border-zinc-700 dark:bg-zinc-950/40 dark:text-zinc-400">
@@ -115,100 +204,203 @@ export function WalletBalanceHistory({
     );
   }
 
+  const filters: { id: HistoryFilter; label: string }[] = [
+    { id: "all", label: "Wszystkie" },
+    { id: "deposit", label: "Doładowania" },
+    { id: "match_charge", label: "Mecze" },
+    { id: "transfer", label: "Przelewy" },
+    { id: "adjustment", label: "Korekty / zwroty" },
+  ];
+
   return (
-    <div className="mt-4 overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50/50 dark:border-zinc-700 dark:bg-zinc-950/40">
-      <div className="flex items-center justify-between gap-2 border-b border-zinc-200 bg-white px-4 py-2.5 dark:border-zinc-700 dark:bg-zinc-900/80">
-        <p className="text-xs font-semibold uppercase tracking-wide text-emerald-900 dark:text-emerald-200">
-          Ostatnie operacje
-        </p>
-        <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium tabular-nums text-zinc-600 ring-1 ring-emerald-900/10 dark:bg-zinc-900 dark:text-zinc-300 dark:ring-emerald-100/10">
-          {transactions.length}
-        </span>
-      </div>
-
-      <div
-        className="hidden grid-cols-[minmax(0,1.4fr)_5.5rem_5.5rem_5.5rem] gap-3 border-b border-zinc-200 bg-white px-4 py-2 text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:border-zinc-700 dark:bg-zinc-900/60 dark:text-zinc-400 sm:grid"
-        aria-hidden
-      >
-        <span>Operacja</span>
-        <span className="text-right">Data</span>
-        <span className="text-right">Zmiana</span>
-        <span className="text-right">Saldo</span>
-      </div>
-
-      <ul className="max-h-[52vh] divide-y divide-zinc-200 overflow-y-auto dark:divide-zinc-700">
-        {transactions.map((tx) => {
-          const amount = Number(tx.amount_pln ?? 0);
-          const balanceAfter = Number(tx.balance_after_pln ?? 0);
-          const isPositive = amount > 0;
-          const isNegative = amount < 0;
-          const { date, time } = formatTxDateParts(tx.created_at);
-          const meta = walletTxMeta(tx.kind);
-          const Icon = meta.Icon;
-
-          return (
-            <li
-              key={tx.id}
-              className={cn("border-l-4 bg-white px-4 py-3 dark:bg-zinc-900/70", meta.borderClass)}
+    <div className="mt-4 space-y-3">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-wrap gap-1.5">
+          {filters.map((f) => (
+            <button
+              key={f.id}
+              type="button"
+              onClick={() => setFilter(f.id)}
+              className={cn(
+                "rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 transition-colors",
+                filter === f.id
+                  ? "bg-emerald-700 text-white ring-emerald-800"
+                  : "bg-white text-zinc-600 ring-zinc-200 hover:bg-zinc-50 dark:bg-zinc-900 dark:text-zinc-300 dark:ring-zinc-700 dark:hover:bg-zinc-800"
+              )}
             >
-              <div className="grid gap-3 sm:grid-cols-[minmax(0,1.4fr)_5.5rem_5.5rem_5.5rem] sm:items-start">
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span
-                      className={cn(
-                        "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold",
-                        meta.badgeClass
+              {f.label}
+              <span className="ml-1 tabular-nums opacity-80">({counts[f.id]})</span>
+            </button>
+          ))}
+        </div>
+        <p className="text-xs tabular-nums text-zinc-500 dark:text-zinc-400">
+          Załadowano {transactions.length}
+          {total > transactions.length ? ` z ${total}` : ""} wpisów
+        </p>
+      </div>
+
+      <input
+        type="search"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Szukaj w notatce, meczu, zawodniku…"
+        className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none ring-emerald-700/30 placeholder:text-zinc-400 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+      />
+
+      <div className="overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50/50 dark:border-zinc-700 dark:bg-zinc-950/40">
+        <div className="flex items-center justify-between gap-2 border-b border-zinc-200 bg-white px-4 py-2.5 dark:border-zinc-700 dark:bg-zinc-900/80">
+          <p className="text-xs font-semibold uppercase tracking-wide text-emerald-900 dark:text-emerald-200">
+            Lista transakcji
+          </p>
+          <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium tabular-nums text-zinc-600 ring-1 ring-emerald-900/10 dark:bg-zinc-900 dark:text-zinc-300 dark:ring-emerald-100/10">
+            {filtered.length}
+            {filtered.length !== transactions.length ? ` / ${transactions.length}` : ""}
+          </span>
+        </div>
+
+        <div
+          className="hidden grid-cols-[minmax(0,1.6fr)_5.5rem_5.5rem_5.5rem] gap-3 border-b border-zinc-200 bg-white px-4 py-2 text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:border-zinc-700 dark:bg-zinc-900/60 dark:text-zinc-400 sm:grid"
+          aria-hidden
+        >
+          <span>Operacja i szczegóły</span>
+          <span className="text-right">Data</span>
+          <span className="text-right">Zmiana</span>
+          <span className="text-right">Saldo</span>
+        </div>
+
+        {filtered.length === 0 ? (
+          <p className="px-4 py-8 text-center text-sm text-zinc-500">Brak wpisów dla wybranego filtra.</p>
+        ) : (
+          <ul className="max-h-[70vh] divide-y divide-zinc-200 overflow-y-auto dark:divide-zinc-700">
+            {filtered.map((tx) => {
+              const amount = Number(tx.amount_pln ?? 0);
+              const balanceAfter = Number(tx.balance_after_pln ?? 0);
+              const isPositive = amount > 0;
+              const isNegative = amount < 0;
+              const { date, time } = formatTxDateParts(tx.created_at);
+              const meta = walletTxMeta(tx);
+              const Icon = meta.Icon;
+              const match = matchLabel(tx);
+              const related = relatedUserLabel(tx);
+              const isTest = Boolean(tx.is_test);
+
+              return (
+                <li
+                  key={tx.id}
+                  className={cn("border-l-4 bg-white px-4 py-3 dark:bg-zinc-900/70", meta.borderClass)}
+                >
+                  <div className="grid gap-3 sm:grid-cols-[minmax(0,1.6fr)_5.5rem_5.5rem_5.5rem] sm:items-start">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span
+                          className={cn(
+                            "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold",
+                            meta.badgeClass
+                          )}
+                        >
+                          <Icon className="h-3 w-3 shrink-0" aria-hidden />
+                          {meta.label}
+                        </span>
+                        <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
+                          {walletKindLabel(tx.wallet_kind)}
+                        </span>
+                        {isTest ? (
+                          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-900 dark:bg-amber-950/60 dark:text-amber-200">
+                            Test
+                          </span>
+                        ) : null}
+                        <span className="text-[11px] tabular-nums text-zinc-400">#{tx.id}</span>
+                        <span className="text-[11px] tabular-nums text-zinc-500 sm:hidden">
+                          {date}
+                          {time ? ` · ${time}` : ""}
+                        </span>
+                      </div>
+
+                      {tx.note ? (
+                        <p className="mt-1.5 whitespace-pre-wrap break-words text-sm leading-snug text-zinc-700 dark:text-zinc-300">
+                          {tx.note}
+                        </p>
+                      ) : (
+                        <p className="mt-1.5 text-sm text-zinc-400 dark:text-zinc-500">Bez notatki</p>
                       )}
-                    >
-                      <Icon className="h-3 w-3 shrink-0" aria-hidden />
-                      {meta.label}
-                    </span>
-                    <span className="text-[11px] tabular-nums text-zinc-500 sm:hidden">
-                      {date}
-                      {time ? ` · ${time}` : ""}
-                    </span>
+
+                      <div className="mt-2 flex flex-col gap-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+                        {match ? (
+                          <p>
+                            <span className="font-semibold text-zinc-600 dark:text-zinc-300">Mecz:</span> {match}
+                          </p>
+                        ) : null}
+                        {related ? (
+                          <p>
+                            <span className="font-semibold text-zinc-600 dark:text-zinc-300">
+                              {amount > 0 ? "Od:" : "Do:"}
+                            </span>{" "}
+                            {related}
+                            {tx.related_user_id ? (
+                              <span className="tabular-nums text-zinc-400"> (#{tx.related_user_id})</span>
+                            ) : null}
+                          </p>
+                        ) : null}
+                        {tx.deposit_request_id ? (
+                          <p>
+                            <span className="font-semibold text-zinc-600 dark:text-zinc-300">Wniosek wpłaty:</span> #
+                            {tx.deposit_request_id}
+                          </p>
+                        ) : null}
+                      </div>
+                    </div>
+
+                    <div className="hidden text-right sm:block">
+                      <p className="text-sm font-medium tabular-nums text-zinc-800 dark:text-zinc-200">{date}</p>
+                      {time ? <p className="mt-0.5 text-xs tabular-nums text-zinc-500">{time}</p> : null}
+                    </div>
+
+                    <div className="flex items-baseline justify-between gap-3 sm:block sm:text-right">
+                      <span className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 sm:hidden">
+                        Zmiana
+                      </span>
+                      <p
+                        className={cn(
+                          "text-base font-bold tabular-nums leading-none",
+                          isPositive && "text-emerald-700 dark:text-emerald-300",
+                          isNegative && "text-red-700 dark:text-red-300",
+                          !isPositive && !isNegative && "text-zinc-700 dark:text-zinc-300"
+                        )}
+                      >
+                        {isPositive ? "+" : ""}
+                        {formatWalletPln(amount)}
+                      </p>
+                    </div>
+
+                    <div className="flex items-baseline justify-between gap-3 sm:block sm:text-right">
+                      <span className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 sm:hidden">
+                        Saldo
+                      </span>
+                      <div>
+                        <p className="text-sm font-semibold tabular-nums text-zinc-800 dark:text-zinc-200">
+                          {formatWalletPln(balanceAfter)}
+                        </p>
+                        <p className="mt-0.5 hidden text-[10px] uppercase tracking-wide text-zinc-400 sm:block">
+                          po operacji
+                        </p>
+                      </div>
+                    </div>
                   </div>
-                  {tx.note ? (
-                    <p className="mt-1.5 line-clamp-2 text-sm leading-snug text-zinc-700 dark:text-zinc-300">{tx.note}</p>
-                  ) : (
-                    <p className="mt-1.5 text-sm text-zinc-400 dark:text-zinc-500">—</p>
-                  )}
-                </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
 
-                <div className="hidden text-right sm:block">
-                  <p className="text-sm font-medium tabular-nums text-zinc-800 dark:text-zinc-200">{date}</p>
-                  {time ? <p className="mt-0.5 text-xs tabular-nums text-zinc-500">{time}</p> : null}
-                </div>
-
-                <div className="flex items-baseline justify-between gap-3 sm:block sm:text-right">
-                  <span className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 sm:hidden">Zmiana</span>
-                  <p
-                    className={cn(
-                      "text-base font-bold tabular-nums leading-none",
-                      isPositive && "text-emerald-700 dark:text-emerald-300",
-                      isNegative && "text-red-700 dark:text-red-300",
-                      !isPositive && !isNegative && "text-zinc-700 dark:text-zinc-300"
-                    )}
-                  >
-                    {isPositive ? "+" : ""}
-                    {formatWalletPln(amount)}
-                  </p>
-                </div>
-
-                <div className="flex items-baseline justify-between gap-3 sm:block sm:text-right">
-                  <span className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 sm:hidden">Saldo</span>
-                  <div>
-                    <p className="text-sm font-semibold tabular-nums text-zinc-800 dark:text-zinc-200">
-                      {formatWalletPln(balanceAfter)}
-                    </p>
-                    <p className="mt-0.5 hidden text-[10px] uppercase tracking-wide text-zinc-400 sm:block">po operacji</p>
-                  </div>
-                </div>
-              </div>
-            </li>
-          );
-        })}
-      </ul>
+      {hasMore && onLoadMore ? (
+        <div className="flex justify-center pt-1">
+          <Button type="button" variant="outline" size="sm" disabled={loadingMore} onClick={() => onLoadMore()}>
+            {loadingMore ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
+            Załaduj starsze wpisy
+          </Button>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -216,6 +408,7 @@ export function WalletBalanceHistory({
 export function PlayerWalletPanel({
   hotpayEnabled,
   compact = false,
+  showTopup = true,
   refreshKey = 0,
   className,
 }: Props) {
@@ -223,7 +416,10 @@ export function PlayerWalletPanel({
   const [adminBalancePln, setAdminBalancePln] = useState<number | null>(null);
   const [operatorBalancePln, setOperatorBalancePln] = useState<number | null>(null);
   const [walletTransactions, setWalletTransactions] = useState<WalletMeTransaction[]>([]);
+  const [transactionsTotal, setTransactionsTotal] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
   const [walletLoading, setWalletLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [topupAmount, setTopupAmount] = useState("");
   const [topupConfirmOpen, setTopupConfirmOpen] = useState(false);
   const { showError, MessageModal } = useAppMessage();
@@ -232,12 +428,14 @@ export function PlayerWalletPanel({
   async function refreshWallet() {
     setWalletLoading(true);
     try {
-      const res = await fetch("/api/wallet/me");
+      const res = await fetch(`/api/wallet/me?limit=${HISTORY_PAGE_SIZE}&offset=0`);
       const json = (await res.json().catch(() => null)) as {
         balance_pln?: unknown;
         admin_balance_pln?: unknown;
         operator_balance_pln?: unknown;
         transactions?: WalletMeTransaction[];
+        transactions_total?: number;
+        transactions_has_more?: boolean;
         error?: unknown;
       } | null;
       if (!res.ok) {
@@ -248,10 +446,43 @@ export function PlayerWalletPanel({
       setAdminBalancePln(Number(json?.admin_balance_pln ?? 0));
       setOperatorBalancePln(Number(json?.operator_balance_pln ?? 0));
       setWalletTransactions(Array.isArray(json?.transactions) ? json.transactions : []);
+      setTransactionsTotal(Number(json?.transactions_total ?? 0));
+      setHasMore(Boolean(json?.transactions_has_more));
     } catch {
       showError("Błąd sieci", "Portfel");
     } finally {
       setWalletLoading(false);
+    }
+  }
+
+  async function loadMoreTransactions() {
+    if (loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    try {
+      const res = await fetch(
+        `/api/wallet/me?limit=${HISTORY_PAGE_SIZE}&offset=${walletTransactions.length}`
+      );
+      const json = (await res.json().catch(() => null)) as {
+        transactions?: WalletMeTransaction[];
+        transactions_total?: number;
+        transactions_has_more?: boolean;
+        error?: unknown;
+      } | null;
+      if (!res.ok) {
+        showError(extractApiErrorMessage(json?.error, "Nie udało się doładować historii"), "Portfel");
+        return;
+      }
+      const next = Array.isArray(json?.transactions) ? json.transactions : [];
+      setWalletTransactions((prev) => {
+        const seen = new Set(prev.map((t) => t.id));
+        return [...prev, ...next.filter((t) => !seen.has(t.id))];
+      });
+      setTransactionsTotal(Number(json?.transactions_total ?? transactionsTotal));
+      setHasMore(Boolean(json?.transactions_has_more));
+    } catch {
+      showError("Błąd sieci", "Portfel");
+    } finally {
+      setLoadingMore(false);
     }
   }
 
@@ -273,6 +504,7 @@ export function PlayerWalletPanel({
   }, [refreshKey]);
 
   const topupAmountParsed = Number.parseFloat(topupAmount.replace(",", "."));
+  const allowTopup = showTopup && hotpayEnabled;
 
   function formatPln(n: number) {
     return new Intl.NumberFormat("pl-PL", { style: "currency", currency: "PLN" }).format(
@@ -342,27 +574,38 @@ export function PlayerWalletPanel({
               <div className="mt-3 grid grid-cols-2 gap-2 rounded-lg bg-white/8 px-3 py-2.5">
                 <div>
                   <p className="text-[11px] uppercase tracking-wide text-white/60">Gotówka / BLIK</p>
-                  <p className={cn(
-                    "mt-0.5 text-sm font-bold tabular-nums",
-                    adminBalancePln < 0 ? "text-red-200" : adminBalancePln > 0 ? "text-emerald-100" : "text-white/70"
-                  )}>
+                  <p
+                    className={cn(
+                      "mt-0.5 text-sm font-bold tabular-nums",
+                      adminBalancePln < 0
+                        ? "text-red-200"
+                        : adminBalancePln > 0
+                          ? "text-emerald-100"
+                          : "text-white/70"
+                    )}
+                  >
                     {formatWalletPln(adminBalancePln)}
                   </p>
                 </div>
                 <div className="border-l border-white/15 pl-3">
                   <p className="text-[11px] uppercase tracking-wide text-white/60">Płatności online</p>
-                  <p className={cn(
-                    "mt-0.5 text-sm font-bold tabular-nums",
-                    operatorBalancePln < 0 ? "text-red-200" : operatorBalancePln > 0 ? "text-emerald-100" : "text-white/70"
-                  )}>
+                  <p
+                    className={cn(
+                      "mt-0.5 text-sm font-bold tabular-nums",
+                      operatorBalancePln < 0
+                        ? "text-red-200"
+                        : operatorBalancePln > 0
+                          ? "text-emerald-100"
+                          : "text-white/70"
+                    )}
+                  >
                     {formatWalletPln(operatorBalancePln)}
                   </p>
                 </div>
               </div>
             )}
 
-            {hotpayEnabled && walletBalancePln !== null && walletBalancePln < 0 ? (
-              /* Tryb zaległości — jeden klik, kwota z salda */
+            {allowTopup && walletBalancePln !== null && walletBalancePln < 0 ? (
               <div className="mt-4 border-t border-white/10 pt-4">
                 <p className="mb-3 text-sm font-medium text-red-200">
                   Zaległość do uregulowania:{" "}
@@ -377,15 +620,14 @@ export function PlayerWalletPanel({
                   onClick={() => setTopupConfirmOpen(true)}
                 />
               </div>
-            ) : hotpayEnabled ? (
-              /* Tryb doładowania — dowolna kwota */
+            ) : allowTopup ? (
               <div className="mt-4 flex flex-col gap-2 border-t border-white/10 pt-4 sm:flex-row sm:items-end">
                 <div className="flex-1">
                   <Label
                     htmlFor="player-topup-amount"
                     className="text-xs font-semibold uppercase tracking-wide text-white/70"
                   >
-                    Kwota doładowania (PLN)
+                    Kwota (PLN)
                   </Label>
                   <input
                     id="player-topup-amount"
@@ -401,14 +643,14 @@ export function PlayerWalletPanel({
                 </div>
                 <PayButton
                   variant="hero"
-                  label="Doładuj saldo"
+                  label="Zapłać kartą lub Blikiem"
                   busy={topupBusy}
                   disabled={walletLoading}
                   className="sm:min-w-[14rem]"
                   onClick={() => {
                     const amount = Number.parseFloat(topupAmount.replace(",", "."));
                     if (!Number.isFinite(amount) || amount < 0.01) {
-                      showError("Podaj poprawną kwotę doładowania (min. 0,01 PLN)", "Doładowanie");
+                      showError("Podaj poprawną kwotę (min. 0,01 PLN)", "Płatność");
                       return;
                     }
                     setTopupConfirmOpen(true);
@@ -451,25 +693,35 @@ export function PlayerWalletPanel({
             <Wallet className="h-5 w-5" strokeWidth={2.25} aria-hidden />
           </div>
           <div className="min-w-0 flex-1">
-            <h3 className="text-base font-bold tracking-tight text-emerald-950 dark:text-emerald-100">Historia salda</h3>
+            <h3 className="text-base font-bold tracking-tight text-emerald-950 dark:text-emerald-100">
+              Historia salda
+            </h3>
             <p className="mt-0.5 text-sm text-zinc-600 dark:text-zinc-400">
-              Wpłaty, przelewy, rozliczenia meczów i korekty — najnowsze operacje na górze listy.
+              Wszystkie doładowania, opłaty meczów, przelewy, zwroty i korekty — z saldem po każdej
+              operacji. Najnowsze na górze.
             </p>
           </div>
         </div>
-        <WalletBalanceHistory loading={walletLoading} transactions={walletTransactions} />
+        <WalletBalanceHistory
+          loading={walletLoading}
+          transactions={walletTransactions}
+          total={transactionsTotal}
+          hasMore={hasMore}
+          loadingMore={loadingMore}
+          onLoadMore={() => void loadMoreTransactions()}
+        />
       </div>
 
       <AppModal
         open={topupConfirmOpen}
         onOpenChange={setTopupConfirmOpen}
-        title={walletBalancePln !== null && walletBalancePln < 0 ? "Opłać zaległość" : "Potwierdź doładowanie"}
+        title={walletBalancePln !== null && walletBalancePln < 0 ? "Opłać zaległość" : "Potwierdź płatność"}
         description={
           walletBalancePln !== null && walletBalancePln < 0
-            ? `Zostaniesz przekierowany do płatności. Kwota zaległości: ${formatPln(Math.abs(walletBalancePln))}.`
+            ? `Zostaniesz przekierowany do płatności kartą lub Blikiem. Kwota zaległości: ${formatPln(Math.abs(walletBalancePln))}.`
             : Number.isFinite(topupAmountParsed)
-              ? `Zostaniesz przekierowany do płatności online. Kwota: ${formatPln(topupAmountParsed)}.`
-              : "Sprawdź kwotę doładowania."
+              ? `Zostaniesz przekierowany do płatności kartą lub Blikiem. Kwota: ${formatPln(topupAmountParsed)}.`
+              : "Sprawdź kwotę płatności."
         }
       >
         <div className="mt-4 flex flex-wrap justify-end gap-2">
@@ -481,9 +733,11 @@ export function PlayerWalletPanel({
             amountPln={
               walletBalancePln !== null && walletBalancePln < 0
                 ? walletBalancePln
-                : Number.isFinite(topupAmountParsed) ? topupAmountParsed : null
+                : Number.isFinite(topupAmountParsed)
+                  ? topupAmountParsed
+                  : null
             }
-            label={walletBalancePln !== null && walletBalancePln < 0 ? "Opłać zaległość" : "Doładuj saldo"}
+            label={walletBalancePln !== null && walletBalancePln < 0 ? "Opłać zaległość" : "Zapłać kartą lub Blikiem"}
             busy={topupBusy}
             onClick={() => void handleTopup()}
           />

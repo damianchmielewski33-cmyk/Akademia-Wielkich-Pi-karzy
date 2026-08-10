@@ -27,7 +27,7 @@ type Props = {
   variant?: PayButtonVariant;
   /** Kwota w PLN; <0 = zaległość (czerwona kolorystyka), >0 = doładowanie */
   amountPln?: number | null;
-  /** Nadpisanie domyślnego tekstu ("Opłać zaległość" / "Doładuj saldo") */
+  /** Nadpisanie domyślnego tekstu ("Opłać zaległość" / "Zapłać kartą lub Blikiem") */
   label?: string;
   /** Dodatkowy tekst pod główną etykietą */
   sublabel?: string;
@@ -58,7 +58,7 @@ export function PayButton({
 }: Props) {
   const isDebt = amountPln != null && amountPln < 0;
   const absAmount = amountPln != null ? Math.abs(amountPln) : null;
-  const defaultLabel = label ?? (isDebt ? "Opłać zaległość" : "Doładuj saldo");
+  const defaultLabel = label ?? (isDebt ? "Opłać zaległość" : "Zapłać kartą lub Blikiem");
   const isDisabled = disabled ?? busy;
 
   // ── HERO variant ────────────────────────────────────────────────────────

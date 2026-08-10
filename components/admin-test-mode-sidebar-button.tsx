@@ -3,6 +3,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { FlaskConical, Loader2 } from "lucide-react";
 import { toast } from "@/lib/app-toast";
+import {
+  adminChromeBtnActiveClass,
+  adminChromeBtnBaseClass,
+  adminChromeBtnIdleClass,
+} from "@/lib/admin-chrome-button";
 import { cn } from "@/lib/utils";
 
 type State = { enabled: boolean; configured: boolean } | null;
@@ -36,9 +41,7 @@ export function AdminTestModeSidebarButton({ className }: { className?: string }
     if (!state?.configured || busy) return;
     const enabled = !state.enabled;
     setBusy(true);
-    const toastId = toast.loading(
-      enabled ? "Włączanie trybu testowego…" : "Wyłączanie i usuwanie danych testowych…"
-    );
+    const toastId = toast.loading(enabled ? "Włączanie sandboxu…" : "Wyłączanie — czyszczenie testów…");
     try {
       const res = await fetch("/api/admin/test-mode", {
         method: "POST",
@@ -51,7 +54,7 @@ export function AdminTestModeSidebarButton({ className }: { className?: string }
         configured?: boolean;
       };
       if (!res.ok) {
-        toast.error(typeof j.error === "string" ? j.error : "Nie udało się przełączyć trybu", {
+        toast.error(typeof j.error === "string" ? j.error : "Nie udało się przełączyć", {
           id: toastId,
         });
         return;
@@ -61,12 +64,12 @@ export function AdminTestModeSidebarButton({ className }: { className?: string }
         configured: j.configured !== false,
       });
       toast.success(
-        enabled ? "Tryb testowy włączony" : "Tryb testowy wyłączony — baza TEST wyczyszczona",
+        enabled ? "Sandbox włączony — gracze bez zmian" : "Sandbox wyłączony — testy skasowane",
         { id: toastId }
       );
       window.location.reload();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Błąd trybu testowego", { id: toastId });
+      toast.error(e instanceof Error ? e.message : "Błąd sandboxu", { id: toastId });
     } finally {
       setBusy(false);
     }
@@ -94,20 +97,17 @@ export function AdminTestModeSidebarButton({ className }: { className?: string }
       disabled={busy || !state.configured}
       onClick={() => void toggle()}
       className={cn(
-        "awp-focus-ring group relative flex h-10 w-full items-center gap-2 overflow-hidden rounded-lg border px-2.5 text-left shadow-sm transition-[transform,box-shadow,background-color] active:translate-y-px",
-        "disabled:pointer-events-none disabled:opacity-60",
-        on
-          ? "border-amber-300/80 bg-gradient-to-br from-amber-500 via-orange-600 to-red-700 text-white shadow-amber-950/40 hover:brightness-110"
-          : "border-[var(--mundial-gold,#f5c518)] bg-[var(--mundial-gold,#f5c518)]/90 text-[var(--mundial-navy,#0a1628)] shadow-black/25 hover:bg-[var(--mundial-gold,#f5c518)]",
+        adminChromeBtnBaseClass,
+        on ? adminChromeBtnActiveClass : adminChromeBtnIdleClass,
         className
       )}
       aria-pressed={on}
       title={
         !state.configured
-          ? "Baza TEST nie skonfigurowana (TURSO_TEST_* lub lokalny SQLite)"
+          ? "Sandbox niedostępny — skonfiguruj środowisko testowe"
           : on
-            ? "Wyłącz tryb testowy (wyczyści bazę TEST)"
-            : "Włącz tryb testowy (osobna baza TEST)"
+            ? "Wyłącz: skasuje mecze i płatności testowe"
+            : "Włącz: ćwicz mecze i płatności bez wpływu na graczy"
       }
     >
       <span
@@ -132,7 +132,7 @@ export function AdminTestModeSidebarButton({ className }: { className?: string }
             on ? "text-white/85" : "text-[var(--mundial-navy,#0a1628)]/75"
           )}
         >
-          {on ? "Aktywny" : "Wyłączony"}
+          {on ? "Sandbox ON" : "Sandbox OFF"}
         </span>
       </span>
     </button>

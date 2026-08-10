@@ -41,7 +41,7 @@ export const SITE_ASSET_UPLOAD_SPECS: Record<SiteAssetKey, ImageUploadSpec> = {
     recommendedPixels: "512×512 px (min. 160×160 px)",
     aspectRatio: "1:1 — kwadrat",
     formats: "PNG, SVG lub WebP (najlepiej z przezroczystym tłem)",
-    maxFileSize: "4 MB",
+    maxFileSize: "3,5 MB",
     fillTip: "Logo powinno mieć margines w pliku — nie dotykać krawędzi obrazu.",
   },
   logo_crest: {
@@ -52,7 +52,7 @@ export const SITE_ASSET_UPLOAD_SPECS: Record<SiteAssetKey, ImageUploadSpec> = {
     recommendedPixels: "512×512 px (min. 256×256 px)",
     aspectRatio: "1:1 — kwadrat",
     formats: "PNG, SVG lub WebP",
-    maxFileSize: "4 MB",
+    maxFileSize: "3,5 MB",
     fillTip: "Herb wyśrodkuj w kwadracie — będzie skalowany proporcjonalnie.",
   },
   logo_login: {
@@ -63,7 +63,7 @@ export const SITE_ASSET_UPLOAD_SPECS: Record<SiteAssetKey, ImageUploadSpec> = {
     recommendedPixels: "512×512 px (min. 320×320 px); poziome logo też OK",
     aspectRatio: "1:1 lub poziome do 3:1",
     formats: "PNG, SVG lub WebP (najlepiej z przezroczystym tłem)",
-    maxFileSize: "4 MB",
+    maxFileSize: "3,5 MB",
     fillTip: "Logo będzie wyświetlane w jasnej ramce na ciemnym tle — unikaj białego prostokąta wokół znaku.",
   },
   logo_favicon: {
@@ -74,7 +74,7 @@ export const SITE_ASSET_UPLOAD_SPECS: Record<SiteAssetKey, ImageUploadSpec> = {
     recommendedPixels: "512×512 px",
     aspectRatio: "1:1 — kwadrat",
     formats: "PNG lub SVG (prosty znak, czytelny w małym rozmiarze)",
-    maxFileSize: "4 MB",
+    maxFileSize: "3,5 MB",
     fillTip: "Unikaj drobnych detali — w zakładce widać tylko miniaturę.",
   },
   bg_soccer_ball: {
@@ -85,7 +85,7 @@ export const SITE_ASSET_UPLOAD_SPECS: Record<SiteAssetKey, ImageUploadSpec> = {
     recommendedPixels: "512×512 px",
     aspectRatio: "1:1 — kwadrat",
     formats: "PNG, SVG lub WebP z przezroczystym tłem",
-    maxFileSize: "4 MB",
+    maxFileSize: "3,5 MB",
     fillTip: "Piłka na przezroczystym tle — bez prostokątnego tła wokół.",
   },
   bg_stadium: {
@@ -96,8 +96,8 @@ export const SITE_ASSET_UPLOAD_SPECS: Record<SiteAssetKey, ImageUploadSpec> = {
     recommendedPixels: "1920×1080 px (zalecane 2560×1440 px)",
     aspectRatio: "16:9 — poziomy panoramiczny",
     formats: "JPG, WebP, PNG lub SVG",
-    maxFileSize: "4 MB",
-    fillTip: "Ważne elementy trzymaj bliżej środka — brzegi mogą być przycięte na wąskich ekranach.",
+    maxFileSize: "3,5 MB",
+    fillTip: "Ważne elementy trzymaj bliżej środka — brzegi mogą być przycięte na wąskich ekranach. Duże zdjęcia skompresuj przed wgraniem.",
   },
   bg_pitch_lines: {
     label: SITE_ASSET_META.bg_pitch_lines.label,
@@ -107,7 +107,7 @@ export const SITE_ASSET_UPLOAD_SPECS: Record<SiteAssetKey, ImageUploadSpec> = {
     recommendedPixels: "1920×320 px (min. 1200×200 px)",
     aspectRatio: "ok. 6:1 — szeroki poziomy pas",
     formats: "PNG, SVG lub WebP (linie boiska u dołu obrazu)",
-    maxFileSize: "4 MB",
+    maxFileSize: "3,5 MB",
     fillTip: "Linie boiska umieść przy dolnej krawędzi pliku — tak wypełnią dół karty.",
   },
 };

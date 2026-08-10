@@ -27,7 +27,8 @@ import {
 
 export const runtime = "nodejs";
 
-const MAX_BYTES = 4 * 1024 * 1024;
+/** Poniżej limitu Vercel (~4,5 MB) i middlewareClientMaxBodySize (5 MB). */
+const MAX_BYTES = 3.5 * 1024 * 1024;
 const ALLOWED = new Map<string, string>([
   ["image/jpeg", ".jpg"],
   ["image/png", ".png"],
@@ -94,112 +95,162 @@ function assetUrlFromSettings(settings: Awaited<ReturnType<typeof getAppSettings
 
 /** POST — upload grafiki witryny (multipart: asset, file). */
 export async function POST(req: Request) {
-  const gate = await requireAdmin();
+  const gate = await requireAdmin("site");
   if (!gate.ok) return gate.response;
 
-  let form: FormData;
   try {
-    form = await req.formData();
-  } catch {
-    return NextResponse.json({ error: "Nieprawidłowe dane formularza" }, { status: 400 });
-  }
+    let form: FormData;
+    try {
+      form = await req.formData();
+    } catch {
+      return NextResponse.json(
+        {
+          error:
+            "Nie udało się odczytać pliku (za duży albo przerwany transfer). Skompresuj do max 3,5 MB i spróbuj ponownie.",
+        },
+        { status: 400 }
+      );
+    }
 
-  const assetRaw = form.get("asset");
-  if (typeof assetRaw !== "string" || !isSiteAssetKey(assetRaw)) {
-    return NextResponse.json({ error: "Nieprawidłowy klucz grafiki." }, { status: 400 });
-  }
-  const assetKey = assetRaw;
+    const assetRaw = form.get("asset");
+    if (typeof assetRaw !== "string" || !isSiteAssetKey(assetRaw)) {
+      return NextResponse.json({ error: "Nieprawidłowy klucz grafiki." }, { status: 400 });
+    }
+    const assetKey = assetRaw;
 
-  const file = form.get("file");
-  if (!file || !(file instanceof File) || file.size === 0) {
-    return NextResponse.json({ error: "Wybierz plik grafiki." }, { status: 400 });
-  }
-  if (file.size > MAX_BYTES) {
-    return NextResponse.json({ error: "Plik jest za duży (max 4 MB)." }, { status: 400 });
-  }
+    const file = form.get("file");
+    if (!file || !(file instanceof File) || file.size === 0) {
+      return NextResponse.json(
+        { error: "Wybierz plik grafiki (JPG/PNG/WebP, max 3,5 MB)." },
+        { status: 400 }
+      );
+    }
+    if (file.size > MAX_BYTES) {
+      return NextResponse.json(
+        { error: "Plik jest za duży (max 3,5 MB). Skompresuj tło (np. WebP/JPG jakości ~80%)." },
+        { status: 400 }
+      );
+    }
 
-  const mime = (file.type || "").toLowerCase();
-  const ext = ALLOWED.get(mime);
-  if (!ext) {
-    return NextResponse.json({ error: "Dozwolone: JPG, PNG, WebP, GIF, SVG." }, { status: 400 });
-  }
+    const mime = (file.type || "").toLowerCase();
+    const ext = ALLOWED.get(mime);
+    if (!ext) {
+      return NextResponse.json(
+        { error: "Dozwolone: JPG, PNG, WebP, GIF, SVG (nie HEIC z iPhone — najpierw eksportuj do JPG)." },
+        { status: 400 }
+      );
+    }
 
-  const buf = Buffer.from(await file.arrayBuffer());
-  if (buf.length > MAX_BYTES) {
-    return NextResponse.json({ error: "Plik jest za duży (max 4 MB)." }, { status: 400 });
-  }
-  if (!imageMimeMatchesMagicBytes(buf, mime)) {
-    return NextResponse.json(
-      { error: "Zawartość pliku nie odpowiada dozwolonym formatom obrazu." },
-      { status: 400 }
-    );
-  }
+    const buf = Buffer.from(await file.arrayBuffer());
+    if (buf.length === 0) {
+      return NextResponse.json(
+        { error: "Plik dotarł pusty — spróbuj mniejszy obraz (max 3,5 MB) albo inny format." },
+        { status: 400 }
+      );
+    }
+    if (buf.length > MAX_BYTES) {
+      return NextResponse.json(
+        { error: "Plik jest za duży (max 3,5 MB). Skompresuj tło (np. WebP/JPG jakości ~80%)." },
+        { status: 400 }
+      );
+    }
+    if (!imageMimeMatchesMagicBytes(buf, mime)) {
+      return NextResponse.json(
+        { error: "Zawartość pliku nie odpowiada dozwolonym formatom obrazu." },
+        { status: 400 }
+      );
+    }
 
-  const db = await getDb();
-  const settings = await getAppSettings(db);
-  const prevUrl = assetUrlFromSettings(settings, assetKey);
+    const db = await getDb();
+    const settings = await getAppSettings(db);
+    const prevUrl = assetUrlFromSettings(settings, assetKey);
 
-  if (isCustomUpload(prevUrl)) {
-    await removeStoredSiteAsset(prevUrl);
-  }
+    if (isCustomUpload(prevUrl)) {
+      await removeStoredSiteAsset(prevUrl);
+    }
 
-  let publicPath: string;
-  if (isProfileBlobStorageEnabled()) {
-    const pathname = `site/${assetKey}-${Date.now()}${ext}`;
-    const blob = await put(pathname, buf, {
-      access: "public",
-      contentType: mime,
+    let publicPath: string;
+    if (isProfileBlobStorageEnabled()) {
+      try {
+        const pathname = `site/${assetKey}-${Date.now()}${ext}`;
+        const blob = await put(pathname, buf, {
+          access: "public",
+          contentType: mime,
+        });
+        publicPath = blob.url;
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : "błąd magazynu Blob";
+        return NextResponse.json(
+          { error: `Nie udało się zapisać grafiki w magazynie: ${msg}` },
+          { status: 503 }
+        );
+      }
+    } else if (isEphemeralUploadStorage()) {
+      return NextResponse.json({ error: BLOB_REQUIRED_ON_VERCEL_MSG }, { status: 503 });
+    } else {
+      try {
+        fs.mkdirSync(siteUploadsDir(), { recursive: true });
+        const filename = `${assetKey}-${Date.now()}${ext}`;
+        publicPath = siteAssetPublicUrl(filename);
+        fs.writeFileSync(path.join(siteUploadsDir(), filename), buf);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : "błąd zapisu pliku";
+        return NextResponse.json(
+          { error: `Nie udało się zapisać grafiki na dysku: ${msg}` },
+          { status: 503 }
+        );
+      }
+    }
+
+    await updateAssetColumn(db, assetKey, publicPath);
+
+    const updated = await getAppSettings(db);
+    return NextResponse.json({
+      ok: true,
+      asset: assetKey,
+      url: updated.site_assets[assetKey],
+      default_url: SITE_ASSET_DEFAULTS[assetKey],
+      settings: updated,
     });
-    publicPath = blob.url;
-  } else if (isEphemeralUploadStorage()) {
-    return NextResponse.json({ error: BLOB_REQUIRED_ON_VERCEL_MSG }, { status: 503 });
-  } else {
-    fs.mkdirSync(siteUploadsDir(), { recursive: true });
-    const filename = `${assetKey}-${Date.now()}${ext}`;
-    publicPath = siteAssetPublicUrl(filename);
-    fs.writeFileSync(path.join(siteUploadsDir(), filename), buf);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "nieznany błąd";
+    return NextResponse.json({ error: `Wgrywanie grafiki nie powiodło się: ${msg}` }, { status: 500 });
   }
-
-  await updateAssetColumn(db, assetKey, publicPath);
-
-  const updated = await getAppSettings(db);
-  return NextResponse.json({
-    ok: true,
-    asset: assetKey,
-    url: updated.site_assets[assetKey],
-    default_url: SITE_ASSET_DEFAULTS[assetKey],
-    settings: updated,
-  });
 }
 
 /** DELETE — przywróć domyślną grafikę (?asset=logo_header). */
 export async function DELETE(req: Request) {
-  const gate = await requireAdmin();
+  const gate = await requireAdmin("site");
   if (!gate.ok) return gate.response;
 
-  const url = new URL(req.url);
-  const assetRaw = url.searchParams.get("asset");
-  if (!assetRaw || !isSiteAssetKey(assetRaw)) {
-    return NextResponse.json({ error: "Nieprawidłowy klucz grafiki." }, { status: 400 });
+  try {
+    const url = new URL(req.url);
+    const assetRaw = url.searchParams.get("asset");
+    if (!assetRaw || !isSiteAssetKey(assetRaw)) {
+      return NextResponse.json({ error: "Nieprawidłowy klucz grafiki." }, { status: 400 });
+    }
+    const assetKey = assetRaw;
+
+    const db = await getDb();
+    const settings = await getAppSettings(db);
+    const prevUrl = assetUrlFromSettings(settings, assetKey);
+
+    if (isCustomUpload(prevUrl)) {
+      await removeStoredSiteAsset(prevUrl);
+    }
+
+    await updateAssetColumn(db, assetKey, null);
+
+    const updated = await getAppSettings(db);
+    return NextResponse.json({
+      ok: true,
+      asset: assetKey,
+      url: updated.site_assets[assetKey],
+      default_url: SITE_ASSET_DEFAULTS[assetKey],
+      settings: updated,
+    });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "nieznany błąd";
+    return NextResponse.json({ error: `Przywracanie grafiki nie powiodło się: ${msg}` }, { status: 500 });
   }
-  const assetKey = assetRaw;
-
-  const db = await getDb();
-  const settings = await getAppSettings(db);
-  const prevUrl = assetUrlFromSettings(settings, assetKey);
-
-  if (isCustomUpload(prevUrl)) {
-    await removeStoredSiteAsset(prevUrl);
-  }
-
-  await updateAssetColumn(db, assetKey, null);
-
-  const updated = await getAppSettings(db);
-  return NextResponse.json({
-    ok: true,
-    asset: assetKey,
-    url: updated.site_assets[assetKey],
-    default_url: SITE_ASSET_DEFAULTS[assetKey],
-    settings: updated,
-  });
 }

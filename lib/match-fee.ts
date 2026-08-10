@@ -3,6 +3,9 @@
  * `matches.fee_pln` = całkowita kwota wynajmu; koszt na osobę = wynajem / zapisani, zaokrąglony w górę do 0,50 zł.
  */
 
+/** Zaliczka na wpisowe przed meczem (koszyk / „Opłać ten mecz”). Nadwyżka wraca przy rozliczeniu. */
+export const MATCH_PREPAYMENT_PLN = 25;
+
 function roundPln(n: number): number {
   return Math.round(n * 100) / 100;
 }

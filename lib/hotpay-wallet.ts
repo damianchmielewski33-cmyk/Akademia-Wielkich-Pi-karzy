@@ -47,6 +47,10 @@ export async function getHotpayPaymentBySessionId(
  * Najpierw atomowo „rezerwuje” wiersz (`pending` → `success`), żeby równoległe
  * webhooki nie zaksięgowały tej samej płatności dwukrotnie.
  * Przy przegranej o `deposit_request_id` cofamy lokalny INSERT (kompensacja).
+ *
+ * Dla `match_cart`: wpłata jest tylko przejściem — zaraz po niej schodzi jako
+ * `match_charge` z portfela operatora (zapłata za mecz), więc saldo ogólne
+ * nie rośnie.
  */
 export async function applyHotpaySuccessCredit(
   db: AppDb,
@@ -54,9 +58,7 @@ export async function applyHotpaySuccessCredit(
   args: { hotpayPaymentId: string; secure: string }
 ): Promise<{ ok: true; alreadyApplied: boolean } | { ok: false; error: string }> {
   if (payment.status === "success" && payment.deposit_request_id != null) {
-    if (payment.kind === "match_cart" && payment.cart_id != null) {
-      await applyPendingMatchCartAfterHotpay(payment.cart_id, payment.user_id);
-    }
+    await settleMatchCartAfterCredit(payment);
     return { ok: true, alreadyApplied: true };
   }
 
@@ -82,6 +84,7 @@ export async function applyHotpaySuccessCredit(
     if (claim.changes === 0) {
       const latest = await getHotpayPaymentBySessionId(db, payment.session_id);
       if (latest?.deposit_request_id != null) {
+        await settleMatchCartAfterCredit(latest);
         return { ok: true, alreadyApplied: true };
       }
       // Inny worker w trakcie księgowania — nie wstawiaj drugiej wpłaty.
@@ -106,6 +109,7 @@ export async function applyHotpaySuccessCredit(
     if (lock.changes === 0) {
       const latest = await getHotpayPaymentBySessionId(db, payment.session_id);
       if (latest?.deposit_request_id != null) {
+        await settleMatchCartAfterCredit(latest);
         return { ok: true, alreadyApplied: true };
       }
       return { ok: true, alreadyApplied: true };
@@ -132,6 +136,7 @@ export async function applyHotpaySuccessCredit(
          WHERE id = ? AND deposit_request_id IS NULL`
       )
       .run(existingBySession.id, args.hotpayPaymentId, args.secure, payment.id);
+    await settleMatchCartAfterCredit(payment);
     return { ok: true, alreadyApplied: true };
   }
 
@@ -183,11 +188,20 @@ export async function applyHotpaySuccessCredit(
     actorUserId: payment.user_id,
   });
 
-  if (payment.kind === "match_cart" && payment.cart_id != null) {
-    await applyPendingMatchCartAfterHotpay(payment.cart_id, payment.user_id);
-  }
+  await settleMatchCartAfterCredit(payment);
 
   return { ok: true, alreadyApplied: false };
+}
+
+/** Po kredycie HotPay: koszyk meczowy schodzi z portfela jako zapłata za mecz (nie zostaje w saldzie). */
+async function settleMatchCartAfterCredit(payment: HotpayPaymentRow): Promise<void> {
+  if (payment.kind !== "match_cart" || payment.cart_id == null) return;
+  const result = await applyPendingMatchCartAfterHotpay(payment.cart_id, payment.user_id);
+  if (!result.ok) {
+    console.error(
+      `[hotpay] match_cart settle failed session=${payment.session_id} cart=${payment.cart_id} error=${result.error}`
+    );
+  }
 }
 
 export async function markHotpayPaymentFailure(

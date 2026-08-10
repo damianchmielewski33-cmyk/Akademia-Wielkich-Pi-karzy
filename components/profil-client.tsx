@@ -67,7 +67,6 @@ export function ProfilClient({
   const [statsOpen, setStatsOpen] = useState(false);
   const [statsCtx, setStatsCtx] = useState<{
     match_id: number;
-    survey_key?: string;
     label: string;
     goals: string;
     assists: string;
@@ -183,12 +182,11 @@ export function ProfilClient({
     assists: number,
     distance: number,
     saves: number,
-    opts?: { blankDefaults?: boolean; surveyKey?: string }
+    opts?: { blankDefaults?: boolean }
   ) {
     const blank = opts?.blankDefaults === true;
     setStatsCtx({
       match_id,
-      survey_key: opts?.surveyKey,
       label,
       goals: blank ? "" : String(goals),
       assists: blank ? "" : String(assists),
@@ -202,11 +200,7 @@ export function ProfilClient({
     if (!statsCtx) return;
     const nz = (s: string) => (s.trim() === "" ? "0" : s);
     const fd = new FormData();
-    if (statsCtx.survey_key) {
-      fd.set("survey_key", statsCtx.survey_key);
-    } else {
-      fd.set("match_id", String(statsCtx.match_id));
-    }
+    fd.set("match_id", String(statsCtx.match_id));
     fd.set("goals", nz(statsCtx.goals));
     fd.set("assists", nz(statsCtx.assists));
     fd.set("distance", nz(statsCtx.distance));
@@ -437,7 +431,7 @@ export function ProfilClient({
                   />
                 ) : (
                   <Button asChild variant="pitch">
-                    <Link href="/platnosci">Doładuj / opłać</Link>
+                    <Link href="/platnosci">Zapłać kartą lub Blikiem</Link>
                   </Button>
                 )}
               </div>
@@ -522,7 +516,7 @@ export function ProfilClient({
             <ul className="mt-5 space-y-2">
               {data.match_stats.map((s) => (
                 <li
-                  key={s.survey_key ?? `stat-${s.stat_id}`}
+                  key={`stat-${s.stat_id}`}
                   className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-emerald-100/90 bg-emerald-50/35 px-3 py-2.5"
                 >
                   <div className="min-w-0 text-sm text-emerald-950 dark:text-emerald-100">
@@ -548,8 +542,7 @@ export function ProfilClient({
                             s.goals,
                             s.assists,
                             s.distance,
-                            s.saves ?? 0,
-                            s.survey_key ? { surveyKey: s.survey_key } : undefined
+                            s.saves ?? 0
                           )
                         }
                       >

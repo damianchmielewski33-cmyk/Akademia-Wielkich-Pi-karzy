@@ -46,37 +46,6 @@ export async function requireUser() {
   return { ok: true as const, session };
 }
 
-/**
- * Sesja do ankiety udziału (mecz spoza terminarza): wymaga zalogowania, ale pozwala przy `needsPinSetup`
- * (np. pierwsze wejście na /ustaw-pin), bo `requireUser()` zwracałby 403 i pop-up nigdy by się nie pokazał.
- */
-export async function requireSessionForParticipationSurvey() {
-  const session = await getServerSession();
-  if (!session) {
-    return {
-      ok: false as const,
-      response: NextResponse.json(
-        { error: "Wejdź na boisko — zaloguj się imieniem, nazwiskiem i PIN-em." },
-        { status: 401 }
-      ),
-    };
-  }
-  if (session.pinChangePending) {
-    return {
-      ok: false as const,
-      response: NextResponse.json(
-        {
-          error:
-            "Twój nowy PIN czeka na gwizdek sztabu. Do decyzji grasz jak kibic bez karnetu.",
-          code: "PIN_CHANGE_PENDING" as const,
-        },
-        { status: 403 }
-      ),
-    };
-  }
-  return { ok: true as const, session };
-}
-
 export async function requireAdmin(requiredSection?: import("@/lib/admin-permissions").AdminSectionId) {
   const r = await requireUser();
   if (!r.ok) return r;

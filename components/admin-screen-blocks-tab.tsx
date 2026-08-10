@@ -160,7 +160,7 @@ export function AdminScreenBlocksTab({ loading, onReload }: Props) {
         <Button type="button" variant="outline" size="sm" disabled={busy} onClick={() => setAllDisabled(false)}>
           Odkryj wszystkie
         </Button>
-        <Button type="button" variant="stadium" size="sm" disabled={busy} onClick={() => void save()}>
+        <Button type="button" variant="gold" size="sm" disabled={busy} onClick={() => void save()}>
           {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
           Zapisz zmiany
         </Button>
@@ -231,7 +231,7 @@ export function AdminScreenBlocksTab({ loading, onReload }: Props) {
       )}
 
       <div className="mt-6 flex justify-end">
-        <Button type="button" variant="stadium" disabled={busy} onClick={() => void save()}>
+        <Button type="button" variant="gold" disabled={busy} onClick={() => void save()}>
           {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
           Zapisz zmiany
         </Button>
