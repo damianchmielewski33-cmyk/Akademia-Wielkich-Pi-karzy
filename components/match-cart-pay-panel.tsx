@@ -5,6 +5,12 @@ import { Loader2, ShoppingCart } from "lucide-react";
 import { AppModal } from "@/components/ui/app-modal";
 import { extractApiErrorMessage, useAppMessage } from "@/components/ui/app-message-modal";
 import { Button } from "@/components/ui/button";
+import {
+  AdminCard,
+  adminEmptyStateClass,
+  adminFieldClass,
+  adminInnerPanelClass,
+} from "@/components/admin-ui";
 import { formatMatchFeePln, MATCH_PREPAYMENT_PLN } from "@/lib/match-fee";
 import { cn } from "@/lib/utils";
 import type { MatchCartMatchOption } from "@/lib/match-cart";
@@ -19,9 +25,6 @@ type Props = {
   onPaid?: () => void;
   className?: string;
 };
-
-const contentPanelClass =
-  "rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-900/80 sm:p-5";
 
 export function MatchCartPayPanel({
   hotpayEnabled,
@@ -79,23 +82,12 @@ export function MatchCartPayPanel({
     if (initialMatchId == null || loading) return;
     if (!matches.some((m) => m.match_id === initialMatchId)) return;
     setMatchId(initialMatchId);
-    const el = document.getElementById("match-cart");
-    if (el) {
-      window.requestAnimationFrame(() => {
-        el.scrollIntoView({ behavior: "smooth", block: "start" });
-      });
-    }
   }, [initialMatchId, loading, matches]);
 
   const selectedMatch = useMemo(
     () => matches.find((m) => m.match_id === matchId) ?? null,
     [matches, matchId]
   );
-
-  useEffect(() => {
-    setSelectedIds([]);
-    autoSelectedRef.current = false;
-  }, [matchId]);
 
   useEffect(() => {
     if (autoSelectedRef.current) return;
@@ -198,46 +190,38 @@ export function MatchCartPayPanel({
   }
 
   return (
-    <div id="match-cart" className={cn(contentPanelClass, className)}>
-      <div className="flex items-start gap-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-violet-100 text-violet-800 dark:bg-violet-950/60 dark:text-violet-200">
-          <ShoppingCart className="h-5 w-5" strokeWidth={2.25} aria-hidden />
+    <AdminCard
+      id="match-cart"
+      className={className}
+      title="Opłać mecz (koszyk)"
+      description={`Zaliczka ${formatMatchFeePln(MATCH_PREPAYMENT_PLN)} na osobę — jeśli ostateczna składka będzie niższa, różnica wraca na portfel płatnika. Możesz opłacić siebie i innych z portfela${hotpayEnabled ? " albo kartą / Blikiem" : ""}.`}
+      headerExtra={
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/15 ring-2 ring-white/30">
+          <ShoppingCart className="h-5 w-5 text-white" strokeWidth={2.25} aria-hidden />
         </div>
-        <div className="min-w-0 flex-1">
-          <h3 className="text-base font-bold tracking-tight text-emerald-950 dark:text-emerald-100">
-            Opłać mecz (koszyk)
-          </h3>
-          <p className="mt-0.5 text-sm text-zinc-600 dark:text-zinc-400">
-            Zaliczka {formatMatchFeePln(MATCH_PREPAYMENT_PLN)} na osobę — jeśli ostateczna składka będzie
-            niższa, różnica wraca na portfel płatnika. Możesz opłacić siebie i innych z portfela
-            {hotpayEnabled ? " albo kartą / Blikiem" : ""}.
-          </p>
-        </div>
-      </div>
-
+      }
+    >
       {loading ? (
-        <p className="mt-4 flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400">
+        <p className="flex items-center gap-2 text-sm pitch-muted">
           <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
           Wczytywanie meczów…
         </p>
       ) : matches.length === 0 ? (
-        <p className="mt-4 rounded-xl border border-dashed border-zinc-200 bg-zinc-50/50 px-4 py-6 text-center text-sm text-zinc-600 dark:border-zinc-700 dark:bg-zinc-950/30 dark:text-zinc-400">
-          Brak nadchodzących meczów z nieopłaconymi zapisami.
-        </p>
+        <p className={adminEmptyStateClass}>Brak nadchodzących meczów z nieopłaconymi zapisami.</p>
       ) : (
-        <div className="mt-4 space-y-4">
-          <div>
-            <label htmlFor="match-cart-match" className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+        <div className="space-y-4">
+          <div className={adminInnerPanelClass}>
+            <label htmlFor="match-cart-match" className="text-xs font-semibold uppercase tracking-wide text-emerald-100/70">
               Mecz
             </label>
             <select
               id="match-cart-match"
-              className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              className={cn(adminFieldClass, "mt-1 flex h-10 w-full rounded-xl px-3 text-sm")}
               value={matchId ?? ""}
               onChange={(e) => setMatchId(Number(e.target.value))}
             >
               {matches.map((m) => (
-                <option key={m.match_id} value={m.match_id}>
+                <option key={m.match_id} value={m.match_id} className="text-zinc-900">
                   {m.match_date} {m.match_time} · {m.location} · {formatMatchFeePln(m.fee_per_person_pln)}/os.
                 </option>
               ))}
@@ -245,34 +229,34 @@ export function MatchCartPayPanel({
           </div>
 
           {selectedMatch ? (
-            <div>
+            <div className={adminInnerPanelClass}>
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                <p className="text-xs font-semibold uppercase tracking-wide text-emerald-100/70">
                   Nieopłaceni ({selectedMatch.unpaid_players.length})
                 </p>
-                <Button type="button" variant="outline" size="sm" onClick={selectAll}>
+                <Button type="button" variant="gold" size="sm" onClick={selectAll}>
                   Zaznacz wszystkich
                 </Button>
               </div>
-              <ul className="mt-2 max-h-48 space-y-1 overflow-y-auto rounded-xl border border-zinc-200 p-2 dark:border-zinc-700">
+              <ul className="mt-2 max-h-48 space-y-1 overflow-y-auto rounded-xl border border-white/20 bg-black/15 p-2">
                 {selectedMatch.unpaid_players.map((p) => {
                   const label =
                     [p.first_name, p.last_name].filter(Boolean).join(" ").trim() || p.zawodnik;
                   const checked = selectedIds.includes(p.user_id);
                   return (
                     <li key={p.user_id}>
-                      <label className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-800/60">
+                      <label className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-white/10">
                         <input
                           type="checkbox"
-                          className="h-4 w-4 accent-emerald-700"
+                          className="h-4 w-4 accent-[var(--mundial-gold,#c9a227)]"
                           checked={checked}
                           onChange={() => togglePlayer(p.user_id)}
                         />
-                        <span className="min-w-0 flex-1 truncate text-zinc-800 dark:text-zinc-200">
+                        <span className="min-w-0 flex-1 truncate text-white">
                           {label}
-                          {p.zawodnik ? <span className="text-zinc-500"> · {p.zawodnik}</span> : null}
+                          {p.zawodnik ? <span className="text-emerald-100/70"> · {p.zawodnik}</span> : null}
                         </span>
-                        <span className="tabular-nums text-xs text-zinc-500">
+                        <span className="tabular-nums text-xs text-emerald-100/70">
                           {formatMatchFeePln(selectedMatch.fee_per_person_pln)}
                         </span>
                       </label>
@@ -283,27 +267,20 @@ export function MatchCartPayPanel({
             </div>
           ) : null}
 
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-200/80 bg-emerald-50/60 px-3 py-3 dark:border-emerald-800/50 dark:bg-emerald-950/30">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/25 bg-black/20 px-3 py-3 backdrop-blur-sm">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-emerald-900/80 dark:text-emerald-200/80">
-                Suma koszyka
-              </p>
-              <p className="mt-0.5 text-xl font-bold tabular-nums text-emerald-950 dark:text-emerald-100">
+              <p className="text-xs font-semibold uppercase tracking-wide text-emerald-100/70">Suma koszyka</p>
+              <p className="mt-0.5 text-xl font-bold tabular-nums text-white">
                 {selectedIds.length === 0 ? "—" : formatMatchFeePln(totalPln)}
               </p>
               {balancePln != null ? (
-                <p className="mt-0.5 text-xs text-zinc-600 dark:text-zinc-400">
+                <p className="mt-0.5 text-xs pitch-muted">
                   Twoje saldo: {formatMatchFeePln(balancePln)}
                   {needsHotpay ? " · brakuje środków" : ""}
                 </p>
               ) : null}
             </div>
-            <Button
-              type="button"
-              variant="pitch"
-              disabled={submitting || loading}
-              onClick={openConfirm}
-            >
+            <Button type="button" variant="gold" disabled={submitting || loading} onClick={openConfirm}>
               Opłać wybranych
             </Button>
           </div>
@@ -326,13 +303,13 @@ export function MatchCartPayPanel({
           <Button type="button" variant="outline" disabled={submitting} onClick={() => setConfirmOpen(false)}>
             Anuluj
           </Button>
-          <Button type="button" variant="pitch" disabled={submitting} onClick={() => void submitCart()}>
+          <Button type="button" variant="gold" disabled={submitting} onClick={() => void submitCart()}>
             {submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
             {needsHotpay && hotpayEnabled ? "Zapłać kartą lub Blikiem" : "Potwierdź opłatę"}
           </Button>
         </div>
       </AppModal>
       {MessageModal}
-    </div>
+    </AdminCard>
   );
 }

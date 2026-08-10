@@ -7,7 +7,7 @@ import { AdminWalletsSaldoSection } from "@/components/admin-wallets-saldo-secti
 import { HotpayPayButtons } from "@/components/hotpay-pay-buttons";
 import { MatchCartPayPanel } from "@/components/match-cart-pay-panel";
 import { PlayerWalletPanel } from "@/components/player-wallet-panel";
-import { PitchCard, PitchPageHero, pitchLabelClass } from "@/components/ui/pitch-card";
+import { AdminCard, AdminToolbar, adminEmptyStateClass } from "@/components/admin-ui";
 import { Button } from "@/components/ui/button";
 import { useHotpayPaymentReturn } from "@/hooks/use-hotpay-payment-return";
 
@@ -58,50 +58,53 @@ export function PlatnosciClient({
     },
   });
 
-  return (
-    <div className="awp-page awp-page--default text-center">
-      <PitchPageHero
-        title="Płatności"
-        subtitle={
-          isAdmin
-            ? "Twoje saldo i historia, salda graczy, doładowania oraz korekty."
-            : isLoggedIn
-              ? hotpayEnabled
-                ? "Saldo, pełna historia transakcji i opłata meczu — dla siebie i innych."
-                : "Saldo, pełna historia transakcji i opłata meczu dla siebie lub innych."
-              : "Zaloguj się, aby zobaczyć saldo portfela."
-        }
-      />
+  function reloadPage() {
+    setWalletRefreshKey((k) => k + 1);
+    void refreshAdminWallet();
+  }
 
-      <div className="mt-10 text-left">
+  const subtitle = !isLoggedIn
+    ? "Zaloguj się, aby zobaczyć saldo portfela."
+    : isAdmin
+      ? "Twoje saldo i historia, salda graczy, doładowania oraz korekty."
+      : hotpayEnabled
+        ? "Saldo, pełna historia transakcji i opłata meczu — dla siebie i innych."
+        : "Saldo, pełna historia transakcji i opłata meczu dla siebie lub innych.";
+
+  return (
+    <div className="relative text-white">
+      <div className="relative z-10 mx-auto w-full min-w-0 max-w-6xl p-3 xs:p-4 sm:p-6 lg:p-8">
+        <AdminToolbar
+          title="Płatności"
+          kicker={isAdmin ? "Panel admina" : "Akademia Wielkich Piłkarzy"}
+          description={subtitle}
+          onReload={reloadPage}
+          loading={adminWalletLoading}
+        />
+
         {!isLoggedIn ? (
-          <PitchCard className="mx-auto max-w-md" contentClassName="px-5 py-6 text-center sm:px-6">
-            <div className="flex flex-col items-center gap-2">
-              <span className={pitchLabelClass}>Portfel</span>
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/15 ring-2 ring-white/30 backdrop-blur-[2px]">
+          <AdminCard title="Portfel" description="Po zalogowaniu zobaczysz saldo swojego portfela.">
+            <div className={adminEmptyStateClass}>
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-white/15 ring-2 ring-white/30">
                 <LogIn className="h-6 w-6 text-white" strokeWidth={2.25} aria-hidden />
               </div>
-              <h2 className="text-xl font-bold tracking-tight text-white drop-shadow-sm">Zaloguj się</h2>
-              <p className="text-sm text-emerald-100/90">Po zalogowaniu zobaczysz saldo swojego portfela.</p>
+              <p className="mt-3 text-sm text-emerald-100/90">Zaloguj się lub załóż konto, aby korzystać z płatności.</p>
+              <div className="mt-5 flex flex-wrap justify-center gap-2">
+                <Button asChild variant="gold">
+                  <Link href="/login">Logowanie</Link>
+                </Button>
+                <Button asChild variant="gold">
+                  <Link href="/register">
+                    <UserPlus className="mr-2 h-4 w-4" aria-hidden />
+                    Rejestracja
+                  </Link>
+                </Button>
+              </div>
             </div>
-            <div className="mt-5 flex flex-wrap justify-center gap-2">
-              <Button asChild variant="pitch">
-                <Link href="/login">Logowanie</Link>
-              </Button>
-              <Button asChild variant="outline" className="border-white/30 bg-white/10 text-white hover:bg-white/15">
-                <Link href="/register">
-                  <UserPlus className="mr-2 h-4 w-4" aria-hidden />
-                  Rejestracja
-                </Link>
-              </Button>
-            </div>
-          </PitchCard>
+          </AdminCard>
         ) : isAdmin ? (
-          <div className="mx-auto max-w-4xl space-y-4">
-            <HotpayPayButtons
-              enabled={hotpayEnabled}
-              walletLoading={adminWalletLoading}
-            />
+          <div className="space-y-6">
+            <HotpayPayButtons enabled={hotpayEnabled} walletLoading={adminWalletLoading} />
             <PlayerWalletPanel
               currentUserId={currentUserId}
               hotpayEnabled={hotpayEnabled}
@@ -112,10 +115,10 @@ export function PlatnosciClient({
               hotpayEnabled={hotpayEnabled}
               onPaid={() => setWalletRefreshKey((k) => k + 1)}
             />
-            <AdminWalletsSaldoSection embedded showPublicLinks showTopUp />
+            <AdminWalletsSaldoSection showPublicLinks showTopUp />
           </div>
         ) : (
-          <div className="mx-auto max-w-4xl space-y-4">
+          <div className="space-y-6">
             <PlayerWalletPanel
               currentUserId={currentUserId}
               hotpayEnabled={hotpayEnabled}

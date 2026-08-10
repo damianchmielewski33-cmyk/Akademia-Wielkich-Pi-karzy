@@ -17,7 +17,7 @@ export default async function PlatnosciPage() {
   const appSettings = await getAppSettings(db);
 
   return (
-    <Suspense fallback={<div className="awp-page awp-page--default p-8 text-center text-sm text-zinc-500">Ładowanie płatności…</div>}>
+    <Suspense fallback={<div className="p-8 text-center text-sm text-emerald-100/80">Ładowanie płatności…</div>}>
       <PlatnosciClient
         isLoggedIn={Boolean(session)}
         isAdmin={session?.isAdmin ?? false}

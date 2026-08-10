@@ -15,6 +15,12 @@ import { extractApiErrorMessage, useAppMessage } from "@/components/ui/app-messa
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { PitchCard, pitchLabelClass, pitchPanelClass } from "@/components/ui/pitch-card";
+import {
+  AdminCard,
+  adminEmptyStateClass,
+  adminFieldClass,
+  adminInnerPanelClass,
+} from "@/components/admin-ui";
 import type { WalletTransactionRow } from "@/lib/wallet";
 import { cn } from "@/lib/utils";
 import { useHotpayPayment } from "@/hooks/use-hotpay-payment";
@@ -43,9 +49,6 @@ type Props = {
   refreshKey?: number;
   className?: string;
 };
-
-const contentPanelClass =
-  "rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-900/80 sm:p-5";
 
 const HISTORY_PAGE_SIZE = 100;
 
@@ -98,39 +101,36 @@ function walletTxMeta(tx: WalletMeTransaction) {
       return {
         label: amount >= 0 ? "Doładowanie" : "Korekta wpłaty",
         Icon: ArrowDownLeft,
-        badgeClass:
-          "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-800/60 dark:bg-emerald-950/50 dark:text-emerald-200",
-        borderClass: "border-l-emerald-500",
+        badgeClass: "border-emerald-300/40 bg-emerald-500/20 text-emerald-100",
+        borderClass: "border-l-emerald-400",
       };
     case "match_charge":
       return {
         label: amount < 0 ? "Opłata za mecz" : "Zwrot / uznanie meczu",
         Icon: ArrowUpRight,
-        badgeClass: "border-red-200 bg-red-50 text-red-800 dark:border-red-800/60 dark:bg-red-950/50 dark:text-red-200",
-        borderClass: "border-l-red-500",
+        badgeClass: "border-red-300/40 bg-red-500/20 text-red-100",
+        borderClass: "border-l-red-400",
       };
     case "adjustment":
       return {
         label: amount > 0 ? "Zwrot / uznanie" : "Korekta (obciążenie)",
         Icon: SlidersHorizontal,
-        badgeClass:
-          "border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-800/60 dark:bg-amber-950/50 dark:text-amber-200",
-        borderClass: "border-l-amber-500",
+        badgeClass: "border-amber-300/40 bg-amber-500/20 text-amber-100",
+        borderClass: "border-l-amber-400",
       };
     case "transfer":
       return {
         label: amount > 0 ? "Przelew otrzymany" : "Przelew wysłany",
         Icon: ArrowLeftRight,
-        badgeClass:
-          "border-sky-200 bg-sky-50 text-sky-900 dark:border-sky-800/60 dark:bg-sky-950/50 dark:text-sky-200",
-        borderClass: "border-l-sky-500",
+        badgeClass: "border-sky-300/40 bg-sky-500/20 text-sky-100",
+        borderClass: "border-l-sky-400",
       };
     default:
       return {
         label: String(tx.kind),
         Icon: SlidersHorizontal,
-        badgeClass: "border-zinc-200 bg-zinc-50 text-zinc-800 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200",
-        borderClass: "border-l-zinc-400",
+        badgeClass: "border-white/25 bg-white/10 text-emerald-100",
+        borderClass: "border-l-white/40",
       };
   }
 }
@@ -189,7 +189,7 @@ export function WalletBalanceHistory({
 
   if (loading && transactions.length === 0) {
     return (
-      <p className="mt-4 flex items-center gap-2 rounded-xl border border-zinc-200 bg-zinc-50/80 px-4 py-8 text-sm text-zinc-600 dark:border-zinc-700 dark:bg-zinc-950/40 dark:text-zinc-400">
+      <p className="mt-4 flex items-center gap-2 text-sm pitch-muted">
         <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
         Wczytywanie historii…
       </p>
@@ -197,11 +197,7 @@ export function WalletBalanceHistory({
   }
 
   if (transactions.length === 0) {
-    return (
-      <p className="mt-4 rounded-xl border border-dashed border-zinc-200 bg-zinc-50/50 px-4 py-8 text-center text-sm text-zinc-600 dark:border-zinc-700 dark:bg-zinc-950/30 dark:text-zinc-400">
-        Brak operacji na koncie.
-      </p>
-    );
+    return <p className={cn(adminEmptyStateClass, "mt-4")}>Brak operacji na koncie.</p>;
   }
 
   const filters: { id: HistoryFilter; label: string }[] = [
@@ -224,8 +220,8 @@ export function WalletBalanceHistory({
               className={cn(
                 "rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 transition-colors",
                 filter === f.id
-                  ? "bg-emerald-700 text-white ring-emerald-800"
-                  : "bg-white text-zinc-600 ring-zinc-200 hover:bg-zinc-50 dark:bg-zinc-900 dark:text-zinc-300 dark:ring-zinc-700 dark:hover:bg-zinc-800"
+                  ? "bg-[var(--mundial-gold,#c9a227)] text-[var(--mundial-navy,#0a1628)] ring-white/40"
+                  : "bg-black/20 text-emerald-100/85 ring-white/20 hover:bg-white/10"
               )}
             >
               {f.label}
@@ -233,7 +229,7 @@ export function WalletBalanceHistory({
             </button>
           ))}
         </div>
-        <p className="text-xs tabular-nums text-zinc-500 dark:text-zinc-400">
+        <p className="text-xs tabular-nums pitch-muted">
           Załadowano {transactions.length}
           {total > transactions.length ? ` z ${total}` : ""} wpisów
         </p>
@@ -244,22 +240,22 @@ export function WalletBalanceHistory({
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         placeholder="Szukaj w notatce, meczu, zawodniku…"
-        className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none ring-emerald-700/30 placeholder:text-zinc-400 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+        className={cn(adminFieldClass, "w-full rounded-xl px-3 py-2 text-sm outline-none")}
       />
 
-      <div className="overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50/50 dark:border-zinc-700 dark:bg-zinc-950/40">
-        <div className="flex items-center justify-between gap-2 border-b border-zinc-200 bg-white px-4 py-2.5 dark:border-zinc-700 dark:bg-zinc-900/80">
-          <p className="text-xs font-semibold uppercase tracking-wide text-emerald-900 dark:text-emerald-200">
+      <div className="overflow-hidden rounded-xl border border-white/25 bg-black/15">
+        <div className="flex items-center justify-between gap-2 border-b border-white/20 bg-black/20 px-4 py-2.5">
+          <p className="text-xs font-semibold uppercase tracking-wide text-emerald-100/85">
             Lista transakcji
           </p>
-          <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium tabular-nums text-zinc-600 ring-1 ring-emerald-900/10 dark:bg-zinc-900 dark:text-zinc-300 dark:ring-emerald-100/10">
+          <span className="rounded-full bg-white/10 px-2 py-0.5 text-[11px] font-medium tabular-nums text-emerald-100/80 ring-1 ring-white/20">
             {filtered.length}
             {filtered.length !== transactions.length ? ` / ${transactions.length}` : ""}
           </span>
         </div>
 
         <div
-          className="hidden grid-cols-[minmax(0,1.6fr)_5.5rem_5.5rem_5.5rem] gap-3 border-b border-zinc-200 bg-white px-4 py-2 text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:border-zinc-700 dark:bg-zinc-900/60 dark:text-zinc-400 sm:grid"
+          className="hidden grid-cols-[minmax(0,1.6fr)_5.5rem_5.5rem_5.5rem] gap-3 border-b border-white/15 bg-black/10 px-4 py-2 text-[11px] font-semibold uppercase tracking-wide text-emerald-100/60 sm:grid"
           aria-hidden
         >
           <span>Operacja i szczegóły</span>
@@ -269,9 +265,9 @@ export function WalletBalanceHistory({
         </div>
 
         {filtered.length === 0 ? (
-          <p className="px-4 py-8 text-center text-sm text-zinc-500">Brak wpisów dla wybranego filtra.</p>
+          <p className="px-4 py-8 text-center text-sm pitch-muted">Brak wpisów dla wybranego filtra.</p>
         ) : (
-          <ul className="max-h-[70vh] divide-y divide-zinc-200 overflow-y-auto dark:divide-zinc-700">
+          <ul className="max-h-[70vh] divide-y divide-white/15 overflow-y-auto">
             {filtered.map((tx) => {
               const amount = Number(tx.amount_pln ?? 0);
               const balanceAfter = Number(tx.balance_after_pln ?? 0);
@@ -287,7 +283,7 @@ export function WalletBalanceHistory({
               return (
                 <li
                   key={tx.id}
-                  className={cn("border-l-4 bg-white px-4 py-3 dark:bg-zinc-900/70", meta.borderClass)}
+                  className={cn("border-l-4 bg-black/20 px-4 py-3", meta.borderClass)}
                 >
                   <div className="grid gap-3 sm:grid-cols-[minmax(0,1.6fr)_5.5rem_5.5rem_5.5rem] sm:items-start">
                     <div className="min-w-0">
@@ -301,49 +297,49 @@ export function WalletBalanceHistory({
                           <Icon className="h-3 w-3 shrink-0" aria-hidden />
                           {meta.label}
                         </span>
-                        <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
+                        <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-medium text-emerald-100/85 ring-1 ring-white/15">
                           {walletKindLabel(tx.wallet_kind)}
                         </span>
                         {isTest ? (
-                          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-900 dark:bg-amber-950/60 dark:text-amber-200">
+                          <span className="rounded-full bg-amber-400/20 px-2 py-0.5 text-[10px] font-semibold text-amber-100 ring-1 ring-amber-300/30">
                             Test
                           </span>
                         ) : null}
-                        <span className="text-[11px] tabular-nums text-zinc-400">#{tx.id}</span>
-                        <span className="text-[11px] tabular-nums text-zinc-500 sm:hidden">
+                        <span className="text-[11px] tabular-nums text-emerald-100/50">#{tx.id}</span>
+                        <span className="text-[11px] tabular-nums text-emerald-100/70 sm:hidden">
                           {date}
                           {time ? ` · ${time}` : ""}
                         </span>
                       </div>
 
                       {tx.note ? (
-                        <p className="mt-1.5 whitespace-pre-wrap break-words text-sm leading-snug text-zinc-700 dark:text-zinc-300">
+                        <p className="mt-1.5 whitespace-pre-wrap break-words text-sm leading-snug text-emerald-50/95">
                           {tx.note}
                         </p>
                       ) : (
-                        <p className="mt-1.5 text-sm text-zinc-400 dark:text-zinc-500">Bez notatki</p>
+                        <p className="mt-1.5 text-sm text-emerald-100/45">Bez notatki</p>
                       )}
 
-                      <div className="mt-2 flex flex-col gap-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+                      <div className="mt-2 flex flex-col gap-0.5 text-xs pitch-muted">
                         {match ? (
                           <p>
-                            <span className="font-semibold text-zinc-600 dark:text-zinc-300">Mecz:</span> {match}
+                            <span className="font-semibold text-emerald-100/85">Mecz:</span> {match}
                           </p>
                         ) : null}
                         {related ? (
                           <p>
-                            <span className="font-semibold text-zinc-600 dark:text-zinc-300">
+                            <span className="font-semibold text-emerald-100/85">
                               {amount > 0 ? "Od:" : "Do:"}
                             </span>{" "}
                             {related}
                             {tx.related_user_id ? (
-                              <span className="tabular-nums text-zinc-400"> (#{tx.related_user_id})</span>
+                              <span className="tabular-nums text-emerald-100/50"> (#{tx.related_user_id})</span>
                             ) : null}
                           </p>
                         ) : null}
                         {tx.deposit_request_id ? (
                           <p>
-                            <span className="font-semibold text-zinc-600 dark:text-zinc-300">Wniosek wpłaty:</span> #
+                            <span className="font-semibold text-emerald-100/85">Wniosek wpłaty:</span> #
                             {tx.deposit_request_id}
                           </p>
                         ) : null}
@@ -351,20 +347,20 @@ export function WalletBalanceHistory({
                     </div>
 
                     <div className="hidden text-right sm:block">
-                      <p className="text-sm font-medium tabular-nums text-zinc-800 dark:text-zinc-200">{date}</p>
-                      {time ? <p className="mt-0.5 text-xs tabular-nums text-zinc-500">{time}</p> : null}
+                      <p className="text-sm font-medium tabular-nums text-white">{date}</p>
+                      {time ? <p className="mt-0.5 text-xs tabular-nums pitch-muted">{time}</p> : null}
                     </div>
 
                     <div className="flex items-baseline justify-between gap-3 sm:block sm:text-right">
-                      <span className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 sm:hidden">
+                      <span className="text-[11px] font-semibold uppercase tracking-wide text-emerald-100/60 sm:hidden">
                         Zmiana
                       </span>
                       <p
                         className={cn(
                           "text-base font-bold tabular-nums leading-none",
-                          isPositive && "text-emerald-700 dark:text-emerald-300",
-                          isNegative && "text-red-700 dark:text-red-300",
-                          !isPositive && !isNegative && "text-zinc-700 dark:text-zinc-300"
+                          isPositive && "text-emerald-300",
+                          isNegative && "text-red-300",
+                          !isPositive && !isNegative && "text-white"
                         )}
                       >
                         {isPositive ? "+" : ""}
@@ -373,14 +369,14 @@ export function WalletBalanceHistory({
                     </div>
 
                     <div className="flex items-baseline justify-between gap-3 sm:block sm:text-right">
-                      <span className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 sm:hidden">
+                      <span className="text-[11px] font-semibold uppercase tracking-wide text-emerald-100/60 sm:hidden">
                         Saldo
                       </span>
                       <div>
-                        <p className="text-sm font-semibold tabular-nums text-zinc-800 dark:text-zinc-200">
+                        <p className="text-sm font-semibold tabular-nums text-white">
                           {formatWalletPln(balanceAfter)}
                         </p>
-                        <p className="mt-0.5 hidden text-[10px] uppercase tracking-wide text-zinc-400 sm:block">
+                        <p className="mt-0.5 hidden text-[10px] uppercase tracking-wide text-emerald-100/45 sm:block">
                           po operacji
                         </p>
                       </div>
@@ -395,7 +391,7 @@ export function WalletBalanceHistory({
 
       {hasMore && onLoadMore ? (
         <div className="flex justify-center pt-1">
-          <Button type="button" variant="outline" size="sm" disabled={loadingMore} onClick={() => onLoadMore()}>
+          <Button type="button" variant="gold" size="sm" disabled={loadingMore} onClick={() => onLoadMore()}>
             {loadingMore ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
             Załaduj starsze wpisy
           </Button>
@@ -558,9 +554,9 @@ export function PlayerWalletPanel({
                   <p className="mt-1 text-xs font-medium text-emerald-100">Nadwyżka na koncie</p>
                 ) : null}
               </div>
-              <Button
+                <Button
                 type="button"
-                variant="pitch"
+                variant="gold"
                 size="sm"
                 disabled={walletLoading}
                 onClick={() => void refreshWallet()}
@@ -663,45 +659,40 @@ export function PlayerWalletPanel({
       ) : (
         <div
           className={cn(
-            contentPanelClass,
+            adminInnerPanelClass,
             "flex flex-wrap items-center justify-between gap-3",
-            walletBalancePln != null && walletBalancePln < 0 && "border-red-200 dark:border-red-800/50",
-            walletBalancePln != null && walletBalancePln > 0 && "border-emerald-200 dark:border-emerald-800/50"
+            walletBalancePln != null && walletBalancePln < 0 && "border-red-300/40",
+            walletBalancePln != null && walletBalancePln > 0 && "border-emerald-300/35"
           )}
         >
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Saldo</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-emerald-100/70">Saldo</p>
             <p
               className={cn(
-                "mt-1 text-3xl font-bold tabular-nums text-emerald-950 dark:text-emerald-100",
-                walletBalancePln != null && walletBalancePln < 0 && "text-red-700 dark:text-red-300"
+                "mt-1 text-3xl font-bold tabular-nums text-white",
+                walletBalancePln != null && walletBalancePln < 0 && "text-red-200",
+                walletBalancePln != null && walletBalancePln > 0 && "text-emerald-100"
               )}
             >
               {walletBalancePln === null ? "—" : formatWalletPln(walletBalancePln)}
             </p>
           </div>
-          <Button type="button" variant="outline" disabled={walletLoading} onClick={() => void refreshWallet()}>
+          <Button type="button" variant="gold" disabled={walletLoading} onClick={() => void refreshWallet()}>
             {walletLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
             Odśwież
           </Button>
         </div>
       )}
 
-      <div className={contentPanelClass}>
-        <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-200">
-            <Wallet className="h-5 w-5" strokeWidth={2.25} aria-hidden />
+      <AdminCard
+        title="Historia salda"
+        description="Wszystkie doładowania, opłaty meczów, przelewy, zwroty i korekty — z saldem po każdej operacji. Najnowsze na górze."
+        headerExtra={
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/15 ring-2 ring-white/30">
+            <Wallet className="h-5 w-5 text-white" strokeWidth={2.25} aria-hidden />
           </div>
-          <div className="min-w-0 flex-1">
-            <h3 className="text-base font-bold tracking-tight text-emerald-950 dark:text-emerald-100">
-              Historia salda
-            </h3>
-            <p className="mt-0.5 text-sm text-zinc-600 dark:text-zinc-400">
-              Wszystkie doładowania, opłaty meczów, przelewy, zwroty i korekty — z saldem po każdej
-              operacji. Najnowsze na górze.
-            </p>
-          </div>
-        </div>
+        }
+      >
         <WalletBalanceHistory
           loading={walletLoading}
           transactions={walletTransactions}
@@ -710,7 +701,7 @@ export function PlayerWalletPanel({
           loadingMore={loadingMore}
           onLoadMore={() => void loadMoreTransactions()}
         />
-      </div>
+      </AdminCard>
 
       <AppModal
         open={topupConfirmOpen}

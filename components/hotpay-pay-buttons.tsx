@@ -5,6 +5,7 @@ import { Wallet } from "lucide-react";
 import { useAppMessage } from "@/components/ui/app-message-modal";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { AdminCard, adminFieldClass, adminInnerPanelClass } from "@/components/admin-ui";
 import { cn } from "@/lib/utils";
 import { useHotpayPayment } from "@/hooks/use-hotpay-payment";
 import { PayButton } from "@/components/pay-button";
@@ -42,48 +43,42 @@ export function HotpayPayButtons({
   }
 
   return (
-    <div className={cn("rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-900/80 sm:p-5", className)}>
-      <div className="flex items-start gap-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-200">
-          <Wallet className="h-5 w-5" strokeWidth={2.25} aria-hidden />
+    <AdminCard
+      className={className}
+      title="Zapłać kartą lub Blikiem"
+      description="Ureguluj niedopłatę lub wpłać środki online. Opłatę za konkretny mecz znajdziesz w sekcji „Opłać mecz (koszyk)”."
+      headerExtra={
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/15 ring-2 ring-white/30">
+          <Wallet className="h-5 w-5 text-white" strokeWidth={2.25} aria-hidden />
         </div>
-        <div className="min-w-0 flex-1">
-          <h3 className="text-base font-bold text-emerald-950 dark:text-emerald-100">Zapłać kartą lub Blikiem</h3>
-          <p className="mt-0.5 text-sm text-zinc-600 dark:text-zinc-400">
-            Ureguluj niedopłatę lub wpłać środki online (karta lub BLIK). Opłatę za konkretny mecz (za siebie lub innych) znajdziesz w sekcji „Opłać mecz (koszyk)”.
-          </p>
-        </div>
-      </div>
-
-      <div className="mt-4">
-        <div className="rounded-xl border border-zinc-200 bg-zinc-50/80 p-3 dark:border-zinc-700 dark:bg-zinc-950/40">
-          <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Zapłać kartą lub Blikiem</p>
-          <Label htmlFor="hotpay-topup-amount" className="sr-only">
-            Kwota płatności
-          </Label>
-          <Input
-            id="hotpay-topup-amount"
-            type="number"
-            min={0.01}
-            step={0.01}
-            className="mt-2"
-            value={topupAmount}
-            onChange={(e) => setTopupAmount(e.target.value)}
-            placeholder="np. 50"
-            disabled={busy || walletLoading}
-          />
-          <PayButton
-            variant="default"
-            label="Zapłać kartą lub Blikiem"
-            busy={busy}
-            disabled={!enabled || walletLoading}
-            fullWidth
-            className="mt-3"
-            onClick={() => void payTopup()}
-          />
-        </div>
+      }
+    >
+      <div className={cn(adminInnerPanelClass, "space-y-3")}>
+        <p className="text-xs font-semibold uppercase tracking-wide text-emerald-100/70">Kwota płatności</p>
+        <Label htmlFor="hotpay-topup-amount" className="sr-only">
+          Kwota płatności
+        </Label>
+        <Input
+          id="hotpay-topup-amount"
+          type="number"
+          min={0.01}
+          step={0.01}
+          className={adminFieldClass}
+          value={topupAmount}
+          onChange={(e) => setTopupAmount(e.target.value)}
+          placeholder="np. 50"
+          disabled={busy || walletLoading}
+        />
+        <PayButton
+          variant="hero"
+          label="Zapłać kartą lub Blikiem"
+          busy={busy}
+          disabled={!enabled || walletLoading}
+          fullWidth
+          onClick={() => void payTopup()}
+        />
       </div>
       {MessageModal}
-    </div>
+    </AdminCard>
   );
 }

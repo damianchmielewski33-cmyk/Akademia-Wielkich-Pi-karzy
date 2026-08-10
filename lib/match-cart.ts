@@ -35,10 +35,7 @@ function playerLabel(p: { first_name: string; last_name: string; zawodnik?: stri
  * Kwota koszyka / zaliczki na osobę przed meczem.
  * Stała zaliczka — ostateczna składka przy rozliczeniu może być niższa (zwrot nadpłaty).
  */
-export async function resolveMatchCartFeePerPerson(
-  _db: AppDb,
-  _match: { fee_pln: number | null; signed_up: number }
-): Promise<number | null> {
+export async function resolveMatchCartFeePerPerson(): Promise<number> {
   return MATCH_PREPAYMENT_PLN;
 }
 
@@ -68,7 +65,7 @@ export async function listMatchCartOptions(): Promise<MatchCartMatchOption[]> {
 
   const out: MatchCartMatchOption[] = [];
   for (const m of matches) {
-    const fee = await resolveMatchCartFeePerPerson(db, m);
+    const fee = await resolveMatchCartFeePerPerson();
     if (fee == null) continue;
 
     const unpaid = (await db
@@ -193,7 +190,7 @@ export async function applyMatchCartFromWallet(args: {
   if (!match) return { ok: false, error: "MATCH_NOT_FOUND" };
   if (match.played === 1 || match.cancelled === 1) return { ok: false, error: "MATCH_CLOSED" };
 
-  const fee = await resolveMatchCartFeePerPerson(db, match);
+  const fee = await resolveMatchCartFeePerPerson();
   if (fee == null || fee <= 0) return { ok: false, error: "NO_FEE" };
 
   const uniqueIds = [...new Set(args.beneficiaryUserIds.map((id) => Number(id)).filter((id) => id > 0))];
@@ -351,7 +348,7 @@ export async function createPendingMatchCart(args: {
   if (!match) return { ok: false, error: "MATCH_NOT_FOUND" };
   if (match.played === 1 || match.cancelled === 1) return { ok: false, error: "MATCH_CLOSED" };
 
-  const fee = await resolveMatchCartFeePerPerson(db, match);
+  const fee = await resolveMatchCartFeePerPerson();
   if (fee == null || fee <= 0) return { ok: false, error: "NO_FEE" };
 
   const uniqueIds = [...new Set(args.beneficiaryUserIds.map((id) => Number(id)).filter((id) => id > 0))];

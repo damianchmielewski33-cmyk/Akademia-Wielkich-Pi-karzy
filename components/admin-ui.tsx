@@ -530,17 +530,19 @@ export function AdminToolbar({
   onReload,
   loading,
   children,
+  kicker = "Panel admina",
 }: {
   title: string;
   description?: string;
   onReload: () => void;
   loading: boolean;
   children?: ReactNode;
+  kicker?: string;
 }) {
   return (
     <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
       <SiteSectionHero
-        kicker="Panel admina"
+        kicker={kicker}
         title={title}
         subtitle={description}
         showCrest={false}
@@ -574,6 +576,7 @@ export function AdminCard({
   className,
   headerExtra,
   tone = "pitch",
+  id,
 }: {
   title?: string;
   description?: string;
@@ -582,6 +585,7 @@ export function AdminCard({
   headerExtra?: ReactNode;
   /** `data` — jasny panel pod tabele i wykresy (analityka). */
   tone?: "pitch" | "data";
+  id?: string;
 }) {
   const header =
     title || description || headerExtra ? (
@@ -600,7 +604,7 @@ export function AdminCard({
 
   if (tone === "data") {
     return (
-      <section className={cn("admin-data-card", className)}>
+      <section id={id} className={cn("admin-data-card", className)}>
         {header}
         {children}
       </section>
@@ -608,7 +612,7 @@ export function AdminCard({
   }
 
   return (
-    <PitchCard className={cn(className)} contentClassName="p-5 sm:p-6">
+    <PitchCard id={id} className={cn(className)} contentClassName="p-5 sm:p-6">
       {header}
       {children}
     </PitchCard>
