@@ -32,7 +32,7 @@ export function WalletBalanceFloat({ enabled = true }: Props) {
       .then((r) => (r.ok ? r.json() : null))
       .then((d: { balance_pln?: unknown } | null) => {
         if (cancelled) return;
-        if (d && typeof d.balance_pln === "number") {
+        if (d && typeof d.balance_pln === "number" && Number.isFinite(d.balance_pln)) {
           setBalancePln(d.balance_pln);
         }
       })
@@ -42,10 +42,13 @@ export function WalletBalanceFloat({ enabled = true }: Props) {
     };
   }, [enabled]);
 
-  if (!mounted || !enabled || balancePln == null) return null;
+  // Pokazuj kafelek od razu po mount — wcześniej znikał całkowicie przy błędzie /api/wallet/me.
+  if (!mounted || !enabled) return null;
 
-  const negative = balancePln < 0;
-  const positive = balancePln > 0;
+  const known = balancePln != null;
+  const amount = balancePln ?? 0;
+  const negative = known && amount < 0;
+  const positive = known && amount > 0;
 
   const tile = (
     <Link
@@ -57,7 +60,11 @@ export function WalletBalanceFloat({ enabled = true }: Props) {
           ? "border-red-300/50 shadow-red-950/25 ring-red-400/30"
           : "border-white/40 shadow-emerald-950/30 ring-emerald-300/35"
       )}
-      aria-label={`Twoje saldo: ${formatPln(balancePln)}. Przejdź do płatności.`}
+      aria-label={
+        known
+          ? `Twoje saldo: ${formatPln(amount)}. Przejdź do płatności.`
+          : "Płatności — wczytywanie salda"
+      }
     >
       <div className="home-pitch-tile absolute inset-0" aria-hidden />
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-0.5 bg-white/45" aria-hidden />
@@ -84,10 +91,11 @@ export function WalletBalanceFloat({ enabled = true }: Props) {
           className={cn(
             "mt-0.5 truncate text-sm font-extrabold tabular-nums leading-tight text-white drop-shadow-sm",
             negative && "text-red-100",
-            positive && "text-emerald-50"
+            positive && "text-emerald-50",
+            !known && "text-white/70"
           )}
         >
-          {formatPln(balancePln)}
+          {known ? formatPln(amount) : "…"}
         </p>
       </div>
       <ChevronRight

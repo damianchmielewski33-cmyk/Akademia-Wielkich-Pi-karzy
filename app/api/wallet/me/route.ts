@@ -29,9 +29,11 @@ export async function GET(req: Request) {
   const userId = gate.session.userId;
   const balances = await getWalletBalances(userId);
 
-  const pending = await db
-    .prepare(
-      `
+  let pending: unknown[] = [];
+  try {
+    pending = await db
+      .prepare(
+        `
       SELECT id, user_id, amount_pln, created_by, status, wallet_kind, note,
              player_declared_at, admin_confirmed_received_at,
              admin_declared_received_at, player_confirmed_amount_at,
@@ -40,17 +42,23 @@ export async function GET(req: Request) {
       WHERE user_id = ? AND status = 'pending'
       ORDER BY created_at DESC
     `
-    )
-    .all(userId);
+      )
+      .all(userId);
+  } catch {
+    pending = [];
+  }
 
-  const totalRow = (await db
-    .prepare(`SELECT COUNT(*) AS c FROM wallet_transactions WHERE user_id = ?`)
-    .get(userId)) as { c: number } | undefined;
-  const transactionsTotal = Number(totalRow?.c ?? 0);
+  let transactionsTotal = 0;
+  let tx: unknown[] = [];
+  try {
+    const totalRow = (await db
+      .prepare(`SELECT COUNT(*) AS c FROM wallet_transactions WHERE user_id = ?`)
+      .get(userId)) as { c: number } | undefined;
+    transactionsTotal = Number(totalRow?.c ?? 0);
 
-  const tx = await db
-    .prepare(
-      `
+    tx = await db
+      .prepare(
+        `
       SELECT
         t.id,
         t.user_id,
@@ -82,8 +90,12 @@ export async function GET(req: Request) {
       ORDER BY datetime(t.created_at) DESC, t.id DESC
       LIMIT ? OFFSET ?
     `
-    )
-    .all(userId, limit, offset);
+      )
+      .all(userId, limit, offset);
+  } catch {
+    transactionsTotal = 0;
+    tx = [];
+  }
 
   return NextResponse.json({
     balance_pln: balances.total,
