@@ -18,7 +18,7 @@ import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import type { AppSettingsApiResponse } from "@/app/api/admin/app-settings/route";
 import { AdminHotpayConfirmPanel } from "@/components/admin-hotpay-confirm-panel";
-import { grossUpHotpayAmount } from "@/lib/hotpay";
+import { grossUpHotpayAmount } from "@/lib/hotpay-amount";
 
 type HotpaySettings = Pick<
   AppSettingsApiResponse,
