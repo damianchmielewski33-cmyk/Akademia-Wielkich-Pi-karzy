@@ -1,17 +1,15 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Mail, Phone } from "lucide-react";
+import { Mail, Phone, Clock, MessageSquare, HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PitchCard, PitchPageHero, pitchLabelClass } from "@/components/ui/pitch-card";
 import { getAppSettings } from "@/lib/app-settings";
 import { getDb } from "@/lib/db";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const db = await getDb();
-  const settings = await getAppSettings(db);
   return {
-    title: "Kontakt",
-    description: `Dane kontaktowe organizatorów — ${settings.site_name}.`,
+    title: "Kontakt – Akademia Wielkich Piłkarzy",
+    description: `Skontaktuj się z organizatorami Akademii Wielkich Piłkarzy. Masz pytania dotyczące zapisów, płatności lub organizacji meczów? Chętnie pomożemy! Dane kontaktowe, telefon i e-mail organizatorów.`,
   };
 }
 
@@ -21,14 +19,21 @@ export default async function KontaktPage() {
 
   return (
     <div className="awp-page awp-page--default text-center">
-      <PitchPageHero title="Kontakt" subtitle="Dane kontaktowe organizatorów" />
+      <PitchPageHero
+        title="Kontakt"
+        subtitle="Masz pytania? Skontaktuj się z organizatorami akademii — chętnie pomożemy!"
+      />
 
-      <div className="mx-auto mt-8 max-w-3xl">
-        <PitchCard className="text-left" contentClassName="p-6 sm:p-8">
+      <div className="mx-auto mt-8 max-w-3xl space-y-6 text-left">
+
+        {/* Organizatorzy */}
+        <PitchCard contentClassName="p-6 sm:p-8">
           <span className={pitchLabelClass}>Organizatorzy</span>
           <h2 className="pitch-heading mt-2 text-xl sm:text-2xl">Zespół akademii</h2>
           <div className="pitch-rule mt-3 w-28 max-w-full opacity-90" />
-
+          <p className="mt-4 text-sm leading-relaxed text-emerald-100/85">
+            Akademia Wielkich Piłkarzy jest prowadzona przez pasjonatów piłki nożnej z wieloletnim doświadczeniem w organizacji rozgrywek amatorskich. Nasi organizatorzy są do Twojej dyspozycji w sprawach dotyczących zapisów, płatności, składów i wszelkich kwestii organizacyjnych.
+          </p>
           <div className="mt-6 grid gap-3">
             <OrganizerCard
               name={settings.organizer_damian_name}
@@ -44,6 +49,82 @@ export default async function KontaktPage() {
             />
           </div>
         </PitchCard>
+
+        {/* Godziny kontaktu */}
+        <PitchCard contentClassName="p-6 sm:p-8">
+          <span className={pitchLabelClass}>Dostępność</span>
+          <h2 className="pitch-heading mt-2 text-xl sm:text-2xl">Kiedy możesz się z nami skontaktować?</h2>
+          <div className="pitch-rule mt-3 w-28 max-w-full opacity-90" />
+          <div className="mt-5 grid gap-4 text-sm text-emerald-100/90 sm:grid-cols-2">
+            <div className="flex gap-3">
+              <Clock className="mt-0.5 h-5 w-5 shrink-0 text-emerald-400" />
+              <div>
+                <p className="font-semibold text-white">Dni powszednie</p>
+                <p className="mt-1 text-emerald-100/80">Poniedziałek – Piątek<br />16:00 – 21:00</p>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <Clock className="mt-0.5 h-5 w-5 shrink-0 text-emerald-400" />
+              <div>
+                <p className="font-semibold text-white">Weekendy</p>
+                <p className="mt-1 text-emerald-100/80">Sobota – Niedziela<br />10:00 – 20:00</p>
+              </div>
+            </div>
+            <div className="flex gap-3 sm:col-span-2">
+              <MessageSquare className="mt-0.5 h-5 w-5 shrink-0 text-emerald-400" />
+              <div>
+                <p className="font-semibold text-white">Czas odpowiedzi</p>
+                <p className="mt-1 text-emerald-100/80">
+                  Staramy się odpowiadać na wszystkie wiadomości w ciągu 24 godzin. W pilnych sprawach dotyczących nadchodzącego meczu prosimy o kontakt telefoniczny.
+                </p>
+              </div>
+            </div>
+          </div>
+        </PitchCard>
+
+        {/* FAQ kontaktowe */}
+        <PitchCard contentClassName="p-6 sm:p-8">
+          <span className={pitchLabelClass}>Najczęstsze pytania</span>
+          <h2 className="pitch-heading mt-2 text-xl sm:text-2xl">W czym możemy Ci pomóc?</h2>
+          <div className="pitch-rule mt-3 w-28 max-w-full opacity-90" />
+          <div className="mt-5 space-y-4 text-sm leading-relaxed text-emerald-100/90">
+            {[
+              {
+                q: "Jak dołączyć do akademii?",
+                a: "Zarejestruj się na platformie, uzupełnij dane i skontaktuj się z organizatorem, aby potwierdzić uczestnictwo w pierwszym meczu. Szczegóły znajdziesz na stronie O nas.",
+              },
+              {
+                q: "Nie mogę się zalogować na konto.",
+                a: "Sprawdź poprawność loginu i hasła. Jeśli problem nadal występuje, skontaktuj się z organizatorem — zresetujemy dostęp do Twojego konta.",
+              },
+              {
+                q: "Jak anulować zapis na mecz?",
+                a: "W zakładce Terminarz możesz wypisać się z meczu przed jego rozpoczęciem. Jeśli termin wypisania minął, skontaktuj się bezpośrednio z organizatorem.",
+              },
+              {
+                q: "Mam problem z płatnością lub portfelem.",
+                a: "Problemy z płatnościami rozwiązujemy indywidualnie. Skontaktuj się z organizatorem, podając datę transakcji i kwotę — wyjaśnimy sytuację.",
+              },
+              {
+                q: "Chcę zgłosić błąd w statystykach.",
+                a: "Jeśli zauważysz błąd w swoich lub cudzych statystykach, poinformuj organizatora podając datę meczu i szczegóły. Poprawimy dane tak szybko, jak to możliwe.",
+              },
+            ].map((item, i) => (
+              <div key={i} className="flex gap-3">
+                <HelpCircle className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
+                <div>
+                  <p className="font-semibold text-white">{item.q}</p>
+                  <p className="mt-1 text-emerald-100/80">{item.a}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="mt-5 rounded-lg bg-emerald-900/40 px-4 py-3 text-sm text-emerald-100/80">
+            Więcej pytań i odpowiedzi znajdziesz na stronie{" "}
+            <Link className="pitch-link" href="/faq">Często zadawane pytania (FAQ)</Link>.
+          </div>
+        </PitchCard>
+
       </div>
 
       <p className="mt-10">

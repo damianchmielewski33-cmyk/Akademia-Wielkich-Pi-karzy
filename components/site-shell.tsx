@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { usePathname } from "next/navigation";
 import {
   Activity,
+  BookOpen,
   CalendarDays,
   Camera,
   Home,
@@ -138,6 +139,7 @@ export function SiteShell({
     { href: "/galeria", label: "Galeria", visible: true, icon: Camera },
     { href: "/statystyki", label: "Statystyki", visible: isLoggedIn, icon: Activity },
     { href: "/rankingi", label: "Rankingi", visible: isLoggedIn, icon: Trophy },
+    { href: "/blog", label: "Blog", visible: true, icon: BookOpen },
     { href: "/o-nas", label: "O nas", visible: true, icon: Info },
     { href: "/kontakt", label: "Kontakt", visible: true, icon: MessageCircle },
     { href: "/panel-admina", label: "Panel admina", visible: isAdmin, icon: Shield },
@@ -491,8 +493,17 @@ export function SiteShell({
               <p className="text-sm font-semibold text-white">{siteName}</p>
               <p className="text-xs text-emerald-200/80">Terminarz, statystyki i społeczność na boisku</p>
               <p className="mt-2 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs text-emerald-200/85 sm:justify-start">
+                <Link href="/blog" className="font-medium underline-offset-2 hover:underline">
+                  Blog
+                </Link>
+                <Link href="/faq" className="font-medium underline-offset-2 hover:underline">
+                  FAQ
+                </Link>
                 <Link href="/o-nas" className="font-medium underline-offset-2 hover:underline">
-                  O nas i zasady
+                  O nas
+                </Link>
+                <Link href="/kontakt" className="font-medium underline-offset-2 hover:underline">
+                  Kontakt
                 </Link>
                 <Link href="/regulamin" className="font-medium underline-offset-2 hover:underline">
                   Regulamin
