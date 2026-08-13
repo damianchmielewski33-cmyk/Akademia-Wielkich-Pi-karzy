@@ -1,7 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import type { CSSProperties } from "react";
 import { headers, cookies } from "next/headers";
-import { Geist, Geist_Mono, Teko } from "next/font/google";
+import { Geist, Geist_Mono } from "next/font/google";
+import localFont from "next/font/local";
 import { Toaster } from "sonner";
 import { SiteShell } from "@/components/site-shell";
 import { ShareLinkClientCleanup } from "@/components/share-link-client-cleanup";
@@ -52,10 +53,13 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const displayFont = Teko({
+const displayFont = localFont({
   variable: "--font-display",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  display: "swap",
+  src: [
+    { path: "../public/fonts/teko-latin-ext.woff2", weight: "400 700", style: "normal" },
+    { path: "../public/fonts/teko-latin.woff2", weight: "400 700", style: "normal" },
+  ],
 });
 
 /** iPhone / PWA: dopasowanie do ekranu + kolor startowy zamiast czerni. */
