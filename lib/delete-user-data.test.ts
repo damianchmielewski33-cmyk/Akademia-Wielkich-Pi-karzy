@@ -32,6 +32,11 @@ function createTestDb(): { db: AppDb; sqlite: Database.Database; dbPath: string 
     CREATE TABLE participation_survey_answer (user_id INTEGER NOT NULL, survey_key TEXT NOT NULL, played INTEGER NOT NULL, answered_at TEXT NOT NULL DEFAULT (datetime('now')), PRIMARY KEY (user_id, survey_key), FOREIGN KEY (user_id) REFERENCES users(id));
     CREATE TABLE standalone_match_stats (user_id INTEGER NOT NULL, survey_key TEXT NOT NULL, goals INTEGER DEFAULT 0, assists INTEGER DEFAULT 0, distance REAL DEFAULT 0, saves INTEGER DEFAULT 0, updated_at TEXT NOT NULL DEFAULT (datetime('now')), PRIMARY KEY (user_id, survey_key), FOREIGN KEY (user_id) REFERENCES users(id));
     CREATE TABLE ranking_seasons (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, started_by_admin_id INTEGER NOT NULL, ended_by_admin_id INTEGER, started_at TEXT NOT NULL DEFAULT (datetime('now')), ended_at TEXT, FOREIGN KEY (started_by_admin_id) REFERENCES users(id), FOREIGN KEY (ended_by_admin_id) REFERENCES users(id));
+    CREATE TABLE venues (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, slug TEXT, city TEXT, address TEXT, owner_user_id INTEGER);
+    CREATE TABLE venue_partner_invites (id INTEGER PRIMARY KEY AUTOINCREMENT, token TEXT NOT NULL UNIQUE, created_by_admin_id INTEGER NOT NULL, claimed_user_id INTEGER, created_at TEXT NOT NULL DEFAULT (datetime('now')), FOREIGN KEY (created_by_admin_id) REFERENCES users(id));
+    CREATE TABLE venue_partners (user_id INTEGER PRIMARY KEY, invite_id INTEGER, created_at TEXT NOT NULL DEFAULT (datetime('now')), revoked_at TEXT, FOREIGN KEY (user_id) REFERENCES users(id));
+    CREATE TABLE user_devices (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, fcm_token TEXT NOT NULL UNIQUE, FOREIGN KEY (user_id) REFERENCES users(id));
+    CREATE TABLE push_subscriptions (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, endpoint TEXT NOT NULL UNIQUE, FOREIGN KEY (user_id) REFERENCES users(id));
   `);
 
   const db: AppDb = {

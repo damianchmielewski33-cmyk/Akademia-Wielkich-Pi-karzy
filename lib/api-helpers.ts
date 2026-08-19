@@ -73,6 +73,23 @@ export async function requireAdmin(requiredSection?: import("@/lib/admin-permiss
   return { ok: true as const, session: r.session };
 }
 
+export async function requireVenuePartner() {
+  const r = await requireUser();
+  if (!r.ok) return r;
+  const db = await getDb();
+  const { isVenuePartner } = await import("@/lib/venue-partners");
+  if (!(await isVenuePartner(db, r.session.userId))) {
+    return {
+      ok: false as const,
+      response: NextResponse.json(
+        { error: "Ten panel jest dla partnerów obiektu. Wejdź z linku zaproszenia." },
+        { status: 403 }
+      ),
+    };
+  }
+  return { ok: true as const, session: r.session };
+}
+
 export async function requirePzuCupAccess() {
   const r = await requireUser();
   if (!r.ok) return r;

@@ -37,6 +37,7 @@ import {
   screenLabel,
 } from "@/lib/screen-blocks";
 import { getUnreadAdminMessageCount } from "@/lib/admin-messages";
+import { isVenuePartner } from "@/lib/venue-partners";
 import { contactAdminRecipientsFromSettings } from "@/lib/contact-admin-recipients";
 import { siteAssetCssUrl } from "@/lib/site-assets";
 import { PREVIEW_BLOCKED_COOKIE } from "@/lib/constants";
@@ -173,6 +174,8 @@ export default async function RootLayout({
   const contactAdminRecipients = contactAdminRecipientsFromSettings(appSettings);
 
   const isAdmin = Boolean(session?.isAdmin && loggedInFull);
+  const isVenuePartnerUser =
+    loggedInFull && session ? await isVenuePartner(db, session.userId) : false;
   const testModeActive = isAdmin ? await isAdminTestModeActive() : false;
   /** Podgląd zaślepki — widok gracza dla każdego z aktywnym ciasteczkiem / parametrem (ustawiane z panelu admina). */
   const screenBlocksAsPlayer = previewBlocked;
@@ -326,6 +329,7 @@ export default async function RootLayout({
                 <SiteShell
                   isLoggedIn={loggedInFull}
                   isAdmin={shellIsAdmin}
+                  isVenuePartner={isVenuePartnerUser}
                   account={accountNav}
                   adminUnreadMessages={adminUnreadMessages}
                   siteName={appSettings.site_name}

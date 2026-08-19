@@ -267,10 +267,10 @@ export function HomeClient({
           <div className="relative z-10 mx-auto w-full max-w-6xl px-4">
             <p className="text-xs font-black uppercase tracking-[0.22em] text-white/80">Rezerwacja boisk</p>
             <h1 className="mt-3 max-w-3xl text-4xl font-black tracking-tight text-white sm:text-6xl">
-              W co chcesz zagrać?
+              Gdzie chcesz zagrać?
             </h1>
             <p className="mt-4 max-w-xl text-base text-white/85 sm:text-lg">
-              Znajdź obiekt, wybierz godzinę i zarezerwuj boisko online. Terminarz akademii zostaje osobnym modułem.
+              Wybierz miasto, dzień i godzinę. Wolne boiska widać od razu — rezerwacja i płatność online.
             </p>
             <div className="mt-8 max-w-5xl">
               <MarketplaceSearchForm />
@@ -320,7 +320,7 @@ export function HomeClient({
             </div>
             {featuredVenues.length === 0 ? (
               <div className="mt-6 rounded-3xl border border-dashed border-zinc-300 bg-white p-8 text-center text-zinc-600 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-300">
-                Brak opublikowanych obiektów. Dodaj pierwszy obiekt w panelu admina.
+                Brak opublikowanych obiektów. Partner z linku zaproszenia doda pierwszy w panelu obiektu.
               </div>
             ) : (
               <div className="-mx-4 mt-6 flex gap-4 overflow-x-auto px-4 pb-3 [scrollbar-width:thin]">
@@ -329,6 +329,23 @@ export function HomeClient({
                 ))}
               </div>
             )}
+          </section>
+        ) : null}
+
+        {isMarketplaceHome ? (
+          <section className="mt-14 overflow-hidden rounded-3xl bg-[var(--mp-teal)] px-6 py-10 text-white sm:px-10">
+            <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+              <div className="max-w-xl">
+                <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/80">Dla obiektów</p>
+                <h2 className="mt-2 text-3xl font-black tracking-tight">Masz halę albo orlik? Wystaw terminy.</h2>
+                <p className="mt-3 text-white/90">
+                  Partnerzy z linku dodają boiska, cennik i wolne godziny. Gracze rezerwują i płacą online, Ty widzisz obłożenie.
+                </p>
+              </div>
+              <Button asChild variant="secondary" className="h-12 rounded-full bg-white px-8 font-black text-zinc-950 hover:bg-zinc-100">
+                <Link href="/dla-obiektow">Dodaj swój obiekt</Link>
+              </Button>
+            </div>
           </section>
         ) : null}
 

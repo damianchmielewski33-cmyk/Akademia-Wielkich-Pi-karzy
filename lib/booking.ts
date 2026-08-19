@@ -3,6 +3,8 @@ import type { AppDb } from "@/lib/db";
 export const BOOKING_STATUSES = ["pending", "confirmed", "cancelled", "expired"] as const;
 export type BookingStatus = (typeof BOOKING_STATUSES)[number];
 
+export const BOOKING_FREE_CANCEL_HOURS = 24;
+
 export type VenueRow = {
   id: number;
   name: string;
@@ -14,6 +16,7 @@ export type VenueRow = {
   email: string | null;
   photo_url: string | null;
   published: number;
+  owner_user_id?: number | null;
   created_at: string;
   updated_at: string;
 };
@@ -55,13 +58,49 @@ export type BookingRow = {
   venue_address?: string;
   pitch_name?: string;
   user_name?: string;
+  can_cancel?: boolean;
+  cancel_until?: string | null;
 };
 
 export type VenueCard = VenueRow & {
   pitch_count: number;
   min_price_pln: number | null;
   surfaces: string | null;
+  photo_urls?: string[];
+  has_indoor?: number;
+  has_outdoor?: number;
+  has_lighting?: number;
 };
+
+export type PitchOpeningHour = {
+  weekday: number;
+  opens_at: string;
+  closes_at: string;
+};
+
+export type PitchPriceRule = {
+  weekday: number | null;
+  start_time: string | null;
+  end_time: string | null;
+  price_pln: number;
+  label: string | null;
+};
+
+export type PitchPublic = PitchRow & {
+  opening_hours: PitchOpeningHour[];
+  price_rules: PitchPriceRule[];
+};
+
+export type PitchBlockPublic = {
+  pitch_id: number;
+  pitch_name: string;
+  block_date: string;
+  start_time: string;
+  end_time: string;
+  reason: string | null;
+};
+
+export const WEEKDAY_LABELS_PL = ["niedziela", "poniedziałek", "wtorek", "środa", "czwartek", "piątek", "sobota"] as const;
 
 export type AvailabilitySlot = {
   date: string;
@@ -83,10 +122,46 @@ export const BOOKING_SCHEMA_SQL = `
     email TEXT,
     photo_url TEXT,
     published INTEGER NOT NULL DEFAULT 1,
+    owner_user_id INTEGER,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
   CREATE INDEX IF NOT EXISTS idx_venues_city_published ON venues(city, published);
+  CREATE INDEX IF NOT EXISTS idx_venues_owner ON venues(owner_user_id);
+
+  CREATE TABLE IF NOT EXISTS venue_partner_invites (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    token TEXT NOT NULL UNIQUE,
+    label TEXT,
+    created_by_admin_id INTEGER NOT NULL,
+    claimed_user_id INTEGER,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    expires_at TEXT,
+    revoked_at TEXT,
+    claimed_at TEXT,
+    FOREIGN KEY (created_by_admin_id) REFERENCES users(id),
+    FOREIGN KEY (claimed_user_id) REFERENCES users(id)
+  );
+  CREATE INDEX IF NOT EXISTS idx_venue_partner_invites_token ON venue_partner_invites(token);
+
+  CREATE TABLE IF NOT EXISTS venue_partners (
+    user_id INTEGER PRIMARY KEY,
+    invite_id INTEGER,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    revoked_at TEXT,
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (invite_id) REFERENCES venue_partner_invites(id)
+  );
+
+  CREATE TABLE IF NOT EXISTS venue_photos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    venue_id INTEGER NOT NULL,
+    url TEXT NOT NULL,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (venue_id) REFERENCES venues(id) ON DELETE CASCADE
+  );
+  CREATE INDEX IF NOT EXISTS idx_venue_photos_venue ON venue_photos(venue_id, sort_order);
 
   CREATE TABLE IF NOT EXISTS pitches (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -223,6 +298,10 @@ function overlaps(aStart: string, aEnd: string, bStart: string, bEnd: string): b
 
 export async function ensureBookingSchema(db: AppDb): Promise<void> {
   await db.exec(BOOKING_SCHEMA_SQL);
+  const cols = await db.prepare("PRAGMA table_info(venues)").all<{ name: string }>();
+  if (cols.length > 0 && !cols.some((c) => c.name === "owner_user_id")) {
+    await db.exec("ALTER TABLE venues ADD COLUMN owner_user_id INTEGER");
+  }
 }
 
 export async function expireStaleBookings(db: AppDb): Promise<void> {
@@ -244,15 +323,21 @@ export type VenueListFilters = {
   maxPrice?: number | null;
   date?: string | null;
   time?: string | null;
+  ownerUserId?: number | null;
 };
 
 export async function listVenueCards(db: AppDb, filters?: VenueListFilters): Promise<VenueCard[]> {
+  if (filters?.ownerUserId == null) {
+    const { seedBookingCatalogIfEmpty } = await import("@/lib/booking-seed");
+    await seedBookingCatalogIfEmpty(db);
+  }
   const includeUnpublished = filters?.includeUnpublished === true;
   const city = filters?.city?.trim();
   const query = filters?.query?.trim();
   const surface = filters?.surface?.trim();
   const indoor = filters?.indoor;
   const maxPrice = filters?.maxPrice;
+  const ownerUserId = filters?.ownerUserId;
   const where = [includeUnpublished ? "1 = 1" : "v.published = 1"];
   const whereParams: unknown[] = [];
   const joinParams: unknown[] = [];
@@ -263,6 +348,10 @@ export async function listVenueCards(db: AppDb, filters?: VenueListFilters): Pro
   if (query) {
     where.push("(LOWER(v.name) LIKE LOWER(?) OR LOWER(v.address) LIKE LOWER(?))");
     whereParams.push(`%${query}%`, `%${query}%`);
+  }
+  if (ownerUserId != null) {
+    where.push("v.owner_user_id = ?");
+    whereParams.push(ownerUserId);
   }
   const pitchWhere = ["p.venue_id = v.id"];
   if (!includeUnpublished) pitchWhere.push("p.active = 1");
@@ -284,7 +373,10 @@ export async function listVenueCards(db: AppDb, filters?: VenueListFilters): Pro
       `SELECT v.*,
               COUNT(p.id) AS pitch_count,
               MIN(CASE WHEN p.active = 1 THEN p.base_price_pln END) AS min_price_pln,
-              GROUP_CONCAT(DISTINCT p.surface) AS surfaces
+              GROUP_CONCAT(DISTINCT p.surface) AS surfaces,
+              MAX(CASE WHEN p.indoor = 1 THEN 1 ELSE 0 END) AS has_indoor,
+              MAX(CASE WHEN p.indoor = 0 THEN 1 ELSE 0 END) AS has_outdoor,
+              MAX(CASE WHEN p.lighting = 1 THEN 1 ELSE 0 END) AS has_lighting
        FROM venues v
        LEFT JOIN pitches p ON ${pitchWhere.join(" AND ")}
        WHERE ${where.join(" AND ")}
@@ -309,7 +401,7 @@ export async function listVenueCards(db: AppDb, filters?: VenueListFilters): Pro
     : time
       ? `${new Date().getFullYear()}-${two(new Date().getMonth() + 1)}-${two(new Date().getDate())}`
       : null;
-  if (!dateForSlots) return venues;
+  if (!dateForSlots) return attachVenuePhotos(db, venues);
 
   const withSlots: VenueCard[] = [];
   for (const venue of venues) {
@@ -332,7 +424,99 @@ export async function listVenueCards(db: AppDb, filters?: VenueListFilters): Pro
     }
     if (any) withSlots.push(venue);
   }
-  return withSlots;
+  return attachVenuePhotos(db, withSlots);
+}
+
+async function attachVenuePhotos(db: AppDb, venues: VenueCard[]): Promise<VenueCard[]> {
+  if (venues.length === 0) return venues;
+  const photos = await db
+    .prepare(
+      `SELECT venue_id, url FROM venue_photos
+       WHERE venue_id IN (${venues.map(() => "?").join(",")})
+       ORDER BY sort_order, id`
+    )
+    .all<{ venue_id: number; url: string }>(...venues.map((v) => v.id));
+  const byVenue = new Map<number, string[]>();
+  for (const photo of photos) {
+    const list = byVenue.get(photo.venue_id) ?? [];
+    list.push(photo.url);
+    byVenue.set(photo.venue_id, list);
+  }
+  return venues.map((venue) => {
+    const photo_urls = byVenue.get(venue.id) ?? (venue.photo_url ? [venue.photo_url] : []);
+    return { ...venue, photo_urls, photo_url: venue.photo_url || photo_urls[0] || null };
+  });
+}
+
+export async function replaceVenuePhotos(db: AppDb, venueId: number, urls: string[]): Promise<void> {
+  const clean = urls.map((u) => u.trim()).filter(Boolean).slice(0, 3);
+  await db.prepare("DELETE FROM venue_photos WHERE venue_id = ?").run(venueId);
+  for (const [index, url] of clean.entries()) {
+    await db.prepare("INSERT INTO venue_photos (venue_id, url, sort_order) VALUES (?, ?, ?)").run(venueId, url, index);
+  }
+  await db
+    .prepare("UPDATE venues SET photo_url = ?, updated_at = datetime('now') WHERE id = ?")
+    .run(clean[0] ?? null, venueId);
+}
+
+export function bookingStartDate(date: string, startTime: string): Date {
+  return new Date(`${date}T${normalizeTime(startTime)}:00`);
+}
+
+export function bookingCancelDeadline(date: string, startTime: string): Date {
+  return new Date(bookingStartDate(date, startTime).getTime() - BOOKING_FREE_CANCEL_HOURS * 60 * 60 * 1000);
+}
+
+export function formatPlDateTime(value: Date | string): string {
+  const d = typeof value === "string" ? new Date(value) : value;
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleString("pl-PL", {
+    weekday: "short",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+export function describeUserCancel(booking: Pick<BookingRow, "status" | "booking_date" | "start_time">, now = new Date()) {
+  const deadline = bookingCancelDeadline(booking.booking_date, booking.start_time);
+  const cancelUntil = Number.isNaN(deadline.getTime()) ? null : deadline.toISOString();
+  if (booking.status === "cancelled" || booking.status === "expired") {
+    return { can_cancel: false, cancel_until: cancelUntil };
+  }
+  if (booking.status === "pending") {
+    return { can_cancel: true, cancel_until: cancelUntil };
+  }
+  if (booking.status === "confirmed") {
+    return { can_cancel: now.getTime() <= deadline.getTime(), cancel_until: cancelUntil };
+  }
+  return { can_cancel: false, cancel_until: cancelUntil };
+}
+
+export async function cancelUserBooking(
+  db: AppDb,
+  args: { bookingId: number; userId: number }
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  await expireStaleBookings(db);
+  const booking = await getBookingById(db, args.bookingId, args.userId);
+  if (!booking) return { ok: false, error: "Nie znaleziono rezerwacji." };
+  const meta = describeUserCancel(booking);
+  if (!meta.can_cancel) {
+    return {
+      ok: false,
+      error: `Rezerwację można anulować najpóźniej ${BOOKING_FREE_CANCEL_HOURS} godz. przed rozpoczęciem slotu.`,
+    };
+  }
+  await db
+    .prepare(
+      `UPDATE bookings
+       SET status = 'cancelled', expires_at = NULL, updated_at = datetime('now')
+       WHERE id = ? AND user_id = ? AND status IN ('pending', 'confirmed')`
+    )
+    .run(args.bookingId, args.userId);
+  return { ok: true };
 }
 
 export type AdminPitchRow = PitchRow & {
@@ -342,9 +526,22 @@ export type AdminPitchRow = PitchRow & {
   closes_at: string | null;
 };
 
-export async function listAdminPitches(db: AppDb, venueId?: number): Promise<AdminPitchRow[]> {
-  const where = venueId != null ? "WHERE p.venue_id = ?" : "";
-  const params = venueId != null ? [venueId] : [];
+export async function listAdminPitches(
+  db: AppDb,
+  venueId?: number,
+  ownerUserId?: number
+): Promise<AdminPitchRow[]> {
+  const clauses: string[] = [];
+  const params: unknown[] = [];
+  if (venueId != null) {
+    clauses.push("p.venue_id = ?");
+    params.push(venueId);
+  }
+  if (ownerUserId != null) {
+    clauses.push("v.owner_user_id = ?");
+    params.push(ownerUserId);
+  }
+  const where = clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";
   return db
     .prepare(
       `SELECT p.*, v.name AS venue_name, v.city AS venue_city,
@@ -356,6 +553,131 @@ export async function listAdminPitches(db: AppDb, venueId?: number): Promise<Adm
        ORDER BY v.name, p.name`
     )
     .all<AdminPitchRow>(...params);
+}
+
+export async function createVenue(
+  db: AppDb,
+  args: {
+    name: string;
+    city: string;
+    address: string;
+    description?: string | null;
+    phone?: string | null;
+    email?: string | null;
+    photoUrl?: string | null;
+    published?: boolean;
+    ownerUserId?: number | null;
+  }
+): Promise<{ id: number; slug: string }> {
+  const baseSlug = slugifyVenueName(args.name);
+  let slug = baseSlug;
+  for (let i = 2; ; i++) {
+    const exists = await db.prepare("SELECT id FROM venues WHERE slug = ?").get(slug);
+    if (!exists) break;
+    slug = `${baseSlug}-${i}`;
+  }
+  const result = await db
+    .prepare(
+      `INSERT INTO venues (name, slug, city, address, description, phone, email, photo_url, published, owner_user_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    )
+    .run(
+      args.name,
+      slug,
+      args.city,
+      args.address,
+      args.description || null,
+      args.phone || null,
+      args.email || null,
+      args.photoUrl || null,
+      args.published === false ? 0 : 1,
+      args.ownerUserId ?? null
+    );
+  return { id: Number(result.lastInsertRowid), slug };
+}
+
+export async function createPitchWithSchedule(
+  db: AppDb,
+  args: {
+    venueId: number;
+    name: string;
+    surface: string;
+    players: number;
+    indoor?: boolean;
+    lighting?: boolean;
+    amenities?: string | null;
+    basePricePln: number;
+    slotMinutes: number;
+    opensAt: string;
+    closesAt: string;
+    weekendPricePln?: number;
+    peakPricePln?: number;
+    peakStart?: string;
+    peakEnd?: string;
+    active?: boolean;
+  }
+): Promise<{ id: number }> {
+  const run = async (tx: AppDb) => {
+    const inserted = await tx
+      .prepare(
+        `INSERT INTO pitches
+          (venue_id, name, surface, players, indoor, lighting, amenities, base_price_pln, slot_minutes, active)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      )
+      .run(
+        args.venueId,
+        args.name,
+        args.surface,
+        args.players,
+        args.indoor ? 1 : 0,
+        args.lighting === false ? 0 : 1,
+        args.amenities || null,
+        args.basePricePln,
+        args.slotMinutes,
+        args.active === false ? 0 : 1
+      );
+    const pitchId = Number(inserted.lastInsertRowid);
+    for (let weekday = 0; weekday <= 6; weekday++) {
+      await tx
+        .prepare(
+          `INSERT INTO pitch_opening_hours (pitch_id, weekday, opens_at, closes_at)
+           VALUES (?, ?, ?, ?)`
+        )
+        .run(pitchId, weekday, args.opensAt, args.closesAt);
+    }
+    if (args.weekendPricePln) {
+      await addPitchPriceRule(tx, { pitchId, weekday: 0, pricePln: args.weekendPricePln, label: "Weekend" });
+      await addPitchPriceRule(tx, { pitchId, weekday: 6, pricePln: args.weekendPricePln, label: "Weekend" });
+    }
+    if (args.peakPricePln && args.peakStart && args.peakEnd) {
+      await addPitchPriceRule(tx, {
+        pitchId,
+        startTime: args.peakStart,
+        endTime: args.peakEnd,
+        pricePln: args.peakPricePln,
+        label: "Szczyt",
+      });
+    }
+    return { id: pitchId };
+  };
+  if (db.transaction) return db.transaction(run);
+  return run(db);
+}
+
+export async function listBookingsForOwner(db: AppDb, ownerUserId: number): Promise<BookingRow[]> {
+  await expireStaleBookings(db);
+  return db
+    .prepare(
+      `SELECT b.*, p.name AS pitch_name, v.name AS venue_name, v.city AS venue_city, v.address AS venue_address,
+              TRIM(u.first_name || ' ' || u.last_name) AS user_name
+       FROM bookings b
+       JOIN pitches p ON p.id = b.pitch_id
+       JOIN venues v ON v.id = p.venue_id
+       JOIN users u ON u.id = b.user_id
+       WHERE v.owner_user_id = ?
+       ORDER BY b.booking_date DESC, b.start_time DESC, b.id DESC`
+    )
+    .all<BookingRow>(ownerUserId);
 }
 
 export async function addPitchPriceRule(
@@ -440,7 +762,13 @@ export async function getVenueWithPitches(
   db: AppDb,
   idOrSlug: string | number,
   includeUnpublished = false
-): Promise<{ venue: VenueRow; pitches: PitchRow[] } | null> {
+): Promise<{
+  venue: VenueRow & { photo_urls: string[] };
+  pitches: PitchPublic[];
+  upcoming_blocks: PitchBlockPublic[];
+} | null> {
+  const { seedBookingCatalogIfEmpty } = await import("@/lib/booking-seed");
+  await seedBookingCatalogIfEmpty(db);
   const isId = typeof idOrSlug === "number" || /^\d+$/.test(String(idOrSlug));
   const venue = (await db
     .prepare(
@@ -450,14 +778,54 @@ export async function getVenueWithPitches(
     )
     .get(isId ? Number(idOrSlug) : String(idOrSlug))) as VenueRow | undefined;
   if (!venue) return null;
-  const pitches = await db
-    .prepare(
-      `SELECT * FROM pitches
-       WHERE venue_id = ? ${includeUnpublished ? "" : "AND active = 1"}
-       ORDER BY active DESC, name`
-    )
-    .all<PitchRow>(venue.id);
-  return { venue, pitches };
+  const [photoRows, pitchRows, upcoming_blocks] = await Promise.all([
+    db
+      .prepare(`SELECT url FROM venue_photos WHERE venue_id = ? ORDER BY sort_order, id`)
+      .all<{ url: string }>(venue.id),
+    db
+      .prepare(
+        `SELECT * FROM pitches
+         WHERE venue_id = ? ${includeUnpublished ? "" : "AND active = 1"}
+         ORDER BY active DESC, name`
+      )
+      .all<PitchRow>(venue.id),
+    db
+      .prepare(
+        `SELECT b.pitch_id, p.name AS pitch_name, b.block_date, b.start_time, b.end_time, b.reason
+         FROM pitch_blocks b
+         JOIN pitches p ON p.id = b.pitch_id
+         WHERE p.venue_id = ? AND b.block_date >= date('now')
+         ORDER BY b.block_date, b.start_time
+         LIMIT 12`
+      )
+      .all<PitchBlockPublic>(venue.id),
+  ]);
+  const photo_urls = photoRows.map((p) => p.url);
+  if (photo_urls.length === 0 && venue.photo_url) photo_urls.push(venue.photo_url);
+  const pitches: PitchPublic[] = [];
+  for (const pitch of pitchRows) {
+    const [opening_hours, price_rules] = await Promise.all([
+      db
+        .prepare(
+          `SELECT weekday, opens_at, closes_at FROM pitch_opening_hours
+           WHERE pitch_id = ? ORDER BY weekday`
+        )
+        .all<PitchOpeningHour>(pitch.id),
+      db
+        .prepare(
+          `SELECT weekday, start_time, end_time, price_pln, label FROM pitch_price_rules
+           WHERE pitch_id = ?
+           ORDER BY CASE WHEN weekday IS NULL THEN 1 ELSE 0 END, weekday, start_time`
+        )
+        .all<PitchPriceRule>(pitch.id),
+    ]);
+    pitches.push({ ...pitch, opening_hours, price_rules });
+  }
+  return {
+    venue: { ...venue, photo_urls, photo_url: venue.photo_url || photo_urls[0] || null },
+    pitches,
+    upcoming_blocks,
+  };
 }
 
 async function getPitchWithVenue(db: AppDb, pitchId: number): Promise<(PitchRow & { venue_published: number }) | null> {
@@ -475,11 +843,13 @@ async function getPitchWithVenue(db: AppDb, pitchId: number): Promise<(PitchRow 
 export async function getAvailabilitySlots(
   db: AppDb,
   pitchId: number,
-  date: string
+  date: string,
+  options?: { allowUnpublished?: boolean }
 ): Promise<{ pitch: PitchRow; slots: AvailabilitySlot[] } | null> {
   await expireStaleBookings(db);
   const pitch = await getPitchWithVenue(db, pitchId);
-  if (!pitch || pitch.active !== 1 || pitch.venue_published !== 1) return null;
+  if (!pitch || pitch.active !== 1) return null;
+  if (!options?.allowUnpublished && pitch.venue_published !== 1) return null;
   const weekday = weekdayForDate(date);
   const opening = await db
     .prepare(
@@ -608,7 +978,7 @@ export async function getBookingById(db: AppDb, bookingId: number, userId?: numb
 
 export async function listBookingsForUser(db: AppDb, userId: number): Promise<BookingRow[]> {
   await expireStaleBookings(db);
-  return db
+  const rows = await db
     .prepare(
       `SELECT b.*, p.name AS pitch_name, v.name AS venue_name, v.city AS venue_city, v.address AS venue_address
        FROM bookings b
@@ -618,6 +988,7 @@ export async function listBookingsForUser(db: AppDb, userId: number): Promise<Bo
        ORDER BY b.booking_date DESC, b.start_time DESC`
     )
     .all<BookingRow>(userId);
+  return rows.map((booking) => ({ ...booking, ...describeUserCancel(booking) }));
 }
 
 export async function listAdminBookings(db: AppDb): Promise<BookingRow[]> {

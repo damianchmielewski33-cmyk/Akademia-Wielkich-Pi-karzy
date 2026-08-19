@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireAdmin } from "@/lib/api-helpers";
 import { getDb, logActivity } from "@/lib/db";
-import { listVenueCards, slugifyVenueName } from "@/lib/booking";
+import { listVenueCards, replaceVenuePhotos, slugifyVenueName } from "@/lib/booking";
 
 export const runtime = "nodejs";
 
@@ -14,6 +14,7 @@ const venueSchema = z.object({
   phone: z.string().trim().max(60).optional(),
   email: z.string().trim().email().optional().or(z.literal("")),
   photo_url: z.string().trim().max(500).optional(),
+  photo_urls: z.array(z.string().trim().max(500)).max(3).optional(),
   published: z.coerce.boolean().optional(),
 });
 
@@ -53,9 +54,16 @@ export async function POST(req: Request) {
       parsed.data.description || null,
       parsed.data.phone || null,
       parsed.data.email || null,
-      parsed.data.photo_url || null,
+      parsed.data.photo_urls?.[0] || parsed.data.photo_url || null,
       parsed.data.published === false ? 0 : 1
     );
+  const venueId = Number(result.lastInsertRowid);
+  const photos = parsed.data.photo_urls?.length
+    ? parsed.data.photo_urls
+    : parsed.data.photo_url
+      ? [parsed.data.photo_url]
+      : [];
+  if (photos.length) await replaceVenuePhotos(db, venueId, photos);
   await logActivity(gate.session.userId, `Dodał obiekt rezerwacji: ${parsed.data.name}`);
-  return NextResponse.json({ id: Number(result.lastInsertRowid), slug });
+  return NextResponse.json({ id: venueId, slug });
 }

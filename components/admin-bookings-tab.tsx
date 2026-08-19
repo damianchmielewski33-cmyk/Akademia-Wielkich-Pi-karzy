@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { toast } from "@/lib/app-toast";
 import type { AdminPitchRow, BookingRow, VenueCard } from "@/lib/booking";
+import type { PartnerInvite } from "@/lib/venue-partners";
 import { Button } from "@/components/ui/button";
 import { FormInput, FormTextarea } from "@/components/ui/form-field";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +17,9 @@ type VenueForm = {
   address: string;
   description: string;
   phone: string;
+  photo_1: string;
+  photo_2: string;
+  photo_3: string;
 };
 
 type PitchForm = {
@@ -33,7 +37,14 @@ type PitchForm = {
   closes_at: string;
 };
 
-const initialVenue: VenueForm = { name: "", city: "", address: "", description: "", phone: "" };
+const initialVenue: VenueForm = { name: "", city: "", address: "", description: "", phone: "", photo_1: "", photo_2: "", photo_3: "" };
+
+function partnerInviteStatus(invite: PartnerInvite) {
+  if (invite.revoked_at) return "revoked";
+  if (invite.expires_at && new Date(invite.expires_at).getTime() <= Date.now()) return "expired";
+  if (invite.claimed_user_id) return "claimed";
+  return "open";
+}
 const initialPitch: PitchForm = {
   venue_id: "",
   name: "",
@@ -56,21 +67,35 @@ export function AdminBookingsTab() {
   const [venueForm, setVenueForm] = useState<VenueForm>(initialVenue);
   const [pitchForm, setPitchForm] = useState<PitchForm>(initialPitch);
   const [blockForm, setBlockForm] = useState({ pitch_id: "", date: "", start_time: "18:00", end_time: "19:00", reason: "" });
+  const [photoDrafts, setPhotoDrafts] = useState<Record<number, [string, string, string]>>({});
+  const [invites, setInvites] = useState<PartnerInvite[]>([]);
+  const [inviteLabel, setInviteLabel] = useState("");
   const [busy, setBusy] = useState(false);
 
   async function load() {
-    const [venuesRes, bookingsRes, pitchesRes] = await Promise.all([
+    const [venuesRes, bookingsRes, pitchesRes, invitesRes] = await Promise.all([
       fetch("/api/admin/venues"),
       fetch("/api/admin/bookings"),
       fetch("/api/admin/pitches"),
+      fetch("/api/admin/partner-invites"),
     ]);
-    if (!venuesRes.ok || !bookingsRes.ok || !pitchesRes.ok) throw new Error();
+    if (!venuesRes.ok || !bookingsRes.ok || !pitchesRes.ok || !invitesRes.ok) throw new Error();
     const venuesJson = (await venuesRes.json()) as { venues: VenueCard[] };
     const bookingsJson = (await bookingsRes.json()) as { bookings: BookingRow[] };
     const pitchesJson = (await pitchesRes.json()) as { pitches: AdminPitchRow[] };
+    const invitesJson = (await invitesRes.json()) as { invites: PartnerInvite[] };
     setVenues(venuesJson.venues);
     setBookings(bookingsJson.bookings);
     setPitches(pitchesJson.pitches);
+    setInvites(invitesJson.invites);
+    setPhotoDrafts((prev) => {
+      const next = { ...prev };
+      for (const venue of venuesJson.venues) {
+        const urls = venue.photo_urls ?? (venue.photo_url ? [venue.photo_url] : []);
+        next[venue.id] = [urls[0] ?? "", urls[1] ?? "", urls[2] ?? ""];
+      }
+      return next;
+    });
     setPitchForm((prev) => ({ ...prev, venue_id: prev.venue_id || String(venuesJson.venues[0]?.id ?? "") }));
     setBlockForm((prev) => ({ ...prev, pitch_id: prev.pitch_id || String(pitchesJson.pitches[0]?.id ?? "") }));
   }
@@ -85,7 +110,10 @@ export function AdminBookingsTab() {
       const res = await fetch("/api/admin/venues", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(venueForm),
+        body: JSON.stringify({
+          ...venueForm,
+          photo_urls: [venueForm.photo_1, venueForm.photo_2, venueForm.photo_3].map((u) => u.trim()).filter(Boolean),
+        }),
       });
       const data = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) {
@@ -157,8 +185,121 @@ export function AdminBookingsTab() {
     await load();
   }
 
+  async function createInvite() {
+    const res = await fetch("/api/admin/partner-invites", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ label: inviteLabel || undefined }),
+    });
+    const data = (await res.json().catch(() => ({}))) as { error?: string; path?: string };
+    if (!res.ok) {
+      toast.error(data.error ?? "Nie udało się utworzyć linku");
+      return;
+    }
+    setInviteLabel("");
+    const url = `${window.location.origin}${data.path ?? ""}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success("Skopiowano link dla partnera");
+    } catch {
+      toast.success(`Link: ${url}`);
+    }
+    await load();
+  }
+
+  async function revokeInvite(id: number) {
+    const res = await fetch(`/api/admin/partner-invites/${id}`, { method: "DELETE" });
+    if (!res.ok) {
+      toast.error("Nie udało się unieważnić linku");
+      return;
+    }
+    toast.success("Link unieważniony");
+    await load();
+  }
+
+  async function saveVenuePhotos(venueId: number) {
+    const urls = photoDrafts[venueId] ?? ["", "", ""];
+    const res = await fetch(`/api/admin/venues/${venueId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ photo_urls: urls.map((u) => u.trim()).filter(Boolean) }),
+    });
+    if (!res.ok) {
+      toast.error("Nie udało się zapisać zdjęć");
+      return;
+    }
+    toast.success("Zapisano zdjęcia obiektu");
+    await load();
+  }
+
   return (
     <div className="space-y-6">
+      <AdminCard
+        title="Link dla partnera"
+        description="Wyślij ten adres właścicielowi hali. Po rejestracji doda swoje boiska, cennik i wolne terminy — bez dostępu do panelu akademii."
+      >
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+          <FormInput
+            label="Notatka (np. nazwa hali)"
+            value={inviteLabel}
+            onChange={(e) => setInviteLabel(e.target.value)}
+            className="sm:flex-1"
+          />
+          <Button variant="gold" onClick={() => void createInvite()}>
+            Wygeneruj i skopiuj link
+          </Button>
+        </div>
+        <div className="mt-4 space-y-2">
+          {invites.length === 0 ? (
+            <p className="text-sm text-zinc-500 dark:text-zinc-400">Brak wygenerowanych linków.</p>
+          ) : (
+            invites.slice(0, 8).map((invite) => {
+              const status = partnerInviteStatus(invite);
+              const url = typeof window !== "undefined" ? `${window.location.origin}/partner/zaproszenie/${invite.token}` : `/partner/zaproszenie/${invite.token}`;
+              return (
+                <div
+                  key={invite.id}
+                  className="flex flex-col gap-2 rounded-2xl border border-zinc-200 p-3 text-sm sm:flex-row sm:items-center sm:justify-between dark:border-zinc-800"
+                >
+                  <div>
+                    <p className="font-semibold">{invite.label || "Partner obiektu"}</p>
+                    <p className="break-all text-zinc-500">{url}</p>
+                    <p className="mt-1 text-zinc-500">
+                      {status === "open"
+                        ? "Oczekuje na aktywację"
+                        : status === "claimed"
+                          ? `Aktywowany: ${invite.claimed_name ?? "partner"}`
+                          : status === "expired"
+                            ? "Wygasł"
+                            : "Unieważniony"}
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        void navigator.clipboard.writeText(url).then(
+                          () => toast.success("Skopiowano"),
+                          () => toast.error("Nie udało się skopiować")
+                        );
+                      }}
+                    >
+                      Kopiuj
+                    </Button>
+                    {status === "open" || status === "claimed" ? (
+                      <Button size="sm" variant="destructive" onClick={() => void revokeInvite(invite.id)}>
+                        Unieważnij
+                      </Button>
+                    ) : null}
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </AdminCard>
+
       <div className="grid gap-6 xl:grid-cols-2">
         <AdminCard title="Nowy obiekt" description="Dodaj halę, orlik lub kompleks boisk do katalogu rezerwacji.">
           <div className="grid gap-3 sm:grid-cols-2">
@@ -167,6 +308,9 @@ export function AdminBookingsTab() {
             <FormInput label="Adres" className="sm:col-span-2" value={venueForm.address} onChange={(e) => setVenueForm({ ...venueForm, address: e.target.value })} />
             <FormInput label="Telefon" value={venueForm.phone} onChange={(e) => setVenueForm({ ...venueForm, phone: e.target.value })} />
             <FormTextarea label="Opis" className="sm:col-span-2" value={venueForm.description} onChange={(e) => setVenueForm({ ...venueForm, description: e.target.value })} />
+            <FormInput label="Zdjęcie 1 (URL)" className="sm:col-span-2" value={venueForm.photo_1} onChange={(e) => setVenueForm({ ...venueForm, photo_1: e.target.value })} />
+            <FormInput label="Zdjęcie 2 (URL)" className="sm:col-span-2" value={venueForm.photo_2} onChange={(e) => setVenueForm({ ...venueForm, photo_2: e.target.value })} />
+            <FormInput label="Zdjęcie 3 (URL)" className="sm:col-span-2" value={venueForm.photo_3} onChange={(e) => setVenueForm({ ...venueForm, photo_3: e.target.value })} />
           </div>
           <Button className="mt-4" variant="gold" onClick={createVenue} disabled={busy}>
             Dodaj obiekt
@@ -239,26 +383,46 @@ export function AdminBookingsTab() {
         </Button>
       </AdminCard>
 
-      <AdminCard title="Obiekty" description="Szybki podgląd katalogu publikowanego dla użytkowników.">
+      <AdminCard title="Obiekty" description="Uzupełnij 2–3 zdjęcia. Godziny, cennik i blokady widać na stronie obiektu.">
         <div className="grid gap-3 md:grid-cols-2">
           {venues.length === 0 ? (
             <p className="text-sm text-zinc-500 dark:text-zinc-400">Brak obiektów.</p>
           ) : (
-            venues.map((venue) => (
-              <Link
-                key={venue.id}
-                href={`/obiekty/${venue.slug}`}
-                className="rounded-2xl border border-zinc-200 bg-white p-4 text-zinc-900 hover:border-emerald-400 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-50"
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="font-semibold">{venue.name}</p>
-                    <p className="text-sm text-zinc-500">{venue.city}, {venue.address}</p>
-                  </div>
-                  <Badge>{venue.pitch_count} boisk</Badge>
+            venues.map((venue) => {
+              const drafts = photoDrafts[venue.id] ?? ["", "", ""];
+              return (
+                <div
+                  key={venue.id}
+                  className="space-y-3 rounded-2xl border border-zinc-200 bg-white p-4 text-zinc-900 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-50"
+                >
+                  <Link href={`/obiekty/${venue.slug}`} className="flex items-center justify-between gap-3 hover:text-emerald-700">
+                    <div>
+                      <p className="font-semibold">{venue.name}</p>
+                      <p className="text-sm text-zinc-500">{venue.city}, {venue.address}</p>
+                    </div>
+                    <Badge>{venue.pitch_count} boisk</Badge>
+                  </Link>
+                  {(["Zdjęcie 1", "Zdjęcie 2", "Zdjęcie 3"] as const).map((label, index) => (
+                    <FormInput
+                      key={label}
+                      label={label}
+                      value={drafts[index] ?? ""}
+                      onChange={(e) =>
+                        setPhotoDrafts((prev) => {
+                          const current = prev[venue.id] ?? ["", "", ""];
+                          const next: [string, string, string] = [current[0] ?? "", current[1] ?? "", current[2] ?? ""];
+                          next[index] = e.target.value;
+                          return { ...prev, [venue.id]: next };
+                        })
+                      }
+                    />
+                  ))}
+                  <Button size="sm" variant="outline" onClick={() => void saveVenuePhotos(venue.id)}>
+                    Zapisz zdjęcia
+                  </Button>
                 </div>
-              </Link>
-            ))
+              );
+            })
           )}
         </div>
       </AdminCard>

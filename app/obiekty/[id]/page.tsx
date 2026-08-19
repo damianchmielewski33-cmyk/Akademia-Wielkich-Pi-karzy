@@ -2,13 +2,39 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getServerSession } from "@/lib/auth";
 import { getDb } from "@/lib/db";
-import { getVenueWithPitches } from "@/lib/booking";
+import { WEEKDAY_LABELS_PL, getVenueWithPitches, type PitchPublic } from "@/lib/booking";
 import { BookingFlowClient } from "@/components/booking-flow-client";
+import { VenueGallery } from "@/components/venue-gallery";
+import { VenueMapEmbed } from "@/components/venue-map-embed";
 
 export const metadata: Metadata = {
   title: "Rezerwacja boiska",
   description: "Wybierz boisko, godzinę i opłać rezerwację online.",
 };
+
+function hoursSummary(hours: PitchPublic["opening_hours"]) {
+  if (hours.length === 0) return "Godziny wkrótce";
+  const first = hours[0]!;
+  const same = hours.every((h) => h.opens_at === first.opens_at && h.closes_at === first.closes_at);
+  if (same) return `Codziennie ${first.opens_at}–${first.closes_at}`;
+  return hours
+    .map((h) => `${WEEKDAY_LABELS_PL[h.weekday] ?? h.weekday}: ${h.opens_at}–${h.closes_at}`)
+    .join(" · ");
+}
+
+function priceSummary(pitch: PitchPublic) {
+  const lines = [`Od ${Number(pitch.base_price_pln).toFixed(0)} zł / slot`];
+  for (const rule of pitch.price_rules) {
+    const when = [
+      rule.weekday != null ? WEEKDAY_LABELS_PL[rule.weekday] : null,
+      rule.start_time && rule.end_time ? `${rule.start_time}–${rule.end_time}` : null,
+    ]
+      .filter(Boolean)
+      .join(" ");
+    lines.push(`${rule.label ?? "Cena specjalna"}${when ? ` (${when})` : ""}: ${Number(rule.price_pln).toFixed(0)} zł`);
+  }
+  return lines;
+}
 
 export default async function VenueDetailsPage({
   params,
@@ -25,15 +51,16 @@ export default async function VenueDetailsPage({
   const userName = session
     ? [session.firstName, session.lastName].filter(Boolean).join(" ").trim() || session.zawodnik
     : "";
-  const mapsQuery = encodeURIComponent(`${data.venue.address}, ${data.venue.city}`);
+  const photos = data.venue.photo_urls?.length
+    ? data.venue.photo_urls
+    : data.venue.photo_url
+      ? [data.venue.photo_url]
+      : [];
 
   return (
-    <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:py-12">
-      <section className="mb-8 overflow-hidden rounded-3xl bg-white shadow-sm dark:bg-zinc-950">
-        {data.venue.photo_url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={data.venue.photo_url} alt="" className="h-56 w-full object-cover sm:h-72" />
-        ) : null}
+    <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:py-10">
+      <section className="mb-6 overflow-hidden rounded-3xl bg-white shadow-sm dark:bg-zinc-950">
+        <VenueGallery photos={photos} name={data.venue.name} />
         <div className="p-6 sm:p-8">
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--mp-teal-dark)]">
             {data.venue.city}
@@ -48,14 +75,17 @@ export default async function VenueDetailsPage({
             {data.venue.address}
             {data.venue.phone ? ` · tel. ${data.venue.phone}` : ""}
           </p>
-          <a
-            href={`https://www.google.com/maps/search/?api=1&query=${mapsQuery}`}
-            target="_blank"
-            rel="noreferrer"
-            className="mt-3 inline-block text-sm font-semibold text-[var(--mp-teal-dark)] underline underline-offset-2"
-          >
-            Otwórz w Mapach Google
-          </a>
+          <div className="mt-5 flex flex-wrap gap-2">
+            {data.pitches.some((p) => p.indoor) ? (
+              <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-bold uppercase tracking-wide text-zinc-600">Kryte</span>
+            ) : null}
+            {data.pitches.some((p) => !p.indoor) ? (
+              <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-bold uppercase tracking-wide text-zinc-600">Otwarte</span>
+            ) : null}
+            {data.pitches.some((p) => p.lighting) ? (
+              <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-bold uppercase tracking-wide text-zinc-600">Oświetlenie</span>
+            ) : null}
+          </div>
         </div>
       </section>
 
@@ -73,6 +103,43 @@ export default async function VenueDetailsPage({
           initialTime={sp.time}
         />
       )}
+
+      <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
+        <section className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
+          <h2 className="text-lg font-black text-zinc-950 dark:text-white">Godziny i cennik</h2>
+          <div className="mt-4 space-y-4">
+            {data.pitches.length === 0 ? (
+              <p className="text-sm text-zinc-500">Brak aktywnych boisk.</p>
+            ) : (
+              data.pitches.map((pitch) => (
+                <article key={pitch.id} className="rounded-2xl border border-zinc-100 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900">
+                  <p className="font-semibold text-zinc-950 dark:text-white">{pitch.name}</p>
+                  <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-300">{hoursSummary(pitch.opening_hours)}</p>
+                  <ul className="mt-2 space-y-1 text-sm text-zinc-600 dark:text-zinc-300">
+                    {priceSummary(pitch).map((line) => (
+                      <li key={line}>{line}</li>
+                    ))}
+                  </ul>
+                </article>
+              ))
+            )}
+          </div>
+          {data.upcoming_blocks.length > 0 ? (
+            <div className="mt-5">
+              <h3 className="text-sm font-bold uppercase tracking-[0.12em] text-zinc-500">Nadchodzące blokady</h3>
+              <ul className="mt-2 space-y-1 text-sm text-zinc-600 dark:text-zinc-300">
+                {data.upcoming_blocks.map((block) => (
+                  <li key={`${block.pitch_id}-${block.block_date}-${block.start_time}`}>
+                    {block.block_date} {block.start_time}–{block.end_time} · {block.pitch_name}
+                    {block.reason ? ` (${block.reason})` : ""}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+        </section>
+        <VenueMapEmbed address={data.venue.address} city={data.venue.city} />
+      </div>
     </main>
   );
 }

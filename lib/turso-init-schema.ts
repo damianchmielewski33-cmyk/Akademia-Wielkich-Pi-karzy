@@ -19,6 +19,7 @@ async function pragmaColumnNames(
     | "wallet_transactions"
     | "wallet_deposit_requests"
     | "hotpay_payments"
+    | "venues"
 ): Promise<string[]> {
   const rs = await client.execute(`PRAGMA table_info(${table})`);
   let nameIdx = rs.columns.indexOf("name");
@@ -703,6 +704,13 @@ export async function initLibsqlSchema(client: Client) {
   `);
 
   await client.executeMultiple(BOOKING_SCHEMA_SQL);
+  const venueCols = await pragmaColumnNames(client, "venues");
+  await addColumnIfMissing(
+    client,
+    venueCols,
+    "owner_user_id",
+    "ALTER TABLE venues ADD COLUMN owner_user_id INTEGER"
+  );
 
   const lineupSqlRs = await client.execute(
     `SELECT sql FROM sqlite_master WHERE type='table' AND name='match_lineup_slots'`

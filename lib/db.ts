@@ -751,6 +751,10 @@ function initSchemaSync(db: Database.Database) {
   `);
 
   db.exec(BOOKING_SCHEMA_SQL);
+  const venueCols = db.prepare("PRAGMA table_info(venues)").all() as { name: string }[];
+  if (venueCols.length > 0 && !venueCols.some((c) => c.name === "owner_user_id")) {
+    db.exec("ALTER TABLE venues ADD COLUMN owner_user_id INTEGER");
+  }
 
   db.exec(`
     CREATE TABLE IF NOT EXISTS match_transport_messages (

@@ -8,6 +8,7 @@ import { usePathname } from "next/navigation";
 import {
   Activity,
   BookOpen,
+  Building2,
   CalendarDays,
   ChevronDown,
   ClipboardCheck,
@@ -22,6 +23,7 @@ import {
   Moon,
   MapPin,
   Shield,
+  Store,
   Sun,
   Trophy,
   UserPlus,
@@ -49,6 +51,7 @@ type Props = {
   children: ReactNode;
   isLoggedIn: boolean;
   isAdmin: boolean;
+  isVenuePartner?: boolean;
   account?: {
     firstName: string;
     lastName: string;
@@ -94,6 +97,7 @@ export function SiteShell({
   children,
   isLoggedIn,
   isAdmin,
+  isVenuePartner = false,
   account = null,
   adminUnreadMessages = 0,
   siteName = SITE_NAME,
@@ -137,6 +141,8 @@ export function SiteShell({
     { href: "/obiekty", label: "Znajdź boisko", visible: true, icon: MapPin },
     { href: "/terminarz", label: "Terminarz akademii", visible: true, icon: CalendarDays },
     { href: "/rezerwacje", label: "Moje rezerwacje", visible: isLoggedIn, icon: ClipboardCheck },
+    { href: "/dla-obiektow", label: "Dla obiektów", visible: !isVenuePartner, icon: Store },
+    { href: "/partner", label: "Mój obiekt", visible: isVenuePartner, icon: Building2 },
   ];
 
   const academyNav: NavItem[] = [
@@ -493,6 +499,8 @@ export function SiteShell({
             <div className="mt-4 flex flex-col gap-2 text-sm text-zinc-300">
               <Link href="/obiekty" className="hover:text-white">Znajdź boisko</Link>
               {isLoggedIn ? <Link href="/rezerwacje" className="hover:text-white">Moje rezerwacje</Link> : null}
+              {isVenuePartner ? <Link href="/partner" className="hover:text-white">Mój obiekt</Link> : null}
+              <Link href="/dla-obiektow" className="hover:text-white">Dla obiektów</Link>
               <Link href="/terminarz" className="hover:text-white">Terminarz akademii</Link>
               <Link href="/rankingi" className="hover:text-white">Rankingi</Link>
             </div>

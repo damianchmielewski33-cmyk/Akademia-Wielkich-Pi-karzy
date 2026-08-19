@@ -6,10 +6,14 @@ import { afterEach, describe, expect, it } from "vitest";
 import type { AppDb } from "@/lib/db";
 import {
   BOOKING_SCHEMA_SQL,
+  cancelUserBooking,
   confirmBookingPayment,
   createBookingHold,
+  describeUserCancel,
   getAvailabilitySlots,
+  getVenueWithPitches,
   listVenueCards,
+  replaceVenuePhotos,
 } from "@/lib/booking";
 
 function createTestDb(): { db: AppDb; sqlite: Database.Database; dbPath: string } {
@@ -183,5 +187,79 @@ describe("booking availability", () => {
 
     const atNoon = await listVenueCards(db, { date: "2026-08-17", time: "12:00" });
     expect(atNoon).toEqual([]);
+  });
+
+  it("stores up to three venue photos and exposes hours on the venue page", async () => {
+    const { db, sqlite, dbPath } = createTestDb();
+    dbs.push({ sqlite, dbPath });
+    seedPitch(sqlite);
+
+    await replaceVenuePhotos(db, 1, [
+      "https://example.com/a.jpg",
+      "https://example.com/b.jpg",
+      "https://example.com/c.jpg",
+    ]);
+    const cards = await listVenueCards(db);
+    expect(cards[0]?.photo_urls).toEqual([
+      "https://example.com/a.jpg",
+      "https://example.com/b.jpg",
+      "https://example.com/c.jpg",
+    ]);
+
+    const details = await getVenueWithPitches(db, "hala-testowa");
+    expect(details?.venue.photo_urls).toHaveLength(3);
+    expect(details?.pitches[0]?.opening_hours.some((h) => h.weekday === 1 && h.opens_at === "18:00")).toBe(true);
+  });
+
+  it("lets the player cancel pending holds and confirmed bookings until 24h before start", async () => {
+    const { db, sqlite, dbPath } = createTestDb();
+    dbs.push({ sqlite, dbPath });
+    seedPitch(sqlite);
+
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const ymd = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    const soon = new Date();
+    soon.setHours(18, 0, 0, 0);
+    const later = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000);
+    later.setHours(18, 0, 0, 0);
+
+    sqlite
+      .prepare(
+        `INSERT INTO bookings (user_id, pitch_id, booking_date, start_time, end_time, amount_pln, status, contact_name, contact_phone)
+         VALUES (1, 1, ?, '18:00', '19:00', 200, 'pending', 'Jan Kowalski', '500600700')`
+      )
+      .run(ymd(soon));
+    sqlite
+      .prepare(
+        `INSERT INTO bookings (user_id, pitch_id, booking_date, start_time, end_time, amount_pln, status, contact_name, contact_phone)
+         VALUES (1, 1, ?, '18:00', '19:00', 200, 'confirmed', 'Jan Kowalski', '500600700')`
+      )
+      .run(ymd(soon));
+    sqlite
+      .prepare(
+        `INSERT INTO bookings (user_id, pitch_id, booking_date, start_time, end_time, amount_pln, status, contact_name, contact_phone)
+         VALUES (1, 1, ?, '18:00', '19:00', 200, 'confirmed', 'Jan Kowalski', '500600700')`
+      )
+      .run(ymd(later));
+
+    const pendingId = (sqlite.prepare("SELECT id FROM bookings WHERE status = 'pending'").get() as { id: number }).id;
+    const nearId = (
+      sqlite.prepare("SELECT id FROM bookings WHERE status = 'confirmed' AND booking_date = ?").get(ymd(soon)) as { id: number }
+    ).id;
+    const farId = (
+      sqlite.prepare("SELECT id FROM bookings WHERE status = 'confirmed' AND booking_date = ?").get(ymd(later)) as { id: number }
+    ).id;
+
+    expect((await cancelUserBooking(db, { bookingId: pendingId, userId: 1 })).ok).toBe(true);
+    expect(describeUserCancel({ status: "confirmed", booking_date: ymd(soon), start_time: "18:00" }).can_cancel).toBe(
+      Date.now() <= new Date(`${ymd(soon)}T18:00:00`).getTime() - 24 * 60 * 60 * 1000
+    );
+    const nearCancel = await cancelUserBooking(db, { bookingId: nearId, userId: 1 });
+    if (Date.now() > new Date(`${ymd(soon)}T18:00:00`).getTime() - 24 * 60 * 60 * 1000) {
+      expect(nearCancel.ok).toBe(false);
+    } else {
+      expect(nearCancel.ok).toBe(true);
+    }
+    expect((await cancelUserBooking(db, { bookingId: farId, userId: 1 })).ok).toBe(true);
   });
 });

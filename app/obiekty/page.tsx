@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { listVenueCards } from "@/lib/booking";
 import { getDb } from "@/lib/db";
 import { MarketplaceSearchForm } from "@/components/marketplace-search-form";
@@ -37,11 +38,33 @@ export default async function VenuesPage({
           Rezerwacja boisk
         </p>
         <h1 className="mt-2 text-3xl font-black tracking-tight text-zinc-950 sm:text-5xl dark:text-white">
-          Wybierz obiekt i zarezerwuj wolny termin.
+          {sp.city ? `Boiska w mieście ${sp.city}` : "Znajdź wolne boisko"}
         </h1>
         <p className="mt-3 max-w-2xl text-sm text-zinc-500 sm:text-base">
-          Filtruj po mieście, dacie, godzinie i cenie, potem kliknij kartę obiektu i zarezerwuj slot.
+          Jak na rynku: miasto, dzień, godzina, potem karta obiektu i slot wolny/zajęty.
         </p>
+        <div className="mt-4 flex flex-wrap gap-2">
+          {[
+            { href: "/obiekty", label: "Wszystkie", active: !sp.city && sp.indoor !== "1" && sp.indoor !== "0" },
+            { href: "/obiekty?city=Warszawa", label: "Warszawa", active: sp.city === "Warszawa" },
+            { href: "/obiekty?city=Kraków", label: "Kraków", active: sp.city === "Kraków" },
+            { href: "/obiekty?city=Wrocław", label: "Wrocław", active: sp.city === "Wrocław" },
+            { href: "/obiekty?indoor=1", label: "Hale", active: sp.indoor === "1" },
+            { href: "/obiekty?indoor=0", label: "Otwarte", active: sp.indoor === "0" },
+          ].map((chip) => (
+            <Link
+              key={chip.href}
+              href={chip.href}
+              className={
+                chip.active
+                  ? "rounded-full border border-[var(--mp-teal)] bg-[var(--mp-teal)] px-3 py-1.5 text-sm font-semibold text-white"
+                  : "rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-sm font-semibold text-zinc-700 hover:border-[var(--mp-teal)] hover:text-[var(--mp-teal-dark)]"
+              }
+            >
+              {chip.label}
+            </Link>
+          ))}
+        </div>
         <div className="mt-6">
           <MarketplaceSearchForm
             variant="page"
@@ -58,10 +81,13 @@ export default async function VenuesPage({
         </div>
       </section>
 
-      <section className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+      <p className="mt-6 text-sm font-semibold text-zinc-500">
+        {venues.length === 1 ? "1 obiekt" : `${venues.length} obiektów`}
+      </p>
+      <section className="mt-4 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {venues.length === 0 ? (
           <div className="rounded-3xl border border-dashed border-zinc-300 bg-white p-8 text-center text-zinc-600 sm:col-span-2 lg:col-span-3 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-300">
-            Brak obiektów dla wybranych filtrów. Dodaj obiekt w panelu admina albo zmień wyszukiwanie.
+            Brak obiektów dla wybranych filtrów. Zmień miasto albo godzinę.
           </div>
         ) : (
           venues.map((venue) => (

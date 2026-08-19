@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { toast } from "@/lib/app-toast";
 import { useHotpayPaymentReturn } from "@/hooks/use-hotpay-payment-return";
 import type { BookingRow } from "@/lib/booking";
+import { BOOKING_FREE_CANCEL_HOURS, formatPlDateTime } from "@/lib/booking";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
@@ -21,6 +22,7 @@ export function MyBookingsClient() {
   const [bookings, setBookings] = useState<BookingRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<number | null>(null);
+  const [cancellingId, setCancellingId] = useState<number | null>(null);
   const highlighted = Number(searchParams.get("booking") ?? 0);
 
   function load() {
@@ -51,6 +53,22 @@ export function MyBookingsClient() {
       window.location.href = data.url;
     } finally {
       setBusyId(null);
+    }
+  }
+
+  async function cancel(id: number) {
+    setCancellingId(id);
+    try {
+      const res = await fetch(`/api/rezerwacje/${id}/cancel`, { method: "POST" });
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) {
+        toast.error(data.error ?? "Nie udało się anulować rezerwacji");
+        return;
+      }
+      toast.success("Rezerwacja anulowana. Slot wrócił do grafiku.");
+      load();
+    } finally {
+      setCancellingId(null);
     }
   }
 
@@ -91,12 +109,30 @@ export function MyBookingsClient() {
                 <p className="text-sm text-zinc-600 dark:text-zinc-300">
                   Kwota: {Number(booking.amount_pln).toFixed(2)} zł
                 </p>
+                {booking.status === "pending" || booking.status === "confirmed" ? (
+                  <p className="mt-2 text-sm text-zinc-500">
+                    {booking.can_cancel
+                      ? `Możesz anulować do ${booking.cancel_until ? formatPlDateTime(booking.cancel_until) : `${BOOKING_FREE_CANCEL_HOURS} godz. przed startem`}.`
+                      : `Termin wycofania minął (${BOOKING_FREE_CANCEL_HOURS} godz. przed startem). W sprawie zmian skontaktuj się z organizatorem.`}
+                  </p>
+                ) : null}
               </div>
-              {booking.status === "pending" ? (
-                <Button onClick={() => void pay(booking.id)} disabled={busyId === booking.id}>
-                  {busyId === booking.id ? "Przekierowanie..." : "Opłać"}
-                </Button>
-              ) : null}
+              <div className="flex flex-col gap-2">
+                {booking.status === "pending" ? (
+                  <Button onClick={() => void pay(booking.id)} disabled={busyId === booking.id}>
+                    {busyId === booking.id ? "Przekierowanie..." : "Opłać"}
+                  </Button>
+                ) : null}
+                {booking.can_cancel ? (
+                  <Button
+                    variant="outline"
+                    onClick={() => void cancel(booking.id)}
+                    disabled={cancellingId === booking.id}
+                  >
+                    {cancellingId === booking.id ? "Anulowanie..." : "Anuluj rezerwację"}
+                  </Button>
+                ) : null}
+              </div>
             </div>
           </article>
         ))
