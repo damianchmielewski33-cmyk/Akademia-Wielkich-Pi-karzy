@@ -127,7 +127,6 @@ export const BOOKING_SCHEMA_SQL = `
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
   CREATE INDEX IF NOT EXISTS idx_venues_city_published ON venues(city, published);
-  CREATE INDEX IF NOT EXISTS idx_venues_owner ON venues(owner_user_id);
 
   CREATE TABLE IF NOT EXISTS venue_partner_invites (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -296,12 +295,17 @@ function overlaps(aStart: string, aEnd: string, bStart: string, bEnd: string): b
   return aStart < bEnd && aEnd > bStart;
 }
 
+/** Indeks po ALTER — nie może być w CREATE TABLE IF NOT EXISTS, bo stara tabela `venues` nie ma jeszcze kolumny. */
+export const VENUES_OWNER_INDEX_SQL =
+  "CREATE INDEX IF NOT EXISTS idx_venues_owner ON venues(owner_user_id)";
+
 export async function ensureBookingSchema(db: AppDb): Promise<void> {
   await db.exec(BOOKING_SCHEMA_SQL);
   const cols = await db.prepare("PRAGMA table_info(venues)").all<{ name: string }>();
   if (cols.length > 0 && !cols.some((c) => c.name === "owner_user_id")) {
     await db.exec("ALTER TABLE venues ADD COLUMN owner_user_id INTEGER");
   }
+  await db.exec(VENUES_OWNER_INDEX_SQL);
 }
 
 export async function expireStaleBookings(db: AppDb): Promise<void> {

@@ -3,7 +3,7 @@ import { isDuplicateColumnError, migrateAppSettingsColumnsLibsql } from "@/lib/a
 import { migrateRealmSchemaLibsql } from "@/lib/realm-migration";
 import { CAPTAIN_LOTTERY_CREATE_SQL, migrateCaptainLotterySchemaLibsql } from "@/lib/captain-lottery-schema";
 import { migrateAdImpressionsSchemaLibsql } from "@/lib/ad-impressions-schema";
-import { BOOKING_SCHEMA_SQL } from "@/lib/booking";
+import { BOOKING_SCHEMA_SQL, VENUES_OWNER_INDEX_SQL } from "@/lib/booking";
 
 async function pragmaColumnNames(
   client: Client,
@@ -703,7 +703,20 @@ export async function initLibsqlSchema(client: Client) {
     );
   `);
 
-  await client.executeMultiple(BOOKING_SCHEMA_SQL);
+  try {
+    await client.executeMultiple(BOOKING_SCHEMA_SQL);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (!/owner_user_id/i.test(msg)) throw err;
+    const existing = await pragmaColumnNames(client, "venues");
+    await addColumnIfMissing(
+      client,
+      existing,
+      "owner_user_id",
+      "ALTER TABLE venues ADD COLUMN owner_user_id INTEGER"
+    );
+    await client.executeMultiple(BOOKING_SCHEMA_SQL);
+  }
   const venueCols = await pragmaColumnNames(client, "venues");
   await addColumnIfMissing(
     client,
@@ -711,6 +724,7 @@ export async function initLibsqlSchema(client: Client) {
     "owner_user_id",
     "ALTER TABLE venues ADD COLUMN owner_user_id INTEGER"
   );
+  await client.execute(VENUES_OWNER_INDEX_SQL);
 
   const lineupSqlRs = await client.execute(
     `SELECT sql FROM sqlite_master WHERE type='table' AND name='match_lineup_slots'`

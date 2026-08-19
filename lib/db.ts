@@ -9,7 +9,7 @@ import { migrateRealmSchemaSqlite } from "@/lib/realm-migration";
 import { CAPTAIN_LOTTERY_CREATE_SQL, migrateCaptainLotterySchemaSqlite } from "@/lib/captain-lottery-schema";
 import { migrateAdImpressionsSchemaSqlite } from "@/lib/ad-impressions-schema";
 import { withTransientNetworkRetries } from "@/lib/transient-network-retry";
-import { BOOKING_SCHEMA_SQL } from "@/lib/booking";
+import { BOOKING_SCHEMA_SQL, VENUES_OWNER_INDEX_SQL } from "@/lib/booking";
 
 /** Lokalny plik SQLite (dev) lub Turso (gdy TURSO_DATABASE_URL). */
 export type AppDb = {
@@ -755,6 +755,7 @@ function initSchemaSync(db: Database.Database) {
   if (venueCols.length > 0 && !venueCols.some((c) => c.name === "owner_user_id")) {
     db.exec("ALTER TABLE venues ADD COLUMN owner_user_id INTEGER");
   }
+  db.exec(VENUES_OWNER_INDEX_SQL);
 
   db.exec(`
     CREATE TABLE IF NOT EXISTS match_transport_messages (

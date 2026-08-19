@@ -10,6 +10,7 @@ import {
   confirmBookingPayment,
   createBookingHold,
   describeUserCancel,
+  ensureBookingSchema,
   getAvailabilitySlots,
   getVenueWithPitches,
   listVenueCards,
@@ -261,5 +262,63 @@ describe("booking availability", () => {
       expect(nearCancel.ok).toBe(true);
     }
     expect((await cancelUserBooking(db, { bookingId: farId, userId: 1 })).ok).toBe(true);
+  });
+});
+
+describe("booking schema migration", () => {
+  it("adds owner_user_id to an existing venues table", async () => {
+    const dbPath = path.join(os.tmpdir(), `awp-booking-migrate-${Date.now()}-${Math.random()}.sqlite`);
+    const sqlite = new Database(dbPath);
+    sqlite.exec(`
+      CREATE TABLE users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        first_name TEXT NOT NULL,
+        last_name TEXT NOT NULL,
+        player_alias TEXT UNIQUE NOT NULL
+      );
+      CREATE TABLE venues (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        slug TEXT NOT NULL UNIQUE,
+        city TEXT NOT NULL,
+        address TEXT NOT NULL,
+        published INTEGER NOT NULL DEFAULT 1
+      );
+    `);
+    const db: AppDb = {
+      prepare(sql: string) {
+        const stmt = sqlite.prepare(sql);
+        return {
+          run(...params: unknown[]) {
+            const r = stmt.run(...(params as never[]));
+            return Promise.resolve({
+              lastInsertRowid: BigInt(r.lastInsertRowid ?? 0),
+              changes: r.changes ?? 0,
+            });
+          },
+          get<T = unknown>(...params: unknown[]) {
+            return Promise.resolve(stmt.get(...(params as never[])) as T | undefined);
+          },
+          all<T = unknown>(...params: unknown[]) {
+            return Promise.resolve(stmt.all(...(params as never[])) as T[]);
+          },
+        };
+      },
+      exec(sql: string) {
+        sqlite.exec(sql);
+        return Promise.resolve();
+      },
+      async transaction<T>(fn: (tx: AppDb) => Promise<T>): Promise<T> {
+        return fn(db);
+      },
+    };
+
+    await ensureBookingSchema(db);
+    const cols = sqlite.prepare("PRAGMA table_info(venues)").all() as { name: string }[];
+    expect(cols.some((c) => c.name === "owner_user_id")).toBe(true);
+    sqlite.prepare("SELECT owner_user_id FROM venues").all();
+
+    sqlite.close();
+    fs.rmSync(dbPath, { force: true });
   });
 });
