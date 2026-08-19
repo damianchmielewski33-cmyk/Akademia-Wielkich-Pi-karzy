@@ -70,7 +70,7 @@ export default async function RankingiPage({ searchParams }: Props) {
           selectedSeasonId={season.id}
         />
       ) : (
-        <p className="mx-auto mt-4 max-w-md text-sm text-emerald-100/75">{season.name}</p>
+        <p className="mx-auto mt-4 max-w-md text-sm text-zinc-500">{season.name}</p>
       )}
 
       <div className="mt-10 text-left">

@@ -56,7 +56,7 @@ export function BookingFlowClient({ venue, pitches, isLoggedIn, userName, initia
         toast.error("Nie udało się wczytać dostępności");
       })
       .finally(() => setLoadingSlots(false));
-  }, [pitchId, date]);
+  }, [pitchId, date, initialTime]);
 
   async function bookAndPay() {
     if (!pitch || !selected) return;

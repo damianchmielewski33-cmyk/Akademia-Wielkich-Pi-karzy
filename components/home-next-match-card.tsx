@@ -92,7 +92,7 @@ export function HomeNextMatchCard({
     >
         <div className="mb-4 flex flex-col items-center gap-2 text-center">
           <span className={pitchLabelClass}>Kolejny termin</span>
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/15 ring-2 ring-white/30 backdrop-blur-[2px]">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-zinc-100 ring-2 ring-[var(--mp-teal)]/25 dark:bg-zinc-800">
             <SiteAssetImage
               asset="logo_crest"
               alt=""
@@ -105,7 +105,7 @@ export function HomeNextMatchCard({
           <h2 id="home-next-match-heading" className="text-xl font-bold tracking-tight drop-shadow-sm sm:text-[1.35rem]">
             Najbliższy mecz
           </h2>
-          {when.weekday ? <p className="text-sm font-medium capitalize text-emerald-100/90">{when.weekday}</p> : null}
+          {when.weekday ? <p className="text-sm font-medium capitalize text-zinc-500">{when.weekday}</p> : null}
         </div>
 
         <div className={cn(pitchPanelClass, "mx-auto max-w-md px-3.5 py-3.5")}>

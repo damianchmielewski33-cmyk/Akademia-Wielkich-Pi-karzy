@@ -304,7 +304,11 @@ export async function listVenueCards(db: AppDb, filters?: VenueListFilters): Pro
       time = null;
     }
   }
-  const dateForSlots = date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : time ? new Date().toISOString().slice(0, 10) : null;
+  const dateForSlots = date && /^\d{4}-\d{2}-\d{2}$/.test(date)
+    ? date
+    : time
+      ? `${new Date().getFullYear()}-${two(new Date().getMonth() + 1)}-${two(new Date().getDate())}`
+      : null;
   if (!dateForSlots) return venues;
 
   const withSlots: VenueCard[] = [];

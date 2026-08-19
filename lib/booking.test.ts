@@ -9,6 +9,7 @@ import {
   confirmBookingPayment,
   createBookingHold,
   getAvailabilitySlots,
+  listVenueCards,
 } from "@/lib/booking";
 
 function createTestDb(): { db: AppDb; sqlite: Database.Database; dbPath: string } {
@@ -170,5 +171,17 @@ describe("booking availability", () => {
     expect(sunday?.slots.find((s) => s.start_time === "18:00")?.amount_pln).toBe(280);
     expect(sunday?.slots.find((s) => s.start_time === "19:00")?.available).toBe(false);
     expect(sunday?.slots.find((s) => s.start_time === "20:00")?.available).toBe(true);
+  });
+
+  it("filters venues by available hour", async () => {
+    const { db, sqlite, dbPath } = createTestDb();
+    dbs.push({ sqlite, dbPath });
+    seedPitch(sqlite);
+
+    const atEighteen = await listVenueCards(db, { date: "2026-08-17", time: "18:00" });
+    expect(atEighteen.map((v) => v.slug)).toEqual(["hala-testowa"]);
+
+    const atNoon = await listVenueCards(db, { date: "2026-08-17", time: "12:00" });
+    expect(atNoon).toEqual([]);
   });
 });

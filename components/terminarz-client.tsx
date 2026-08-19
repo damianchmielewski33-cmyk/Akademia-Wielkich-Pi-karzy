@@ -1477,32 +1477,21 @@ export function TerminarzClient({
         />
 
         <div className="mx-auto max-w-4xl">
-          <div className="relative overflow-hidden rounded-2xl border-2 border-white/35 text-white shadow-lg shadow-emerald-950/20 ring-1 ring-emerald-950/15">
-            <div className="home-pitch-tile absolute inset-0" aria-hidden />
-            <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-white/40" aria-hidden />
-            <div
-              className="pointer-events-none absolute bottom-0 left-0 h-10 w-10 rounded-tr-full border-t-2 border-r-2 border-white/45"
-              aria-hidden
-            />
-            <div
-              className="pointer-events-none absolute bottom-0 right-0 h-10 w-10 rounded-tl-full border-t-2 border-l-2 border-white/45"
-              aria-hidden
-            />
-
+          <div className="relative overflow-hidden rounded-2xl border border-zinc-200 bg-white text-zinc-900 shadow-sm dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-50">
             <div className="relative flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
               <div className="flex flex-col gap-2.5">
-                <span className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--mundial-gold,#f5c518)]">
+                <span className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--mp-teal-dark)]">
                   Widok terminarza
                 </span>
-                <div className="inline-flex rounded-xl border border-white/25 bg-black/10 p-1 backdrop-blur-sm">
+                <div className="inline-flex rounded-xl border border-zinc-200 bg-zinc-50 p-1 dark:border-zinc-800 dark:bg-zinc-900">
                   <button
                     type="button"
                     onClick={() => setView("list")}
                     className={cn(
                       "inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-all",
                       view === "list"
-                        ? "bg-emerald-100 text-emerald-950 shadow-md shadow-emerald-950/20"
-                        : "text-white/90 hover:bg-white/10"
+                        ? "bg-[var(--mp-teal)] text-white shadow-sm"
+                        : "text-zinc-600 hover:bg-white dark:text-zinc-300 dark:hover:bg-zinc-800"
                     )}
                   >
                     <List className="h-4 w-4 shrink-0" aria-hidden />
@@ -1514,8 +1503,8 @@ export function TerminarzClient({
                     className={cn(
                       "inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-all",
                       view === "cal"
-                        ? "bg-emerald-100 text-emerald-950 shadow-md shadow-emerald-950/20"
-                        : "text-white/90 hover:bg-white/10"
+                        ? "bg-[var(--mp-teal)] text-white shadow-sm"
+                        : "text-zinc-600 hover:bg-white dark:text-zinc-300 dark:hover:bg-zinc-800"
                     )}
                   >
                     <CalendarDays className="h-4 w-4 shrink-0" aria-hidden />
@@ -1526,7 +1515,7 @@ export function TerminarzClient({
 
               {isAdmin && (
                 <div className="flex flex-col gap-1.5 sm:items-end">
-                  <span className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--mundial-gold,#f5c518)] sm:text-right">
+                  <span className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--mp-teal-dark)] sm:text-right">
                     Administrator
                   </span>
                   <Button

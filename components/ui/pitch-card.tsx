@@ -5,16 +5,16 @@ import { SiteSectionHero, PAGE_HERO_KICKER } from "@/components/site-section-her
 import { cn } from "@/lib/utils";
 
 export const pitchLabelClass =
-  "text-xs font-semibold uppercase tracking-[0.14em] text-[var(--mundial-gold,#f5c518)]";
+  "text-xs font-semibold uppercase tracking-[0.14em] text-[var(--mp-teal-dark)]";
 
-export const pitchPanelClass = "rounded-xl border border-white/25 bg-black/10 backdrop-blur-sm";
+export const pitchPanelClass = "rounded-xl border border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900";
 
 export const pitchSecondaryBtnClass =
-  "inline-flex w-full items-center justify-center gap-2 rounded-lg border border-white/25 bg-black/10 px-4 py-2.5 text-sm font-semibold text-white/95 backdrop-blur-sm transition-colors hover:bg-white/10 disabled:pointer-events-none disabled:opacity-50";
+  "inline-flex w-full items-center justify-center gap-2 rounded-lg border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-800 transition-colors hover:bg-zinc-50 disabled:pointer-events-none disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800";
 
 type PitchCardProps<T extends ElementType = "section"> = {
   as?: T;
-  variant?: "pitch" | "gold";
+  variant?: "marketplace" | "pitch" | "gold";
   showDecorations?: boolean;
   contentClassName?: string;
   children: ReactNode;
@@ -22,19 +22,21 @@ type PitchCardProps<T extends ElementType = "section"> = {
 
 export function PitchCard<T extends ElementType = "section">({
   as,
-  variant = "pitch",
-  showDecorations = true,
+  variant = "marketplace",
+  showDecorations,
   className,
   contentClassName,
   children,
   ...props
 }: PitchCardProps<T>) {
   const Comp = as ?? "section";
-  const bgClass = variant === "gold" ? "home-pitch-tile-gold" : "home-pitch-tile";
+  const stadium = variant === "pitch" || variant === "gold";
+  const bgClass = variant === "gold" ? "home-pitch-tile-gold" : variant === "pitch" ? "home-pitch-tile" : "";
+  const decorations = showDecorations ?? stadium;
 
   return (
     <Comp className={cn("pitch-card", bgClass, className)} {...props}>
-      {showDecorations ? <PitchCardDecorations /> : null}
+      {decorations ? <PitchCardDecorations /> : null}
       <div className={cn("relative", contentClassName)}>{children}</div>
     </Comp>
   );

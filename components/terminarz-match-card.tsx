@@ -9,7 +9,7 @@ import { MatchSignupCountsBlock } from "@/components/terminarz-match-counts";
 import { MatchLocationWeather } from "@/components/match-location-weather";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { PitchCardDecorations, pitchLabelClass, pitchPanelClass } from "@/components/ui/pitch-card";
+import { pitchLabelClass, pitchPanelClass } from "@/components/ui/pitch-card";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -53,27 +53,26 @@ export function TerminarzMatchCard({
     <article
       data-mecz-highlight={highlight ? m.id : undefined}
       className={cn(
-        "pitch-card home-pitch-tile group relative flex flex-col transition-shadow hover:shadow-xl",
+        "pitch-card group relative flex flex-col shadow-sm transition-shadow hover:shadow-md",
         cancelled && "opacity-90",
-        highlight && "ring-2 ring-[var(--mundial-gold,#f5c518)] ring-offset-2 ring-offset-transparent"
+        highlight && "ring-2 ring-[var(--mp-teal)] ring-offset-2 ring-offset-[var(--background)]"
       )}
     >
-      <PitchCardDecorations />
       <div className="relative px-4 py-3 sm:px-5">
         <span className={pitchLabelClass}>{cancelled ? "Anulowany" : past ? "Archiwum" : "Mecz"}</span>
         <div className="mt-2 flex flex-wrap items-start justify-between gap-2">
           <div className="flex items-center gap-3">
-            <div className="flex flex-col items-center rounded-xl bg-white/15 px-3 py-1.5 backdrop-blur-sm">
-              <Calendar className="h-4 w-4 text-[var(--mundial-gold,#f5c518)]" aria-hidden />
-              <span className="mt-0.5 text-sm font-bold tabular-nums text-white">{m.match_date.slice(5).replace("-", ".")}</span>
-              <span className="text-[10px] font-medium uppercase tracking-wide text-white/80">
+            <div className="flex flex-col items-center rounded-xl bg-zinc-100 px-3 py-1.5 dark:bg-zinc-800">
+              <Calendar className="h-4 w-4 text-[var(--mp-teal-dark)]" aria-hidden />
+              <span className="mt-0.5 text-sm font-bold tabular-nums text-zinc-950 dark:text-white">{m.match_date.slice(5).replace("-", ".")}</span>
+              <span className="text-[10px] font-medium uppercase tracking-wide text-zinc-500">
                 {m.match_date.slice(0, 4)}
               </span>
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4 text-[var(--mundial-gold,#f5c518)]" aria-hidden />
-                <span className="text-lg font-bold tabular-nums text-white">{m.match_time}</span>
+                <Clock className="h-4 w-4 text-[var(--mp-teal-dark)]" aria-hidden />
+                <span className="text-lg font-bold tabular-nums text-zinc-950 dark:text-white">{m.match_time}</span>
               </div>
               <div className="mt-1 flex flex-wrap gap-1.5">
                 {cancelled && (
@@ -92,7 +91,7 @@ export function TerminarzMatchCard({
               </div>
             </div>
           </div>
-          <div className="text-right text-white">
+          <div className="text-right text-zinc-950 dark:text-white">
             <MatchSignupCountsBlock
               matchId={m.id}
               signedUp={m.signed_up}
@@ -106,8 +105,8 @@ export function TerminarzMatchCard({
       </div>
 
       <div className={cn(pitchPanelClass, "relative mx-4 mb-4 flex flex-1 flex-col px-4 py-4 sm:mx-5 sm:px-5")}>
-        <div className="flex items-start gap-2 text-sm text-emerald-50/95">
-          <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[var(--mundial-gold,#f5c518)]" aria-hidden />
+        <div className="flex items-start gap-2 text-sm text-zinc-600 dark:text-zinc-300">
+          <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[var(--mp-teal-dark)]" aria-hidden />
           <div className="min-w-0">
             <p className="font-medium leading-snug">{m.location}</p>
             <a
@@ -121,7 +120,7 @@ export function TerminarzMatchCard({
           </div>
         </div>
 
-        <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-white/15">
+        <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800">
           <div
             className={cn(
               "h-full rounded-full transition-all",
