@@ -14,7 +14,7 @@ type Props = {
 export function PagePreloaderLayout({
   title,
   subtitle,
-  kicker = "Mundial 2026",
+  kicker = "Rezerwacja boisk",
   className,
   variant = "default",
   children,
@@ -24,7 +24,7 @@ export function PagePreloaderLayout({
   return (
     <div
       className={cn(
-        "flex flex-1 flex-col items-center justify-center murawa-bg",
+        "flex flex-1 flex-col items-center justify-center marketplace-bg",
         full ? "min-h-[100dvh] px-4 py-10 sm:px-6 sm:py-12" : "min-h-[50vh] px-4 py-14 sm:py-20",
         className
       )}

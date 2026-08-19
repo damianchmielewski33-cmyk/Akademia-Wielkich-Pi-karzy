@@ -8,7 +8,7 @@ import { getSiteUrl } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Start",
-  description: "Najbliższy mecz, zapisy, terminarz i społeczność akademii.",
+  description: "Rezerwuj boiska online i korzystaj z terminarza akademii.",
   openGraph: {
     url: getSiteUrl(),
   },
@@ -23,7 +23,7 @@ export default async function HomePage() {
   });
 
   return (
-    <Suspense fallback={<p className="p-8 text-center text-sm text-emerald-100/80">Ładowanie…</p>}>
+    <Suspense fallback={<p className="p-8 text-center text-sm text-zinc-500">Ładowanie…</p>}>
       <HomeClient {...props} />
     </Suspense>
   );

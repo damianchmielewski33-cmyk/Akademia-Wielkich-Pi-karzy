@@ -3,16 +3,20 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  /* Mundial 2026 ÔÇö kolory motywu */
+  /* Marka akademii — panel admina i motywy stadionowe */
   --mundial-navy: #1a2d5a;
   --mundial-purple: #3d2a6e;
   --mundial-teal: #00a651;
   --mundial-teal-dark: #008c44;
   --mundial-gold: #f5c518;
   --mundial-red: #e4002b;
-  /* Ja┼Ťniejsze t┼éo w trybie jasnym */
-  --background: #f4f6fb;
-  --foreground: #0f172a;
+  /* Marketplace (publiczna strona rezerwacji) */
+  --mp-teal: #00c9b1;
+  --mp-teal-dark: #00a394;
+  --mp-ink: #171717;
+  --mp-muted: #6b7280;
+  --background: #f4f5f7;
+  --foreground: #171717;
   color-scheme: light;
   --awp-field-bg: #ffffff;
   --awp-field-bg-dark: #18181b;
@@ -46,32 +50,79 @@
 @layer components {
   /* ========== AWP: wsp├│lne powierzchnie / obrysy / focus ========== */
   .awp-focus-ring {
-    @apply outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent;
+    @apply outline-none focus-visible:ring-2 focus-visible:ring-[var(--mp-teal)]/80 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent;
   }
 
-  /* Uniwersalna powierzchnia ÔÇ×karta na murawieÔÇŁ */
+  /* Uniwersalna powierzchnia karty — jasny marketplace */
   .pitch-card {
-    @apply relative overflow-hidden rounded-2xl border-2 border-white/35 text-white shadow-lg shadow-emerald-950/20 ring-1 ring-emerald-950/15;
+    @apply relative overflow-hidden rounded-2xl border border-zinc-200 bg-white text-zinc-900 shadow-sm dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-50;
   }
 
   .pitch-label {
-    @apply text-xs font-semibold uppercase tracking-[0.14em] text-[var(--mundial-gold,#f5c518)];
+    @apply text-xs font-semibold uppercase tracking-[0.14em] text-[var(--mp-teal-dark)];
   }
 
   .pitch-panel {
-    @apply rounded-xl border border-white/25 bg-black/10 backdrop-blur-sm;
+    @apply rounded-xl border border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900;
   }
 
   .pitch-muted {
-    @apply text-emerald-100/90;
+    @apply text-zinc-500 dark:text-zinc-400;
   }
 
   .pitch-heading {
-    @apply font-bold tracking-tight text-white drop-shadow-sm;
+    @apply font-bold tracking-tight text-zinc-950 dark:text-white;
   }
 
   .pitch-link {
-    @apply font-semibold text-white/80 underline decoration-white/30 underline-offset-2 hover:text-white;
+    @apply font-semibold text-[var(--mp-teal-dark)] underline decoration-[var(--mp-teal)]/40 underline-offset-2 hover:text-[var(--mp-teal)];
+  }
+
+  .home-pitch-tile.pitch-card,
+  .home-pitch-tile-gold.pitch-card {
+    @apply border-2 border-white/35 text-white shadow-lg shadow-emerald-950/20 ring-1 ring-emerald-950/15;
+  }
+
+  .home-pitch-tile .pitch-label,
+  .home-pitch-tile-gold .pitch-label {
+    @apply text-[var(--mundial-gold,#f5c518)];
+  }
+
+  .home-pitch-tile .pitch-heading,
+  .home-pitch-tile-gold .pitch-heading {
+    @apply text-white drop-shadow-sm;
+  }
+
+  .home-pitch-tile .pitch-muted,
+  .home-pitch-tile-gold .pitch-muted {
+    @apply text-emerald-100/90;
+  }
+
+  .home-pitch-tile .pitch-panel,
+  .home-pitch-tile-gold .pitch-panel {
+    @apply border-white/25 bg-black/10;
+  }
+
+  .home-pitch-tile .pitch-link,
+  .home-pitch-tile-gold .pitch-link {
+    @apply text-white/80 decoration-white/30 hover:text-white;
+  }
+
+  /* Jasne karty: stare klasy stadionowe nie giną na białym tle */
+  .pitch-card:not(.home-pitch-tile):not(.home-pitch-tile-gold) :where(.text-white):not([class*="bg-emerald"]):not([class*="bg-red"]):not([class*="bg-lime"]) {
+    color: #18181b;
+  }
+  .dark .pitch-card:not(.home-pitch-tile):not(.home-pitch-tile-gold) :where(.text-white):not([class*="bg-emerald"]):not([class*="bg-red"]):not([class*="bg-lime"]) {
+    color: #f8fafc;
+  }
+  .pitch-card:not(.home-pitch-tile):not(.home-pitch-tile-gold) :where([class*="text-emerald-100"], [class*="text-emerald-50"]) {
+    color: #52525b;
+  }
+  .dark .pitch-card:not(.home-pitch-tile):not(.home-pitch-tile-gold) :where([class*="text-emerald-100"], [class*="text-emerald-50"]) {
+    color: #a1a1aa;
+  }
+  .pitch-card:not(.home-pitch-tile):not(.home-pitch-tile-gold) :where(.text-emerald-400, .text-emerald-300) {
+    color: var(--mp-teal-dark);
   }
 
   .pitch-chip {
@@ -305,24 +356,10 @@
     opacity: 0.88;
   }
 
-  /* Wspólny nagłówek strony — spójny z nawigacją (Mundial) */
+  /* Wspólny nagłówek strony — jasny marketplace */
   .awp-section-hero {
-    @apply relative mx-auto w-full overflow-hidden rounded-2xl border px-4 py-6 text-white xs:rounded-3xl xs:px-5 xs:py-7 sm:px-8 sm:py-8;
-    border-color: color-mix(in srgb, var(--mundial-gold) 28%, transparent);
-    background:
-      radial-gradient(ellipse 90% 70% at 100% -10%, rgba(0, 166, 81, 0.22), transparent 55%),
-      radial-gradient(ellipse 70% 55% at -5% 110%, rgba(61, 42, 110, 0.55), transparent 50%),
-      linear-gradient(
-        128deg,
-        var(--mundial-navy) 0%,
-        #243563 38%,
-        var(--mundial-purple) 72%,
-        #152847 100%
-      );
-    box-shadow:
-      0 1px 0 rgba(255, 255, 255, 0.1) inset,
-      0 24px 64px -28px rgba(26, 45, 90, 0.65),
-      0 8px 24px -12px rgba(15, 23, 42, 0.35);
+    @apply relative mx-auto w-full overflow-hidden rounded-2xl border border-zinc-200 bg-white px-4 py-6 text-zinc-900 xs:rounded-3xl xs:px-5 xs:py-7 sm:px-8 sm:py-8 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-50;
+    box-shadow: 0 16px 40px -28px rgba(15, 23, 42, 0.28);
   }
 
   .awp-section-hero::before {
@@ -333,9 +370,9 @@
     background: linear-gradient(
       90deg,
       transparent,
-      var(--mundial-gold) 18%,
-      var(--mundial-teal) 50%,
-      var(--mundial-gold) 82%,
+      var(--mp-teal) 18%,
+      #0ea5e9 50%,
+      var(--mp-teal) 82%,
       transparent
     );
     opacity: 0.95;
@@ -348,11 +385,64 @@
     right: -15%;
     width: 55%;
     height: 120%;
-    background: radial-gradient(circle, rgba(245, 197, 24, 0.12) 0%, transparent 68%);
+    background: radial-gradient(circle, rgba(0, 201, 177, 0.12) 0%, transparent 68%);
     pointer-events: none;
   }
 
   .awp-section-hero__stripes {
+    display: none;
+  }
+
+  .awp-section-hero__inner {
+    @apply relative z-[1];
+  }
+
+  .awp-section-hero__crest {
+    @apply flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-zinc-50 ring-1 ring-zinc-200 sm:h-16 sm:w-16 dark:bg-zinc-900 dark:ring-zinc-700;
+  }
+
+  .awp-section-hero__kicker {
+    @apply text-[0.62rem] font-bold uppercase tracking-[0.22em] text-[var(--mp-teal-dark)];
+  }
+
+  .awp-section-hero__title {
+    @apply mt-2 font-sans text-[clamp(1.65rem,4.4vw,2.4rem)] font-black leading-[1.05] tracking-tight text-zinc-900 dark:text-white;
+  }
+
+  .awp-section-hero__subtitle {
+    @apply mt-3 max-w-2xl text-sm leading-relaxed text-zinc-600 sm:text-base dark:text-zinc-300;
+  }
+
+  .awp-section-hero__extra {
+    @apply mt-4 w-full;
+  }
+
+  .awp-section-hero__rule {
+    @apply relative z-[1] mx-auto mt-6 h-px w-full max-w-md rounded-full sm:mx-0;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(0, 201, 177, 0.2) 25%,
+      var(--mp-teal) 50%,
+      rgba(0, 201, 177, 0.2) 75%,
+      transparent
+    );
+  }
+
+  .awp-section-hero--stadium {
+    @apply border text-white;
+    border-color: color-mix(in srgb, var(--mundial-gold) 28%, transparent);
+    background:
+      radial-gradient(ellipse 90% 70% at 100% -10%, rgba(0, 166, 81, 0.22), transparent 55%),
+      radial-gradient(ellipse 70% 55% at -5% 110%, rgba(61, 42, 110, 0.55), transparent 50%),
+      linear-gradient(128deg, var(--mundial-navy) 0%, #243563 38%, var(--mundial-purple) 72%, #152847 100%);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.1) inset,
+      0 24px 64px -28px rgba(26, 45, 90, 0.65);
+  }
+
+  .awp-section-hero--stadium .awp-section-hero__stripes {
+    display: block;
     position: absolute;
     inset: 0;
     opacity: 0.07;
@@ -366,46 +456,21 @@
     pointer-events: none;
   }
 
-  .awp-section-hero__inner {
-    @apply relative z-[1];
+  .awp-section-hero--stadium .awp-section-hero__kicker {
+    @apply text-[var(--mundial-gold)];
   }
 
-  .awp-section-hero__crest {
-    @apply flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl sm:h-16 sm:w-16;
-    background: linear-gradient(145deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.06));
-    box-shadow:
-      0 0 0 1px rgba(245, 197, 24, 0.35),
-      0 8px 24px -8px rgba(0, 0, 0, 0.45),
-      inset 0 1px 0 rgba(255, 255, 255, 0.2);
-  }
-
-  .awp-section-hero__kicker {
-    @apply text-[0.62rem] font-bold uppercase tracking-[0.22em] text-[var(--mundial-gold)];
-  }
-
-  .awp-section-hero__title {
-    @apply mt-2 font-[family-name:var(--font-display)] text-[clamp(1.85rem,5vw,2.75rem)] font-semibold uppercase leading-[0.95] tracking-wide text-white;
+  .awp-section-hero--stadium .awp-section-hero__title {
+    @apply font-[family-name:var(--font-display)] uppercase tracking-wide text-white;
     text-shadow: 0 2px 16px rgba(0, 0, 0, 0.35);
   }
 
-  .awp-section-hero__subtitle {
-    @apply mt-3 max-w-2xl text-sm leading-relaxed text-white/85 sm:text-base;
+  .awp-section-hero--stadium .awp-section-hero__subtitle {
+    @apply text-white/85;
   }
 
-  .awp-section-hero__extra {
-    @apply mt-4 w-full;
-  }
-
-  .awp-section-hero__rule {
-    @apply relative z-[1] mx-auto mt-6 h-px w-full max-w-md rounded-full sm:mx-0;
-    background: linear-gradient(
-      90deg,
-      transparent,
-      rgba(245, 197, 24, 0.55) 25%,
-      rgba(0, 166, 81, 0.65) 50%,
-      rgba(245, 197, 24, 0.55) 75%,
-      transparent
-    );
+  .awp-section-hero--stadium .awp-section-hero__crest {
+    @apply bg-white/10 ring-[var(--mundial-gold)]/40;
   }
 
   .awp-section-hero--center .awp-section-hero__subtitle {
@@ -978,6 +1043,90 @@ html {
   @apply -mx-3 overflow-x-auto overscroll-x-contain px-3 [scrollbar-width:thin] xs:-mx-0 xs:px-0;
 }
 
+/* Publiczna strona: jasny marketplace, bez stadionu */
+.marketplace-bg {
+  background-color: var(--background);
+  background-image: none;
+}
+
+.dark .marketplace-bg {
+  background-color: #0c1020;
+}
+
+.mp-header {
+  background: #fff;
+  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.06), 0 8px 24px -18px rgba(15, 23, 42, 0.18);
+}
+
+.dark .mp-header {
+  background: #111827;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.mp-hero {
+  position: relative;
+  min-height: clamp(22rem, 58vw, 32rem);
+  background-color: #0b1c18;
+  background-image:
+    linear-gradient(180deg, rgba(8, 16, 24, 0.28) 0%, rgba(8, 16, 24, 0.62) 100%),
+    var(--awp-bg-stadium, url("/stadium-bg.svg"));
+  background-size: cover;
+  background-position: center;
+}
+
+.mp-search-pill {
+  display: grid;
+  gap: 0.5rem;
+  border-radius: 1.5rem;
+  background: #fff;
+  box-shadow: 0 18px 50px -24px rgba(15, 23, 42, 0.45);
+}
+
+@media (min-width: 768px) {
+  .mp-search-pill {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.4fr) auto;
+    align-items: stretch;
+    border-radius: 9999px;
+  }
+
+  .mp-search-pill > label,
+  .mp-search-pill > .mp-search-field {
+    border-right: 1px solid #e5e7eb;
+  }
+
+  .mp-search-pill > :last-child {
+    border-right: 0;
+  }
+}
+
+.mp-price {
+  color: var(--mp-teal-dark);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.mp-venue-card {
+  overflow: hidden;
+  border-radius: 1.25rem;
+  background: #fff;
+  box-shadow: 0 10px 30px -22px rgba(15, 23, 42, 0.35);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.mp-venue-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 18px 40px -24px rgba(15, 23, 42, 0.45);
+}
+
+.dark .mp-venue-card {
+  background: #111827;
+}
+
+.mp-footer {
+  background: #111827;
+  color: #d1d5db;
+}
+
 /* Tlo stadionu: panorama boiska + trybuny */
 .murawa-bg {
   background-color: #0b3d2e;
@@ -1026,7 +1175,6 @@ html {
 
 /* Kafelek strony g┼é├│wnej: pasy murawy + ÔÇ×linie kredoweÔÇŁ */
 .home-pitch-tile,
-.pitch-card:not(.home-pitch-tile-gold),
 .awp-surface,
 .awp-surface-strong,
 .awp-card-surface:not(.home-pitch-tile-gold) {
@@ -1450,25 +1598,19 @@ html {
 
 /* ========== Ujednolicone preloadery ========== */
 .awp-preloader-shell {
-  @apply relative overflow-hidden rounded-2xl border border-[var(--mundial-gold)]/30 px-6 py-7 text-center text-white shadow-lg sm:px-8 sm:py-8;
-  background: linear-gradient(
-    105deg,
-    var(--mundial-navy) 0%,
-    var(--mundial-purple) 48%,
-    var(--mundial-navy) 100%
-  );
+  @apply relative overflow-hidden rounded-2xl border border-zinc-200 bg-white px-6 py-7 text-center text-zinc-900 shadow-lg sm:px-8 sm:py-8 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-50;
 }
 
 .awp-preloader-shell__kicker {
-  @apply text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-[var(--mundial-gold)];
+  @apply text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-[var(--mp-teal-dark)];
 }
 
 .awp-preloader-shell__title {
-  @apply mt-2 text-2xl font-bold tracking-tight text-white drop-shadow-sm sm:text-3xl;
+  @apply mt-2 text-2xl font-bold tracking-tight text-zinc-950 sm:text-3xl dark:text-white;
 }
 
 .awp-preloader-shell__subtitle {
-  @apply mt-2 text-sm leading-relaxed text-emerald-100/90 sm:text-base;
+  @apply mt-2 text-sm leading-relaxed text-zinc-500 sm:text-base;
 }
 
 .awp-preloader-shell__body {

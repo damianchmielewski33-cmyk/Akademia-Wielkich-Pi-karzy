@@ -7,6 +7,8 @@ import {
   verifyNotificationHash,
 } from "@/lib/hotpay";
 import { applyPendingMatchCartAfterHotpay } from "@/lib/match-cart";
+import { cancelBookingPayment, confirmBookingPayment } from "@/lib/booking";
+import { notifyBookingConfirmed } from "@/lib/booking-notifications";
 
 export type HotpayPaymentRow = {
   id: number;
@@ -21,6 +23,7 @@ export type HotpayPaymentRow = {
   secure: string | null;
   deposit_request_id: number | null;
   cart_id: number | null;
+  booking_id: number | null;
   error_message: string | null;
   created_at: string;
   completed_at: string | null;
@@ -34,7 +37,7 @@ export async function getHotpayPaymentBySessionId(
   const row = (await db
     .prepare(
       `SELECT id, session_id, user_id, kind, amount_pln, gross_amount_pln, status, hotpay_payment_id, secure,
-              deposit_request_id, cart_id, error_message, created_at, completed_at,
+              deposit_request_id, cart_id, booking_id, error_message, created_at, completed_at,
               COALESCE(is_test, 0) AS is_test
        FROM hotpay_payments WHERE session_id = ?`
     )
@@ -57,6 +60,10 @@ export async function applyHotpaySuccessCredit(
   payment: HotpayPaymentRow,
   args: { hotpayPaymentId: string; secure: string }
 ): Promise<{ ok: true; alreadyApplied: boolean } | { ok: false; error: string }> {
+  if (payment.kind === "booking") {
+    return settleBookingAfterHotpay(db, payment, args);
+  }
+
   if (payment.status === "success" && payment.deposit_request_id != null) {
     await settleMatchCartAfterCredit(db, payment);
     return { ok: true, alreadyApplied: true };
@@ -193,6 +200,56 @@ export async function applyHotpaySuccessCredit(
   return { ok: true, alreadyApplied: false };
 }
 
+async function settleBookingAfterHotpay(
+  db: AppDb,
+  payment: HotpayPaymentRow,
+  args: { hotpayPaymentId: string; secure: string }
+): Promise<{ ok: true; alreadyApplied: boolean } | { ok: false; error: string }> {
+  if (payment.booking_id == null) return { ok: false, error: "BOOKING_NOT_LINKED" };
+  const amount = Math.round(Number(payment.amount_pln) * 100) / 100;
+  if (!Number.isFinite(amount) || amount <= 0) return { ok: false, error: "INVALID_AMOUNT" };
+
+  if (payment.status === "success") {
+    const confirmed = await confirmBookingPayment(db, {
+      bookingId: payment.booking_id,
+      sessionId: payment.session_id,
+    });
+    if (!confirmed.ok) return { ok: false, error: confirmed.error };
+    return { ok: true, alreadyApplied: true };
+  }
+
+  const claim = await db
+    .prepare(
+      `UPDATE hotpay_payments
+       SET status = 'success',
+           hotpay_payment_id = ?,
+           secure = ?,
+           error_message = NULL,
+           completed_at = datetime('now')
+       WHERE id = ? AND status IN ('pending', 'failure', 'cancelled')`
+    )
+    .run(args.hotpayPaymentId, args.secure, payment.id);
+  if (claim.changes === 0) {
+    const latest = await getHotpayPaymentBySessionId(db, payment.session_id);
+    if (latest?.kind === "booking" && latest.booking_id != null) {
+      await confirmBookingPayment(db, { bookingId: latest.booking_id, sessionId: latest.session_id });
+    }
+    return { ok: true, alreadyApplied: true };
+  }
+
+  const confirmed = await confirmBookingPayment(db, {
+    bookingId: payment.booking_id,
+    sessionId: payment.session_id,
+  });
+  if (!confirmed.ok) return { ok: false, error: confirmed.error };
+  try {
+    await notifyBookingConfirmed(payment.booking_id);
+  } catch (e) {
+    console.error("[hotpay] booking confirm notification failed", e);
+  }
+  return { ok: true, alreadyApplied: false };
+}
+
 /**
  * Po kredycie HotPay: koszyk meczowy schodzi z portfela jako zapłata za mecz.
  * Przy błędzie: retry + wpis w error_message / activity_log (admin może POST /confirm).
@@ -262,6 +319,16 @@ export async function markHotpayPaymentFailure(
        WHERE id = ? AND status = 'pending'`
     )
     .run(args.hotpayPaymentId ?? null, args.secure ?? null, args.errorMessage, paymentId);
+  const payment = (await db
+    .prepare("SELECT booking_id, session_id FROM hotpay_payments WHERE id = ?")
+    .get(paymentId)) as { booking_id: number | null; session_id: string } | undefined;
+  if (payment?.booking_id != null) {
+    await cancelBookingPayment(db, {
+      bookingId: payment.booking_id,
+      sessionId: payment.session_id,
+      status: "failure",
+    });
+  }
 }
 
 /** Oznacza pending jako cancelled po powrocie użytkownika bez potwierdzenia (np. anulowany BLIK). */
@@ -287,6 +354,13 @@ export async function markHotpayPaymentCancelledByUser(
        WHERE id = ? AND status = 'pending'`
     )
     .run("Anulowano lub brak potwierdzenia po powrocie z bramki HotPay", payment.id);
+  if (payment.kind === "booking" && payment.booking_id != null) {
+    await cancelBookingPayment(db, {
+      bookingId: payment.booking_id,
+      sessionId: payment.session_id,
+      status: "cancelled",
+    });
+  }
   const latest = await getHotpayPaymentBySessionId(db, payment.session_id);
   return { ok: true, status: latest?.status ?? "cancelled" };
 }

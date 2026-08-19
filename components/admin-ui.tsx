@@ -243,7 +243,7 @@ export function AdminShell({
   }
 
   return (
-    <div className="flex min-h-screen flex-col text-white lg:flex-row">
+    <div className="murawa-bg flex min-h-screen flex-col text-white lg:flex-row">
       <aside className="mundial-header relative z-30 shrink-0 border-b border-[var(--mundial-gold)]/30 shadow-lg lg:w-72 lg:border-b-0 lg:border-r">
         <div
           className="pointer-events-none absolute inset-0 opacity-[0.12]"
@@ -550,6 +550,7 @@ export function AdminToolbar({
         showCrest={false}
         size="compact"
         align="left"
+        variant="stadium"
         className="min-w-0 flex-1 lg:max-w-2xl"
       />
       {children ? (
@@ -604,7 +605,7 @@ export function AdminCard({
   }
 
   return (
-    <PitchCard id={id} className={cn(className)} contentClassName="p-5 sm:p-6">
+    <PitchCard id={id} variant="pitch" className={cn(className)} contentClassName="p-5 sm:p-6">
       {header}
       {children}
     </PitchCard>

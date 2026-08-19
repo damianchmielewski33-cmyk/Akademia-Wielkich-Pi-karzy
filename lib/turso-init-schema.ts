@@ -3,6 +3,7 @@ import { isDuplicateColumnError, migrateAppSettingsColumnsLibsql } from "@/lib/a
 import { migrateRealmSchemaLibsql } from "@/lib/realm-migration";
 import { CAPTAIN_LOTTERY_CREATE_SQL, migrateCaptainLotterySchemaLibsql } from "@/lib/captain-lottery-schema";
 import { migrateAdImpressionsSchemaLibsql } from "@/lib/ad-impressions-schema";
+import { BOOKING_SCHEMA_SQL } from "@/lib/booking";
 
 async function pragmaColumnNames(
   client: Client,
@@ -223,13 +224,14 @@ export async function initLibsqlSchema(client: Client) {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       session_id TEXT NOT NULL UNIQUE,
       user_id INTEGER NOT NULL,
-      kind TEXT NOT NULL CHECK (kind IN ('match','topup','match_cart')),
+      kind TEXT NOT NULL CHECK (kind IN ('match','topup','match_cart','booking')),
       amount_pln REAL NOT NULL,
       status TEXT NOT NULL CHECK (status IN ('pending','success','failure','cancelled')) DEFAULT 'pending',
       hotpay_payment_id TEXT,
       secure TEXT,
       deposit_request_id INTEGER,
       cart_id INTEGER,
+      booking_id INTEGER,
       error_message TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       completed_at TEXT,
@@ -614,6 +616,9 @@ export async function initLibsqlSchema(client: Client) {
   if (hotpayCols.length > 0 && !hotpayCols.includes("cart_id")) {
     await client.execute("ALTER TABLE hotpay_payments ADD COLUMN cart_id INTEGER");
   }
+  if (hotpayCols.length > 0 && !hotpayCols.includes("booking_id")) {
+    await client.execute("ALTER TABLE hotpay_payments ADD COLUMN booking_id INTEGER");
+  }
   if (hotpayCols.length > 0 && !hotpayCols.includes("gross_amount_pln")) {
     await client.execute("ALTER TABLE hotpay_payments ADD COLUMN gross_amount_pln REAL");
   }
@@ -628,30 +633,33 @@ export async function initLibsqlSchema(client: Client) {
   );
   if (hotpaySqlRs.rows.length > 0) {
     const hotpaySql = String((hotpaySqlRs.rows[0] as Record<string, unknown>).sql ?? "");
-    if (hotpaySql.includes("CHECK") && hotpaySql.includes("kind") && !hotpaySql.includes("'match_cart'")) {
+    if (hotpaySql.includes("CHECK") && hotpaySql.includes("kind") && !hotpaySql.includes("'booking'")) {
       await client.executeMultiple(`
         CREATE TABLE hotpay_payments_migration (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           session_id TEXT NOT NULL UNIQUE,
           user_id INTEGER NOT NULL,
-          kind TEXT NOT NULL CHECK (kind IN ('match','topup','match_cart')),
+          kind TEXT NOT NULL CHECK (kind IN ('match','topup','match_cart','booking')),
           amount_pln REAL NOT NULL,
           status TEXT NOT NULL CHECK (status IN ('pending','success','failure','cancelled')) DEFAULT 'pending',
           hotpay_payment_id TEXT,
           secure TEXT,
           deposit_request_id INTEGER,
           cart_id INTEGER,
+          booking_id INTEGER,
+          gross_amount_pln REAL,
           error_message TEXT,
           created_at TEXT NOT NULL DEFAULT (datetime('now')),
           completed_at TEXT,
+          is_test INTEGER NOT NULL DEFAULT 0,
           FOREIGN KEY (user_id) REFERENCES users(id),
           FOREIGN KEY (deposit_request_id) REFERENCES wallet_deposit_requests(id)
         );
         INSERT INTO hotpay_payments_migration
           (id, session_id, user_id, kind, amount_pln, status, hotpay_payment_id, secure,
-           deposit_request_id, cart_id, error_message, created_at, completed_at)
+           deposit_request_id, cart_id, booking_id, gross_amount_pln, error_message, created_at, completed_at, is_test)
         SELECT id, session_id, user_id, kind, amount_pln, status, hotpay_payment_id, secure,
-               deposit_request_id, cart_id, error_message, created_at, completed_at
+               deposit_request_id, cart_id, NULL, gross_amount_pln, error_message, created_at, completed_at, COALESCE(is_test, 0)
         FROM hotpay_payments;
         DROP TABLE hotpay_payments;
         ALTER TABLE hotpay_payments_migration RENAME TO hotpay_payments;
@@ -693,6 +701,8 @@ export async function initLibsqlSchema(client: Client) {
       FOREIGN KEY (beneficiary_user_id) REFERENCES users(id)
     );
   `);
+
+  await client.executeMultiple(BOOKING_SCHEMA_SQL);
 
   const lineupSqlRs = await client.execute(
     `SELECT sql FROM sqlite_master WHERE type='table' AND name='match_lineup_slots'`

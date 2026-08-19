@@ -12,6 +12,7 @@ type Props = {
   showCrest?: boolean;
   align?: "left" | "center";
   size?: "default" | "compact";
+  variant?: "marketplace" | "stadium";
   titleId?: string;
   children?: ReactNode;
 };
@@ -24,6 +25,7 @@ export function SiteSectionHero({
   showCrest = true,
   align = "left",
   size = "default",
+  variant = "marketplace",
   titleId,
   children,
 }: Props) {
@@ -33,6 +35,7 @@ export function SiteSectionHero({
     <header
       className={cn(
         "awp-section-hero",
+        variant === "stadium" && "awp-section-hero--stadium",
         size === "compact" && "awp-section-hero--compact",
         centered && "awp-section-hero--center",
         className

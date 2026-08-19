@@ -84,6 +84,7 @@ import { AdminFilterChips, AdminRowActions } from "@/components/admin-row-action
 import { AdminGalleryTab } from "@/components/admin-gallery-tab";
 import { AdminMessagesTab } from "@/components/admin-messages-tab";
 import { AdminRankingSeasonsTab } from "@/components/admin-ranking-seasons-tab";
+import { AdminBookingsTab } from "@/components/admin-bookings-tab";
 import { MatchLineupAdmin } from "@/components/match-lineup-admin";
 import {
   AdminCommandSearch,
@@ -298,6 +299,7 @@ const navGroupDefs = [
     label: "Mecze i rywalizacja",
     items: [
       { id: "matches", label: "Mecze", icon: Calendar },
+      { id: "bookings", label: "Rezerwacje boisk", icon: CreditCard },
       { id: "lineups", label: "Składy na mecz", icon: LayoutGrid },
       { id: "stats", label: "Statystyki", icon: Table2 },
       { id: "rankings", label: "Rankingi", icon: Trophy },
@@ -1207,6 +1209,7 @@ export function AdminPanel() {
     if (
       tab === "lineups" ||
       tab === "wallets" ||
+      tab === "bookings" ||
       tab === "operator-payments" ||
       tab === "settings" ||
       tab === "gallery" ||
@@ -1258,6 +1261,7 @@ export function AdminPanel() {
   const shellLoading =
     tab === "lineups" ||
     tab === "wallets" ||
+    tab === "bookings" ||
     tab === "operator-payments" ||
     tab === "settings" ||
     tab === "gallery" ||
@@ -1326,6 +1330,7 @@ export function AdminPanel() {
             ? [{ id: "messages", label: "Wiadomości", badgeCount: unreadMessages }]
             : []),
           ...(canAccessTab(adminSections, "matches") ? [{ id: "matches", label: "Mecze" }] : []),
+          ...(canAccessTab(adminSections, "bookings") ? [{ id: "bookings", label: "Rezerwacje" }] : []),
           ...(canAccessTab(adminSections, "settings") ? [{ id: "settings", label: "Ustawienia" }] : []),
         ]}
       >
@@ -1348,6 +1353,7 @@ export function AdminPanel() {
           />
         )}
         {tab === "messages" && <AdminMessagesTab onUnreadChange={loadSummaryOnly} />}
+        {tab === "bookings" && <AdminBookingsTab />}
         {tab === "wallets" && <AdminWalletsSaldoSection />}
         {tab === "operator-payments" && <AdminOperatorPaymentsTab />}
         {tab === "matches" && (

@@ -50,7 +50,7 @@ export function AdminHeaderMessagesButton({ initialUnreadCount = 0, compact = fa
         type="button"
         onClick={() => setOpen(true)}
         className={cn(
-          "awp-focus-ring relative inline-flex touch-manipulation items-center justify-center rounded-xl border border-white/20 bg-white/10 text-white shadow-sm transition-colors hover:bg-white/15",
+          "awp-focus-ring relative inline-flex touch-manipulation items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-700 shadow-sm transition-colors hover:border-zinc-300 hover:text-zinc-950 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200",
           compact ? "h-9 w-9 xs:h-10 xs:w-10" : "h-10 w-10"
         )}
         aria-label={unread > 0 ? `Wiadomości (${unread} nieprzeczytanych)` : "Wiadomości"}
@@ -61,7 +61,7 @@ export function AdminHeaderMessagesButton({ initialUnreadCount = 0, compact = fa
         <MessageCircle className={cn(compact ? "h-4 w-4 xs:h-5 xs:w-5" : "h-5 w-5")} aria-hidden />
         {unread > 0 ? (
           <span
-            className="absolute right-0 top-0 inline-flex min-h-[1rem] min-w-[1rem] translate-x-0.5 -translate-y-0.5 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold tabular-nums leading-none text-white ring-2 ring-emerald-900"
+            className="absolute right-0 top-0 inline-flex min-h-[1rem] min-w-[1rem] translate-x-0.5 -translate-y-0.5 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold tabular-nums leading-none text-white ring-2 ring-white dark:ring-zinc-900"
             aria-hidden
           >
             {unread > 99 ? "99+" : unread}

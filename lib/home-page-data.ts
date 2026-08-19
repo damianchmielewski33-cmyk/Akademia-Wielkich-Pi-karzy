@@ -1,5 +1,6 @@
 import { getAccountNavFields } from "@/lib/account-server";
 import type { AppSession } from "@/lib/auth";
+import { listVenueCards, type VenueCard } from "@/lib/booking";
 import { getDb, type MatchRow } from "@/lib/db";
 import { getHomeTopPlayers, type HomeTopPlayer } from "@/lib/rankings-data";
 import { REALMS } from "@/lib/realm";
@@ -26,6 +27,7 @@ export type HomePageClientProps = {
   showPzuCupTile: boolean;
   pageVariant: "home" | "pzu-cup";
   topRankedPlayers: HomeTopPlayer[];
+  featuredVenues: VenueCard[];
 };
 export async function getHomePageClientProps(
   session: AppSession | null,
@@ -94,6 +96,9 @@ export async function getHomePageClientProps(
   const topRankedPlayers =
     options?.pageVariant === "pzu-cup" ? [] : await getHomeTopPlayers(3);
 
+  const featuredVenues =
+    options?.pageVariant === "pzu-cup" ? [] : (await listVenueCards(db)).slice(0, 8);
+
   const appSettings = await getAppSettings(db);
   const hotpayEnabled = isHotpayConfigured() && appSettings.hotpay_enabled;
 
@@ -114,5 +119,6 @@ export async function getHomePageClientProps(
     showPzuCupTile: options?.showPzuCupTile ?? false,
     pageVariant: options?.pageVariant ?? "home",
     topRankedPlayers,
+    featuredVenues,
   };
 }

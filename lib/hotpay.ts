@@ -15,7 +15,7 @@ export const HOTPAY_NOTIFICATION_IPS = [
   "35.159.7.168",
 ] as const;
 
-export type HotpayPaymentKind = "match" | "topup" | "match_cart";
+export type HotpayPaymentKind = "match" | "topup" | "match_cart" | "booking";
 export type HotpayPaymentStatus = "pending" | "success" | "failure" | "cancelled";
 
 export type HotpayConfig = {
@@ -230,10 +230,14 @@ export function sanitizeHotpayReturnPath(raw: unknown): string {
     pathOnly === "/" ||
     pathOnly === "/platnosci" ||
     pathOnly === "/terminarz" ||
+    pathOnly === "/rezerwacje" ||
+    pathOnly === "/obiekty" ||
     pathOnly === "/profil" ||
     pathOnly === "/pzu-cup" ||
     pathOnly.startsWith("/pzu-cup/") ||
     pathOnly.startsWith("/terminarz/") ||
+    pathOnly.startsWith("/rezerwacje/") ||
+    pathOnly.startsWith("/obiekty/") ||
     pathOnly.startsWith("/transport/") ||
     pathOnly.startsWith("/platnosci-public/") ||
     pathOnly.startsWith("/zaproszenie/");

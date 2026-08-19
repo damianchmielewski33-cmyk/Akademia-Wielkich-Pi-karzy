@@ -67,7 +67,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#1A2D5A",
+  themeColor: "#00C9B1",
 };
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -134,7 +134,7 @@ export default async function RootLayout({
   );
 
   const accountRow = session ? await getAccountNavFields(session.userId) : null;
-  const htmlThemeClass = accountRow ? (normalizeUiTheme(accountRow.uiTheme) === "dark" ? "dark" : "") : "dark";
+  const htmlThemeClass = accountRow && normalizeUiTheme(accountRow.uiTheme) === "dark" ? "dark" : "";
 
   let accountNav: {
     firstName: string;
@@ -240,7 +240,7 @@ export default async function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
         <style
           dangerouslySetInnerHTML={{
-            __html: "html,body{background-color:#1A2D5A;}",
+            __html: "html,body{background-color:#f4f5f7;}",
           }}
         />
         {/* iOS PWA splash — solid brand color (Safari ignores manifest background_color). */}
@@ -288,13 +288,13 @@ export default async function RootLayout({
         {/* Skrypt AdSense ładujemy dopiero po zgodzie marketingowej (AdsenseProvider). */}
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${displayFont.variable} murawa-bg min-h-screen antialiased font-sans`}
+        className={`${geistSans.variable} ${geistMono.variable} ${displayFont.variable} marketplace-bg min-h-screen antialiased font-sans`}
       >
         <script
-          // Default jest "dark" (boiskowy klimat). Ten skrypt pozwala zapamiętać wybór dla niezalogowanych.
+          // Publiczny marketplace jest jasny. Ten skrypt zapamiętuje wybór motywu.
           dangerouslySetInnerHTML={{
             __html:
-              "(function(){try{var t=localStorage.getItem('awp-ui-theme');if(t==='light'){document.documentElement.classList.remove('dark');}else if(t==='dark'){document.documentElement.classList.add('dark');}}catch(e){}})();",
+              "(function(){try{var t=localStorage.getItem('awp-ui-theme');if(t==='dark'){document.documentElement.classList.add('dark');}else{document.documentElement.classList.remove('dark');}}catch(e){}})();",
           }}
         />
         <SiteJsonLd

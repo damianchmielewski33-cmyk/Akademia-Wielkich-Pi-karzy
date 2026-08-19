@@ -24,9 +24,7 @@ export default async function ONasPage() {
         title="O akademii"
         subtitle={
           <>
-            Poznaj{" "}
-            <strong className="font-semibold text-white">{siteName}</strong>{" "}
-            — miejsce, gdzie piłkarska pasja spotyka się z nowoczesną organizacją.
+            Poznaj {siteName} — miejsce, gdzie piłkarska pasja spotyka się z nowoczesną organizacją.
           </>
         }
       />

@@ -48,6 +48,9 @@ function successToastText(data: StatusPayload): string {
   if (data.kind === "match_cart") {
     return amount ? `Zaliczka ${amount} została opłacona` : "Zaliczka na mecz została opłacona";
   }
+  if (data.kind === "booking") {
+    return amount ? `Rezerwacja boiska opłacona (${amount})` : "Rezerwacja boiska została opłacona";
+  }
   return amount
     ? `Wpłata ${amount} zaksięgowana na portfelu`
     : "Wpłata zaksięgowana na portfelu";

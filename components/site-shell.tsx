@@ -9,6 +9,8 @@ import {
   Activity,
   BookOpen,
   CalendarDays,
+  ChevronDown,
+  ClipboardCheck,
   Camera,
   Home,
   Info,
@@ -18,6 +20,7 @@ import {
   Menu,
   MessageCircle,
   Moon,
+  MapPin,
   Shield,
   Sun,
   Trophy,
@@ -35,7 +38,6 @@ import { NavigationLoadingOverlay } from "@/components/navigation-loading-overla
 import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
 import { LogoutConfirmModal } from "@/components/logout-confirm-modal";
 import { SiteAssetImage } from "@/components/site-asset-image";
-import { useSiteAsset } from "@/components/site-assets-provider";
 import { AdsenseSlot } from "@/components/adsense-slot";
 import { CookieConsentFooterLink } from "@/components/cookie-consent-footer-link";
 import { isAdsenseInlinePath } from "@/lib/adsense";
@@ -64,7 +66,7 @@ type NavItem = {
   icon: typeof Home;
 };
 
-function NavButton({
+function NavLink({
   href,
   children,
   active,
@@ -77,10 +79,10 @@ function NavButton({
     <Link
       href={href}
       className={cn(
-        "awp-focus-ring rounded-xl px-3 py-2 text-sm font-semibold transition-[background-color,color,box-shadow]",
+        "awp-focus-ring rounded-lg px-2.5 py-2 text-[0.7rem] font-bold uppercase tracking-[0.12em] transition-colors",
         active
-          ? "bg-white/15 text-white shadow-sm"
-          : "text-emerald-100/85 hover:bg-white/10 hover:text-white"
+          ? "text-[var(--mp-teal-dark)]"
+          : "text-zinc-600 hover:text-zinc-950 dark:text-zinc-300 dark:hover:text-white"
       )}
     >
       {children}
@@ -98,15 +100,16 @@ export function SiteShell({
 }: Props) {
   const router = useRouter();
   const pathname = usePathname();
-  const pitchLinesBg = useSiteAsset("bg_pitch_lines");
   const { isHiddenHref } = useScreenBlocks();
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [themeBusy, setThemeBusy] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [academyOpen, setAcademyOpen] = useState(false);
   const mobileNavTitleId = useId();
 
   useEffect(() => {
     setMobileNavOpen(false);
+    setAcademyOpen(false);
   }, [pathname]);
 
   useEffect(() => {
@@ -130,9 +133,14 @@ export function SiteShell({
     return <>{children}</>;
   }
 
-  const navItems: NavItem[] = [
+  const primaryNav: NavItem[] = [
+    { href: "/obiekty", label: "Znajdź boisko", visible: true, icon: MapPin },
+    { href: "/terminarz", label: "Terminarz akademii", visible: true, icon: CalendarDays },
+    { href: "/rezerwacje", label: "Moje rezerwacje", visible: isLoggedIn, icon: ClipboardCheck },
+  ];
+
+  const academyNav: NavItem[] = [
     { href: "/", label: "Start", visible: true, icon: Home },
-    { href: "/terminarz", label: "Terminarz", visible: true, icon: CalendarDays },
     { href: "/platnosci", label: "Płatności", visible: isLoggedIn, icon: Wallet },
     { href: "/pilkarze", label: "Piłkarze", visible: true, icon: Users },
     { href: "/sklady", label: "Składy", visible: true, icon: Medal },
@@ -143,14 +151,20 @@ export function SiteShell({
     { href: "/o-nas", label: "O nas", visible: true, icon: Info },
     { href: "/kontakt", label: "Kontakt", visible: true, icon: MessageCircle },
     { href: "/panel-admina", label: "Panel admina", visible: isAdmin, icon: Shield },
+  ];
+
+  const authNav: NavItem[] = [
     { href: "/login", label: "Logowanie", visible: !isLoggedIn, icon: LogIn },
     { href: "/register", label: "Rejestracja", visible: !isLoggedIn, icon: UserPlus },
   ];
 
-  const visibleNav = navItems.filter((x) => x.visible && !isHiddenHref(x.href));
+  const visiblePrimary = primaryNav.filter((x) => x.visible && !isHiddenHref(x.href));
+  const visibleAcademy = academyNav.filter((x) => x.visible && !isHiddenHref(x.href));
+  const visibleAuth = authNav.filter((x) => x.visible && !isHiddenHref(x.href));
+  const visibleMobile = [...visiblePrimary, ...visibleAcademy, ...visibleAuth];
 
   const isDarkNow =
-    typeof document !== "undefined" ? document.documentElement.classList.contains("dark") : true;
+    typeof document !== "undefined" ? document.documentElement.classList.contains("dark") : false;
 
   async function toggleTheme() {
     if (themeBusy) return;
@@ -178,183 +192,195 @@ export function SiteShell({
     }
   }
 
+  const themeButton = (
+    <button
+      type="button"
+      onClick={() => void toggleTheme()}
+      disabled={themeBusy}
+      className={cn(
+        "awp-focus-ring inline-flex h-10 w-10 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-700 shadow-sm transition-colors hover:border-zinc-300 hover:text-zinc-950 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200",
+        themeBusy && "opacity-70"
+      )}
+      aria-label={isDarkNow ? "Przełącz na jasny motyw" : "Przełącz na ciemny motyw"}
+      title={isDarkNow ? "Jasny motyw" : "Ciemny motyw"}
+    >
+      {isDarkNow ? <Sun className="h-4 w-4" aria-hidden /> : <Moon className="h-4 w-4" aria-hidden />}
+    </button>
+  );
+
   return (
-    <div className="flex min-h-screen flex-col overflow-x-clip text-zinc-900 dark:text-zinc-100">
+    <div className="flex min-h-screen flex-col overflow-x-clip bg-[var(--background)] text-zinc-900 dark:text-zinc-100">
       <NavigationLoadingOverlay />
       <AnalyticsTracker />
-      <div className="pt-[env(safe-area-inset-top)]">
+      <div className="sticky top-0 z-40 pt-[env(safe-area-inset-top)]">
         <AndroidAppBanner />
         <Suspense fallback={null}>
           <SisterSiteArrivalBanner />
         </Suspense>
-        <header className="mundial-header relative z-30 border-b border-[var(--mundial-gold)]/30 text-white shadow-lg">
-        <div
-          className="pointer-events-none absolute inset-0 opacity-[0.12]"
-          style={{
-            backgroundImage:
-              "repeating-linear-gradient(90deg, transparent, transparent 14px, rgba(255,255,255,0.06) 14px, rgba(255,255,255,0.06) 28px)",
-          }}
-          aria-hidden
-        />
-        <div className="relative mx-auto flex max-w-6xl items-center justify-between gap-2 overflow-hidden px-3 py-3 xs:gap-3 xs:px-4 sm:py-3.5">
-          <Link
-            href="/"
-            className="awp-focus-ring flex min-w-0 max-w-[calc(100%-9.75rem)] flex-1 items-center gap-2 rounded-xl pr-1 xs:max-w-[calc(100%-11rem)] xs:gap-2.5 sm:max-w-none sm:flex-none sm:gap-3 sm:pr-2"
-          >
-            <span className="relative z-[1] flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 shadow-inner ring-1 ring-[var(--mundial-gold)]/40 xs:h-10 xs:w-10 sm:h-11 sm:w-11">
-              <SiteAssetImage
-                asset="logo_header"
-                alt="Logo"
-                width={160}
-                height={160}
-                className="h-8 w-8 drop-shadow-sm xs:h-9 xs:w-9 sm:h-10 sm:w-10"
-                priority
-                sizes="40px"
-              />
-            </span>
-            <span className="min-w-0 flex-1 overflow-hidden text-left">
-              <span className="hidden text-[0.6rem] font-semibold uppercase tracking-[0.18em] text-[var(--mundial-gold)] xs:block xs:text-[0.65rem] xs:tracking-[0.2em]">
-                Mundial 2026
+        <header className="mp-header relative z-30 text-zinc-900 dark:text-zinc-50">
+          <div className="relative mx-auto flex max-w-6xl items-center justify-between gap-3 px-3 py-3 xs:px-4 sm:py-3.5">
+            <Link
+              href="/"
+              className="awp-focus-ring flex min-w-0 items-center gap-2.5 rounded-xl pr-1"
+            >
+              <span className="relative z-[1] flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[var(--mp-teal)] shadow-sm">
+                <SiteAssetImage
+                  asset="logo_header"
+                  alt="Logo"
+                  width={160}
+                  height={160}
+                  className="h-8 w-8 drop-shadow-sm"
+                  priority
+                  sizes="40px"
+                />
               </span>
-              <span className="block truncate text-sm font-semibold leading-snug xs:text-[0.95rem] sm:text-base">
-                <span className="sm:hidden">Akademia WP</span>
-                <span className="hidden sm:inline">Akademia Wielkich Piłkarzy</span>
+              <span className="min-w-0 text-left">
+                <span className="block truncate text-sm font-black tracking-tight text-zinc-950 dark:text-white sm:text-base">
+                  <span className="sm:hidden">Akademia WP</span>
+                  <span className="hidden sm:inline">{siteName}</span>
+                </span>
+                <span className="hidden text-[0.65rem] font-semibold uppercase tracking-[0.16em] text-[var(--mp-teal-dark)] xs:block">
+                  Rezerwacja boisk
+                </span>
               </span>
-            </span>
-          </Link>
+            </Link>
 
-          <nav className="relative z-[2] flex shrink-0 items-center justify-end gap-1 xs:gap-1.5 sm:gap-2" aria-label="Główna nawigacja">
-            {/* Desktop / duży tablet */}
-            <div className="hidden flex-wrap items-center justify-end gap-1 lg:flex lg:gap-1.5">
-              {isAdmin ? <AdminHeaderMessagesButton initialUnreadCount={adminUnreadMessages} /> : null}
+            <nav className="relative z-[2] flex shrink-0 items-center justify-end gap-1" aria-label="Główna nawigacja">
+              <div className="hidden items-center gap-0.5 lg:flex">
+                {isAdmin ? <AdminHeaderMessagesButton initialUnreadCount={adminUnreadMessages} /> : null}
 
-              <button
-                type="button"
-                onClick={() => void toggleTheme()}
-                disabled={themeBusy}
-                className={cn(
-                  "awp-focus-ring inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/20 bg-white/10 text-white shadow-sm transition-colors hover:bg-white/15",
-                  themeBusy && "opacity-70"
-                )}
-                aria-label={isDarkNow ? "Przełącz na jasny motyw" : "Przełącz na ciemny motyw"}
-                title={isDarkNow ? "Jasny motyw" : "Ciemny motyw"}
-              >
-                {isDarkNow ? <Sun className="h-5 w-5" aria-hidden /> : <Moon className="h-5 w-5" aria-hidden />}
-              </button>
-
-              {visibleNav
-                .filter((x) => !["/login", "/register"].includes(x.href) || !isLoggedIn)
-                .map((x) => (
-                  <NavButton key={x.href} href={x.href} active={pathname === x.href}>
+                {visiblePrimary.map((x) => (
+                  <NavLink key={x.href} href={x.href} active={pathname === x.href || pathname?.startsWith(`${x.href}/`)}>
                     {x.label}
-                  </NavButton>
+                  </NavLink>
                 ))}
 
-              {isLoggedIn && account ? (
-                <Link
-                  href="/profil"
-                  className={cn(
-                    "awp-focus-ring flex max-w-[min(100%,15rem)] items-center gap-2 rounded-xl px-2 py-1.5 transition-[background-color,color,box-shadow]",
-                    pathname === "/profil"
-                      ? "bg-white/15 text-white shadow-sm"
-                      : "text-emerald-100/90 hover:bg-white/10 hover:text-white"
-                  )}
-                  aria-label="Mój profil"
-                  title="Mój profil"
-                >
-                  <PlayerAvatar
-                    photoPath={account.profilePhotoPath}
-                    firstName={account.firstName}
-                    lastName={account.lastName}
-                    size="sm"
-                    ringClassName="ring-2 ring-white/45"
-                  />
-                  <div className="min-w-0">
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setAcademyOpen((open) => !open)}
+                    className={cn(
+                      "awp-focus-ring inline-flex items-center gap-1 rounded-lg px-2.5 py-2 text-[0.7rem] font-bold uppercase tracking-[0.12em] text-zinc-600 hover:text-zinc-950 dark:text-zinc-300 dark:hover:text-white",
+                      academyOpen && "text-[var(--mp-teal-dark)]"
+                    )}
+                    aria-expanded={academyOpen}
+                  >
+                    Akademia
+                    <ChevronDown className={cn("h-3.5 w-3.5 transition", academyOpen && "rotate-180")} aria-hidden />
+                  </button>
+                  {academyOpen ? (
+                    <div className="absolute right-0 top-full z-50 mt-2 w-56 overflow-hidden rounded-2xl border border-zinc-200 bg-white py-2 shadow-xl dark:border-zinc-700 dark:bg-zinc-950">
+                      {visibleAcademy.map((x) => (
+                        <Link
+                          key={x.href}
+                          href={x.href}
+                          onClick={() => setAcademyOpen(false)}
+                          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50 dark:text-zinc-200 dark:hover:bg-zinc-900"
+                        >
+                          <x.icon className="h-4 w-4 text-[var(--mp-teal-dark)]" aria-hidden />
+                          {x.label}
+                        </Link>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+
+                {themeButton}
+
+                {isLoggedIn && account ? (
+                  <Link
+                    href="/profil"
+                    className={cn(
+                      "awp-focus-ring ml-1 flex max-w-[min(100%,14rem)] items-center gap-2 rounded-full border border-zinc-200 px-2 py-1.5 transition-colors hover:border-zinc-300 dark:border-zinc-700",
+                      pathname === "/profil" && "border-[var(--mp-teal)]"
+                    )}
+                    aria-label="Mój profil"
+                    title="Mój profil"
+                  >
+                    <PlayerAvatar
+                      photoPath={account.profilePhotoPath}
+                      firstName={account.firstName}
+                      lastName={account.lastName}
+                      size="sm"
+                      ringClassName="ring-2 ring-[var(--mp-teal)]/40"
+                    />
                     <PlayerNameStack
                       firstName={account.firstName}
                       lastName={account.lastName}
                       nick={account.zawodnik}
-                      primaryClassName="truncate text-sm font-semibold text-white"
-                      secondaryClassName="truncate text-xs text-emerald-200/90"
+                      primaryClassName="truncate text-sm font-semibold text-zinc-900 dark:text-white"
+                      secondaryClassName="truncate text-xs text-zinc-500"
                     />
-                  </div>
-                </Link>
-              ) : null}
+                  </Link>
+                ) : (
+                  visibleAuth.map((x) => (
+                    <Link
+                      key={x.href}
+                      href={x.href}
+                      className={cn(
+                        "awp-focus-ring ml-1 rounded-full px-4 py-2 text-[0.7rem] font-bold uppercase tracking-[0.12em]",
+                        x.href === "/login"
+                          ? "bg-[var(--mp-teal)] text-white hover:bg-[var(--mp-teal-dark)]"
+                          : "text-zinc-600 hover:text-zinc-950 dark:text-zinc-300"
+                      )}
+                    >
+                      {x.label}
+                    </Link>
+                  ))
+                )}
 
-              {isLoggedIn ? (
+                {isLoggedIn ? (
+                  <button
+                    type="button"
+                    onClick={() => setLogoutOpen(true)}
+                    className="awp-focus-ring rounded-lg px-2.5 py-2 text-[0.7rem] font-bold uppercase tracking-[0.12em] text-zinc-500 hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white"
+                  >
+                    Wyloguj
+                  </button>
+                ) : null}
+              </div>
+
+              <div className="flex items-center gap-1.5 lg:hidden">
+                {isAdmin ? <AdminHeaderMessagesButton initialUnreadCount={adminUnreadMessages} compact /> : null}
+                {themeButton}
+                {isLoggedIn && account ? (
+                  <Link
+                    href="/profil"
+                    className="awp-focus-ring flex items-center rounded-full p-0.5"
+                    aria-label="Mój profil"
+                    title="Mój profil"
+                  >
+                    <PlayerAvatar
+                      photoPath={account.profilePhotoPath}
+                      firstName={account.firstName}
+                      lastName={account.lastName}
+                      size="xs"
+                      ringClassName="ring-2 ring-[var(--mp-teal)]/40"
+                    />
+                  </Link>
+                ) : null}
                 <button
                   type="button"
-                  onClick={() => setLogoutOpen(true)}
-                  className="awp-focus-ring rounded-xl px-3 py-2 text-sm font-semibold text-emerald-100/85 transition-colors hover:bg-white/10 hover:text-white"
+                  onClick={() => setMobileNavOpen(true)}
+                  className="awp-focus-ring inline-flex h-10 w-10 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-800 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+                  aria-label="Otwórz menu"
+                  aria-expanded={mobileNavOpen}
+                  aria-controls="awp-mobile-nav"
+                  title="Menu"
                 >
-                  Wyloguj
+                  <Menu className="h-5 w-5" aria-hidden />
                 </button>
-              ) : null}
-            </div>
-
-            {/* Mobile / tablet — kompaktowe przyciski, żeby nie nachodziły na logo */}
-            <div className="flex items-center gap-1 xs:gap-1.5 lg:hidden">
-              {isAdmin ? (
-                <AdminHeaderMessagesButton initialUnreadCount={adminUnreadMessages} compact />
-              ) : null}
-
-              <button
-                type="button"
-                onClick={() => void toggleTheme()}
-                disabled={themeBusy}
-                className={cn(
-                  "awp-focus-ring inline-flex h-9 w-9 touch-manipulation items-center justify-center rounded-xl border border-white/20 bg-white/10 text-white shadow-sm hover:bg-white/15 xs:h-10 xs:w-10",
-                  themeBusy && "opacity-70"
-                )}
-                aria-label={isDarkNow ? "Przełącz na jasny motyw" : "Przełącz na ciemny motyw"}
-                title={isDarkNow ? "Jasny motyw" : "Ciemny motyw"}
-              >
-                {isDarkNow ? <Sun className="h-4 w-4 xs:h-5 xs:w-5" aria-hidden /> : <Moon className="h-4 w-4 xs:h-5 xs:w-5" aria-hidden />}
-              </button>
-
-              {isLoggedIn && account ? (
-                <Link
-                  href="/profil"
-                  className={cn(
-                    "awp-focus-ring flex touch-manipulation items-center rounded-xl p-0.5 transition-[background-color,color] xs:p-1",
-                    pathname === "/profil" ? "bg-white/15 text-white" : "text-emerald-100/90 hover:bg-white/10"
-                  )}
-                  aria-label="Mój profil"
-                  title="Mój profil"
-                >
-                  <PlayerAvatar
-                    photoPath={account.profilePhotoPath}
-                    firstName={account.firstName}
-                    lastName={account.lastName}
-                    size="xs"
-                    ringClassName="ring-2 ring-white/45"
-                    className="xs:h-8 xs:w-8 xs:text-xs"
-                  />
-                </Link>
-              ) : null}
-
-              <button
-                type="button"
-                onClick={() => setMobileNavOpen(true)}
-                className="awp-focus-ring inline-flex h-9 w-9 touch-manipulation items-center justify-center rounded-xl border border-white/20 bg-white/10 text-white shadow-sm hover:bg-white/15 xs:h-10 xs:w-10"
-                aria-label="Otwórz menu"
-                aria-expanded={mobileNavOpen}
-                aria-controls="awp-mobile-nav"
-                title="Menu"
-              >
-                <Menu className="h-4 w-4 xs:h-5 xs:w-5" aria-hidden />
-              </button>
-            </div>
-          </nav>
-        </div>
-      </header>
+              </div>
+            </nav>
+          </div>
+        </header>
       </div>
 
       {mobileNavOpen ? (
         <div className="fixed inset-0 z-[80] lg:hidden" role="presentation">
           <button
             type="button"
-            className="absolute inset-0 bg-emerald-950/70 backdrop-blur-sm"
+            className="absolute inset-0 bg-zinc-950/40 backdrop-blur-sm"
             aria-label="Zamknij menu"
             onClick={() => setMobileNavOpen(false)}
           />
@@ -363,19 +389,19 @@ export function SiteShell({
             role="dialog"
             aria-modal="true"
             aria-labelledby={mobileNavTitleId}
-            className="absolute inset-y-0 right-0 flex w-[min(100%,20.5rem)] flex-col border-l border-white/15 bg-emerald-950/98 shadow-[-24px_0_60px_-28px_rgba(0,0,0,0.75)] backdrop-blur-md pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
+            className="absolute inset-y-0 right-0 flex w-[min(100%,20.5rem)] flex-col border-l border-zinc-200 bg-white shadow-2xl dark:border-zinc-800 dark:bg-zinc-950 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
           >
-            <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-3.5">
+            <div className="flex items-center justify-between gap-3 border-b border-zinc-100 px-4 py-3.5 dark:border-zinc-800">
               <div className="min-w-0">
-                <p id={mobileNavTitleId} className="text-sm font-semibold text-white">
+                <p id={mobileNavTitleId} className="text-sm font-semibold text-zinc-950 dark:text-white">
                   Menu
                 </p>
-                <p className="truncate text-xs text-emerald-200/75">{siteName}</p>
+                <p className="truncate text-xs text-zinc-500">{siteName}</p>
               </div>
               <button
                 type="button"
                 onClick={() => setMobileNavOpen(false)}
-                className="awp-focus-ring inline-flex h-10 w-10 touch-manipulation items-center justify-center rounded-xl border border-white/20 bg-white/10 text-white"
+                className="awp-focus-ring inline-flex h-10 w-10 items-center justify-center rounded-full border border-zinc-200 text-zinc-700 dark:border-zinc-700 dark:text-zinc-200"
                 aria-label="Zamknij menu"
               >
                 <X className="h-5 w-5" aria-hidden />
@@ -384,7 +410,7 @@ export function SiteShell({
 
             <nav className="flex-1 overflow-y-auto overscroll-contain px-3 py-3" aria-label="Nawigacja mobilna">
               <ul className="space-y-1">
-                {visibleNav.map((x) => {
+                {visibleMobile.map((x) => {
                   const Icon = x.icon;
                   const active = pathname === x.href;
                   return (
@@ -395,14 +421,14 @@ export function SiteShell({
                         className={cn(
                           "awp-focus-ring flex min-h-12 touch-manipulation items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors",
                           active
-                            ? "bg-white/15 text-white shadow-sm ring-1 ring-white/20"
-                            : "text-emerald-50/90 hover:bg-white/10 hover:text-white"
+                            ? "bg-[var(--mp-teal)]/12 text-[var(--mp-teal-dark)]"
+                            : "text-zinc-700 hover:bg-zinc-50 dark:text-zinc-200 dark:hover:bg-zinc-900"
                         )}
                       >
                         <span
                           className={cn(
                             "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg",
-                            active ? "bg-white/15 text-[var(--mundial-gold)]" : "bg-white/8 text-emerald-100/90"
+                            active ? "bg-[var(--mp-teal)] text-white" : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-200"
                           )}
                         >
                           <Icon className="h-4 w-4" aria-hidden />
@@ -415,16 +441,16 @@ export function SiteShell({
               </ul>
 
               {isLoggedIn ? (
-                <div className="mt-3 border-t border-white/10 pt-3">
+                <div className="mt-3 border-t border-zinc-100 pt-3 dark:border-zinc-800">
                   <button
                     type="button"
-                    className="awp-focus-ring flex min-h-12 w-full touch-manipulation items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-emerald-50/90 hover:bg-white/10 hover:text-white"
+                    className="awp-focus-ring flex min-h-12 w-full touch-manipulation items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-zinc-700 hover:bg-zinc-50 dark:text-zinc-200 dark:hover:bg-zinc-900"
                     onClick={() => {
                       setMobileNavOpen(false);
                       setLogoutOpen(true);
                     }}
                   >
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/8">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-zinc-100 dark:bg-zinc-800">
                       <LogOut className="h-4 w-4" aria-hidden />
                     </span>
                     Wyloguj
@@ -438,30 +464,7 @@ export function SiteShell({
 
       <LogoutConfirmModal open={logoutOpen} onOpenChange={setLogoutOpen} />
 
-      <main className="relative flex flex-1 flex-col pb-[max(4.5rem,calc(env(safe-area-inset-bottom)+3.75rem))] sm:pb-8">
-        <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
-          <SiteAssetImage
-            asset="bg_soccer_ball"
-            decorative
-            width={220}
-            height={220}
-            className="absolute -right-16 top-8 h-auto w-[220px] max-w-none opacity-[0.14] sm:top-12 dark:opacity-[0.12]"
-          />
-          <SiteAssetImage
-            asset="bg_soccer_ball"
-            decorative
-            width={160}
-            height={160}
-            className="absolute -left-10 bottom-24 h-auto w-[160px] max-w-none opacity-[0.12] sm:bottom-32 dark:opacity-[0.1]"
-          />
-          <SiteAssetImage
-            asset="bg_soccer_ball"
-            decorative
-            width={120}
-            height={120}
-            className="absolute bottom-8 right-[18%] h-auto w-[120px] max-w-none opacity-[0.1] max-sm:hidden dark:opacity-[0.08]"
-          />
-        </div>
+      <main className="relative flex flex-1 flex-col pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:pb-8">
         <div className="relative z-10 flex flex-1 flex-col">{children}</div>
         {isAdsenseInlinePath(pathname) ? (
           <AdsenseSlot placement="inline" className="relative z-10" label="Reklama" />
@@ -469,57 +472,57 @@ export function SiteShell({
         <AdsenseSlot placement="footer" className="relative z-10 mt-auto" />
       </main>
 
-      <footer className="relative z-20 border-t border-emerald-950/25 bg-gradient-to-b from-emerald-950 via-emerald-900 to-emerald-950 text-emerald-50 pb-[env(safe-area-inset-bottom)]">
-        <div
-          className="pointer-events-none absolute inset-x-0 top-0 h-16 opacity-40"
-          style={{
-            backgroundImage: `url("${pitchLinesBg.replace(/"/g, "%22")}")`,
-            backgroundSize: "cover",
-            backgroundPosition: "center top",
-          }}
-          aria-hidden
-        />
-        <div className="relative mx-auto flex max-w-6xl flex-col items-center gap-3 px-4 py-8 text-center sm:flex-row sm:justify-between sm:gap-2 sm:text-left">
-          <div className="flex max-w-full flex-col items-center gap-3 sm:flex-row sm:items-center">
+      <footer className="mp-footer relative z-20 pb-[env(safe-area-inset-bottom)]">
+        <div className="mx-auto grid max-w-6xl gap-10 px-4 py-12 sm:grid-cols-2 lg:grid-cols-4">
+          <div>
             <SiteAssetImage
               asset="logo_crest"
               alt={siteName}
               width={144}
               height={144}
-              className="h-11 w-11 opacity-95 drop-shadow"
-              sizes="44px"
+              className="h-12 w-12"
+              sizes="48px"
             />
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-white">{siteName}</p>
-              <p className="text-xs text-emerald-200/80">Terminarz, statystyki i społeczność na boisku</p>
-              <p className="mt-2 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs text-emerald-200/85 sm:justify-start">
-                <Link href="/blog" className="font-medium underline-offset-2 hover:underline">
-                  Blog
-                </Link>
-                <Link href="/faq" className="font-medium underline-offset-2 hover:underline">
-                  FAQ
-                </Link>
-                <Link href="/o-nas" className="font-medium underline-offset-2 hover:underline">
-                  O nas
-                </Link>
-                <Link href="/kontakt" className="font-medium underline-offset-2 hover:underline">
-                  Kontakt
-                </Link>
-                <Link href="/regulamin" className="font-medium underline-offset-2 hover:underline">
-                  Regulamin
-                </Link>
-                <Link href="/polityka-prywatnosci" className="font-medium underline-offset-2 hover:underline">
-                  Polityka prywatności
-                </Link>
-                <Link href="/cookies" className="font-medium underline-offset-2 hover:underline">
-                  Cookies
-                </Link>
-                <CookieConsentFooterLink />
-                <GymBratCrossLink variant="footer" />
-              </p>
+            <p className="mt-4 text-sm font-semibold text-white">{siteName}</p>
+            <p className="mt-2 text-sm text-zinc-400">
+              Rezerwuj boiska online. Terminarz akademii, składy i społeczność zostają w osobnym module.
+            </p>
+          </div>
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.16em] text-white">Dla Ciebie</p>
+            <div className="mt-4 flex flex-col gap-2 text-sm text-zinc-300">
+              <Link href="/obiekty" className="hover:text-white">Znajdź boisko</Link>
+              {isLoggedIn ? <Link href="/rezerwacje" className="hover:text-white">Moje rezerwacje</Link> : null}
+              <Link href="/terminarz" className="hover:text-white">Terminarz akademii</Link>
+              <Link href="/rankingi" className="hover:text-white">Rankingi</Link>
             </div>
           </div>
-          <p className="text-xs text-emerald-200/70">© {new Date().getFullYear()} · Gra z pasją</p>
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.16em] text-white">Akademia</p>
+            <div className="mt-4 flex flex-col gap-2 text-sm text-zinc-300">
+              <Link href="/pilkarze" className="hover:text-white">Piłkarze</Link>
+              <Link href="/galeria" className="hover:text-white">Galeria</Link>
+              <Link href="/blog" className="hover:text-white">Blog</Link>
+              <Link href="/o-nas" className="hover:text-white">O nas</Link>
+            </div>
+          </div>
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.16em] text-white">Kontakt</p>
+            <div className="mt-4 flex flex-col gap-2 text-sm text-zinc-300">
+              <Link href="/kontakt" className="hover:text-white">Kontakt</Link>
+              <Link href="/faq" className="hover:text-white">FAQ</Link>
+              <Link href="/regulamin" className="hover:text-white">Regulamin</Link>
+              <Link href="/polityka-prywatnosci" className="hover:text-white">Polityka prywatności</Link>
+              <Link href="/cookies" className="hover:text-white">Cookies</Link>
+              <CookieConsentFooterLink />
+              <GymBratCrossLink variant="footer" />
+            </div>
+          </div>
+        </div>
+        <div className="border-t border-white/10">
+          <p className="mx-auto max-w-6xl px-4 py-4 text-xs text-zinc-500">
+            © {new Date().getFullYear()} {siteName}
+          </p>
         </div>
       </footer>
     </div>

@@ -9,6 +9,7 @@ import { migrateRealmSchemaSqlite } from "@/lib/realm-migration";
 import { CAPTAIN_LOTTERY_CREATE_SQL, migrateCaptainLotterySchemaSqlite } from "@/lib/captain-lottery-schema";
 import { migrateAdImpressionsSchemaSqlite } from "@/lib/ad-impressions-schema";
 import { withTransientNetworkRetries } from "@/lib/transient-network-retry";
+import { BOOKING_SCHEMA_SQL } from "@/lib/booking";
 
 /** Lokalny plik SQLite (dev) lub Turso (gdy TURSO_DATABASE_URL). */
 export type AppDb = {
@@ -215,13 +216,16 @@ function migrateWalletTransactionsTransfer(db: Database.Database) {
   `);
 }
 
-/** Stare bazy: HotPay bez kind match_cart / bez cart_id. */
-function migrateHotpayPaymentsMatchCart(db: Database.Database) {
+/** Stare bazy: HotPay bez nowszych typów / powiązań płatności. */
+function migrateHotpayPaymentsKinds(db: Database.Database) {
   const cols = db.prepare("PRAGMA table_info(hotpay_payments)").all() as { name: string }[];
   if (!cols.length) return;
 
   if (!cols.some((c) => c.name === "cart_id")) {
     db.exec("ALTER TABLE hotpay_payments ADD COLUMN cart_id INTEGER");
+  }
+  if (!cols.some((c) => c.name === "booking_id")) {
+    db.exec("ALTER TABLE hotpay_payments ADD COLUMN booking_id INTEGER");
   }
 
   if (!cols.some((c) => c.name === "gross_amount_pln")) {
@@ -238,31 +242,38 @@ function migrateHotpayPaymentsMatchCart(db: Database.Database) {
     .prepare(`SELECT sql FROM sqlite_master WHERE type='table' AND name='hotpay_payments'`)
     .get() as { sql: string } | undefined;
   const sql = row?.sql ?? "";
-  if (!sql.includes("CHECK") || !sql.includes("kind") || sql.includes("'match_cart'")) return;
+  if (!sql.includes("CHECK") || !sql.includes("kind") || sql.includes("'booking'")) return;
 
   db.exec(`
     CREATE TABLE hotpay_payments_migration (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       session_id TEXT NOT NULL UNIQUE,
       user_id INTEGER NOT NULL,
-      kind TEXT NOT NULL CHECK (kind IN ('match','topup','match_cart')),
+      kind TEXT NOT NULL CHECK (kind IN ('match','topup','match_cart','booking')),
       amount_pln REAL NOT NULL,
       status TEXT NOT NULL CHECK (status IN ('pending','success','failure','cancelled')) DEFAULT 'pending',
       hotpay_payment_id TEXT,
       secure TEXT,
       deposit_request_id INTEGER,
       cart_id INTEGER,
+      booking_id INTEGER,
+      gross_amount_pln REAL,
       error_message TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       completed_at TEXT,
+      is_test INTEGER NOT NULL DEFAULT 0,
       FOREIGN KEY (user_id) REFERENCES users(id),
       FOREIGN KEY (deposit_request_id) REFERENCES wallet_deposit_requests(id)
     );
     INSERT INTO hotpay_payments_migration
       (id, session_id, user_id, kind, amount_pln, status, hotpay_payment_id, secure,
-       deposit_request_id, cart_id, error_message, created_at, completed_at)
+       deposit_request_id, cart_id, booking_id, gross_amount_pln, error_message, created_at, completed_at, is_test)
     SELECT id, session_id, user_id, kind, amount_pln, status, hotpay_payment_id, secure,
-           deposit_request_id, cart_id, error_message, created_at, completed_at
+           deposit_request_id, cart_id,
+           NULL,
+           gross_amount_pln,
+           error_message, created_at, completed_at,
+           COALESCE(is_test, 0)
     FROM hotpay_payments;
     DROP TABLE hotpay_payments;
     ALTER TABLE hotpay_payments_migration RENAME TO hotpay_payments;
@@ -554,13 +565,14 @@ function initSchemaSync(db: Database.Database) {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       session_id TEXT NOT NULL UNIQUE,
       user_id INTEGER NOT NULL,
-      kind TEXT NOT NULL CHECK (kind IN ('match','topup','match_cart')),
+      kind TEXT NOT NULL CHECK (kind IN ('match','topup','match_cart','booking')),
       amount_pln REAL NOT NULL,
       status TEXT NOT NULL CHECK (status IN ('pending','success','failure','cancelled')) DEFAULT 'pending',
       hotpay_payment_id TEXT,
       secure TEXT,
       deposit_request_id INTEGER,
       cart_id INTEGER,
+      booking_id INTEGER,
       error_message TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       completed_at TEXT,
@@ -705,7 +717,7 @@ function initSchemaSync(db: Database.Database) {
 
   migratePublicShareLinksKind(db);
   migrateWalletTransactionsTransfer(db);
-  migrateHotpayPaymentsMatchCart(db);
+  migrateHotpayPaymentsKinds(db);
   migrateMatchLineupSlotsSlotIndexMax(db);
   migrateWalletKindColumns(db);
 
@@ -737,6 +749,8 @@ function initSchemaSync(db: Database.Database) {
       FOREIGN KEY (beneficiary_user_id) REFERENCES users(id)
     );
   `);
+
+  db.exec(BOOKING_SCHEMA_SQL);
 
   db.exec(`
     CREATE TABLE IF NOT EXISTS match_transport_messages (
