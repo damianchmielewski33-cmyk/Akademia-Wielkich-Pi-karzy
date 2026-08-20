@@ -5,10 +5,20 @@ import { getDb } from "@/lib/db";
 import { getAppSettings } from "@/lib/app-settings";
 import { getServerSession } from "@/lib/auth";
 
-export const metadata: Metadata = {
-  title: "Logowanie",
-  description: "Zaloguj się do konta zawodnika akademii.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const db = await getDb();
+  const settings = await getAppSettings(db);
+  if (!settings.booking_marketplace_enabled) {
+    return {
+      title: "Logowanie",
+      description: "Wejście akademii — imię, nazwisko i PIN.",
+    };
+  }
+  return {
+    title: "Logowanie",
+    description: "PIN akademii albo rezerwacja boiska bez konta — to dwa osobne wejścia.",
+  };
+}
 
 type Props = { searchParams: Promise<{ next?: string; setup?: string; wylogowano?: string }> };
 
@@ -36,6 +46,7 @@ export default async function LoginPage({ searchParams }: Props) {
       siteName={settings.site_name}
       nextPath={nextPath && nextPath.startsWith("/") ? nextPath : "/"}
       idleLogout={wylogowano === "bezczynnosc"}
+      marketplaceEnabled={settings.booking_marketplace_enabled === true}
     />
   );
 }

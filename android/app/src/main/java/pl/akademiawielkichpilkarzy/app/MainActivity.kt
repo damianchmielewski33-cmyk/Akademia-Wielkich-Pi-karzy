@@ -10,6 +10,8 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.fragment.app.FragmentActivity
 import pl.akademiawielkichpilkarzy.app.ui.login.LoginScreen
@@ -34,17 +36,35 @@ class MainActivity : FragmentActivity() {
                     AppUpdateGate(checkOnStart = true)
                     val token by AwpApp.instance.sessionStore.tokenFlow.collectAsState(initial = null)
                     val deepLinkPath = deepLinkPathState.value
+                    var browsePitches by remember { mutableStateOf(false) }
+                    val guestMarketplacePath =
+                        deepLinkPath?.takeIf {
+                            it.startsWith("/obiekty") ||
+                                it.startsWith("/rezerwacje") ||
+                                it.startsWith("/dla-obiektow") ||
+                                it.startsWith("/zaproszenie")
+                        }
                     if (token.isNullOrBlank()) {
-                        // Zaproszenia działają bez sesji; /platnosci wymaga logowania (potem MainScaffold dostaje path).
-                        if (deepLinkPath?.startsWith("/zaproszenie") == true) {
+                        if (guestMarketplacePath != null) {
                             WebPortalScreen(
-                                title = "Zaproszenie",
-                                path = deepLinkPath,
+                                title = if (guestMarketplacePath.startsWith("/zaproszenie")) "Zaproszenie" else "Rezerwacja boiska",
+                                path = guestMarketplacePath,
                                 requireAuth = false,
-                                showTopBar = false
+                                showTopBar = !guestMarketplacePath.startsWith("/zaproszenie")
+                            )
+                        } else if (browsePitches) {
+                            WebPortalScreen(
+                                title = "Rezerwacja boiska",
+                                path = "/?mode=booking",
+                                requireAuth = false,
+                                showTopBar = true,
+                                onBack = { browsePitches = false }
                             )
                         } else {
-                            LoginScreen(onLoggedIn = {})
+                            LoginScreen(
+                                onLoggedIn = {},
+                                onBrowsePitches = { browsePitches = true }
+                            )
                         }
                     } else {
                         MainScaffold(
@@ -67,7 +87,12 @@ class MainActivity : FragmentActivity() {
     private fun Intent?.deepLinkPathOrNull(): String? {
         val uri = this?.data ?: return null
         val path = uri.encodedPath?.takeIf {
-            it.startsWith("/zaproszenie") || it.startsWith("/platnosci") || it.startsWith("/terminarz")
+            it.startsWith("/zaproszenie") ||
+                it.startsWith("/platnosci") ||
+                it.startsWith("/terminarz") ||
+                it.startsWith("/obiekty") ||
+                it.startsWith("/rezerwacje") ||
+                it.startsWith("/dla-obiektow")
         } ?: return null
         val query = uri.encodedQuery?.takeIf { it.isNotBlank() }?.let { "?$it" }.orEmpty()
         return path + query

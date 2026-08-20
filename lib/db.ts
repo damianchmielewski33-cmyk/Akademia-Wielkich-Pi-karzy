@@ -9,12 +9,13 @@ import { migrateRealmSchemaSqlite } from "@/lib/realm-migration";
 import { CAPTAIN_LOTTERY_CREATE_SQL, migrateCaptainLotterySchemaSqlite } from "@/lib/captain-lottery-schema";
 import { migrateAdImpressionsSchemaSqlite } from "@/lib/ad-impressions-schema";
 import { withTransientNetworkRetries } from "@/lib/transient-network-retry";
-import { BOOKING_SCHEMA_SQL, VENUES_OWNER_INDEX_SQL } from "@/lib/booking";
+import { BOOKING_SCHEMA_SQL, VENUES_OWNER_INDEX_SQL, BOOKING_GUEST_COLUMN_ALTERS, BOOKINGS_ACCESS_TOKEN_INDEX_SQL } from "@/lib/booking";
 import {
   BOOKINGS_PAYOUT_INDEX_SQL,
   SETTLEMENT_COLUMN_ALTERS,
   VENUE_PAYOUTS_SCHEMA_SQL,
 } from "@/lib/venue-settlements";
+import { VENUE_APPLICATIONS_SCHEMA_SQL } from "@/lib/venue-applications";
 
 /** Lokalny plik SQLite (dev) lub Turso (gdy TURSO_DATABASE_URL). */
 export type AppDb = {
@@ -769,6 +770,14 @@ function initSchemaSync(db: Database.Database) {
     }
   }
   db.exec(BOOKINGS_PAYOUT_INDEX_SQL);
+  const bookingGuestCols = db.prepare("PRAGMA table_info(bookings)").all() as { name: string }[];
+  for (const alter of BOOKING_GUEST_COLUMN_ALTERS) {
+    if (bookingGuestCols.length > 0 && !bookingGuestCols.some((c) => c.name === alter.column)) {
+      db.exec(alter.ddl);
+    }
+  }
+  db.exec(BOOKINGS_ACCESS_TOKEN_INDEX_SQL);
+  db.exec(VENUE_APPLICATIONS_SCHEMA_SQL);
 
   db.exec(`
     CREATE TABLE IF NOT EXISTS match_transport_messages (

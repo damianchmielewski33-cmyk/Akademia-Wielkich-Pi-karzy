@@ -70,7 +70,8 @@ import retrofit2.HttpException
 
 @Composable
 fun LoginScreen(
-    onLoggedIn: () -> Unit
+    onLoggedIn: () -> Unit,
+    onBrowsePitches: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val activity = context as? FragmentActivity
@@ -84,7 +85,8 @@ fun LoginScreen(
     var error by remember { mutableStateOf<String?>(null) }
     var loginBanner by remember { mutableStateOf<String?>(null) }
     var siteName by remember { mutableStateOf("Akademia Wielkich Piłkarzy") }
-    var siteDescription by remember { mutableStateOf("Szatnia, terminarz i płatności w aplikacji") }
+    var siteDescription by remember { mutableStateOf("Terminarz, składy i społeczność akademii") }
+    var marketplaceEnabled by remember { mutableStateOf(false) }
     var biometricsAvailable by remember { mutableStateOf(false) }
     var biometricEnabled by remember { mutableStateOf(false) }
     var authMode by remember { mutableStateOf("login") }
@@ -103,11 +105,14 @@ fun LoginScreen(
             siteDescription = cfg.settings?.siteDescription?.takeIf { it.isNotBlank() }
                 ?: cfg.appSettings?.siteDescription?.takeIf { it.isNotBlank() }
                 ?: siteDescription
+            marketplaceEnabled = cfg.appSettings?.bookingMarketplaceEnabled == true
         } catch (_: Exception) {
         }
-        try {
-            venues = ApiClient.api.venues().venues.take(8)
-        } catch (_: Exception) {
+        if (marketplaceEnabled) {
+            try {
+                venues = ApiClient.api.venues().venues.take(8)
+            } catch (_: Exception) {
+            }
         }
         // Auto-prompt biometrii przy starcie, jeśli włączona.
         if (biometricsAvailable && biometricEnabled && activity != null) {
@@ -189,7 +194,11 @@ fun LoginScreen(
                     .navigationBarsPadding()
                     .verticalScroll(rememberScrollState())
             ) {
-            MarketplaceLoginHero(siteName = siteName, subtitle = siteDescription)
+            MarketplaceLoginHero(
+                siteName = siteName,
+                subtitle = siteDescription,
+                marketplaceEnabled = marketplaceEnabled
+            )
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -227,8 +236,25 @@ fun LoginScreen(
                     )
                     else -> MarketplaceAuthCard(
                         title = "Logowanie",
-                        subtitle = "Wejdź PIN-em albo biometrią, jeśli jest włączona."
+                        subtitle = if (marketplaceEnabled) {
+                            "Rezerwacja boiska bez PIN-u albo wejście akademii."
+                        } else {
+                            "Wejście akademii — imię, nazwisko i PIN."
+                        }
                     ) {
+                        if (marketplaceEnabled && onBrowsePitches != null) {
+                            MarketplacePrimaryButton(
+                                text = "Rezerwuj boisko bez PIN-u",
+                                loading = false,
+                                enabled = true
+                            ) { onBrowsePitches() }
+                            Text(
+                                "albo akademia — imię, nazwisko i PIN",
+                                color = AwpColors.Zinc500,
+                                style = MaterialTheme.typography.bodySmall,
+                                modifier = Modifier.align(Alignment.CenterHorizontally)
+                            )
+                        }
                         if (biometricsAvailable && biometricEnabled && activity != null) {
                             MarketplacePrimaryButton("Zaloguj odciskiem / twarzą") {
                                 error = null
@@ -292,12 +318,14 @@ fun LoginScreen(
                             loading = loading,
                             enabled = firstName.isNotBlank() && lastName.isNotBlank() && pin.length in 4..6
                         ) { performPinLogin() }
-                        MarketplaceLink("Załóż konto") { authMode = "register" }
+                        MarketplaceLink("Załóż konto akademii") { authMode = "register" }
                         MarketplaceLink("Zapomniałem PIN-u") { authMode = "forgot" }
                     }
                 }
             }
-            MarketplaceVenueStrip(venues = venues)
+            if (marketplaceEnabled) {
+                MarketplaceVenueStrip(venues = venues)
+            }
             Spacer(Modifier.height(24.dp))
         }
         }
@@ -387,7 +415,7 @@ private fun ForgotPinPanel(onBack: () -> Unit, onSuccess: () -> Unit) {
 }
 
 @Composable
-private fun MarketplaceLoginHero(siteName: String, subtitle: String) {
+private fun MarketplaceLoginHero(siteName: String, subtitle: String, marketplaceEnabled: Boolean) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -419,14 +447,14 @@ private fun MarketplaceLoginHero(siteName: String, subtitle: String) {
                 .padding(bottom = 44.dp)
         ) {
             Text(
-                "REZERWACJA BOISK",
+                if (marketplaceEnabled) "REZERWACJA BOISK" else "AKADEMIA",
                 style = MaterialTheme.typography.labelSmall,
                 color = Color.White.copy(alpha = 0.8f),
                 fontWeight = FontWeight.Black
             )
             Spacer(Modifier.height(8.dp))
             Text(
-                "Zaloguj się i graj",
+                if (marketplaceEnabled) "Zarezerwuj boisko" else siteName,
                 style = MaterialTheme.typography.displayLarge,
                 color = Color.White
             )

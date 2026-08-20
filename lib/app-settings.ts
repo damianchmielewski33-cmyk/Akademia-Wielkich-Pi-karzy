@@ -96,6 +96,8 @@ export type AppSettings = {
   mobile_settings: MobileChannelSettings;
   /** Czy platnosci HotPay sa wlaczone przez admina (niezaleznie od konfiguracji env). */
   hotpay_enabled: boolean;
+  /** Publiczny marketplace rezerwacji boisk. Wyłączony = stara akademia dla znajomych. */
+  booking_marketplace_enabled: boolean;
   /** Prowizja operatora w % (np. 1.8). 0 = brak powiększania kwoty. */
   hotpay_commission_pct: number;
   /** Stała opłata operatora w PLN (np. 0.40). */
@@ -163,6 +165,7 @@ export const APP_SETTINGS_DEFAULTS: AppSettings = {
   screen_blocks_mobile: emptyMobileScreenBlocksMap(),
   mobile_settings: { ...MOBILE_CHANNEL_SETTINGS_DEFAULTS },
   hotpay_enabled: true,
+  booking_marketplace_enabled: false,
   hotpay_commission_pct: 2.45,
   hotpay_commission_fixed: 0.30,
 };
@@ -223,6 +226,7 @@ type AppSettingsRow = {
   screen_blocks_mobile_json?: string | null;
   mobile_settings_json?: string | null;
   hotpay_enabled?: number | null;
+  booking_marketplace_enabled?: number | null;
   hotpay_commission_pct?: number | null;
   hotpay_commission_fixed?: number | null;
 };
@@ -273,6 +277,7 @@ function appSettingsSelectSql(): string {
     screen_blocks_mobile_json,
     mobile_settings_json,
     hotpay_enabled,
+    booking_marketplace_enabled,
     hotpay_commission_pct,
     hotpay_commission_fixed
   FROM app_settings WHERE realm = ?
@@ -418,6 +423,7 @@ export function resolveAppSettings(
     screen_blocks: parseScreenBlocksJson(row?.screen_blocks_json),
     screen_blocks_mobile: parseMobileScreenBlocksJson(row?.screen_blocks_mobile_json),
     hotpay_enabled: sqlFlagOn(row?.hotpay_enabled, true),
+    booking_marketplace_enabled: sqlFlagOn(row?.booking_marketplace_enabled, false),
     hotpay_commission_pct:
       typeof row?.hotpay_commission_pct === "number" && row.hotpay_commission_pct >= 0
         ? row.hotpay_commission_pct
@@ -546,6 +552,7 @@ export async function saveAppSettings(db: DbWriteLike, realm: Realm, settings: A
         screen_blocks_mobile_json = ?,
         mobile_settings_json = ?,
         hotpay_enabled = ?,
+        booking_marketplace_enabled = ?,
         hotpay_commission_pct = ?,
         hotpay_commission_fixed = ?
       WHERE realm = ?`
@@ -594,6 +601,7 @@ export async function saveAppSettings(db: DbWriteLike, realm: Realm, settings: A
       serializeMobileScreenBlocksMap(settings.screen_blocks_mobile),
       serializeMobileSettings(settings.mobile_settings),
       settings.hotpay_enabled ? 1 : 0,
+      settings.booking_marketplace_enabled ? 1 : 0,
       settings.hotpay_commission_pct,
       settings.hotpay_commission_fixed,
       realm
@@ -676,6 +684,11 @@ const APP_SETTINGS_MIGRATION_COLUMNS: { name: string; ddl: string }[] = [
   },
   { name: "mobile_settings_json", ddl: "ALTER TABLE app_settings ADD COLUMN mobile_settings_json TEXT" },
   { name: "hotpay_enabled", ddl: "ALTER TABLE app_settings ADD COLUMN hotpay_enabled INTEGER NOT NULL DEFAULT 1" },
+  {
+    name: "booking_marketplace_enabled",
+    ddl: "ALTER TABLE app_settings ADD COLUMN booking_marketplace_enabled INTEGER NOT NULL DEFAULT 0",
+  },
+  { name: "hotpay_commission_pct", ddl: "ALTER TABLE app_settings ADD COLUMN hotpay_commission_pct REAL NOT NULL DEFAULT 2.45" },
   { name: "hotpay_commission_pct", ddl: "ALTER TABLE app_settings ADD COLUMN hotpay_commission_pct REAL NOT NULL DEFAULT 2.45" },
   { name: "hotpay_commission_fixed", ddl: "ALTER TABLE app_settings ADD COLUMN hotpay_commission_fixed REAL NOT NULL DEFAULT 0.30" },
 ];

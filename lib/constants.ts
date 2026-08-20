@@ -6,6 +6,10 @@
 export const SESSION_COOKIE =
   process.env.NODE_ENV === "production" ? "__Host-awp_session" : "awp_session";
 
+/** Gość marketplace: dostęp do własnej rezerwacji bez PIN-u akademii. */
+export const BOOKING_ACCESS_COOKIE = "awp_booking_access";
+export const BOOKING_ACCESS_MAX_AGE_SEC = 60 * 60 * 24 * 90;
+
 /** Ciasteczko gościa czatu z organizatorem — podpisany dostęp do własnej rozmowy (bez IDOR po samym imieniu). */
 export const CONTACT_ADMIN_GUEST_COOKIE =
   process.env.NODE_ENV === "production" ? "__Host-awp_contact_guest" : "awp_contact_guest";

@@ -52,6 +52,7 @@ const WEB_SETTINGS_TOC: SettingsTocGroup[] = [
     label: "System",
     items: [
       { id: "settings-test-mode", label: "Tryb testowy" },
+      { id: "settings-marketplace", label: "Rezerwacja boisk" },
       { id: "settings-system", label: "Co działa na serwerze" },
     ],
   },
@@ -544,6 +545,22 @@ export function AdminSettingsTab({
           checked={Boolean(testMode?.enabled)}
           disabled={busy || testModeBusy || !testMode?.configured}
           onCheckedChange={(v) => void setTestModeEnabled(v)}
+        />
+      </SettingsSection>
+
+      <SettingsSection
+        id="settings-marketplace"
+        hidden={channel !== "web" || settingsRealm !== "academy" || !sectionVisible("settings-marketplace")}
+        title="Rezerwacja boisk (nowa strona)"
+        description="Wyłącznik na czas transformacji. Wyłączony = stara akademia dla grupy znajomych. Włączony = nowy wygląd, katalog hal i rezerwacje online."
+      >
+        <YesNoSwitchRow
+          className={adminToggleRowClass}
+          label="Włącz rezerwację boisk"
+          hint="Gdy wyłączone, nikt nie widzi marketplace’u ani pytania „Szukam boiska”. Działa sam terminarz akademii. W panelu admina nadal przygotujesz hale (zakładka Rezerwacje)."
+          checked={Boolean(settings.booking_marketplace_enabled)}
+          disabled={busy}
+          onCheckedChange={(v) => void save({ booking_marketplace_enabled: v })}
         />
       </SettingsSection>
 

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/api-helpers";
+import { requireBookingMarketplace } from "@/lib/booking-marketplace";
 import { getDb, logActivity } from "@/lib/db";
 import { claimPartnerInvite } from "@/lib/venue-partners";
 
@@ -9,6 +10,8 @@ export async function POST(
   _req: Request,
   { params }: { params: Promise<{ token: string }> }
 ) {
+  const marketplace = await requireBookingMarketplace();
+  if (!marketplace.ok) return marketplace.response;
   const gate = await requireUser();
   if (!gate.ok) return gate.response;
   const token = (await params).token?.trim() ?? "";

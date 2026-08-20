@@ -559,7 +559,8 @@ data class AppSettingsSnapshotDto(
     @Json(name = "ranking_pt_save") val rankingPtSave: Double? = null,
     @Json(name = "lineup_pitch_slots_min") val lineupPitchSlotsMin: Int? = null,
     @Json(name = "lineup_pitch_slots_max") val lineupPitchSlotsMax: Int? = null,
-    @Json(name = "match_cancel_reasons") val matchCancelReasons: List<MatchCancelReasonDto> = emptyList()
+    @Json(name = "match_cancel_reasons") val matchCancelReasons: List<MatchCancelReasonDto> = emptyList(),
+    @Json(name = "booking_marketplace_enabled") val bookingMarketplaceEnabled: Boolean = false
 )
 
 data class SiteAssetsDto(

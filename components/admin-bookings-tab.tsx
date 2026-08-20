@@ -5,6 +5,7 @@ import Link from "next/link";
 import { toast } from "@/lib/app-toast";
 import type { AdminPitchRow, BookingRow, VenueCard } from "@/lib/booking";
 import type { PartnerInvite } from "@/lib/venue-partners";
+import type { VenueApplication } from "@/lib/venue-applications";
 import { Button } from "@/components/ui/button";
 import { FormInput, FormTextarea } from "@/components/ui/form-field";
 import { Badge } from "@/components/ui/badge";
@@ -70,25 +71,31 @@ export function AdminBookingsTab() {
   const [blockForm, setBlockForm] = useState({ pitch_id: "", date: "", start_time: "18:00", end_time: "19:00", reason: "" });
   const [photoDrafts, setPhotoDrafts] = useState<Record<number, [string, string, string]>>({});
   const [invites, setInvites] = useState<PartnerInvite[]>([]);
+  const [applications, setApplications] = useState<VenueApplication[]>([]);
   const [inviteLabel, setInviteLabel] = useState("");
   const [busy, setBusy] = useState(false);
 
   async function load() {
-    const [venuesRes, bookingsRes, pitchesRes, invitesRes] = await Promise.all([
+    const [venuesRes, bookingsRes, pitchesRes, invitesRes, appsRes] = await Promise.all([
       fetch("/api/admin/venues"),
       fetch("/api/admin/bookings"),
       fetch("/api/admin/pitches"),
       fetch("/api/admin/partner-invites"),
+      fetch("/api/admin/venue-applications"),
     ]);
     if (!venuesRes.ok || !bookingsRes.ok || !pitchesRes.ok || !invitesRes.ok) throw new Error();
     const venuesJson = (await venuesRes.json()) as { venues: VenueCard[] };
     const bookingsJson = (await bookingsRes.json()) as { bookings: BookingRow[] };
     const pitchesJson = (await pitchesRes.json()) as { pitches: AdminPitchRow[] };
     const invitesJson = (await invitesRes.json()) as { invites: PartnerInvite[] };
+    const appsJson = appsRes.ok
+      ? ((await appsRes.json()) as { applications: VenueApplication[] })
+      : { applications: [] };
     setVenues(venuesJson.venues);
     setBookings(bookingsJson.bookings);
     setPitches(pitchesJson.pitches);
     setInvites(invitesJson.invites);
+    setApplications(appsJson.applications);
     setPhotoDrafts((prev) => {
       const next = { ...prev };
       for (const venue of venuesJson.venues) {
@@ -233,12 +240,73 @@ export function AdminBookingsTab() {
     await load();
   }
 
+  async function decideApplication(id: number, action: "approve" | "reject", publish = false) {
+    const res = await fetch(`/api/admin/venue-applications/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action, publish }),
+    });
+    const data = (await res.json().catch(() => ({}))) as { error?: string };
+    if (!res.ok) {
+      toast.error(data.error ?? "Nie udało się zapisać decyzji");
+      return;
+    }
+    toast.success(action === "approve" ? "Hala przyjęta — partner dostał maila" : "Zgłoszenie odrzucone");
+    await load();
+  }
+
   return (
     <div className="space-y-6">
       <AdminSettlementsCard />
       <AdminCard
+        title="Zgłoszenia hal"
+        description="Publiczny formularz /dla-obiektow — bez tokenu. Weryfikacja, potem publikacja z cennikiem i zdjęciami."
+      >
+        {applications.length === 0 ? (
+          <p className="text-sm text-zinc-500">Brak zgłoszeń.</p>
+        ) : (
+          <div className="space-y-3">
+            {applications.map((app) => (
+              <article
+                key={app.id}
+                className="rounded-2xl border border-zinc-200 p-3 text-sm dark:border-zinc-800"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div>
+                    <p className="font-semibold">
+                      {app.venue_name} · {app.city}
+                    </p>
+                    <p className="text-zinc-500">
+                      {app.contact_name} · {app.contact_email} · {app.contact_phone}
+                    </p>
+                    <p className="mt-1 text-zinc-500">{app.address}</p>
+                    {app.description ? <p className="mt-1">{app.description}</p> : null}
+                  </div>
+                  <Badge>
+                    {app.status === "pending" ? "Do weryfikacji" : app.status === "approved" ? "Przyjęte" : "Odrzucone"}
+                  </Badge>
+                </div>
+                {app.status === "pending" ? (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <Button size="sm" onClick={() => void decideApplication(app.id, "approve", false)}>
+                      Przyjmij (szkic)
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => void decideApplication(app.id, "approve", true)}>
+                      Przyjmij i publikuj
+                    </Button>
+                    <Button size="sm" variant="destructive" onClick={() => void decideApplication(app.id, "reject")}>
+                      Odrzuć
+                    </Button>
+                  </div>
+                ) : null}
+              </article>
+            ))}
+          </div>
+        )}
+      </AdminCard>
+      <AdminCard
         title="Link dla partnera"
-        description="Wyślij ten adres właścicielowi hali. Po rejestracji doda swoje boiska, cennik i wolne terminy — bez dostępu do panelu akademii."
+        description="Zapasowa ścieżka dla znajomych obiektów. Marketplace rośnie ze zgłoszeń powyżej, nie z tokenów."
       >
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
           <FormInput

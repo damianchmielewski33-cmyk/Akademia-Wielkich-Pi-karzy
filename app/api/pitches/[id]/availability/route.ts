@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
+import { requireBookingMarketplace } from "@/lib/booking-marketplace";
 import { getAvailabilitySlots } from "@/lib/booking";
 
 export const runtime = "nodejs";
@@ -8,6 +9,8 @@ export async function GET(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const marketplace = await requireBookingMarketplace();
+  if (!marketplace.ok) return marketplace.response;
   const { id } = await params;
   const pitchId = Number(id);
   const date = new URL(req.url).searchParams.get("date") ?? "";

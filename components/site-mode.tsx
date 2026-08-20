@@ -9,12 +9,14 @@ import { parseSiteMode, persistSiteMode, shouldAskSiteMode, SITE_MODE_STORAGE_KE
 type Ctx = {
   mode: SiteMode | null;
   ready: boolean;
+  marketplaceEnabled: boolean;
   setMode: (mode: SiteMode, options?: { navigateHome?: boolean }) => void;
 };
 
 const SiteModeContext = createContext<Ctx>({
   mode: null,
   ready: false,
+  marketplaceEnabled: false,
   setMode: () => {},
 });
 
@@ -25,19 +27,27 @@ export function useSiteMode() {
 export function SiteModeProvider({
   children,
   initialMode = null,
+  marketplaceEnabled = false,
 }: {
   children: ReactNode;
   initialMode?: SiteMode | null;
+  marketplaceEnabled?: boolean;
 }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const [mode, setModeState] = useState<SiteMode | null>(
-    () => parseSiteMode(searchParams.get("mode")) ?? siteModeFromPathname(pathname) ?? initialMode
-  );
+  const [mode, setModeState] = useState<SiteMode | null>(() => {
+    if (!marketplaceEnabled) return "academy";
+    return parseSiteMode(searchParams.get("mode")) ?? siteModeFromPathname(pathname) ?? initialMode;
+  });
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
+    if (!marketplaceEnabled) {
+      setModeState("academy");
+      setReady(true);
+      return;
+    }
     const fromQuery = parseSiteMode(searchParams.get("mode"));
     const fromPath = siteModeFromPathname(pathname);
     let stored: SiteMode | null = null;
@@ -50,25 +60,35 @@ export function SiteModeProvider({
     if (next) persistSiteMode(next);
     setModeState(next);
     setReady(true);
-  }, [pathname, searchParams, initialMode]);
+  }, [pathname, searchParams, initialMode, marketplaceEnabled]);
 
   const setMode = useCallback(
     (next: SiteMode, options?: { navigateHome?: boolean }) => {
+      if (!marketplaceEnabled && next === "booking") return;
       persistSiteMode(next);
       setModeState(next);
       if (!options?.navigateHome) return;
       if (pathname === "/") router.refresh();
       else router.push("/");
     },
-    [pathname, router]
+    [pathname, router, marketplaceEnabled]
   );
 
-  const value = useMemo(() => ({ mode, ready, setMode }), [mode, ready, setMode]);
+  const value = useMemo(
+    () => ({ mode, ready, marketplaceEnabled, setMode }),
+    [mode, ready, marketplaceEnabled, setMode]
+  );
 
   return (
     <SiteModeContext.Provider value={value}>
       {children}
-      <SiteModeGate pathname={pathname} mode={mode} ready={ready} onChoose={setMode} />
+      <SiteModeGate
+        pathname={pathname}
+        mode={mode}
+        ready={ready}
+        marketplaceEnabled={marketplaceEnabled}
+        onChoose={setMode}
+      />
     </SiteModeContext.Provider>
   );
 }
@@ -77,14 +97,16 @@ function SiteModeGate({
   pathname,
   mode,
   ready,
+  marketplaceEnabled,
   onChoose,
 }: {
   pathname: string | null;
   mode: SiteMode | null;
   ready: boolean;
+  marketplaceEnabled: boolean;
   onChoose: (mode: SiteMode, options?: { navigateHome?: boolean }) => void;
 }) {
-  const open = ready && shouldAskSiteMode(pathname, mode);
+  const open = ready && marketplaceEnabled && shouldAskSiteMode(pathname, mode, marketplaceEnabled);
 
   return (
     <AppModal

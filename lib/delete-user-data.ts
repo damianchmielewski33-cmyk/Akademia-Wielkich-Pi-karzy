@@ -30,6 +30,7 @@ export async function deleteUserAccountData(db: AppDb, userId: number): Promise<
   await db.prepare("UPDATE venues SET owner_user_id = NULL WHERE owner_user_id = ?").run(userId);
   await db.prepare("DELETE FROM venue_partners WHERE user_id = ?").run(userId);
   await db.prepare("UPDATE venue_partner_invites SET claimed_user_id = NULL WHERE claimed_user_id = ?").run(userId);
+  await db.prepare("UPDATE venue_applications SET partner_user_id = NULL WHERE partner_user_id = ?").run(userId);
 
   await db.prepare("UPDATE public_share_links SET user_id = NULL WHERE user_id = ?").run(userId);
 
@@ -63,6 +64,9 @@ export async function deleteUserAccountData(db: AppDb, userId: number): Promise<
       .prepare("UPDATE venue_partner_invites SET created_by_admin_id = ? WHERE created_by_admin_id = ?")
       .run(fallbackAdminId, userId);
     await db
+      .prepare("UPDATE venue_applications SET reviewed_by_admin_id = ? WHERE reviewed_by_admin_id = ?")
+      .run(fallbackAdminId, userId);
+    await db
       .prepare("UPDATE venue_payouts SET created_by_admin_id = ? WHERE created_by_admin_id = ?")
       .run(fallbackAdminId, userId);
     await db
@@ -78,6 +82,7 @@ export async function deleteUserAccountData(db: AppDb, userId: number): Promise<
     await db.prepare("DELETE FROM match_attendance WHERE marked_by_admin_id = ?").run(userId);
     await db.prepare("DELETE FROM match_wallet_charges WHERE created_by_admin_id = ?").run(userId);
     await db.prepare("DELETE FROM venue_partner_invites WHERE created_by_admin_id = ?").run(userId);
+    await db.prepare("UPDATE venue_applications SET reviewed_by_admin_id = NULL WHERE reviewed_by_admin_id = ?").run(userId);
     await db.prepare("UPDATE venue_payouts SET paid_by_admin_id = NULL WHERE paid_by_admin_id = ?").run(userId);
     await db.prepare("DELETE FROM venue_payouts WHERE created_by_admin_id = ?").run(userId);
     await db.prepare("DELETE FROM public_share_links WHERE created_by_admin_id = ?").run(userId);

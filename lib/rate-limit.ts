@@ -88,6 +88,10 @@ export const RATE = {
   hotpayPublicStatus: { limit: 60, windowMs: 60 * 1000 },
   /** Publiczne rozpoczęcie płatności z linku — limit na IP. */
   hotpayPublicCreate: { limit: 15, windowMs: 60 * 60 * 1000 },
+  /** Publiczne zgłoszenie hali (bez tokenu zaproszenia). */
+  venueApply: { limit: 6, windowMs: 60 * 60 * 1000 },
+  /** Rezerwacja gościa marketplace (bez PIN-u akademii). */
+  guestBooking: { limit: 20, windowMs: 60 * 60 * 1000 },
   /** Anulowanie sesji HotPay (session_id) — limit na IP. */
   hotpayAbandon: { limit: 40, windowMs: 60 * 1000 },
   /** Ręczne domknięcie HotPay przez admina (finance). */

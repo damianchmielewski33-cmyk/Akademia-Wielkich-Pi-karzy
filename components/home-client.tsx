@@ -60,10 +60,10 @@ type Props = {
 };
 
 export function HomeClient(props: Props) {
-  const { mode } = useSiteMode();
+  const { mode, marketplaceEnabled } = useSiteMode();
   const pageVariant = props.pageVariant ?? "home";
 
-  if (pageVariant === "home" && mode === "booking") {
+  if (pageVariant === "home" && marketplaceEnabled && mode === "booking") {
     return <BookingHomeView featuredVenues={props.featuredVenues ?? []} />;
   }
   if (pageVariant === "pzu-cup" || mode === "academy") {
@@ -127,7 +127,15 @@ function BookingHomeView({ featuredVenues }: { featuredVenues: VenueCard[] }) {
           </div>
           {featuredVenues.length === 0 ? (
             <div className="mt-6 rounded-3xl border border-dashed border-zinc-300 bg-white p-8 text-center text-zinc-600 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-300">
-              Brak opublikowanych obiektów. Partner z linku zaproszenia doda pierwszy w panelu obiektu.
+              <p className="font-semibold">Katalog startuje od Warszawy.</p>
+              <p className="mt-2 text-sm">
+                Potrzebujemy 5–15 hal w jednym mieście: zdjęcia, cennik, godziny, oświetlenie. Potem kolejne miasto.
+              </p>
+              <div className="mt-4">
+                <Button asChild>
+                  <Link href="/dla-obiektow">Zgłoś obiekt</Link>
+                </Button>
+              </div>
             </div>
           ) : (
             <div className="-mx-4 mt-6 flex gap-4 overflow-x-auto px-4 pb-3 [scrollbar-width:thin]">
@@ -144,7 +152,8 @@ function BookingHomeView({ featuredVenues }: { featuredVenues: VenueCard[] }) {
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/80">Dla obiektów</p>
               <h2 className="mt-2 text-3xl font-black tracking-tight">Masz halę albo orlik? Wystaw terminy.</h2>
               <p className="mt-3 text-white/90">
-                Partnerzy z linku dodają boiska, cennik i wolne godziny. Gracze rezerwują i płacą online, Ty widzisz obłożenie.
+                Zgłoś halę na stronie — bez tokenu od znajomych. Po weryfikacji publikujemy obiekt. Gracze rezerwują i
+                płacą online, Ty widzisz obrót, prowizję i termin przelewu.
               </p>
             </div>
             <Button asChild variant="secondary" className="h-12 rounded-full bg-white px-8 font-black text-zinc-950 hover:bg-zinc-100">
@@ -157,7 +166,7 @@ function BookingHomeView({ featuredVenues }: { featuredVenues: VenueCard[] }) {
           {[
             { n: "1", t: "Znajdź obiekt", d: "Filtruj po mieście, nawierzchni i cenie." },
             { n: "2", t: "Wybierz godzinę", d: "Zobacz wolne sloty i zablokuj termin." },
-            { n: "3", t: "Opłać online", d: "Potwierdzenie rezerwacji przychodzi od razu." },
+            { n: "3", t: "Opłać online", d: "Potwierdzenie na e-mail — bez PIN-u akademii." },
           ].map((step) => (
             <div key={step.n} className="rounded-2xl bg-zinc-50 p-5 dark:bg-zinc-900">
               <p className="text-3xl font-black text-[var(--mp-teal)]">{step.n}</p>

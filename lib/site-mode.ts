@@ -48,7 +48,12 @@ export function parseSiteMode(value: string | null | undefined): SiteMode | null
   return null;
 }
 
-export function shouldAskSiteMode(pathname: string | null | undefined, mode: SiteMode | null): boolean {
+export function shouldAskSiteMode(
+  pathname: string | null | undefined,
+  mode: SiteMode | null,
+  marketplaceEnabled = true
+): boolean {
+  if (!marketplaceEnabled) return false;
   if (mode) return false;
   const path = (pathname ?? "").split("?")[0] || "/";
   if (matchesPrefix(path, SKIP_GATE_PREFIXES)) return false;

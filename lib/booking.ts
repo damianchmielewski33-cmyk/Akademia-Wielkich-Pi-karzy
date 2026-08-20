@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import type { AppDb } from "@/lib/db";
 import { ensureSettlementSchema, splitBookingAmount, clampVenueCommissionPct } from "@/lib/venue-settlements";
 
@@ -53,6 +54,8 @@ export type BookingRow = {
   status: BookingStatus;
   contact_name: string;
   contact_phone: string;
+  contact_email?: string | null;
+  access_token?: string | null;
   note: string | null;
   hotpay_session_id: string | null;
   expires_at: string | null;
@@ -234,6 +237,8 @@ export const BOOKING_SCHEMA_SQL = `
     status TEXT NOT NULL CHECK (status IN ('pending','confirmed','cancelled','expired')) DEFAULT 'pending',
     contact_name TEXT NOT NULL,
     contact_phone TEXT NOT NULL,
+    contact_email TEXT,
+    access_token TEXT,
     note TEXT,
     hotpay_session_id TEXT,
     expires_at TEXT,
@@ -245,6 +250,7 @@ export const BOOKING_SCHEMA_SQL = `
   CREATE INDEX IF NOT EXISTS idx_bookings_pitch_date_time ON bookings(pitch_id, booking_date, start_time, end_time);
   CREATE INDEX IF NOT EXISTS idx_bookings_user_created ON bookings(user_id, created_at);
   CREATE INDEX IF NOT EXISTS idx_bookings_status_expires ON bookings(status, expires_at);
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_bookings_access_token ON bookings(access_token);
 
   CREATE TABLE IF NOT EXISTS booking_payments (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -327,6 +333,14 @@ function overlaps(aStart: string, aEnd: string, bStart: string, bEnd: string): b
 export const VENUES_OWNER_INDEX_SQL =
   "CREATE INDEX IF NOT EXISTS idx_venues_owner ON venues(owner_user_id)";
 
+export const BOOKINGS_ACCESS_TOKEN_INDEX_SQL =
+  "CREATE UNIQUE INDEX IF NOT EXISTS idx_bookings_access_token ON bookings(access_token)";
+
+export const BOOKING_GUEST_COLUMN_ALTERS: Array<{ column: string; ddl: string }> = [
+  { column: "contact_email", ddl: "ALTER TABLE bookings ADD COLUMN contact_email TEXT" },
+  { column: "access_token", ddl: "ALTER TABLE bookings ADD COLUMN access_token TEXT" },
+];
+
 export async function ensureBookingSchema(db: AppDb): Promise<void> {
   await db.exec(BOOKING_SCHEMA_SQL);
   const cols = await db.prepare("PRAGMA table_info(venues)").all<{ name: string }>();
@@ -334,6 +348,15 @@ export async function ensureBookingSchema(db: AppDb): Promise<void> {
     await db.exec("ALTER TABLE venues ADD COLUMN owner_user_id INTEGER");
   }
   await db.exec(VENUES_OWNER_INDEX_SQL);
+  const bookingCols = await db.prepare("PRAGMA table_info(bookings)").all<{ name: string }>();
+  for (const alter of BOOKING_GUEST_COLUMN_ALTERS) {
+    if (bookingCols.length > 0 && !bookingCols.some((c) => c.name === alter.column)) {
+      await db.exec(alter.ddl);
+    }
+  }
+  await db.exec(BOOKINGS_ACCESS_TOKEN_INDEX_SQL);
+  const { ensureVenueApplicationsSchema } = await import("@/lib/venue-applications");
+  await ensureVenueApplicationsSchema(db);
   await ensureSettlementSchema(db);
 }
 
@@ -959,10 +982,13 @@ export async function createBookingHold(
     startTime: string;
     contactName: string;
     contactPhone: string;
+    contactEmail?: string | null;
     note?: string | null;
   }
 ): Promise<{ ok: true; booking: BookingRow } | { ok: false; error: string }> {
   const start = normalizeTime(args.startTime);
+  const accessToken = randomBytes(24).toString("hex");
+  const contactEmail = args.contactEmail?.trim().toLowerCase() || null;
   const executor = db.transaction ? db.transaction.bind(db) : async <T>(fn: (tx: AppDb) => Promise<T>) => fn(db);
   return executor(async (tx) => {
     await expireStaleBookings(tx);
@@ -982,8 +1008,8 @@ export async function createBookingHold(
       .prepare(
         `INSERT INTO bookings
           (user_id, pitch_id, booking_date, start_time, end_time, amount_pln, platform_fee_pln, owner_payout_pln, status,
-           contact_name, contact_phone, note, expires_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, datetime('now', '+15 minutes'))`
+           contact_name, contact_phone, contact_email, access_token, note, expires_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, datetime('now', '+15 minutes'))`
       )
       .run(
         args.userId,
@@ -996,12 +1022,43 @@ export async function createBookingHold(
         split.owner_payout_pln,
         args.contactName.trim(),
         args.contactPhone.trim(),
+        contactEmail,
+        accessToken,
         args.note?.trim() || null
       );
     const booking = await getBookingById(tx, Number(result.lastInsertRowid), args.userId);
     if (!booking) return { ok: false as const, error: "Nie udało się utworzyć rezerwacji." };
-    return { ok: true as const, booking };
+    return { ok: true as const, booking: { ...booking, access_token: accessToken, contact_email: contactEmail } };
   });
+}
+
+export async function getBookingByAccessToken(db: AppDb, token: string): Promise<BookingRow | null> {
+  const trimmed = token.trim();
+  if (!trimmed) return null;
+  const row = await db
+    .prepare(
+      `SELECT b.*, p.name AS pitch_name, v.name AS venue_name, v.city AS venue_city, v.address AS venue_address,
+              TRIM(u.first_name || ' ' || u.last_name) AS user_name
+       FROM bookings b
+       JOIN pitches p ON p.id = b.pitch_id
+       JOIN venues v ON v.id = p.venue_id
+       JOIN users u ON u.id = b.user_id
+       WHERE b.access_token = ?
+       LIMIT 1`
+    )
+    .get<BookingRow>(trimmed);
+  return row ?? null;
+}
+
+export async function listBookingsForAccessToken(db: AppDb, token: string): Promise<BookingRow[]> {
+  const booking = await getBookingByAccessToken(db, token);
+  if (!booking) return [];
+  return listBookingsForUser(db, booking.user_id);
+}
+
+export async function userIdForBookingAccess(db: AppDb, token: string): Promise<number | null> {
+  const booking = await getBookingByAccessToken(db, token);
+  return booking?.user_id ?? null;
 }
 
 export async function getBookingById(db: AppDb, bookingId: number, userId?: number): Promise<BookingRow | null> {

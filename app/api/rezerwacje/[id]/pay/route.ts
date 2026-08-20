@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
-import { requireUser } from "@/lib/api-helpers";
+import { getServerSession } from "@/lib/auth";
 import { getAppSettings } from "@/lib/app-settings";
+import { requireBookingMarketplace } from "@/lib/booking-marketplace";
 import { getDb, logActivity } from "@/lib/db";
-import { getBookingById } from "@/lib/booking";
+import { getBookingById, userIdForBookingAccess } from "@/lib/booking";
+import { readBookingAccessToken } from "@/lib/booking-access";
 import {
   buildHotpayReturnUrl,
   createHotpaySessionId,
@@ -13,12 +15,35 @@ import {
 
 export const runtime = "nodejs";
 
-export async function POST(
-  _req: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const gate = await requireUser();
-  if (!gate.ok) return gate.response;
+async function actorUserId(req: Request): Promise<{ userId: number; token: string | null } | null> {
+  const session = await getServerSession();
+  if (session && !session.needsPinSetup && !session.pinChangePending) {
+    return { userId: session.userId, token: null };
+  }
+  let bodyToken: string | null = null;
+  try {
+    const json = (await req.clone().json()) as { access_token?: string };
+    bodyToken = typeof json.access_token === "string" ? json.access_token : null;
+  } catch {
+    /* no body */
+  }
+  const token = readBookingAccessToken(req, bodyToken);
+  if (!token) return null;
+  const db = await getDb();
+  const userId = await userIdForBookingAccess(db, token);
+  return userId ? { userId, token } : null;
+}
+
+export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const marketplace = await requireBookingMarketplace();
+  if (!marketplace.ok) return marketplace.response;
+  const actor = await actorUserId(req);
+  if (!actor) {
+    return NextResponse.json(
+      { error: "Nie znaleziono rezerwacji. Użyj linku z maila albo zarezerwuj ponownie — bez PIN-u akademii." },
+      { status: 401 }
+    );
+  }
 
   const bookingId = Number((await params).id);
   if (!Number.isInteger(bookingId) || bookingId <= 0) {
@@ -36,7 +61,7 @@ export async function POST(
     return NextResponse.json({ error: "Płatności online są chwilowo wyłączone." }, { status: 503 });
   }
 
-  const booking = await getBookingById(db, bookingId, gate.session.userId);
+  const booking = await getBookingById(db, bookingId, actor.userId);
   if (!booking) return NextResponse.json({ error: "Nie znaleziono rezerwacji" }, { status: 404 });
   if (booking.status === "confirmed") {
     return NextResponse.json({ ok: true, status: "confirmed" });
@@ -53,11 +78,11 @@ export async function POST(
     0
   );
   const hasCommission = grossAmountPln > amountPln;
-  const sessionId = createHotpaySessionId(gate.session.userId);
-  const returnPath = `/rezerwacje?booking=${booking.id}`;
+  const sessionId = createHotpaySessionId(actor.userId);
+  const tokenQs = actor.token ? `&token=${encodeURIComponent(actor.token)}` : "";
+  const returnPath = `/rezerwacje?booking=${booking.id}${tokenQs}`;
   const returnUrl = buildHotpayReturnUrl(sessionId, "pending", returnPath);
-  const playerLabel =
-    [gate.session.firstName, gate.session.lastName].filter(Boolean).join(" ").trim() || gate.session.zawodnik;
+  const playerLabel = booking.contact_name.trim() || "Rezerwacja boiska";
 
   await db
     .prepare(
@@ -72,7 +97,7 @@ export async function POST(
         (session_id, user_id, kind, amount_pln, gross_amount_pln, status, booking_id, is_test)
        VALUES (?, ?, 'booking', ?, ?, 'pending', ?, 0)`
     )
-    .run(sessionId, gate.session.userId, amountPln, hasCommission ? grossAmountPln : null, booking.id);
+    .run(sessionId, actor.userId, amountPln, hasCommission ? grossAmountPln : null, booking.id);
 
   await db
     .prepare(
@@ -104,6 +129,6 @@ export async function POST(
     return NextResponse.json({ error: init.error }, { status: 502 });
   }
 
-  await logActivity(gate.session.userId, `Rozpoczął płatność za rezerwację #${booking.id}: ${amountPln.toFixed(2)} PLN`);
+  await logActivity(actor.userId, `Rozpoczął płatność za rezerwację #${booking.id}: ${amountPln.toFixed(2)} PLN`);
   return NextResponse.json({ ok: true, url: init.url, session_id: sessionId, amount_pln: amountPln });
 }

@@ -3,14 +3,42 @@ import { notFound } from "next/navigation";
 import { getServerSession } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { WEEKDAY_LABELS_PL, getVenueWithPitches, type PitchPublic } from "@/lib/booking";
+import { redirectIfBookingMarketplaceDisabled } from "@/lib/booking-marketplace";
 import { BookingFlowClient } from "@/components/booking-flow-client";
 import { VenueGallery } from "@/components/venue-gallery";
 import { VenueMapEmbed } from "@/components/venue-map-embed";
 
-export const metadata: Metadata = {
-  title: "Rezerwacja boiska",
-  description: "Wybierz boisko, godzinę i opłać rezerwację online.",
-};
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  try {
+    const db = await getDb();
+    const data = await getVenueWithPitches(db, id);
+    if (!data) {
+      return {
+        title: "Rezerwacja boiska",
+        description: "Wybierz boisko, godzinę i opłać rezerwację online.",
+      };
+    }
+    const minPrice = data.pitches.reduce(
+      (min, pitch) => Math.min(min, Number(pitch.base_price_pln)),
+      Number.POSITIVE_INFINITY
+    );
+    const priceBit = Number.isFinite(minPrice) ? ` cena od ${minPrice.toFixed(0)} zł` : "";
+    return {
+      title: `${data.venue.name} — rezerwacja boiska ${data.venue.city}`,
+      description: `Rezerwacja orlika / hali w mieście ${data.venue.city}.${priceBit}. Godziny, oświetlenie, płatność online.`,
+    };
+  } catch {
+    return {
+      title: "Rezerwacja boiska",
+      description: "Wybierz boisko, godzinę i opłać rezerwację online.",
+    };
+  }
+}
 
 function hoursSummary(hours: PitchPublic["opening_hours"]) {
   if (hours.length === 0) return "Godziny wkrótce";
@@ -44,6 +72,7 @@ export default async function VenueDetailsPage({
   searchParams: Promise<{ date?: string; time?: string }>;
 }) {
   const [{ id }, sp] = await Promise.all([params, searchParams]);
+  await redirectIfBookingMarketplaceDisabled();
   const [session, db] = await Promise.all([getServerSession(), getDb()]);
   const data = await getVenueWithPitches(db, id);
   if (!data) notFound();

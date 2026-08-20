@@ -24,17 +24,18 @@ export function MyBookingsClient() {
   const [busyId, setBusyId] = useState<number | null>(null);
   const [cancellingId, setCancellingId] = useState<number | null>(null);
   const highlighted = Number(searchParams.get("booking") ?? 0);
+  const token = searchParams.get("token")?.trim() ?? "";
 
   function load() {
     setLoading(true);
-    fetch("/api/rezerwacje")
+    fetch(`/api/rezerwacje${token ? `?token=${encodeURIComponent(token)}` : ""}`)
       .then((r) => (r.ok ? r.json() : Promise.reject()))
       .then((data: { bookings: BookingRow[] }) => setBookings(data.bookings))
       .catch(() => toast.error("Nie udało się wczytać rezerwacji"))
       .finally(() => setLoading(false));
   }
 
-  useEffect(load, []);
+  useEffect(load, [token]);
 
   useHotpayPaymentReturn({
     enabled: true,

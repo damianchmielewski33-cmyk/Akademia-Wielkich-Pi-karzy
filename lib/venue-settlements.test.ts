@@ -10,6 +10,7 @@ import {
   getPartnerSettlement,
   isBookingEligibleForPayout,
   markVenuePayoutPaid,
+  nextTransferDateIso,
   splitBookingAmount,
 } from "@/lib/venue-settlements";
 
@@ -117,6 +118,8 @@ describe("venue settlements", () => {
     const partner = await getPartnerSettlement(db, 2, new Date("2020-01-06T19:00:00"));
     expect(partner.pending.owner_payout_pln).toBe(153);
     expect(partner.pending.booking_count).toBe(1);
+    expect(partner.commission_pct).toBe(15);
+    expect(partner.next_transfer_date).toBe("2020-01-13");
 
     const created = await createVenuePayout(db, {
       venueId: 1,
@@ -157,5 +160,28 @@ describe("venue settlements", () => {
         new Date("2026-08-20T12:00:00")
       )
     ).toBe(false);
+  });
+
+  it("dates the transfer 7 days after the last eligible slot", () => {
+    expect(
+      nextTransferDateIso(
+        [
+          {
+            booking_id: 1,
+            booking_date: "2026-08-20",
+            start_time: "18:00",
+            end_time: "19:00",
+            pitch_name: "A",
+            venue_id: 1,
+            venue_name: "Hala",
+            amount_pln: 180,
+            platform_fee_pln: 27,
+            owner_payout_pln: 153,
+            commission_pct: 15,
+          },
+        ],
+        new Date("2026-08-20T20:00:00")
+      )
+    ).toBe("2026-08-27");
   });
 });

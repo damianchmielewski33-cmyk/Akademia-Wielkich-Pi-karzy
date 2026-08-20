@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "@/lib/auth";
+import { requireBookingMarketplace } from "@/lib/booking-marketplace";
 import { getDb } from "@/lib/db";
 import { userHasPzuCupAccess } from "@/lib/pzu-cup-access";
 import { matchBelongsToRealm } from "@/lib/realm-db";
@@ -74,6 +75,8 @@ export async function requireAdmin(requiredSection?: import("@/lib/admin-permiss
 }
 
 export async function requireVenuePartner() {
+  const marketplace = await requireBookingMarketplace();
+  if (!marketplace.ok) return marketplace;
   const r = await requireUser();
   if (!r.ok) return r;
   const db = await getDb();
@@ -82,7 +85,7 @@ export async function requireVenuePartner() {
     return {
       ok: false as const,
       response: NextResponse.json(
-        { error: "Ten panel jest dla partnerów obiektu. Wejdź z linku zaproszenia." },
+        { error: "Ten panel jest dla partnerów obiektu. Zgłoś halę na /dla-obiektow albo wejdź z konta partnera." },
         { status: 403 }
       ),
     };

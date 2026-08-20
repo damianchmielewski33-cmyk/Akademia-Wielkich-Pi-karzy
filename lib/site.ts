@@ -1,8 +1,8 @@
 export const SITE_NAME = "Akademia Wielkich Piłkarzy";
 
-/** Domyślny opis pod SEO, Open Graph i schema.org. */
+/** Domyślny opis pod SEO, Open Graph i schema.org — marketplace rezerwacji jest pierwszym wejściem. */
 export const SITE_DESCRIPTION =
-  "Terminarz meczów, statystyki, rankingi i społeczność amatorskiej piłki nożnej — Akademia Wielkich Piłkarzy.";
+  "Rezerwacja orlika i hali: miasto, godzina, cena od, płatność online. Akademia amatorskiej piłki — drugim wejściem.";
 
 /**
  * Publiczny email, gdy brak NEXT_PUBLIC_CONTACT_EMAIL (np. środowisko lokalne).

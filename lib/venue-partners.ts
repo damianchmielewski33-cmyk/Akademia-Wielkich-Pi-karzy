@@ -144,15 +144,23 @@ export async function claimPartnerInvite(
       .run(args.userId, invite.id);
   }
 
+  await grantVenuePartner(db, args.userId, invite.id);
+
+  return { ok: true };
+}
+
+export async function grantVenuePartner(
+  db: AppDb,
+  userId: number,
+  inviteId: number | null = null
+): Promise<void> {
   await db
     .prepare(
       `INSERT INTO venue_partners (user_id, invite_id, revoked_at)
        VALUES (?, ?, NULL)
        ON CONFLICT(user_id) DO UPDATE SET
-         invite_id = excluded.invite_id,
+         invite_id = COALESCE(excluded.invite_id, venue_partners.invite_id),
          revoked_at = NULL`
     )
-    .run(args.userId, invite.id);
-
-  return { ok: true };
+    .run(userId, inviteId);
 }

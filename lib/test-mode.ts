@@ -248,6 +248,7 @@ const TEST_WIPE_TABLES = [
   "pitches",
   "venue_partners",
   "venue_partner_invites",
+  "venue_applications",
   "venues",
   "public_share_links",
   "push_subscriptions",

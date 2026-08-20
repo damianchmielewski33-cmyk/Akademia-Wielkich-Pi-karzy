@@ -54,6 +54,8 @@ export function adminSectionForApiPath(pathname: string): AdminSectionId | null 
     p.includes("/api/admin/match/") ||
     p.includes("/api/admin/bookings") ||
     p.includes("/api/admin/venues") ||
+    p.includes("/api/admin/venue-applications") ||
+    p.includes("/api/admin/partner-invites") ||
     p.includes("/api/admin/pitches") ||
     p.includes("/api/admin/lineup") ||
     p.includes("/api/admin/stats") ||

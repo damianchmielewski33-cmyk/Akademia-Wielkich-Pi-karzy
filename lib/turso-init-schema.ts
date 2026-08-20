@@ -3,12 +3,13 @@ import { isDuplicateColumnError, migrateAppSettingsColumnsLibsql } from "@/lib/a
 import { migrateRealmSchemaLibsql } from "@/lib/realm-migration";
 import { CAPTAIN_LOTTERY_CREATE_SQL, migrateCaptainLotterySchemaLibsql } from "@/lib/captain-lottery-schema";
 import { migrateAdImpressionsSchemaLibsql } from "@/lib/ad-impressions-schema";
-import { BOOKING_SCHEMA_SQL, VENUES_OWNER_INDEX_SQL } from "@/lib/booking";
+import { BOOKING_SCHEMA_SQL, VENUES_OWNER_INDEX_SQL, BOOKING_GUEST_COLUMN_ALTERS, BOOKINGS_ACCESS_TOKEN_INDEX_SQL } from "@/lib/booking";
 import {
   BOOKINGS_PAYOUT_INDEX_SQL,
   SETTLEMENT_COLUMN_ALTERS,
   VENUE_PAYOUTS_SCHEMA_SQL,
 } from "@/lib/venue-settlements";
+import { VENUE_APPLICATIONS_SCHEMA_SQL } from "@/lib/venue-applications";
 
 async function pragmaColumnNames(
   client: Client,
@@ -739,6 +740,12 @@ export async function initLibsqlSchema(client: Client) {
     await addColumnIfMissing(client, cols, alter.column, alter.ddl);
   }
   await client.execute(BOOKINGS_PAYOUT_INDEX_SQL);
+  const guestBookingCols = await pragmaColumnNames(client, "bookings");
+  for (const alter of BOOKING_GUEST_COLUMN_ALTERS) {
+    await addColumnIfMissing(client, guestBookingCols, alter.column, alter.ddl);
+  }
+  await client.execute(BOOKINGS_ACCESS_TOKEN_INDEX_SQL);
+  await client.executeMultiple(VENUE_APPLICATIONS_SCHEMA_SQL);
 
   const lineupSqlRs = await client.execute(
     `SELECT sql FROM sqlite_master WHERE type='table' AND name='match_lineup_slots'`

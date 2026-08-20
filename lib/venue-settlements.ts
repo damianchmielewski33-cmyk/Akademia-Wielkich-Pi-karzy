@@ -1,6 +1,8 @@
 import type { AppDb } from "@/lib/db";
 
 export const DEFAULT_VENUE_COMMISSION_PCT = 15;
+/** Przelew do partnera: tyle dni po zakończeniu opłaconego terminu. */
+export const VENUE_PAYOUT_DAYS_AFTER_SLOT = 7;
 
 export type VenuePayoutStatus = "pending" | "paid";
 
@@ -239,9 +241,38 @@ export async function listPayouts(
     .all<VenuePayoutRow>(...params);
 }
 
+export function nextTransferDateIso(lines: SettlementLine[], now = new Date()): string | null {
+  if (lines.length === 0) return null;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const ymd = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const etas = lines.map((line) => {
+    const end = (line.end_time || line.start_time).slice(0, 5);
+    const slotEnd = new Date(`${line.booking_date}T${end}:00`);
+    if (Number.isNaN(slotEnd.getTime())) return ymd(now);
+    slotEnd.setDate(slotEnd.getDate() + VENUE_PAYOUT_DAYS_AFTER_SLOT);
+    return ymd(slotEnd);
+  });
+  return etas.sort().at(-1) ?? null;
+}
+
 export async function getPartnerSettlement(db: AppDb, ownerUserId: number, now = new Date()) {
   const pending = await eligibleLines(db, { ownerUserId }, now);
   const payouts = await listPayouts(db, { ownerUserId });
+  const commissionPct =
+    pending[0]?.commission_pct ??
+    clampVenueCommissionPct(
+      Number(
+        (
+          await db
+            .prepare(
+              `SELECT COALESCE(commission_pct, ${DEFAULT_VENUE_COMMISSION_PCT}) AS commission_pct
+               FROM venues WHERE owner_user_id = ? ORDER BY id LIMIT 1`
+            )
+            .get<{ commission_pct: number }>(ownerUserId)
+        )?.commission_pct ?? DEFAULT_VENUE_COMMISSION_PCT
+      )
+    );
+  const nextTransfer = nextTransferDateIso(pending, now);
   return {
     pending: {
       booking_count: pending.length,
@@ -251,6 +282,12 @@ export async function getPartnerSettlement(db: AppDb, ownerUserId: number, now =
       lines: pending,
     },
     payouts,
+    commission_pct: commissionPct,
+    next_transfer_date: nextTransfer,
+    payout_policy: {
+      days_after_slot: VENUE_PAYOUT_DAYS_AFTER_SLOT,
+      copy: `Gracz płaci platformie. Twoja część (${100 - commissionPct}%) schodzi po rozegraniu terminu. Przelew wychodzi w ciągu ${VENUE_PAYOUT_DAYS_AFTER_SLOT} dni od zakończenia slotu.`,
+    },
   };
 }
 

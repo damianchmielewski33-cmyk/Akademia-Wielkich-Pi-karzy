@@ -138,7 +138,6 @@ export default async function RootLayout({
 
   const accountRow = session ? await getAccountNavFields(session.userId) : null;
   const htmlThemeClass = accountRow && normalizeUiTheme(accountRow.uiTheme) === "dark" ? "dark" : "";
-  const initialSiteMode = parseSiteMode(cookieStore.get(SITE_MODE_COOKIE)?.value);
 
   let accountNav: {
     firstName: string;
@@ -159,6 +158,10 @@ export default async function RootLayout({
 
   const db = await getDb();
   const appSettings = await getAppSettings(db);
+  const marketplaceEnabled = appSettings.booking_marketplace_enabled === true;
+  const initialSiteMode = marketplaceEnabled
+    ? parseSiteMode(cookieStore.get(SITE_MODE_COOKIE)?.value)
+    : "academy";
   const settingsRow = (await db
     .prepare("SELECT match_notification_prompt_enabled FROM app_settings WHERE realm = 'academy'")
     .get()) as { match_notification_prompt_enabled: number } | undefined;
@@ -316,7 +319,7 @@ export default async function RootLayout({
         <ShareLinkClientCleanup />
         <PinSetupGate>
           <Suspense fallback={null}>
-            <SiteModeProvider initialMode={initialSiteMode}>
+            <SiteModeProvider initialMode={initialSiteMode} marketplaceEnabled={marketplaceEnabled}>
               <AdsenseProvider
                 clientId={adsenseClientId}
                 enabled={appSettings.adsense_enabled}

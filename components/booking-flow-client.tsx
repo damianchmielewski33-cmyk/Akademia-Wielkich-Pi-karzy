@@ -52,6 +52,7 @@ export function BookingFlowClient({ venue, pitches, isLoggedIn, userName, initia
   const [busy, setBusy] = useState(false);
   const [contactName, setContactName] = useState(userName);
   const [contactPhone, setContactPhone] = useState("");
+  const [contactEmail, setContactEmail] = useState("");
   const [note, setNote] = useState("");
   const [acceptedTerms, setAcceptedTerms] = useState(false);
 
@@ -81,12 +82,12 @@ export function BookingFlowClient({ venue, pitches, isLoggedIn, userName, initia
 
   async function bookAndPay() {
     if (!pitch || !selected) return;
-    if (!isLoggedIn) {
-      router.push(`/login?next=/obiekty/${venue.slug}`);
-      return;
-    }
     if (!contactName.trim() || !contactPhone.trim()) {
       toast.error("Podaj imię i telefon kontaktowy");
+      return;
+    }
+    if (!isLoggedIn && !contactEmail.trim()) {
+      toast.error("Podaj e-mail — potwierdzenie przyjdzie bez PIN-u akademii");
       return;
     }
     if (!acceptedTerms) {
@@ -104,6 +105,7 @@ export function BookingFlowClient({ venue, pitches, isLoggedIn, userName, initia
           start_time: selected.start_time,
           contact_name: contactName,
           contact_phone: contactPhone,
+          contact_email: contactEmail || undefined,
           note,
         }),
       });
@@ -116,7 +118,7 @@ export function BookingFlowClient({ venue, pitches, isLoggedIn, userName, initia
       const pay = await fetch(`/api/rezerwacje/${data.booking.id}/pay`, { method: "POST" });
       const payData = (await pay.json().catch(() => ({}))) as { url?: string; error?: string };
       if (!pay.ok || !payData.url) {
-        toast.success("Termin zablokowany na 15 minut. Opłać go z listy rezerwacji.");
+        toast.success("Termin zablokowany na 15 minut. Opłać go z listy rezerwacji — link jest też na mailu.");
         router.push(`/rezerwacje?booking=${data.booking.id}`);
         return;
       }
@@ -238,6 +240,12 @@ export function BookingFlowClient({ venue, pitches, isLoggedIn, userName, initia
         <div className="mt-5 space-y-3">
           <FormInput label="Imię i nazwisko" value={contactName} onChange={(e) => setContactName(e.target.value)} />
           <FormInput label="Telefon" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} />
+          <FormInput
+            label={isLoggedIn ? "E-mail (potwierdzenie)" : "E-mail — potwierdzenie bez PIN-u"}
+            type="email"
+            value={contactEmail}
+            onChange={(e) => setContactEmail(e.target.value)}
+          />
           <FormTextarea label="Uwagi" value={note} onChange={(e) => setNote(e.target.value)} />
         </div>
         <label className="mt-4 flex items-start gap-2 text-sm text-zinc-600 dark:text-zinc-300">
@@ -256,8 +264,13 @@ export function BookingFlowClient({ venue, pitches, isLoggedIn, userName, initia
           </span>
         </label>
         <Button className="mt-5 w-full font-black uppercase tracking-[0.12em]" disabled={!selected || busy || !acceptedTerms} onClick={bookAndPay}>
-          {busy ? "Tworzenie rezerwacji..." : isLoggedIn ? "Zarezerwuj i opłać" : "Zaloguj się, aby zarezerwować"}
+          {busy ? "Tworzenie rezerwacji..." : "Zarezerwuj i opłać"}
         </Button>
+        {!isLoggedIn ? (
+          <p className="mt-3 text-center text-xs text-zinc-500">
+            Bez konta akademii. Potwierdzenie przyjdzie na e-mail.
+          </p>
+        ) : null}
       </aside>
     </div>
   );

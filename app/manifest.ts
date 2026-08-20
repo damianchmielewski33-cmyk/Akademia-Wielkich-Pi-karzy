@@ -7,12 +7,13 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
   const settings = await getAppSettings(db);
   const favicon = settings.site_assets.logo_favicon;
   const faviconType = favicon.toLowerCase().endsWith(".svg") ? "image/svg+xml" : "image/png";
+  const marketplace = settings.booking_marketplace_enabled === true;
 
   return {
     name: settings.site_name,
-    short_name: "AWP",
+    short_name: marketplace ? "Boiska" : settings.site_name,
     description: settings.site_description,
-    start_url: "/",
+    start_url: marketplace ? "/?mode=booking" : "/",
     display: "standalone",
     background_color: "#F4F5F7",
     theme_color: "#00C9B1",

@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { listVenueCards } from "@/lib/booking";
+import { redirectIfBookingMarketplaceDisabled } from "@/lib/booking-marketplace";
 import { getDb } from "@/lib/db";
 import { MarketplaceSearchForm } from "@/components/marketplace-search-form";
 import { MarketplaceVenueCard } from "@/components/marketplace-venue-card";
 
 export const metadata: Metadata = {
-  title: "Obiekty i boiska",
-  description: "Znajdź obiekt sportowy i zarezerwuj boisko online.",
+  title: "Rezerwacja orlika i hali",
+  description: "Znajdź orlik albo halę: miasto, godzina, cena od, oświetlenie. Rezerwacja i płatność online.",
 };
 
 export default async function VenuesPage({
@@ -16,6 +17,7 @@ export default async function VenuesPage({
   searchParams: Promise<{ city?: string; q?: string; date?: string; time?: string; surface?: string; indoor?: string; max_price?: string }>;
 }) {
   const sp = await searchParams;
+  await redirectIfBookingMarketplaceDisabled();
   const db = await getDb();
   const venues = await listVenueCards(db, {
     city: sp.city,
@@ -49,6 +51,8 @@ export default async function VenuesPage({
             { href: "/obiekty?city=Warszawa", label: "Warszawa", active: sp.city === "Warszawa" },
             { href: "/obiekty?city=Kraków", label: "Kraków", active: sp.city === "Kraków" },
             { href: "/obiekty?city=Wrocław", label: "Wrocław", active: sp.city === "Wrocław" },
+            { href: "/obiekty?city=Poznań", label: "Poznań", active: sp.city === "Poznań" },
+            { href: "/obiekty?city=Gdańsk", label: "Gdańsk", active: sp.city === "Gdańsk" },
             { href: "/obiekty?indoor=1", label: "Hale", active: sp.indoor === "1" },
             { href: "/obiekty?indoor=0", label: "Otwarte", active: sp.indoor === "0" },
           ].map((chip) => (
@@ -87,7 +91,11 @@ export default async function VenuesPage({
       <section className="mt-4 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {venues.length === 0 ? (
           <div className="rounded-3xl border border-dashed border-zinc-300 bg-white p-8 text-center text-zinc-600 sm:col-span-2 lg:col-span-3 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-300">
-            Brak obiektów dla wybranych filtrów. Zmień miasto albo godzinę.
+            Brak obiektów dla wybranych filtrów. Priorytet katalogu: 5–15 hal w Warszawie ze zdjęciami i cennikiem.{" "}
+            <Link href="/dla-obiektow" className="font-semibold text-[var(--mp-teal-dark)] underline">
+              Zgłoś halę
+            </Link>
+            .
           </div>
         ) : (
           venues.map((venue) => (

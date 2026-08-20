@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getServerSession } from "@/lib/auth";
+import { redirectIfBookingMarketplaceDisabled } from "@/lib/booking-marketplace";
 import { getDb } from "@/lib/db";
 import { isVenuePartner } from "@/lib/venue-partners";
 import { PartnerDashboardClient } from "@/components/partner-dashboard-client";
@@ -11,6 +12,7 @@ export const metadata: Metadata = {
 };
 
 export default async function PartnerDashboardPage() {
+  await redirectIfBookingMarketplaceDisabled();
   const session = await getServerSession();
   if (!session) redirect("/login?next=/partner");
   const db = await getDb();

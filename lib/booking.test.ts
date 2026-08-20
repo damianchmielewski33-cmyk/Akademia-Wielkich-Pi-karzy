@@ -122,6 +122,26 @@ describe("booking availability", () => {
     expect(availability?.slots.find((s) => s.start_time === "18:00")?.available).toBe(false);
   });
 
+  it("issues an access token so a guest can pay without an academy PIN", async () => {
+    const { db, sqlite, dbPath } = createTestDb();
+    dbs.push({ sqlite, dbPath });
+    seedPitch(sqlite);
+
+    const hold = await createBookingHold(db, {
+      userId: 1,
+      pitchId: 1,
+      date: "2026-08-17",
+      startTime: "18:00",
+      contactName: "Jan Kowalski",
+      contactPhone: "500600700",
+      contactEmail: "jan@example.com",
+    });
+    expect(hold.ok).toBe(true);
+    if (!hold.ok) return;
+    expect(hold.booking.access_token).toMatch(/^[a-f0-9]{48}$/);
+    expect(hold.booking.contact_email).toBe("jan@example.com");
+  });
+
   it("releases expired pending holds and confirms paid bookings", async () => {
     const { db, sqlite, dbPath } = createTestDb();
     dbs.push({ sqlite, dbPath });

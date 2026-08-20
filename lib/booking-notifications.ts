@@ -30,20 +30,26 @@ export async function notifyBookingConfirmed(bookingId: number): Promise<void> {
   if (!booking) return;
   const settings = await getAppSettings(db);
   const user = await userEmail(booking.user_id);
-  const link = `${getAppBaseUrl()}/rezerwacje?booking=${booking.id}`;
+  const to = booking.contact_email?.trim() || user?.email?.trim() || "";
+  const token = booking.access_token?.trim();
+  const link = token
+    ? `${getAppBaseUrl()}/rezerwacje?token=${encodeURIComponent(token)}&booking=${booking.id}`
+    : `${getAppBaseUrl()}/rezerwacje?booking=${booking.id}`;
+  const greeting = user?.first_name || booking.contact_name.split(" ")[0] || "cześć";
 
-  if (isMailConfigured() && user?.email?.trim()) {
+  if (isMailConfigured() && to) {
     try {
       await sendMail({
-        to: user.email.trim(),
+        to,
         subject: `Rezerwacja potwierdzona — ${booking.booking_date} ${booking.start_time}`,
         text: [
-          `Cześć ${user.first_name},`,
+          `Cześć ${greeting},`,
           "",
           "Twoja rezerwacja boiska została potwierdzona:",
           ...bookingLines(booking),
+          `• Telefon: ${booking.contact_phone}`,
           "",
-          `Szczegóły: ${link}`,
+          `Szczegóły (bez PIN-u akademii): ${link}`,
           "",
           `— ${settings.site_name}`,
         ].join("\n"),
@@ -67,15 +73,20 @@ export async function notifyBookingCancelled(bookingId: number): Promise<void> {
   if (!booking) return;
   const settings = await getAppSettings(db);
   const user = await userEmail(booking.user_id);
-  const link = `${getAppBaseUrl()}/rezerwacje?booking=${booking.id}`;
+  const to = booking.contact_email?.trim() || user?.email?.trim() || "";
+  const token = booking.access_token?.trim();
+  const link = token
+    ? `${getAppBaseUrl()}/rezerwacje?token=${encodeURIComponent(token)}&booking=${booking.id}`
+    : `${getAppBaseUrl()}/rezerwacje?booking=${booking.id}`;
+  const greeting = user?.first_name || booking.contact_name.split(" ")[0] || "cześć";
 
-  if (isMailConfigured() && user?.email?.trim()) {
+  if (isMailConfigured() && to) {
     try {
       await sendMail({
-        to: user.email.trim(),
+        to,
         subject: `Rezerwacja anulowana — ${booking.booking_date} ${booking.start_time}`,
         text: [
-          `Cześć ${user.first_name},`,
+          `Cześć ${greeting},`,
           "",
           "Rezerwacja boiska została anulowana:",
           ...bookingLines(booking),

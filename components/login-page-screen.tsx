@@ -9,9 +9,10 @@ type Props = {
   siteName: string;
   nextPath: string;
   idleLogout?: boolean;
+  marketplaceEnabled?: boolean;
 };
 
-export function LoginPageScreen({ siteName, nextPath, idleLogout }: Props) {
+export function LoginPageScreen({ siteName, nextPath, idleLogout, marketplaceEnabled = false }: Props) {
   const registerHref =
     nextPath && nextPath !== "/" ? `/register?next=${encodeURIComponent(nextPath)}` : "/register";
 
@@ -67,7 +68,9 @@ export function LoginPageScreen({ siteName, nextPath, idleLogout }: Props) {
               {siteName}
             </h1>
             <p className="mt-3 max-w-[18rem] text-sm leading-relaxed text-white/80">
-              Zaloguj się, żeby rezerwować boiska, opłacać terminy i korzystać z terminarza akademii.
+              {marketplaceEnabled
+                ? "Zaloguj się, żeby rezerwować boiska, opłacać terminy i korzystać z terminarza akademii."
+                : "Zaloguj się imieniem, nazwiskiem i PIN-em, żeby korzystać z terminarza akademii."}
             </p>
 
             <div className="mt-8 flex flex-wrap items-center justify-center gap-3 text-xs font-medium text-emerald-100/75">

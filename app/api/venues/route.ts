@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
+import { requireBookingMarketplace } from "@/lib/booking-marketplace";
 import { listVenueCards } from "@/lib/booking";
 
 export const runtime = "nodejs";
 
 export async function GET(req: Request) {
+  const marketplace = await requireBookingMarketplace();
+  if (!marketplace.ok) return marketplace.response;
   const url = new URL(req.url);
   const indoorRaw = url.searchParams.get("indoor");
   const maxPriceRaw = url.searchParams.get("max_price");

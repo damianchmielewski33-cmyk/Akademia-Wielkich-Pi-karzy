@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getServerSession } from "@/lib/auth";
+import { siteModeFromPathname } from "@/lib/site-mode";
 
 function normalizePath(pathname: string): string {
   if (!pathname) return "/";
@@ -22,6 +23,7 @@ export async function PinSetupGate({ children }: { children: React.ReactNode }) 
   const h = await headers();
   const pathname = normalizePath(h.get("x-pathname") ?? "");
   if (ALLOWED_WHEN_PIN_PENDING.has(pathname)) return <>{children}</>;
+  if (siteModeFromPathname(pathname) === "booking") return <>{children}</>;
 
   redirect("/ustaw-pin");
 }

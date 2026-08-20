@@ -106,7 +106,7 @@ export function SiteShell({
   const router = useRouter();
   const pathname = usePathname();
   const { isHiddenHref } = useScreenBlocks();
-  const { mode, setMode } = useSiteMode();
+  const { mode, setMode, marketplaceEnabled } = useSiteMode();
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [themeBusy, setThemeBusy] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -142,7 +142,7 @@ export function SiteShell({
   const bookingNav: NavItem[] = [
     { href: "/", label: "Start", visible: true, icon: Home },
     { href: "/obiekty", label: "Znajdź boisko", visible: true, icon: MapPin },
-    { href: "/rezerwacje", label: "Moje rezerwacje", visible: isLoggedIn, icon: ClipboardCheck },
+    { href: "/rezerwacje", label: "Moje rezerwacje", visible: true, icon: ClipboardCheck },
     { href: "/dla-obiektow", label: "Dla obiektów", visible: !isVenuePartner, icon: Store },
     { href: "/partner", label: "Mój obiekt", visible: isVenuePartner, icon: Building2 },
     { href: "/panel-admina", label: "Panel admina", visible: isAdmin, icon: Shield },
@@ -307,7 +307,7 @@ export function SiteShell({
                 </div>
                 ) : null}
 
-                {mode ? (
+                {marketplaceEnabled && mode ? (
                   <button
                     type="button"
                     onClick={() => setMode(mode === "booking" ? "academy" : "booking", { navigateHome: true })}
@@ -454,7 +454,7 @@ export function SiteShell({
             </div>
 
             <nav className="flex-1 overflow-y-auto overscroll-contain px-3 py-3" aria-label="Nawigacja mobilna">
-              {mode ? (
+              {marketplaceEnabled && mode ? (
                 <button
                   type="button"
                   className="mb-3 w-full rounded-2xl border border-zinc-200 px-3 py-3 text-left text-sm font-semibold dark:border-zinc-700"
@@ -572,7 +572,7 @@ export function SiteShell({
                   <Link href="/dla-obiektow" className="hover:text-white">Dla obiektów</Link>
                 </>
               ) : null}
-              {mode ? (
+              {marketplaceEnabled && mode ? (
                 <button
                   type="button"
                   className="text-left hover:text-white"

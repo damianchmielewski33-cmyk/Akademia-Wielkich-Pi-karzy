@@ -71,6 +71,7 @@ const putBodySchema = z
     lineup_pitch_slots_max: z.number().int().min(1).max(32).optional(),
     match_cancel_reasons: z.array(cancelReasonSchema).min(1).max(20).optional(),
     hotpay_enabled: z.boolean().optional(),
+    booking_marketplace_enabled: z.boolean().optional(),
     hotpay_commission_pct: z.number().min(0).max(50).optional(),
     hotpay_commission_fixed: z.number().min(0).max(100).optional(),
     screen_blocks: z.record(z.string(), screenBlockEntrySchema).optional(),
@@ -319,6 +320,9 @@ export async function PUT(req: Request) {
 
   if (body.hotpay_enabled !== undefined) {
     next.hotpay_enabled = body.hotpay_enabled;
+  }
+  if (body.booking_marketplace_enabled !== undefined) {
+    next.booking_marketplace_enabled = body.booking_marketplace_enabled;
   }
   if (body.hotpay_commission_pct !== undefined) {
     next.hotpay_commission_pct = Math.round(body.hotpay_commission_pct * 1000) / 1000;
