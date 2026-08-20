@@ -472,8 +472,7 @@ export function resolveAppSettings(
         organizer_mateusz_email: nonEmptyString(row?.organizer_mateusz_email, d.organizer_mateusz_email),
         facebook_damian_url: nonEmptyString(row?.facebook_damian_url, d.facebook_damian_url),
         facebook_mateusz_url: nonEmptyString(row?.facebook_mateusz_url, d.facebook_mateusz_url),
-        allow_self_registration:
-          allowRaw === null || allowRaw === undefined ? true : sqlFlagOn(allowRaw, true),
+        allow_self_registration: true,
         default_match_max_slots:
           typeof row?.default_match_max_slots === "number" && row.default_match_max_slots >= 1
             ? row.default_match_max_slots

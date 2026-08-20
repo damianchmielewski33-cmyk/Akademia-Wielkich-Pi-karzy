@@ -139,7 +139,7 @@ export function AdminMobileAppsTab() {
             aria-label="Szukaj gracza po imieniu i nazwisku"
           />
           <AdminFilterChips
-            ariaLabel="Filtr aplikacji"
+            aria-label="Filtr aplikacji"
             value={filter}
             onChange={(id) => setFilter(id as MobileFilter)}
             options={[
