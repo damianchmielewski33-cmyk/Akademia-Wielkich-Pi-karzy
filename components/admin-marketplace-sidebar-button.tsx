@@ -3,17 +3,14 @@
 import { useCallback, useEffect, useState } from "react";
 import { LandPlot, Loader2 } from "lucide-react";
 import { toast } from "@/lib/app-toast";
-import {
-  adminChromeBtnActiveClass,
-  adminChromeBtnBaseClass,
-  adminChromeBtnIdleClass,
-} from "@/lib/admin-chrome-button";
+import { AdminNavTile } from "@/components/admin-nav-tile";
 import { cn } from "@/lib/utils";
 
 type State = { enabled: boolean } | null;
 
 /**
- * Wyłącznik marketplace’u rezerwacji — boczny panel admina, obok trybu testowego.
+ * Przełącznik wersji aplikacji — boczny panel admina, obok trybu testowego.
+ * V1 = bez rezerwacji boisk, V2 = z rezerwacjami.
  */
 export function AdminMarketplaceSidebarButton({ className }: { className?: string }) {
   const [state, setState] = useState<State>(null);
@@ -51,7 +48,9 @@ export function AdminMarketplaceSidebarButton({ className }: { className?: strin
     if (state == null || busy) return;
     const enabled = !state.enabled;
     setBusy(true);
-    const toastId = toast.loading(enabled ? "Włączanie rezerwacji boisk…" : "Wyłączanie rezerwacji boisk…");
+    const toastId = toast.loading(
+      enabled ? "Przełączanie na wersję aplikacji V2…" : "Przełączanie na wersję aplikacji V1…"
+    );
     try {
       const res = await fetch("/api/admin/app-settings", {
         method: "PUT",
@@ -73,10 +72,11 @@ export function AdminMarketplaceSidebarButton({ className }: { className?: strin
       );
       toast.success(
         next
-          ? "Rezerwacja boisk włączona — gracze widzą katalog hal"
-          : "Rezerwacja boisk wyłączona — zostaje sam terminarz akademii",
+          ? "Wersja aplikacji V2 — gracze widzą katalog hal i rezerwacje"
+          : "Wersja aplikacji V1 — zostaje sam terminarz akademii",
         { id: toastId }
       );
+      window.location.reload();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Błąd zapisu", { id: toastId });
     } finally {
@@ -86,14 +86,8 @@ export function AdminMarketplaceSidebarButton({ className }: { className?: strin
 
   if (state == null) {
     return (
-      <div
-        className={cn(
-          "flex h-10 items-center justify-center rounded-lg border border-white/15 bg-black/20 text-emerald-100/60",
-          className
-        )}
-        aria-hidden
-      >
-        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+      <div className={cn("flex min-h-[4.75rem] items-center justify-center", className)} aria-hidden>
+        <Loader2 className="h-5 w-5 animate-spin text-white/70" />
       </div>
     );
   }
@@ -101,47 +95,16 @@ export function AdminMarketplaceSidebarButton({ className }: { className?: strin
   const on = state.enabled;
 
   return (
-    <button
-      type="button"
+    <AdminNavTile
+      title="Wersja aplikacji"
+      desc={on ? "V2 — akademia z rezerwacją boisk" : "V1 — akademia bez rezerwacji boisk"}
+      icon={LandPlot}
+      photoKey="app-version"
+      active={on}
       disabled={busy}
       onClick={() => void toggle()}
-      className={cn(
-        adminChromeBtnBaseClass,
-        on ? adminChromeBtnActiveClass : adminChromeBtnIdleClass,
-        className
-      )}
-      aria-pressed={on}
-      title={
-        on
-          ? "Wyłącz rezerwację boisk — gracze wracają do terminarza akademii"
-          : "Włącz rezerwację boisk — katalog hal i rezerwacje online"
-      }
-    >
-      <span
-        className={cn(
-          "flex h-6 w-6 shrink-0 items-center justify-center rounded-md ring-1",
-          on ? "bg-black/25 ring-white/35" : "bg-black/10 ring-black/20"
-        )}
-      >
-        {busy ? (
-          <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
-        ) : (
-          <LandPlot className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />
-        )}
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className="block truncate text-xs font-bold leading-none tracking-tight">
-          Rezerwacja boisk
-        </span>
-        <span
-          className={cn(
-            "mt-0.5 block truncate text-[10px] font-semibold uppercase tracking-wide",
-            on ? "text-white/85" : "text-[var(--mundial-navy,#0a1628)]/75"
-          )}
-        >
-          {on ? "Włączone" : "Wyłączone"}
-        </span>
-      </span>
-    </button>
+      className={className}
+      badge={busy ? <Loader2 className="h-4 w-4 animate-spin text-white" aria-hidden /> : undefined}
+    />
   );
 }

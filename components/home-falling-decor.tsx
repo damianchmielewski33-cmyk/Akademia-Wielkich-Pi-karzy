@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, type CSSProperties } from "react";
+import type { CSSProperties } from "react";
 import { cn } from "@/lib/utils";
 
 type FallItem = {
@@ -47,41 +47,22 @@ function FallStar({ size }: { size: number }) {
   );
 }
 
-/** Klasyczna piłka Telstar — czarne pięciokąty i białe sześciokąty. */
+/** Piłka z animacji — białe tło i panele zielony / czerwony / niebieski (jak na zdjęciu). */
 function FallingSoccerBall() {
-  const uid = useId().replace(/:/g, "");
-  const clip = `soccer-clip-${uid}`;
-  const fill = `soccer-fill-${uid}`;
-
   return (
-    <svg viewBox="0 0 200 200" aria-hidden className="home-fall__ball h-full w-full">
-      <defs>
-        <clipPath id={clip}>
-          <circle cx="100" cy="100" r="92" />
-        </clipPath>
-        <radialGradient id={fill} cx="34%" cy="28%" r="74%">
-          <stop offset="0%" stopColor="#ffffff" />
-          <stop offset="48%" stopColor="#f4f4f5" />
-          <stop offset="82%" stopColor="#d4d4d8" />
-          <stop offset="100%" stopColor="#a1a1aa" />
-        </radialGradient>
-      </defs>
-      <circle cx="100" cy="100" r="92" fill={`url(#${fill})`} stroke="#111827" strokeWidth="6" />
-      <g clipPath={`url(#${clip})`} stroke="#111827" strokeLinejoin="round">
-        <polygon fill="#111827" strokeWidth="1" points="100,74 119.02,87.82 111.76,110.18 88.24,110.18 80.98,87.82" />
-        <polygon fill="#111827" strokeWidth="1" points="100,6 115.22,17.06 109.4,34.94 90.6,34.94 84.78,17.06" />
-        <polygon fill="#111827" strokeWidth="1" points="183.7,66.81 177.88,84.69 159.08,84.69 153.26,66.81 168.48,55.75" />
-        <polygon fill="#111827" strokeWidth="1" points="151.72,165.19 132.92,165.19 127.1,147.31 142.32,136.25 157.54,147.31" />
-        <polygon fill="#111827" strokeWidth="1" points="48.28,165.19 42.46,147.31 57.68,136.25 72.9,147.31 67.08,165.19" />
-        <polygon fill="#111827" strokeWidth="1" points="16.3,66.81 31.52,55.75 46.74,66.81 40.92,84.69 22.12,84.69" />
-        <polygon fill="none" strokeWidth="3.4" points="134.09,47.08 141.41,63.52 130.83,78.08 112.93,76.2 105.61,59.76 116.19,45.2" />
-        <polygon fill="none" strokeWidth="3.4" points="155.16,111.92 141.78,123.97 124.66,118.4 120.92,100.8 134.3,88.75 151.42,94.32" />
-        <polygon fill="none" strokeWidth="3.4" points="100,152 84.41,143 84.41,125 100,116 115.59,125 115.59,143" />
-        <polygon fill="none" strokeWidth="3.4" points="44.84,111.92 48.58,94.32 65.7,88.75 79.08,100.8 75.34,118.4 58.22,123.97" />
-        <polygon fill="none" strokeWidth="3.4" points="65.91,47.08 83.81,45.2 94.39,59.76 87.07,76.2 69.17,78.08 58.59,63.52" />
-      </g>
-      <circle cx="68" cy="62" r="22" fill="#ffffff" opacity="0.28" />
-    </svg>
+    <span className="home-fall__ball relative block h-full w-full overflow-hidden rounded-full bg-white ring-1 ring-black/25">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/trionda-ball.png"
+        alt=""
+        draggable={false}
+        className="pointer-events-none h-full w-full scale-[1.08] object-cover object-center"
+      />
+      <span
+        className="pointer-events-none absolute inset-0 rounded-full bg-[radial-gradient(circle_at_32%_26%,rgba(255,255,255,0.32),transparent_40%,rgba(0,0,0,0.22)_100%)]"
+        aria-hidden
+      />
+    </span>
   );
 }
 

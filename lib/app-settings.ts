@@ -96,7 +96,7 @@ export type AppSettings = {
   mobile_settings: MobileChannelSettings;
   /** Czy platnosci HotPay sa wlaczone przez admina (niezaleznie od konfiguracji env). */
   hotpay_enabled: boolean;
-  /** Publiczny marketplace rezerwacji boisk. Wyłączony = stara akademia dla znajomych. */
+  /** Publiczny tryb V2 (rezerwacje boisk). Wyłączony = Wersja V1, sama akademia. */
   booking_marketplace_enabled: boolean;
   /** Prowizja operatora w % (np. 1.8). 0 = brak powiększania kwoty. */
   hotpay_commission_pct: number;

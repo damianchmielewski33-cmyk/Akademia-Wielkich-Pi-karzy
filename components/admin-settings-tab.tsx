@@ -52,7 +52,7 @@ const WEB_SETTINGS_TOC: SettingsTocGroup[] = [
     label: "System",
     items: [
       { id: "settings-test-mode", label: "Tryb testowy" },
-      { id: "settings-marketplace", label: "Rezerwacja boisk" },
+      { id: "settings-marketplace", label: "Wersja aplikacji" },
       { id: "settings-system", label: "Co działa na serwerze" },
     ],
   },
@@ -372,6 +372,10 @@ export function AdminSettingsTab({
               detail: { enabled: j.booking_marketplace_enabled === true },
             })
           );
+          toast.success("Zapisano — odświeżanie…", { id: toastId });
+          setSaveFlash("saved");
+          window.location.reload();
+          return;
         }
         toast.success("Zapisano", { id: toastId });
         setSaveFlash("saved");
@@ -568,13 +572,13 @@ export function AdminSettingsTab({
       <SettingsSection
         id="settings-marketplace"
         hidden={channel !== "web" || settingsRealm !== "academy" || !sectionVisible("settings-marketplace")}
-        title="Rezerwacja boisk (nowa strona)"
-        description="Wyłącznik na czas transformacji. Wyłączony = stara akademia dla grupy znajomych. Włączony = nowy wygląd, katalog hal i rezerwacje online."
+        title="Wersja aplikacji"
+        description="V1 = akademia bez rezerwacji boisk. V2 = akademia z rezerwacjami boisk (katalog hal, nowy wygląd). Działanie poza nazwą zostaje takie jak dotychczas."
       >
         <YesNoSwitchRow
           className={adminToggleRowClass}
-          label="Włącz rezerwację boisk"
-          hint="Gdy wyłączone, nikt nie widzi marketplace’u ani pytania „Szukam boiska”. Działa sam terminarz akademii. W panelu admina nadal przygotujesz hale (zakładka Rezerwacje)."
+          label="Wersja aplikacji V2"
+          hint="Wyłączone = Wersja V1 (sam terminarz akademii, bez marketplace’u i pytania „Szukam boiska”). Włączone = Wersja V2 (katalog hal i rezerwacje online). W panelu admina nadal przygotujesz hale (zakładka Rezerwacje)."
           checked={Boolean(settings.booking_marketplace_enabled)}
           disabled={busy}
           onCheckedChange={(v) => void save({ booking_marketplace_enabled: v })}

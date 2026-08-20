@@ -9,6 +9,8 @@ import {
   Users,
   X,
 } from "lucide-react";
+import { PhotoPanel } from "@/components/photo-panel";
+import { pitchPhotoAt } from "@/lib/marketplace-photos";
 import { cn } from "@/lib/utils";
 
 export type AdminSearchJump =
@@ -24,7 +26,7 @@ type Props = {
 
 const SETTINGS_HITS: { id: string; label: string; keywords: string }[] = [
   { id: "settings-test-mode", label: "Tryb testowy", keywords: "sandbox test" },
-  { id: "settings-marketplace", label: "Rezerwacja boisk", keywords: "marketplace hale rezerwacje wyłącznik" },
+  { id: "settings-marketplace", label: "Wersja aplikacji", keywords: "v1 v2 wersja marketplace hale rezerwacje wyłącznik" },
   { id: "settings-brand", label: "Nazwa i opis strony", keywords: "nazwa branding seo" },
   { id: "settings-assets", label: "Logo i tła", keywords: "logo tło grafika asset" },
   { id: "settings-contact", label: "Kontakt i organizatorzy", keywords: "email telefon blik facebook" },
@@ -42,6 +44,7 @@ const TAB_HITS: { tab: string; label: string; keywords: string }[] = [
   { tab: "users", label: "Użytkownicy", keywords: "konta pin gracze" },
   { tab: "messages", label: "Wiadomości", keywords: "inbox chat" },
   { tab: "matches", label: "Mecze", keywords: "terminarz zapisy" },
+  { tab: "bookings", label: "Rezerwacje boisk", keywords: "hale terminy rezerwacje booking" },
   { tab: "lineups", label: "Składy na mecz", keywords: "skład boisko" },
   { tab: "stats", label: "Statystyki", keywords: "gole asysty" },
   { tab: "rankings", label: "Rankingi", keywords: "sezon punkty" },
@@ -199,33 +202,44 @@ export function AdminCommandSearch({ onJump, className }: Props) {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="awp-focus-ring flex w-full items-center gap-2 rounded-xl border border-white/20 bg-black/20 px-3 py-2 text-left text-sm text-emerald-100/80 transition-colors hover:bg-white/10 hover:text-white"
+        className="awp-focus-ring block w-full text-left"
         aria-label="Szukaj w panelu"
+        aria-expanded={open}
       >
-        <Search className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
-        <span className="min-w-0 flex-1 truncate">Szukaj…</span>
-        <kbd className="hidden rounded border border-white/20 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-100/60 sm:inline">
-          Ctrl+K
-        </kbd>
+        <PhotoPanel
+          src={pitchPhotoAt(3)}
+          className="min-h-[3.25rem] border-2 border-white/30"
+          contentClassName="flex min-h-[3.25rem] items-center gap-2.5 px-3 py-2.5"
+          overlayClassName="bg-gradient-to-r from-black/75 via-black/50 to-black/20"
+          sizes="320px"
+        >
+          <Search className="h-5 w-5 shrink-0 text-white" aria-hidden />
+          <span className="min-w-0 flex-1 truncate text-sm font-bold text-white drop-shadow-sm sm:text-base">
+            Szukaj w panelu…
+          </span>
+          <kbd className="hidden rounded-md border border-white/35 bg-black/25 px-1.5 py-0.5 text-[10px] font-semibold text-white/80 sm:inline">
+            Ctrl+K
+          </kbd>
+        </PhotoPanel>
       </button>
 
       {open ? (
-        <div className="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-xl border border-white/20 bg-emerald-950/95 shadow-xl backdrop-blur-md">
-          <div className="flex items-center gap-2 border-b border-white/15 px-3 py-2">
-            <Search className="h-4 w-4 shrink-0 text-emerald-100/70" aria-hidden />
+        <div className="absolute left-0 right-0 top-full z-50 mt-1.5 overflow-hidden rounded-2xl border-2 border-white/25 bg-emerald-950/95 shadow-2xl backdrop-blur-md">
+          <div className="flex items-center gap-2 border-b border-white/15 px-3 py-3">
+            <Search className="h-5 w-5 shrink-0 text-white/80" aria-hidden />
             <input
               ref={inputRef}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Użytkownik, mecz, ustawienie…"
-              className="min-w-0 flex-1 bg-transparent text-base text-white outline-none placeholder:text-emerald-100/45"
+              className="min-w-0 flex-1 bg-transparent text-base font-medium text-white outline-none placeholder:text-white/50"
               aria-label="Fraza wyszukiwania"
             />
-            {loading ? <Loader2 className="h-4 w-4 animate-spin text-emerald-100/70" aria-hidden /> : null}
+            {loading ? <Loader2 className="h-4 w-4 animate-spin text-white/70" aria-hidden /> : null}
             <button
               type="button"
               onClick={() => setOpen(false)}
-              className="awp-focus-ring rounded-lg p-1 text-emerald-100/70 hover:bg-white/10 hover:text-white"
+              className="awp-focus-ring rounded-lg p-1 text-white/70 hover:bg-white/10 hover:text-white"
               aria-label="Zamknij"
             >
               <X className="h-4 w-4" aria-hidden />
@@ -233,7 +247,7 @@ export function AdminCommandSearch({ onJump, className }: Props) {
           </div>
           <ul className="max-h-72 overflow-y-auto py-1" role="listbox">
             {results.length === 0 ? (
-              <li className="px-3 py-4 text-center text-sm text-emerald-100/60">Brak wyników</li>
+              <li className="px-3 py-4 text-center text-base text-white/70">Brak wyników</li>
             ) : (
               results.map((r) => {
                 const Icon = r.icon;
@@ -244,12 +258,12 @@ export function AdminCommandSearch({ onJump, className }: Props) {
                       role="option"
                       aria-selected={false}
                       onClick={() => select(r.jump)}
-                      className="flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm transition-colors hover:bg-white/10"
+                      className="flex w-full items-center gap-3 px-3 py-3 text-left transition-colors hover:bg-white/10"
                     >
-                      <Icon className="h-4 w-4 shrink-0 text-emerald-100/80" aria-hidden />
+                      <Icon className="h-5 w-5 shrink-0 text-white/85" aria-hidden />
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate font-semibold text-white">{r.label}</span>
-                        <span className="block truncate text-xs text-emerald-100/60">{r.hint}</span>
+                        <span className="block truncate text-base font-bold text-white">{r.label}</span>
+                        <span className="block truncate text-sm text-white/70">{r.hint}</span>
                       </span>
                     </button>
                   </li>

@@ -1,28 +1,48 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" aria-hidden="true">
   <defs>
     <clipPath id="soccer-ball-clip">
-      <circle cx="100" cy="100" r="92"/>
+      <circle cx="100" cy="100" r="94"/>
     </clipPath>
-    <radialGradient id="soccer-ball-fill" cx="34%" cy="28%" r="74%">
+    <radialGradient id="soccer-ball-fill" cx="32%" cy="26%" r="78%">
       <stop offset="0%" stop-color="#ffffff"/>
-      <stop offset="48%" stop-color="#f4f4f5"/>
-      <stop offset="82%" stop-color="#d4d4d8"/>
-      <stop offset="100%" stop-color="#a1a1aa"/>
+      <stop offset="55%" stop-color="#f4f4f5"/>
+      <stop offset="100%" stop-color="#d4d4d8"/>
     </radialGradient>
+    <linearGradient id="soccer-green" x1="0.15" y1="0.05" x2="0.7" y2="0.85">
+      <stop offset="0%" stop-color="#b8ff4a"/>
+      <stop offset="55%" stop-color="#4ade80"/>
+      <stop offset="100%" stop-color="#16a34a"/>
+    </linearGradient>
+    <linearGradient id="soccer-red" x1="0.2" y1="0.1" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ef4444"/>
+      <stop offset="100%" stop-color="#991b1b"/>
+    </linearGradient>
+    <linearGradient id="soccer-blue" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#60a5fa"/>
+      <stop offset="100%" stop-color="#1d4ed8"/>
+    </linearGradient>
+    <pattern id="soccer-waves" width="18" height="10" patternUnits="userSpaceOnUse">
+      <path d="M0 6 Q4.5 1 9 6 T18 6" fill="none" stroke="#166534" stroke-width="0.7" opacity="0.28"/>
+    </pattern>
+    <pattern id="soccer-stars" width="14" height="14" patternUnits="userSpaceOnUse">
+      <path d="M7 2.2 8.1 5.4 11.5 5.6 8.9 7.8 9.7 11.2 7 9.4 4.3 11.2 5.1 7.8 2.5 5.6 5.9 5.4Z" fill="#93c5fd" opacity="0.45"/>
+    </pattern>
+    <pattern id="soccer-geo" width="16" height="16" patternUnits="userSpaceOnUse">
+      <path d="M8 1 15 8 8 15 1 8Z" fill="none" stroke="#7f1d1d" stroke-width="0.8" opacity="0.35"/>
+    </pattern>
   </defs>
-  <circle cx="100" cy="100" r="92" fill="url(#soccer-ball-fill)" stroke="#111827" stroke-width="6"/>
-  <g clip-path="url(#soccer-ball-clip)" stroke="#111827" stroke-linejoin="round">
-    <polygon fill="#111827" stroke-width="1" points="100,74 119.02,87.82 111.76,110.18 88.24,110.18 80.98,87.82"/>
-    <polygon fill="#111827" stroke-width="1" points="100,6 115.22,17.06 109.4,34.94 90.6,34.94 84.78,17.06"/>
-    <polygon fill="#111827" stroke-width="1" points="183.7,66.81 177.88,84.69 159.08,84.69 153.26,66.81 168.48,55.75"/>
-    <polygon fill="#111827" stroke-width="1" points="151.72,165.19 132.92,165.19 127.1,147.31 142.32,136.25 157.54,147.31"/>
-    <polygon fill="#111827" stroke-width="1" points="48.28,165.19 42.46,147.31 57.68,136.25 72.9,147.31 67.08,165.19"/>
-    <polygon fill="#111827" stroke-width="1" points="16.3,66.81 31.52,55.75 46.74,66.81 40.92,84.69 22.12,84.69"/>
-    <polygon fill="none" stroke-width="3.4" points="134.09,47.08 141.41,63.52 130.83,78.08 112.93,76.2 105.61,59.76 116.19,45.2"/>
-    <polygon fill="none" stroke-width="3.4" points="155.16,111.92 141.78,123.97 124.66,118.4 120.92,100.8 134.3,88.75 151.42,94.32"/>
-    <polygon fill="none" stroke-width="3.4" points="100,152 84.41,143 84.41,125 100,116 115.59,125 115.59,143"/>
-    <polygon fill="none" stroke-width="3.4" points="44.84,111.92 48.58,94.32 65.7,88.75 79.08,100.8 75.34,118.4 58.22,123.97"/>
-    <polygon fill="none" stroke-width="3.4" points="65.91,47.08 83.81,45.2 94.39,59.76 87.07,76.2 69.17,78.08 58.59,63.52"/>
+  <circle cx="100" cy="100" r="94" fill="url(#soccer-ball-fill)"/>
+  <g clip-path="url(#soccer-ball-clip)">
+    <path fill="url(#soccer-green)" d="M12 78 C18 18 88 8 108 52 C118 78 92 92 78 118 C58 158 18 148 10 98 Z"/>
+    <path fill="url(#soccer-waves)" d="M12 78 C18 18 88 8 108 52 C118 78 92 92 78 118 C58 158 18 148 10 98 Z"/>
+    <path fill="url(#soccer-red)" d="M118 28 C168 22 198 70 188 112 C176 158 128 168 108 132 C92 102 86 48 118 28 Z"/>
+    <path fill="url(#soccer-geo)" d="M118 28 C168 22 198 70 188 112 C176 158 128 168 108 132 C92 102 86 48 118 28 Z"/>
+    <path fill="url(#soccer-blue)" d="M92 118 C132 108 176 128 174 168 C168 198 118 204 86 178 C62 156 64 128 92 118 Z"/>
+    <path fill="url(#soccer-stars)" d="M92 118 C132 108 176 128 174 168 C168 198 118 204 86 178 C62 156 64 128 92 118 Z"/>
+    <path fill="none" stroke="#1e1b4b" stroke-width="2.2" stroke-linejoin="round" d="M12 78 C18 18 88 8 108 52 C118 78 92 92 78 118 C58 158 18 148 10 98 Z"/>
+    <path fill="none" stroke="#3f0d12" stroke-width="2.2" stroke-linejoin="round" d="M118 28 C168 22 198 70 188 112 C176 158 128 168 108 132 C92 102 86 48 118 28 Z"/>
+    <path fill="none" stroke="#1e3a8a" stroke-width="2.2" stroke-linejoin="round" d="M92 118 C132 108 176 128 174 168 C168 198 118 204 86 178 C62 156 64 128 92 118 Z"/>
   </g>
-  <circle cx="68" cy="62" r="22" fill="#ffffff" opacity="0.28"/>
+  <circle cx="100" cy="100" r="94" fill="none" stroke="#111827" stroke-width="5"/>
+  <circle cx="68" cy="58" r="26" fill="#ffffff" opacity="0.28"/>
 </svg>

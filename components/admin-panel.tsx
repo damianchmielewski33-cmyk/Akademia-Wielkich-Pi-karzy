@@ -50,6 +50,7 @@ import {
   type AdminNavGroup,
   type AdminTab,
 } from "@/components/admin-ui";
+import { AdminNavTile } from "@/components/admin-nav-tile";
 import { LogoutConfirmModal } from "@/components/logout-confirm-modal";
 import { AppModal } from "@/components/ui/app-modal";
 import {
@@ -98,7 +99,6 @@ import {
   type AdminSectionId,
 } from "@/lib/admin-permissions";
 import {
-  cn,
   formatDateLocalYmd,
 } from "@/lib/utils";
 
@@ -284,41 +284,41 @@ type AppSettings = {
 const navGroupDefs = [
   {
     id: "overview",
-    items: [{ id: "dashboard", label: "Przegląd", icon: LayoutDashboard }],
+    items: [{ id: "dashboard", label: "Przegląd", desc: "Liczby dnia i szybkie skróty", icon: LayoutDashboard }],
   },
   {
     id: "people",
     label: "Ludzie",
     items: [
-      { id: "users", label: "Użytkownicy", icon: Users },
-      { id: "messages", label: "Wiadomości", icon: MessageCircle },
+      { id: "users", label: "Użytkownicy", desc: "Konta, PIN-y i uprawnienia", icon: Users },
+      { id: "messages", label: "Wiadomości", desc: "Skrzynka od graczy i gości", icon: MessageCircle },
     ],
   },
   {
     id: "matches-comp",
     label: "Mecze i rywalizacja",
     items: [
-      { id: "matches", label: "Mecze", icon: Calendar },
-      { id: "bookings", label: "Rezerwacje boisk", icon: CreditCard },
-      { id: "lineups", label: "Składy na mecz", icon: LayoutGrid },
-      { id: "stats", label: "Statystyki", icon: Table2 },
-      { id: "rankings", label: "Rankingi", icon: Trophy },
-      { id: "pzu-cup", label: "PZU Cup", icon: Medal },
+      { id: "matches", label: "Mecze", desc: "Terminarz, zapisy i obecność", icon: Calendar },
+      { id: "bookings", label: "Rezerwacje boisk", desc: "Hale, terminy i płatności", icon: CreditCard },
+      { id: "lineups", label: "Składy na mecz", desc: "Ustawienie drużyn na boisku", icon: LayoutGrid },
+      { id: "stats", label: "Statystyki", desc: "Gole, asysty i dystans", icon: Table2 },
+      { id: "rankings", label: "Rankingi", desc: "Sezony i tabela punktów", icon: Trophy },
+      { id: "pzu-cup", label: "PZU Cup", desc: "Turniej i osobna baza", icon: Medal },
     ],
   },
   {
     id: "finance",
     label: "Finanse",
-    items: [{ id: "wallets", label: "Portfele", icon: Wallet }],
+    items: [{ id: "wallets", label: "Portfele", desc: "Salda, doładowania i korekty", icon: Wallet }],
   },
   {
     id: "site",
     label: "Treść i witryna",
     items: [
-      { id: "gallery", label: "Galeria", icon: Film },
-      { id: "screen-blocks", label: "Zaślepki", icon: Construction },
-      { id: "analytics", label: "Analityka", icon: BarChart3 },
-      { id: "settings", label: "Ustawienia", icon: Settings2 },
+      { id: "gallery", label: "Galeria", desc: "Filmy i materiały z boiska", icon: Film },
+      { id: "screen-blocks", label: "Zaślepki", desc: "Tymczasowe wyłączenie ekranów", icon: Construction },
+      { id: "analytics", label: "Analityka", desc: "Odsłony i aktywność graczy", icon: BarChart3 },
+      { id: "settings", label: "Ustawienia", desc: "Marka, płatności i wersja aplikacji", icon: Settings2 },
     ],
   },
 ] as const;
@@ -2051,43 +2051,44 @@ function DashboardView({
   const shortcuts: {
     category: string;
     description: string;
-    links: { tab: TabId; label: string; icon: typeof Users }[];
+    links: { tab: TabId; label: string; desc: string; icon: typeof Users }[];
   }[] = [
     {
       category: "Ludzie",
       description: "Konta, PIN-y i skrzynka wiadomości.",
       links: [
-        { tab: "users", label: "Użytkownicy", icon: Users },
-        { tab: "messages", label: "Wiadomości", icon: MessageCircle },
+        { tab: "users", label: "Użytkownicy", desc: "Konta, PIN-y i uprawnienia", icon: Users },
+        { tab: "messages", label: "Wiadomości", desc: "Skrzynka od graczy i gości", icon: MessageCircle },
       ],
     },
     {
       category: "Mecze i rywalizacja",
       description: "Terminy, składy, wyniki i turnieje.",
       links: [
-        { tab: "matches", label: "Mecze", icon: Calendar },
-        { tab: "lineups", label: "Składy", icon: LayoutGrid },
-        { tab: "stats", label: "Statystyki", icon: Table2 },
-        { tab: "rankings", label: "Rankingi", icon: Trophy },
-        { tab: "pzu-cup", label: "PZU Cup", icon: Medal },
+        { tab: "matches", label: "Mecze", desc: "Terminarz, zapisy i obecność", icon: Calendar },
+        { tab: "bookings", label: "Rezerwacje boisk", desc: "Hale, terminy i płatności", icon: CreditCard },
+        { tab: "lineups", label: "Składy", desc: "Ustawienie drużyn na boisku", icon: LayoutGrid },
+        { tab: "stats", label: "Statystyki", desc: "Gole, asysty i dystans", icon: Table2 },
+        { tab: "rankings", label: "Rankingi", desc: "Sezony i tabela punktów", icon: Trophy },
+        { tab: "pzu-cup", label: "PZU Cup", desc: "Turniej i osobna baza", icon: Medal },
       ],
     },
     {
       category: "Finanse",
       description: "Salda graczy, doładowania i płatności u operatora.",
       links: [
-        { tab: "wallets", label: "Portfele", icon: Wallet },
-        { tab: "operator-payments", label: "Płatności operatora", icon: CreditCard },
+        { tab: "wallets", label: "Portfele", desc: "Salda, doładowania i korekty", icon: Wallet },
+        { tab: "operator-payments", label: "Płatności operatora", desc: "Bramka HotPay i prowizje", icon: CreditCard },
       ],
     },
     {
       category: "Treść i witryna",
       description: "Galeria, zaślepki, analityka i konfiguracja.",
       links: [
-        { tab: "gallery", label: "Galeria", icon: Film },
-        { tab: "screen-blocks", label: "Zaślepki", icon: Construction },
-        { tab: "analytics", label: "Analityka", icon: BarChart3 },
-        { tab: "settings", label: "Ustawienia", icon: Settings2 },
+        { tab: "gallery", label: "Galeria", desc: "Filmy i materiały z boiska", icon: Film },
+        { tab: "screen-blocks", label: "Zaślepki", desc: "Tymczasowe wyłączenie ekranów", icon: Construction },
+        { tab: "analytics", label: "Analityka", desc: "Odsłony i aktywność graczy", icon: BarChart3 },
+        { tab: "settings", label: "Ustawienia", desc: "Marka, płatności i wersja aplikacji", icon: Settings2 },
       ],
     },
   ];
@@ -2097,7 +2098,6 @@ function DashboardView({
     title: string;
     body: string;
     tab: TabId;
-    tone: "danger" | "warn" | "info";
   }[] = [];
 
   if ((summary?.pin_reset_requests ?? 0) > 0 || (summary?.pin_change_pending ?? 0) > 0) {
@@ -2106,7 +2106,6 @@ function DashboardView({
       title: "PIN-y do obsługi",
       body: `Reset: ${summary?.pin_reset_requests ?? 0}, zmiana oczekująca: ${summary?.pin_change_pending ?? 0}.`,
       tab: "users",
-      tone: "danger",
     });
   }
   if ((summary?.unread_messages ?? 0) > 0) {
@@ -2115,7 +2114,6 @@ function DashboardView({
       title: "Nieprzeczytane wiadomości",
       body: `${summary?.unread_messages} w skrzynce admina.`,
       tab: "messages",
-      tone: "warn",
     });
   }
   if ((summary?.negative_balances ?? 0) > 0) {
@@ -2124,7 +2122,6 @@ function DashboardView({
       title: "Ujemne salda",
       body: `${summary?.negative_balances} graczy z niedopłatą.`,
       tab: "wallets",
-      tone: "warn",
     });
   }
   if ((summary?.pending_deposits ?? 0) > 0) {
@@ -2133,7 +2130,6 @@ function DashboardView({
       title: "Doładowania do potwierdzenia",
       body: `${summary?.pending_deposits} oczekujących wpłat.`,
       tab: "wallets",
-      tone: "info",
     });
   }
 
@@ -2149,59 +2145,38 @@ function DashboardView({
       {opsAlerts.length > 0 ? (
         <div className="mb-6 grid gap-3 sm:grid-cols-2">
           {opsAlerts.map((a) => (
-            <div
+            <AdminNavTile
               key={a.key}
-              className={cn(
-                "rounded-xl border px-4 py-3 text-sm shadow-sm backdrop-blur-sm",
-                a.tone === "danger" && "border-red-300/40 bg-red-950/35 text-red-100",
-                a.tone === "warn" && "border-amber-300/40 bg-amber-950/30 text-amber-50",
-                a.tone === "info" && "border-sky-300/40 bg-sky-950/30 text-sky-50"
-              )}
-            >
-              <p className="font-semibold">{a.title}</p>
-              <p className="mt-1 opacity-90">{a.body}</p>
-              <Button
-                type="button"
-                variant="gold"
-                size="sm"
-                className="mt-3"
-                onClick={() => onGoToTab(a.tab)}
-              >
-                Przejdź
-              </Button>
-            </div>
+              title={a.title}
+              desc={a.body}
+              icon={a.tab === "messages" ? MessageCircle : a.tab === "wallets" ? Wallet : Users}
+              photoKey={`alert-${a.key}`}
+              onClick={() => onGoToTab(a.tab)}
+            />
           ))}
         </div>
       ) : null}
 
       {(summary?.next_matches?.length ?? 0) > 0 ? (
-        <AdminCard
-          className="mb-8"
-          title="Najbliższe mecze"
-          description="Kliknij, aby otworzyć zapisy."
-        >
-          <ul className="space-y-2">
+        <section className="mb-8">
+          <h2 className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--mundial-gold,#f5c518)]">
+            Najbliższe mecze
+          </h2>
+          <p className="mt-1 mb-3 text-sm text-white/85 sm:text-base">Kliknij kafelek, aby otworzyć zapisy.</p>
+          <ul className="grid gap-2 sm:grid-cols-2">
             {summary!.next_matches!.map((m) => (
               <li key={m.id}>
-                <button
-                  type="button"
+                <AdminNavTile
+                  title={`${m.date} ${m.time}`}
+                  desc={`${m.location} · ${m.players_count}/${m.max_slots || "?"}`}
+                  icon={Calendar}
+                  photoKey={`next-match-${m.id}`}
                   onClick={() => onGoToTab("matches", { matchId: m.id })}
-                  className="awp-focus-ring flex w-full items-center justify-between gap-3 rounded-xl border border-white/20 bg-black/10 px-3 py-2.5 text-left text-sm transition-colors hover:bg-white/10"
-                >
-                  <span className="min-w-0">
-                    <span className="font-semibold text-white">
-                      {m.date} {m.time}
-                    </span>
-                    <span className="mt-0.5 block truncate text-emerald-100/75">{m.location}</span>
-                  </span>
-                  <span className="shrink-0 tabular-nums text-emerald-100/80">
-                    {m.players_count}/{m.max_slots || "?"}
-                  </span>
-                </button>
+                />
               </li>
             ))}
           </ul>
-        </AdminCard>
+        </section>
       ) : null}
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -2212,34 +2187,32 @@ function DashboardView({
             hint={m.hint}
             value={m.value}
             icon={m.icon}
+            photoKey={m.key}
             onClick={() => onGoToTab(m.tab)}
           />
         ))}
       </div>
 
-      <div className="mt-8 grid gap-4 sm:grid-cols-2">
+      <div className="mt-10 space-y-8">
         {shortcuts.map((block) => (
-          <AdminCard key={block.category} title={block.category} description={block.description}>
-            <ul className="divide-y divide-white/10">
-              {block.links.map((link) => {
-                const Icon = link.icon;
-                return (
-                  <li key={link.tab}>
-                    <button
-                      type="button"
-                      onClick={() => onGoToTab(link.tab)}
-                      className="awp-focus-ring flex w-full items-center gap-3 px-1 py-2.5 text-left text-sm font-medium text-emerald-50 transition-colors hover:bg-white/5"
-                    >
-                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/20 bg-black/20">
-                        <Icon className="h-4 w-4 text-emerald-300" aria-hidden />
-                      </span>
-                      <span className="min-w-0 flex-1">{link.label}</span>
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          </AdminCard>
+          <section key={block.category}>
+            <h2 className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--mundial-gold,#f5c518)]">
+              {block.category}
+            </h2>
+            <p className="mt-1 mb-3 text-sm text-white/85 sm:text-base">{block.description}</p>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {block.links.map((link) => (
+                <AdminNavTile
+                  key={link.tab}
+                  title={link.label}
+                  desc={link.desc}
+                  icon={link.icon}
+                  photoKey={link.tab}
+                  onClick={() => onGoToTab(link.tab)}
+                />
+              ))}
+            </div>
+          </section>
         ))}
       </div>
 
@@ -2261,13 +2234,13 @@ function DashboardView({
                 className="flex flex-col gap-1 border-l-2 border-[var(--mundial-gold)]/50 pl-4 sm:flex-row sm:items-start sm:justify-between sm:gap-4"
               >
                 <div className="min-w-0 flex-1 space-y-0.5">
-                  <p className="text-sm font-medium text-white">
+                  <p className="text-base font-bold text-white drop-shadow-sm">
                     {item.actorLabel ?? item.actorName ?? "—"}
                   </p>
-                  <p className="text-sm pitch-muted">{item.text}</p>
+                  <p className="text-sm leading-relaxed text-emerald-50/90 sm:text-base">{item.text}</p>
                 </div>
                 <time
-                  className="shrink-0 text-xs tabular-nums text-emerald-100/70 sm:pt-0.5"
+                  className="shrink-0 text-sm tabular-nums text-white/80 sm:pt-0.5"
                   dateTime={item.time}
                   title={item.time}
                 >

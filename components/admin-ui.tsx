@@ -1,21 +1,18 @@
 "use client";
 
 import { useEffect, useMemo, useState, type ComponentType, type ReactNode } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Calendar, ChevronDown, Loader2, LogOut, Moon, Sun } from "lucide-react";
-import { PitchCard, PitchCardDecorations, pitchLabelClass } from "@/components/ui/pitch-card";
+import { PitchCard } from "@/components/ui/pitch-card";
 import { SiteSectionHero } from "@/components/site-section-hero";
 import { SiteAssetImage } from "@/components/site-asset-image";
+import { PhotoPanel } from "@/components/photo-panel";
+import { AdminNavTile, adminPhotoIndex } from "@/components/admin-nav-tile";
 import { AdminTestModeSidebarButton } from "@/components/admin-test-mode-sidebar-button";
 import { AdminOperatorPaymentsSidebarButton } from "@/components/admin-operator-payments-sidebar-button";
 import { AdminMarketplaceSidebarButton } from "@/components/admin-marketplace-sidebar-button";
-import {
-  adminChromeBtnActiveClass,
-  adminChromeBtnBaseClass,
-  adminChromeBtnIdleClass,
-  adminGoldBtnClass,
-} from "@/lib/admin-chrome-button";
+import { pitchPhotoAt } from "@/lib/marketplace-photos";
+import { adminGoldBtnClass } from "@/lib/admin-chrome-button";
 import { cn } from "@/lib/utils";
 
 /* ========== Klasy pomocnicze (tabele, pola) ========== */
@@ -71,6 +68,7 @@ export const adminStatusChipClass =
 export type AdminTab = {
   id: string;
   label: string;
+  desc?: string;
   icon: ComponentType<{ className?: string; strokeWidth?: number; "aria-hidden"?: boolean }>;
   /** Czerwona kropka bez liczby (np. zgłoszenia PIN). */
   badge?: boolean;
@@ -126,25 +124,6 @@ function TabBadge({ tab }: { tab: AdminTab }) {
   return null;
 }
 
-function AdminChromeIcon({
-  active,
-  children,
-}: {
-  active?: boolean;
-  children: ReactNode;
-}) {
-  return (
-    <span
-      className={cn(
-        "flex h-6 w-6 shrink-0 items-center justify-center rounded-md ring-1",
-        active ? "bg-black/25 ring-white/35" : "bg-black/10 ring-black/20"
-      )}
-    >
-      {children}
-    </span>
-  );
-}
-
 function NavTabButton({
   tab,
   active,
@@ -156,25 +135,18 @@ function NavTabButton({
   onSelect: () => void;
   compact?: boolean;
 }) {
-  const Icon = tab.icon;
   return (
-    <button
-      type="button"
+    <AdminNavTile
+      title={tab.label}
+      desc={tab.desc}
+      icon={tab.icon}
+      photoKey={tab.id}
+      active={active}
+      compact={compact}
       onClick={onSelect}
-      className={cn(
-        adminChromeBtnBaseClass,
-        active ? adminChromeBtnActiveClass : adminChromeBtnIdleClass,
-        compact ? "w-auto min-w-[7.5rem] shrink-0" : "w-full"
-      )}
-    >
-      <AdminChromeIcon active={active}>
-        <Icon className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />
-      </AdminChromeIcon>
-      <span className="flex min-w-0 flex-1 items-center justify-between gap-2">
-        <span className="block truncate text-xs font-bold leading-none tracking-tight">{tab.label}</span>
-        <TabBadge tab={tab} />
-      </span>
-    </button>
+      badge={<TabBadge tab={tab} />}
+      className={compact ? "w-auto min-w-[10.5rem] shrink-0" : undefined}
+    />
   );
 }
 
@@ -245,32 +217,36 @@ export function AdminShell({
 
   return (
     <div className="murawa-bg flex min-h-screen flex-col text-white lg:flex-row">
-      <aside className="mundial-header relative z-30 shrink-0 border-b border-[var(--mundial-gold)]/30 shadow-lg lg:w-72 lg:border-b-0 lg:border-r">
-        <div
-          className="pointer-events-none absolute inset-0 opacity-[0.12]"
-          style={{
-            backgroundImage:
-              "repeating-linear-gradient(90deg, transparent, transparent 14px, rgba(255,255,255,0.06) 14px, rgba(255,255,255,0.06) 28px)",
-          }}
-          aria-hidden
-        />
+      <aside className="relative z-30 shrink-0 border-b border-white/20 shadow-lg lg:w-80 lg:border-b-0 lg:border-r lg:border-white/15">
         <div className="relative flex flex-col gap-3 p-3 xs:p-4 lg:sticky lg:top-0 lg:h-screen lg:max-h-screen lg:gap-3 lg:overflow-hidden lg:pt-[max(1rem,env(safe-area-inset-top))] lg:pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-          <div className="flex shrink-0 items-center gap-3 border-b border-white/15 pb-3 lg:pb-4">
-            <span className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/10 shadow-inner ring-1 ring-[var(--mundial-gold)]/40 xs:h-11 xs:w-11">
+          <PhotoPanel
+            src={pitchPhotoAt(0)}
+            className="shrink-0"
+            contentClassName="flex items-center gap-3 p-4"
+            overlayClassName="bg-gradient-to-r from-black/75 via-black/50 to-black/20"
+            sizes="320px"
+            priority
+          >
+            <span className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/15 ring-2 ring-white/35">
               <SiteAssetImage
                 asset="logo_crest"
                 alt=""
                 width={128}
                 height={128}
-                className="h-9 w-9 drop-shadow xs:h-10 xs:w-10"
-                sizes="40px"
+                className="h-10 w-10 drop-shadow"
+                sizes="48px"
               />
             </span>
             <div className="min-w-0">
-              <p className={cn(pitchLabelClass, "text-[0.65rem]")}>Akademia</p>
-              <p className="truncate font-semibold leading-tight text-white">Panel administratora</p>
+              <p className="text-[0.65rem] font-bold uppercase tracking-[0.16em] text-[var(--mundial-gold,#f5c518)]">
+                Panel admina
+              </p>
+              <p className="mt-1 truncate text-lg font-black leading-tight text-white drop-shadow-sm">
+                Sterowanie akademią
+              </p>
+              <p className="mt-0.5 truncate text-xs text-white/80">Mecze, gracze, portfele i ustawienia.</p>
             </div>
-          </div>
+          </PhotoPanel>
 
           {searchSlot ? <div className="relative z-40 shrink-0">{searchSlot}</div> : null}
 
@@ -284,20 +260,26 @@ export function AdminShell({
                     key={s.id}
                     type="button"
                     onClick={() => onTabChange(s.id)}
-                    className={cn(
-                      adminChromeBtnBaseClass,
-                      "min-h-9 flex-1 justify-center px-2",
-                      active ? adminChromeBtnActiveClass : adminChromeBtnIdleClass
-                    )}
+                    className="min-w-0 flex-1"
                   >
-                    <span className="truncate text-xs font-bold leading-none tracking-tight">{s.label}</span>
-                    {s.badgeCount != null && s.badgeCount > 0 ? (
-                      <span className="inline-flex min-h-[1.1rem] min-w-[1.1rem] items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white">
-                        {s.badgeCount > 99 ? "99+" : s.badgeCount}
-                      </span>
-                    ) : s.badge ? (
-                      <span className="h-1.5 w-1.5 rounded-full bg-red-500" aria-hidden />
-                    ) : null}
+                    <PhotoPanel
+                      src={pitchPhotoAt(adminPhotoIndex(s.id))}
+                      className={cn(
+                        "min-h-[2.75rem] rounded-xl",
+                        active && "ring-2 ring-[var(--mundial-gold,#f5c518)]"
+                      )}
+                      contentClassName="flex min-h-[2.75rem] items-center justify-center gap-1.5 px-2 py-2"
+                      sizes="160px"
+                    >
+                      <span className="truncate text-xs font-bold text-white drop-shadow-sm">{s.label}</span>
+                      {s.badgeCount != null && s.badgeCount > 0 ? (
+                        <span className="inline-flex min-h-[1.1rem] min-w-[1.1rem] items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white">
+                          {s.badgeCount > 99 ? "99+" : s.badgeCount}
+                        </span>
+                      ) : s.badge ? (
+                        <span className="h-1.5 w-1.5 rounded-full bg-red-500" aria-hidden />
+                      ) : null}
+                    </PhotoPanel>
                   </button>
                 );
               })}
@@ -321,16 +303,22 @@ export function AdminShell({
                     onClick={() => {
                       if (!selected && g.items[0]) onTabChange(g.items[0].id);
                     }}
-                    className={cn(
-                      adminChromeBtnBaseClass,
-                      "w-auto shrink-0 rounded-full px-3",
-                      selected ? adminChromeBtnActiveClass : adminChromeBtnIdleClass
-                    )}
+                    className="min-w-0 shrink-0"
                   >
-                    <span className="truncate text-xs font-bold leading-none tracking-tight">{chipLabel}</span>
-                    {groupAlert && !selected ? (
-                      <span className="h-1.5 w-1.5 rounded-full bg-red-500" aria-hidden />
-                    ) : null}
+                    <PhotoPanel
+                      src={pitchPhotoAt(adminPhotoIndex(`group-${g.id}`))}
+                      className={cn(
+                        "min-h-[2.5rem] rounded-full",
+                        selected && "ring-2 ring-[var(--mundial-gold,#f5c518)]"
+                      )}
+                      contentClassName="flex min-h-[2.5rem] items-center gap-2 px-3.5 py-1.5"
+                      sizes="180px"
+                    >
+                      <span className="truncate text-xs font-bold text-white drop-shadow-sm">{chipLabel}</span>
+                      {groupAlert && !selected ? (
+                        <span className="h-1.5 w-1.5 rounded-full bg-red-500" aria-hidden />
+                      ) : null}
+                    </PhotoPanel>
                   </button>
                 );
               })}
@@ -386,10 +374,10 @@ export function AdminShell({
                     onClick={() => toggleGroup(g.id)}
                     aria-expanded={isOpen}
                     className={cn(
-                      "awp-focus-ring flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-[0.7rem] font-bold uppercase tracking-wider transition-colors",
+                      "awp-focus-ring flex w-full items-center gap-2 rounded-xl px-2 py-2.5 text-left text-sm font-bold uppercase tracking-[0.12em] transition-colors",
                       containsActive
                         ? "text-[var(--mundial-gold,#f5c518)]"
-                        : "text-emerald-100/55 hover:text-emerald-100/85"
+                        : "text-white/70 hover:text-white"
                     )}
                   >
                     <ChevronDown
@@ -405,7 +393,7 @@ export function AdminShell({
                     ) : null}
                   </button>
                   {isOpen ? (
-                    <div className="mt-0.5 ml-2 space-y-0.5 border-l border-white/10 pl-2">
+                    <div className="mt-1 space-y-1.5">
                       {g.items.map((t) => (
                         <NavTabButton
                           key={t.id}
@@ -422,7 +410,7 @@ export function AdminShell({
           </nav>
 
           {/* Zawsze widoczne: tryb testowy + rezerwacje + płatności operatora + stopka */}
-          <div className="relative z-10 flex shrink-0 flex-col gap-3 border-t border-white/20 pt-3">
+          <div className="relative z-10 flex shrink-0 flex-col gap-2 border-t border-white/20 pt-3">
             <div className="flex flex-col gap-1.5">
               <AdminTestModeSidebarButton />
               <AdminMarketplaceSidebarButton />
@@ -431,57 +419,35 @@ export function AdminShell({
                 onOpen={() => onTabChange("operator-payments")}
               />
             </div>
-            <div className="flex flex-wrap gap-1.5 lg:flex-col">
-              <button
-                type="button"
+            <div className="grid grid-cols-2 gap-1.5 lg:grid-cols-1">
+              <AdminNavTile
+                title={isDarkNow ? "Jasny motyw" : "Ciemny motyw"}
+                desc={isDarkNow ? "Przełącz na jasny interfejs" : "Przełącz na ciemny interfejs"}
+                icon={isDarkNow ? Sun : Moon}
+                photoKey="theme"
                 onClick={() => void toggleTheme()}
-                className={cn(adminChromeBtnBaseClass, adminChromeBtnIdleClass, "flex-1 lg:flex-none")}
-              >
-                <AdminChromeIcon>
-                  {isDarkNow ? (
-                    <Sun className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />
-                  ) : (
-                    <Moon className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />
-                  )}
-                </AdminChromeIcon>
-                <span className="min-w-0 flex-1 truncate text-xs font-bold leading-none tracking-tight">
-                  {isDarkNow ? "Jasny motyw" : "Ciemny motyw"}
-                </span>
-              </button>
-              <Link
+              />
+              <AdminNavTile
+                title="Terminarz"
+                desc="Widok gracza — zapisy na mecze"
+                icon={Calendar}
+                photoKey="terminarz"
                 href="/terminarz"
-                className={cn(adminChromeBtnBaseClass, adminChromeBtnIdleClass, "flex-1 lg:flex-none")}
-              >
-                <AdminChromeIcon>
-                  <Calendar className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />
-                </AdminChromeIcon>
-                <span className="min-w-0 flex-1 truncate text-xs font-bold leading-none tracking-tight">
-                  Terminarz
-                </span>
-              </Link>
-              <Link
+              />
+              <AdminNavTile
+                title="Strona główna"
+                desc="Wróć na start akademii"
+                icon={ArrowLeft}
+                photoKey="home"
                 href="/"
-                className={cn(adminChromeBtnBaseClass, adminChromeBtnIdleClass, "flex-1 lg:flex-none")}
-              >
-                <AdminChromeIcon>
-                  <ArrowLeft className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />
-                </AdminChromeIcon>
-                <span className="min-w-0 flex-1 truncate text-xs font-bold leading-none tracking-tight">
-                  Strona główna
-                </span>
-              </Link>
-              <button
-                type="button"
+              />
+              <AdminNavTile
+                title="Wyloguj"
+                desc="Zakończ sesję administratora"
+                icon={LogOut}
+                photoKey="logout"
                 onClick={onLogout}
-                className={cn(adminChromeBtnBaseClass, adminChromeBtnIdleClass, "flex-1 lg:flex-none")}
-              >
-                <AdminChromeIcon>
-                  <LogOut className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />
-                </AdminChromeIcon>
-                <span className="min-w-0 flex-1 truncate text-xs font-bold leading-none tracking-tight">
-                  Wyloguj
-                </span>
-              </button>
+              />
             </div>
           </div>
         </div>
@@ -549,11 +515,11 @@ export function AdminToolbar({
         kicker={kicker}
         title={title}
         subtitle={description}
-        showCrest={false}
-        size="compact"
+        showCrest
+        size="default"
         align="left"
         variant="stadium"
-        className="min-w-0 flex-1 lg:max-w-2xl"
+        className="min-w-0 flex-1"
       />
       {children ? (
         <div className="flex shrink-0 flex-wrap items-center gap-2 lg:pt-2">{children}</div>
@@ -586,9 +552,9 @@ export function AdminCard({
     title || description || headerExtra ? (
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          {title ? <h2 className="pitch-heading text-lg font-bold">{title}</h2> : null}
+          {title ? <h2 className="pitch-heading text-xl font-black tracking-tight sm:text-2xl">{title}</h2> : null}
           {description ? (
-            <p className={cn("mt-1 text-sm", tone === "data" ? "admin-data-muted" : "pitch-muted")}>
+            <p className={cn("mt-1.5 text-sm leading-relaxed sm:text-base", tone === "data" ? "admin-data-muted" : "pitch-muted")}>
               {description}
             </p>
           ) : null}
@@ -620,35 +586,37 @@ export function AdminMetricTile({
   value,
   icon: Icon,
   onClick,
+  photoKey,
 }: {
   label: string;
   hint: string;
   value: number | string | undefined;
   icon: ComponentType<{ className?: string; "aria-hidden"?: boolean }>;
   onClick: () => void;
+  photoKey?: string;
 }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="group awp-focus-ring relative block h-full min-h-[7rem] w-full overflow-hidden rounded-2xl border-2 border-white/30 text-left shadow-md shadow-emerald-950/20 ring-1 ring-emerald-950/10 transition-[transform,box-shadow] motion-safe:hover:-translate-y-0.5 hover:shadow-lg focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
-    >
-      <div className="home-pitch-tile absolute inset-0" aria-hidden />
-      <PitchCardDecorations />
-      <div className="relative flex h-full flex-col justify-between p-5">
+    <button type="button" onClick={onClick} className="group awp-focus-ring block h-full w-full text-left">
+      <PhotoPanel
+        src={pitchPhotoAt(adminPhotoIndex(photoKey ?? label))}
+        className="min-h-[8.5rem] border-2 border-white/30 shadow-md shadow-emerald-950/12 ring-1 ring-emerald-950/10 transition-[transform,box-shadow] motion-safe:hover:-translate-y-0.5 hover:shadow-xl"
+        contentClassName="flex min-h-[8.5rem] flex-col justify-between p-5"
+        overlayClassName="bg-gradient-to-t from-black/80 via-black/45 to-black/20"
+        sizes="(max-width: 768px) 100vw, 360px"
+      >
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-white">{label}</p>
-            <p className="mt-0.5 text-xs text-emerald-100/80">{hint}</p>
+            <p className="text-lg font-bold text-white drop-shadow-sm sm:text-xl">{label}</p>
+            <p className="mt-1 text-sm leading-snug text-emerald-50/90 sm:text-base">{hint}</p>
           </div>
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/15 ring-2 ring-white/30">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/20 ring-2 ring-white/40">
             <Icon className="h-5 w-5 text-white" aria-hidden />
           </div>
         </div>
-        <p className="mt-3 text-3xl font-bold tabular-nums tracking-tight text-[var(--mundial-gold,#f5c518)]">
+        <p className="mt-3 text-4xl font-black tabular-nums tracking-tight text-[var(--mundial-gold,#f5c518)] drop-shadow-sm">
           {value ?? "–"}
         </p>
-      </div>
+      </PhotoPanel>
     </button>
   );
 }
