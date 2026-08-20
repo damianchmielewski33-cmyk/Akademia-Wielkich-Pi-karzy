@@ -4,13 +4,16 @@ import { SiteAssetImage } from "@/components/site-asset-image";
 import { cn } from "@/lib/utils";
 
 type AwPreloaderProps = {
-  /** Krótki opis pod paskiem postępu (inline / overlay). */
+  /** Krótki opis pod wskaźnikiem. */
   label?: string;
   className?: string;
-  /** `page` — pełna karta; `compact` — sam wskaźnik bez tła karty. */
+  /** `page` — logo + pasek; `compact` — sam spinner. */
   variant?: "page" | "compact";
 };
 
+/**
+ * Wskaźnik ładowania V2 — jasna powierzchnia, teal marketplace, bez stadionowego złota.
+ */
 export function AwPreloader({ label, className, variant = "page" }: AwPreloaderProps) {
   if (variant === "compact") {
     return (
@@ -24,7 +27,15 @@ export function AwPreloader({ label, className, variant = "page" }: AwPreloaderP
   return (
     <div className={cn("awp-preloader awp-preloader--page", className)} role="status" aria-live="polite">
       <div className="awp-preloader__crest">
-        <SiteAssetImage asset="logo_header" alt="" width={160} height={160} className="h-11 w-11 drop-shadow" sizes="44px" priority />
+        <SiteAssetImage
+          asset="logo_header"
+          alt=""
+          width={160}
+          height={160}
+          className="h-10 w-10 drop-shadow-sm"
+          sizes="40px"
+          priority
+        />
       </div>
       <div className="awp-preloader__track" aria-hidden>
         <div className="awp-preloader__bar" />

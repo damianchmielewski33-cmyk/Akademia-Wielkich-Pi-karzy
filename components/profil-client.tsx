@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, type ComponentType } from "react";
+import { useState, type ComponentType, type ReactNode } from "react";
 import { toast } from "@/lib/app-toast";
 import {
   Activity,
@@ -35,9 +35,13 @@ import { InlinePreloader } from "@/components/preloaders";
 import { PlayerAliasPicker } from "@/components/player-alias-picker";
 import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
 import { formatWalletPln } from "@/components/player-wallet-panel";
+import { MarketplacePitchPhoto } from "@/components/marketplace-pitch-photo";
+import { PhotoPanel } from "@/components/photo-panel";
+import { useSiteMode } from "@/components/site-mode";
 import { PitchPageHero } from "@/components/ui/pitch-card";
 import { AndroidAppVersionCard } from "@/components/android-app-version-card";
 import type { ProfileDashboard } from "@/lib/profile-data";
+import { MARKETPLACE_PITCH_PHOTOS } from "@/lib/marketplace-photos";
 import { normalizeUiTheme, type UiTheme } from "@/lib/ui-theme";
 import { cn } from "@/lib/utils";
 import { useHotpayPayment } from "@/hooks/use-hotpay-payment";
@@ -49,11 +53,22 @@ type Props = {
   hotpayEnabled: boolean;
 };
 
+const sectionCardClass =
+  "overflow-hidden rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-950 sm:p-6";
+
+const sectionTitleClass = "text-lg font-black tracking-tight text-zinc-950 dark:text-white sm:text-xl";
+
+const sectionDescClass = "mt-1 text-sm text-zinc-500 dark:text-zinc-400";
+
+const iconWrapClass =
+  "flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-[var(--mp-teal)] text-white shadow-sm";
+
 export function ProfilClient({
   initial,
   walletBalancePln,
   hotpayEnabled,
 }: Props) {
+  const { marketplaceEnabled } = useSiteMode();
   const router = useRouter();
   const [data, setData] = useState<ProfileDashboard>(initial);
   const { pay: payDebt, busy: debtBusy } = useHotpayPayment();
@@ -225,6 +240,584 @@ export function ProfilClient({
   }
 
   const u = data.user;
+  const light = marketplaceEnabled;
+
+  const photoActions = (
+    <div className="mt-4 flex flex-wrap justify-center gap-2">
+      <Button
+        type="button"
+        variant={light ? "default" : "secondary"}
+        size="sm"
+        disabled={uploadingPhoto}
+        className={light ? "rounded-full bg-[var(--mp-teal)] hover:bg-[var(--mp-teal-dark)]" : undefined}
+        asChild
+      >
+        <label className="cursor-pointer">
+          <Camera className="mr-1.5 h-4 w-4" />
+          {uploadingPhoto ? "Przetwarzanie…" : "Wgraj zdjęcie"}
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            className="hidden"
+            onChange={onPhotoChange}
+          />
+        </label>
+      </Button>
+      {u.profile_photo_path ? (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={uploadingPhoto}
+          className={light ? "rounded-full" : undefined}
+          onClick={removePhoto}
+        >
+          <Trash2 className="mr-1.5 h-4 w-4" />
+          Usuń
+        </Button>
+      ) : null}
+    </div>
+  );
+
+  const profileForm = (
+    <div className="mt-5 space-y-4">
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <Label htmlFor="pf_fn">Imię</Label>
+          <Input
+            id="pf_fn"
+            value={firstName}
+            readOnly={!editingProfile}
+            onChange={(e) => setFirstName(e.target.value)}
+            className={cn(
+              "mt-1",
+              !editingProfile &&
+                (light
+                  ? "cursor-default border-zinc-200 bg-zinc-50 text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+                  : "cursor-default border-emerald-100/90 bg-zinc-50/80 text-emerald-950 dark:text-emerald-100")
+            )}
+            required
+          />
+        </div>
+        <div>
+          <Label htmlFor="pf_ln">Nazwisko</Label>
+          <Input
+            id="pf_ln"
+            value={lastName}
+            readOnly={!editingProfile}
+            onChange={(e) => setLastName(e.target.value)}
+            className={cn(
+              "mt-1",
+              !editingProfile &&
+                (light
+                  ? "cursor-default border-zinc-200 bg-zinc-50 text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+                  : "cursor-default border-emerald-100/90 bg-zinc-50/80 text-emerald-950 dark:text-emerald-100")
+            )}
+            required
+          />
+        </div>
+      </div>
+      <PlayerAliasPicker
+        label="Piłkarz (postać na stronie)"
+        value={zawodnik}
+        onChange={setZawodnik}
+        disabled={!editingProfile}
+        helperText={
+          editingProfile
+            ? "Wyszukaj z internetu lub wpisz dowolnego piłkarza — pseudonim musi być unikalny w akademii."
+            : ""
+        }
+        inputClassName={cn(
+          !editingProfile &&
+            (light
+              ? "cursor-default border-zinc-200 bg-zinc-50 text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+              : "cursor-default border-emerald-100/90 bg-zinc-50/80 text-emerald-950 dark:text-emerald-100")
+        )}
+      />
+      <div>
+        <Label>Motyw strony</Label>
+        <Select value={uiTheme} onValueChange={(v) => setUiTheme(normalizeUiTheme(v))} disabled={!editingProfile}>
+          <SelectTrigger
+            className={cn(
+              "mt-1",
+              !editingProfile &&
+                (light
+                  ? "cursor-default border-zinc-200 bg-zinc-50 opacity-100 dark:border-zinc-700 dark:bg-zinc-900"
+                  : "cursor-default border-emerald-100/90 bg-zinc-50/80 opacity-100")
+            )}
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="light">
+              <span className="flex items-center gap-2">
+                <Sun className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
+                Jasny
+              </span>
+            </SelectItem>
+            <SelectItem value="dark">
+              <span className="flex items-center gap-2">
+                <Moon className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
+                Ciemny
+              </span>
+            </SelectItem>
+          </SelectContent>
+        </Select>
+        <p className="mt-1.5 text-xs text-zinc-500">
+          Po zapisaniu stosuje się do całej aplikacji (nagłówek, treść, stopka).
+        </p>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {editingProfile ? (
+          <>
+            <Button
+              type="button"
+              disabled={savingProfile}
+              className={light ? "rounded-full" : undefined}
+              onClick={() => void saveProfile()}
+            >
+              {savingProfile ? "Zapisywanie…" : "Zapisz edycje"}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={savingProfile}
+              className={light ? "rounded-full" : undefined}
+              onClick={cancelProfileEdit}
+            >
+              Anuluj
+            </Button>
+          </>
+        ) : (
+          <Button
+            type="button"
+            className={light ? "rounded-full" : undefined}
+            onClick={() => {
+              window.setTimeout(() => setEditingProfile(true), 0);
+            }}
+          >
+            Edytuj
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+
+  const walletBlock = (
+    <div
+      className={cn(
+        "mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border p-4",
+        light
+          ? "border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900/80"
+          : "border-zinc-200 bg-white shadow-sm dark:border-zinc-700 dark:bg-zinc-900/80",
+        walletBalancePln < 0 && "border-red-200 dark:border-red-800/50",
+        walletBalancePln > 0 &&
+          (light ? "border-teal-200 dark:border-teal-900" : "border-emerald-200 dark:border-emerald-800/50")
+      )}
+    >
+      <div>
+        <p
+          className={cn(
+            "text-xs font-semibold uppercase tracking-wide",
+            light ? "text-[var(--mp-teal-dark)]" : "text-zinc-500"
+          )}
+        >
+          Saldo
+        </p>
+        <p
+          className={cn(
+            "mt-1 text-3xl font-bold tabular-nums",
+            light ? "text-zinc-950 dark:text-white" : "text-emerald-950 dark:text-emerald-100",
+            walletBalancePln < 0 && "text-red-600 dark:text-red-300",
+            walletBalancePln > 0 && light && "text-[var(--mp-teal-dark)]"
+          )}
+        >
+          {formatWalletPln(walletBalancePln)}
+        </p>
+        {walletBalancePln < 0 ? (
+          <p className="mt-1 text-xs font-medium text-red-600 dark:text-red-300">Niedopłata do uregulowania</p>
+        ) : null}
+      </div>
+      {hotpayEnabled && walletBalancePln < 0 ? (
+        <PayButton
+          variant="default"
+          amountPln={walletBalancePln}
+          busy={debtBusy}
+          onClick={() => void payDebt(Math.abs(walletBalancePln))}
+        />
+      ) : (
+        <Button asChild variant={light ? "default" : "pitch"} className={light ? "rounded-full" : undefined}>
+          <Link href="/platnosci">Zapłać kartą lub Blikiem</Link>
+        </Button>
+      )}
+    </div>
+  );
+
+  const summaryGrid = (
+    <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+      <MiniStat light={light} icon={Activity} label="Mecze ze statystykami" value={data.summary.matches_with_stats} />
+      <MiniStat light={light} icon={Target} label="Gole" value={data.summary.goals} />
+      <MiniStat light={light} icon={Share2} label="Asysty" value={data.summary.assists} />
+      <MiniStat light={light} icon={Route} label="Dystans (km)" value={data.summary.distance_km.toFixed(1)} />
+      <MiniStat light={light} icon={Shield} label="Obrony" value={data.summary.saves} />
+      <MiniStat
+        light={light}
+        icon={Activity}
+        label="Brak statystyk"
+        value={data.summary.missing_stats_count}
+        muted={data.summary.missing_stats_count === 0}
+      />
+    </div>
+  );
+
+  const matchStatsSection = (
+    <>
+      {data.matches_missing_stats.length > 0 ? (
+        <div className="mt-5">
+          <h3
+            className={cn(
+              "text-sm font-semibold uppercase tracking-wide",
+              light ? "text-[var(--mp-teal-dark)]" : "text-emerald-900/90 dark:text-emerald-200/90"
+            )}
+          >
+            Do uzupełnienia
+          </h3>
+          <ul className="mt-2 space-y-2">
+            {data.matches_missing_stats.map((m) => (
+              <li
+                key={m.match_id}
+                className={cn(
+                  "flex flex-wrap items-center justify-between gap-2 rounded-xl border px-3 py-2.5",
+                  light
+                    ? "border-amber-200 bg-amber-50/70 dark:border-amber-900/50 dark:bg-amber-950/25"
+                    : "border-amber-200/80 bg-amber-50/50"
+                )}
+              >
+                <span
+                  className={cn(
+                    "text-sm",
+                    light ? "text-zinc-900 dark:text-zinc-100" : "text-emerald-950 dark:text-emerald-100"
+                  )}
+                >
+                  {m.match_date} · {m.match_time} — {m.location}
+                </span>
+                <div className="flex items-center gap-2">
+                  {!m.can_add ? (
+                    <Badge variant="secondary" className="font-normal">
+                      Termin minął ({m.edit_deadline})
+                    </Badge>
+                  ) : (
+                    <Button
+                      type="button"
+                      size="sm"
+                      className={light ? "rounded-full" : undefined}
+                      onClick={() =>
+                        openStatsEditor(m.match_id, `${m.match_date} · ${m.location}`, 0, 0, 0, 0, {
+                          blankDefaults: true,
+                        })
+                      }
+                    >
+                      Dodaj statystyki
+                    </Button>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      {data.match_stats.length > 0 ? (
+        <ul className="mt-5 space-y-2">
+          {data.match_stats.map((s) => (
+            <li
+              key={`stat-${s.stat_id}`}
+              className={cn(
+                "flex flex-wrap items-center justify-between gap-2 rounded-xl border px-3 py-2.5",
+                light
+                  ? "border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900/60"
+                  : "border-emerald-100/90 bg-emerald-50/35"
+              )}
+            >
+              <div
+                className={cn(
+                  "min-w-0 text-sm",
+                  light ? "text-zinc-900 dark:text-zinc-100" : "text-emerald-950 dark:text-emerald-100"
+                )}
+              >
+                <span className="font-medium">{s.match_date}</span> · {s.match_time} — {s.location}
+                <span className="mt-0.5 block text-xs text-zinc-500 dark:text-zinc-400">
+                  Gole {s.goals} · Asysty {s.assists} · km {s.distance.toFixed(1)} · Obrony {s.saves ?? 0}
+                </span>
+              </div>
+              <div className="flex shrink-0 items-center gap-2">
+                {!s.can_edit ? (
+                  <Badge variant="outline" className="font-normal text-zinc-600 dark:text-zinc-400">
+                    Zablokowane (było do {s.edit_deadline})
+                  </Badge>
+                ) : (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={light ? "outline" : "secondary"}
+                    className={light ? "rounded-full" : undefined}
+                    onClick={() =>
+                      openStatsEditor(
+                        s.match_id,
+                        `${s.match_date} · ${s.location}`,
+                        s.goals,
+                        s.assists,
+                        s.distance,
+                        s.saves ?? 0
+                      )
+                    }
+                  >
+                    Edytuj
+                  </Button>
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
+      ) : data.matches_missing_stats.length === 0 ? (
+        <p className="relative mt-4 text-sm text-zinc-500 dark:text-zinc-400">
+          Brak rozegranych meczów ze statystykami.
+        </p>
+      ) : null}
+    </>
+  );
+
+  const activitySection = (
+    <>
+      {data.recent_activity.length === 0 ? (
+        <p className="mt-4 text-sm text-zinc-500">Brak wpisów.</p>
+      ) : (
+        <ul
+          className={cn(
+            "mt-4 space-y-2 border-t pt-4",
+            light ? "border-zinc-200 dark:border-zinc-800" : "border-emerald-100/80"
+          )}
+        >
+          {data.recent_activity.map((a, i) => (
+            <li key={i} className="text-sm text-zinc-700 dark:text-zinc-300">
+              <span className="text-xs tabular-nums text-zinc-400">{a.timestamp}</span>
+              <span
+                className={cn(
+                  "mt-0.5 block",
+                  light ? "text-zinc-900 dark:text-zinc-100" : "text-emerald-950 dark:text-emerald-100"
+                )}
+              >
+                {a.action}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </>
+  );
+
+  const shortcuts = (
+    <ul className="mt-3 list-inside list-disc space-y-1.5 text-sm text-zinc-600 dark:text-zinc-300">
+      <li>
+        <Link
+          href="/terminarz"
+          className={cn(
+            "font-medium underline-offset-2 hover:underline",
+            light ? "text-[var(--mp-teal-dark)]" : "text-emerald-800"
+          )}
+        >
+          Terminarz
+        </Link>{" "}
+        — zapisy na mecze
+      </li>
+      <li>
+        <Link
+          href="/rankingi"
+          className={cn(
+            "font-medium underline-offset-2 hover:underline",
+            light ? "text-[var(--mp-teal-dark)]" : "text-emerald-800"
+          )}
+        >
+          Rankingi
+        </Link>
+      </li>
+      <li>
+        <Link
+          href="/pilkarze"
+          className={cn(
+            "font-medium underline-offset-2 hover:underline",
+            light ? "text-[var(--mp-teal-dark)]" : "text-emerald-800"
+          )}
+        >
+          Piłkarze
+        </Link>{" "}
+        — jak widzą Cię inni
+      </li>
+    </ul>
+  );
+
+  const statsModal = (
+    <AppModal
+      open={statsOpen}
+      onOpenChange={setStatsOpen}
+      size="lg"
+      title="Statystyki meczu"
+      description={statsCtx?.label}
+      footer={
+        <>
+          <Button type="button" variant="outline" onClick={() => setStatsOpen(false)}>
+            Anuluj
+          </Button>
+          <Button type="button" variant={light ? "default" : "pitch"} onClick={submitStats}>
+            Zapisz
+          </Button>
+        </>
+      }
+    >
+      {statsCtx ? (
+        <div className={cn(modalPanelClass, "grid gap-3 sm:grid-cols-2")}>
+          <FormInput
+            id="st_g"
+            label="Gole"
+            type="number"
+            min={0}
+            value={statsCtx.goals}
+            onChange={(e) => setStatsCtx({ ...statsCtx, goals: e.target.value })}
+          />
+          <FormInput
+            id="st_a"
+            label="Asysty"
+            type="number"
+            min={0}
+            value={statsCtx.assists}
+            onChange={(e) => setStatsCtx({ ...statsCtx, assists: e.target.value })}
+          />
+          <FormInput
+            id="st_d"
+            label="Dystans (km)"
+            type="number"
+            min={0}
+            step="0.1"
+            value={statsCtx.distance}
+            onChange={(e) => setStatsCtx({ ...statsCtx, distance: e.target.value })}
+          />
+          <FormInput
+            id="st_s"
+            label="Obronione strzały"
+            type="number"
+            min={0}
+            value={statsCtx.saves}
+            onChange={(e) => setStatsCtx({ ...statsCtx, saves: e.target.value })}
+          />
+        </div>
+      ) : null}
+    </AppModal>
+  );
+
+  if (light) {
+    return (
+      <div className="relative flex flex-1 flex-col text-zinc-900 dark:text-zinc-50">
+        <section className="mp-hero mp-hero--photo relative z-10 flex flex-col justify-end overflow-hidden pb-10 pt-12 sm:pb-16 sm:pt-20">
+          <MarketplacePitchPhoto src={MARKETPLACE_PITCH_PHOTOS[5]} priority className="z-0" />
+          <div className="absolute inset-0 z-[1] bg-gradient-to-t from-black/80 via-black/45 to-black/25" />
+          <div className="relative z-10 mx-auto flex w-full max-w-6xl flex-col items-center px-3 text-center xs:px-4 sm:flex-row sm:items-end sm:gap-8 sm:text-left">
+            <div className="relative shrink-0">
+              <div className="overflow-hidden rounded-full border-4 border-white/90 shadow-xl ring-4 ring-[var(--mp-teal)]/40">
+                <PlayerAvatar
+                  photoPath={u.profile_photo_path}
+                  firstName={firstName}
+                  lastName={lastName}
+                  size="profile"
+                  ringClassName="ring-0"
+                />
+              </div>
+              {uploadingPhoto ? (
+                <InlinePreloader layout="overlay" immediate label="Zapisywanie zdjęcia…" />
+              ) : null}
+            </div>
+            <div className="mt-4 min-w-0 flex-1 sm:mt-0 sm:pb-2">
+              <p className="text-[0.65rem] font-black uppercase tracking-[0.22em] text-white/80 sm:text-xs">
+                Akademia
+              </p>
+              <h1 className="mt-1 text-[1.85rem] font-black leading-tight tracking-tight text-white xs:text-4xl sm:text-5xl">
+                {firstName} {lastName}
+              </h1>
+              {zawodnik ? (
+                <p className="mt-2 text-sm font-semibold text-white/90 sm:text-base">@{zawodnik}</p>
+              ) : null}
+              <p className="mt-2 max-w-xl text-sm text-white/80 sm:text-base">
+                Dane konta, portfel, zdjęcie i statystyki z ostatnich meczów.
+              </p>
+              {photoActions}
+              <p className="mt-2 text-xs text-white/65">JPG, PNG, WebP lub GIF, do 2 MB.</p>
+            </div>
+          </div>
+        </section>
+
+        <div className="relative z-10 mx-auto w-full min-w-0 max-w-6xl space-y-6 px-3 py-8 xs:px-4 sm:py-10">
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
+            <SectionCard
+              icon={Pencil}
+              title="Dane i awatar"
+              description="Logowanie odbywa się po imieniu, nazwisku i wybranym piłkarzu — po zmianie nadal jesteś zalogowany."
+            >
+              {profileForm}
+            </SectionCard>
+
+            <div className="space-y-6">
+              <SectionCard
+                icon={Wallet}
+                title="Portfel"
+                description="Podgląd salda — doładowania i opłaty meczów są na stronie Płatności."
+              >
+                {walletBlock}
+              </SectionCard>
+              <AndroidAppVersionCard />
+            </div>
+          </div>
+
+          <PhotoPanel
+            src={MARKETPLACE_PITCH_PHOTOS[0]}
+            className="min-h-[8rem] rounded-3xl"
+            contentClassName="flex min-h-[8rem] flex-col justify-end p-5 sm:p-6"
+            sizes="(max-width: 768px) 100vw, 1152px"
+          >
+            <p className="text-[0.65rem] font-black uppercase tracking-[0.18em] text-white/80">Podsumowanie</p>
+            <h2 className="mt-1 text-2xl font-black text-white">Twoje liczby</h2>
+            <p className="mt-1 max-w-lg text-sm text-white/85">
+              Szybki wgląd — pełna tabela jest w{" "}
+              <Link href="/statystyki" className="font-bold text-white underline underline-offset-2">
+                Statystykach
+              </Link>
+              .
+            </p>
+          </PhotoPanel>
+          <div className={sectionCardClass}>{summaryGrid}</div>
+
+          <SectionCard
+            title="Statystyki z meczów"
+            description="Możesz dodać lub poprawić wpis do 7 dni po dacie meczu. Później zmiany wykona wyłącznie admin."
+          >
+            {matchStatsSection}
+          </SectionCard>
+
+          <SectionCard
+            title="Twoja ostatnia aktywność"
+            description="Chronologia tego, co robiłeś na stronie (np. logowanie, zapisy, mecze)."
+          >
+            {activitySection}
+          </SectionCard>
+
+          <section className="rounded-3xl border border-dashed border-zinc-300 bg-zinc-50 p-6 dark:border-zinc-700 dark:bg-zinc-900/40">
+            <h2 className={sectionTitleClass}>Skrót do strony</h2>
+            {shortcuts}
+          </section>
+        </div>
+
+        {statsModal}
+      </div>
+    );
+  }
 
   return (
     <div className="awp-page awp-page--default">
@@ -245,7 +838,7 @@ export function ProfilClient({
                 ringClassName="ring-0"
               />
               {uploadingPhoto ? (
-                <InlinePreloader layout="overlay" label="Zapisywanie zdjęcia…" />
+                <InlinePreloader layout="overlay" immediate label="Zapisywanie zdjęcia…" />
               ) : null}
             </div>
             <div className="mt-3 w-full max-w-[240px]">
@@ -258,21 +851,7 @@ export function ProfilClient({
                 secondaryClassName="text-sm text-emerald-100/85"
               />
             </div>
-            <div className="mt-4 flex flex-wrap justify-center gap-2">
-              <Button type="button" variant="secondary" size="sm" disabled={uploadingPhoto} asChild>
-                <label className="cursor-pointer">
-                  <Camera className="mr-1.5 h-4 w-4" />
-                  {uploadingPhoto ? "Przetwarzanie…" : "Wgraj zdjęcie"}
-                  <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="hidden" onChange={onPhotoChange} />
-                </label>
-              </Button>
-              {u.profile_photo_path ? (
-                <Button type="button" variant="outline" size="sm" disabled={uploadingPhoto} onClick={removePhoto}>
-                  <Trash2 className="mr-1.5 h-4 w-4" />
-                  Usuń
-                </Button>
-              ) : null}
-            </div>
+            {photoActions}
             <p className="mt-3 text-xs text-emerald-100/75">JPG, PNG, WebP lub GIF, do 2 MB.</p>
           </div>
         </div>
@@ -285,109 +864,10 @@ export function ProfilClient({
                 Dane i awatar (lista)
               </h2>
               <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-                Logowanie odbywa się po imieniu, nazwisku i wybranym piłkarzu — po zmianie tych danych nadal jesteś zalogowany.
+                Logowanie odbywa się po imieniu, nazwisku i wybranym piłkarzu — po zmianie tych danych nadal jesteś
+                zalogowany.
               </p>
-              <div className="mt-5 space-y-4">
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <Label htmlFor="pf_fn">Imię</Label>
-                    <Input
-                      id="pf_fn"
-                      value={firstName}
-                      readOnly={!editingProfile}
-                      onChange={(e) => setFirstName(e.target.value)}
-                      className={cn(
-                        "mt-1",
-                        !editingProfile && "cursor-default border-emerald-100/90 bg-zinc-50/80 text-emerald-950 dark:text-emerald-100"
-                      )}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="pf_ln">Nazwisko</Label>
-                    <Input
-                      id="pf_ln"
-                      value={lastName}
-                      readOnly={!editingProfile}
-                      onChange={(e) => setLastName(e.target.value)}
-                      className={cn(
-                        "mt-1",
-                        !editingProfile && "cursor-default border-emerald-100/90 bg-zinc-50/80 text-emerald-950 dark:text-emerald-100"
-                      )}
-                      required
-                    />
-                  </div>
-                </div>
-                <PlayerAliasPicker
-                  label="Piłkarz (postać na stronie)"
-                  value={zawodnik}
-                  onChange={setZawodnik}
-                  disabled={!editingProfile}
-                  helperText={
-                    editingProfile
-                      ? "Wyszukaj z internetu lub wpisz dowolnego piłkarza — pseudonim musi być unikalny w akademii."
-                      : ""
-                  }
-                  inputClassName={cn(
-                    !editingProfile && "cursor-default border-emerald-100/90 bg-zinc-50/80 text-emerald-950 dark:text-emerald-100"
-                  )}
-                />
-                <div>
-                  <Label>Motyw strony</Label>
-                  <Select
-                    value={uiTheme}
-                    onValueChange={(v) => setUiTheme(normalizeUiTheme(v))}
-                    disabled={!editingProfile}
-                  >
-                    <SelectTrigger
-                      className={cn(
-                        "mt-1",
-                        !editingProfile && "cursor-default border-emerald-100/90 bg-zinc-50/80 opacity-100"
-                      )}
-                    >
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="light">
-                        <span className="flex items-center gap-2">
-                          <Sun className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
-                          Jasny
-                        </span>
-                      </SelectItem>
-                      <SelectItem value="dark">
-                        <span className="flex items-center gap-2">
-                          <Moon className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
-                          Ciemny
-                        </span>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <p className="mt-1.5 text-xs text-zinc-500">
-                    Po zapisaniu stosuje się do całej aplikacji (nagłówek, treść, stopka).
-                  </p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {editingProfile ? (
-                    <>
-                      <Button type="button" disabled={savingProfile} onClick={() => void saveProfile()}>
-                        {savingProfile ? "Zapisywanie…" : "Zapisz edycje"}
-                      </Button>
-                      <Button type="button" variant="outline" disabled={savingProfile} onClick={cancelProfileEdit}>
-                        Anuluj
-                      </Button>
-                    </>
-                  ) : (
-                    <Button
-                      type="button"
-                      onClick={() => {
-                        window.setTimeout(() => setEditingProfile(true), 0);
-                      }}
-                    >
-                      Edytuj
-                    </Button>
-                  )}
-                </div>
-              </div>
+              {profileForm}
             </div>
           </div>
 
@@ -402,42 +882,7 @@ export function ProfilClient({
               <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
                 Podgląd salda — doładowania i opłaty meczów są na stronie Płatności.
               </p>
-              <div
-                className={cn(
-                  "mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-900/80",
-                  walletBalancePln < 0 && "border-red-200 dark:border-red-800/50",
-                  walletBalancePln > 0 && "border-emerald-200 dark:border-emerald-800/50"
-                )}
-              >
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Saldo</p>
-                  <p
-                    className={cn(
-                      "mt-1 text-3xl font-bold tabular-nums text-emerald-950 dark:text-emerald-100",
-                      walletBalancePln < 0 && "text-red-700 dark:text-red-300"
-                    )}
-                  >
-                    {formatWalletPln(walletBalancePln)}
-                  </p>
-                  {walletBalancePln < 0 ? (
-                    <p className="mt-1 text-xs font-medium text-red-700 dark:text-red-300">
-                      Niedopłata do uregulowania
-                    </p>
-                  ) : null}
-                </div>
-                {hotpayEnabled && walletBalancePln < 0 ? (
-                  <PayButton
-                    variant="default"
-                    amountPln={walletBalancePln}
-                    busy={debtBusy}
-                    onClick={() => void payDebt(Math.abs(walletBalancePln))}
-                  />
-                ) : (
-                  <Button asChild variant="pitch">
-                    <Link href="/platnosci">Zapłać kartą lub Blikiem</Link>
-                  </Button>
-                )}
-              </div>
+              {walletBlock}
             </div>
           </div>
 
@@ -451,19 +896,7 @@ export function ProfilClient({
                 </Link>
                 .
               </p>
-              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
-                <MiniStat icon={Activity} label="Mecze ze statystykami" value={data.summary.matches_with_stats} />
-                <MiniStat icon={Target} label="Gole" value={data.summary.goals} />
-                <MiniStat icon={Share2} label="Asysty" value={data.summary.assists} />
-                <MiniStat icon={Route} label="Dystans (km)" value={data.summary.distance_km.toFixed(1)} />
-                <MiniStat icon={Shield} label="Obrony" value={data.summary.saves} />
-                <MiniStat
-                  icon={Activity}
-                  label="Brak statystyk"
-                  value={data.summary.missing_stats_count}
-                  muted={data.summary.missing_stats_count === 0}
-                />
-              </div>
+              {summaryGrid}
             </div>
           </div>
         </div>
@@ -473,193 +906,59 @@ export function ProfilClient({
         <div>
           <h2 className="text-lg font-bold text-white">Statystyki z meczów</h2>
           <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-            Możesz dodać lub poprawić wpis do <strong>7 dni po dacie meczu</strong>. Później zmiany wykona wyłącznie admin.
+            Możesz dodać lub poprawić wpis do <strong>7 dni po dacie meczu</strong>. Później zmiany wykona wyłącznie
+            admin.
           </p>
-
-          {data.matches_missing_stats.length > 0 ? (
-            <div className="mt-5">
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-emerald-900/90 dark:text-emerald-200/90">
-                Do uzupełnienia
-              </h3>
-              <ul className="mt-2 space-y-2">
-                {data.matches_missing_stats.map((m) => (
-                  <li
-                    key={m.match_id}
-                    className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-200/80 bg-amber-50/50 px-3 py-2.5"
-                  >
-                    <span className="text-sm text-emerald-950 dark:text-emerald-100">
-                      {m.match_date} · {m.match_time} — {m.location}
-                    </span>
-                    <div className="flex items-center gap-2">
-                      {!m.can_add ? (
-                        <Badge variant="secondary" className="font-normal">
-                          Termin minął ({m.edit_deadline})
-                        </Badge>
-                      ) : (
-                        <Button
-                          type="button"
-                          size="sm"
-                          onClick={() =>
-                            openStatsEditor(m.match_id, `${m.match_date} · ${m.location}`, 0, 0, 0, 0, {
-                              blankDefaults: true,
-                            })
-                          }
-                        >
-                          Dodaj statystyki
-                        </Button>
-                      )}
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-
-          {data.match_stats.length > 0 ? (
-            <ul className="mt-5 space-y-2">
-              {data.match_stats.map((s) => (
-                <li
-                  key={`stat-${s.stat_id}`}
-                  className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-emerald-100/90 bg-emerald-50/35 px-3 py-2.5"
-                >
-                  <div className="min-w-0 text-sm text-emerald-950 dark:text-emerald-100">
-                    <span className="font-medium">{s.match_date}</span> · {s.match_time} — {s.location}
-                    <span className="mt-0.5 block text-xs text-zinc-600 dark:text-zinc-400">
-                      Gole {s.goals} · Asysty {s.assists} · km {s.distance.toFixed(1)} · Obrony {s.saves ?? 0}
-                    </span>
-                  </div>
-                  <div className="flex shrink-0 items-center gap-2">
-                    {!s.can_edit ? (
-                      <Badge variant="outline" className="font-normal text-zinc-600 dark:text-zinc-400">
-                        Zablokowane (było do {s.edit_deadline})
-                      </Badge>
-                    ) : (
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="secondary"
-                        onClick={() =>
-                          openStatsEditor(
-                            s.match_id,
-                            `${s.match_date} · ${s.location}`,
-                            s.goals,
-                            s.assists,
-                            s.distance,
-                            s.saves ?? 0
-                          )
-                        }
-                      >
-                        Edytuj
-                      </Button>
-                    )}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          ) : data.matches_missing_stats.length === 0 ? (
-            <p className="relative mt-4 text-sm text-zinc-600 dark:text-zinc-400">Brak rozegranych meczów ze statystykami.</p>
-          ) : null}
+          {matchStatsSection}
         </div>
       </section>
 
       <section className="awp-card-surface mx-auto mt-10 max-w-5xl">
         <div>
           <h2 className="text-lg font-bold text-white">Twoja ostatnia aktywność</h2>
-          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">Chronologia tego, co robiłeś na stronie (np. logowanie, zapisy, mecze).</p>
-          {data.recent_activity.length === 0 ? (
-            <p className="mt-4 text-sm text-zinc-500">Brak wpisów.</p>
-          ) : (
-            <ul className="mt-4 space-y-2 border-t border-emerald-100/80 pt-4">
-              {data.recent_activity.map((a, i) => (
-                <li key={i} className="text-sm text-zinc-700">
-                  <span className="text-xs tabular-nums text-zinc-400">{a.timestamp}</span>
-                  <span className="mt-0.5 block text-emerald-950 dark:text-emerald-100">{a.action}</span>
-                </li>
-              ))}
-            </ul>
-          )}
+          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+            Chronologia tego, co robiłeś na stronie (np. logowanie, zapisy, mecze).
+          </p>
+          {activitySection}
         </div>
       </section>
 
       <section className="relative mx-auto mt-10 max-w-5xl rounded-2xl border border-dashed border-emerald-300/80 bg-emerald-50/40 p-6 dark:border-emerald-700/50 dark:bg-emerald-950/25">
         <h2 className="text-base font-bold text-emerald-950 dark:text-emerald-100">Skrót do strony</h2>
-        <ul className="mt-3 list-inside list-disc space-y-1.5 text-sm text-zinc-700">
-          <li>
-            <Link href="/terminarz" className="font-medium text-emerald-800 underline-offset-2 hover:underline">
-              Terminarz
-            </Link>{" "}
-            — zapisy na mecze
-          </li>
-          <li>
-            <Link href="/rankingi" className="font-medium text-emerald-800 underline-offset-2 hover:underline">
-              Rankingi
-            </Link>
-          </li>
-          <li>
-            <Link href="/pilkarze" className="font-medium text-emerald-800 underline-offset-2 hover:underline">
-              Piłkarze
-            </Link>{" "}
-            — jak widzą Cię inni
-          </li>
-        </ul>
+        {shortcuts}
       </section>
 
-      <AppModal
-        open={statsOpen}
-        onOpenChange={setStatsOpen}
-        size="lg"
-        title="Statystyki meczu"
-        description={statsCtx?.label}
-        footer={
-          <>
-            <Button type="button" variant="outline" onClick={() => setStatsOpen(false)}>
-              Anuluj
-            </Button>
-            <Button type="button" variant="pitch" onClick={submitStats}>
-              Zapisz
-            </Button>
-          </>
-        }
-      >
-        {statsCtx ? (
-          <div className={cn(modalPanelClass, "grid gap-3 sm:grid-cols-2")}>
-            <FormInput
-              id="st_g"
-              label="Gole"
-              type="number"
-              min={0}
-              value={statsCtx.goals}
-              onChange={(e) => setStatsCtx({ ...statsCtx, goals: e.target.value })}
-            />
-            <FormInput
-              id="st_a"
-              label="Asysty"
-              type="number"
-              min={0}
-              value={statsCtx.assists}
-              onChange={(e) => setStatsCtx({ ...statsCtx, assists: e.target.value })}
-            />
-            <FormInput
-              id="st_d"
-              label="Dystans (km)"
-              type="number"
-              min={0}
-              step="0.1"
-              value={statsCtx.distance}
-              onChange={(e) => setStatsCtx({ ...statsCtx, distance: e.target.value })}
-            />
-            <FormInput
-              id="st_s"
-              label="Obronione strzały"
-              type="number"
-              min={0}
-              value={statsCtx.saves}
-              onChange={(e) => setStatsCtx({ ...statsCtx, saves: e.target.value })}
-            />
-          </div>
-        ) : null}
-      </AppModal>
+      {statsModal}
     </div>
+  );
+}
+
+function SectionCard({
+  icon: Icon,
+  title,
+  description,
+  children,
+}: {
+  icon?: ComponentType<{ className?: string; strokeWidth?: number; "aria-hidden"?: boolean }>;
+  title: string;
+  description?: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className={sectionCardClass}>
+      <div className="mb-1 flex items-start gap-3">
+        {Icon ? (
+          <span className={iconWrapClass}>
+            <Icon className="h-4 w-4" strokeWidth={2.25} aria-hidden />
+          </span>
+        ) : null}
+        <div className="min-w-0 flex-1">
+          <h2 className={sectionTitleClass}>{title}</h2>
+          {description ? <p className={sectionDescClass}>{description}</p> : null}
+        </div>
+      </div>
+      {children}
+    </section>
   );
 }
 
@@ -668,23 +967,48 @@ function MiniStat({
   label,
   value,
   muted,
+  light,
 }: {
   icon: ComponentType<{ className?: string; strokeWidth?: number }>;
   label: string;
   value: string | number;
   muted?: boolean;
+  light?: boolean;
 }) {
   return (
     <div
-      className={`rounded-xl border border-emerald-100/90 bg-white/90 px-3 py-3 shadow-sm dark:border-emerald-800/50 dark:bg-zinc-800/60 ${muted ? "opacity-70" : ""}`}
+      className={cn(
+        "rounded-xl border px-3 py-3 shadow-sm",
+        light
+          ? "border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900/70"
+          : "border-emerald-100/90 bg-white/90 dark:border-emerald-800/50 dark:bg-zinc-800/60",
+        muted && "opacity-70"
+      )}
     >
-      <div className="flex items-center gap-2 text-emerald-800 dark:text-emerald-300">
+      <div
+        className={cn(
+          "flex items-center gap-2",
+          light ? "text-[var(--mp-teal-dark)]" : "text-emerald-800 dark:text-emerald-300"
+        )}
+      >
         <Icon className="h-4 w-4 shrink-0" strokeWidth={2.2} />
-        <span className="text-[0.65rem] font-bold uppercase leading-tight tracking-wide text-emerald-900/85 dark:text-emerald-200/90">
+        <span
+          className={cn(
+            "text-[0.65rem] font-bold uppercase leading-tight tracking-wide",
+            light ? "text-zinc-600 dark:text-zinc-300" : "text-emerald-900/85 dark:text-emerald-200/90"
+          )}
+        >
           {label}
         </span>
       </div>
-      <p className="mt-1.5 text-xl font-bold tabular-nums text-emerald-950 dark:text-emerald-100">{value}</p>
+      <p
+        className={cn(
+          "mt-1.5 text-xl font-bold tabular-nums",
+          light ? "text-zinc-950 dark:text-white" : "text-emerald-950 dark:text-emerald-100"
+        )}
+      >
+        {value}
+      </p>
     </div>
   );
 }

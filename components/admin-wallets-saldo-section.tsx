@@ -11,8 +11,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AdminCard, AdminToolbar, adminPanelInnerClass } from "@/components/admin-ui";
 import { AdminFilterChips } from "@/components/admin-row-actions";
+import { PhotoPanel } from "@/components/photo-panel";
+import { useSiteMode } from "@/components/site-mode";
 import { PitchCardDecorations, pitchLabelClass } from "@/components/ui/pitch-card";
 import type { PlatnosciUserLite } from "@/components/platnosci-client";
+import { MARKETPLACE_PITCH_PHOTOS } from "@/lib/marketplace-photos";
 import { cn } from "@/lib/utils";
 
 type AdminWalletPlayerRow = PlatnosciUserLite & {
@@ -135,7 +138,7 @@ function PlatnosciCollapsible({
     <details className={cn(platnosciCollapsibleClass(embedded), className)}>
       <summary className={cn(
         "awp-focus-ring cursor-pointer list-none px-4 py-3 text-sm font-semibold [&::-webkit-details-marker]:hidden",
-        embedded ? "text-emerald-950 dark:text-emerald-100" : "text-white"
+        embedded ? "text-zinc-950 dark:text-zinc-50" : "text-white"
       )}>
         <span className="flex items-center justify-between gap-3">
           <span>{title}</span>
@@ -182,7 +185,7 @@ function WalletPlayerPicker({
   const selected = selectedId != null ? players.find((p) => p.id === selectedId) : undefined;
   const filtered = useMemo(() => filterWalletPlayers(players, query), [players, query]);
   const playerCardClass =
-    "rounded-xl border border-emerald-200 bg-emerald-50/80 p-3 dark:border-emerald-800/50 dark:bg-emerald-950/35";
+    "rounded-xl border border-teal-200 bg-teal-50/80 p-3 dark:border-teal-800/50 dark:bg-teal-950/35";
 
   if (selected) {
     const b = Number(selected.balance_pln ?? 0);
@@ -196,20 +199,20 @@ function WalletPlayerPicker({
             firstName={selected.first_name}
             lastName={selected.last_name}
             size="md"
-            ringClassName="ring-2 ring-emerald-300/90 dark:ring-emerald-600/70"
+            ringClassName="ring-2 ring-teal-300/90 dark:ring-teal-600/70"
           />
           <div className="min-w-0 flex-1">
             <PlayerNameStack
               firstName={selected.first_name}
               lastName={selected.last_name}
               nick={selected.zawodnik}
-              primaryClassName="text-base font-semibold text-emerald-950 dark:text-emerald-50"
-              secondaryClassName="text-sm text-emerald-800/90 dark:text-emerald-200/80"
+              primaryClassName="text-base font-semibold text-zinc-950 dark:text-zinc-50"
+              secondaryClassName="text-sm text-zinc-600 dark:text-zinc-300"
             />
             <p
               className={cn(
                 "mt-1.5 text-sm font-semibold tabular-nums",
-                neg ? "text-red-700 dark:text-red-300" : pos ? "text-emerald-800 dark:text-emerald-200" : "text-zinc-700 dark:text-zinc-300"
+                neg ? "text-red-700 dark:text-red-300" : pos ? "text-[var(--mp-teal-dark)] dark:text-teal-200" : "text-zinc-700 dark:text-zinc-300"
               )}
             >
               Obecne saldo: {formatPln(b)}
@@ -310,6 +313,7 @@ export function AdminWalletsSaldoSection({
   showTopUp,
 }: AdminWalletsSaldoSectionProps) {
   const router = useRouter();
+  const { marketplaceEnabled } = useSiteMode();
   const linksEnabled = showPublicLinks ?? !embedded;
   const topUpEnabled = showTopUp ?? !embedded;
   const [walletTab, setWalletTab] = useState<"balances" | "topup" | "adjust" | "links">("balances");
@@ -778,7 +782,7 @@ export function AdminWalletsSaldoSection({
           )}
         >
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-800 dark:text-emerald-300">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--mp-teal-dark)] dark:text-teal-300">
               Lista sald
             </p>
             <p className="mt-0.5 text-xs text-zinc-600 dark:text-zinc-400">
@@ -970,7 +974,7 @@ export function AdminWalletsSaldoSection({
                         "rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors",
                         embedded
                           ? active
-                            ? "border-emerald-500 bg-emerald-100 text-emerald-950 dark:border-emerald-600 dark:bg-emerald-900/50 dark:text-emerald-50"
+                            ? "border-[var(--mp-teal)] bg-teal-50 text-[var(--mp-teal-dark)] dark:border-teal-600 dark:bg-teal-900/50 dark:text-teal-50"
                             : "border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
                           : active
                             ? "border-emerald-400/50 bg-emerald-500/25 text-white"
@@ -1077,6 +1081,21 @@ export function AdminWalletsSaldoSection({
           onReload={() => void refresh()}
           loading={adminLoading}
         />
+      ) : marketplaceEnabled ? (
+        <div className="mx-auto max-w-4xl overflow-hidden rounded-3xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
+          <PhotoPanel
+            src={MARKETPLACE_PITCH_PHOTOS[3]}
+            className="min-h-[7rem] rounded-none border-0"
+            contentClassName="flex min-h-[7rem] flex-col justify-end px-5 py-5"
+            sizes="(max-width: 768px) 100vw, 896px"
+          >
+            <p className="text-[0.65rem] font-black uppercase tracking-[0.18em] text-white/80">Administrator</p>
+            <h2 className="mt-1 text-2xl font-black text-white">Portfele graczy</h2>
+            <p className="mt-1 text-sm text-white/85">
+              Salda, doładowania po przelewie, korekty i linki do podsumowań.
+            </p>
+          </PhotoPanel>
+        </div>
       ) : (
         <div className="mx-auto max-w-4xl">
           <div className="relative overflow-hidden rounded-2xl border-2 border-white/35 text-white shadow-lg shadow-emerald-950/20 ring-1 ring-emerald-950/15">

@@ -4,3 +4,8 @@ export { PagePreloaderLayout } from "./page-preloader-layout";
 export { getRoutePreloaderSpec, isFullBleedRoute } from "./route-preloader-config";
 export type { RoutePreloaderSpec } from "./route-preloader-config";
 export { RoutePreloaderScreen } from "./route-preloader-screen";
+export {
+  PRELOADER_MIN_VISIBLE_MS,
+  PRELOADER_SHOW_DELAY_MS,
+  useDelayedVisible,
+} from "./use-delayed-visible";

@@ -59,7 +59,7 @@ export function TerminarzMatchCard({
       className={cn(
         "flex min-h-[22rem] flex-col transition hover:-translate-y-0.5 hover:shadow-xl",
         cancelled && "opacity-90",
-        highlight && "ring-2 ring-[var(--mundial-gold,#f5c518)] ring-offset-2 ring-offset-transparent"
+        highlight && "ring-2 ring-[var(--mp-teal)] ring-offset-2 ring-offset-transparent"
       )}
       contentClassName="flex h-full flex-col p-4 sm:p-5"
       sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 380px"
@@ -70,16 +70,16 @@ export function TerminarzMatchCard({
         </span>
         <div className="mt-3 flex flex-wrap items-start justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="flex flex-col items-center rounded-xl bg-white/90 px-3 py-1.5 text-emerald-950 shadow-md">
-              <Calendar className="h-4 w-4 text-emerald-800" aria-hidden />
+            <div className="flex flex-col items-center rounded-xl bg-white/95 px-3 py-1.5 text-zinc-900 shadow-md">
+              <Calendar className="h-4 w-4 text-[var(--mp-teal-dark)]" aria-hidden />
               <span className="mt-0.5 text-sm font-bold tabular-nums">{m.match_date.slice(5).replace("-", ".")}</span>
-              <span className="text-[10px] font-medium uppercase tracking-wide text-emerald-800/70">
+              <span className="text-[10px] font-medium uppercase tracking-wide text-zinc-500">
                 {m.match_date.slice(0, 4)}
               </span>
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4 text-[var(--mundial-gold,#f5c518)]" aria-hidden />
+                <Clock className="h-4 w-4 text-[var(--mp-teal)]" aria-hidden />
                 <span className="text-lg font-black tabular-nums text-white drop-shadow-sm">{m.match_time}</span>
               </div>
               <div className="mt-1 flex flex-wrap gap-1.5">
@@ -112,7 +112,7 @@ export function TerminarzMatchCard({
         </div>
 
         <div className="mt-4 flex items-start gap-2 text-sm text-white">
-          <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[var(--mundial-gold,#f5c518)]" aria-hidden />
+          <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[var(--mp-teal)]" aria-hidden />
           <div className="min-w-0">
             <p className="font-medium leading-snug drop-shadow-sm">{m.location}</p>
             <a
@@ -130,7 +130,7 @@ export function TerminarzMatchCard({
           <div
             className={cn(
               "h-full rounded-full transition-all",
-              tone === "full" ? "bg-red-400/90" : tone === "warn" ? "bg-amber-400/90" : "bg-emerald-100"
+              tone === "full" ? "bg-red-400/90" : tone === "warn" ? "bg-amber-400/90" : "bg-[var(--mp-teal)]"
             )}
             style={{ width: `${Math.min(pct, 100)}%` }}
           />
@@ -181,7 +181,7 @@ export function TerminarzMatchCard({
 
         {!archive ? (
           <details className="mt-3 rounded-xl border border-white/20 bg-black/20">
-            <summary className="cursor-pointer list-none px-3 py-2 text-xs font-semibold uppercase tracking-[0.1em] text-[var(--mundial-gold,#f5c518)] [&::-webkit-details-marker]:hidden">
+            <summary className="cursor-pointer list-none px-3 py-2 text-xs font-semibold uppercase tracking-[0.1em] text-[var(--mp-teal)] [&::-webkit-details-marker]:hidden">
               Pogoda — rozwiń
             </summary>
             <div className="border-t border-white/15 px-2 pb-2 pt-1">

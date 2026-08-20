@@ -161,13 +161,13 @@ const actionBarClass =
 const actionBtnBase =
   "awp-match-btn h-auto min-h-9 justify-start gap-2 whitespace-normal py-2 text-left";
 
-const actionBtnPrimary = cn(actionBtnBase, "awp-match-btn--primary font-semibold");
+const actionBtnPrimary = cn(actionBtnBase, "awp-match-btn--primary font-bold");
 
-const actionBtnDanger = cn(actionBtnBase, "awp-match-btn--danger font-semibold");
+const actionBtnDanger = cn(actionBtnBase, "awp-match-btn--danger font-bold");
 
-const actionBtnSecondary = cn(actionBtnBase, "awp-match-btn--secondary font-medium");
+const actionBtnSecondary = cn(actionBtnBase, "awp-match-btn--secondary font-semibold");
 
-const actionBtnAdmin = cn(actionBtnBase, "awp-match-btn--admin font-semibold");
+const actionBtnAdmin = cn(actionBtnBase, "awp-match-btn--admin font-bold");
 
 function ActionNotice({
   tone,
@@ -180,7 +180,7 @@ function ActionNotice({
     tone === "warning"
       ? "border-amber-200 bg-amber-50/95 text-amber-950 dark:border-amber-800/55 dark:bg-amber-950/35 dark:text-amber-100"
       : tone === "info"
-        ? "border-emerald-200 bg-emerald-50/80 text-emerald-950 dark:border-emerald-800/50 dark:bg-emerald-950/40 dark:text-emerald-100"
+        ? "border-teal-200 bg-teal-50/90 text-teal-950 dark:border-teal-800/50 dark:bg-teal-950/40 dark:text-teal-100"
         : "border-zinc-200 bg-white text-zinc-600 dark:border-zinc-600 dark:bg-zinc-800/90 dark:text-zinc-300";
   return <p className={cn("rounded-lg border px-3 py-2.5 text-xs leading-snug", toneClass)}>{children}</p>;
 }
@@ -996,7 +996,7 @@ export function TerminarzClient({
                     )}
                     <span>
                       <span className="block leading-tight">Opłać zaległość za mecz</span>
-                      <span className="mt-1 block text-[11px] font-normal leading-snug text-emerald-100/95">
+                      <span className="mt-1 block text-[11px] font-normal leading-snug text-white/90">
                         {formatMatchFeePln(Math.abs(walletBalancePln))} · karta / BLIK
                       </span>
                     </span>
@@ -1036,7 +1036,7 @@ export function TerminarzClient({
                       )}
                       <span>
                         <span className="block leading-tight">Opłać zaległość</span>
-                        <span className="mt-1 block text-[11px] font-normal leading-snug text-emerald-100/95">
+                        <span className="mt-1 block text-[11px] font-normal leading-snug text-white/90">
                           {formatMatchFeePln(Math.abs(walletBalancePln))} · karta / BLIK
                         </span>
                       </span>
@@ -1057,7 +1057,7 @@ export function TerminarzClient({
                       )}
                       <span>
                         <span className="block leading-tight">Opłać ten mecz</span>
-                        <span className="mt-1 block text-[11px] font-normal leading-snug text-emerald-100/95">
+                        <span className="mt-1 block text-[11px] font-normal leading-snug text-white/90">
                           {formatMatchFeePln(MATCH_PREPAYMENT_PLN)} · zwrot, jeśli składka będzie niższa
                         </span>
                       </span>
@@ -1076,7 +1076,7 @@ export function TerminarzClient({
             ) : (
               <>
                 <ActionNotice tone="info">
-                  <strong className="font-semibold text-emerald-900 dark:text-emerald-100">Jeszcze nie wiem</strong> — nie
+                  <strong className="font-semibold text-[var(--mp-teal-dark)] dark:text-teal-100">Jeszcze nie wiem</strong> — nie
                   zajmujesz miejsca w
                   składzie. Gdy potwierdzisz{hotpayEnabled ? "" : ", wybierzesz też transport"}.
                 </ActionNotice>
@@ -1091,7 +1091,7 @@ export function TerminarzClient({
                     <UserPlus className="shrink-0" aria-hidden />
                     <span>
                       <span className="block leading-tight">Potwierdzam — wpadam na mecz</span>
-                      <span className="mt-1 block text-[11px] font-normal leading-snug text-emerald-100/95">
+                      <span className="mt-1 block text-[11px] font-normal leading-snug text-white/90">
                         {freeSubtitle}
                       </span>
                     </span>
@@ -1143,7 +1143,7 @@ export function TerminarzClient({
                     <UserPlus className="shrink-0" aria-hidden />
                     <span>
                       <span className="block leading-tight">Zmieniam zdanie — wpadam na mecz</span>
-                      <span className="mt-1 block text-[11px] font-normal leading-snug text-emerald-100/95">
+                      <span className="mt-1 block text-[11px] font-normal leading-snug text-white/90">
                         {freeSubtitle}
                       </span>
                     </span>
@@ -1188,7 +1188,7 @@ export function TerminarzClient({
                   <UserPlus className="shrink-0" aria-hidden />
                   <span>
                     <span className="block leading-tight">Zapisz mnie na ten mecz</span>
-                    <span className="mt-1 block text-[11px] font-normal leading-snug text-emerald-100/95">
+                    <span className="mt-1 block text-[11px] font-normal leading-snug text-white/90">
                       {freeSubtitle}
                     </span>
                   </span>
@@ -1208,7 +1208,7 @@ export function TerminarzClient({
                 title="Nie zajmuje miejsca w składzie — gdy ustalisz termin, potwierdź udział osobno"
                 onClick={() => void signupTentative(m.id)}
               >
-                <HelpCircle className="shrink-0 text-amber-700" aria-hidden />
+                <HelpCircle className="shrink-0 text-[var(--mp-teal-dark)]" aria-hidden />
                 <span>
                   <span className="block leading-tight text-zinc-900 dark:text-zinc-100">Jeszcze nie wiem</span>
                   <span className="mt-1 block text-[11px] font-normal leading-snug text-zinc-500 dark:text-zinc-400">
@@ -1242,7 +1242,7 @@ export function TerminarzClient({
               title="Dopisz osobę grającą jednorazowo — zajmuje miejsce w składzie"
               onClick={() => openAddGuestDialog(m)}
             >
-              <UserPlus className="shrink-0 text-amber-700 dark:text-amber-300" aria-hidden />
+              <UserPlus className="shrink-0 text-[var(--mp-teal-dark)] dark:text-teal-300" aria-hidden />
               <span>
                 <span className="block leading-tight text-zinc-900 dark:text-zinc-100">Dodaj gościa na mecz</span>
                 <span className="mt-1 block text-[11px] font-normal leading-snug text-zinc-500 dark:text-zinc-400">
@@ -1257,7 +1257,7 @@ export function TerminarzClient({
             Na ten dzień zapisu już nie będzie.{" "}
             <Link
               href="/login"
-              className="font-semibold text-emerald-800 underline underline-offset-2 hover:text-emerald-950 dark:text-emerald-300 dark:hover:text-emerald-100"
+              className="font-semibold text-[var(--mp-teal-dark)] underline underline-offset-2 hover:text-[var(--mp-teal)] dark:text-teal-300 dark:hover:text-teal-100"
             >
               Zaloguj się
             </Link>
@@ -1269,7 +1269,7 @@ export function TerminarzClient({
               href="/login"
               title="Konto jest potrzebne, żeby zapisać się na listę zawodników"
             >
-              <LogIn className="shrink-0 text-emerald-700" aria-hidden />
+              <LogIn className="shrink-0 text-[var(--mp-teal-dark)]" aria-hidden />
               <span>
                 <span className="block leading-tight text-zinc-900 dark:text-zinc-100">Zaloguj się i zapisz na mecz</span>
                 <span className="mt-1 block text-[11px] font-normal leading-snug text-zinc-500 dark:text-zinc-400">
@@ -1299,7 +1299,7 @@ export function TerminarzClient({
             }
             onClick={() => openCaptainLottery(m)}
           >
-            <Crown className="shrink-0 text-amber-700 dark:text-amber-300" aria-hidden />
+            <Crown className="shrink-0 text-[var(--mp-teal-dark)] dark:text-teal-300" aria-hidden />
             <span>
               <span className="block leading-tight text-zinc-900 dark:text-zinc-100">
                 {captainLotteryData[m.id]?.locked && captainLotteryData[m.id]?.hasResults
@@ -1344,7 +1344,7 @@ export function TerminarzClient({
               )}
               <span>
                 <span className="block leading-tight">Dodaj losowanie</span>
-                <span className="mt-1 block text-[11px] font-normal leading-snug text-amber-900/85 dark:text-amber-200/90">
+                <span className="mt-1 block text-[11px] font-normal leading-snug text-[var(--mp-teal-dark)]/90 dark:text-teal-200/90">
                   Także przed zapisami «wpadam» — koło czeka na graczy
                 </span>
               </span>
@@ -1383,7 +1383,7 @@ export function TerminarzClient({
               <ShieldCheck className="shrink-0" aria-hidden />
               <span>
                 <span className="block leading-tight">Potwierdź: mecz się odbył</span>
-                <span className="mt-1 block text-[11px] font-normal leading-snug text-amber-900/85 dark:text-amber-200/90">
+                <span className="mt-1 block text-[11px] font-normal leading-snug text-[var(--mp-teal-dark)]/90 dark:text-teal-200/90">
                   Tylko dla administratora — zamyka ten termin
                 </span>
               </span>
@@ -1427,7 +1427,7 @@ export function TerminarzClient({
             <Activity className="shrink-0" aria-hidden />
             <span>
               <span className="block leading-tight">Dodaj swoje statystyki z tego meczu</span>
-              <span className="mt-1 block text-[11px] font-normal leading-snug text-emerald-100/95">
+              <span className="mt-1 block text-[11px] font-normal leading-snug text-white/90">
                 Nie wypełniłeś jeszcze formularza po meczu — zrób to tutaj
               </span>
             </span>
@@ -1468,7 +1468,7 @@ export function TerminarzClient({
             <RotateCcw className="shrink-0" aria-hidden />
             <span>
               <span className="block leading-tight">Przywróć jako nierozegrany</span>
-              <span className="mt-1 block text-[11px] font-normal leading-snug text-amber-900/85 dark:text-amber-200/90">
+              <span className="mt-1 block text-[11px] font-normal leading-snug text-[var(--mp-teal-dark)]/90 dark:text-teal-200/90">
                 Cofnij status rozegranego meczu
               </span>
             </span>
@@ -1942,7 +1942,7 @@ export function TerminarzClient({
                   <Activity className="shrink-0" aria-hidden />
                   <span className="text-left">
                     <span className="block leading-tight">Dodaj statystyki z tego meczu</span>
-                    <span className="mt-0.5 block text-[11px] font-normal text-emerald-100/95">
+                    <span className="mt-0.5 block text-[11px] font-normal text-white/90">
                       Gole, asysty, dystans, obrony
                     </span>
                   </span>
@@ -1963,7 +1963,7 @@ export function TerminarzClient({
                       openAddGuestDialog(m);
                     }}
                   >
-                    <UserPlus className="shrink-0 text-amber-700 dark:text-amber-300" aria-hidden />
+                    <UserPlus className="shrink-0 text-[var(--mp-teal-dark)] dark:text-teal-300" aria-hidden />
                     <span className="text-left">
                       <span className="block leading-tight">Dodaj gościa na mecz</span>
                       <span className="mt-0.5 block text-[11px] font-normal text-zinc-500 dark:text-zinc-400">
@@ -1978,7 +1978,7 @@ export function TerminarzClient({
                 className="h-auto min-h-9 w-full gap-2 whitespace-normal py-2 text-left sm:w-auto"
                 onClick={() => openPlayers(calPopup.id)}
               >
-                <Users className="shrink-0 text-emerald-700 dark:text-emerald-400" aria-hidden />
+                <Users className="shrink-0 text-[var(--mp-teal-dark)] dark:text-teal-300" aria-hidden />
                 <span className="text-left">
                   <span className="block leading-tight">Kto jest zapisany?</span>
                   <span className="mt-0.5 block text-[11px] font-normal text-zinc-500 dark:text-zinc-400">

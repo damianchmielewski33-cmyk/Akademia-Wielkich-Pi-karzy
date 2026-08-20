@@ -34,8 +34,14 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import kotlinx.coroutines.delay
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
@@ -1029,14 +1035,30 @@ fun ScreenScaffold(
 }
 
 @Composable
-fun LoadingBlock() {
+fun LoadingBlock(
+    modifier: Modifier = Modifier,
+    /** Nie pokazuj spinnera, jeśli dane wrócą szybciej (ms). */
+    showDelayMs: Long = 280L
+) {
+    var visible by remember { mutableStateOf(showDelayMs <= 0L) }
+    LaunchedEffect(showDelayMs) {
+        if (showDelayMs <= 0L) {
+            visible = true
+            return@LaunchedEffect
+        }
+        visible = false
+        delay(showDelayMs)
+        visible = true
+    }
     Box(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .padding(32.dp),
         contentAlignment = Alignment.Center
     ) {
-        CircularProgressIndicator(color = AwpColors.MundialTeal)
+        if (visible) {
+            CircularProgressIndicator(color = AwpColors.MpTeal)
+        }
     }
 }
 

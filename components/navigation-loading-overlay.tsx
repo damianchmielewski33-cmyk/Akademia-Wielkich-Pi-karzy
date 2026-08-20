@@ -4,9 +4,11 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { getRoutePreloaderSpec, PagePreloaderLayout } from "@/components/preloaders";
+import {
+  PRELOADER_MIN_VISIBLE_MS,
+  PRELOADER_SHOW_DELAY_MS,
+} from "@/components/preloaders/use-delayed-visible";
 
-/** Krótszy niż wcześniej — pełna nawigacja nie powinna sztucznie blokować UI przez kilka sekund. */
-const MIN_VISIBLE_MS = 550;
 const MAX_OVERLAY_MS = 15000;
 
 function isReducedMotion() {
@@ -26,37 +28,55 @@ function stripQuery(p: string): string {
 }
 
 /**
- * Nakładka włącza się po kliknięciu linku wewnętrznego i zostaje min. MIN_VISIBLE_MS po dojściu do docelowej ścieżki.
+ * Nakładka nawigacji V2: pojawia się dopiero po PRELOADER_SHOW_DELAY_MS.
+ * Szybkie przejścia nie pokazują loadera wcale.
  */
 export function NavigationLoadingOverlay() {
   const pathname = usePathname();
   const navStartRef = useRef<number | null>(null);
+  const showTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const maxTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [visible, setVisible] = useState(false);
+  const shownAtRef = useRef<number | null>(null);
   const [pendingPath, setPendingPath] = useState<string | null>(null);
+  const [visible, setVisible] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
+  function clearAllTimers() {
+    if (showTimerRef.current) {
+      clearTimeout(showTimerRef.current);
+      showTimerRef.current = null;
+    }
+    if (closeTimerRef.current) {
+      clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
+    if (maxTimerRef.current) {
+      clearTimeout(maxTimerRef.current);
+      maxTimerRef.current = null;
+    }
+  }
+
+  function resetOverlay() {
+    clearAllTimers();
+    setVisible(false);
+    setPendingPath(null);
+    navStartRef.current = null;
+    shownAtRef.current = null;
+  }
+
   useEffect(() => {
     if (!visible) return;
     if (maxTimerRef.current) clearTimeout(maxTimerRef.current);
-    maxTimerRef.current = setTimeout(() => {
-      setVisible(false);
-      setPendingPath(null);
-      navStartRef.current = null;
-      if (closeTimerRef.current) {
-        clearTimeout(closeTimerRef.current);
-        closeTimerRef.current = null;
-      }
-      maxTimerRef.current = null;
-    }, MAX_OVERLAY_MS);
+    maxTimerRef.current = setTimeout(() => resetOverlay(), MAX_OVERLAY_MS);
     return () => {
       if (maxTimerRef.current) clearTimeout(maxTimerRef.current);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- resetOverlay closes overlay
   }, [visible]);
 
   useEffect(() => {
@@ -94,40 +114,49 @@ export function NavigationLoadingOverlay() {
       const current = pathname ?? "";
       if (path === current) return;
 
+      clearAllTimers();
       navStartRef.current = Date.now();
+      shownAtRef.current = null;
       setPendingPath(path);
-      setVisible(true);
+      setVisible(false);
+
+      showTimerRef.current = setTimeout(() => {
+        setVisible(true);
+        shownAtRef.current = Date.now();
+        showTimerRef.current = null;
+      }, PRELOADER_SHOW_DELAY_MS);
     };
 
     document.addEventListener("click", onClick, true);
     return () => document.removeEventListener("click", onClick, true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
 
   useEffect(() => {
-    if (!visible || !pendingPath) return;
+    if (!pendingPath) return;
     const cur = stripQuery(pathname ?? "");
     const pending = stripQuery(pendingPath);
     if (cur !== pending) return;
 
-    const minMs = isReducedMotion() ? 0 : MIN_VISIBLE_MS;
-    if (navStartRef.current === null) navStartRef.current = Date.now();
-    const elapsed = Date.now() - navStartRef.current;
+    // Nawigacja skończyła się przed pokazaniem — nic nie wyświetlaj.
+    if (!visible || shownAtRef.current == null) {
+      resetOverlay();
+      return;
+    }
+
+    const minMs = isReducedMotion() ? 0 : PRELOADER_MIN_VISIBLE_MS;
+    const elapsed = Date.now() - shownAtRef.current;
     const remaining = Math.max(0, minMs - elapsed);
 
     if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
     closeTimerRef.current = setTimeout(() => {
-      setVisible(false);
-      setPendingPath(null);
-      navStartRef.current = null;
-      closeTimerRef.current = null;
+      resetOverlay();
     }, remaining);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname, visible, pendingPath]);
 
   useEffect(() => {
-    return () => {
-      if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
-      if (maxTimerRef.current) clearTimeout(maxTimerRef.current);
-    };
+    return () => clearAllTimers();
   }, []);
 
   useEffect(() => {
@@ -156,7 +185,7 @@ export function NavigationLoadingOverlay() {
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[100] overflow-y-auto bg-[var(--background)]/95 backdrop-blur-[2px]"
+      className="fixed inset-0 z-[100] overflow-y-auto bg-[var(--background)]/92 backdrop-blur-[2px]"
       aria-busy="true"
       aria-live="polite"
       aria-label={title}

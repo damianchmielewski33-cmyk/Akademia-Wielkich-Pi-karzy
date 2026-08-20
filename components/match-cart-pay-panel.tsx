@@ -6,11 +6,18 @@ import { AppModal } from "@/components/ui/app-modal";
 import { extractApiErrorMessage, useAppMessage } from "@/components/ui/app-message-modal";
 import { Button } from "@/components/ui/button";
 import {
-  AdminCard,
   adminEmptyStateClass,
   adminFieldClass,
   adminInnerPanelClass,
 } from "@/components/admin-ui";
+import {
+  PaymentsCard,
+  paymentsEmptyClass,
+  paymentsFieldClass,
+  paymentsIconWrapClass,
+  paymentsInnerPanelClass,
+} from "@/components/payments-card";
+import { useSiteMode } from "@/components/site-mode";
 import { formatMatchFeePln, MATCH_PREPAYMENT_PLN } from "@/lib/match-fee";
 import { cn } from "@/lib/utils";
 import type { MatchCartMatchOption } from "@/lib/match-cart";
@@ -18,11 +25,8 @@ import { currentHotpayReturnPath } from "@/lib/hotpay-client";
 
 type Props = {
   hotpayEnabled: boolean;
-  /** Prefill z URL (?mecz=). */
   initialMatchId?: number | null;
-  /** Przy deep-linku zaznacz tego gracza w koszyku (jeśli nieopłacony). */
   preferUserId?: number | null;
-  /** Wymusza ponowne wczytanie (np. po powrocie z HotPay). */
   refreshKey?: number;
   onPaid?: () => void;
   className?: string;
@@ -36,6 +40,8 @@ export function MatchCartPayPanel({
   onPaid,
   className,
 }: Props) {
+  const { marketplaceEnabled } = useSiteMode();
+  const light = marketplaceEnabled;
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [matches, setMatches] = useState<MatchCartMatchOption[]>([]);
@@ -207,34 +213,47 @@ export function MatchCartPayPanel({
     }
   }
 
+  const btnVariant = light ? "default" : "gold";
+
   return (
-    <AdminCard
+    <PaymentsCard
       id="match-cart"
       className={className}
       title="Opłać mecz (koszyk)"
       description={`Zaliczka ${formatMatchFeePln(MATCH_PREPAYMENT_PLN)} na osobę — jeśli ostateczna składka będzie niższa, różnica wraca na portfel płatnika. Możesz opłacić siebie i innych z portfela${hotpayEnabled ? " albo kartą / Blikiem" : ""}.`}
       headerExtra={
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/15 ring-2 ring-white/30">
+        <div className={light ? paymentsIconWrapClass : "flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/15 ring-2 ring-white/30"}>
           <ShoppingCart className="h-5 w-5 text-white" strokeWidth={2.25} aria-hidden />
         </div>
       }
     >
       {loading ? (
-        <p className="flex items-center gap-2 text-sm pitch-muted">
+        <p className={cn("flex items-center gap-2 text-sm", light ? "text-zinc-500" : "pitch-muted")}>
           <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
           Wczytywanie meczów…
         </p>
       ) : matches.length === 0 ? (
-        <p className={adminEmptyStateClass}>Brak nadchodzących meczów z nieopłaconymi zapisami.</p>
+        <p className={light ? paymentsEmptyClass : adminEmptyStateClass}>
+          Brak nadchodzących meczów z nieopłaconymi zapisami.
+        </p>
       ) : (
         <div className="space-y-4">
-          <div className={adminInnerPanelClass}>
-            <label htmlFor="match-cart-match" className="text-xs font-semibold uppercase tracking-wide text-emerald-100/70">
+          <div className={light ? paymentsInnerPanelClass : adminInnerPanelClass}>
+            <label
+              htmlFor="match-cart-match"
+              className={cn(
+                "text-xs font-semibold uppercase tracking-wide",
+                light ? "text-[var(--mp-teal-dark)]" : "text-emerald-100/70"
+              )}
+            >
               Mecz
             </label>
             <select
               id="match-cart-match"
-              className={cn(adminFieldClass, "mt-1 flex h-10 w-full rounded-xl px-3 text-sm")}
+              className={cn(
+                "mt-1 flex h-10 w-full rounded-xl px-3 text-sm",
+                light ? paymentsFieldClass : adminFieldClass
+              )}
               value={matchId ?? ""}
               onChange={(e) => setMatchId(Number(e.target.value))}
             >
@@ -247,37 +266,69 @@ export function MatchCartPayPanel({
           </div>
 
           {selectedMatch ? (
-            <div className={adminInnerPanelClass}>
+            <div className={light ? paymentsInnerPanelClass : adminInnerPanelClass}>
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="text-xs font-semibold uppercase tracking-wide text-emerald-100/70">
+                <p
+                  className={cn(
+                    "text-xs font-semibold uppercase tracking-wide",
+                    light ? "text-[var(--mp-teal-dark)]" : "text-emerald-100/70"
+                  )}
+                >
                   Nieopłaceni ({selectedMatch.unpaid_players.length})
                 </p>
-                <Button type="button" variant="gold" size="sm" onClick={selectAll}>
+                <Button type="button" variant={btnVariant} size="sm" onClick={selectAll}>
                   Zaznacz wszystkich
                 </Button>
               </div>
-              <ul className="mt-2 max-h-48 space-y-1 overflow-y-auto rounded-xl border border-white/20 bg-black/15 p-2">
+              <ul
+                className={cn(
+                  "mt-2 max-h-48 space-y-1 overflow-y-auto rounded-xl border p-2",
+                  light
+                    ? "border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-950"
+                    : "border-white/20 bg-black/15"
+                )}
+              >
                 {selectedMatch.unpaid_players.map((p) => {
                   const label =
                     [p.first_name, p.last_name].filter(Boolean).join(" ").trim() || p.zawodnik;
                   const checked = selectedIds.includes(p.user_id);
                   return (
                     <li key={p.user_id}>
-                      <label className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-white/10">
+                      <label
+                        className={cn(
+                          "flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm",
+                          light ? "hover:bg-zinc-100 dark:hover:bg-zinc-800" : "hover:bg-white/10"
+                        )}
+                      >
                         <input
                           type="checkbox"
-                          className="h-4 w-4 accent-[var(--mundial-gold,#c9a227)]"
+                          className={cn(
+                            "h-4 w-4",
+                            light ? "accent-[var(--mp-teal)]" : "accent-[var(--mundial-gold,#c9a227)]"
+                          )}
                           checked={checked}
                           onChange={() => togglePlayer(p.user_id)}
                         />
-                        <span className="min-w-0 flex-1 truncate text-white">
+                        <span
+                          className={cn(
+                            "min-w-0 flex-1 truncate",
+                            light ? "text-zinc-900 dark:text-zinc-50" : "text-white"
+                          )}
+                        >
                           {label}
                           {Number(p.is_temporary) === 1 ? (
-                            <span className="text-amber-200/90"> · gość</span>
+                            <span className="text-amber-600 dark:text-amber-300"> · gość</span>
                           ) : null}
-                          {p.zawodnik ? <span className="text-emerald-100/70"> · {p.zawodnik}</span> : null}
+                          {p.zawodnik ? (
+                            <span className={light ? "text-zinc-500" : "text-emerald-100/70"}> · {p.zawodnik}</span>
+                          ) : null}
                         </span>
-                        <span className="tabular-nums text-xs text-emerald-100/70">
+                        <span
+                          className={cn(
+                            "tabular-nums text-xs",
+                            light ? "text-zinc-500" : "text-emerald-100/70"
+                          )}
+                        >
                           {formatMatchFeePln(selectedMatch.fee_per_person_pln)}
                         </span>
                       </label>
@@ -288,20 +339,39 @@ export function MatchCartPayPanel({
             </div>
           ) : null}
 
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/25 bg-black/20 px-3 py-3 backdrop-blur-sm">
+          <div
+            className={cn(
+              "flex flex-wrap items-center justify-between gap-3 rounded-xl border px-3 py-3",
+              light
+                ? "border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900/80"
+                : "border-white/25 bg-black/20 backdrop-blur-sm"
+            )}
+          >
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-emerald-100/70">Suma koszyka</p>
-              <p className="mt-0.5 text-xl font-bold tabular-nums text-white">
+              <p
+                className={cn(
+                  "text-xs font-semibold uppercase tracking-wide",
+                  light ? "text-[var(--mp-teal-dark)]" : "text-emerald-100/70"
+                )}
+              >
+                Suma koszyka
+              </p>
+              <p
+                className={cn(
+                  "mt-0.5 text-xl font-bold tabular-nums",
+                  light ? "text-zinc-950 dark:text-white" : "text-white"
+                )}
+              >
                 {selectedIds.length === 0 ? "—" : formatMatchFeePln(totalPln)}
               </p>
               {balancePln != null ? (
-                <p className="mt-0.5 text-xs pitch-muted">
+                <p className={cn("mt-0.5 text-xs", light ? "text-zinc-500" : "pitch-muted")}>
                   Twoje saldo: {formatMatchFeePln(balancePln)}
                   {needsHotpay ? " · brakuje środków" : ""}
                 </p>
               ) : null}
             </div>
-            <Button type="button" variant="gold" disabled={submitting || loading} onClick={openConfirm}>
+            <Button type="button" variant={btnVariant} disabled={submitting || loading} onClick={openConfirm}>
               Opłać wybranych
             </Button>
           </div>
@@ -324,13 +394,13 @@ export function MatchCartPayPanel({
           <Button type="button" variant="outline" disabled={submitting} onClick={() => setConfirmOpen(false)}>
             Anuluj
           </Button>
-          <Button type="button" variant="gold" disabled={submitting} onClick={() => void submitCart()}>
+          <Button type="button" variant={btnVariant} disabled={submitting} onClick={() => void submitCart()}>
             {submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
             {needsHotpay && hotpayEnabled ? "Zapłać kartą lub Blikiem" : "Potwierdź opłatę"}
           </Button>
         </div>
       </AppModal>
       {MessageModal}
-    </AdminCard>
+    </PaymentsCard>
   );
 }

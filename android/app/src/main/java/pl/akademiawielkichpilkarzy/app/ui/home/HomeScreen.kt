@@ -128,20 +128,6 @@ fun HomeScreen(nav: HomeNavActions) {
                 .padding(horizontal = 16.dp, vertical = 18.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            user?.let { me ->
-                HomeWelcomeBanner(
-                    firstName = me.firstName,
-                    lastName = me.lastName,
-                    zawodnik = me.zawodnik
-                )
-            }
-
-            AwpHeroCard(
-                title = nav.siteName,
-                subtitle = nav.siteDescription,
-                kicker = "Start"
-            )
-
             when {
                 loading -> LoadingBlock()
                 error != null -> ErrorBlock(error!!) { reload() }
@@ -220,7 +206,23 @@ fun HomeScreen(nav: HomeNavActions) {
                 }
             }
 
-            HomeTileGrid(nav)
+            user?.let { me ->
+                HomeWelcomeBanner(
+                    firstName = me.firstName,
+                    lastName = me.lastName,
+                    zawodnik = me.zawodnik
+                )
+            }
+
+            AwpHeroCard(
+                title = nav.siteName,
+                subtitle = nav.siteDescription,
+                kicker = "Start"
+            )
+
+            if (!loading && error == null) {
+                HomeTileGrid(nav)
+            }
 
             Spacer(Modifier.height(8.dp))
         }

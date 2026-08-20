@@ -1,9 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { MessageCircle } from "lucide-react";
+import { createPortal } from "react-dom";
+import { MessageCircle, X } from "lucide-react";
 import { AdminMessagesTab } from "@/components/admin-messages-tab";
-import { AppModal } from "@/components/ui/app-modal";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -13,8 +13,13 @@ type Props = {
 };
 
 export function AdminHeaderMessagesButton({ initialUnreadCount = 0, compact = false }: Props) {
+  const [mounted, setMounted] = useState(false);
   const [unread, setUnread] = useState(initialUnreadCount);
   const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     setUnread(initialUnreadCount);
@@ -44,22 +49,69 @@ export function AdminHeaderMessagesButton({ initialUnreadCount = 0, compact = fa
     };
   }, [refresh]);
 
+  useEffect(() => {
+    if (!open) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
+
+  function closeBubble() {
+    setOpen(false);
+    void refresh();
+  }
+
+  const bubble =
+    mounted && open
+      ? createPortal(
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Szatnia łączności"
+            className="mp-chat-widget bottom-[max(0.75rem,env(safe-area-inset-bottom))] left-3 sm:bottom-5 sm:left-5"
+          >
+            <AdminMessagesTab
+              mode="popup"
+              active={open}
+              onUnreadChange={refresh}
+              onClose={closeBubble}
+            />
+          </div>,
+          document.body
+        )
+      : null;
+
   return (
     <>
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={() => setOpen((v) => !v)}
         className={cn(
-          "awp-focus-ring relative inline-flex touch-manipulation items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-700 shadow-sm transition-colors hover:border-zinc-300 hover:text-zinc-950 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200",
+          "awp-focus-ring relative inline-flex touch-manipulation items-center justify-center rounded-full border shadow-sm transition-colors",
+          open
+            ? "border-[var(--mp-teal)] bg-[var(--mp-teal)] text-white hover:bg-[var(--mp-teal-dark)]"
+            : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-300 hover:text-zinc-950 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200",
           compact ? "h-9 w-9 xs:h-10 xs:w-10" : "h-10 w-10"
         )}
-        aria-label={unread > 0 ? `Wiadomości (${unread} nieprzeczytanych)` : "Wiadomości"}
-        title={unread > 0 ? `Wiadomości (${unread} nieprzeczytanych)` : "Wiadomości"}
+        aria-label={
+          unread > 0
+            ? `Szatnia łączności (${unread} nieprzeczytanych)`
+            : open
+              ? "Zamknij szatnię łączności"
+              : "Szatnia łączności"
+        }
+        title="Szatnia łączności"
         aria-haspopup="dialog"
         aria-expanded={open}
       >
-        <MessageCircle className={cn(compact ? "h-4 w-4 xs:h-5 xs:w-5" : "h-5 w-5")} aria-hidden />
-        {unread > 0 ? (
+        {open ? (
+          <X className={cn(compact ? "h-4 w-4 xs:h-5 xs:w-5" : "h-5 w-5")} aria-hidden />
+        ) : (
+          <MessageCircle className={cn(compact ? "h-4 w-4 xs:h-5 xs:w-5" : "h-5 w-5")} aria-hidden />
+        )}
+        {!open && unread > 0 ? (
           <span
             className="absolute right-0 top-0 inline-flex min-h-[1rem] min-w-[1rem] translate-x-0.5 -translate-y-0.5 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold tabular-nums leading-none text-white ring-2 ring-white dark:ring-zinc-900"
             aria-hidden
@@ -68,27 +120,7 @@ export function AdminHeaderMessagesButton({ initialUnreadCount = 0, compact = fa
           </span>
         ) : null}
       </button>
-
-      <AppModal
-        open={open}
-        onOpenChange={(next) => {
-          setOpen(next);
-          if (!next) void refresh();
-        }}
-        hideHeader
-        title="Szatnia łączności"
-        description="Rozmowy z zawodnikami i gośćmi akademii."
-        size="full"
-        className={cn(
-          "gap-0 overflow-hidden border-2 border-[var(--mundial-gold)]/35 bg-[#0d5c45] p-0 pt-0 text-white shadow-[0_28px_90px_-28px_rgba(0,40,28,0.85)]",
-          "home-pitch-tile max-h-[min(92dvh,calc(100dvh-1rem-env(safe-area-inset-top)-env(safe-area-inset-bottom)))]",
-          "before:h-1 before:from-[var(--mundial-gold)] before:via-emerald-300 before:to-[var(--mundial-gold)]",
-          "[&>button]:right-3 [&>button]:top-3.5 [&>button]:z-30 [&>button]:border-white/25 [&>button]:bg-black/30 [&>button]:text-white [&>button]:hover:border-white/40 [&>button]:hover:bg-black/45 [&>button]:hover:text-white"
-        )}
-        contentClassName="min-h-0 space-y-0 overflow-hidden p-0"
-      >
-        <AdminMessagesTab mode="popup" active={open} onUnreadChange={refresh} />
-      </AppModal>
+      {bubble}
     </>
   );
 }

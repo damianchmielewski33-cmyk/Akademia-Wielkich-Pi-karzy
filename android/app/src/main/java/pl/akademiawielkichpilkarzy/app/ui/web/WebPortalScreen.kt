@@ -226,7 +226,7 @@ fun WebPortalScreen(
 
             startUrl == null || loading -> {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = AwpColors.MundialGold)
+                    CircularProgressIndicator(color = AwpColors.MpTeal)
                 }
             }
 
@@ -235,8 +235,8 @@ fun WebPortalScreen(
                     LinearProgressIndicator(
                         progress = { progress },
                         modifier = Modifier.fillMaxWidth(),
-                        color = AwpColors.MundialGold,
-                        trackColor = AwpColors.MundialNavy
+                        color = AwpColors.MpTeal,
+                        trackColor = Color(0xFFE4E4E7)
                     )
                 }
                 AndroidView(

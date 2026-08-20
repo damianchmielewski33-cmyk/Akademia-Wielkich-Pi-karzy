@@ -528,6 +528,28 @@ function AcademyHomeView({
     return (
       <>
         <div className="awp-page awp-page--default relative z-10 text-center">
+          {nextMatch ? (
+            <div className="mb-8">
+              <HomeNextMatchCard
+                match={nextMatch}
+                tentativeLine={nextMatchTentativeLine}
+                lineupPublic={lineupPublicNextMatch}
+                signup={nextMatchSignup}
+                transportActive={transportHomeActive}
+                hotpayEnabled={hotpayEnabled}
+                isLoggedIn={isLoggedIn}
+                tentativeBusy={tentativeBusy}
+                walletBalancePln={walletBalancePln}
+                debtBusy={debtBusy}
+                onPayDebt={(amount) => void payDebt(amount)}
+                onSignup={openTransportSignup}
+                onTentative={() => void signupTentativeHome()}
+                onDeclined={() => void signupDeclinedHome()}
+                onConfirmFromTentative={openConfirmFromTentative}
+              />
+            </div>
+          ) : null}
+
           {isLoggedIn ? (
             <div className="mb-8 flex items-center justify-center gap-4">
               <PlayerAvatar
@@ -575,28 +597,6 @@ function AcademyHomeView({
               align="center"
             />
           )}
-
-          {nextMatch ? (
-            <div className="mt-8">
-              <HomeNextMatchCard
-                match={nextMatch}
-                tentativeLine={nextMatchTentativeLine}
-                lineupPublic={lineupPublicNextMatch}
-                signup={nextMatchSignup}
-                transportActive={transportHomeActive}
-                hotpayEnabled={hotpayEnabled}
-                isLoggedIn={isLoggedIn}
-                tentativeBusy={tentativeBusy}
-                walletBalancePln={walletBalancePln}
-                debtBusy={debtBusy}
-                onPayDebt={(amount) => void payDebt(amount)}
-                onSignup={openTransportSignup}
-                onTentative={() => void signupTentativeHome()}
-                onDeclined={() => void signupDeclinedHome()}
-                onConfirmFromTentative={openConfirmFromTentative}
-              />
-            </div>
-          ) : null}
 
           <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2">
             {academyLinks.map((item) => (
@@ -664,6 +664,44 @@ function AcademyHomeView({
   return (
     <div className="relative flex flex-1 flex-col text-zinc-900 dark:text-zinc-50">
       {isAcademyHome ? <HomeFallingDecor /> : null}
+
+      {nextMatch ? (
+        <section className="relative z-10 mx-auto w-full min-w-0 max-w-6xl px-3 pb-2 pt-4 xs:px-4 sm:pt-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
+            <div>
+              <p className="text-[0.65rem] font-bold uppercase tracking-[0.16em] text-[var(--mp-teal-dark)] sm:text-xs">
+                Terminarz
+              </p>
+              <h2 className="mt-1 text-xl font-black tracking-tight sm:text-3xl">Najbliższy mecz</h2>
+            </div>
+            <Button asChild variant="outline" className="w-full sm:w-auto">
+              <Link href="/terminarz">Pełny terminarz</Link>
+            </Button>
+          </div>
+          <div className="mt-4 sm:mt-6">
+            <HomeNextMatchCard
+              match={nextMatch}
+              backgroundSrc={pitchPhotos[1] ?? heroPhoto}
+              photoPool={marketplaceEnabled ? photoPool : undefined}
+              tentativeLine={nextMatchTentativeLine}
+              lineupPublic={lineupPublicNextMatch}
+              signup={nextMatchSignup}
+              transportActive={transportHomeActive}
+              hotpayEnabled={hotpayEnabled}
+              isLoggedIn={isLoggedIn}
+              tentativeBusy={tentativeBusy}
+              walletBalancePln={walletBalancePln}
+              debtBusy={debtBusy}
+              onPayDebt={(amount) => void payDebt(amount)}
+              onSignup={openTransportSignup}
+              onTentative={() => void signupTentativeHome()}
+              onDeclined={() => void signupDeclinedHome()}
+              onConfirmFromTentative={openConfirmFromTentative}
+            />
+          </div>
+        </section>
+      ) : null}
+
       {pageVariant === "pzu-cup" ? (
         <section className="mp-hero mp-hero--photo relative z-0 flex flex-col justify-end overflow-hidden pb-16 pt-16 sm:pb-20 sm:pt-24">
           <MarketplacePitchPhoto src={heroPhoto} priority className="z-0" />
@@ -676,8 +714,8 @@ function AcademyHomeView({
           </div>
         </section>
       ) : (
-        <section className="mp-hero mp-hero--photo relative z-0 flex flex-col justify-end overflow-hidden pb-16 pt-16 sm:pb-20 sm:pt-24">
-          <MarketplacePitchPhoto src={heroPhoto} priority className="z-0" />
+        <section className="mp-hero mp-hero--photo relative z-0 flex flex-col justify-end overflow-hidden pb-12 pt-10 sm:pb-20 sm:pt-24">
+          <MarketplacePitchPhoto src={heroPhoto} priority={!nextMatch} className="z-0" />
           <div className="absolute inset-0 z-[1] bg-gradient-to-t from-black/75 via-black/40 to-black/20" />
           <div className="relative z-10 mx-auto w-full max-w-6xl px-4">
             <p className="text-xs font-black uppercase tracking-[0.22em] text-white/80">Akademia</p>
@@ -740,41 +778,6 @@ function AcademyHomeView({
               ) : null}
             </div>
           </HomePhotoTile>
-        ) : null}
-
-        {nextMatch ? (
-          <section className="mt-12">
-            <div className="flex items-end justify-between gap-4">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--mp-teal-dark)]">Terminarz</p>
-                <h2 className="mt-1 text-2xl font-black tracking-tight sm:text-3xl">Najbliższy mecz</h2>
-              </div>
-              <Button asChild variant="outline">
-                <Link href="/terminarz">Pełny terminarz</Link>
-              </Button>
-            </div>
-            <div className="mt-6">
-              <HomeNextMatchCard
-                match={nextMatch}
-                backgroundSrc={pitchPhotos[1] ?? heroPhoto}
-                photoPool={marketplaceEnabled ? photoPool : undefined}
-                tentativeLine={nextMatchTentativeLine}
-                lineupPublic={lineupPublicNextMatch}
-                signup={nextMatchSignup}
-                transportActive={transportHomeActive}
-                hotpayEnabled={hotpayEnabled}
-                isLoggedIn={isLoggedIn}
-                tentativeBusy={tentativeBusy}
-                walletBalancePln={walletBalancePln}
-                debtBusy={debtBusy}
-                onPayDebt={(amount) => void payDebt(amount)}
-                onSignup={openTransportSignup}
-                onTentative={() => void signupTentativeHome()}
-                onDeclined={() => void signupDeclinedHome()}
-                onConfirmFromTentative={openConfirmFromTentative}
-              />
-            </div>
-          </section>
         ) : null}
 
         {isAcademyHome ? (

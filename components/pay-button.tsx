@@ -1,49 +1,36 @@
 "use client";
 
 import { Loader2, Wallet } from "lucide-react";
+import { useSiteMode } from "@/components/site-mode";
 import { cn } from "@/lib/utils";
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
 function formatPln(n: number) {
   return new Intl.NumberFormat("pl-PL", { style: "currency", currency: "PLN" }).format(
     Math.round(n * 100) / 100
   );
 }
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
 export type PayButtonVariant =
-  /** Duży przycisk na ciemnym tle karty boiska (PitchCard / hero) */
+  /** Duży przycisk — V2: teal na jasnej karcie; V1: na ciemnym PitchCard */
   | "hero"
-  /** Kompaktowy przycisk na białym / jasnym tle (profil, strona publiczna) */
+  /** Kompaktowy przycisk (profil, modal, strona publiczna) */
   | "default"
-  /** Pasek akcji w terminarzu (ciemna karta meczu, awp-match-btn) */
+  /** Pasek akcji w terminarzu */
   | "action";
 
 type Props = {
   variant?: PayButtonVariant;
-  /** Kwota w PLN; <0 = zaległość (czerwona kolorystyka), >0 = doładowanie */
   amountPln?: number | null;
-  /** Nadpisanie domyślnego tekstu ("Opłać zaległość" / "Zapłać kartą lub Blikiem") */
   label?: string;
-  /** Dodatkowy tekst pod główną etykietą */
   sublabel?: string;
   busy?: boolean;
   disabled?: boolean;
-  /** Pełna szerokość */
   fullWidth?: boolean;
-  /** Renderuj jako link <a> zamiast <button> */
   href?: string;
   onClick?: () => void;
   className?: string;
 };
 
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
 export function PayButton({
   variant = "default",
   amountPln,
@@ -56,13 +43,57 @@ export function PayButton({
   onClick,
   className,
 }: Props) {
+  const { marketplaceEnabled } = useSiteMode();
   const isDebt = amountPln != null && amountPln < 0;
   const absAmount = amountPln != null ? Math.abs(amountPln) : null;
   const defaultLabel = label ?? (isDebt ? "Opłać zaległość" : "Zapłać kartą lub Blikiem");
   const isDisabled = disabled ?? busy;
 
-  // ── HERO variant ────────────────────────────────────────────────────────
   if (variant === "hero") {
+    if (marketplaceEnabled) {
+      return (
+        <button
+          type="button"
+          disabled={isDisabled}
+          onClick={onClick}
+          className={cn(
+            "group relative flex items-center gap-3 overflow-hidden rounded-2xl px-4 py-3.5 text-left text-white shadow-md transition-all",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mp-teal)]/70 focus-visible:ring-offset-2",
+            "disabled:pointer-events-none disabled:opacity-60 active:translate-y-px",
+            isDebt
+              ? "bg-red-600 shadow-red-900/20 hover:bg-red-700"
+              : "bg-[var(--mp-teal)] shadow-teal-950/15 hover:bg-[var(--mp-teal-dark)]",
+            fullWidth ? "w-full" : "",
+            className
+          )}
+        >
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/20 ring-2 ring-white/30">
+            {busy ? (
+              <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
+            ) : (
+              <Wallet className="h-5 w-5" strokeWidth={2.25} aria-hidden />
+            )}
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-semibold uppercase tracking-wide text-white/90">
+              {defaultLabel}
+            </span>
+            {absAmount != null ? (
+              <span className="block text-2xl font-extrabold tabular-nums leading-tight tracking-tight">
+                {formatPln(absAmount)}
+              </span>
+            ) : null}
+            {sublabel ? (
+              <span className="mt-0.5 block text-[11px] leading-snug text-white/75">{sublabel}</span>
+            ) : null}
+          </span>
+          <span className="shrink-0 text-lg font-bold text-white/70 transition-transform group-hover:translate-x-0.5" aria-hidden>
+            ›
+          </span>
+        </button>
+      );
+    }
+
     return (
       <button
         type="button"
@@ -81,13 +112,10 @@ export function PayButton({
           className
         )}
       >
-        {/* Icon circle */}
         <span
           className={cn(
             "flex h-11 w-11 shrink-0 items-center justify-center rounded-full ring-2",
-            isDebt
-              ? "bg-red-500/20 ring-red-400/40"
-              : "bg-emerald-400/20 ring-emerald-300/30"
+            isDebt ? "bg-red-500/20 ring-red-400/40" : "bg-emerald-400/20 ring-emerald-300/30"
           )}
         >
           {busy ? (
@@ -96,13 +124,11 @@ export function PayButton({
             <Wallet className="h-5 w-5 text-white" strokeWidth={2.25} aria-hidden />
           )}
         </span>
-
-        {/* Text */}
         <span className="min-w-0 flex-1">
           <span className="block text-sm font-semibold uppercase tracking-wide text-white/80">
             {defaultLabel}
           </span>
-          {absAmount != null && (
+          {absAmount != null ? (
             <span
               className={cn(
                 "block text-2xl font-extrabold tabular-nums leading-tight tracking-tight",
@@ -111,15 +137,11 @@ export function PayButton({
             >
               {formatPln(absAmount)}
             </span>
-          )}
-          {sublabel && (
-            <span className="mt-0.5 block text-[11px] leading-snug text-white/60">
-              {sublabel}
-            </span>
-          )}
+          ) : null}
+          {sublabel ? (
+            <span className="mt-0.5 block text-[11px] leading-snug text-white/60">{sublabel}</span>
+          ) : null}
         </span>
-
-        {/* Chevron */}
         <span
           className={cn(
             "shrink-0 text-lg font-bold transition-transform group-hover:translate-x-0.5 group-disabled:translate-x-0",
@@ -133,7 +155,6 @@ export function PayButton({
     );
   }
 
-  // ── ACTION variant (terminarz ciemna karta meczu) ───────────────────────
   if (variant === "action") {
     return (
       <button
@@ -152,29 +173,30 @@ export function PayButton({
         )}
         <span>
           <span className="block leading-tight">{defaultLabel}</span>
-          {absAmount != null && (
+          {absAmount != null ? (
             <span className="mt-0.5 block text-[11px] font-bold tabular-nums leading-snug text-emerald-100/95">
               {formatPln(absAmount)}
             </span>
-          )}
-          {sublabel && !absAmount && (
+          ) : null}
+          {sublabel && !absAmount ? (
             <span className="mt-0.5 block text-[11px] font-normal leading-snug text-emerald-100/80">
               {sublabel}
             </span>
-          )}
+          ) : null}
         </span>
       </button>
     );
   }
 
-  // ── DEFAULT variant (jasne tło, np. profil, strona publiczna) ─────────────
   const defaultCls = cn(
     "group inline-flex items-center gap-2.5 rounded-xl px-4 py-2.5 text-sm font-semibold text-white shadow-md transition-all",
     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
     "active:translate-y-px",
     isDebt
       ? "bg-red-600 shadow-red-900/25 hover:bg-red-700 focus-visible:ring-red-500"
-      : "bg-emerald-600 shadow-emerald-900/20 hover:bg-emerald-700 focus-visible:ring-emerald-500",
+      : marketplaceEnabled
+        ? "bg-[var(--mp-teal)] shadow-teal-950/15 hover:bg-[var(--mp-teal-dark)] focus-visible:ring-[var(--mp-teal)]"
+        : "bg-emerald-600 shadow-emerald-900/20 hover:bg-emerald-700 focus-visible:ring-emerald-500",
     isDisabled && "pointer-events-none opacity-60",
     fullWidth ? "w-full justify-center" : "",
     className
@@ -188,11 +210,11 @@ export function PayButton({
         <Wallet className="h-4 w-4 shrink-0" aria-hidden />
       )}
       <span>{defaultLabel}</span>
-      {absAmount != null && (
+      {absAmount != null ? (
         <span className="rounded-md bg-white/20 px-1.5 py-0.5 text-xs font-bold tabular-nums">
           {formatPln(absAmount)}
         </span>
-      )}
+      ) : null}
     </>
   );
 
@@ -205,12 +227,7 @@ export function PayButton({
   }
 
   return (
-    <button
-      type="button"
-      disabled={isDisabled}
-      onClick={onClick}
-      className={defaultCls}
-    >
+    <button type="button" disabled={isDisabled} onClick={onClick} className={defaultCls}>
       {defaultContent}
     </button>
   );
