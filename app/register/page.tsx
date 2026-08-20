@@ -22,6 +22,11 @@ export default async function RegisterPage({ searchParams }: PageProps) {
   });
 
   return (
-    <RegisterPageScreen siteName={settings.site_name} nextPath={nextPath} closed={!allowed} />
+    <RegisterPageScreen
+      siteName={settings.site_name}
+      nextPath={nextPath}
+      closed={!allowed}
+      marketplaceEnabled={settings.booking_marketplace_enabled === true}
+    />
   );
 }

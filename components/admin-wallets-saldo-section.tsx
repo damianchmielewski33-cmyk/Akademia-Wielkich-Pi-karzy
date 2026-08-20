@@ -37,6 +37,8 @@ type AdminWalletOverview = {
   playedMatches?: PlayedMatchOption[];
 };
 
+const EMPTY_PLAYED_MATCHES: PlayedMatchOption[] = [];
+
 async function fetchJson<T>(url: string, init?: RequestInit): Promise<{ ok: true; data: T } | { ok: false; error: string }> {
   try {
     const res = await fetch(url, init);
@@ -385,7 +387,7 @@ export function AdminWalletsSaldoSection({
     [balancePlayerList, topUpUserId]
   );
 
-  const playedMatches = adminOverview?.playedMatches ?? [];
+  const playedMatches = adminOverview?.playedMatches ?? EMPTY_PLAYED_MATCHES;
   const selectedPlayedMatch = useMemo(
     () => (playedMatchId != null ? playedMatches.find((m) => m.id === playedMatchId) : undefined),
     [playedMatches, playedMatchId]

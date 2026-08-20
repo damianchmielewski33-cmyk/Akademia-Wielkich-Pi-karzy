@@ -24,6 +24,11 @@
   --awp-field-fg-dark: #ecfdf5;
 }
 
+html.site-chrome-academy {
+  --mp-teal: var(--mundial-teal);
+  --mp-teal-dark: var(--mundial-teal-dark);
+}
+
 .dark {
   color-scheme: dark;
   --background: #0c1020;

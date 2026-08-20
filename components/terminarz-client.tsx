@@ -5,6 +5,8 @@ import Link from "next/link";
 import { PhotoPanel } from "@/components/photo-panel";
 import { MarketplacePitchPhoto } from "@/components/marketplace-pitch-photo";
 import { MARKETPLACE_PITCH_PHOTOS, pitchPhotoAt } from "@/lib/marketplace-photos";
+import { useSiteMode } from "@/components/site-mode";
+import { PitchPageHero } from "@/components/ui/pitch-card";
 import { useRouter } from "next/navigation";
 import { toast } from "@/lib/app-toast";
 import {
@@ -214,6 +216,7 @@ export function TerminarzClient({
   captainLotteryHistory: initialCaptainLotteryHistory = {},
   hotpayEnabled = false,
 }: Props) {
+  const { marketplaceEnabled } = useSiteMode();
   const router = useRouter();
   const [walletBalancePln, setWalletBalancePln] = useState<number | null>(null);
   const { pay: payDebt, busy: debtBusy } = useHotpayPayment();
@@ -1480,7 +1483,9 @@ export function TerminarzClient({
 
   return (
     <>
-      <div className="relative flex flex-1 flex-col text-zinc-900 dark:text-zinc-50">
+      <div className={cn("relative flex flex-1 flex-col", marketplaceEnabled && "text-zinc-900 dark:text-zinc-50")}>
+        {marketplaceEnabled ? (
+          <>
         <section className="mp-hero mp-hero--photo relative flex flex-col justify-end overflow-hidden pb-16 pt-16 sm:pb-20 sm:pt-24">
           <MarketplacePitchPhoto src={heroPhoto} priority className="z-0" />
           <div className="absolute inset-0 z-[1] bg-gradient-to-t from-black/75 via-black/40 to-black/20" />
@@ -1549,8 +1554,25 @@ export function TerminarzClient({
             </div>
           ))}
         </div>
+          </>
+        ) : (
+          <div className="awp-page awp-page--wide pb-0">
+            <PitchPageHero
+              kicker="Terminarz"
+              title="Najbliższe mecze"
+              subtitle="Zapisz się na boisko, sprawdź składy i terminy."
+              titleId="terminarz-page-title"
+            />
+          </div>
+        )}
 
-        <div className="relative z-10 mx-auto w-full min-w-0 max-w-6xl px-4 py-10 sm:py-12">
+        <div
+          className={
+            marketplaceEnabled
+              ? "relative z-10 mx-auto w-full min-w-0 max-w-6xl px-4 py-10 sm:py-12"
+              : "awp-page awp-page--wide pt-4"
+          }
+        >
         <PhotoPanel src={pitchPhotoAt(2)} className="mb-5" contentClassName="p-4 sm:p-5" sizes="(max-width: 768px) 100vw, 1152px">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex flex-col gap-2.5">
@@ -1845,6 +1867,8 @@ export function TerminarzClient({
           />
         )}
 
+        {marketplaceEnabled ? (
+        <>
         <section className="mt-14 grid gap-4 sm:grid-cols-3">
           {[
             { n: "1", t: "Wybierz mecz", d: "Lista albo kalendarz — data, godzina i boisko." },
@@ -1891,6 +1915,8 @@ export function TerminarzClient({
             </Button>
           </div>
         </section>
+        </>
+        ) : null}
         </div>
       </div>
 

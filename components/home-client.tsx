@@ -514,8 +514,7 @@ function AcademyHomeView({
 
   if (!marketplaceEnabled) {
     return (
-      <div className="relative flex flex-1 flex-col">
-        {isAcademyHome ? <HomeFallingDecor /> : null}
+      <>
         <div className="awp-page awp-page--default relative z-10 text-center">
           {isLoggedIn ? (
             <div className="mb-8 flex items-center justify-center gap-4">
@@ -646,7 +645,7 @@ function AcademyHomeView({
         </div>
         {academyDialogs}
         <LogoutConfirmModal open={logoutOpen} onOpenChange={setLogoutOpen} />
-      </div>
+      </>
     );
   }
 

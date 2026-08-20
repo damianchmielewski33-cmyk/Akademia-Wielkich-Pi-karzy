@@ -4,18 +4,18 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "@/lib/app-toast";
 import { z } from "zod";
-import {
-  AuthGoalPreloader,
-  AUTH_SUCCESS_PRELOADER_DELAY_MS,
-} from "@/components/auth-goal-preloader";
+import { AuthGoalPreloader, AUTH_SUCCESS_PRELOADER_DELAY_MS } from "@/components/auth-goal-preloader";
 import { AppModal } from "@/components/ui/app-modal";
 import { Button } from "@/components/ui/button";
 import { FormInput } from "@/components/ui/form-field";
 import { Label } from "@/components/ui/label";
 import { YesNoSwitch } from "@/components/ui/yes-no-switch";
 import { PlayerAliasPicker } from "@/components/player-alias-picker";
+import { useSiteMode } from "@/components/site-mode";
 import { formSchemas, useValidatedForm } from "@/lib/form-validation";
 import { notifyPostLoginPromptsUpdated } from "@/lib/post-login-prompts";
+import { REALMS, type Realm } from "@/lib/realm";
+import { sanitizeAppBridgeNext } from "@/lib/app-bridge";
 
 const loginSchema = z.object({
   firstName: formSchemas.requiredName("Imię"),
@@ -36,9 +36,6 @@ const forgotSchema = z
     path: ["pinConfirm"],
   });
 
-import { REALMS, type Realm } from "@/lib/realm";
-import { sanitizeAppBridgeNext } from "@/lib/app-bridge";
-
 export function LoginForm({
   nextPath,
   embedMode,
@@ -50,6 +47,8 @@ export function LoginForm({
   onAuthenticated?: () => void;
   realm?: Realm;
 }) {
+  const { marketplaceEnabled } = useSiteMode();
+  const submitVariant = marketplaceEnabled ? "gold" : "pitch";
   const router = useRouter();
   const next = sanitizeAppBridgeNext(nextPath) ?? "/";
   const [rememberMe, setRememberMe] = useState(false);
@@ -215,7 +214,7 @@ export function LoginForm({
             aria-label="Nie wylogowuj mnie"
           />
         </div>
-        <Button type="submit" className="w-full" variant="gold" disabled={loading}>
+        <Button type="submit" className="w-full" variant={submitVariant} disabled={loading}>
           {loading ? "Logowanie…" : "Zaloguj się"}
         </Button>
       </form>

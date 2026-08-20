@@ -26,6 +26,8 @@ import { MatchSignupCountsBlock } from "@/components/terminarz-match-counts";
 import { PayButton } from "@/components/pay-button";
 import { PhotoPanel } from "@/components/photo-panel";
 import { SiteAssetImage } from "@/components/site-asset-image";
+import { SiteSectionHero } from "@/components/site-section-hero";
+import { useSiteMode } from "@/components/site-mode";
 import { Button } from "@/components/ui/button";
 import { FormInput } from "@/components/ui/form-field";
 import { formSchemas, useValidatedForm } from "@/lib/form-validation";
@@ -350,6 +352,7 @@ export function InviteShareLanding({
   debtBusy = false,
   onPayDebt,
 }: InviteShareLandingProps) {
+  const { marketplaceEnabled } = useSiteMode();
   const signupToastShownRef = useRef(false);
   const [rosterOpen, setRosterOpen] = useState(false);
   const [guestBusy, setGuestBusy] = useState(false);
@@ -440,7 +443,15 @@ export function InviteShareLanding({
       : "/register";
 
   return (
-    <div className="relative flex flex-1 flex-col text-zinc-900 dark:text-zinc-50">
+    <div
+      className={
+        marketplaceEnabled
+          ? "relative flex flex-1 flex-col text-zinc-900 dark:text-zinc-50"
+          : "awp-page awp-page--default"
+      }
+    >
+      {marketplaceEnabled ? (
+        <>
       <section className="mp-hero mp-hero--photo relative flex flex-col justify-end overflow-hidden pb-16 pt-16 sm:pb-20 sm:pt-24">
         <MarketplacePitchPhoto src={heroPhoto} priority className="z-0" />
         <div className="absolute inset-0 z-[1] bg-gradient-to-t from-black/75 via-black/40 to-black/20" />
@@ -459,9 +470,25 @@ export function InviteShareLanding({
             <MarketplacePitchPhoto src={src} sizes="288px" />
           </div>
         ))}
-      </div>
+        </div>
+          </>
+        ) : (
+          <SiteSectionHero
+            variant="stadium"
+            kicker="Zaproszenie"
+            title="Zapis na mecz"
+            subtitle="Potwierdź udział, zaloguj się albo zapisz się jednorazowo jako gość."
+            align="center"
+          />
+        )}
 
-      <div className="relative z-10 mx-auto w-full min-w-0 max-w-6xl px-4 py-10 sm:py-12">
+      <div
+        className={
+          marketplaceEnabled
+            ? "relative z-10 mx-auto w-full min-w-0 max-w-6xl px-4 py-10 sm:py-12"
+            : "relative z-10 mt-6 space-y-4"
+        }
+      >
         {!match ? (
           <PhotoPanel
             src={pitchPhotoAt(3)}
@@ -489,11 +516,15 @@ export function InviteShareLanding({
         ) : (
           <>
             <div className="flex items-end justify-between gap-4">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--mp-teal-dark)]">Terminarz</p>
-                <h2 className="mt-1 text-2xl font-black tracking-tight sm:text-3xl">Zapis na mecz</h2>
-              </div>
-              <Button asChild variant="outline">
+              {marketplaceEnabled ? (
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--mp-teal-dark)]">Terminarz</p>
+                  <h2 className="mt-1 text-2xl font-black tracking-tight sm:text-3xl">Zapis na mecz</h2>
+                </div>
+              ) : (
+                <div />
+              )}
+              <Button asChild variant={marketplaceEnabled ? "outline" : "pitch"}>
                 <Link href="/terminarz">Pełny terminarz</Link>
               </Button>
             </div>
@@ -594,9 +625,25 @@ export function InviteShareLanding({
                 ) : (
                   <>
                     <div>
-                      <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--mp-teal-dark)]">Zapis</p>
-                      <h2 className="mt-1 text-2xl font-black tracking-tight sm:text-3xl">Czy grasz w tym terminie?</h2>
-                      <p className="mt-2 max-w-2xl text-sm text-zinc-600 dark:text-zinc-400">
+                      {marketplaceEnabled ? (
+                        <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--mp-teal-dark)]">Zapis</p>
+                      ) : null}
+                      <h2
+                        className={
+                          marketplaceEnabled
+                            ? "mt-1 text-2xl font-black tracking-tight sm:text-3xl"
+                            : "mt-1 text-2xl font-black tracking-tight text-white drop-shadow-sm sm:text-3xl"
+                        }
+                      >
+                        Czy grasz w tym terminie?
+                      </h2>
+                      <p
+                        className={
+                          marketplaceEnabled
+                            ? "mt-2 max-w-2xl text-sm text-zinc-600 dark:text-zinc-400"
+                            : "mt-2 max-w-2xl text-sm text-white/80"
+                        }
+                      >
                         Zaloguj się albo załóż konto, żeby odpowiedzieć: tak, jeszcze nie wiem albo nie biorę udziału.
                         Możesz też zapisać się jednorazowo jako gość.
                       </p>
@@ -724,6 +771,8 @@ export function InviteShareLanding({
           </>
         )}
 
+        {marketplaceEnabled ? (
+          <>
         <PhotoPanel
           src={pitchPhotoAt((match?.id ?? highlightMatchId) + 11)}
           className="mt-14 min-h-[18rem] rounded-3xl"
@@ -773,6 +822,8 @@ export function InviteShareLanding({
             </PhotoPanel>
           ))}
         </section>
+          </>
+        ) : null}
       </div>
     </div>
   );

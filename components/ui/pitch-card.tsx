@@ -71,6 +71,7 @@ type PitchPageHeroProps = {
   className?: string;
   align?: "left" | "center";
   showCrest?: boolean;
+  titleId?: string;
   children?: ReactNode;
 };
 
@@ -82,6 +83,7 @@ export function PitchPageHero({
   className,
   align = "center",
   showCrest = true,
+  titleId,
   children,
 }: PitchPageHeroProps) {
   const { marketplaceEnabled } = useSiteMode();
@@ -92,6 +94,7 @@ export function PitchPageHero({
       subtitle={subtitle}
       align={align}
       showCrest={showCrest}
+      titleId={titleId}
       variant={marketplaceEnabled ? "marketplace" : "stadium"}
       className={cn("mx-auto w-full max-w-3xl", className)}
     >

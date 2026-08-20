@@ -16,6 +16,7 @@ import { PlayerAliasPicker } from "@/components/player-alias-picker";
 import { formSchemas, useValidatedForm } from "@/lib/form-validation";
 import { notifyPostLoginPromptsUpdated } from "@/lib/post-login-prompts";
 import { sanitizeAppBridgeNext } from "@/lib/app-bridge";
+import { useSiteMode } from "@/components/site-mode";
 
 const registerSchema = z
   .object({
@@ -37,6 +38,8 @@ export function RegisterForm({
   nextPath?: string;
   realm?: "academy" | "pzu_cup";
 }) {
+  const { marketplaceEnabled } = useSiteMode();
+  const submitVariant = marketplaceEnabled ? "gold" : "pitch";
   const router = useRouter();
   const next = sanitizeAppBridgeNext(nextPath) ?? undefined;
   const [autoLogin, setAutoLogin] = useState(true);
@@ -183,7 +186,7 @@ export function RegisterForm({
             aria-label="Zaloguj mnie automatycznie po rejestracji"
           />
         </div>
-        <Button type="submit" className="w-full" variant="gold" disabled={loading}>
+        <Button type="submit" className="w-full" variant={submitVariant} disabled={loading}>
           {loading ? "Tworzenie…" : "Załóż konto"}
         </Button>
       </form>
