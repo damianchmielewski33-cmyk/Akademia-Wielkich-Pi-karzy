@@ -91,7 +91,7 @@ const DEMO_VENUES: DemoVenue[] = [
     phone: "71 000 55 66",
     photos: [
       "https://images.unsplash.com/photo-1551958219-acbc608c6377?auto=format&fit=crop&w=1600&q=80",
-      "https://images.unsplash.com/photo-1489944446611-063e2d80944a?auto=format&fit=crop&w=1600&q=80",
+      "https://images.unsplash.com/photo-1459865264687-595d652de67e?auto=format&fit=crop&w=1600&q=80",
       "https://images.unsplash.com/photo-1517466787929-bc90951d0974?auto=format&fit=crop&w=1600&q=80",
     ],
     pitches: [
@@ -118,7 +118,7 @@ const DEMO_VENUES: DemoVenue[] = [
     photos: [
       "https://images.unsplash.com/photo-1575361204480-aadea25e6e68?auto=format&fit=crop&w=1600&q=80",
       "https://images.unsplash.com/photo-1517927033932-b3d18e61fb3a?auto=format&fit=crop&w=1600&q=80",
-      "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1600&q=80",
+      "https://images.unsplash.com/photo-1560272564-c83b66b1ad12?auto=format&fit=crop&w=1600&q=80",
     ],
     pitches: [
       {
@@ -198,7 +198,7 @@ const DEMO_VENUES: DemoVenue[] = [
     phone: "22 000 55 44",
     photos: [
       "https://images.unsplash.com/photo-1529900748604-07564a03e7a6?auto=format&fit=crop&w=1600&q=80",
-      "https://images.unsplash.com/photo-1489944446611-063e2d80944a?auto=format&fit=crop&w=1600&q=80",
+      "https://images.unsplash.com/photo-1459865264687-595d652de67e?auto=format&fit=crop&w=1600&q=80",
       "https://images.unsplash.com/photo-1517466787929-bc90951d0974?auto=format&fit=crop&w=1600&q=80",
     ],
     pitches: [
@@ -253,7 +253,7 @@ const DEMO_VENUES: DemoVenue[] = [
     phone: "22 000 77 66",
     photos: [
       "https://images.unsplash.com/photo-1575361204480-aadea25e6e68?auto=format&fit=crop&w=1600&q=80",
-      "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1600&q=80",
+      "https://images.unsplash.com/photo-1560272564-c83b66b1ad12?auto=format&fit=crop&w=1600&q=80",
       "https://images.unsplash.com/photo-1517927033932-b3d18e61fb3a?auto=format&fit=crop&w=1600&q=80",
     ],
     pitches: [

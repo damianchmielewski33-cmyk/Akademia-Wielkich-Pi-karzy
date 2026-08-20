@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { resolveMarketplacePhoto } from "@/lib/marketplace-photos";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -9,7 +10,7 @@ type Props = {
 };
 
 export function VenueGallery({ photos, name }: Props) {
-  const urls = photos.filter(Boolean).slice(0, 3);
+  const urls = photos.filter(Boolean).map(resolveMarketplacePhoto).slice(0, 3);
   const [active, setActive] = useState(0);
   if (urls.length === 0) return null;
   const current = urls[Math.min(active, urls.length - 1)]!;

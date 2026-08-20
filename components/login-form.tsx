@@ -161,7 +161,7 @@ export function LoginForm({
   return (
     <>
       {showGoalPreloader && <AuthGoalPreloader label="Czas coś pokopać" />}
-      <form onSubmit={onSubmit} className={embedMode ? "space-y-4" : "mt-8 space-y-4"}>
+      <form onSubmit={onSubmit} className="space-y-4">
         <FormInput
           id="first_name"
           label="Imię"
@@ -215,7 +215,7 @@ export function LoginForm({
             aria-label="Nie wylogowuj mnie"
           />
         </div>
-        <Button type="submit" className="w-full" variant="pitch" disabled={loading}>
+        <Button type="submit" className="w-full" variant="gold" disabled={loading}>
           {loading ? "Logowanie…" : "Zaloguj się"}
         </Button>
       </form>

@@ -1,33 +1,28 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none" aria-hidden="true">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" aria-hidden="true">
   <defs>
-    <radialGradient id="ball-shine" cx="35%" cy="30%" r="65%">
-      <stop offset="0%" stop-color="#ffffff" />
-      <stop offset="55%" stop-color="#f4f4f5" />
-      <stop offset="100%" stop-color="#d4d4d8" />
+    <clipPath id="soccer-ball-clip">
+      <circle cx="100" cy="100" r="92"/>
+    </clipPath>
+    <radialGradient id="soccer-ball-fill" cx="34%" cy="28%" r="74%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="48%" stop-color="#f4f4f5"/>
+      <stop offset="82%" stop-color="#d4d4d8"/>
+      <stop offset="100%" stop-color="#a1a1aa"/>
     </radialGradient>
-    <filter id="ball-shadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#0f172a" flood-opacity="0.25" />
-    </filter>
   </defs>
-  <g filter="url(#ball-shadow)">
-    <circle cx="60" cy="60" r="54" fill="url(#ball-shine)" stroke="#18181b" stroke-width="2.2" />
-    <!-- klasyczna piłka: pentagony + heksagony -->
-    <g fill="#18181b">
-      <polygon points="60,18 69.5,25 66,36 54,36 50.5,25" />
-      <polygon points="60,102 50.5,95 54,84 66,84 69.5,95" />
-      <polygon points="18,48 24,38 36,40 39,52 30,60" />
-      <polygon points="102,48 96,38 84,40 81,52 90,60" />
-      <polygon points="30,84 36,74 48,76 51,88 42,96" />
-      <polygon points="90,84 84,74 72,76 69,88 78,96" />
-    </g>
-    <g fill="none" stroke="#18181b" stroke-width="1.6" stroke-linejoin="round">
-      <path d="M60 18 69.5 25 84 40 90 60 84 74 69.5 95 60 102 50.5 95 36 84 30 60 36 40 50.5 25Z" />
-      <path d="M60 18 50.5 25 36 40 30 60 36 74 50.5 95" />
-      <path d="M60 18 69.5 25 84 40 90 60 84 74 69.5 95" />
-      <path d="M36 40 54 36 66 36 84 40" />
-      <path d="M36 74 54 84 66 84 84 74" />
-      <path d="M30 60 39 52 51 52 60 60 51 68 39 68Z" />
-      <path d="M90 60 81 52 69 52 60 60 69 68 81 68Z" />
-    </g>
+  <circle cx="100" cy="100" r="92" fill="url(#soccer-ball-fill)" stroke="#111827" stroke-width="6"/>
+  <g clip-path="url(#soccer-ball-clip)" stroke="#111827" stroke-linejoin="round">
+    <polygon fill="#111827" stroke-width="1" points="100,74 119.02,87.82 111.76,110.18 88.24,110.18 80.98,87.82"/>
+    <polygon fill="#111827" stroke-width="1" points="100,6 115.22,17.06 109.4,34.94 90.6,34.94 84.78,17.06"/>
+    <polygon fill="#111827" stroke-width="1" points="183.7,66.81 177.88,84.69 159.08,84.69 153.26,66.81 168.48,55.75"/>
+    <polygon fill="#111827" stroke-width="1" points="151.72,165.19 132.92,165.19 127.1,147.31 142.32,136.25 157.54,147.31"/>
+    <polygon fill="#111827" stroke-width="1" points="48.28,165.19 42.46,147.31 57.68,136.25 72.9,147.31 67.08,165.19"/>
+    <polygon fill="#111827" stroke-width="1" points="16.3,66.81 31.52,55.75 46.74,66.81 40.92,84.69 22.12,84.69"/>
+    <polygon fill="none" stroke-width="3.4" points="134.09,47.08 141.41,63.52 130.83,78.08 112.93,76.2 105.61,59.76 116.19,45.2"/>
+    <polygon fill="none" stroke-width="3.4" points="155.16,111.92 141.78,123.97 124.66,118.4 120.92,100.8 134.3,88.75 151.42,94.32"/>
+    <polygon fill="none" stroke-width="3.4" points="100,152 84.41,143 84.41,125 100,116 115.59,125 115.59,143"/>
+    <polygon fill="none" stroke-width="3.4" points="44.84,111.92 48.58,94.32 65.7,88.75 79.08,100.8 75.34,118.4 58.22,123.97"/>
+    <polygon fill="none" stroke-width="3.4" points="65.91,47.08 83.81,45.2 94.39,59.76 87.07,76.2 69.17,78.08 58.59,63.52"/>
   </g>
+  <circle cx="68" cy="62" r="22" fill="#ffffff" opacity="0.28"/>
 </svg>

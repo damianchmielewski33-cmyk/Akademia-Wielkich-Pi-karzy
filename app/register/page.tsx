@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { RegisterPageScreen } from "@/components/register-page-screen";
 import { getRequestAppSettings } from "@/lib/request-app-settings";
 import { sanitizeAppBridgeNext } from "@/lib/app-bridge";
+import { getDb } from "@/lib/db";
+import { isSelfRegistrationAllowed } from "@/lib/registration-gate";
 
 export const metadata: Metadata = {
   title: "Rejestracja",
@@ -14,8 +16,12 @@ export default async function RegisterPage({ searchParams }: PageProps) {
   const { next: nextRaw } = await searchParams;
   const nextPath = sanitizeAppBridgeNext(nextRaw) ?? undefined;
   const settings = await getRequestAppSettings();
+  const db = await getDb();
+  const allowed = await isSelfRegistrationAllowed(db, {
+    allow_self_registration: settings.allow_self_registration,
+  });
 
   return (
-    <RegisterPageScreen siteName={settings.site_name} nextPath={nextPath} />
+    <RegisterPageScreen siteName={settings.site_name} nextPath={nextPath} closed={!allowed} />
   );
 }

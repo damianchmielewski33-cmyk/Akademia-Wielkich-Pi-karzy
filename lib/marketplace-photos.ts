@@ -9,17 +9,34 @@ export const MARKETPLACE_PITCH_PHOTOS = [
   "https://images.unsplash.com/photo-1518604666860-9ed391f76460?auto=format&fit=crop&w=1600&q=80",
   "https://images.unsplash.com/photo-1579952363873-27f3bade9f55?auto=format&fit=crop&w=1600&q=80",
   "https://images.unsplash.com/photo-1551958219-acbc608c6377?auto=format&fit=crop&w=1600&q=80",
-  "https://images.unsplash.com/photo-1489944446611-063e2d80944a?auto=format&fit=crop&w=1600&q=80",
+  "https://images.unsplash.com/photo-1459865264687-595d652de67e?auto=format&fit=crop&w=1600&q=80",
   "https://images.unsplash.com/photo-1517466787929-bc90951d0974?auto=format&fit=crop&w=1600&q=80",
   "https://images.unsplash.com/photo-1575361204480-aadea25e6e68?auto=format&fit=crop&w=1600&q=80",
   "https://images.unsplash.com/photo-1517927033932-b3d18e61fb3a?auto=format&fit=crop&w=1600&q=80",
-  "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1600&q=80",
+  "https://images.unsplash.com/photo-1560272564-c83b66b1ad12?auto=format&fit=crop&w=1600&q=80",
 ] as const;
+
+/** Unsplash czasem usuwa zdjęcia — Next Image wtedy zwraca 400 na `/_next/image`. */
+const DEAD_UNSPLASH_PHOTOS: Record<string, string> = {
+  "photo-1489944446611-063e2d80944a": MARKETPLACE_PITCH_PHOTOS[7],
+  "photo-1508098682722-e99c43a406b2": MARKETPLACE_PITCH_PHOTOS[11],
+};
+
+export function resolveMarketplacePhoto(src: string): string {
+  const trimmed = src.trim();
+  if (!trimmed) return MARKETPLACE_PITCH_PHOTOS[0];
+  try {
+    const id = new URL(trimmed).pathname.split("/").filter(Boolean).pop() ?? "";
+    return DEAD_UNSPLASH_PHOTOS[id] ?? trimmed;
+  } catch {
+    return trimmed;
+  }
+}
 
 export function pitchPhotoAt(index: number): string {
   const n = MARKETPLACE_PITCH_PHOTOS.length;
   const i = ((index % n) + n) % n;
-  return MARKETPLACE_PITCH_PHOTOS[i] ?? MARKETPLACE_PITCH_PHOTOS[0];
+  return resolveMarketplacePhoto(MARKETPLACE_PITCH_PHOTOS[i] ?? MARKETPLACE_PITCH_PHOTOS[0]);
 }
 
 export function canOptimizeMarketplacePhoto(src: string): boolean {
@@ -47,7 +64,7 @@ export function pitchPhotosFromVenues(
       const trimmed = url.trim();
       if (!trimmed || seen.has(trimmed)) continue;
       seen.add(trimmed);
-      out.push(trimmed);
+      out.push(resolveMarketplacePhoto(trimmed));
     }
   }
   return out.length > 0 ? out : [...MARKETPLACE_PITCH_PHOTOS];

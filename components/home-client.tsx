@@ -94,8 +94,7 @@ function BookingHomeView({ featuredVenues }: { featuredVenues: VenueCard[] }) {
   return (
     <div className="relative flex flex-1 flex-col text-zinc-900 dark:text-zinc-50">
       <HomeFallingDecor />
-      <div className="relative z-10 flex flex-1 flex-col">
-      <section className="mp-hero mp-hero--photo relative flex flex-col justify-end overflow-hidden pb-16 pt-16 sm:pb-20 sm:pt-24">
+      <section className="mp-hero mp-hero--photo relative z-10 flex flex-col justify-end overflow-hidden pb-16 pt-16 sm:pb-20 sm:pt-24">
         <MarketplacePitchPhoto src={heroPhoto} priority className="z-0" />
         <div className="absolute inset-0 z-[1] bg-gradient-to-t from-black/75 via-black/40 to-black/20" />
         <div className="relative z-10 mx-auto w-full max-w-6xl px-4">
@@ -204,7 +203,6 @@ function BookingHomeView({ featuredVenues }: { featuredVenues: VenueCard[] }) {
             </PhotoPanel>
           ))}
         </section>
-      </div>
       </div>
     </div>
   );
@@ -655,9 +653,8 @@ function AcademyHomeView({
   return (
     <div className="relative flex flex-1 flex-col text-zinc-900 dark:text-zinc-50">
       {isAcademyHome ? <HomeFallingDecor /> : null}
-      <div className="relative z-10 flex flex-1 flex-col">
       {pageVariant === "pzu-cup" ? (
-        <section className="mp-hero mp-hero--photo relative flex flex-col justify-end overflow-hidden pb-16 pt-16 sm:pb-20 sm:pt-24">
+        <section className="mp-hero mp-hero--photo relative z-0 flex flex-col justify-end overflow-hidden pb-16 pt-16 sm:pb-20 sm:pt-24">
           <MarketplacePitchPhoto src={heroPhoto} priority className="z-0" />
           <div className="absolute inset-0 z-[1] bg-gradient-to-t from-black/75 via-black/40 to-black/20" />
           <div className="relative z-10 mx-auto w-full max-w-6xl px-4">
@@ -668,7 +665,7 @@ function AcademyHomeView({
           </div>
         </section>
       ) : (
-        <section className="mp-hero mp-hero--photo relative flex flex-col justify-end overflow-hidden pb-16 pt-16 sm:pb-20 sm:pt-24">
+        <section className="mp-hero mp-hero--photo relative z-0 flex flex-col justify-end overflow-hidden pb-16 pt-16 sm:pb-20 sm:pt-24">
           <MarketplacePitchPhoto src={heroPhoto} priority className="z-0" />
           <div className="absolute inset-0 z-[1] bg-gradient-to-t from-black/75 via-black/40 to-black/20" />
           <div className="relative z-10 mx-auto w-full max-w-6xl px-4">
@@ -684,7 +681,7 @@ function AcademyHomeView({
       )}
 
       {isAcademyHome ? (
-        <div className="-mx-4 mt-0 flex gap-4 overflow-x-auto bg-zinc-100 px-4 py-4 [scrollbar-width:thin] dark:bg-zinc-900">
+        <div className="relative z-10 -mx-4 mt-0 flex gap-4 overflow-x-auto bg-zinc-100 px-4 py-4 [scrollbar-width:thin] dark:bg-zinc-900">
           {photoPool.slice(0, 8).map((src) => (
             <div key={src} className="relative h-48 w-72 shrink-0 overflow-hidden rounded-3xl bg-zinc-200">
               <MarketplacePitchPhoto src={src} sizes="288px" />
@@ -895,7 +892,6 @@ function AcademyHomeView({
       </div>
 
       {academyDialogs}
-      </div>
     </div>
   );
 }

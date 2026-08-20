@@ -1751,12 +1751,12 @@ html {
   }
 }
 
-/* Spadające piłki i gwiazdy — boczne tło strony start */
+/* Spadające piłki i gwiazdy — na telefonie przez cały ekran, na dużym z boków */
 .home-fall {
   pointer-events: none;
   position: fixed;
   inset: 0;
-  z-index: 0;
+  z-index: 2;
   overflow: hidden;
 }
 
@@ -1764,7 +1764,7 @@ html {
   position: absolute;
   top: 0;
   bottom: 0;
-  width: clamp(3.75rem, calc((100vw - 64rem) / 2), 14rem);
+  width: 50%;
 }
 
 .home-fall__rail--left {
@@ -1775,6 +1775,16 @@ html {
   right: 0;
 }
 
+@media (min-width: 1024px) {
+  .home-fall:not(.home-fall--cover) {
+    z-index: 0;
+  }
+
+  .home-fall:not(.home-fall--cover) .home-fall__rail {
+    width: clamp(4.5rem, calc((100vw - 64rem) / 2), 16rem);
+  }
+}
+
 .home-fall__item {
   position: absolute;
   top: -12%;
@@ -1782,6 +1792,11 @@ html {
   animation: home-fall-down var(--dur, 14s) linear infinite;
   animation-delay: var(--delay, 0s);
   will-change: transform, opacity;
+}
+
+.home-fall__ball {
+  display: block;
+  filter: drop-shadow(0 4px 6px rgba(15, 23, 42, 0.35));
 }
 
 .home-fall__star {

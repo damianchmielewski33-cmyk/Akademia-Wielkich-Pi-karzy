@@ -2,7 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { MapPin } from "lucide-react";
 import type { VenueCard } from "@/lib/booking-shared";
-import { canOptimizeMarketplacePhoto } from "@/lib/marketplace-photos";
+import { canOptimizeMarketplacePhoto, resolveMarketplacePhoto } from "@/lib/marketplace-photos";
 import { siteAssetNeedsUnoptimized } from "@/lib/site-assets";
 import { cn } from "@/lib/utils";
 
@@ -23,7 +23,7 @@ function surfaceLabel(surfaces: string | null) {
 
 export function MarketplaceVenueCard({ venue, href, className }: Props) {
   const to = href ?? `/obiekty/${venue.slug}`;
-  const photo = venue.photo_url;
+  const photo = venue.photo_url ? resolveMarketplacePhoto(venue.photo_url) : null;
   return (
     <Link href={to} className={cn("mp-venue-card group block min-w-[16.5rem] text-left", className)}>
       <div className="relative h-48 overflow-hidden bg-zinc-200">

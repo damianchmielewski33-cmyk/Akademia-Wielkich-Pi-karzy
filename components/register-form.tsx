@@ -104,7 +104,7 @@ export function RegisterForm({
   return (
     <>
       {showGoalPreloader && <AuthGoalPreloader label={goalPreloaderLabel} />}
-      <form onSubmit={onSubmit} className="mt-8 space-y-4">
+      <form onSubmit={onSubmit} className="space-y-4">
         <FormInput
           id="reg_fn"
           label="Imię"
@@ -183,7 +183,7 @@ export function RegisterForm({
             aria-label="Zaloguj mnie automatycznie po rejestracji"
           />
         </div>
-        <Button type="submit" className="w-full" variant="pitch" disabled={loading}>
+        <Button type="submit" className="w-full" variant="gold" disabled={loading}>
           {loading ? "Tworzenie…" : "Załóż konto"}
         </Button>
       </form>
