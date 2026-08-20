@@ -13,7 +13,8 @@ import pl.akademiawielkichpilkarzy.app.ui.common.PushAutoEnabler
 fun WebAppShell(
     isBlocked: (String) -> String?,
     initialPath: String? = null,
-    onLoggedOut: () -> Unit
+    onLoggedOut: () -> Unit,
+    onInitialContentReady: (() -> Unit)? = null
 ) {
     PushAutoEnabler()
     val scope = rememberCoroutineScope()
@@ -49,6 +50,7 @@ fun WebAppShell(
         requireAuth = !startPath.startsWith("/zaproszenie"),
         showTopBar = false,
         onBack = null,
-        onNavigatedToLogin = { logout() }
+        onNavigatedToLogin = { logout() },
+        onInitialContentReady = onInitialContentReady
     )
 }

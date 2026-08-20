@@ -66,7 +66,10 @@ data class HomeNavActions(
 )
 
 @Composable
-fun HomeScreen(nav: HomeNavActions) {
+fun HomeScreen(
+    nav: HomeNavActions,
+    onInitialContentReady: (() -> Unit)? = null
+) {
     var data by remember { mutableStateOf<TerminarzResponse?>(null) }
     var user by remember { mutableStateOf<MeUser?>(null) }
     var nextLineup by remember { mutableStateOf<LineupSelected?>(null) }
@@ -118,6 +121,12 @@ fun HomeScreen(nav: HomeNavActions) {
     }
 
     LaunchedEffect(Unit) { reload() }
+
+    LaunchedEffect(loading) {
+        if (!loading) {
+            onInitialContentReady?.invoke()
+        }
+    }
 
     MurawaBackground(theme = ScreenPhotoTheme.Home) {
         val scroll = rememberScrollState()

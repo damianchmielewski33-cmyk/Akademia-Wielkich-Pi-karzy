@@ -78,7 +78,8 @@ private data class Tab(
 @Composable
 fun MainScaffold(
     initialPath: String? = null,
-    onLoggedOut: () -> Unit
+    onLoggedOut: () -> Unit,
+    onInitialContentReady: (() -> Unit)? = null
 ) {
     PushAutoEnabler()
     val isAdmin by AwpApp.instance.sessionStore.isAdminFlow.collectAsState(initial = false)
@@ -144,7 +145,8 @@ fun MainScaffold(
             WebAppShell(
                 isBlocked = { key -> isBlocked(key) },
                 initialPath = initialPath,
-                onLoggedOut = onLoggedOut
+                onLoggedOut = onLoggedOut,
+                onInitialContentReady = onInitialContentReady
             )
         }
         else -> {
@@ -156,6 +158,7 @@ fun MainScaffold(
                 mobileConfig = mobileConfig,
                 initialPath = initialPath,
                 onLoggedOut = onLoggedOut,
+                onInitialContentReady = onInitialContentReady,
                 navController = navController
             )
         }
@@ -171,6 +174,7 @@ private fun NativeMainScaffold(
     mobileConfig: MobileConfigResponse?,
     initialPath: String?,
     onLoggedOut: () -> Unit,
+    onInitialContentReady: (() -> Unit)? = null,
     navController: androidx.navigation.NavHostController
 ) {
     val scope = rememberCoroutineScope()
@@ -354,7 +358,10 @@ private fun NativeMainScaffold(
         ) {
             composable("home") {
                 BlockedOrContent(message = isBlocked("home")) {
-                    HomeScreen(nav = homeNav)
+                    HomeScreen(
+                        nav = homeNav,
+                        onInitialContentReady = onInitialContentReady
+                    )
                 }
             }
             composable("schedule") {

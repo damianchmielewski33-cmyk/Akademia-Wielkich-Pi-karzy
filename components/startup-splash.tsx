@@ -7,8 +7,13 @@ import { isInstalledAndroidAppClient } from "@/lib/app-webview";
 import { cn } from "@/lib/utils";
 
 const SESSION_KEY = "awp-startup-splash-shown";
+const ANDROID_COLD_PRELOADER_KEY = "awp-android-route-preloader-ok";
 const BOOT_SPLASH_ID = "awp-boot-splash";
-const VISIBLE_MS = 3200;
+const ACTIVE_CLASS = "awp-startup-splash-active";
+/** Minimalny czas marki — nie dłuższy niż realne ładowanie + ta wartość. */
+const MIN_VISIBLE_MS = 1400;
+/** Górny limit, gdy treść długo nie jest gotowa. */
+const MAX_VISIBLE_MS = 4500;
 const FADE_MS = 420;
 
 function isIosDevice(): boolean {
@@ -42,10 +47,55 @@ export function shouldShowIosStartupSplash(): boolean {
   return true;
 }
 
+/** Czy trasy mają pominąć full-screen preloader (splash startowy go zastępuje). */
+export function shouldSuppressStartupRoutePreloader(): boolean {
+  if (typeof document === "undefined") return false;
+  if (document.documentElement.classList.contains(ACTIVE_CLASS)) return true;
+  if (document.documentElement.classList.contains("awp-boot-splash-pending")) return true;
+  if (isInstalledAndroidAppClient()) {
+    try {
+      return sessionStorage.getItem(ANDROID_COLD_PRELOADER_KEY) !== "1";
+    } catch {
+      return true;
+    }
+  }
+  return false;
+}
+
+/** Po cold starcie Android WebView — przywróć zwykłe preloadery tras. */
+export function markAndroidColdStartPreloadersDone(): void {
+  if (typeof window === "undefined") return;
+  try {
+    sessionStorage.setItem(ANDROID_COLD_PRELOADER_KEY, "1");
+  } catch {
+    /* ignore */
+  }
+}
+
 function removeBootSplashDom() {
   if (typeof document === "undefined") return;
   document.getElementById(BOOT_SPLASH_ID)?.remove();
   document.documentElement.classList.remove("awp-boot-splash-pending");
+}
+
+function setSplashActiveClass(active: boolean) {
+  if (typeof document === "undefined") return;
+  document.documentElement.classList.toggle(ACTIVE_CLASS, active);
+}
+
+function whenDocumentReady(): Promise<void> {
+  if (typeof document === "undefined") return Promise.resolve();
+  if (document.readyState === "complete") {
+    return new Promise((resolve) => {
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+    });
+  }
+  return new Promise((resolve) => {
+    const done = () => {
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+    };
+    window.addEventListener("load", done, { once: true });
+  });
 }
 
 function JugglingPlayer({ className, marketplace }: { className?: string; marketplace: boolean }) {
@@ -92,6 +142,7 @@ export function StartupSplash({ marketplaceEnabled = false }: { marketplaceEnabl
   useEffect(() => {
     if (!shouldShowIosStartupSplash()) {
       removeBootSplashDom();
+      setSplashActiveClass(false);
       setPhase("hidden");
       return;
     }
@@ -101,12 +152,42 @@ export function StartupSplash({ marketplaceEnabled = false }: { marketplaceEnabl
       /* ignore */
     }
     setPhase("show");
+    setSplashActiveClass(true);
     removeBootSplashDom();
-    const leaveTimer = window.setTimeout(() => setPhase("leave"), VISIBLE_MS);
-    const hideTimer = window.setTimeout(() => setPhase("hidden"), VISIBLE_MS + FADE_MS);
+
+    const startedAt = Date.now();
+    let leaveTimer: number | undefined;
+    let hideTimer: number | undefined;
+    let cancelled = false;
+
+    const beginLeave = () => {
+      if (cancelled) return;
+      setPhase("leave");
+      setSplashActiveClass(false);
+      hideTimer = window.setTimeout(() => {
+        if (!cancelled) setPhase("hidden");
+      }, FADE_MS);
+    };
+
+    const run = async () => {
+      const ready = whenDocumentReady();
+      const maxWait = new Promise<void>((resolve) => {
+        window.setTimeout(resolve, MAX_VISIBLE_MS);
+      });
+      await Promise.race([ready, maxWait]);
+      if (cancelled) return;
+      const elapsed = Date.now() - startedAt;
+      const remainMin = Math.max(0, MIN_VISIBLE_MS - elapsed);
+      leaveTimer = window.setTimeout(beginLeave, remainMin);
+    };
+
+    void run();
+
     return () => {
-      window.clearTimeout(leaveTimer);
-      window.clearTimeout(hideTimer);
+      cancelled = true;
+      setSplashActiveClass(false);
+      if (leaveTimer) window.clearTimeout(leaveTimer);
+      if (hideTimer) window.clearTimeout(hideTimer);
     };
   }, []);
 

@@ -9,6 +9,7 @@ import { ShareLinkClientCleanup } from "@/components/share-link-client-cleanup";
 import { PwaRegister } from "@/components/pwa-register";
 import { AndroidAppUpdatePrompt } from "@/components/android-app-update-prompt";
 import { StartupSplash } from "@/components/startup-splash";
+import { AndroidColdStartPreloaderUnlock } from "@/components/android-cold-start-preloader-unlock";
 import { WebPushEnabler } from "@/components/web-push-enabler";
 import { MatchNotificationPrompt } from "@/components/match-notification-prompt";
 import { PinChangePendingBanner } from "@/components/pin-change-pending-banner";
@@ -342,6 +343,7 @@ export default async function RootLayout({
         />
         <PwaRegister />
         <StartupSplash marketplaceEnabled={marketplaceEnabled} />
+        <AndroidColdStartPreloaderUnlock />
         <AndroidAppUpdatePrompt />
         {loggedInFull ? <WebPushEnabler /> : null}
         <SessionIdleMonitor enabled={sessionIdleLogout} />

@@ -18,6 +18,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
+import kotlinx.coroutines.delay
 import pl.akademiawielkichpilkarzy.app.data.api.ApiClient
 import pl.akademiawielkichpilkarzy.app.ui.login.LoginScreen
 import pl.akademiawielkichpilkarzy.app.ui.nav.MainScaffold
@@ -61,6 +62,7 @@ class MainActivity : FragmentActivity() {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     var splashMinTimeDone by remember { mutableStateOf(false) }
                     var sessionReady by remember { mutableStateOf(false) }
+                    var initialContentReady by remember { mutableStateOf(false) }
                     var token by remember { mutableStateOf<String?>(null) }
                     var marketplaceEnabled by remember { mutableStateOf(cachedMarketplace) }
                     var browsePitches by remember { mutableStateOf(false) }
@@ -83,7 +85,16 @@ class MainActivity : FragmentActivity() {
                         store.tokenFlow.collect { token = it }
                     }
 
-                    val showSplash = !splashMinTimeDone || !sessionReady
+                    // Nie blokuj startu w nieskończoność, gdy ekran nie zgłosi gotowości.
+                    LaunchedEffect(sessionReady) {
+                        if (!sessionReady) return@LaunchedEffect
+                        delay(5_000L)
+                        initialContentReady = true
+                    }
+
+                    // Splash zastępuje loadery: treść ładuje się pod spodem, znika dopiero
+                    // po min. czasie animacji i gotowości pierwszego ekranu.
+                    val showSplash = !sessionReady || !splashMinTimeDone || !initialContentReady
                     val guestMarketplacePath =
                         deepLinkPath?.takeIf {
                             it.startsWith("/obiekty") ||
@@ -93,10 +104,15 @@ class MainActivity : FragmentActivity() {
                                 it.startsWith("/platnosci-public")
                         }
 
+                    fun markInitialReady() {
+                        initialContentReady = true
+                    }
+
                     Box(modifier = Modifier.fillMaxSize()) {
                         AppUpdateGate(checkOnStart = true)
 
-                        if (!showSplash) {
+                        // Montuj UI pod splashiem — równoległe ładowanie zamiast kolejki.
+                        if (sessionReady) {
                             if (token.isNullOrBlank()) {
                                 if (guestMarketplacePath != null) {
                                     WebPortalScreen(
@@ -107,7 +123,8 @@ class MainActivity : FragmentActivity() {
                                         },
                                         path = guestMarketplacePath,
                                         requireAuth = false,
-                                        showTopBar = false
+                                        showTopBar = false,
+                                        onInitialContentReady = { markInitialReady() }
                                     )
                                 } else if (browsePitches) {
                                     WebPortalScreen(
@@ -115,18 +132,21 @@ class MainActivity : FragmentActivity() {
                                         path = "/?mode=booking",
                                         requireAuth = false,
                                         showTopBar = false,
-                                        onBack = { browsePitches = false }
+                                        onBack = { browsePitches = false },
+                                        onInitialContentReady = { markInitialReady() }
                                     )
                                 } else {
                                     LoginScreen(
                                         onLoggedIn = {},
-                                        onBrowsePitches = { browsePitches = true }
+                                        onBrowsePitches = { browsePitches = true },
+                                        onInitialContentReady = { markInitialReady() }
                                     )
                                 }
                             } else {
                                 MainScaffold(
                                     initialPath = deepLinkPath,
-                                    onLoggedOut = {}
+                                    onLoggedOut = {},
+                                    onInitialContentReady = { markInitialReady() }
                                 )
                             }
                         }

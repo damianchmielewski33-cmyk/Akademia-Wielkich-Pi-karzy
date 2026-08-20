@@ -71,7 +71,8 @@ import retrofit2.HttpException
 @Composable
 fun LoginScreen(
     onLoggedIn: () -> Unit,
-    onBrowsePitches: (() -> Unit)? = null
+    onBrowsePitches: (() -> Unit)? = null,
+    onInitialContentReady: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val activity = context as? FragmentActivity
@@ -118,6 +119,7 @@ fun LoginScreen(
             } catch (_: Exception) {
             }
         }
+        onInitialContentReady?.invoke()
         // Auto-prompt biometrii przy starcie, jeśli włączona.
         if (biometricsAvailable && biometricEnabled && activity != null) {
             BiometricHelper.authenticate(

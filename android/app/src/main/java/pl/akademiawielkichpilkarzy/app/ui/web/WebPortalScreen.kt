@@ -44,10 +44,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import java.util.concurrent.atomic.AtomicBoolean
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import pl.akademiawielkichpilkarzy.app.BuildConfig
@@ -105,7 +107,8 @@ fun WebPortalScreen(
     requireAuth: Boolean = true,
     showTopBar: Boolean = true,
     onBack: (() -> Unit)? = null,
-    onNavigatedToLogin: (() -> Unit)? = null
+    onNavigatedToLogin: (() -> Unit)? = null,
+    onInitialContentReady: (() -> Unit)? = null
 ) {
     val siteBase = remember { normalizeSiteBase() }
     var loading by remember { mutableStateOf(true) }
@@ -115,6 +118,21 @@ fun WebPortalScreen(
     var loadedStartUrl by remember { mutableStateOf<String?>(null) }
     var webView by remember { mutableStateOf<WebView?>(null) }
     var fileCallback by remember { mutableStateOf<ValueCallback<Array<Uri>>?>(null) }
+    val readyNotified = remember { AtomicBoolean(false) }
+    val onReadyLatest = rememberUpdatedState(onInitialContentReady)
+    val onLoginLatest = rememberUpdatedState(onNavigatedToLogin)
+
+    fun markInitialReady() {
+        if (readyNotified.compareAndSet(false, true)) {
+            onReadyLatest.value?.invoke()
+        }
+    }
+
+    LaunchedEffect(error, startUrl) {
+        if (error != null && startUrl == null) {
+            markInitialReady()
+        }
+    }
 
     val filePicker = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -292,12 +310,14 @@ fun WebPortalScreen(
                                 override fun onPageFinished(view: WebView?, url: String?) {
                                     progress = 1f
                                     CookieManager.getInstance().flush()
+                                    markInitialReady()
                                     val u = url.orEmpty()
-                                    if (onNavigatedToLogin != null &&
+                                    val loginCb = onLoginLatest.value
+                                    if (loginCb != null &&
                                         (u.contains("/login") || u.endsWith("/login")) &&
                                         !u.contains("register")
                                     ) {
-                                        onNavigatedToLogin()
+                                        loginCb()
                                     }
                                 }
                             }
