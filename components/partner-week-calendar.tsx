@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import type { AdminPitchRow, AvailabilitySlot } from "@/lib/booking";
+import type { AdminPitchRow, AvailabilitySlot } from "@/lib/booking-shared";
 import { cn } from "@/lib/utils";
 
 const WEEKDAY_SHORT = ["nd", "pn", "wt", "śr", "cz", "pt", "sb"] as const;

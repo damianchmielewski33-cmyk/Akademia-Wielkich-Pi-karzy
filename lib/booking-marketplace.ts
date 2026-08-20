@@ -1,14 +1,12 @@
 import { NextResponse } from "next/server";
 import { redirect } from "next/navigation";
-import { getAppSettings } from "@/lib/app-settings";
-import { getDb } from "@/lib/db";
+import { getRequestAppSettings } from "@/lib/request-app-settings";
 
 export const BOOKING_MARKETPLACE_DISABLED_MESSAGE =
   "Rezerwacja boisk jest chwilowo wyłączona. Działa akademia dla grupy znajomych.";
 
 export async function isBookingMarketplaceEnabled(): Promise<boolean> {
-  const db = await getDb();
-  const settings = await getAppSettings(db);
+  const settings = await getRequestAppSettings();
   return settings.booking_marketplace_enabled === true;
 }
 

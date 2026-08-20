@@ -1,13 +1,12 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { LoginPageScreen } from "@/components/login-page-screen";
-import { getDb } from "@/lib/db";
-import { getAppSettings } from "@/lib/app-settings";
 import { getServerSession } from "@/lib/auth";
+import { sanitizeAppBridgeNext } from "@/lib/app-bridge";
+import { getRequestAppSettings } from "@/lib/request-app-settings";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const db = await getDb();
-  const settings = await getAppSettings(db);
+  const settings = await getRequestAppSettings();
   if (!settings.booking_marketplace_enabled) {
     return {
       title: "Logowanie",
@@ -24,27 +23,27 @@ type Props = { searchParams: Promise<{ next?: string; setup?: string; wylogowano
 
 export default async function LoginPage({ searchParams }: Props) {
   const { next: nextPath, setup, wylogowano } = await searchParams;
+  const safeNext = sanitizeAppBridgeNext(nextPath) ?? "/";
 
   if (setup === "1") {
     const q = new URLSearchParams();
-    if (nextPath && nextPath.startsWith("/")) q.set("next", nextPath);
+    if (safeNext !== "/") q.set("next", safeNext);
     redirect(q.size ? `/ustaw-pin?${q}` : "/ustaw-pin");
   }
 
   if (!wylogowano) {
     const session = await getServerSession();
     if (session && !session.needsPinSetup && !session.pinChangePending) {
-      redirect(nextPath && nextPath.startsWith("/") ? nextPath : "/");
+      redirect(safeNext);
     }
   }
 
-  const db = await getDb();
-  const settings = await getAppSettings(db);
+  const settings = await getRequestAppSettings();
 
   return (
     <LoginPageScreen
       siteName={settings.site_name}
-      nextPath={nextPath && nextPath.startsWith("/") ? nextPath : "/"}
+      nextPath={safeNext}
       idleLogout={wylogowano === "bezczynnosc"}
       marketplaceEnabled={settings.booking_marketplace_enabled === true}
     />

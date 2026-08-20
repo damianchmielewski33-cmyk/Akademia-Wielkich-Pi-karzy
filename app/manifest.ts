@@ -1,10 +1,8 @@
 import type { MetadataRoute } from "next";
-import { getAppSettings } from "@/lib/app-settings";
-import { getDb } from "@/lib/db";
+import { getRequestAppSettings } from "@/lib/request-app-settings";
 
 export default async function manifest(): Promise<MetadataRoute.Manifest> {
-  const db = await getDb();
-  const settings = await getAppSettings(db);
+  const settings = await getRequestAppSettings();
   const favicon = settings.site_assets.logo_favicon;
   const faviconType = favicon.toLowerCase().endsWith(".svg") ? "image/svg+xml" : "image/png";
   const marketplace = settings.booking_marketplace_enabled === true;

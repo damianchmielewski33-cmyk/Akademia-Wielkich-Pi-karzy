@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { sanitizeAppBridgeNext } from "@/lib/app-bridge";
 import { clearSessionCookie, getServerSession } from "@/lib/auth";
 import { logActivity } from "@/lib/db";
 
@@ -17,7 +18,6 @@ export async function GET(req: Request) {
   await clearSessionCookie();
   const url = new URL(req.url);
   const nextRaw = url.searchParams.get("next");
-  const next =
-    nextRaw && nextRaw.startsWith("/") && !nextRaw.startsWith("//") ? nextRaw : "/login";
+  const next = sanitizeAppBridgeNext(nextRaw) ?? "/login";
   return NextResponse.redirect(new URL(next, req.url));
 }

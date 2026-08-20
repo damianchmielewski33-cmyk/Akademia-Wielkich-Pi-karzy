@@ -5,7 +5,7 @@ import { Download, RefreshCw, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   compareAndroidAppVersion,
-  parseAndroidAppIdentity,
+  readInstalledAndroidAppIdentity,
   type AndroidAppIdentity,
 } from "@/lib/app-webview";
 
@@ -15,31 +15,6 @@ type LatestInfo = {
   notes?: string | null;
 };
 
-declare global {
-  interface Window {
-    AwpAndroid?: {
-      getVersionName: () => string;
-      getVersionCode: () => number;
-      checkUpdate: () => void;
-    };
-  }
-}
-
-function identityFromBridge(): AndroidAppIdentity | null {
-  if (typeof window === "undefined" || !window.AwpAndroid) return null;
-  try {
-    const versionName = String(window.AwpAndroid.getVersionName?.() ?? "").trim();
-    const versionCode = Number(window.AwpAndroid.getVersionCode?.());
-    if (!versionName) return null;
-    return {
-      versionName,
-      versionCode: Number.isFinite(versionCode) ? versionCode : null,
-    };
-  } catch {
-    return null;
-  }
-}
-
 export function AndroidAppVersionCard() {
   const [installed, setInstalled] = useState<AndroidAppIdentity | null>(null);
   const [latest, setLatest] = useState<LatestInfo | null>(null);
@@ -47,9 +22,7 @@ export function AndroidAppVersionCard() {
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    const fromBridge = identityFromBridge();
-    const fromUa = parseAndroidAppIdentity(typeof navigator === "undefined" ? "" : navigator.userAgent);
-    const current = fromBridge ?? fromUa;
+    const current = readInstalledAndroidAppIdentity();
     setInstalled(current);
     if (!current) {
       setChecking(false);

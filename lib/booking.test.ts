@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import type { AppDb } from "@/lib/db";
 import {
   BOOKING_SCHEMA_SQL,
+  authorizeBookingAccess,
   cancelUserBooking,
   confirmBookingPayment,
   createBookingHold,
@@ -13,6 +14,7 @@ import {
   ensureBookingSchema,
   getAvailabilitySlots,
   getVenueWithPitches,
+  listBookingsForAccessToken,
   listVenueCards,
   replaceVenuePhotos,
 } from "@/lib/booking";
@@ -142,6 +144,45 @@ describe("booking availability", () => {
     expect(hold.booking.contact_email).toBe("jan@example.com");
   });
 
+  it("scopes a guest token to one booking and hides the secret in lists", async () => {
+    const { db, sqlite, dbPath } = createTestDb();
+    dbs.push({ sqlite, dbPath });
+    seedPitch(sqlite);
+
+    const first = await createBookingHold(db, {
+      userId: 1,
+      pitchId: 1,
+      date: "2026-08-17",
+      startTime: "18:00",
+      contactName: "Jan Kowalski",
+      contactPhone: "500600700",
+      contactEmail: "jan@example.com",
+    });
+    const second = await createBookingHold(db, {
+      userId: 1,
+      pitchId: 1,
+      date: "2026-08-17",
+      startTime: "19:00",
+      contactName: "Jan Kowalski",
+      contactPhone: "500600700",
+      contactEmail: "jan@example.com",
+    });
+    expect(first.ok && second.ok).toBe(true);
+    if (!first.ok || !second.ok) return;
+
+    const listed = await listBookingsForAccessToken(db, first.booking.access_token!);
+    expect(listed).toHaveLength(1);
+    expect(listed[0]?.id).toBe(first.booking.id);
+    expect(listed[0]?.access_token).toBeUndefined();
+
+    expect(
+      await authorizeBookingAccess(db, { bookingId: second.booking.id, token: first.booking.access_token })
+    ).toBeNull();
+    expect(
+      await authorizeBookingAccess(db, { bookingId: first.booking.id, token: first.booking.access_token })
+    ).toEqual({ userId: 1 });
+  });
+
   it("releases expired pending holds and confirms paid bookings", async () => {
     const { db, sqlite, dbPath } = createTestDb();
     dbs.push({ sqlite, dbPath });
@@ -220,6 +261,12 @@ describe("booking availability", () => {
       "https://example.com/b.jpg",
       "https://example.com/c.jpg",
     ]);
+    sqlite.exec(`
+      INSERT INTO pitches (id, venue_id, name, surface, players, base_price_pln, slot_minutes, active)
+      VALUES (2, 1, 'Boisko B', 'parkiet', 8, 120, 60, 1);
+      INSERT INTO pitch_opening_hours (pitch_id, weekday, opens_at, closes_at)
+      VALUES (2, 3, '09:00', '11:00');
+    `);
     const cards = await listVenueCards(db);
     expect(cards[0]?.photo_urls).toEqual([
       "https://example.com/a.jpg",
@@ -229,7 +276,27 @@ describe("booking availability", () => {
 
     const details = await getVenueWithPitches(db, "hala-testowa");
     expect(details?.venue.photo_urls).toHaveLength(3);
+    expect(details?.pitches).toHaveLength(2);
     expect(details?.pitches[0]?.opening_hours.some((h) => h.weekday === 1 && h.opens_at === "18:00")).toBe(true);
+    expect(details?.pitches.some((p) => p.opening_hours.some((h) => h.weekday === 3 && h.opens_at === "09:00"))).toBe(
+      true
+    );
+  });
+
+  it("limits catalog cards without scanning the full list in memory", async () => {
+    const { db, sqlite, dbPath } = createTestDb();
+    dbs.push({ sqlite, dbPath });
+    seedPitch(sqlite);
+    sqlite.exec(`
+      INSERT INTO venues (id, name, slug, city, address, published)
+      VALUES (2, 'Hala Druga', 'hala-druga', 'Kraków', 'Druga 2', 1);
+      INSERT INTO pitches (id, venue_id, name, surface, players, base_price_pln, slot_minutes, active)
+      VALUES (2, 2, 'Boisko B', 'parkiet', 10, 150, 60, 1);
+    `);
+    const limited = await listVenueCards(db, { limit: 1 });
+    expect(limited).toHaveLength(1);
+    const all = await listVenueCards(db);
+    expect(all.length).toBeGreaterThanOrEqual(2);
   });
 
   it("lets the player cancel pending holds and confirmed bookings until 24h before start", async () => {

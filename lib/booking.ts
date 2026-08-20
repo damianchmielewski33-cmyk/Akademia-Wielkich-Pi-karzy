@@ -1,311 +1,58 @@
 import { randomBytes } from "node:crypto";
 import type { AppDb } from "@/lib/db";
 import { ensureSettlementSchema, splitBookingAmount, clampVenueCommissionPct } from "@/lib/venue-settlements";
+import {
+  BOOKING_FREE_CANCEL_HOURS,
+  addMinutes,
+  bookingCancelDeadline,
+  normalizeTime,
+  type AdminPitchRow,
+  type AvailabilitySlot,
+  type BookingRow,
+  type PitchBlockPublic,
+  type PitchOpeningHour,
+  type PitchPriceRule,
+  type PitchPublic,
+  type PitchRow,
+  type VenueCard,
+  type VenueRow,
+} from "@/lib/booking-shared";
+import {
+  BOOKING_GUEST_COLUMN_ALTERS,
+  BOOKING_SCHEMA_SQL,
+  BOOKINGS_ACCESS_TOKEN_INDEX_SQL,
+  VENUES_OWNER_INDEX_SQL,
+} from "@/lib/booking-schema";
 
-export const BOOKING_STATUSES = ["pending", "confirmed", "cancelled", "expired"] as const;
-export type BookingStatus = (typeof BOOKING_STATUSES)[number];
-
-export const BOOKING_FREE_CANCEL_HOURS = 24;
-
-export type VenueRow = {
-  id: number;
-  name: string;
-  slug: string;
-  city: string;
-  address: string;
-  description: string | null;
-  phone: string | null;
-  email: string | null;
-  photo_url: string | null;
-  published: number;
-  owner_user_id?: number | null;
-  commission_pct?: number | null;
-  created_at: string;
-  updated_at: string;
-};
-
-export type PitchRow = {
-  id: number;
-  venue_id: number;
-  name: string;
-  surface: string;
-  players: number;
-  indoor: number;
-  lighting: number;
-  amenities: string | null;
-  base_price_pln: number;
-  slot_minutes: number;
-  active: number;
-  created_at: string;
-  updated_at: string;
-};
-
-export type BookingRow = {
-  id: number;
-  user_id: number;
-  pitch_id: number;
-  booking_date: string;
-  start_time: string;
-  end_time: string;
-  amount_pln: number;
-  platform_fee_pln?: number | null;
-  owner_payout_pln?: number | null;
-  payout_id?: number | null;
-  status: BookingStatus;
-  contact_name: string;
-  contact_phone: string;
-  contact_email?: string | null;
-  access_token?: string | null;
-  note: string | null;
-  hotpay_session_id: string | null;
-  expires_at: string | null;
-  created_at: string;
-  updated_at: string;
-  venue_name?: string;
-  venue_city?: string;
-  venue_address?: string;
-  pitch_name?: string;
-  user_name?: string;
-  can_cancel?: boolean;
-  cancel_until?: string | null;
-};
-
-export type VenueCard = VenueRow & {
-  pitch_count: number;
-  min_price_pln: number | null;
-  surfaces: string | null;
-  photo_urls?: string[];
-  has_indoor?: number;
-  has_outdoor?: number;
-  has_lighting?: number;
-};
-
-export type PitchOpeningHour = {
-  weekday: number;
-  opens_at: string;
-  closes_at: string;
-};
-
-export type PitchPriceRule = {
-  weekday: number | null;
-  start_time: string | null;
-  end_time: string | null;
-  price_pln: number;
-  label: string | null;
-};
-
-export type PitchPublic = PitchRow & {
-  opening_hours: PitchOpeningHour[];
-  price_rules: PitchPriceRule[];
-};
-
-export type PitchBlockPublic = {
-  pitch_id: number;
-  pitch_name: string;
-  block_date: string;
-  start_time: string;
-  end_time: string;
-  reason: string | null;
-};
-
-export const WEEKDAY_LABELS_PL = ["niedziela", "poniedziałek", "wtorek", "środa", "czwartek", "piątek", "sobota"] as const;
-
-export type AvailabilitySlot = {
-  date: string;
-  start_time: string;
-  end_time: string;
-  amount_pln: number;
-  available: boolean;
-};
-
-export const BOOKING_SCHEMA_SQL = `
-  CREATE TABLE IF NOT EXISTS venues (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    slug TEXT NOT NULL UNIQUE,
-    city TEXT NOT NULL,
-    address TEXT NOT NULL,
-    description TEXT,
-    phone TEXT,
-    email TEXT,
-    photo_url TEXT,
-    published INTEGER NOT NULL DEFAULT 1,
-    owner_user_id INTEGER,
-    commission_pct REAL NOT NULL DEFAULT 15,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-  );
-  CREATE INDEX IF NOT EXISTS idx_venues_city_published ON venues(city, published);
-
-  CREATE TABLE IF NOT EXISTS venue_partner_invites (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    token TEXT NOT NULL UNIQUE,
-    label TEXT,
-    created_by_admin_id INTEGER NOT NULL,
-    claimed_user_id INTEGER,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    expires_at TEXT,
-    revoked_at TEXT,
-    claimed_at TEXT,
-    FOREIGN KEY (created_by_admin_id) REFERENCES users(id),
-    FOREIGN KEY (claimed_user_id) REFERENCES users(id)
-  );
-  CREATE INDEX IF NOT EXISTS idx_venue_partner_invites_token ON venue_partner_invites(token);
-
-  CREATE TABLE IF NOT EXISTS venue_partners (
-    user_id INTEGER PRIMARY KEY,
-    invite_id INTEGER,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    revoked_at TEXT,
-    FOREIGN KEY (user_id) REFERENCES users(id),
-    FOREIGN KEY (invite_id) REFERENCES venue_partner_invites(id)
-  );
-
-  CREATE TABLE IF NOT EXISTS venue_photos (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    venue_id INTEGER NOT NULL,
-    url TEXT NOT NULL,
-    sort_order INTEGER NOT NULL DEFAULT 0,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    FOREIGN KEY (venue_id) REFERENCES venues(id) ON DELETE CASCADE
-  );
-  CREATE INDEX IF NOT EXISTS idx_venue_photos_venue ON venue_photos(venue_id, sort_order);
-
-  CREATE TABLE IF NOT EXISTS pitches (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    venue_id INTEGER NOT NULL,
-    name TEXT NOT NULL,
-    surface TEXT NOT NULL DEFAULT 'sztuczna trawa',
-    players INTEGER NOT NULL DEFAULT 10,
-    indoor INTEGER NOT NULL DEFAULT 0,
-    lighting INTEGER NOT NULL DEFAULT 1,
-    amenities TEXT,
-    base_price_pln REAL NOT NULL,
-    slot_minutes INTEGER NOT NULL DEFAULT 60,
-    active INTEGER NOT NULL DEFAULT 1,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-    FOREIGN KEY (venue_id) REFERENCES venues(id) ON DELETE CASCADE
-  );
-  CREATE INDEX IF NOT EXISTS idx_pitches_venue_active ON pitches(venue_id, active);
-
-  CREATE TABLE IF NOT EXISTS pitch_opening_hours (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    pitch_id INTEGER NOT NULL,
-    weekday INTEGER NOT NULL CHECK (weekday >= 0 AND weekday <= 6),
-    opens_at TEXT NOT NULL,
-    closes_at TEXT NOT NULL,
-    FOREIGN KEY (pitch_id) REFERENCES pitches(id) ON DELETE CASCADE
-  );
-  CREATE UNIQUE INDEX IF NOT EXISTS idx_pitch_opening_unique ON pitch_opening_hours(pitch_id, weekday);
-
-  CREATE TABLE IF NOT EXISTS pitch_price_rules (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    pitch_id INTEGER NOT NULL,
-    weekday INTEGER,
-    start_time TEXT,
-    end_time TEXT,
-    price_pln REAL NOT NULL,
-    label TEXT,
-    FOREIGN KEY (pitch_id) REFERENCES pitches(id) ON DELETE CASCADE
-  );
-  CREATE INDEX IF NOT EXISTS idx_pitch_price_rules_pitch ON pitch_price_rules(pitch_id, weekday, start_time);
-
-  CREATE TABLE IF NOT EXISTS pitch_blocks (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    pitch_id INTEGER NOT NULL,
-    block_date TEXT NOT NULL,
-    start_time TEXT NOT NULL,
-    end_time TEXT NOT NULL,
-    reason TEXT,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    FOREIGN KEY (pitch_id) REFERENCES pitches(id) ON DELETE CASCADE
-  );
-  CREATE INDEX IF NOT EXISTS idx_pitch_blocks_pitch_date ON pitch_blocks(pitch_id, block_date);
-
-  CREATE TABLE IF NOT EXISTS bookings (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL,
-    pitch_id INTEGER NOT NULL,
-    booking_date TEXT NOT NULL,
-    start_time TEXT NOT NULL,
-    end_time TEXT NOT NULL,
-    amount_pln REAL NOT NULL,
-    platform_fee_pln REAL,
-    owner_payout_pln REAL,
-    payout_id INTEGER,
-    status TEXT NOT NULL CHECK (status IN ('pending','confirmed','cancelled','expired')) DEFAULT 'pending',
-    contact_name TEXT NOT NULL,
-    contact_phone TEXT NOT NULL,
-    contact_email TEXT,
-    access_token TEXT,
-    note TEXT,
-    hotpay_session_id TEXT,
-    expires_at TEXT,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-    FOREIGN KEY (user_id) REFERENCES users(id),
-    FOREIGN KEY (pitch_id) REFERENCES pitches(id)
-  );
-  CREATE INDEX IF NOT EXISTS idx_bookings_pitch_date_time ON bookings(pitch_id, booking_date, start_time, end_time);
-  CREATE INDEX IF NOT EXISTS idx_bookings_user_created ON bookings(user_id, created_at);
-  CREATE INDEX IF NOT EXISTS idx_bookings_status_expires ON bookings(status, expires_at);
-  CREATE UNIQUE INDEX IF NOT EXISTS idx_bookings_access_token ON bookings(access_token);
-
-  CREATE TABLE IF NOT EXISTS booking_payments (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    booking_id INTEGER NOT NULL,
-    provider TEXT NOT NULL DEFAULT 'hotpay',
-    amount_pln REAL NOT NULL,
-    status TEXT NOT NULL CHECK (status IN ('pending','success','failure','cancelled')) DEFAULT 'pending',
-    hotpay_session_id TEXT,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    completed_at TEXT,
-    FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE CASCADE
-  );
-  CREATE INDEX IF NOT EXISTS idx_booking_payments_booking ON booking_payments(booking_id);
-  CREATE INDEX IF NOT EXISTS idx_booking_payments_session ON booking_payments(hotpay_session_id);
-
-  CREATE TABLE IF NOT EXISTS venue_payouts (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    venue_id INTEGER NOT NULL,
-    gross_pln REAL NOT NULL,
-    platform_fee_pln REAL NOT NULL,
-    owner_payout_pln REAL NOT NULL,
-    booking_count INTEGER NOT NULL,
-    status TEXT NOT NULL CHECK (status IN ('pending','paid')) DEFAULT 'pending',
-    note TEXT,
-    created_by_admin_id INTEGER NOT NULL,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    paid_at TEXT,
-    paid_by_admin_id INTEGER,
-    FOREIGN KEY (venue_id) REFERENCES venues(id),
-    FOREIGN KEY (created_by_admin_id) REFERENCES users(id),
-    FOREIGN KEY (paid_by_admin_id) REFERENCES users(id)
-  );
-  CREATE INDEX IF NOT EXISTS idx_venue_payouts_venue_created ON venue_payouts(venue_id, created_at);
-`;
-
-function two(n: number): string {
-  return String(n).padStart(2, "0");
-}
-
-export function normalizeTime(raw: string): string {
-  const trimmed = raw.trim();
-  const match = /^([0-2]?\d):([0-5]\d)$/.exec(trimmed);
-  if (!match) throw new Error("INVALID_TIME");
-  const h = Number(match[1]);
-  const m = Number(match[2]);
-  if (h > 23) throw new Error("INVALID_TIME");
-  return `${two(h)}:${two(m)}`;
-}
-
-export function addMinutes(time: string, minutes: number): string {
-  const [h, m] = normalizeTime(time).split(":").map(Number);
-  const total = h * 60 + m + minutes;
-  if (total < 0 || total > 24 * 60) throw new Error("TIME_OUT_OF_RANGE");
-  return `${two(Math.floor(total / 60))}:${two(total % 60)}`;
-}
+export {
+  BOOKING_FREE_CANCEL_HOURS,
+  BOOKING_STATUSES,
+  WEEKDAY_LABELS_PL,
+  addMinutes,
+  bookingCancelDeadline,
+  bookingStartDate,
+  formatPlDateTime,
+  normalizeTime,
+} from "@/lib/booking-shared";
+export type {
+  AdminPitchRow,
+  AvailabilitySlot,
+  BookingRow,
+  BookingStatus,
+  PitchBlockPublic,
+  PitchOpeningHour,
+  PitchPriceRule,
+  PitchPublic,
+  PitchRow,
+  VenueCard,
+  VenueRow,
+} from "@/lib/booking-shared";
+export {
+  BOOKING_GUEST_COLUMN_ALTERS,
+  BOOKING_SCHEMA_SQL,
+  BOOKINGS_ACCESS_TOKEN_INDEX_SQL,
+  VENUES_OWNER_INDEX_SQL,
+} from "@/lib/booking-schema";
 
 export function slugifyVenueName(name: string): string {
   return (
@@ -328,18 +75,6 @@ export function weekdayForDate(ymd: string): number {
 function overlaps(aStart: string, aEnd: string, bStart: string, bEnd: string): boolean {
   return aStart < bEnd && aEnd > bStart;
 }
-
-/** Indeks po ALTER — nie może być w CREATE TABLE IF NOT EXISTS, bo stara tabela `venues` nie ma jeszcze kolumny. */
-export const VENUES_OWNER_INDEX_SQL =
-  "CREATE INDEX IF NOT EXISTS idx_venues_owner ON venues(owner_user_id)";
-
-export const BOOKINGS_ACCESS_TOKEN_INDEX_SQL =
-  "CREATE UNIQUE INDEX IF NOT EXISTS idx_bookings_access_token ON bookings(access_token)";
-
-export const BOOKING_GUEST_COLUMN_ALTERS: Array<{ column: string; ddl: string }> = [
-  { column: "contact_email", ddl: "ALTER TABLE bookings ADD COLUMN contact_email TEXT" },
-  { column: "access_token", ddl: "ALTER TABLE bookings ADD COLUMN access_token TEXT" },
-];
 
 export async function ensureBookingSchema(db: AppDb): Promise<void> {
   await db.exec(BOOKING_SCHEMA_SQL);
@@ -380,6 +115,7 @@ export type VenueListFilters = {
   date?: string | null;
   time?: string | null;
   ownerUserId?: number | null;
+  limit?: number | null;
 };
 
 export async function listVenueCards(db: AppDb, filters?: VenueListFilters): Promise<VenueCard[]> {
@@ -394,6 +130,25 @@ export async function listVenueCards(db: AppDb, filters?: VenueListFilters): Pro
   const indoor = filters?.indoor;
   const maxPrice = filters?.maxPrice;
   const ownerUserId = filters?.ownerUserId;
+  const limit =
+    typeof filters?.limit === "number" && Number.isFinite(filters.limit) && filters.limit > 0
+      ? Math.min(Math.floor(filters.limit), 200)
+      : null;
+  const date = filters?.date?.trim();
+  const timeRaw = filters?.time?.trim();
+  let time: string | null = null;
+  if (timeRaw) {
+    try {
+      time = normalizeTime(timeRaw);
+    } catch {
+      time = null;
+    }
+  }
+  const dateForSlots = date && /^\d{4}-\d{2}-\d{2}$/.test(date)
+    ? date
+    : time
+      ? `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}-${String(new Date().getDate()).padStart(2, "0")}`
+      : null;
   const where = [includeUnpublished ? "1 = 1" : "v.published = 1"];
   const whereParams: unknown[] = [];
   const joinParams: unknown[] = [];
@@ -424,9 +179,7 @@ export async function listVenueCards(db: AppDb, filters?: VenueListFilters): Pro
     joinParams.push(maxPrice);
   }
   const requireMatchingPitch = Boolean(surface || indoor != null || maxPrice != null);
-  const venues = await db
-    .prepare(
-      `SELECT v.*,
+  const sql = `SELECT v.*,
               COUNT(p.id) AS pitch_count,
               MIN(CASE WHEN p.active = 1 THEN p.base_price_pln END) AS min_price_pln,
               GROUP_CONCAT(DISTINCT p.surface) AS surfaces,
@@ -438,35 +191,35 @@ export async function listVenueCards(db: AppDb, filters?: VenueListFilters): Pro
        WHERE ${where.join(" AND ")}
        GROUP BY v.id
        HAVING COUNT(p.id) > 0 OR ? = 1
-       ORDER BY v.published DESC, v.city, v.name`
-    )
-    .all<VenueCard>(...joinParams, ...whereParams, requireMatchingPitch ? 0 : 1);
+       ORDER BY v.published DESC, v.city, v.name${limit != null && !dateForSlots ? " LIMIT ?" : ""}`;
+  const queryParams: unknown[] = [...joinParams, ...whereParams, requireMatchingPitch ? 0 : 1];
+  if (limit != null && !dateForSlots) queryParams.push(limit);
+  const venues = await db.prepare(sql).all<VenueCard>(...queryParams);
 
-  const date = filters?.date?.trim();
-  const timeRaw = filters?.time?.trim();
-  let time: string | null = null;
-  if (timeRaw) {
-    try {
-      time = normalizeTime(timeRaw);
-    } catch {
-      time = null;
-    }
-  }
-  const dateForSlots = date && /^\d{4}-\d{2}-\d{2}$/.test(date)
-    ? date
-    : time
-      ? `${new Date().getFullYear()}-${two(new Date().getMonth() + 1)}-${two(new Date().getDate())}`
-      : null;
   if (!dateForSlots) return attachVenuePhotos(db, venues);
 
+  await expireStaleBookings(db);
   const withSlots: VenueCard[] = [];
+  if (venues.length === 0) return attachVenuePhotos(db, withSlots);
+
+  const pitchRows = await db
+    .prepare(
+      `SELECT id, venue_id FROM pitches
+       WHERE venue_id IN (${venues.map(() => "?").join(",")}) AND active = 1`
+    )
+    .all<{ id: number; venue_id: number }>(...venues.map((v) => v.id));
+  const pitchesByVenue = new Map<number, number[]>();
+  for (const row of pitchRows) {
+    const list = pitchesByVenue.get(row.venue_id) ?? [];
+    list.push(row.id);
+    pitchesByVenue.set(row.venue_id, list);
+  }
+
   for (const venue of venues) {
-    const pitches = await db
-      .prepare(`SELECT id FROM pitches WHERE venue_id = ? AND active = 1`)
-      .all<{ id: number }>(venue.id);
+    const pitchIds = pitchesByVenue.get(venue.id) ?? [];
     let any = false;
-    for (const pitch of pitches) {
-      const availability = await getAvailabilitySlots(db, pitch.id, dateForSlots);
+    for (const pitchId of pitchIds) {
+      const availability = await getAvailabilitySlots(db, pitchId, dateForSlots, { skipExpire: true });
       if (
         availability?.slots.some((s) => {
           if (!s.available) return false;
@@ -478,7 +231,10 @@ export async function listVenueCards(db: AppDb, filters?: VenueListFilters): Pro
         break;
       }
     }
-    if (any) withSlots.push(venue);
+    if (any) {
+      withSlots.push(venue);
+      if (limit != null && withSlots.length >= limit) break;
+    }
   }
   return attachVenuePhotos(db, withSlots);
 }
@@ -513,27 +269,6 @@ export async function replaceVenuePhotos(db: AppDb, venueId: number, urls: strin
   await db
     .prepare("UPDATE venues SET photo_url = ?, updated_at = datetime('now') WHERE id = ?")
     .run(clean[0] ?? null, venueId);
-}
-
-export function bookingStartDate(date: string, startTime: string): Date {
-  return new Date(`${date}T${normalizeTime(startTime)}:00`);
-}
-
-export function bookingCancelDeadline(date: string, startTime: string): Date {
-  return new Date(bookingStartDate(date, startTime).getTime() - BOOKING_FREE_CANCEL_HOURS * 60 * 60 * 1000);
-}
-
-export function formatPlDateTime(value: Date | string): string {
-  const d = typeof value === "string" ? new Date(value) : value;
-  if (Number.isNaN(d.getTime())) return "";
-  return d.toLocaleString("pl-PL", {
-    weekday: "short",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
 }
 
 export function describeUserCancel(booking: Pick<BookingRow, "status" | "booking_date" | "start_time">, now = new Date()) {
@@ -577,13 +312,6 @@ export async function cancelUserBooking(
     .run(args.bookingId, args.userId);
   return { ok: true };
 }
-
-export type AdminPitchRow = PitchRow & {
-  venue_name: string;
-  venue_city: string;
-  opens_at: string | null;
-  closes_at: string | null;
-};
 
 export async function listAdminPitches(
   db: AppDb,
@@ -863,25 +591,48 @@ export async function getVenueWithPitches(
   ]);
   const photo_urls = photoRows.map((p) => p.url);
   if (photo_urls.length === 0 && venue.photo_url) photo_urls.push(venue.photo_url);
-  const pitches: PitchPublic[] = [];
-  for (const pitch of pitchRows) {
-    const [opening_hours, price_rules] = await Promise.all([
+  const pitchIds = pitchRows.map((p) => p.id);
+  const hoursByPitch = new Map<number, PitchOpeningHour[]>();
+  const rulesByPitch = new Map<number, PitchPriceRule[]>();
+  if (pitchIds.length > 0) {
+    const placeholders = pitchIds.map(() => "?").join(",");
+    const [hourRows, ruleRows] = await Promise.all([
       db
         .prepare(
-          `SELECT weekday, opens_at, closes_at FROM pitch_opening_hours
-           WHERE pitch_id = ? ORDER BY weekday`
+          `SELECT pitch_id, weekday, opens_at, closes_at FROM pitch_opening_hours
+           WHERE pitch_id IN (${placeholders}) ORDER BY weekday`
         )
-        .all<PitchOpeningHour>(pitch.id),
+        .all<PitchOpeningHour & { pitch_id: number }>(...pitchIds),
       db
         .prepare(
-          `SELECT weekday, start_time, end_time, price_pln, label FROM pitch_price_rules
-           WHERE pitch_id = ?
+          `SELECT pitch_id, weekday, start_time, end_time, price_pln, label FROM pitch_price_rules
+           WHERE pitch_id IN (${placeholders})
            ORDER BY CASE WHEN weekday IS NULL THEN 1 ELSE 0 END, weekday, start_time`
         )
-        .all<PitchPriceRule>(pitch.id),
+        .all<PitchPriceRule & { pitch_id: number }>(...pitchIds),
     ]);
-    pitches.push({ ...pitch, opening_hours, price_rules });
+    for (const row of hourRows) {
+      const list = hoursByPitch.get(row.pitch_id) ?? [];
+      list.push({ weekday: row.weekday, opens_at: row.opens_at, closes_at: row.closes_at });
+      hoursByPitch.set(row.pitch_id, list);
+    }
+    for (const row of ruleRows) {
+      const list = rulesByPitch.get(row.pitch_id) ?? [];
+      list.push({
+        weekday: row.weekday,
+        start_time: row.start_time,
+        end_time: row.end_time,
+        price_pln: row.price_pln,
+        label: row.label,
+      });
+      rulesByPitch.set(row.pitch_id, list);
+    }
   }
+  const pitches: PitchPublic[] = pitchRows.map((pitch) => ({
+    ...pitch,
+    opening_hours: hoursByPitch.get(pitch.id) ?? [],
+    price_rules: rulesByPitch.get(pitch.id) ?? [],
+  }));
   return {
     venue: { ...venue, photo_urls, photo_url: venue.photo_url || photo_urls[0] || null },
     pitches,
@@ -905,9 +656,11 @@ export async function getAvailabilitySlots(
   db: AppDb,
   pitchId: number,
   date: string,
-  options?: { allowUnpublished?: boolean }
+  options?: { allowUnpublished?: boolean; skipExpire?: boolean }
 ): Promise<{ pitch: PitchRow; slots: AvailabilitySlot[] } | null> {
-  await expireStaleBookings(db);
+  if (!options?.skipExpire) {
+    await expireStaleBookings(db);
+  }
   const pitch = await getPitchWithVenue(db, pitchId);
   if (!pitch || pitch.active !== 1) return null;
   if (!options?.allowUnpublished && pitch.venue_published !== 1) return null;
@@ -992,7 +745,7 @@ export async function createBookingHold(
   const executor = db.transaction ? db.transaction.bind(db) : async <T>(fn: (tx: AppDb) => Promise<T>) => fn(db);
   return executor(async (tx) => {
     await expireStaleBookings(tx);
-    const availability = await getAvailabilitySlots(tx, args.pitchId, args.date);
+    const availability = await getAvailabilitySlots(tx, args.pitchId, args.date, { skipExpire: true });
     if (!availability) return { ok: false as const, error: "Boisko jest niedostępne." };
     const slot = availability.slots.find((s) => s.start_time === start);
     if (!slot || !slot.available) return { ok: false as const, error: "Ten termin jest już zajęty." };
@@ -1032,6 +785,12 @@ export async function createBookingHold(
   });
 }
 
+export function publicBookingView<T extends { access_token?: string | null }>(booking: T): Omit<T, "access_token"> {
+  const rest = { ...booking };
+  delete rest.access_token;
+  return rest;
+}
+
 export async function getBookingByAccessToken(db: AppDb, token: string): Promise<BookingRow | null> {
   const trimmed = token.trim();
   if (!trimmed) return null;
@@ -1053,12 +812,22 @@ export async function getBookingByAccessToken(db: AppDb, token: string): Promise
 export async function listBookingsForAccessToken(db: AppDb, token: string): Promise<BookingRow[]> {
   const booking = await getBookingByAccessToken(db, token);
   if (!booking) return [];
-  return listBookingsForUser(db, booking.user_id);
+  return [publicBookingView({ ...booking, ...describeUserCancel(booking) }) as BookingRow];
 }
 
-export async function userIdForBookingAccess(db: AppDb, token: string): Promise<number | null> {
+export async function authorizeBookingAccess(
+  db: AppDb,
+  args: { bookingId: number; sessionUserId?: number | null; token?: string | null }
+): Promise<{ userId: number } | null> {
+  if (args.sessionUserId) {
+    const owned = await getBookingById(db, args.bookingId, args.sessionUserId);
+    return owned ? { userId: args.sessionUserId } : null;
+  }
+  const token = args.token?.trim();
+  if (!token) return null;
   const booking = await getBookingByAccessToken(db, token);
-  return booking?.user_id ?? null;
+  if (!booking || booking.id !== args.bookingId) return null;
+  return { userId: booking.user_id };
 }
 
 export async function getBookingById(db: AppDb, bookingId: number, userId?: number): Promise<BookingRow | null> {
@@ -1092,7 +861,7 @@ export async function listBookingsForUser(db: AppDb, userId: number): Promise<Bo
        ORDER BY b.booking_date DESC, b.start_time DESC`
     )
     .all<BookingRow>(userId);
-  return rows.map((booking) => ({ ...booking, ...describeUserCancel(booking) }));
+  return rows.map((booking) => publicBookingView({ ...booking, ...describeUserCancel(booking) }) as BookingRow);
 }
 
 export async function listAdminBookings(db: AppDb): Promise<BookingRow[]> {

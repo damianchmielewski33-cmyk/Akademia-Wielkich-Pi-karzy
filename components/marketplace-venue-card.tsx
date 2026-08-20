@@ -1,6 +1,9 @@
 import Link from "next/link";
+import Image from "next/image";
 import { MapPin } from "lucide-react";
-import type { VenueCard } from "@/lib/booking";
+import type { VenueCard } from "@/lib/booking-shared";
+import { canOptimizeMarketplacePhoto } from "@/lib/marketplace-photos";
+import { siteAssetNeedsUnoptimized } from "@/lib/site-assets";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -20,12 +23,22 @@ function surfaceLabel(surfaces: string | null) {
 
 export function MarketplaceVenueCard({ venue, href, className }: Props) {
   const to = href ?? `/obiekty/${venue.slug}`;
+  const photo = venue.photo_url;
   return (
     <Link href={to} className={cn("mp-venue-card group block min-w-[16.5rem] text-left", className)}>
       <div className="relative h-48 overflow-hidden bg-zinc-200">
-        {venue.photo_url ? (
+        {photo && canOptimizeMarketplacePhoto(photo) ? (
+          <Image
+            src={photo}
+            alt=""
+            fill
+            sizes="(max-width: 640px) 85vw, (max-width: 1024px) 45vw, 280px"
+            className="object-cover transition duration-300 group-hover:scale-[1.03]"
+            unoptimized={siteAssetNeedsUnoptimized(photo)}
+          />
+        ) : photo ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={venue.photo_url} alt="" className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]" />
+          <img src={photo} alt="" className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]" />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-zinc-800 via-zinc-700 to-[var(--mp-teal-dark)] text-white">
             <MapPin className="h-10 w-10 opacity-80" aria-hidden />

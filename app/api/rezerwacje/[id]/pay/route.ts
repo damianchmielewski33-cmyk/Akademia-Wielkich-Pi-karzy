@@ -3,7 +3,7 @@ import { getServerSession } from "@/lib/auth";
 import { getAppSettings } from "@/lib/app-settings";
 import { requireBookingMarketplace } from "@/lib/booking-marketplace";
 import { getDb, logActivity } from "@/lib/db";
-import { getBookingById, userIdForBookingAccess } from "@/lib/booking";
+import { authorizeBookingAccess, getBookingById } from "@/lib/booking";
 import { readBookingAccessToken } from "@/lib/booking-access";
 import {
   buildHotpayReturnUrl,
@@ -15,10 +15,14 @@ import {
 
 export const runtime = "nodejs";
 
-async function actorUserId(req: Request): Promise<{ userId: number; token: string | null } | null> {
+async function actorForBooking(
+  req: Request,
+  bookingId: number
+): Promise<{ userId: number } | null> {
   const session = await getServerSession();
   if (session && !session.needsPinSetup && !session.pinChangePending) {
-    return { userId: session.userId, token: null };
+    const db = await getDb();
+    return authorizeBookingAccess(db, { bookingId, sessionUserId: session.userId });
   }
   let bodyToken: string | null = null;
   try {
@@ -30,24 +34,22 @@ async function actorUserId(req: Request): Promise<{ userId: number; token: strin
   const token = readBookingAccessToken(req, bodyToken);
   if (!token) return null;
   const db = await getDb();
-  const userId = await userIdForBookingAccess(db, token);
-  return userId ? { userId, token } : null;
+  return authorizeBookingAccess(db, { bookingId, token });
 }
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const marketplace = await requireBookingMarketplace();
   if (!marketplace.ok) return marketplace.response;
-  const actor = await actorUserId(req);
+  const bookingId = Number((await params).id);
+  if (!Number.isInteger(bookingId) || bookingId <= 0) {
+    return NextResponse.json({ error: "Nieprawidłowa rezerwacja" }, { status: 400 });
+  }
+  const actor = await actorForBooking(req, bookingId);
   if (!actor) {
     return NextResponse.json(
       { error: "Nie znaleziono rezerwacji. Użyj linku z maila albo zarezerwuj ponownie — bez PIN-u akademii." },
       { status: 401 }
     );
-  }
-
-  const bookingId = Number((await params).id);
-  if (!Number.isInteger(bookingId) || bookingId <= 0) {
-    return NextResponse.json({ error: "Nieprawidłowa rezerwacja" }, { status: 400 });
   }
 
   const config = getHotpayConfig();
@@ -79,8 +81,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   );
   const hasCommission = grossAmountPln > amountPln;
   const sessionId = createHotpaySessionId(actor.userId);
-  const tokenQs = actor.token ? `&token=${encodeURIComponent(actor.token)}` : "";
-  const returnPath = `/rezerwacje?booking=${booking.id}${tokenQs}`;
+  const returnPath = `/rezerwacje?booking=${booking.id}`;
   const returnUrl = buildHotpayReturnUrl(sessionId, "pending", returnPath);
   const playerLabel = booking.contact_name.trim() || "Rezerwacja boiska";
 

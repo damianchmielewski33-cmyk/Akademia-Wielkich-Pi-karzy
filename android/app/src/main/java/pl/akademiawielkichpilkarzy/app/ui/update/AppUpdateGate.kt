@@ -37,6 +37,34 @@ fun AppUpdateGate(checkOnStart: Boolean = true) {
     var dismissed by remember { mutableStateOf(false) }
     var infoMessage by remember { mutableStateOf<String?>(null) }
 
+    fun startInstall(info: AppUpdateInfo) {
+        val act = activity ?: return
+        if (busy) return
+        scope.launch {
+            busy = true
+            error = null
+            dismissed = false
+            try {
+                if (!AppUpdater.canRequestPackageInstalls(act)) {
+                    status = "Włącz instalację z tej aplikacji w ustawieniach…"
+                    AppUpdater.openUnknownSourcesSettings(act)
+                    error = "Włącz zezwolenie i kliknij Aktualizuj ponownie."
+                    return@launch
+                }
+                status = "Pobieranie…"
+                val file = AppUpdater.downloadApk(act, info)
+                status = "Uruchamianie instalatora…"
+                AppUpdater.installApk(act, file)
+                dismissed = true
+            } catch (e: Exception) {
+                error = e.message ?: "Aktualizacja nieudana"
+            } finally {
+                busy = false
+                status = null
+            }
+        }
+    }
+
     LaunchedEffect(checkOnStart) {
         if (!checkOnStart) return@LaunchedEffect
         try {
@@ -66,47 +94,46 @@ fun AppUpdateGate(checkOnStart: Boolean = true) {
         }
     }
 
+    LaunchedEffect(Unit) {
+        AppUpdateRequests.install.collect {
+            try {
+                val info = AppUpdater.checkForUpdate() ?: update
+                if (info == null) {
+                    infoMessage = "Masz najnowszą wersję (${BuildConfig.VERSION_NAME})."
+                    return@collect
+                }
+                infoMessage = null
+                update = info
+                startInstall(info)
+            } catch (e: Exception) {
+                infoMessage = e.message ?: "Nie udało się sprawdzić aktualizacji"
+            }
+        }
+    }
+
     val info = update
     if (info != null && !dismissed && activity != null) {
         AwpModal(
-            title = "Dostępna aktualizacja",
+            title = "Wymagana aktualizacja",
             subtitle = "Nowa wersja ${info.versionName}",
             onDismiss = { if (!busy) dismissed = true },
             confirmText = if (busy) "Proszę czekać…" else "Aktualizuj",
             dismissText = "Później",
+            dismissOnBackPress = false,
+            dismissOnClickOutside = false,
             onConfirm = {
-                if (!busy) {
-                    scope.launch {
-                        busy = true
-                        error = null
-                        try {
-                            if (!AppUpdater.canRequestPackageInstalls(activity)) {
-                                status = "Włącz instalację z tej aplikacji w ustawieniach…"
-                                AppUpdater.openUnknownSourcesSettings(activity)
-                                error = "Włącz zezwolenie i kliknij Aktualizuj ponownie."
-                                return@launch
-                            }
-                            status = "Pobieranie…"
-                            val file = AppUpdater.downloadApk(activity, info)
-                            status = "Uruchamianie instalatora…"
-                            AppUpdater.installApk(activity, file)
-                            dismissed = true
-                        } catch (e: Exception) {
-                            error = e.message ?: "Aktualizacja nieudana"
-                        } finally {
-                            busy = false
-                            status = null
-                        }
-                    }
-                }
+                startInstall(info)
             }
         ) {
             PitchPanel {
                 Column {
                     Text(
-                        "Nowa wersja ${info.versionName} (masz ${BuildConfig.VERSION_NAME}). " +
-                            "Aplikacja pobierze APK i poprosi o instalację — bez GitHuba."
+                        "Masz wersję ${BuildConfig.VERSION_NAME}. Żeby korzystać z rezerwacji, terminarza i portfela bez błędów, zainstaluj aktualizację ${info.versionName}."
                     )
+                    info.notes?.trim()?.takeIf { it.isNotEmpty() }?.let { notes ->
+                        Spacer(Modifier.height(8.dp))
+                        Text(notes)
+                    }
                     if (busy) {
                         Spacer(Modifier.height(12.dp))
                         CircularProgressIndicator()

@@ -6,6 +6,9 @@ import { getAppBaseUrl } from "@/lib/app-url";
 import { isMailConfigured, sendMail } from "@/lib/mail";
 import { notifyAdminsByEmail } from "@/lib/admin-notify";
 import { getAppSettings } from "@/lib/app-settings";
+import { VENUE_APPLICATIONS_SCHEMA_SQL } from "@/lib/venue-applications-schema";
+
+export { VENUE_APPLICATIONS_SCHEMA_SQL } from "@/lib/venue-applications-schema";
 
 export type VenueApplicationStatus = "pending" | "approved" | "rejected";
 
@@ -28,32 +31,6 @@ export type VenueApplication = {
   created_at: string;
   reviewed_at: string | null;
 };
-
-export const VENUE_APPLICATIONS_SCHEMA_SQL = `
-  CREATE TABLE IF NOT EXISTS venue_applications (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    contact_name TEXT NOT NULL,
-    contact_email TEXT NOT NULL,
-    contact_phone TEXT NOT NULL,
-    venue_name TEXT NOT NULL,
-    city TEXT NOT NULL,
-    address TEXT NOT NULL,
-    description TEXT,
-    website TEXT,
-    note TEXT,
-    status TEXT NOT NULL CHECK (status IN ('pending','approved','rejected')) DEFAULT 'pending',
-    admin_note TEXT,
-    venue_id INTEGER,
-    partner_user_id INTEGER,
-    reviewed_by_admin_id INTEGER,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    reviewed_at TEXT,
-    FOREIGN KEY (venue_id) REFERENCES venues(id),
-    FOREIGN KEY (partner_user_id) REFERENCES users(id),
-    FOREIGN KEY (reviewed_by_admin_id) REFERENCES users(id)
-  );
-  CREATE INDEX IF NOT EXISTS idx_venue_applications_status ON venue_applications(status, created_at);
-`;
 
 export async function ensureVenueApplicationsSchema(db: AppDb): Promise<void> {
   await db.exec(VENUE_APPLICATIONS_SCHEMA_SQL);
@@ -184,7 +161,7 @@ export async function approveVenueApplication(
   db: AppDb,
   args: { applicationId: number; adminUserId: number; publish?: boolean; adminNote?: string | null }
 ): Promise<
-  | { ok: true; venueId: number; partnerUserId: number; pin: string | null }
+  | { ok: true; venueId: number; partnerUserId: number; needsPinSetup: boolean; alias: string }
   | { ok: false; error: string }
 > {
   const application = await getVenueApplication(db, args.applicationId);
@@ -237,8 +214,12 @@ export async function approveVenueApplication(
           "",
           `Panel: ${base}/partner`,
           `Logowanie: ${base}/login?next=/partner`,
-          partner.pin
-            ? `PIN do panelu (imię i nazwisko z zgłoszenia): ${partner.pin}`
+          partner.needsPinSetup
+            ? [
+                "PIN ustawisz sam przy pierwszym wejściu (nie wysyłamy go mailem):",
+                `${base}/ustaw-pin?next=/partner`,
+                `Imię i nazwisko z zgłoszenia. Pseudonim konta: ${partner.alias}`,
+              ].join("\n")
             : "Wejdź istniejącym PIN-em przypisanym do tego adresu e-mail.",
           "",
           "W panelu widać obrót, prowizję 15% i termin przelewu.",
@@ -251,5 +232,5 @@ export async function approveVenueApplication(
     }
   }
 
-  return { ok: true, venueId: venue.id, partnerUserId: partner.userId, pin: partner.pin };
+  return { ok: true, venueId: venue.id, partnerUserId: partner.userId, needsPinSetup: partner.needsPinSetup, alias: partner.alias };
 }

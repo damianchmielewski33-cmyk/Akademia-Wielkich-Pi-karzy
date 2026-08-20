@@ -303,10 +303,8 @@ const DEMO_VENUES: DemoVenue[] = [
 ];
 
 export async function seedBookingCatalogIfEmpty(db: AppDb): Promise<void> {
-  if (process.env.VITEST) {
-    const existing = await db.prepare("SELECT COUNT(*) AS n FROM venues").get<{ n: number }>();
-    if ((existing?.n ?? 0) > 0) return;
-  }
+  const existing = await db.prepare("SELECT COUNT(*) AS n FROM venues").get<{ n: number }>();
+  if ((existing?.n ?? 0) > 0) return;
   for (const venue of DEMO_VENUES) {
     const slug = slugifyVenueName(venue.name);
     const exists = await db.prepare("SELECT id FROM venues WHERE slug = ?").get<{ id: number }>(slug);

@@ -1,16 +1,14 @@
 import type { Metadata } from "next";
 import { getAccountNavFields } from "@/lib/account-server";
 import { getServerSession } from "@/lib/auth";
-import { getDb } from "@/lib/db";
-import { getAppSettings } from "@/lib/app-settings";
+import { getRequestAppSettings } from "@/lib/request-app-settings";
 import { REALMS } from "@/lib/realm";
 import { PzuCupFetchProvider } from "@/components/pzu-cup-fetch-provider";
 import { PzuCupShell } from "@/components/pzu-cup-shell";
 import { SiteAssetsProvider } from "@/components/site-assets-provider";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const db = await getDb();
-  const settings = await getAppSettings(db, REALMS.PZU_CUP);
+  const settings = await getRequestAppSettings(REALMS.PZU_CUP);
   return {
     title: {
       default: settings.site_name,
@@ -26,8 +24,7 @@ export default async function PzuCupLayout({ children }: { children: React.React
   const loggedInFull = Boolean(session && !session.needsPinSetup && !session.pinChangePending);
   const accountRow = session ? await getAccountNavFields(session.userId) : null;
 
-  const db = await getDb();
-  const appSettings = await getAppSettings(db, REALMS.PZU_CUP);
+  const appSettings = await getRequestAppSettings(REALMS.PZU_CUP);
 
   let accountNav: {
     firstName: string;

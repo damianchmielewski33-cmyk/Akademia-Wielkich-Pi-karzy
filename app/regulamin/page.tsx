@@ -1,13 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PitchCard, PitchPageHero, pitchLabelClass } from "@/components/ui/pitch-card";
-import { getAppSettings } from "@/lib/app-settings";
-import { getDb } from "@/lib/db";
+import { getRequestAppSettings } from "@/lib/request-app-settings";
 import { getSiteUrl, SELLER_FULL_ADDRESS, SELLER_LEGAL_NAME } from "@/lib/site";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const db = await getDb();
-  const settings = await getAppSettings(db);
+  const settings = await getRequestAppSettings();
   return {
     title: "Regulamin",
     description: `Regulamin serwisu i płatności ${settings.site_name}.`,
@@ -15,8 +13,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function RegulaminPage() {
-  const db = await getDb();
-  const settings = await getAppSettings(db);
+  const settings = await getRequestAppSettings();
   const email = settings.contact_email?.trim() || settings.organizer_damian_email?.trim() || "";
   const sellerName = settings.organizer_damian_name?.trim() || SELLER_LEGAL_NAME;
   const siteName = settings.site_name;

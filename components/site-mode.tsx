@@ -4,6 +4,8 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { CalendarDays, MapPin } from "lucide-react";
 import { AppModal } from "@/components/ui/app-modal";
+import { MarketplacePitchPhoto } from "@/components/marketplace-pitch-photo";
+import { MARKETPLACE_PITCH_PHOTOS } from "@/lib/marketplace-photos";
 import { parseSiteMode, persistSiteMode, shouldAskSiteMode, SITE_MODE_STORAGE_KEY, siteModeFromPathname, type SiteMode } from "@/lib/site-mode";
 
 type Ctx = {
@@ -128,24 +130,34 @@ function SiteModeGate({
           <button
             type="button"
             onClick={() => onChoose("booking", { navigateHome: true })}
-            className="rounded-3xl border border-zinc-200 bg-white p-6 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-[var(--mp-teal)] hover:shadow-md dark:border-zinc-700 dark:bg-zinc-900"
+            className="overflow-hidden rounded-3xl border border-zinc-200 bg-white text-left shadow-sm transition hover:-translate-y-0.5 hover:border-[var(--mp-teal)] hover:shadow-md dark:border-zinc-700 dark:bg-zinc-900"
           >
-            <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--mp-teal)] text-white">
-              <MapPin className="h-6 w-6" aria-hidden />
+            <span className="relative block h-36 w-full bg-zinc-200">
+              <MarketplacePitchPhoto src={MARKETPLACE_PITCH_PHOTOS[0]} sizes="(max-width: 640px) 100vw, 280px" />
             </span>
-            <p className="mt-4 text-xl font-black text-zinc-950 dark:text-white">Szukam boiska</p>
-            <p className="mt-2 text-sm text-zinc-500">Rezerwacja hali albo orlika — wolne godziny i płatność online.</p>
+            <span className="block p-6">
+              <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--mp-teal)] text-white">
+                <MapPin className="h-6 w-6" aria-hidden />
+              </span>
+              <p className="mt-4 text-xl font-black text-zinc-950 dark:text-white">Szukam boiska</p>
+              <p className="mt-2 text-sm text-zinc-500">Rezerwacja hali albo orlika — wolne godziny i płatność online.</p>
+            </span>
           </button>
           <button
             type="button"
             onClick={() => onChoose("academy", { navigateHome: true })}
-            className="rounded-3xl border border-zinc-200 bg-white p-6 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-[var(--mp-teal)] hover:shadow-md dark:border-zinc-700 dark:bg-zinc-900"
+            className="overflow-hidden rounded-3xl border border-zinc-200 bg-white text-left shadow-sm transition hover:-translate-y-0.5 hover:border-[var(--mp-teal)] hover:shadow-md dark:border-zinc-700 dark:bg-zinc-900"
           >
-            <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-zinc-900 text-white dark:bg-white dark:text-zinc-950">
-              <CalendarDays className="h-6 w-6" aria-hidden />
+            <span className="relative block h-36 w-full bg-zinc-200">
+              <MarketplacePitchPhoto src={MARKETPLACE_PITCH_PHOTOS[3]} sizes="(max-width: 640px) 100vw, 280px" />
             </span>
-            <p className="mt-4 text-xl font-black text-zinc-950 dark:text-white">Gram z wami</p>
-            <p className="mt-2 text-sm text-zinc-500">Akademia — terminarze meczów, składy, portfel i statystyki.</p>
+            <span className="block p-6">
+              <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-zinc-900 text-white dark:bg-white dark:text-zinc-950">
+                <CalendarDays className="h-6 w-6" aria-hidden />
+              </span>
+              <p className="mt-4 text-xl font-black text-zinc-950 dark:text-white">Gram z wami</p>
+              <p className="mt-2 text-sm text-zinc-500">Akademia — terminarze meczów, składy, portfel i statystyki.</p>
+            </span>
           </button>
         </div>
       </div>

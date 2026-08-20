@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { toast } from "@/lib/app-toast";
-import type { AdminPitchRow, BookingRow, VenueCard } from "@/lib/booking";
+import type { AdminPitchRow, BookingRow, VenueCard } from "@/lib/booking-shared";
 import { Button } from "@/components/ui/button";
 import { FormInput, FormTextarea } from "@/components/ui/form-field";
 import { Badge } from "@/components/ui/badge";

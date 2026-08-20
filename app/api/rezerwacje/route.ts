@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getServerSession } from "@/lib/auth";
 import { getDb, logActivity } from "@/lib/db";
-import { createBookingHold, listBookingsForAccessToken, listBookingsForUser } from "@/lib/booking";
+import { createBookingHold, listBookingsForAccessToken, listBookingsForUser, publicBookingView } from "@/lib/booking";
 import { requireBookingMarketplace } from "@/lib/booking-marketplace";
 import { ensureMarketplaceCustomer } from "@/lib/booking-accounts";
 import { BOOKING_ACCESS_COOKIE, bookingAccessCookieOptions, readBookingAccessToken } from "@/lib/booking-access";
@@ -42,7 +42,9 @@ export async function GET(req: Request) {
     return NextResponse.json({ bookings: [], guest: true });
   }
   const bookings = await listBookingsForAccessToken(db, token);
-  return NextResponse.json({ bookings, guest: true });
+  const res = NextResponse.json({ bookings, guest: true });
+  res.cookies.set(BOOKING_ACCESS_COOKIE, token, bookingAccessCookieOptions());
+  return res;
 }
 
 export async function POST(req: Request) {
@@ -106,7 +108,10 @@ export async function POST(req: Request) {
     `Utworzył rezerwację boiska #${result.booking.id}: ${result.booking.booking_date} ${result.booking.start_time}`
   );
 
-  const res = NextResponse.json({ booking: result.booking, guest: !loggedIn });
+  const res = NextResponse.json({
+    booking: publicBookingView(result.booking),
+    guest: !loggedIn,
+  });
   if (result.booking.access_token) {
     res.cookies.set(BOOKING_ACCESS_COOKIE, result.booking.access_token, bookingAccessCookieOptions());
   }

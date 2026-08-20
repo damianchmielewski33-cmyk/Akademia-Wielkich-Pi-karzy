@@ -162,7 +162,7 @@ fun ProfileScreen(
 
                 if (updateInfo != null) {
                     AwpGoldButton("Zainstaluj aktualizację ${updateInfo!!.versionName}") {
-                        AppUpdateRequests.requestManualCheck()
+                        AppUpdateRequests.requestInstall()
                     }
                 }
 

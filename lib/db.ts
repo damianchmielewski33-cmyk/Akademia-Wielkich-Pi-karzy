@@ -9,13 +9,13 @@ import { migrateRealmSchemaSqlite } from "@/lib/realm-migration";
 import { CAPTAIN_LOTTERY_CREATE_SQL, migrateCaptainLotterySchemaSqlite } from "@/lib/captain-lottery-schema";
 import { migrateAdImpressionsSchemaSqlite } from "@/lib/ad-impressions-schema";
 import { withTransientNetworkRetries } from "@/lib/transient-network-retry";
-import { BOOKING_SCHEMA_SQL, VENUES_OWNER_INDEX_SQL, BOOKING_GUEST_COLUMN_ALTERS, BOOKINGS_ACCESS_TOKEN_INDEX_SQL } from "@/lib/booking";
+import { BOOKING_SCHEMA_SQL, VENUES_OWNER_INDEX_SQL, BOOKING_GUEST_COLUMN_ALTERS, BOOKINGS_ACCESS_TOKEN_INDEX_SQL } from "@/lib/booking-schema";
 import {
   BOOKINGS_PAYOUT_INDEX_SQL,
   SETTLEMENT_COLUMN_ALTERS,
   VENUE_PAYOUTS_SCHEMA_SQL,
 } from "@/lib/venue-settlements";
-import { VENUE_APPLICATIONS_SCHEMA_SQL } from "@/lib/venue-applications";
+import { VENUE_APPLICATIONS_SCHEMA_SQL } from "@/lib/venue-applications-schema";
 
 /** Lokalny plik SQLite (dev) lub Turso (gdy TURSO_DATABASE_URL). */
 export type AppDb = {

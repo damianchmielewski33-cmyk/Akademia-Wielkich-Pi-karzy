@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { HomeNextMatchCard } from "@/components/home-next-match-card";
 import { HomeTopRankings } from "@/components/home-top-rankings";
+import { MarketplacePitchPhoto } from "@/components/marketplace-pitch-photo";
 import { MarketplaceSearchForm } from "@/components/marketplace-search-form";
 import { MarketplaceVenueCard } from "@/components/marketplace-venue-card";
 import { PlayerAvatar } from "@/components/player-avatar";
@@ -27,7 +28,8 @@ import { AppModal } from "@/components/ui/app-modal";
 import { FormInput } from "@/components/ui/form-field";
 import { ModalMatchSummary, modalPanelClass } from "@/components/ui/modal-shared";
 import type { MatchRow } from "@/lib/db";
-import type { VenueCard } from "@/lib/booking";
+import type { VenueCard } from "@/lib/booking-shared";
+import { MARKETPLACE_PITCH_PHOTOS, pitchPhotosFromVenues } from "@/lib/marketplace-photos";
 import type { HomeTopPlayer } from "@/lib/rankings-data";
 import { cn } from "@/lib/utils";
 import { useScreenBlocks } from "@/components/screen-blocks-provider";
@@ -80,9 +82,12 @@ export function HomeClient(props: Props) {
 }
 
 function BookingHomeView({ featuredVenues }: { featuredVenues: VenueCard[] }) {
+  const heroPhoto = pitchPhotosFromVenues(featuredVenues)[0] ?? MARKETPLACE_PITCH_PHOTOS[0];
   return (
     <div className="relative flex flex-1 flex-col text-zinc-900 dark:text-zinc-50">
-      <section className="mp-hero relative flex flex-col justify-end overflow-hidden pb-16 pt-16 sm:pb-20 sm:pt-24">
+      <section className="mp-hero mp-hero--photo relative flex flex-col justify-end overflow-hidden pb-16 pt-16 sm:pb-20 sm:pt-24">
+        <MarketplacePitchPhoto src={heroPhoto} priority className="z-0" />
+        <div className="absolute inset-0 z-[1] bg-gradient-to-t from-black/75 via-black/40 to-black/20" />
         <div className="relative z-10 mx-auto w-full max-w-6xl px-4">
           <p className="text-xs font-black uppercase tracking-[0.22em] text-white/80">Rezerwacja boisk</p>
           <h1 className="mt-3 max-w-3xl text-4xl font-black tracking-tight text-white sm:text-6xl">
@@ -203,10 +208,14 @@ function AcademyHomeView({
   showPzuCupTile = false,
   pageVariant = "home",
   topRankedPlayers = [],
+  featuredVenues = [],
 }: Props) {
   const router = useRouter();
   const { isHiddenHref } = useScreenBlocks();
+  const { marketplaceEnabled } = useSiteMode();
   const isAcademyHome = pageVariant === "home";
+  const pitchPhotos = pitchPhotosFromVenues(featuredVenues);
+  const heroPhoto = pitchPhotos[0] ?? MARKETPLACE_PITCH_PHOTOS[0];
   const [transportSignupOpen, setTransportSignupOpen] = useState(false);
   const [transportIntent, setTransportIntent] = useState<"signup" | "confirm">("signup");
   const [tentativeBusy, setTentativeBusy] = useState(false);
@@ -400,7 +409,9 @@ function AcademyHomeView({
   return (
     <div className="relative flex flex-1 flex-col text-zinc-900 dark:text-zinc-50">
       {pageVariant === "pzu-cup" ? (
-        <section className="mp-hero relative flex flex-col justify-end overflow-hidden pb-16 pt-16 sm:pb-20 sm:pt-24">
+        <section className="mp-hero mp-hero--photo relative flex flex-col justify-end overflow-hidden pb-16 pt-16 sm:pb-20 sm:pt-24">
+          <MarketplacePitchPhoto src={heroPhoto} priority className="z-0" />
+          <div className="absolute inset-0 z-[1] bg-gradient-to-t from-black/75 via-black/40 to-black/20" />
           <div className="relative z-10 mx-auto w-full max-w-6xl px-4">
             <p className="text-xs font-black uppercase tracking-[0.22em] text-white/80">PZU Cup 2026</p>
             <h1 className="mt-3 max-w-3xl text-4xl font-black tracking-tight text-white sm:text-6xl">
@@ -409,7 +420,9 @@ function AcademyHomeView({
           </div>
         </section>
       ) : (
-        <section className="mp-hero relative flex flex-col justify-end overflow-hidden pb-16 pt-16 sm:pb-20 sm:pt-24">
+        <section className="mp-hero mp-hero--photo relative flex flex-col justify-end overflow-hidden pb-16 pt-16 sm:pb-20 sm:pt-24">
+          <MarketplacePitchPhoto src={heroPhoto} priority className="z-0" />
+          <div className="absolute inset-0 z-[1] bg-gradient-to-t from-black/75 via-black/40 to-black/20" />
           <div className="relative z-10 mx-auto w-full max-w-6xl px-4">
             <p className="text-xs font-black uppercase tracking-[0.22em] text-white/80">Akademia</p>
             <h1 className="mt-3 max-w-3xl text-4xl font-black tracking-tight text-white sm:text-6xl">
@@ -471,6 +484,22 @@ function AcademyHomeView({
           </div>
         </section>
       )}
+
+      {isAcademyHome && marketplaceEnabled && featuredVenues.length > 0 ? (
+        <div className="-mx-4 mt-0 flex gap-4 overflow-x-auto bg-zinc-100 px-4 py-4 [scrollbar-width:thin] dark:bg-zinc-900">
+          {featuredVenues.map((venue) => (
+            <MarketplaceVenueCard key={venue.id} venue={venue} className="w-72 shrink-0" />
+          ))}
+        </div>
+      ) : isAcademyHome ? (
+        <div className="-mx-4 mt-0 flex gap-4 overflow-x-auto bg-zinc-100 px-4 py-4 [scrollbar-width:thin] dark:bg-zinc-900">
+          {pitchPhotos.slice(0, 8).map((src) => (
+            <div key={src} className="relative h-48 w-72 shrink-0 overflow-hidden rounded-3xl bg-zinc-200">
+              <MarketplacePitchPhoto src={src} sizes="288px" />
+            </div>
+          ))}
+        </div>
+      ) : null}
 
       <div className="relative z-10 mx-auto w-full min-w-0 max-w-6xl px-4 py-10 sm:py-12">
         <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

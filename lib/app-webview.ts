@@ -8,6 +8,18 @@ const APP_WEBVIEW_UA_MARKER = "AWPAndroidApp";
 const APP_WEBVIEW_VERSION_RE = /AWPAndroidApp\/([^\s]+)/;
 const APP_WEBVIEW_CODE_RE = /AWPAndroidCode\/(\d+)/;
 
+export const ANDROID_UPDATE_LATER_STORAGE_PREFIX = "awp-android-update-later:";
+
+declare global {
+  interface Window {
+    AwpAndroid?: {
+      getVersionName: () => string;
+      getVersionCode: () => number;
+      checkUpdate: () => void;
+    };
+  }
+}
+
 export function isAppWebViewUserAgent(ua: string | null | undefined): boolean {
   if (!ua) return false;
   return ua.includes(APP_WEBVIEW_UA_MARKER);
@@ -19,10 +31,42 @@ export function isRunningInAppWebView(): boolean {
   return isAppWebViewUserAgent(navigator.userAgent);
 }
 
+/** Zainstalowany APK: most JS albo User-Agent WebView. Zwykła przeglądarka / PWA — nie. */
+export function isInstalledAndroidAppClient(): boolean {
+  if (typeof window === "undefined") return false;
+  if (window.AwpAndroid) return true;
+  return isRunningInAppWebView();
+}
+
 export type AndroidAppIdentity = {
   versionName: string;
   versionCode: number | null;
 };
+
+export type AndroidLatestVersion = {
+  versionName: string;
+  versionCode: number;
+};
+
+export function readInstalledAndroidAppIdentity(): AndroidAppIdentity | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const bridge = window.AwpAndroid;
+    if (bridge) {
+      const versionName = String(bridge.getVersionName?.() ?? "").trim();
+      const versionCode = Number(bridge.getVersionCode?.());
+      if (versionName) {
+        return {
+          versionName,
+          versionCode: Number.isFinite(versionCode) ? versionCode : null,
+        };
+      }
+    }
+  } catch {
+    /* most niedostępny */
+  }
+  return parseAndroidAppIdentity(typeof navigator === "undefined" ? "" : navigator.userAgent);
+}
 
 export function parseAndroidAppIdentity(ua: string | null | undefined): AndroidAppIdentity | null {
   if (!isAppWebViewUserAgent(ua)) return null;
@@ -39,7 +83,7 @@ export function parseAndroidAppIdentity(ua: string | null | undefined): AndroidA
 /** Dodatnie, gdy `latest` jest nowsza od `current`. */
 export function compareAndroidAppVersion(
   current: AndroidAppIdentity,
-  latest: { versionName: string; versionCode: number }
+  latest: AndroidLatestVersion
 ): number {
   if (current.versionCode != null && Number.isFinite(current.versionCode)) {
     return latest.versionCode - current.versionCode;
@@ -57,4 +101,21 @@ export function compareVersionName(a: string, b: string): number {
     if (da !== db) return da - db;
   }
   return 0;
+}
+
+export function androidUpdateLaterStorageKey(versionCode: number): string {
+  return `${ANDROID_UPDATE_LATER_STORAGE_PREFIX}${versionCode}`;
+}
+
+/** Popup tylko w zainstalowanym APK, gdy serwer ma nowszą kompilację. */
+export function shouldShowAndroidUpdatePrompt(args: {
+  inInstalledApp: boolean;
+  current: AndroidAppIdentity | null;
+  latest: AndroidLatestVersion | null;
+  postponedVersionCode?: number | null;
+}): boolean {
+  if (!args.inInstalledApp || !args.current || !args.latest) return false;
+  if (compareAndroidAppVersion(args.current, args.latest) <= 0) return false;
+  if (args.postponedVersionCode === args.latest.versionCode) return false;
+  return true;
 }

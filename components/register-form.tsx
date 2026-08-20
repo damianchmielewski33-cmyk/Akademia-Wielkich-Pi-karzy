@@ -15,6 +15,7 @@ import { YesNoSwitch } from "@/components/ui/yes-no-switch";
 import { PlayerAliasPicker } from "@/components/player-alias-picker";
 import { formSchemas, useValidatedForm } from "@/lib/form-validation";
 import { notifyPostLoginPromptsUpdated } from "@/lib/post-login-prompts";
+import { sanitizeAppBridgeNext } from "@/lib/app-bridge";
 
 const registerSchema = z
   .object({
@@ -37,7 +38,7 @@ export function RegisterForm({
   realm?: "academy" | "pzu_cup";
 }) {
   const router = useRouter();
-  const next = nextPath && nextPath.startsWith("/") ? nextPath : undefined;
+  const next = sanitizeAppBridgeNext(nextPath) ?? undefined;
   const [autoLogin, setAutoLogin] = useState(true);
   const [loading, setLoading] = useState(false);
   const [showGoalPreloader, setShowGoalPreloader] = useState(false);

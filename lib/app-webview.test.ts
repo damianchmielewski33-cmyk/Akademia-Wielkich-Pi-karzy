@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  androidUpdateLaterStorageKey,
   compareAndroidAppVersion,
   compareVersionName,
   isAppWebViewUserAgent,
   parseAndroidAppIdentity,
+  shouldShowAndroidUpdatePrompt,
 } from "@/lib/app-webview";
 
 describe("app-webview", () => {
@@ -39,5 +41,32 @@ describe("app-webview", () => {
         { versionName: "1.10.3", versionCode: 26 }
       )
     ).toBe(0);
+  });
+
+  it("pokazuje popup tylko w zainstalowanej aplikacji, gdy jest nowsza wersja", () => {
+    const current = { versionName: "1.10.3", versionCode: 26 };
+    const latest = { versionName: "1.11.0", versionCode: 27 };
+    expect(
+      shouldShowAndroidUpdatePrompt({ inInstalledApp: true, current, latest })
+    ).toBe(true);
+    expect(
+      shouldShowAndroidUpdatePrompt({ inInstalledApp: false, current, latest })
+    ).toBe(false);
+    expect(
+      shouldShowAndroidUpdatePrompt({
+        inInstalledApp: true,
+        current,
+        latest: { versionName: "1.10.3", versionCode: 26 },
+      })
+    ).toBe(false);
+    expect(
+      shouldShowAndroidUpdatePrompt({
+        inInstalledApp: true,
+        current,
+        latest,
+        postponedVersionCode: 27,
+      })
+    ).toBe(false);
+    expect(androidUpdateLaterStorageKey(27)).toBe("awp-android-update-later:27");
   });
 });

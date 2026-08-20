@@ -5,8 +5,8 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { toast } from "@/lib/app-toast";
 import { useHotpayPaymentReturn } from "@/hooks/use-hotpay-payment-return";
-import type { BookingRow } from "@/lib/booking";
-import { BOOKING_FREE_CANCEL_HOURS, formatPlDateTime } from "@/lib/booking";
+import type { BookingRow } from "@/lib/booking-shared";
+import { BOOKING_FREE_CANCEL_HOURS, formatPlDateTime } from "@/lib/booking-shared";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
@@ -35,7 +35,14 @@ export function MyBookingsClient() {
       .finally(() => setLoading(false));
   }
 
-  useEffect(load, [token]);
+  useEffect(() => {
+    load();
+    if (!token) return;
+    const next = new URL(window.location.href);
+    next.searchParams.delete("token");
+    window.history.replaceState({}, "", `${next.pathname}${next.search}${next.hash}`);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- token z maila ma wejść tylko raz
+  }, [token]);
 
   useHotpayPaymentReturn({
     enabled: true,

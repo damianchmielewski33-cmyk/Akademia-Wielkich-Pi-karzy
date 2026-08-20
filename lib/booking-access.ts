@@ -1,5 +1,11 @@
 import { BOOKING_ACCESS_COOKIE, BOOKING_ACCESS_MAX_AGE_SEC } from "@/lib/constants";
 
+const ACCESS_TOKEN_RE = /^[a-f0-9]{32,64}$/i;
+
+export function isBookingAccessToken(value: string | null | undefined): value is string {
+  return Boolean(value && ACCESS_TOKEN_RE.test(value.trim()));
+}
+
 export function bookingAccessCookieOptions() {
   return {
     httpOnly: true,
@@ -10,12 +16,17 @@ export function bookingAccessCookieOptions() {
   };
 }
 
+function normalizeToken(raw: string | null | undefined): string | null {
+  const trimmed = raw?.trim() ?? "";
+  return isBookingAccessToken(trimmed) ? trimmed : null;
+}
+
 export function readBookingAccessToken(req: Request, extra?: string | null): string | null {
-  const fromExtra = extra?.trim();
+  const fromExtra = normalizeToken(extra);
   if (fromExtra) return fromExtra;
   try {
     const url = new URL(req.url);
-    const fromQuery = url.searchParams.get("token")?.trim();
+    const fromQuery = normalizeToken(url.searchParams.get("token"));
     if (fromQuery) return fromQuery;
   } catch {
     /* ignore */
@@ -23,7 +34,7 @@ export function readBookingAccessToken(req: Request, extra?: string | null): str
   const cookie = req.headers.get("cookie") ?? "";
   const match = cookie.match(new RegExp(`(?:^|;\\s*)${BOOKING_ACCESS_COOKIE}=([^;]+)`));
   const fromCookie = match?.[1] ? decodeURIComponent(match[1]).trim() : "";
-  return fromCookie || null;
+  return normalizeToken(fromCookie);
 }
 
 export { BOOKING_ACCESS_COOKIE };

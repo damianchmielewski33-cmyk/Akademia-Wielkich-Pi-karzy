@@ -37,6 +37,7 @@ const forgotSchema = z
   });
 
 import { REALMS, type Realm } from "@/lib/realm";
+import { sanitizeAppBridgeNext } from "@/lib/app-bridge";
 
 export function LoginForm({
   nextPath,
@@ -50,7 +51,7 @@ export function LoginForm({
   realm?: Realm;
 }) {
   const router = useRouter();
-  const next = nextPath || "/";
+  const next = sanitizeAppBridgeNext(nextPath) ?? "/";
   const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showGoalPreloader, setShowGoalPreloader] = useState(false);

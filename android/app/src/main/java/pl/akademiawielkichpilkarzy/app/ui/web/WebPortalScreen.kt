@@ -70,7 +70,7 @@ private class AwpAndroidJsBridge {
 
     @JavascriptInterface
     fun checkUpdate() {
-        AppUpdateRequests.requestManualCheck()
+        AppUpdateRequests.requestInstall()
     }
 }
 

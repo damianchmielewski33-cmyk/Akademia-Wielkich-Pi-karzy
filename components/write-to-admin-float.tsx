@@ -1,9 +1,9 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { usePathname } from "next/navigation";
-import { ArrowLeft, Loader2, MessageCircle, Plus, Send } from "lucide-react";
+import { ArrowLeft, Loader2, MessageCircle, Plus, Send, X } from "lucide-react";
 import { toast } from "@/lib/app-toast";
 import {
   ChatAttachmentControls,
@@ -16,7 +16,6 @@ import {
   insertEmojiAtCursor,
 } from "@/components/chat-composer-extras";
 import { ChatPeerPicker, type ChatPeer } from "@/components/chat-peer-picker";
-import { AppModal } from "@/components/ui/app-modal";
 import { FormInput } from "@/components/ui/form-field";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -52,7 +51,7 @@ const GUEST_NAME_STORAGE_KEY = "awp-contact-admin-guest-name";
 type Props = {
   defaults?: { senderName: string } | null;
   recipients: ContactAdminRecipientOption[];
-  /** Ukryj pływający przycisk (admin — ikona tylko na pasku górnym). */
+  /** Ukryj pĹ‚ywajÄ…cy przycisk (admin â€” ikona tylko na pasku gĂłrnym). */
   hideFloat?: boolean;
 };
 
@@ -115,6 +114,15 @@ export function WriteToAdminFloat({ defaults, recipients, hideFloat = false }: P
   }, [open]);
 
   useEffect(() => {
+    if (!open) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape" && !sending) setOpen(false);
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, sending]);
+
+  useEffect(() => {
     if (recipients.length > 0 && !recipients.some((r) => r.key === recipientKey)) {
       setRecipientKey(recipients[0].key);
     }
@@ -167,7 +175,7 @@ export function WriteToAdminFloat({ defaults, recipients, hideFloat = false }: P
         };
         if (!res.ok) {
           if (!opts?.quiet && (opts?.markRead || openRef.current)) {
-            toast.error(typeof data.error === "string" ? data.error : "Nie udało się wczytać rozmowy.");
+            toast.error(typeof data.error === "string" ? data.error : "Nie udaĹ‚o siÄ™ wczytaÄ‡ rozmowy.");
           }
           if (opts?.quiet) {
             setNameConfirmed(false);
@@ -208,7 +216,7 @@ export function WriteToAdminFloat({ defaults, recipients, hideFloat = false }: P
       error?: string;
     };
     if (!res.ok) {
-      toast.error(typeof data.error === "string" ? data.error : "Nie udało się wczytać rozmów.");
+      toast.error(typeof data.error === "string" ? data.error : "Nie udaĹ‚o siÄ™ wczytaÄ‡ rozmĂłw.");
       return;
     }
     setThreads(data.threads ?? []);
@@ -233,7 +241,7 @@ export function WriteToAdminFloat({ defaults, recipients, hideFloat = false }: P
         };
         if (!res.ok) {
           if (!opts?.quiet) {
-            toast.error(typeof data.error === "string" ? data.error : "Nie udało się otworzyć rozmowy.");
+            toast.error(typeof data.error === "string" ? data.error : "Nie udaĹ‚o siÄ™ otworzyÄ‡ rozmowy.");
           }
           return;
         }
@@ -298,7 +306,7 @@ export function WriteToAdminFloat({ defaults, recipients, hideFloat = false }: P
     e.preventDefault();
     const name = senderName.trim();
     if (name.length < 2) {
-      toast.error("Podaj imię i nazwisko z listy Piłkarze albo ze strony Kontakt.");
+      toast.error("Podaj imiÄ™ i nazwisko z listy PiĹ‚karze albo ze strony Kontakt.");
       return;
     }
     const ok = await loadGuestThread({ name, markRead: true });
@@ -309,7 +317,7 @@ export function WriteToAdminFloat({ defaults, recipients, hideFloat = false }: P
     e.preventDefault();
     const text = body.trim();
     if (!text && !attachmentUrl) {
-      toast.error("Napisz wiadomość lub dołącz grafikę.");
+      toast.error("Napisz wiadomoĹ›Ä‡ lub doĹ‚Ä…cz grafikÄ™.");
       return;
     }
 
@@ -317,7 +325,7 @@ export function WriteToAdminFloat({ defaults, recipients, hideFloat = false }: P
     try {
       if (isLoggedIn) {
         if (!selectedKey && threadKind !== "dm") {
-          // organizator bez wybranego wątku — użyj domyślnego user:me po stronie API
+          // organizator bez wybranego wÄ…tku â€” uĹĽyj domyĹ›lnego user:me po stronie API
         }
         const res = await fetch("/api/chat/messages", {
           method: "POST",
@@ -335,7 +343,7 @@ export function WriteToAdminFloat({ defaults, recipients, hideFloat = false }: P
           message?: ChatMessage;
         };
         if (!res.ok) {
-          toast.error(typeof data.error === "string" ? data.error : "Nie udało się wysłać wiadomości.");
+          toast.error(typeof data.error === "string" ? data.error : "Nie udaĹ‚o siÄ™ wysĹ‚aÄ‡ wiadomoĹ›ci.");
           return;
         }
         setBody("");
@@ -352,11 +360,11 @@ export function WriteToAdminFloat({ defaults, recipients, hideFloat = false }: P
 
       const name = senderName.trim();
       if (!nameConfirmed || name.length < 2) {
-        toast.error("Najpierw potwierdź imię i nazwisko z listy Piłkarze.");
+        toast.error("Najpierw potwierdĹş imiÄ™ i nazwisko z listy PiĹ‚karze.");
         return;
       }
       if (!recipients.some((r) => r.key === recipientKey)) {
-        toast.error("Wybierz odbiorcę wiadomości.");
+        toast.error("Wybierz odbiorcÄ™ wiadomoĹ›ci.");
         return;
       }
       const res = await fetch("/api/contact-admin", {
@@ -371,14 +379,14 @@ export function WriteToAdminFloat({ defaults, recipients, hideFloat = false }: P
       });
       const data = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) {
-        toast.error(typeof data.error === "string" ? data.error : "Nie udało się wysłać wiadomości.");
+        toast.error(typeof data.error === "string" ? data.error : "Nie udaĹ‚o siÄ™ wysĹ‚aÄ‡ wiadomoĹ›ci.");
         return;
       }
       setBody("");
       clearAttachment();
       await loadGuestThread({ markRead: true });
     } catch {
-      toast.error("Nie udało się wysłać wiadomości.");
+      toast.error("Nie udaĹ‚o siÄ™ wysĹ‚aÄ‡ wiadomoĹ›ci.");
     } finally {
       setSending(false);
     }
@@ -392,7 +400,7 @@ export function WriteToAdminFloat({ defaults, recipients, hideFloat = false }: P
     setMessages([]);
     setBody("");
     clearAttachment();
-    // Wyślemy z peer_user_id przy pierwszym submit — ustawiamy tymczasowy marker
+    // WyĹ›lemy z peer_user_id przy pierwszym submit â€” ustawiamy tymczasowy marker
     setSelectedKey(`pending-dm:${peer.id}`);
   }
 
@@ -400,7 +408,7 @@ export function WriteToAdminFloat({ defaults, recipients, hideFloat = false }: P
     e.preventDefault();
     const text = body.trim();
     if (!text && !attachmentUrl) {
-      toast.error("Napisz wiadomość lub dołącz grafikę.");
+      toast.error("Napisz wiadomoĹ›Ä‡ lub doĹ‚Ä…cz grafikÄ™.");
       return;
     }
     setSending(true);
@@ -424,7 +432,7 @@ export function WriteToAdminFloat({ defaults, recipients, hideFloat = false }: P
         conversation_key?: string;
       };
       if (!res.ok) {
-        toast.error(typeof data.error === "string" ? data.error : "Nie udało się wysłać wiadomości.");
+        toast.error(typeof data.error === "string" ? data.error : "Nie udaĹ‚o siÄ™ wysĹ‚aÄ‡ wiadomoĹ›ci.");
         return;
       }
       setBody("");
@@ -434,7 +442,7 @@ export function WriteToAdminFloat({ defaults, recipients, hideFloat = false }: P
       }
       await loadPlayerThreads();
     } catch {
-      toast.error("Nie udało się wysłać wiadomości.");
+      toast.error("Nie udaĹ‚o siÄ™ wysĹ‚aÄ‡ wiadomoĹ›ci.");
     } finally {
       setSending(false);
     }
@@ -442,13 +450,13 @@ export function WriteToAdminFloat({ defaults, recipients, hideFloat = false }: P
 
   async function deleteChatMessage(id: number) {
     if (!isLoggedIn) return;
-    if (!window.confirm("Usunąć tę wiadomość?")) return;
+    if (!window.confirm("UsunÄ…Ä‡ tÄ™ wiadomoĹ›Ä‡?")) return;
     setDeletingId(id);
     try {
       const res = await fetch(`/api/chat/messages/${id}`, { method: "DELETE" });
       const data = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) {
-        toast.error(typeof data.error === "string" ? data.error : "Nie udało się usunąć wiadomości.");
+        toast.error(typeof data.error === "string" ? data.error : "Nie udaĹ‚o siÄ™ usunÄ…Ä‡ wiadomoĹ›ci.");
         return;
       }
       setMessages((prev) => prev.filter((m) => m.id !== id));
@@ -469,469 +477,419 @@ export function WriteToAdminFloat({ defaults, recipients, hideFloat = false }: P
       : isLoggedIn && view === "new"
         ? "Nowa rozmowa"
         : isLoggedIn
-          ? "Wiadomości"
+          ? "WiadomoĹ›ci"
           : "Czat z organizatorem";
+  const modalSubtitle =
+    isLoggedIn && view === "list"
+      ? "Organizator albo inny gracz"
+      : isLoggedIn && view === "new"
+        ? "Wybierz zawodnika z listy"
+        : isLoggedIn && threadKind === "dm"
+          ? "Prywatna rozmowa"
+          : "OdpowiedĹş zwykle w ciÄ…gu dnia";
+  const showBack = isLoggedIn && (view === "chat" || view === "new");
+  const headerBtn =
+    "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white/95 transition hover:bg-white/15 disabled:opacity-50";
 
-  const floatButton = (
+  function goToThreadList() {
+    setView("list");
+    setSelectedKey(null);
+    setMessages([]);
+  }
+
+  const sendButton = (
+    <Button
+      type="submit"
+      size="icon"
+      variant="default"
+      className="h-10 w-10 shrink-0 rounded-full bg-[var(--mp-teal)] text-white hover:bg-[var(--mp-teal-dark)]"
+      disabled={sending || uploadingAttachment || !canSend}
+      aria-label="WyĹ›lij"
+    >
+      {sending ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Send className="h-4 w-4" aria-hidden />}
+    </Button>
+  );
+
+  const widget = (
     <>
+      {open ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={modalTitle}
+          className="mp-chat-widget bottom-[max(4.75rem,calc(env(safe-area-inset-bottom)+4.5rem))] left-3 sm:bottom-[5.75rem] sm:left-5"
+        >
+          <header className="mp-chat-widget__header">
+            {showBack ? (
+              <button type="button" className={headerBtn} aria-label="WrĂłÄ‡ do listy" onClick={goToThreadList}>
+                <ArrowLeft className="h-4 w-4" aria-hidden />
+              </button>
+            ) : (
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/20">
+                <MessageCircle className="h-4 w-4" aria-hidden />
+              </span>
+            )}
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-bold leading-tight tracking-tight">{modalTitle}</p>
+              <p className="truncate text-[11px] text-white/80">{modalSubtitle}</p>
+            </div>
+            <button
+              type="button"
+              className={headerBtn}
+              aria-label="Zamknij czat"
+              disabled={sending}
+              onClick={() => setOpen(false)}
+            >
+              <X className="h-4 w-4" aria-hidden />
+            </button>
+          </header>
+
+          <div className="flex min-h-0 flex-1 flex-col bg-[#f4f5f7] dark:bg-zinc-950">
+            {isLoggedIn && view === "list" ? (
+              <>
+                <div className="min-h-0 flex-1 overflow-y-auto p-3">
+                  {threads.length === 0 ? (
+                    <p className="py-10 text-center text-sm text-zinc-500">Ĺadowanie rozmĂłwâ€¦</p>
+                  ) : (
+                    <ul className="space-y-2">
+                      {threads.map((t) => (
+                        <li key={t.conversation_key}>
+                          <button
+                            type="button"
+                            onClick={() => void openPlayerThread(t.conversation_key)}
+                            className="flex w-full items-start gap-3 rounded-2xl border border-zinc-200 bg-white px-3 py-3 text-left shadow-sm transition hover:border-[var(--mp-teal)] dark:border-zinc-700 dark:bg-zinc-900"
+                          >
+                            <span
+                              className={cn(
+                                "mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full",
+                                t.unread_count > 0 ? "bg-red-500" : "bg-zinc-300 dark:bg-zinc-600"
+                              )}
+                              aria-hidden
+                            />
+                            <span className="min-w-0 flex-1">
+                              <span className="flex items-baseline justify-between gap-2">
+                                <span className="truncate font-semibold text-zinc-950 dark:text-white">{t.title}</span>
+                                {t.last_at_display ? (
+                                  <time className="shrink-0 text-[10px] text-zinc-400">{t.last_at_display}</time>
+                                ) : null}
+                              </span>
+                              <span className="mt-0.5 block text-xs text-zinc-500">
+                                {t.kind === "dm" ? "Gracz" : "Organizator"}
+                                {t.subtitle ? ` Â· ${t.subtitle}` : ""}
+                              </span>
+                              {t.preview ? (
+                                <span className="mt-1 line-clamp-2 text-sm text-zinc-600 dark:text-zinc-300">
+                                  {t.preview}
+                                </span>
+                              ) : (
+                                <span className="mt-1 text-sm text-zinc-400">Brak wiadomoĹ›ci â€” napisz pierwszÄ…</span>
+                              )}
+                            </span>
+                            {t.unread_count > 0 ? (
+                              <Badge className="bg-red-500 text-white hover:bg-red-500">
+                                {t.unread_count > 99 ? "99+" : t.unread_count}
+                              </Badge>
+                            ) : null}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+                <div className="border-t border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900">
+                  <Button type="button" className="w-full rounded-full" onClick={() => setView("new")}>
+                    <Plus className="mr-2 h-4 w-4" aria-hidden />
+                    Napisz do gracza
+                  </Button>
+                </div>
+              </>
+            ) : null}
+
+            {isLoggedIn && view === "new" ? (
+              <div className="min-h-0 flex-1 overflow-y-auto p-3">
+                <ChatPeerPicker tone="light" onSelect={(peer) => startDmWithPeer(peer)} />
+              </div>
+            ) : null}
+
+            {isLoggedIn && view === "chat" ? (
+              <>
+                <div className="min-h-0 flex-1 overflow-y-auto px-3 pt-3">
+                  {threadKind === "organizer" ? (
+                    <div className="mb-3 grid gap-1.5">
+                      <Label htmlFor="player-chat-recipient" className="text-zinc-700 dark:text-zinc-200">
+                        Do kogo piszesz? <span className="text-red-500">*</span>
+                      </Label>
+                      <select
+                        id="player-chat-recipient"
+                        className={cn(nativeSelectClasses, "w-full bg-white")}
+                        value={recipientKey}
+                        disabled={sending}
+                        required
+                        onChange={(e) => setRecipientKey(e.target.value as ContactAdminRecipientKey)}
+                      >
+                        {recipients.map((r) => (
+                          <option key={r.key} value={r.key}>
+                            {r.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  ) : null}
+                  <ChatTranscript
+                    tone="light"
+                    className="min-h-[12rem] border-0 bg-transparent"
+                    empty={
+                      loadingThread && messages.length === 0 ? (
+                        <Loader2 className="h-5 w-5 animate-spin text-[var(--mp-teal)]" aria-hidden />
+                      ) : messages.length === 0 ? (
+                        <p className="text-center text-sm text-zinc-500">Napisz pierwszÄ… wiadomoĹ›Ä‡.</p>
+                      ) : undefined
+                    }
+                  >
+                    {messages.length > 0
+                      ? (() => {
+                          const clustered = messages.map((m) => ({
+                            mine: m.mine,
+                            senderKey: m.mine ? "me" : m.sender_name,
+                          }));
+                          return messages.map((m, i) => (
+                            <ChatBubble
+                              key={m.id}
+                              body={m.body}
+                              attachmentUrl={m.attachment_url}
+                              senderLabel={m.mine ? null : m.sender_name}
+                              timeLabel={m.created_at_display}
+                              mine={m.mine}
+                              tone="light"
+                              cluster={chatClusterForIndex(clustered, i)}
+                              onDelete={() => void deleteChatMessage(m.id)}
+                              deleting={deletingId === m.id}
+                            />
+                          ));
+                        })()
+                      : null}
+                    <div ref={bottomRef} />
+                  </ChatTranscript>
+                </div>
+                <form
+                  id="player-chat-form"
+                  className="border-t border-zinc-200 bg-white p-2 dark:border-zinc-800 dark:bg-zinc-900"
+                  onSubmit={(e) => void handleLoggedInSubmit(e)}
+                >
+                  <ChatComposerShell tone="light">
+                    <ChatEmojiPicker
+                      tone="light"
+                      disabled={sending}
+                      onPick={(emoji) => {
+                        setBody((prev) => insertEmojiAtCursor(prev, emoji, textareaRef.current));
+                      }}
+                    />
+                    <ChatAttachmentControls
+                      tone="light"
+                      disabled={sending}
+                      attachmentUrl={attachmentUrl}
+                      previewUrl={attachmentPreview}
+                      onUploadingChange={setUploadingAttachment}
+                      onUploaded={(url, preview) => {
+                        if (attachmentPreview?.startsWith("blob:")) URL.revokeObjectURL(attachmentPreview);
+                        setAttachmentUrl(url);
+                        setAttachmentPreview(preview);
+                      }}
+                      onClear={clearAttachment}
+                    />
+                    <ChatComposerField
+                      id="player-chat-body"
+                      tone="light"
+                      value={body}
+                      onChange={setBody}
+                      placeholder="Napisz wiadomoĹ›Ä‡â€¦"
+                      disabled={sending}
+                      rows={1}
+                      fieldRef={textareaRef}
+                    />
+                    {sendButton}
+                  </ChatComposerShell>
+                </form>
+              </>
+            ) : null}
+
+            {!isLoggedIn && !showGuestChat ? (
+              <form id="guest-name-form" className="flex min-h-0 flex-1 flex-col p-4" onSubmit={(e) => void confirmGuestName(e)}>
+                <div className="flex-1">
+                  <FormInput
+                    id="contact-admin-name"
+                    label="ImiÄ™ i nazwisko"
+                    required
+                    value={senderName}
+                    onChange={(e) => setSenderName(e.target.value)}
+                    placeholder="np. Jan Kowalski"
+                    autoComplete="name"
+                    disabled={loadingThread}
+                    hint="Tak jak na liĹ›cie PiĹ‚karze albo Kontakt."
+                  />
+                </div>
+                <Button type="submit" className="mt-4 w-full rounded-full" disabled={loadingThread}>
+                  {loadingThread ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
+                      Sprawdzanieâ€¦
+                    </>
+                  ) : (
+                    "Dalej"
+                  )}
+                </Button>
+              </form>
+            ) : null}
+
+            {!isLoggedIn && showGuestChat ? (
+              <>
+                <div className="min-h-0 flex-1 overflow-y-auto px-3 pt-3">
+                  <p className="mb-3 text-sm text-zinc-600 dark:text-zinc-300">
+                    Rozmawiasz jako <span className="font-semibold text-zinc-950 dark:text-white">{senderName}</span>
+                    {" Â· "}
+                    <button
+                      type="button"
+                      className="font-semibold text-[var(--mp-teal-dark)] underline underline-offset-2"
+                      onClick={() => {
+                        setNameConfirmed(false);
+                        setMessages([]);
+                        setUnreadReplies(0);
+                        clearAttachment();
+                        try {
+                          localStorage.removeItem(GUEST_NAME_STORAGE_KEY);
+                        } catch {
+                          /* ignore */
+                        }
+                      }}
+                    >
+                      ZmieĹ„
+                    </button>
+                  </p>
+                  <div className="mb-3 grid gap-1.5">
+                    <Label htmlFor="contact-admin-recipient" className="text-zinc-700 dark:text-zinc-200">
+                      Do kogo piszesz? <span className="text-red-500">*</span>
+                    </Label>
+                    <select
+                      id="contact-admin-recipient"
+                      className={cn(nativeSelectClasses, "w-full bg-white")}
+                      value={recipientKey}
+                      disabled={sending}
+                      required
+                      onChange={(e) => setRecipientKey(e.target.value as ContactAdminRecipientKey)}
+                    >
+                      {recipients.map((r) => (
+                        <option key={r.key} value={r.key}>
+                          {r.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <ChatTranscript
+                    tone="light"
+                    className="min-h-[12rem] border-0 bg-transparent"
+                    empty={
+                      loadingThread && messages.length === 0 ? (
+                        <Loader2 className="h-5 w-5 animate-spin text-[var(--mp-teal)]" aria-hidden />
+                      ) : messages.length === 0 ? (
+                        <p className="text-center text-sm text-zinc-500">Brak wiadomoĹ›ci â€” napisz pierwszÄ….</p>
+                      ) : undefined
+                    }
+                  >
+                    {messages.length > 0
+                      ? (() => {
+                          const clustered = messages.map((m) => ({
+                            mine: m.mine,
+                            senderKey: m.mine ? "me" : m.sender_name,
+                          }));
+                          return messages.map((m, i) => (
+                            <ChatBubble
+                              key={m.id}
+                              body={m.body}
+                              attachmentUrl={m.attachment_url}
+                              senderLabel={m.mine ? null : m.sender_name}
+                              timeLabel={m.created_at_display}
+                              mine={m.mine}
+                              tone="light"
+                              cluster={chatClusterForIndex(clustered, i)}
+                            />
+                          ));
+                        })()
+                      : null}
+                    <div ref={bottomRef} />
+                  </ChatTranscript>
+                </div>
+                <form
+                  id="write-to-admin-form"
+                  className="border-t border-zinc-200 bg-white p-2 dark:border-zinc-800 dark:bg-zinc-900"
+                  onSubmit={(e) => void handleSubmit(e)}
+                >
+                  <ChatComposerShell tone="light">
+                    <ChatEmojiPicker
+                      tone="light"
+                      disabled={sending}
+                      onPick={(emoji) => {
+                        setBody((prev) => insertEmojiAtCursor(prev, emoji, textareaRef.current));
+                      }}
+                    />
+                    <ChatAttachmentControls
+                      tone="light"
+                      disabled={sending}
+                      attachmentUrl={attachmentUrl}
+                      previewUrl={attachmentPreview}
+                      onUploadingChange={setUploadingAttachment}
+                      onUploaded={(url, preview) => {
+                        if (attachmentPreview?.startsWith("blob:")) URL.revokeObjectURL(attachmentPreview);
+                        setAttachmentUrl(url);
+                        setAttachmentPreview(preview);
+                      }}
+                      onClear={clearAttachment}
+                    />
+                    <ChatComposerField
+                      id="contact-admin-body"
+                      tone="light"
+                      value={body}
+                      onChange={setBody}
+                      placeholder="Napisz wiadomoĹ›Ä‡â€¦"
+                      disabled={sending}
+                      rows={1}
+                      fieldRef={textareaRef}
+                    />
+                    {sendButton}
+                  </ChatComposerShell>
+                </form>
+              </>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={() => setOpen((v) => !v)}
         className={cn(
-          "group fixed z-[60] flex h-11 w-11 items-center justify-center overflow-hidden rounded-full border border-[var(--mundial-gold)]/65 bg-gradient-to-br from-emerald-800 via-emerald-900 to-emerald-950 text-white shadow-lg ring-1 ring-emerald-300/25 transition-[transform,box-shadow] motion-safe:hover:-translate-y-0.5 hover:shadow-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent",
-          "bottom-[max(0.75rem,env(safe-area-inset-bottom))] left-3 sm:bottom-5 sm:left-5 sm:h-12 sm:w-12"
+          "mp-chat-fab awp-focus-ring relative",
+          "bottom-[max(0.75rem,env(safe-area-inset-bottom))] left-3 sm:bottom-5 sm:left-5"
         )}
-        aria-label="Czat — otwórz rozmowy"
-        title="Wiadomości"
+        aria-label={open ? "Zamknij czat" : "Czat â€” otwĂłrz rozmowy"}
+        aria-expanded={open}
+        title="WiadomoĹ›ci"
       >
-        <MessageCircle className="h-5 w-5 text-[var(--mundial-gold)] sm:h-[1.35rem] sm:w-[1.35rem]" strokeWidth={2.25} aria-hidden />
-        {unreadReplies > 0 ? (
+        {open ? (
+          <X className="h-6 w-6" strokeWidth={2.25} aria-hidden />
+        ) : (
+          <MessageCircle className="h-6 w-6" strokeWidth={2.25} aria-hidden />
+        )}
+        {!open && unreadReplies > 0 ? (
           <span
-            className="absolute -right-0.5 -top-0.5 inline-flex min-h-[1.125rem] min-w-[1.125rem] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold tabular-nums text-white ring-2 ring-emerald-950"
+            className="absolute -right-0.5 -top-0.5 inline-flex min-h-[1.125rem] min-w-[1.125rem] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold tabular-nums text-white ring-2 ring-white"
             aria-hidden
           >
             {unreadReplies > 99 ? "99+" : unreadReplies}
           </span>
         ) : null}
       </button>
-
-      <AppModal
-        open={open}
-        onOpenChange={(next) => {
-          if (!sending) setOpen(next);
-        }}
-        title={modalTitle}
-        description={
-          isLoggedIn
-            ? view === "list"
-              ? "Napisz do organizatora albo do innego gracza."
-              : view === "new"
-                ? "Wybierz zawodnika z akademii."
-                : threadKind === "dm"
-                  ? "Prywatna rozmowa między graczami."
-                  : "Wiadomość do organizatora Akademii."
-            : "Podaj imię i nazwisko z listy Piłkarze (lub organizatora z Kontakt), aby pisać i czytać odpowiedzi."
-        }
-        icon={<MessageCircle className="h-6 w-6 text-[var(--mundial-gold)]" aria-hidden />}
-        headerKicker="Czat"
-        size={isLoggedIn ? "lg" : "md"}
-        scrollable
-        footer={
-          isLoggedIn && view === "list" ? (
-            <>
-              <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-                Zamknij
-              </Button>
-              <Button type="button" variant="stadium" onClick={() => setView("new")}>
-                <Plus className="mr-2 h-4 w-4" aria-hidden />
-                Napisz do gracza
-              </Button>
-            </>
-          ) : isLoggedIn && view === "new" ? (
-            <Button type="button" variant="outline" onClick={() => setView("list")}>
-              Wróć
-            </Button>
-          ) : isLoggedIn && view === "chat" ? (
-            <>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  setView("list");
-                  setSelectedKey(null);
-                  setMessages([]);
-                }}
-              >
-                Lista rozmów
-              </Button>
-              <Button
-                type="submit"
-                form="player-chat-form"
-                variant="stadium"
-                disabled={sending || uploadingAttachment || !canSend}
-              >
-                {sending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
-                    Wysyłanie…
-                  </>
-                ) : (
-                  <>
-                    <Send className="mr-2 h-4 w-4" aria-hidden />
-                    Wyślij
-                  </>
-                )}
-              </Button>
-            </>
-          ) : showGuestChat ? (
-            <>
-              <Button type="button" variant="outline" disabled={sending} onClick={() => setOpen(false)}>
-                Zamknij
-              </Button>
-              <Button
-                type="submit"
-                form="write-to-admin-form"
-                variant="stadium"
-                disabled={sending || uploadingAttachment || !canSend}
-              >
-                {sending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
-                    Wysyłanie…
-                  </>
-                ) : (
-                  <>
-                    <Send className="mr-2 h-4 w-4" aria-hidden />
-                    Wyślij
-                  </>
-                )}
-              </Button>
-            </>
-          ) : (
-            <Button type="submit" form="guest-name-form" variant="stadium" disabled={loadingThread}>
-              {loadingThread ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
-                  Sprawdzanie…
-                </>
-              ) : (
-                "Dalej"
-              )}
-            </Button>
-          )
-        }
-      >
-        {isLoggedIn && view === "list" ? (
-          <div className="space-y-2">
-            {threads.length === 0 ? (
-              <p className="py-8 text-center text-sm text-emerald-100/70">Ładowanie rozmów…</p>
-            ) : (
-              <ul className="space-y-2">
-                {threads.map((t) => (
-                  <li key={t.conversation_key}>
-                    <button
-                      type="button"
-                      onClick={() => void openPlayerThread(t.conversation_key)}
-                      className="flex w-full items-start gap-3 rounded-xl border border-white/15 bg-black/15 px-3 py-3 text-left transition hover:bg-white/10"
-                    >
-                      <span
-                        className={cn(
-                          "mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full",
-                          t.unread_count > 0 ? "bg-red-500" : "bg-white/20"
-                        )}
-                        aria-hidden
-                      />
-                      <span className="min-w-0 flex-1">
-                        <span className="flex items-baseline justify-between gap-2">
-                          <span className="truncate font-semibold text-white">{t.title}</span>
-                          {t.last_at_display ? (
-                            <time className="shrink-0 text-[10px] text-emerald-100/55">{t.last_at_display}</time>
-                          ) : null}
-                        </span>
-                        <span className="mt-0.5 block text-xs text-emerald-100/55">
-                          {t.kind === "dm" ? "Gracz" : "Organizator"}
-                          {t.subtitle ? ` · ${t.subtitle}` : ""}
-                        </span>
-                        {t.preview ? (
-                          <span className="mt-1 line-clamp-2 text-sm text-emerald-100/80">{t.preview}</span>
-                        ) : (
-                          <span className="mt-1 text-sm text-emerald-100/45">Brak wiadomości — napisz pierwszą</span>
-                        )}
-                      </span>
-                      {t.unread_count > 0 ? (
-                        <Badge className="bg-red-500 text-white hover:bg-red-500">
-                          {t.unread_count > 99 ? "99+" : t.unread_count}
-                        </Badge>
-                      ) : null}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        ) : null}
-
-        {isLoggedIn && view === "new" ? (
-          <ChatPeerPicker
-            tone="pitch"
-            onSelect={(peer) => {
-              startDmWithPeer(peer);
-            }}
-          />
-        ) : null}
-
-        {isLoggedIn && view === "chat" ? (
-          <div className="space-y-3">
-            <button
-              type="button"
-              className="inline-flex items-center gap-1.5 text-sm font-medium text-emerald-100/80 hover:text-white lg:hidden"
-              onClick={() => {
-                setView("list");
-                setSelectedKey(null);
-              }}
-            >
-              <ArrowLeft className="h-4 w-4" aria-hidden />
-              Wróć
-            </button>
-
-            {threadKind === "organizer" ? (
-              <div className="grid gap-1.5">
-                <Label htmlFor="player-chat-recipient">
-                  Do kogo piszesz? <span className="text-red-400">*</span>
-                </Label>
-                <select
-                  id="player-chat-recipient"
-                  className={cn(nativeSelectClasses, "w-full")}
-                  value={recipientKey}
-                  disabled={sending}
-                  required
-                  onChange={(e) => setRecipientKey(e.target.value as ContactAdminRecipientKey)}
-                >
-                  {recipients.map((r) => (
-                    <option key={r.key} value={r.key}>
-                      {r.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            ) : null}
-
-            <ChatTranscript
-              tone="pitch"
-              className="max-h-[min(300px,40vh)] min-h-[4.5rem]"
-              empty={
-                loadingThread && messages.length === 0 ? (
-                  <Loader2 className="h-5 w-5 animate-spin text-emerald-100/70" aria-hidden />
-                ) : messages.length === 0 ? (
-                  <p className="text-center text-sm text-emerald-100/65">Napisz pierwszą wiadomość.</p>
-                ) : undefined
-              }
-            >
-              {messages.length > 0
-                ? (() => {
-                    const clustered = messages.map((m) => ({
-                      mine: m.mine,
-                      senderKey: m.mine ? "me" : m.sender_name,
-                    }));
-                    return messages.map((m, i) => (
-                      <ChatBubble
-                        key={m.id}
-                        body={m.body}
-                        attachmentUrl={m.attachment_url}
-                        senderLabel={m.mine ? null : m.sender_name}
-                        timeLabel={m.created_at_display}
-                        mine={m.mine}
-                        tone="pitch"
-                        cluster={chatClusterForIndex(clustered, i)}
-                        onDelete={() => void deleteChatMessage(m.id)}
-                        deleting={deletingId === m.id}
-                      />
-                    ));
-                  })()
-                : null}
-              <div ref={bottomRef} />
-            </ChatTranscript>
-
-            <form id="player-chat-form" onSubmit={(e) => void handleLoggedInSubmit(e)}>
-              <ChatComposerShell tone="pitch">
-                <ChatEmojiPicker
-                  tone="pitch"
-                  disabled={sending}
-                  onPick={(emoji) => {
-                    setBody((prev) => insertEmojiAtCursor(prev, emoji, textareaRef.current));
-                  }}
-                />
-                <ChatAttachmentControls
-                  tone="pitch"
-                  disabled={sending}
-                  attachmentUrl={attachmentUrl}
-                  previewUrl={attachmentPreview}
-                  onUploadingChange={setUploadingAttachment}
-                  onUploaded={(url, preview) => {
-                    if (attachmentPreview?.startsWith("blob:")) URL.revokeObjectURL(attachmentPreview);
-                    setAttachmentUrl(url);
-                    setAttachmentPreview(preview);
-                  }}
-                  onClear={clearAttachment}
-                />
-                <ChatComposerField
-                  id="player-chat-body"
-                  tone="pitch"
-                  value={body}
-                  onChange={setBody}
-                  placeholder="Aa"
-                  disabled={sending}
-                  rows={2}
-                  fieldRef={textareaRef}
-                />
-                <Button
-                  type="submit"
-                  size="icon"
-                  variant="stadium"
-                  className="h-10 w-10 shrink-0 rounded-full"
-                  disabled={sending || uploadingAttachment || !canSend}
-                  aria-label="Wyślij"
-                >
-                  {sending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                  ) : (
-                    <Send className="h-4 w-4" aria-hidden />
-                  )}
-                </Button>
-              </ChatComposerShell>
-            </form>
-          </div>
-        ) : null}
-
-        {!isLoggedIn && !showGuestChat ? (
-          <form id="guest-name-form" className="space-y-4" onSubmit={(e) => void confirmGuestName(e)}>
-            <FormInput
-              id="contact-admin-name"
-              label="Imię i nazwisko"
-              required
-              value={senderName}
-              onChange={(e) => setSenderName(e.target.value)}
-              placeholder="np. Jan Kowalski"
-              autoComplete="name"
-              disabled={loadingThread}
-              hint="Tak jak na liście Piłkarze albo Kontakt. Wielkość liter i polskie znaki nie mają znaczenia."
-            />
-          </form>
-        ) : null}
-
-        {!isLoggedIn && showGuestChat ? (
-          <div className="space-y-4">
-            <p className="text-sm text-emerald-100/75">
-              Rozmawiasz jako <span className="font-semibold text-white">{senderName}</span>
-              {" · "}
-              <button
-                type="button"
-                className="underline underline-offset-2 hover:text-white"
-                onClick={() => {
-                  setNameConfirmed(false);
-                  setMessages([]);
-                  setUnreadReplies(0);
-                  clearAttachment();
-                  try {
-                    localStorage.removeItem(GUEST_NAME_STORAGE_KEY);
-                  } catch {
-                    /* ignore */
-                  }
-                }}
-              >
-                Zmień
-              </button>
-            </p>
-
-            <div className="grid gap-1.5">
-              <Label htmlFor="contact-admin-recipient">
-                Do kogo piszesz? <span className="text-red-400">*</span>
-              </Label>
-              <select
-                id="contact-admin-recipient"
-                className={cn(nativeSelectClasses, "w-full")}
-                value={recipientKey}
-                disabled={sending}
-                required
-                onChange={(e) => setRecipientKey(e.target.value as ContactAdminRecipientKey)}
-              >
-                {recipients.map((r) => (
-                  <option key={r.key} value={r.key}>
-                    {r.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <ChatTranscript
-              tone="pitch"
-              className="max-h-[min(320px,42vh)] min-h-[4.5rem]"
-              empty={
-                loadingThread && messages.length === 0 ? (
-                  <Loader2 className="h-5 w-5 animate-spin text-emerald-100/70" aria-hidden />
-                ) : messages.length === 0 ? (
-                  <p className="text-center text-sm text-emerald-100/65">
-                    Brak wiadomości — napisz pierwszą.
-                  </p>
-                ) : undefined
-              }
-            >
-              {messages.length > 0
-                ? (() => {
-                    const clustered = messages.map((m) => ({
-                      mine: m.mine,
-                      senderKey: m.mine ? "me" : m.sender_name,
-                    }));
-                    return messages.map((m, i) => (
-                      <ChatBubble
-                        key={m.id}
-                        body={m.body}
-                        attachmentUrl={m.attachment_url}
-                        senderLabel={m.mine ? null : m.sender_name}
-                        timeLabel={m.created_at_display}
-                        mine={m.mine}
-                        tone="pitch"
-                        cluster={chatClusterForIndex(clustered, i)}
-                      />
-                    ));
-                  })()
-                : null}
-              <div ref={bottomRef} />
-            </ChatTranscript>
-
-            <form id="write-to-admin-form" className="space-y-2" onSubmit={(e) => void handleSubmit(e)}>
-              <ChatComposerShell tone="pitch">
-                <ChatEmojiPicker
-                  tone="pitch"
-                  disabled={sending}
-                  onPick={(emoji) => {
-                    setBody((prev) => insertEmojiAtCursor(prev, emoji, textareaRef.current));
-                  }}
-                />
-                <ChatAttachmentControls
-                  tone="pitch"
-                  disabled={sending}
-                  attachmentUrl={attachmentUrl}
-                  previewUrl={attachmentPreview}
-                  onUploadingChange={setUploadingAttachment}
-                  onUploaded={(url, preview) => {
-                    if (attachmentPreview?.startsWith("blob:")) URL.revokeObjectURL(attachmentPreview);
-                    setAttachmentUrl(url);
-                    setAttachmentPreview(preview);
-                  }}
-                  onClear={clearAttachment}
-                />
-                <ChatComposerField
-                  id="contact-admin-body"
-                  tone="pitch"
-                  value={body}
-                  onChange={setBody}
-                  placeholder="Aa"
-                  disabled={sending}
-                  rows={2}
-                  fieldRef={textareaRef}
-                />
-                <Button
-                  type="submit"
-                  size="icon"
-                  variant="stadium"
-                  className="h-10 w-10 shrink-0 rounded-full"
-                  disabled={sending || uploadingAttachment || !canSend}
-                  aria-label="Wyślij"
-                >
-                  {sending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                  ) : (
-                    <Send className="h-4 w-4" aria-hidden />
-                  )}
-                </Button>
-              </ChatComposerShell>
-            </form>
-          </div>
-        ) : null}
-      </AppModal>
     </>
   );
 
-  return createPortal(floatButton, document.body);
+  return createPortal(widget, document.body);
 }

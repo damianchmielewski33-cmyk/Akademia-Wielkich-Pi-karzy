@@ -7,7 +7,7 @@ import { REALMS } from "@/lib/realm";
 import { formatPonderingPlayersPolish } from "@/lib/terminarz-shared";
 import { parseYoutubeVideoIdFromUserInput } from "@/lib/site";
 import { isLocalMatchDay } from "@/lib/transport";
-import { getAppSettings } from "@/lib/app-settings";
+import { getRequestAppSettings } from "@/lib/request-app-settings";
 import { isHotpayConfigured } from "@/lib/hotpay";
 import type { SiteMode } from "@/lib/site-mode";
 
@@ -37,18 +37,23 @@ export async function getHomePageClientProps(
   const db = await getDb();
   const pageVariant = options?.pageVariant ?? "home";
   const loadAcademy = pageVariant === "pzu-cup" || options?.siteMode === "academy";
-  const loadBooking = pageVariant === "home" && options?.siteMode === "booking";
 
-  const nextMatch = loadAcademy
-    ? ((await db
-        .prepare(
-          `SELECT * FROM matches
+  const [nextMatch, appSettings, topRankedPlayers, featuredVenues, nav] = await Promise.all([
+    loadAcademy
+      ? db
+          .prepare(
+            `SELECT * FROM matches
        WHERE realm = ? AND played = 0 AND COALESCE(cancelled, 0) = 0
          AND datetime(match_date || ' ' || match_time) > datetime('now', 'localtime')
        ORDER BY match_date, match_time LIMIT 1`
-        )
-        .get(REALMS.ACADEMY)) as MatchRow | undefined)
-    : undefined;
+          )
+          .get(REALMS.ACADEMY) as Promise<MatchRow | undefined>
+      : Promise.resolve(undefined),
+    getRequestAppSettings(),
+    loadAcademy && pageVariant !== "pzu-cup" ? getHomeTopPlayers(3) : Promise.resolve([] as HomeTopPlayer[]),
+    pageVariant === "home" ? listVenueCards(db, { limit: 8 }) : Promise.resolve([] as VenueCard[]),
+    session ? getAccountNavFields(session.userId) : Promise.resolve(null),
+  ]);
 
   let nextMatchSignup: "none" | "tentative" | "confirmed" | "declined" = "none";
   if (nextMatch && session) {
@@ -80,19 +85,14 @@ export async function getHomePageClientProps(
   let profilePhotoPath: string | null = null;
   let zawodnik = "";
   if (session) {
-    const nav = await getAccountNavFields(session.userId);
     profilePhotoPath = nav?.profilePhotoPath ?? null;
     zawodnik = nav?.zawodnik ?? session.zawodnik;
   }
 
-  const settingsRow = loadAcademy
-    ? ((await db
-        .prepare("SELECT home_youtube_url FROM app_settings WHERE realm = ?")
-        .get(REALMS.ACADEMY)) as { home_youtube_url: string | null } | undefined)
-    : undefined;
-  const youtubeLiveVideoId = settingsRow?.home_youtube_url
-    ? parseYoutubeVideoIdFromUserInput(settingsRow.home_youtube_url)
-    : null;
+  const youtubeLiveVideoId =
+    loadAcademy && appSettings.home_youtube_url
+      ? parseYoutubeVideoIdFromUserInput(appSettings.home_youtube_url)
+      : null;
 
   const nextMatchForClient =
     nextMatch && nextMatchSignup === "confirmed"
@@ -101,10 +101,6 @@ export async function getHomePageClientProps(
         ? { ...nextMatch, gate_pin: null }
         : null;
 
-  const topRankedPlayers = loadAcademy && pageVariant !== "pzu-cup" ? await getHomeTopPlayers(3) : [];
-  const featuredVenues = loadBooking ? (await listVenueCards(db)).slice(0, 8) : [];
-
-  const appSettings = await getAppSettings(db);
   const hotpayEnabled = isHotpayConfigured() && appSettings.hotpay_enabled;
 
   return {

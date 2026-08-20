@@ -7,6 +7,7 @@ import { Toaster } from "sonner";
 import { SiteShell } from "@/components/site-shell";
 import { ShareLinkClientCleanup } from "@/components/share-link-client-cleanup";
 import { PwaRegister } from "@/components/pwa-register";
+import { AndroidAppUpdatePrompt } from "@/components/android-app-update-prompt";
 import { WebPushEnabler } from "@/components/web-push-enabler";
 import { MatchNotificationPrompt } from "@/components/match-notification-prompt";
 import { PinChangePendingBanner } from "@/components/pin-change-pending-banner";
@@ -30,7 +31,7 @@ import { ScreenBlockPreviewContent } from "@/components/screen-block-preview-con
 import { AdsenseProvider } from "@/components/adsense-provider";
 import { getGoogleSiteVerification, getSiteUrl } from "@/lib/site";
 import { resolveAdsenseClientId } from "@/lib/adsense";
-import { getAppSettings } from "@/lib/app-settings";
+import { getRequestAppSettings } from "@/lib/request-app-settings";
 import {
   getScreenKeyFromPathname,
   isScreenDisabledForUser,
@@ -74,8 +75,7 @@ export const viewport: Viewport = {
 };
 
 export async function generateMetadata(): Promise<Metadata> {
-  const db = await getDb();
-  const settings = await getAppSettings(db);
+  const settings = await getRequestAppSettings();
   const siteName = settings.site_name;
   const siteDescription = settings.site_description;
   const favicon = settings.site_assets.logo_favicon;
@@ -156,16 +156,12 @@ export default async function RootLayout({
 
   const sessionIdleLogout = Boolean(session && !session.rememberMe);
 
-  const db = await getDb();
-  const appSettings = await getAppSettings(db);
+  const [db, appSettings] = await Promise.all([getDb(), getRequestAppSettings()]);
   const marketplaceEnabled = appSettings.booking_marketplace_enabled === true;
   const initialSiteMode = marketplaceEnabled
     ? parseSiteMode(cookieStore.get(SITE_MODE_COOKIE)?.value)
     : "academy";
-  const settingsRow = (await db
-    .prepare("SELECT match_notification_prompt_enabled FROM app_settings WHERE realm = 'academy'")
-    .get()) as { match_notification_prompt_enabled: number } | undefined;
-  const matchNotificationPromptEnabled = (settingsRow?.match_notification_prompt_enabled ?? 0) === 1;
+  const matchNotificationPromptEnabled = appSettings.match_notification_prompt_enabled === true;
 
   let writeToAdminDefaults: { senderName: string } | null = null;
   if (session) {
@@ -180,13 +176,14 @@ export default async function RootLayout({
   const contactAdminRecipients = contactAdminRecipientsFromSettings(appSettings);
 
   const isAdmin = Boolean(session?.isAdmin && loggedInFull);
-  const isVenuePartnerUser =
-    loggedInFull && session ? await isVenuePartner(db, session.userId) : false;
-  const testModeActive = isAdmin ? await isAdminTestModeActive() : false;
+  const [isVenuePartnerUser, testModeActive, adminUnreadMessages] = await Promise.all([
+    loggedInFull && session ? isVenuePartner(db, session.userId) : Promise.resolve(false),
+    isAdmin ? isAdminTestModeActive() : Promise.resolve(false),
+    isAdmin ? getUnreadAdminMessageCount(db) : Promise.resolve(0),
+  ]);
   /** Podgląd zaślepki — widok gracza dla każdego z aktywnym ciasteczkiem / parametrem (ustawiane z panelu admina). */
   const screenBlocksAsPlayer = previewBlocked;
   const shellIsAdmin = isAdmin && !screenBlocksAsPlayer;
-  const adminUnreadMessages = isAdmin ? await getUnreadAdminMessageCount(db) : 0;
 
   const screenKey = !isPzuCupSection ? getScreenKeyFromPathname(pathname) : null;
   const screenBlocksAdminBypass = shellIsAdmin;
@@ -314,6 +311,7 @@ export default async function RootLayout({
           logoUrl={siteAssets.logo_favicon}
         />
         <PwaRegister />
+        <AndroidAppUpdatePrompt />
         {loggedInFull ? <WebPushEnabler /> : null}
         <SessionIdleMonitor enabled={sessionIdleLogout} />
         <ShareLinkClientCleanup />

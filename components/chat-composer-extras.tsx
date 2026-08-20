@@ -83,7 +83,7 @@ export function ChatEmojiPicker({ onPick, disabled, className, tone = "pitch" }:
         className={cn(
           "h-10 w-10 shrink-0 rounded-full",
           light
-            ? "text-emerald-700 hover:bg-emerald-50 hover:text-emerald-900 dark:text-emerald-300 dark:hover:bg-emerald-950/50"
+            ? "text-zinc-500 hover:bg-[var(--mp-teal)]/10 hover:text-[var(--mp-teal-dark)] dark:text-zinc-300 dark:hover:bg-zinc-800"
             : "text-emerald-100/90 hover:bg-white/10 hover:text-white"
         )}
         aria-label="Emotki"
@@ -111,7 +111,7 @@ export function ChatEmojiPicker({ onPick, disabled, className, tone = "pitch" }:
                 aria-label={emoji}
                 className={cn(
                   "flex h-8 w-8 items-center justify-center rounded-lg text-lg transition-colors",
-                  light ? "hover:bg-emerald-50 dark:hover:bg-emerald-950/40" : "hover:bg-white/15"
+                  light ? "hover:bg-[var(--mp-teal)]/10 dark:hover:bg-zinc-800" : "hover:bg-white/15"
                 )}
                 onClick={() => {
                   onPick(emoji);
@@ -200,7 +200,7 @@ export function ChatAttachmentControls({
         className={cn(
           "h-10 w-10 shrink-0 rounded-full",
           light
-            ? "text-emerald-700 hover:bg-emerald-50 hover:text-emerald-900 dark:text-emerald-300 dark:hover:bg-emerald-950/50"
+            ? "text-zinc-500 hover:bg-[var(--mp-teal)]/10 hover:text-[var(--mp-teal-dark)] dark:text-zinc-300 dark:hover:bg-zinc-800"
             : "text-emerald-100/90 hover:bg-white/10 hover:text-white"
         )}
         aria-label="Dołącz grafikę"
@@ -209,7 +209,7 @@ export function ChatAttachmentControls({
         <ImagePlus className="h-5 w-5" aria-hidden />
       </Button>
       {attachmentUrl && previewUrl ? (
-        <div className="relative h-12 w-12 overflow-hidden rounded-2xl border border-emerald-300/40 shadow-sm ring-1 ring-emerald-900/10">
+        <div className="relative h-12 w-12 overflow-hidden rounded-2xl border border-zinc-200 shadow-sm ring-1 ring-zinc-950/5">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={previewUrl} alt="" className="h-full w-full object-cover" />
           <button
@@ -308,7 +308,7 @@ export function ChatBubble({
           <p
             className={cn(
               "mb-1 px-1 text-[11px] font-semibold tracking-wide",
-              light ? "text-emerald-800 dark:text-emerald-300" : "text-[var(--mundial-gold)]"
+              light ? "text-[var(--mp-teal-dark)]" : "text-[var(--mundial-gold)]"
             )}
           >
             {senderLabel}
@@ -322,7 +322,9 @@ export function ChatBubble({
               bubbleRadius(mine, cluster),
               imageOnly ? "p-0.5" : "px-3.5 py-2",
               mine
-                ? "bg-gradient-to-br from-emerald-600 via-emerald-700 to-emerald-800 text-white shadow-emerald-950/20"
+                ? light
+                  ? "bg-[var(--mp-teal)] text-white"
+                  : "bg-gradient-to-br from-emerald-600 via-emerald-700 to-emerald-800 text-white shadow-emerald-950/20"
                 : light
                   ? "border border-zinc-200/90 bg-white text-zinc-900 shadow-zinc-950/5 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-50"
                   : "border border-white/20 bg-white/14 text-emerald-50 backdrop-blur-[2px]"
@@ -381,7 +383,7 @@ export function ChatBubble({
   );
 }
 
-/** Wspólny obszar rozmowy — tło jak w Messengerze, w kolorach Akademii. */
+/** Wspólny obszar rozmowy — jasny jak widget PNH, albo murawa akademii. */
 export function ChatTranscript({
   children,
   className,
@@ -399,19 +401,21 @@ export function ChatTranscript({
       className={cn(
         "awp-chat-transcript relative overflow-y-auto overscroll-contain",
         light
-          ? "rounded-2xl border border-emerald-200/70 bg-gradient-to-b from-emerald-50/90 via-white to-zinc-50 dark:border-emerald-900/40 dark:from-emerald-950/50 dark:via-zinc-950 dark:to-zinc-950"
+          ? "rounded-2xl border border-zinc-200/80 bg-[#f4f5f7] dark:border-zinc-700 dark:bg-zinc-900"
           : "rounded-2xl border border-white/15 bg-gradient-to-b from-emerald-950/80 via-emerald-900/55 to-emerald-950/90",
         className
       )}
     >
-      <div
-        className="pointer-events-none absolute inset-0 opacity-[0.07]"
-        style={{
-          backgroundImage:
-            "radial-gradient(circle at 12% 18%, rgba(245,197,24,0.55), transparent 42%), radial-gradient(circle at 88% 78%, rgba(0,166,81,0.45), transparent 46%)",
-        }}
-        aria-hidden
-      />
+      {light ? null : (
+        <div
+          className="pointer-events-none absolute inset-0 opacity-[0.07]"
+          style={{
+            backgroundImage:
+              "radial-gradient(circle at 12% 18%, rgba(245,197,24,0.55), transparent 42%), radial-gradient(circle at 88% 78%, rgba(0,166,81,0.45), transparent 46%)",
+          }}
+          aria-hidden
+        />
+      )}
       <div className="relative z-[1] flex min-h-full flex-col px-3 py-3 sm:px-4">
         {empty ? <div className="flex flex-1 items-center justify-center py-8">{empty}</div> : children}
       </div>
@@ -435,7 +439,7 @@ export function ChatComposerShell({
       className={cn(
         "flex items-end gap-1.5 rounded-2xl border p-1.5 sm:gap-2 sm:p-2",
         light
-          ? "border-zinc-200 bg-zinc-100/90 dark:border-zinc-700 dark:bg-zinc-900/80"
+          ? "border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900"
           : "border-white/15 bg-black/20",
         className
       )}

@@ -927,12 +927,19 @@ fun AwpModal(
     dismissText: String = "Zamknij",
     onConfirm: (() -> Unit)? = null,
     danger: Boolean = false,
+    dismissOnBackPress: Boolean = true,
+    dismissOnClickOutside: Boolean = true,
+    showDismissButton: Boolean = true,
     content: @Composable ColumnScope.() -> Unit
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
         modifier = Modifier.fillMaxWidth(0.94f),
-        properties = DialogProperties(usePlatformDefaultWidth = false),
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false,
+            dismissOnBackPress = dismissOnBackPress,
+            dismissOnClickOutside = dismissOnClickOutside
+        ),
         confirmButton = {
             if (onConfirm != null) {
                 TextButton(onClick = onConfirm) {
@@ -940,7 +947,11 @@ fun AwpModal(
                 }
             }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(dismissText) } },
+        dismissButton = if (showDismissButton) {
+            { TextButton(onClick = onDismiss) { Text(dismissText) } }
+        } else {
+            null
+        },
         title = {
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Box(

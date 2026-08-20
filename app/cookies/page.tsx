@@ -2,12 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { CookieConsentManager } from "@/components/cookie-consent-manager";
 import { PitchCard, PitchPageHero, pitchLabelClass } from "@/components/ui/pitch-card";
-import { getAppSettings } from "@/lib/app-settings";
-import { getDb } from "@/lib/db";
+import { getRequestAppSettings } from "@/lib/request-app-settings";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const db = await getDb();
-  const settings = await getAppSettings(db);
+  const settings = await getRequestAppSettings();
   return {
     title: "Polityka cookies",
     description: `Jak używamy plików cookies w serwisie ${settings.site_name}.`,
@@ -15,8 +13,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function CookiesPage() {
-  const db = await getDb();
-  const settings = await getAppSettings(db);
+  const settings = await getRequestAppSettings();
   const email = settings.contact_email;
   const siteName = settings.site_name;
 

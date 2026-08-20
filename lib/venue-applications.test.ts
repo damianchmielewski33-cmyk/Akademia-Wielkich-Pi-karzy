@@ -129,7 +129,8 @@ describe("venue applications", () => {
     });
     expect(approved.ok).toBe(true);
     if (!approved.ok) return;
-    expect(approved.pin).toBeTruthy();
+    expect(approved.needsPinSetup).toBe(true);
+    expect(approved.alias).toMatch(/^partner-/);
     expect(await isVenuePartner(db, approved.partnerUserId)).toBe(true);
 
     const venue = sqlite.prepare("SELECT published, owner_user_id FROM venues WHERE id = ?").get(approved.venueId) as {
