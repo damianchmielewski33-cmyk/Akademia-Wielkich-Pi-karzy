@@ -1,8 +1,11 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
+import { LayoutGrid, Users } from "lucide-react";
 import { LineupPlayerStatsDialog } from "@/components/lineup-player-stats-dialog";
-import { PlayerAvatar } from "@/components/player-avatar";
+import { MarketplaceSection } from "@/components/payments-card";
+import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
+import { useSiteMode } from "@/components/site-mode";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getSlotStylesAway, getSlotStylesHome } from "@/lib/match-lineup-layout";
 import { cn } from "@/lib/utils";
@@ -383,8 +386,25 @@ function TeamHalfReadOnly({
 }
 
 export function MatchLineupView({ matchDate, matchTime, location, players, home, away }: Props) {
-  const playerById = new Map<number, LineupPlayer>();
-  for (const p of players) playerById.set(p.userId, p);
+  const { marketplaceEnabled } = useSiteMode();
+  const light = marketplaceEnabled;
+  const playerById = useMemo(() => {
+    const map = new Map<number, LineupPlayer>();
+    for (const p of players) map.set(p.userId, p);
+    return map;
+  }, [players]);
+
+  const onPitchIds = useMemo(() => {
+    const ids = new Set<number>();
+    for (const uid of home) if (uid != null) ids.add(uid);
+    for (const uid of away) if (uid != null) ids.add(uid);
+    return ids;
+  }, [home, away]);
+
+  const bench = useMemo(
+    () => players.filter((p) => !onPitchIds.has(p.userId)),
+    [players, onPitchIds]
+  );
 
   const [statsOpen, setStatsOpen] = useState(false);
   const [statsUserId, setStatsUserId] = useState<number | null>(null);
@@ -394,6 +414,102 @@ export function MatchLineupView({ matchDate, matchTime, location, players, home,
     setStatsOpen(true);
   }, []);
 
+  const pitch = (
+    <div
+      className="relative mx-auto aspect-[9/16] w-full max-w-[min(100%,32rem)] overflow-hidden rounded-xl border-2 border-white/40 shadow-inner xs:aspect-[3/5] xs:rounded-2xl sm:aspect-[3/4]"
+      style={{
+        background:
+          "linear-gradient(180deg, #14532d 0%, #166534 18%, #15803d 50%, #166534 82%, #14532d 100%)",
+        boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.12)",
+      }}
+    >
+      <PitchMarkings />
+
+      <div className="absolute inset-[3.5%] flex flex-col xs:inset-[4%] sm:inset-[3.2%]">
+        <div className="relative min-h-0 flex-[1_1_50%] min-h-[120px] xs:min-h-[128px] sm:min-h-0">
+          <TeamHalfReadOnly
+            label="Drużyna B"
+            team="away"
+            slots={away}
+            playerById={playerById}
+            onOpenStats={openPlayerStats}
+          />
+        </div>
+        <div className="relative min-h-0 flex-[1_1_50%] min-h-[120px] xs:min-h-[128px] sm:min-h-0">
+          <TeamHalfReadOnly
+            label="Drużyna A"
+            team="home"
+            slots={home}
+            playerById={playerById}
+            onOpenStats={openPlayerStats}
+          />
+        </div>
+      </div>
+    </div>
+  );
+
+  const statsDialog = (
+    <LineupPlayerStatsDialog
+      userId={statsUserId}
+      open={statsOpen}
+      onOpenChange={(open) => {
+        setStatsOpen(open);
+        if (!open) setStatsUserId(null);
+      }}
+    />
+  );
+
+  if (light) {
+    return (
+      <div className="min-w-0 space-y-5 overflow-x-hidden">
+        <MarketplaceSection
+          icon={LayoutGrid}
+          title="Ustawienie"
+          description="Drużyna B — góra, drużyna A — dół. Dotknij zawodnika, żeby zobaczyć statystyki."
+        >
+          {pitch}
+        </MarketplaceSection>
+
+        {bench.length > 0 ? (
+          <MarketplaceSection
+            icon={Users}
+            title="Poza boiskiem"
+            description="Zapisani na mecz, którzy nie trafili jeszcze do ustawienia."
+          >
+            <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              {bench.map((p) => (
+                <li key={p.userId}>
+                  <button
+                    type="button"
+                    onClick={() => openPlayerStats(p.userId)}
+                    className="flex w-full items-center gap-3 rounded-2xl border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-left transition-colors hover:border-teal-200 hover:bg-teal-50/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mp-teal)] dark:border-zinc-800 dark:bg-zinc-900/60 dark:hover:bg-zinc-900"
+                  >
+                    <PlayerAvatar
+                      photoPath={p.profilePhotoPath}
+                      firstName={p.firstName}
+                      lastName={p.lastName}
+                      size="md"
+                      ringClassName="ring-2 ring-[var(--mp-teal)]/25"
+                    />
+                    <PlayerNameStack
+                      firstName={p.firstName}
+                      lastName={p.lastName}
+                      nick={p.zawodnik}
+                      primaryClassName="font-semibold text-zinc-950 dark:text-white"
+                      secondaryClassName="text-zinc-500 dark:text-zinc-400"
+                    />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </MarketplaceSection>
+        ) : null}
+
+        {statsDialog}
+      </div>
+    );
+  }
+
   return (
     <div className="min-w-0 space-y-3 overflow-x-hidden sm:space-y-4">
       <div className="text-center sm:text-left">
@@ -401,7 +517,9 @@ export function MatchLineupView({ matchDate, matchTime, location, players, home,
           Ten mecz
         </h2>
         <p className="mt-1 text-xs leading-snug text-zinc-600 xs:text-sm sm:text-base">
-          <span className="whitespace-nowrap">{matchDate} · {matchTime}</span>
+          <span className="whitespace-nowrap">
+            {matchDate} · {matchTime}
+          </span>
           <span className="mx-1 hidden sm:inline">·</span>
           <span className="mt-0.5 block break-words sm:mt-0 sm:inline">{location}</span>
         </p>
@@ -415,53 +533,42 @@ export function MatchLineupView({ matchDate, matchTime, location, players, home,
           <CardDescription className="text-xs leading-relaxed sm:text-sm">
             <span className="sm:hidden">B — góra, A — dół. Dotknij zawodnika po statystyki.</span>
             <span className="hidden sm:inline">
-              Drużyna B — góra, drużyna A — dół. Kliknij zawodnika (koszulka lub tabliczka z imieniem), aby zobaczyć statystyki.
+              Drużyna B — góra, drużyna A — dół. Kliknij zawodnika (koszulka lub tabliczka z imieniem), aby zobaczyć
+              statystyki.
             </span>
           </CardDescription>
         </CardHeader>
-        <CardContent className="min-w-0 px-1 pb-3 pt-0 xs:px-2 sm:px-4 sm:pb-4">
-          <div
-            className="relative mx-auto aspect-[9/16] w-full max-w-[min(100%,32rem)] overflow-hidden rounded-xl border-2 border-white/40 shadow-inner xs:aspect-[3/5] xs:rounded-2xl sm:aspect-[3/4]"
-            style={{
-              background:
-                "linear-gradient(180deg, #14532d 0%, #166534 18%, #15803d 50%, #166534 82%, #14532d 100%)",
-              boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.12)",
-            }}
-          >
-            <PitchMarkings />
-
-            <div className="absolute inset-[3.5%] flex flex-col xs:inset-[4%] sm:inset-[3.2%]">
-              <div className="relative min-h-0 flex-[1_1_50%] min-h-[120px] xs:min-h-[128px] sm:min-h-0">
-                <TeamHalfReadOnly
-                  label="Drużyna B"
-                  team="away"
-                  slots={away}
-                  playerById={playerById}
-                  onOpenStats={openPlayerStats}
-                />
-              </div>
-              <div className="relative min-h-0 flex-[1_1_50%] min-h-[120px] xs:min-h-[128px] sm:min-h-0">
-                <TeamHalfReadOnly
-                  label="Drużyna A"
-                  team="home"
-                  slots={home}
-                  playerById={playerById}
-                  onOpenStats={openPlayerStats}
-                />
-              </div>
-            </div>
-          </div>
-        </CardContent>
+        <CardContent className="min-w-0 px-1 pb-3 pt-0 xs:px-2 sm:px-4 sm:pb-4">{pitch}</CardContent>
       </Card>
 
-      <LineupPlayerStatsDialog
-        userId={statsUserId}
-        open={statsOpen}
-        onOpenChange={(open) => {
-          setStatsOpen(open);
-          if (!open) setStatsUserId(null);
-        }}
-      />
+      {bench.length > 0 ? (
+        <div className="rounded-2xl border border-zinc-200/80 bg-white p-4 shadow-sm">
+          <h3 className="text-sm font-bold text-emerald-950 dark:text-emerald-100">Poza boiskiem</h3>
+          <p className="mt-1 text-xs text-zinc-500">Zapisani, którzy nie trafili do ustawienia.</p>
+          <ul className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {bench.map((p) => (
+              <li key={p.userId}>
+                <button
+                  type="button"
+                  onClick={() => openPlayerStats(p.userId)}
+                  className="flex w-full items-center gap-3 rounded-xl border border-emerald-100 bg-emerald-50/50 px-3 py-2 text-left hover:bg-emerald-50 dark:border-emerald-900/40 dark:bg-emerald-950/30"
+                >
+                  <PlayerAvatar
+                    photoPath={p.profilePhotoPath}
+                    firstName={p.firstName}
+                    lastName={p.lastName}
+                    size="md"
+                    ringClassName="ring-2 ring-emerald-900/20"
+                  />
+                  <PlayerNameStack firstName={p.firstName} lastName={p.lastName} nick={p.zawodnik} />
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      {statsDialog}
     </div>
   );
 }

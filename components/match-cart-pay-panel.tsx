@@ -11,10 +11,10 @@ import {
   adminInnerPanelClass,
 } from "@/components/admin-ui";
 import {
+  ChromeIconBadge,
   PaymentsCard,
   paymentsEmptyClass,
   paymentsFieldClass,
-  paymentsIconWrapClass,
   paymentsInnerPanelClass,
 } from "@/components/payments-card";
 import { useSiteMode } from "@/components/site-mode";
@@ -221,11 +221,7 @@ export function MatchCartPayPanel({
       className={className}
       title="Opłać mecz (koszyk)"
       description={`Zaliczka ${formatMatchFeePln(MATCH_PREPAYMENT_PLN)} na osobę — jeśli ostateczna składka będzie niższa, różnica wraca na portfel płatnika. Możesz opłacić siebie i innych z portfela${hotpayEnabled ? " albo kartą / Blikiem" : ""}.`}
-      headerExtra={
-        <div className={light ? paymentsIconWrapClass : "flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/15 ring-2 ring-white/30"}>
-          <ShoppingCart className="h-5 w-5 text-white" strokeWidth={2.25} aria-hidden />
-        </div>
-      }
+      headerExtra={<ChromeIconBadge icon={ShoppingCart} marketplace={marketplaceEnabled} />}
     >
       {loading ? (
         <p className={cn("flex items-center gap-2 text-sm", light ? "text-zinc-500" : "pitch-muted")}>

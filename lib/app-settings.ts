@@ -35,6 +35,11 @@ import {
   type SiteAssetKey,
   type SiteAssetUrls,
 } from "@/lib/site-assets";
+import {
+  parseMarketplacePitchPhotosJson,
+  resolveMarketplacePitchPhotoPool,
+  MARKETPLACE_PITCH_PHOTOS,
+} from "@/lib/marketplace-photos";
 
 export type MatchCancelReasonEntry = { value: string; label: string };
 
@@ -98,6 +103,13 @@ export type AppSettings = {
   hotpay_enabled: boolean;
   /** Publiczny tryb V2 (rezerwacje boisk). Wyłączony = Wersja V1, sama akademia. */
   booking_marketplace_enabled: boolean;
+  /**
+   * Pasek zdjęć pod „Gramy razem” / hero V2 — null w slocie = domyślne Unsplash.
+   * Długość zawsze = MARKETPLACE_PITCH_PHOTOS.
+   */
+  marketplace_pitch_photos_custom: (string | null)[];
+  /** Rozwiązana pula URL (custom albo default). */
+  marketplace_pitch_photos: string[];
   /** Prowizja operatora w % (np. 1.8). 0 = brak powiększania kwoty. */
   hotpay_commission_pct: number;
   /** Stała opłata operatora w PLN (np. 0.40). */
@@ -166,6 +178,8 @@ export const APP_SETTINGS_DEFAULTS: AppSettings = {
   mobile_settings: { ...MOBILE_CHANNEL_SETTINGS_DEFAULTS },
   hotpay_enabled: true,
   booking_marketplace_enabled: false,
+  marketplace_pitch_photos_custom: Array.from({ length: MARKETPLACE_PITCH_PHOTOS.length }, () => null),
+  marketplace_pitch_photos: [...MARKETPLACE_PITCH_PHOTOS],
   hotpay_commission_pct: 2.45,
   hotpay_commission_fixed: 0.30,
 };
@@ -227,6 +241,7 @@ type AppSettingsRow = {
   mobile_settings_json?: string | null;
   hotpay_enabled?: number | null;
   booking_marketplace_enabled?: number | null;
+  marketplace_pitch_photos_json?: string | null;
   hotpay_commission_pct?: number | null;
   hotpay_commission_fixed?: number | null;
 };
@@ -278,6 +293,7 @@ function appSettingsSelectSql(): string {
     mobile_settings_json,
     hotpay_enabled,
     booking_marketplace_enabled,
+    marketplace_pitch_photos_json,
     hotpay_commission_pct,
     hotpay_commission_fixed
   FROM app_settings WHERE realm = ?
@@ -424,6 +440,13 @@ export function resolveAppSettings(
     screen_blocks_mobile: parseMobileScreenBlocksJson(row?.screen_blocks_mobile_json),
     hotpay_enabled: sqlFlagOn(row?.hotpay_enabled, true),
     booking_marketplace_enabled: sqlFlagOn(row?.booking_marketplace_enabled, false),
+    marketplace_pitch_photos_custom: (() => {
+      const custom = parseMarketplacePitchPhotosJson(row?.marketplace_pitch_photos_json);
+      return custom;
+    })(),
+    marketplace_pitch_photos: resolveMarketplacePitchPhotoPool(
+      parseMarketplacePitchPhotosJson(row?.marketplace_pitch_photos_json)
+    ),
     hotpay_commission_pct:
       typeof row?.hotpay_commission_pct === "number" && row.hotpay_commission_pct >= 0
         ? row.hotpay_commission_pct
@@ -687,6 +710,10 @@ const APP_SETTINGS_MIGRATION_COLUMNS: { name: string; ddl: string }[] = [
   {
     name: "booking_marketplace_enabled",
     ddl: "ALTER TABLE app_settings ADD COLUMN booking_marketplace_enabled INTEGER NOT NULL DEFAULT 0",
+  },
+  {
+    name: "marketplace_pitch_photos_json",
+    ddl: "ALTER TABLE app_settings ADD COLUMN marketplace_pitch_photos_json TEXT",
   },
   { name: "hotpay_commission_pct", ddl: "ALTER TABLE app_settings ADD COLUMN hotpay_commission_pct REAL NOT NULL DEFAULT 2.45" },
   { name: "hotpay_commission_pct", ddl: "ALTER TABLE app_settings ADD COLUMN hotpay_commission_pct REAL NOT NULL DEFAULT 2.45" },

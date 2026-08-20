@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, type ComponentType, type ReactNode } from "react";
+import { useState, type ComponentType } from "react";
 import { toast } from "@/lib/app-toast";
 import {
   Activity,
@@ -35,6 +35,7 @@ import { InlinePreloader } from "@/components/preloaders";
 import { PlayerAliasPicker } from "@/components/player-alias-picker";
 import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
 import { formatWalletPln } from "@/components/player-wallet-panel";
+import { MarketplaceSection, mpSectionCardClass } from "@/components/payments-card";
 import { MarketplacePitchPhoto } from "@/components/marketplace-pitch-photo";
 import { PhotoPanel } from "@/components/photo-panel";
 import { useSiteMode } from "@/components/site-mode";
@@ -52,16 +53,6 @@ type Props = {
   walletBalancePln: number;
   hotpayEnabled: boolean;
 };
-
-const sectionCardClass =
-  "overflow-hidden rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-950 sm:p-6";
-
-const sectionTitleClass = "text-lg font-black tracking-tight text-zinc-950 dark:text-white sm:text-xl";
-
-const sectionDescClass = "mt-1 text-sm text-zinc-500 dark:text-zinc-400";
-
-const iconWrapClass =
-  "flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-[var(--mp-teal)] text-white shadow-sm";
 
 export function ProfilClient({
   initial,
@@ -756,22 +747,22 @@ export function ProfilClient({
 
         <div className="relative z-10 mx-auto w-full min-w-0 max-w-6xl space-y-6 px-3 py-8 xs:px-4 sm:py-10">
           <div className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
-            <SectionCard
+            <MarketplaceSection
               icon={Pencil}
               title="Dane i awatar"
               description="Logowanie odbywa się po imieniu, nazwisku i wybranym piłkarzu — po zmianie nadal jesteś zalogowany."
             >
               {profileForm}
-            </SectionCard>
+            </MarketplaceSection>
 
             <div className="space-y-6">
-              <SectionCard
+              <MarketplaceSection
                 icon={Wallet}
                 title="Portfel"
                 description="Podgląd salda — doładowania i opłaty meczów są na stronie Płatności."
               >
                 {walletBlock}
-              </SectionCard>
+              </MarketplaceSection>
               <AndroidAppVersionCard />
             </div>
           </div>
@@ -792,24 +783,24 @@ export function ProfilClient({
               .
             </p>
           </PhotoPanel>
-          <div className={sectionCardClass}>{summaryGrid}</div>
+          <div className={mpSectionCardClass}>{summaryGrid}</div>
 
-          <SectionCard
+          <MarketplaceSection
             title="Statystyki z meczów"
             description="Możesz dodać lub poprawić wpis do 7 dni po dacie meczu. Później zmiany wykona wyłącznie admin."
           >
             {matchStatsSection}
-          </SectionCard>
+          </MarketplaceSection>
 
-          <SectionCard
+          <MarketplaceSection
             title="Twoja ostatnia aktywność"
             description="Chronologia tego, co robiłeś na stronie (np. logowanie, zapisy, mecze)."
           >
             {activitySection}
-          </SectionCard>
+          </MarketplaceSection>
 
           <section className="rounded-3xl border border-dashed border-zinc-300 bg-zinc-50 p-6 dark:border-zinc-700 dark:bg-zinc-900/40">
-            <h2 className={sectionTitleClass}>Skrót do strony</h2>
+            <h2 className="text-lg font-black tracking-tight text-zinc-950 dark:text-white sm:text-xl">Skrót do strony</h2>
             {shortcuts}
           </section>
         </div>
@@ -930,35 +921,6 @@ export function ProfilClient({
 
       {statsModal}
     </div>
-  );
-}
-
-function SectionCard({
-  icon: Icon,
-  title,
-  description,
-  children,
-}: {
-  icon?: ComponentType<{ className?: string; strokeWidth?: number; "aria-hidden"?: boolean }>;
-  title: string;
-  description?: string;
-  children: ReactNode;
-}) {
-  return (
-    <section className={sectionCardClass}>
-      <div className="mb-1 flex items-start gap-3">
-        {Icon ? (
-          <span className={iconWrapClass}>
-            <Icon className="h-4 w-4" strokeWidth={2.25} aria-hidden />
-          </span>
-        ) : null}
-        <div className="min-w-0 flex-1">
-          <h2 className={sectionTitleClass}>{title}</h2>
-          {description ? <p className={sectionDescClass}>{description}</p> : null}
-        </div>
-      </div>
-      {children}
-    </section>
   );
 }
 

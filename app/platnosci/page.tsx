@@ -21,7 +21,6 @@ export default async function PlatnosciPage() {
       <PlatnosciClient
         isLoggedIn={Boolean(session)}
         isAdmin={session?.isAdmin ?? false}
-        currentUserId={session?.userId ?? null}
         hotpayEnabled={isHotpayConfigured() && appSettings.hotpay_enabled}
       />
     </Suspense>

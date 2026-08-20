@@ -23,6 +23,7 @@ import { WalletBalanceFloat } from "@/components/wallet-balance-float";
 import { WriteToAdminFloat } from "@/components/write-to-admin-float";
 import { SiteJsonLd } from "@/components/site-json-ld";
 import { SiteAssetsProvider } from "@/components/site-assets-provider";
+import { MarketplacePhotosProvider } from "@/components/marketplace-photos-provider";
 import { ScreenBlocksProvider } from "@/components/screen-blocks-provider";
 import { SiteModeProvider } from "@/components/site-mode";
 import { ScreenBlockPlaceholder } from "@/components/screen-block-placeholder";
@@ -347,6 +348,10 @@ export default async function RootLayout({
                 popupEnabled={appSettings.adsense_popup_enabled}
               >
                 <SiteAssetsProvider assets={siteAssets}>
+                  <MarketplacePhotosProvider
+                    photos={appSettings.marketplace_pitch_photos}
+                    customSlots={appSettings.marketplace_pitch_photos_custom}
+                  >
                   <ScreenBlocksProvider
                     blocks={appSettings.screen_blocks}
                     isAdmin={shellIsAdmin}
@@ -365,6 +370,7 @@ export default async function RootLayout({
                       {mainContent}
                     </SiteShell>
                   </ScreenBlocksProvider>
+                  </MarketplacePhotosProvider>
                 </SiteAssetsProvider>
               </AdsenseProvider>
               {loggedInFull && !isPzuCupSection ? <WalletBalanceFloat enabled /> : null}

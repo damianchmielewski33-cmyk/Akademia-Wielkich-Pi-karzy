@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils";
 import type { AppSettingsApiResponse } from "@/app/api/admin/app-settings/route";
 import type { MatchCancelReasonEntry } from "@/lib/app-settings";
 import { AdminSiteAssetField } from "@/components/admin-site-asset-field";
+import { AdminMarketplacePitchPhotosSection } from "@/components/marketplace-photo-strip";
 import { AdminImageSpecsTable, ImageUploadSpecDetails } from "@/components/admin-image-specs";
 import { ALL_ADMIN_IMAGE_SPECS, PROFILE_PHOTO_SPEC } from "@/lib/image-upload-specs";
 import { SITE_ASSET_KEYS } from "@/lib/site-assets";
@@ -664,6 +665,14 @@ export function AdminSettingsTab({
                 );
               })}
             </div>
+          </div>
+
+          <div className="rounded-xl border border-white/20 bg-black/10 p-4">
+            <p className="mb-3 text-sm font-semibold text-white">Zdjęcia V2 — pasek „Gramy razem”</p>
+            <AdminMarketplacePitchPhotosSection
+              disabled={busy}
+              onUpdated={(next) => setSettings((prev) => (prev ? { ...next, system: prev.system } : prev))}
+            />
           </div>
 
           <div className="rounded-xl border border-white/20 bg-black/10 p-4">

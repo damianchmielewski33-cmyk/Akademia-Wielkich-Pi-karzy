@@ -1,10 +1,15 @@
+"use client";
+
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { HomeFallingDecor } from "@/components/home-falling-decor";
 import { MarketplacePitchPhoto } from "@/components/marketplace-pitch-photo";
+import { MarketplacePhotoStrip } from "@/components/marketplace-photo-strip";
+import { useMarketplacePhotos } from "@/components/marketplace-photos-provider";
 import { PhotoPanel } from "@/components/photo-panel";
+import { useScreenBlocks } from "@/components/screen-blocks-provider";
 import { Button } from "@/components/ui/button";
-import { MARKETPLACE_PITCH_PHOTOS, pitchPhotoAt } from "@/lib/marketplace-photos";
+import { pitchPhotoAt } from "@/lib/marketplace-photos";
 
 type Tile = {
   href: string;
@@ -50,7 +55,9 @@ export function AuthPageShell({
   footerLabel,
   children,
 }: Props) {
-  const heroPhoto = pitchPhotoAt(1);
+  const { photos: mpPhotos } = useMarketplacePhotos();
+  const { isAdmin } = useScreenBlocks();
+  const heroPhoto = pitchPhotoAt(1, mpPhotos);
 
   return (
     <div className="relative flex flex-1 flex-col text-zinc-900 dark:text-zinc-50">
@@ -66,17 +73,11 @@ export function AuthPageShell({
         </div>
       </section>
 
-      <div className="relative z-10 -mx-4 mt-0 flex gap-4 overflow-x-auto bg-zinc-100 px-4 py-4 [scrollbar-width:thin] dark:bg-zinc-900">
-        {MARKETPLACE_PITCH_PHOTOS.slice(0, 8).map((src) => (
-          <div key={src} className="relative h-48 w-72 shrink-0 overflow-hidden rounded-3xl bg-zinc-200">
-            <MarketplacePitchPhoto src={src} sizes="288px" />
-          </div>
-        ))}
-      </div>
+      <MarketplacePhotoStrip isAdmin={isAdmin} />
 
       <div className="relative z-10 mx-auto w-full min-w-0 max-w-6xl px-4 py-10 sm:py-12">
         <PhotoPanel
-          src={pitchPhotoAt(4)}
+          src={pitchPhotoAt(4, mpPhotos)}
           className="min-h-[18rem]"
           contentClassName="p-5 sm:p-6"
           overlayClassName="bg-gradient-to-t from-black/80 via-black/50 to-black/20"
@@ -92,7 +93,7 @@ export function AuthPageShell({
           {tiles.map((tile) => (
             <Link key={tile.href} href={tile.href} className="block">
               <PhotoPanel
-                src={pitchPhotoAt(tile.photoIndex)}
+                src={pitchPhotoAt(tile.photoIndex, mpPhotos)}
                 className="min-h-[12rem] transition hover:-translate-y-0.5 hover:shadow-xl"
                 contentClassName="flex min-h-[12rem] flex-col justify-end p-5"
                 overlayClassName="bg-gradient-to-t from-black/75 via-black/30 to-black/10"
@@ -106,7 +107,7 @@ export function AuthPageShell({
         </div>
 
         <PhotoPanel
-          src={pitchPhotoAt(9)}
+          src={pitchPhotoAt(9, mpPhotos)}
           className="mt-14 min-h-[18rem] rounded-3xl"
           contentClassName="flex min-h-[18rem] flex-col justify-center gap-6 px-6 py-10 sm:px-10 lg:flex-row lg:items-center lg:justify-between"
           overlayClassName="bg-gradient-to-r from-black/70 via-black/55 to-black/45"
@@ -130,7 +131,7 @@ export function AuthPageShell({
           {steps.map((step, i) => (
             <PhotoPanel
               key={step.n}
-              src={pitchPhotoAt(10 + i)}
+              src={pitchPhotoAt(10 + i, mpPhotos)}
               className="min-h-[15rem]"
               contentClassName="flex min-h-[15rem] flex-col justify-end p-5"
               overlayClassName="bg-gradient-to-t from-black/75 via-black/30 to-black/10"

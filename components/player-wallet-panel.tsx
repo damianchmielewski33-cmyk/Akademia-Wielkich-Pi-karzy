@@ -20,10 +20,10 @@ import {
   adminFieldClass,
 } from "@/components/admin-ui";
 import {
+  ChromeIconBadge,
   PaymentsCard,
   paymentsEmptyClass,
   paymentsFieldClass,
-  paymentsIconWrapClass,
   paymentsInnerPanelClass,
 } from "@/components/payments-card";
 import { PhotoPanel } from "@/components/photo-panel";
@@ -49,7 +49,6 @@ export type WalletMeTransaction = WalletTransactionRow & {
 type HistoryFilter = "all" | "deposit" | "match_charge" | "transfer" | "adjustment";
 
 type Props = {
-  currentUserId: number | null;
   hotpayEnabled: boolean;
   compact?: boolean;
   /** Ukrywa formularz doładowania (np. admin ma już HotpayPayButtons). */
@@ -102,60 +101,47 @@ function matchLabel(tx: WalletMeTransaction): string | null {
   return tx.match_cancelled ? `${base} (odwołany)` : base;
 }
 
-function walletTxMeta(tx: WalletMeTransaction, light: boolean) {
+function walletTxMeta(tx: WalletMeTransaction) {
   const amount = Number(tx.amount_pln ?? 0);
   switch (tx.kind) {
     case "deposit":
       return {
         label: amount >= 0 ? "Doładowanie" : "Korekta wpłaty",
         Icon: ArrowDownLeft,
-        badgeClass: light
-          ? "border-teal-200 bg-teal-50 text-[var(--mp-teal-dark)] dark:border-teal-800 dark:bg-teal-950/40 dark:text-teal-200"
-          : "border-emerald-300/40 bg-emerald-500/20 text-emerald-100",
-        borderClass: light ? "border-l-[var(--mp-teal)]" : "border-l-emerald-400",
       };
     case "match_charge":
       return {
         label: amount < 0 ? "Opłata za mecz" : "Zwrot / uznanie meczu",
         Icon: ArrowUpRight,
-        badgeClass: light
-          ? "border-red-200 bg-red-50 text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200"
-          : "border-red-300/40 bg-red-500/20 text-red-100",
-        borderClass: "border-l-red-400",
       };
     case "adjustment":
       return {
-        label: amount > 0 ? "Zwrot / uznanie" : "Korekta (obciążenie)",
+        label: amount > 0 ? "Zwrot / uznanie" : "Korekta",
         Icon: SlidersHorizontal,
-        badgeClass: light
-          ? "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200"
-          : "border-amber-300/40 bg-amber-500/20 text-amber-100",
-        borderClass: "border-l-amber-400",
       };
     case "transfer":
       return {
         label: amount > 0 ? "Przelew otrzymany" : "Przelew wysłany",
         Icon: ArrowLeftRight,
-        badgeClass: light
-          ? "border-sky-200 bg-sky-50 text-sky-800 dark:border-sky-900 dark:bg-sky-950/40 dark:text-sky-200"
-          : "border-sky-300/40 bg-sky-500/20 text-sky-100",
-        borderClass: "border-l-sky-400",
       };
     default:
-      return {
-        label: String(tx.kind),
-        Icon: SlidersHorizontal,
-        badgeClass: light
-          ? "border-zinc-200 bg-zinc-100 text-zinc-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
-          : "border-white/25 bg-white/10 text-emerald-100",
-        borderClass: light ? "border-l-zinc-300" : "border-l-white/40",
-      };
+      return { label: String(tx.kind), Icon: SlidersHorizontal };
   }
 }
 
 function walletKindLabel(kind: WalletTransactionRow["wallet_kind"] | null | undefined) {
-  if (kind === "operator") return "Online (HotPay)";
-  return "Gotówka / BLIK";
+  if (kind === "operator") return "Online";
+  return "Gotówka";
+}
+
+function txDetailLine(tx: WalletMeTransaction, amount: number): string | null {
+  const match = matchLabel(tx);
+  if (match) return match;
+  const related = relatedUserLabel(tx);
+  if (related) return `${amount > 0 ? "Od" : "Do"}: ${related}`;
+  const note = tx.note?.trim();
+  if (note) return note.length > 90 ? `${note.slice(0, 90)}…` : note;
+  return null;
 }
 
 export function WalletBalanceHistory({
@@ -222,333 +208,166 @@ export function WalletBalanceHistory({
 
   const filters: { id: HistoryFilter; label: string }[] = [
     { id: "all", label: "Wszystkie" },
-    { id: "deposit", label: "Doładowania" },
+    { id: "deposit", label: "Wpłaty" },
     { id: "match_charge", label: "Mecze" },
     { id: "transfer", label: "Przelewy" },
-    { id: "adjustment", label: "Korekty / zwroty" },
+    { id: "adjustment", label: "Korekty" },
   ];
 
   return (
     <div className="mt-4 space-y-3">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-wrap gap-1.5">
-          {filters.map((f) => (
-            <button
-              key={f.id}
-              type="button"
-              onClick={() => setFilter(f.id)}
-              className={cn(
-                "rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 transition-colors",
-                light
-                  ? filter === f.id
-                    ? "bg-[var(--mp-teal)] text-white ring-[var(--mp-teal)]"
-                    : "bg-zinc-100 text-zinc-700 ring-zinc-200 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-200 dark:ring-zinc-700"
-                  : filter === f.id
-                    ? "bg-[var(--mundial-gold,#c9a227)] text-[var(--mundial-navy,#0a1628)] ring-white/40"
-                    : "bg-black/20 text-emerald-100/85 ring-white/20 hover:bg-white/10"
-              )}
-            >
-              {f.label}
-              <span className="ml-1 tabular-nums opacity-80">({counts[f.id]})</span>
-            </button>
-          ))}
-        </div>
-        <p className={cn("text-xs tabular-nums", light ? "text-zinc-500" : "pitch-muted")}>
-          Załadowano {transactions.length}
-          {total > transactions.length ? ` z ${total}` : ""} wpisów
-        </p>
+      <div className="mp-h-scroll -mx-1 flex gap-1.5 overflow-x-auto px-1 pb-0.5">
+        {filters.map((f) => (
+          <button
+            key={f.id}
+            type="button"
+            onClick={() => setFilter(f.id)}
+            className={cn(
+              "shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors",
+              light
+                ? filter === f.id
+                  ? "bg-[var(--mp-teal)] text-white"
+                  : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300"
+                : filter === f.id
+                  ? "bg-[var(--mundial-gold,#c9a227)] text-[var(--mundial-navy,#0a1628)]"
+                  : "bg-black/25 text-emerald-100/85 hover:bg-white/10"
+            )}
+          >
+            {f.label}
+            {filter === f.id || f.id === "all" ? (
+              <span className="ml-1 tabular-nums opacity-75">{counts[f.id]}</span>
+            ) : null}
+          </button>
+        ))}
       </div>
 
       <input
         type="search"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        placeholder="Szukaj w notatce, meczu, zawodniku…"
-        className={cn(light ? paymentsFieldClass : cn(adminFieldClass, "w-full rounded-xl px-3 py-2 text-sm outline-none"))}
+        placeholder="Szukaj…"
+        className={cn(
+          light ? paymentsFieldClass : cn(adminFieldClass, "w-full rounded-xl px-3 py-2 text-sm outline-none"),
+          "h-10"
+        )}
       />
 
-      <div
-        className={cn(
-          "overflow-hidden rounded-xl border",
-          light
-            ? "border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950"
-            : "border-white/25 bg-black/15"
-        )}
-      >
-        <div
-          className={cn(
-            "flex items-center justify-between gap-2 border-b px-4 py-2.5",
-            light ? "border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900" : "border-white/20 bg-black/20"
-          )}
-        >
-          <p
-            className={cn(
-              "text-xs font-semibold uppercase tracking-wide",
-              light ? "text-zinc-600 dark:text-zinc-300" : "text-emerald-100/85"
-            )}
-          >
-            Lista transakcji
-          </p>
-          <span
-            className={cn(
-              "rounded-full px-2 py-0.5 text-[11px] font-medium tabular-nums ring-1",
-              light
-                ? "bg-zinc-100 text-zinc-600 ring-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:ring-zinc-700"
-                : "bg-white/10 text-emerald-100/80 ring-white/20"
-            )}
-          >
-            {filtered.length}
-            {filtered.length !== transactions.length ? ` / ${transactions.length}` : ""}
-          </span>
-        </div>
+      {filtered.length === 0 ? (
+        <p className={cn("py-8 text-center text-sm", light ? "text-zinc-500" : "pitch-muted")}>
+          Brak wpisów dla wybranego filtra.
+        </p>
+      ) : (
+        <ul className="max-h-[min(70vh,36rem)] space-y-2 overflow-y-auto overscroll-contain pr-0.5">
+          {filtered.map((tx) => {
+            const amount = Number(tx.amount_pln ?? 0);
+            const balanceAfter = Number(tx.balance_after_pln ?? 0);
+            const isPositive = amount > 0;
+            const isNegative = amount < 0;
+            const { date, time } = formatTxDateParts(tx.created_at);
+            const meta = walletTxMeta(tx);
+            const Icon = meta.Icon;
+            const detail = txDetailLine(tx, amount);
+            const isTest = Boolean(tx.is_test);
 
-        <div
-          className={cn(
-            "hidden grid-cols-[minmax(0,1.6fr)_5.5rem_5.5rem_5.5rem] gap-3 border-b px-4 py-2 text-[11px] font-semibold uppercase tracking-wide sm:grid",
-            light
-              ? "border-zinc-100 text-zinc-400 dark:border-zinc-800 dark:text-zinc-500"
-              : "border-white/15 bg-black/10 text-emerald-100/60"
-          )}
-          aria-hidden
-        >
-          <span>Operacja i szczegóły</span>
-          <span className="text-right">Data</span>
-          <span className="text-right">Zmiana</span>
-          <span className="text-right">Saldo</span>
-        </div>
-
-        {filtered.length === 0 ? (
-          <p className={cn("px-4 py-8 text-center text-sm", light ? "text-zinc-500" : "pitch-muted")}>
-            Brak wpisów dla wybranego filtra.
-          </p>
-        ) : (
-          <ul
-            className={cn(
-              "max-h-[70vh] divide-y overflow-y-auto",
-              light ? "divide-zinc-100 dark:divide-zinc-800" : "divide-white/15"
-            )}
-          >
-            {filtered.map((tx) => {
-              const amount = Number(tx.amount_pln ?? 0);
-              const balanceAfter = Number(tx.balance_after_pln ?? 0);
-              const isPositive = amount > 0;
-              const isNegative = amount < 0;
-              const { date, time } = formatTxDateParts(tx.created_at);
-              const meta = walletTxMeta(tx, light);
-              const Icon = meta.Icon;
-              const match = matchLabel(tx);
-              const related = relatedUserLabel(tx);
-              const isTest = Boolean(tx.is_test);
-
-              return (
-                <li
-                  key={tx.id}
+            return (
+              <li
+                key={tx.id}
+                className={cn(
+                  "flex items-start gap-3 rounded-2xl px-3 py-3",
+                  light
+                    ? "border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950"
+                    : "border border-white/15 bg-black/20"
+                )}
+              >
+                <span
                   className={cn(
-                    "border-l-4 px-4 py-3",
-                    light ? "bg-white dark:bg-zinc-950" : "bg-black/20",
-                    meta.borderClass
+                    "mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl",
+                    light
+                      ? isNegative
+                        ? "bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-300"
+                        : isPositive
+                          ? "bg-teal-50 text-[var(--mp-teal-dark)] dark:bg-teal-950/40 dark:text-teal-200"
+                          : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300"
+                      : isNegative
+                        ? "bg-red-500/20 text-red-200"
+                        : "bg-white/10 text-white"
                   )}
+                  aria-hidden
                 >
-                  <div className="grid gap-3 sm:grid-cols-[minmax(0,1.6fr)_5.5rem_5.5rem_5.5rem] sm:items-start">
+                  <Icon className="h-4 w-4" />
+                </span>
+
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span
-                          className={cn(
-                            "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold",
-                            meta.badgeClass
-                          )}
-                        >
-                          <Icon className="h-3 w-3 shrink-0" aria-hidden />
-                          {meta.label}
-                        </span>
-                        <span
-                          className={cn(
-                            "rounded-full px-2 py-0.5 text-[10px] font-medium ring-1",
-                            light
-                              ? "bg-zinc-100 text-zinc-600 ring-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:ring-zinc-700"
-                              : "bg-white/10 text-emerald-100/85 ring-white/15"
-                          )}
-                        >
-                          {walletKindLabel(tx.wallet_kind)}
-                        </span>
+                      <p
+                        className={cn(
+                          "truncate text-sm font-semibold",
+                          light ? "text-zinc-950 dark:text-white" : "text-white"
+                        )}
+                      >
+                        {meta.label}
                         {isTest ? (
-                          <span className="rounded-full bg-amber-400/20 px-2 py-0.5 text-[10px] font-semibold text-amber-800 ring-1 ring-amber-300/40 dark:text-amber-100 dark:ring-amber-300/30">
+                          <span
+                            className={cn(
+                              "ml-2 align-middle text-[10px] font-bold uppercase tracking-wide",
+                              light ? "text-amber-600" : "text-amber-200"
+                            )}
+                          >
                             Test
                           </span>
                         ) : null}
-                        <span
-                          className={cn(
-                            "text-[11px] tabular-nums",
-                            light ? "text-zinc-400" : "text-emerald-100/50"
-                          )}
-                        >
-                          #{tx.id}
-                        </span>
-                        <span
-                          className={cn(
-                            "text-[11px] tabular-nums sm:hidden",
-                            light ? "text-zinc-500" : "text-emerald-100/70"
-                          )}
-                        >
-                          {date}
-                          {time ? ` · ${time}` : ""}
-                        </span>
-                      </div>
-
-                      {tx.note ? (
-                        <p
-                          className={cn(
-                            "mt-1.5 whitespace-pre-wrap break-words text-sm leading-snug",
-                            light ? "text-zinc-800 dark:text-zinc-100" : "text-emerald-50/95"
-                          )}
-                        >
-                          {tx.note}
-                        </p>
-                      ) : (
-                        <p className={cn("mt-1.5 text-sm", light ? "text-zinc-400" : "text-emerald-100/45")}>
-                          Bez notatki
-                        </p>
-                      )}
-
-                      <div
-                        className={cn(
-                          "mt-2 flex flex-col gap-0.5 text-xs",
-                          light ? "text-zinc-500" : "pitch-muted"
-                        )}
-                      >
-                        {match ? (
-                          <p>
-                            <span
-                              className={cn(
-                                "font-semibold",
-                                light ? "text-zinc-700 dark:text-zinc-200" : "text-emerald-100/85"
-                              )}
-                            >
-                              Mecz:
-                            </span>{" "}
-                            {match}
-                          </p>
-                        ) : null}
-                        {related ? (
-                          <p>
-                            <span
-                              className={cn(
-                                "font-semibold",
-                                light ? "text-zinc-700 dark:text-zinc-200" : "text-emerald-100/85"
-                              )}
-                            >
-                              {amount > 0 ? "Od:" : "Do:"}
-                            </span>{" "}
-                            {related}
-                            {tx.related_user_id ? (
-                              <span className={cn("tabular-nums", light ? "text-zinc-400" : "text-emerald-100/50")}>
-                                {" "}
-                                (#{tx.related_user_id})
-                              </span>
-                            ) : null}
-                          </p>
-                        ) : null}
-                        {tx.deposit_request_id ? (
-                          <p>
-                            <span
-                              className={cn(
-                                "font-semibold",
-                                light ? "text-zinc-700 dark:text-zinc-200" : "text-emerald-100/85"
-                              )}
-                            >
-                              Wniosek wpłaty:
-                            </span>{" "}
-                            #{tx.deposit_request_id}
-                          </p>
-                        ) : null}
-                      </div>
-                    </div>
-
-                    <div className="hidden text-right sm:block">
-                      <p
-                        className={cn(
-                          "text-sm font-medium tabular-nums",
-                          light ? "text-zinc-900 dark:text-zinc-50" : "text-white"
-                        )}
-                      >
-                        {date}
                       </p>
-                      {time ? (
-                        <p className={cn("mt-0.5 text-xs tabular-nums", light ? "text-zinc-500" : "pitch-muted")}>
-                          {time}
-                        </p>
-                      ) : null}
+                      <p className={cn("mt-0.5 truncate text-xs", light ? "text-zinc-500" : "text-emerald-100/70")}>
+                        {[detail, walletKindLabel(tx.wallet_kind)].filter(Boolean).join(" · ")}
+                      </p>
                     </div>
-
-                    <div className="flex items-baseline justify-between gap-3 sm:block sm:text-right">
-                      <span
-                        className={cn(
-                          "text-[11px] font-semibold uppercase tracking-wide sm:hidden",
-                          light ? "text-zinc-400" : "text-emerald-100/60"
-                        )}
-                      >
-                        Zmiana
-                      </span>
+                    <div className="shrink-0 text-right">
                       <p
                         className={cn(
-                          "text-base font-bold tabular-nums leading-none",
+                          "text-sm font-bold tabular-nums leading-none",
                           isPositive && (light ? "text-[var(--mp-teal-dark)]" : "text-emerald-300"),
-                          isNegative && "text-red-500 dark:text-red-300",
+                          isNegative && (light ? "text-red-600 dark:text-red-300" : "text-red-300"),
                           !isPositive && !isNegative && (light ? "text-zinc-900 dark:text-white" : "text-white")
                         )}
                       >
                         {isPositive ? "+" : ""}
                         {formatWalletPln(amount)}
                       </p>
-                    </div>
-
-                    <div className="flex items-baseline justify-between gap-3 sm:block sm:text-right">
-                      <span
-                        className={cn(
-                          "text-[11px] font-semibold uppercase tracking-wide sm:hidden",
-                          light ? "text-zinc-400" : "text-emerald-100/60"
-                        )}
-                      >
-                        Saldo
-                      </span>
-                      <div>
-                        <p
-                          className={cn(
-                            "text-sm font-semibold tabular-nums",
-                            light ? "text-zinc-900 dark:text-white" : "text-white"
-                          )}
-                        >
-                          {formatWalletPln(balanceAfter)}
-                        </p>
-                        <p
-                          className={cn(
-                            "mt-0.5 hidden text-[10px] uppercase tracking-wide sm:block",
-                            light ? "text-zinc-400" : "text-emerald-100/45"
-                          )}
-                        >
-                          po operacji
-                        </p>
-                      </div>
+                      <p className={cn("mt-1 text-[11px] tabular-nums", light ? "text-zinc-400" : "text-emerald-100/55")}>
+                        {date}
+                        {time ? ` ${time}` : ""}
+                      </p>
+                      <p className={cn("mt-0.5 text-[11px] tabular-nums", light ? "text-zinc-400" : "text-emerald-100/45")}>
+                        saldo {formatWalletPln(balanceAfter)}
+                      </p>
                     </div>
                   </div>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </div>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+
+      <p className={cn("text-center text-[11px] tabular-nums", light ? "text-zinc-400" : "pitch-muted")}>
+        {filtered.length}
+        {filtered.length !== transactions.length ? ` z ${transactions.length}` : ""}
+        {total > transactions.length ? ` · łącznie ${total}` : ""}
+      </p>
 
       {hasMore && onLoadMore ? (
         <div className="flex justify-center pt-1">
           <Button
             type="button"
-            variant={light ? "default" : "gold"}
+            variant={light ? "outline" : "gold"}
             size="sm"
+            className={light ? "rounded-full" : undefined}
             disabled={loadingMore}
             onClick={() => onLoadMore()}
           >
             {loadingMore ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
-            Załaduj starsze wpisy
+            Starsze wpisy
           </Button>
         </div>
       ) : null}
@@ -967,11 +786,7 @@ export function PlayerWalletPanel({
       <PaymentsCard
         title="Historia salda"
         description="Wszystkie doładowania, opłaty meczów, przelewy, zwroty i korekty — z saldem po każdej operacji. Najnowsze na górze."
-        headerExtra={
-          <div className={marketplaceEnabled ? paymentsIconWrapClass : "flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/15 ring-2 ring-white/30"}>
-            <Wallet className="h-5 w-5 text-white" strokeWidth={2.25} aria-hidden />
-          </div>
-        }
+        headerExtra={<ChromeIconBadge icon={Wallet} marketplace={marketplaceEnabled} />}
       >
         <WalletBalanceHistory
           loading={walletLoading}

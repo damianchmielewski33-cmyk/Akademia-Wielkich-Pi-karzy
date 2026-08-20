@@ -22,6 +22,8 @@ import { HomeFallingDecor } from "@/components/home-falling-decor";
 import { HomeNextMatchCard } from "@/components/home-next-match-card";
 import { HomeTopRankings } from "@/components/home-top-rankings";
 import { MarketplacePitchPhoto } from "@/components/marketplace-pitch-photo";
+import { MarketplacePhotoStrip } from "@/components/marketplace-photo-strip";
+import { useMarketplacePhotos } from "@/components/marketplace-photos-provider";
 import { PhotoPanel } from "@/components/photo-panel";
 import { MarketplaceSearchForm } from "@/components/marketplace-search-form";
 import { MarketplaceVenueCard } from "@/components/marketplace-venue-card";
@@ -35,7 +37,7 @@ import { ModalMatchSummary, modalPanelClass } from "@/components/ui/modal-shared
 import { SiteSectionHero } from "@/components/site-section-hero";
 import type { MatchRow } from "@/lib/db";
 import type { VenueCard } from "@/lib/booking-shared";
-import { MARKETPLACE_PITCH_PHOTOS, pitchPhotosFromVenues } from "@/lib/marketplace-photos";
+import { pitchPhotosFromVenues, MARKETPLACE_PITCH_PHOTOS } from "@/lib/marketplace-photos";
 import type { HomeTopPlayer } from "@/lib/rankings-data";
 import { cn } from "@/lib/utils";
 import { useScreenBlocks } from "@/components/screen-blocks-provider";
@@ -88,9 +90,10 @@ export function HomeClient(props: Props) {
 }
 
 function BookingHomeView({ featuredVenues }: { featuredVenues: VenueCard[] }) {
+  const { photos: mpPhotos } = useMarketplacePhotos();
   const photos = pitchPhotosFromVenues(featuredVenues);
-  const photoPool = [...new Set([...photos, ...MARKETPLACE_PITCH_PHOTOS])];
-  const heroPhoto = photos[0] ?? MARKETPLACE_PITCH_PHOTOS[0];
+  const photoPool = [...new Set([...photos, ...mpPhotos])];
+  const heroPhoto = photos[0] ?? mpPhotos[0];
   return (
     <div className="relative flex flex-1 flex-col text-zinc-900 dark:text-zinc-50">
       <HomeFallingDecor />
@@ -242,10 +245,11 @@ function AcademyHomeView({
   const router = useRouter();
   const { isHiddenHref } = useScreenBlocks();
   const { marketplaceEnabled } = useSiteMode();
+  const { photos: mpPhotos } = useMarketplacePhotos();
   const isAcademyHome = pageVariant === "home";
   const pitchPhotos = pitchPhotosFromVenues(featuredVenues);
-  const heroPhoto = pitchPhotos[0] ?? MARKETPLACE_PITCH_PHOTOS[0];
-  const photoPool = [...new Set([...pitchPhotos, ...MARKETPLACE_PITCH_PHOTOS])];
+  const heroPhoto = pitchPhotos[0] ?? mpPhotos[0];
+  const photoPool = [...new Set([...pitchPhotos, ...mpPhotos])];
   const [transportSignupOpen, setTransportSignupOpen] = useState(false);
   const [transportIntent, setTransportIntent] = useState<"signup" | "confirm">("signup");
   const [tentativeBusy, setTentativeBusy] = useState(false);
@@ -528,6 +532,27 @@ function AcademyHomeView({
     return (
       <>
         <div className="awp-page awp-page--default relative z-10 text-center">
+          {isLoggedIn ? (
+            <div className="mb-8 flex items-center justify-center gap-4">
+              <PlayerAvatar
+                photoPath={profilePhotoPath}
+                firstName={firstName}
+                lastName={lastName}
+                size="lg"
+                className="shadow-md ring-2 ring-white/40"
+              />
+              <div className="text-left">
+                <h2 className="text-2xl font-bold tracking-tight text-white drop-shadow-sm">Witaj!</h2>
+                <p className="text-lg font-semibold text-emerald-100">
+                  {`${firstName} ${lastName}`.trim() || zawodnik}
+                </p>
+                {zawodnik && `${firstName} ${lastName}`.trim() ? (
+                  <p className="text-sm text-emerald-100/80">{zawodnik}</p>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
+
           {nextMatch ? (
             <div className="mb-8">
               <HomeNextMatchCard
@@ -547,27 +572,6 @@ function AcademyHomeView({
                 onDeclined={() => void signupDeclinedHome()}
                 onConfirmFromTentative={openConfirmFromTentative}
               />
-            </div>
-          ) : null}
-
-          {isLoggedIn ? (
-            <div className="mb-8 flex items-center justify-center gap-4">
-              <PlayerAvatar
-                photoPath={profilePhotoPath}
-                firstName={firstName}
-                lastName={lastName}
-                size="lg"
-                className="shadow-md ring-2 ring-white/40"
-              />
-              <div className="text-left">
-                <h2 className="text-2xl font-bold tracking-tight text-white drop-shadow-sm">Witaj!</h2>
-                <p className="text-lg font-semibold text-emerald-100">
-                  {`${firstName} ${lastName}`.trim() || zawodnik}
-                </p>
-                {zawodnik && `${firstName} ${lastName}`.trim() ? (
-                  <p className="text-sm text-emerald-100/80">{zawodnik}</p>
-                ) : null}
-              </div>
             </div>
           ) : null}
 
@@ -665,6 +669,32 @@ function AcademyHomeView({
     <div className="relative flex flex-1 flex-col text-zinc-900 dark:text-zinc-50">
       {isAcademyHome ? <HomeFallingDecor /> : null}
 
+      {isLoggedIn ? (
+        <section className="relative z-10 mx-auto w-full min-w-0 max-w-6xl px-3 pt-4 xs:px-4 sm:pt-6">
+          <HomePhotoTile
+            contentClassName="flex flex-wrap items-center gap-4"
+            src={homeTilePhoto(photoPool, 5)}
+          >
+            <PlayerAvatar
+              photoPath={profilePhotoPath}
+              firstName={firstName}
+              lastName={lastName}
+              size="lg"
+              className="shadow-md ring-2 ring-white/50"
+            />
+            <div className="min-w-0 text-left">
+              <p className="text-xs font-semibold uppercase tracking-wide text-white/80">Witaj</p>
+              <p className="text-lg font-black text-white drop-shadow-sm">
+                {`${firstName} ${lastName}`.trim() || zawodnik}
+              </p>
+              {zawodnik && `${firstName} ${lastName}`.trim() ? (
+                <p className="text-sm text-white/80">{zawodnik}</p>
+              ) : null}
+            </div>
+          </HomePhotoTile>
+        </section>
+      ) : null}
+
       {nextMatch ? (
         <section className="relative z-10 mx-auto w-full min-w-0 max-w-6xl px-3 pb-2 pt-4 xs:px-4 sm:pt-6">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
@@ -729,15 +759,7 @@ function AcademyHomeView({
         </section>
       )}
 
-      {isAcademyHome ? (
-        <div className="relative z-10 -mx-4 mt-0 flex gap-4 overflow-x-auto bg-zinc-100 px-4 py-4 [scrollbar-width:thin] dark:bg-zinc-900">
-          {photoPool.slice(0, 8).map((src) => (
-            <div key={src} className="relative h-48 w-72 shrink-0 overflow-hidden rounded-3xl bg-zinc-200">
-              <MarketplacePitchPhoto src={src} sizes="288px" />
-            </div>
-          ))}
-        </div>
-      ) : null}
+      {isAcademyHome ? <MarketplacePhotoStrip isAdmin={isAdmin} /> : null}
 
       <div className="relative z-10 mx-auto w-full min-w-0 max-w-6xl px-4 py-10 sm:py-12">
         <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -754,31 +776,6 @@ function AcademyHomeView({
             </HomePhotoTile>
           ))}
         </section>
-
-        {isLoggedIn ? (
-          <HomePhotoTile
-            className="mt-10"
-            contentClassName="flex flex-wrap items-center gap-4"
-            src={homeTilePhoto(photoPool, 5)}
-          >
-            <PlayerAvatar
-              photoPath={profilePhotoPath}
-              firstName={firstName}
-              lastName={lastName}
-              size="lg"
-              className="shadow-md ring-2 ring-white/50"
-            />
-            <div className="min-w-0 text-left">
-              <p className="text-xs font-semibold uppercase tracking-wide text-white/80">Witaj</p>
-              <p className="text-lg font-black text-white drop-shadow-sm">
-                {`${firstName} ${lastName}`.trim() || zawodnik}
-              </p>
-              {zawodnik && `${firstName} ${lastName}`.trim() ? (
-                <p className="text-sm text-white/80">{zawodnik}</p>
-              ) : null}
-            </div>
-          </HomePhotoTile>
-        ) : null}
 
         {isAcademyHome ? (
           <div className="mt-12">

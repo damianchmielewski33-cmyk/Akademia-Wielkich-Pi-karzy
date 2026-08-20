@@ -27,14 +27,12 @@ export type PlatnosciUserLite = {
 type Props = {
   isLoggedIn: boolean;
   isAdmin: boolean;
-  currentUserId: number | null;
   hotpayEnabled: boolean;
 };
 
 export function PlatnosciClient({
   isLoggedIn,
   isAdmin,
-  currentUserId,
   hotpayEnabled,
 }: Props) {
   const { marketplaceEnabled } = useSiteMode();
@@ -139,7 +137,6 @@ export function PlatnosciClient({
     <div className="space-y-6">
       <HotpayPayButtons enabled={hotpayEnabled} walletLoading={adminWalletLoading} />
       <PlayerWalletPanel
-        currentUserId={currentUserId}
         hotpayEnabled={hotpayEnabled}
         showTopup={false}
         refreshKey={walletRefreshKey}
@@ -154,7 +151,6 @@ export function PlatnosciClient({
   ) : (
     <div className="space-y-6">
       <PlayerWalletPanel
-        currentUserId={currentUserId}
         hotpayEnabled={hotpayEnabled}
         refreshKey={walletRefreshKey}
       />

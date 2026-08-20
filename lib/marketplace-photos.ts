@@ -16,6 +16,12 @@ export const MARKETPLACE_PITCH_PHOTOS = [
   "https://images.unsplash.com/photo-1560272564-c83b66b1ad12?auto=format&fit=crop&w=1600&q=80",
 ] as const;
 
+/** Liczba slotów edytowalnych (pasek pod „Gramy razem” + pula hero/kafelków). */
+export const MARKETPLACE_PITCH_SLOT_COUNT = MARKETPLACE_PITCH_PHOTOS.length;
+
+/** Ile zdjęć pokazuje poziomy pasek pod hero. */
+export const MARKETPLACE_STRIP_VISIBLE = 8;
+
 /** Unsplash czasem usuwa zdjęcia — Next Image wtedy zwraca 400 na `/_next/image`. */
 const DEAD_UNSPLASH_PHOTOS: Record<string, string> = {
   "photo-1489944446611-063e2d80944a": MARKETPLACE_PITCH_PHOTOS[7],
@@ -33,10 +39,58 @@ export function resolveMarketplacePhoto(src: string): string {
   }
 }
 
-export function pitchPhotoAt(index: number): string {
-  const n = MARKETPLACE_PITCH_PHOTOS.length;
+export function pitchPhotoAt(index: number, pool?: readonly string[]): string {
+  const list = pool && pool.length > 0 ? pool : MARKETPLACE_PITCH_PHOTOS;
+  const n = list.length;
   const i = ((index % n) + n) % n;
-  return resolveMarketplacePhoto(MARKETPLACE_PITCH_PHOTOS[i] ?? MARKETPLACE_PITCH_PHOTOS[0]);
+  return resolveMarketplacePhoto(list[i] ?? MARKETPLACE_PITCH_PHOTOS[0]);
+}
+
+/** Surowa lista custom URL (null = domyślne Unsplash dla slotu). */
+export function parseMarketplacePitchPhotosJson(
+  raw: string | null | undefined
+): (string | null)[] {
+  const slots: (string | null)[] = Array.from({ length: MARKETPLACE_PITCH_SLOT_COUNT }, () => null);
+  if (!raw?.trim()) return slots;
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return slots;
+    for (let i = 0; i < MARKETPLACE_PITCH_SLOT_COUNT; i++) {
+      const v = parsed[i];
+      if (typeof v === "string" && v.trim()) slots[i] = v.trim();
+    }
+  } catch {
+    /* ignore */
+  }
+  return slots;
+}
+
+export function serializeMarketplacePitchPhotosJson(slots: (string | null)[]): string {
+  const normalized = Array.from({ length: MARKETPLACE_PITCH_SLOT_COUNT }, (_, i) => {
+    const v = slots[i]?.trim();
+    return v ? v : null;
+  });
+  return JSON.stringify(normalized);
+}
+
+/** Pełna pula URL do wyświetlania (custom albo default). */
+export function resolveMarketplacePitchPhotoPool(customSlots: (string | null)[]): string[] {
+  return Array.from({ length: MARKETPLACE_PITCH_SLOT_COUNT }, (_, i) => {
+    const custom = customSlots[i]?.trim();
+    if (custom) return resolveMarketplacePhoto(custom);
+    return resolveMarketplacePhoto(MARKETPLACE_PITCH_PHOTOS[i] ?? MARKETPLACE_PITCH_PHOTOS[0]);
+  });
+}
+
+export function isCustomMarketplacePitchUpload(url: string | null | undefined): boolean {
+  if (!url?.trim()) return false;
+  const t = url.trim();
+  return (
+    t.startsWith("/uploads/site/") ||
+    t.startsWith("/api/uploads/site/") ||
+    t.includes(".public.blob.vercel-storage.com") ||
+    t.includes("blob.vercel-storage.com")
+  );
 }
 
 export function canOptimizeMarketplacePhoto(src: string): boolean {

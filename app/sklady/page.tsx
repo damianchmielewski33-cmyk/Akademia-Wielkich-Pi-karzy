@@ -1,10 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { SiteSectionHero } from "@/components/site-section-hero";
-import { cn } from "@/lib/utils";
-import { getDb, type MatchRow } from "@/lib/db";
-import { getAppSettings } from "@/lib/app-settings";
+import { SkladyClient } from "@/components/sklady-client";
 import { MatchLineupView, type LineupPlayer } from "@/components/match-lineup-view";
+import { getAppSettings } from "@/lib/app-settings";
+import { getDb, type MatchRow } from "@/lib/db";
 import { pitchHalfSlotCounts, pitchSlotTotalFromSignupCount } from "@/lib/lineup-pitch-slots";
 
 export const metadata: Metadata = {
@@ -18,131 +17,86 @@ export default async function SkladyPage({ searchParams }: PageProps) {
   const sp = await searchParams;
   const db = await getDb();
 
-  const publicMatches = await db
+  const publicMatches = (await db
     .prepare(
       `SELECT * FROM matches WHERE lineup_public = 1
        ORDER BY match_date DESC, match_time DESC`
     )
-    .all() as MatchRow[];
+    .all()) as MatchRow[];
 
-  const nextUpcomingAny = await db
+  const nextUpcomingAny = (await db
     .prepare(
       `SELECT * FROM matches
        WHERE datetime(match_date || ' ' || match_time) > datetime('now', 'localtime')
        ORDER BY match_date ASC, match_time ASC
        LIMIT 1`
     )
-    .get() as MatchRow | undefined;
+    .get()) as MatchRow | undefined;
 
   if (publicMatches.length === 0) {
     if (nextUpcomingAny) {
       return (
-        <div className="awp-page max-w-lg">
-          <div className="rounded-2xl border border-zinc-200 bg-white p-8 text-center shadow-sm dark:border-zinc-700 dark:bg-zinc-900/90">
-            <h1 className="text-xl font-bold text-emerald-950 dark:text-emerald-100">Składy jeszcze niewidoczne</h1>
-            <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-              Administrator nie udostępnił jeszcze składów na najbliższy mecz. Wróć później albo sprawdź stronę główną.
-            </p>
-            <p className="mt-4 text-sm font-medium text-zinc-800 dark:text-zinc-200">
-              {nextUpcomingAny.match_date} · {nextUpcomingAny.match_time}
-            </p>
-            <p className="text-sm text-zinc-600 dark:text-zinc-400">{nextUpcomingAny.location}</p>
-            <Link href="/" className="mt-6 inline-block text-sm font-semibold text-emerald-700 underline dark:text-emerald-400">
-              Strona główna
-            </Link>
-          </div>
-        </div>
+        <SkladyClient
+          variant="empty-pending"
+          nextUpcoming={{
+            match_date: nextUpcomingAny.match_date,
+            match_time: nextUpcomingAny.match_time,
+            location: nextUpcomingAny.location,
+          }}
+        />
       );
     }
-    return (
-      <div className="awp-page max-w-lg">
-        <div className="rounded-2xl border border-zinc-200 bg-white p-8 text-center shadow-sm dark:border-zinc-700 dark:bg-zinc-900/90">
-          <h1 className="text-xl font-bold text-emerald-950 dark:text-emerald-100">Brak publicznych składów</h1>
-          <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-            Nie ma zaplanowanych meczów ani opublikowanych składów. Gdy pojawią się terminy, wróć do tej strony.
-          </p>
-          <Link href="/terminarz" className="mt-6 inline-block text-sm font-semibold text-emerald-700 underline dark:text-emerald-400">
-            Terminarz
-          </Link>
-        </div>
-      </div>
-    );
+    return <SkladyClient variant="empty-none" />;
   }
 
-  const defaultUpcoming = await db
+  const defaultUpcoming = (await db
     .prepare(
       `SELECT id FROM matches WHERE lineup_public = 1
        AND datetime(match_date || ' ' || match_time) > datetime('now', 'localtime')
        ORDER BY match_date ASC, match_time ASC
        LIMIT 1`
     )
-    .get() as { id: number } | undefined;
+    .get()) as { id: number } | undefined;
 
-  const defaultLatest = await db
+  const defaultLatest = (await db
     .prepare(
       `SELECT id FROM matches WHERE lineup_public = 1
        ORDER BY match_date DESC, match_time DESC
        LIMIT 1`
     )
-    .get() as { id: number };
+    .get()) as { id: number };
 
   const parsed = sp.m ? Number.parseInt(sp.m, 10) : NaN;
   const ids = new Set(publicMatches.map((x) => x.id));
   const selectedId =
     Number.isFinite(parsed) && ids.has(parsed) ? parsed : (defaultUpcoming?.id ?? defaultLatest.id);
 
-  const navMatches = [...publicMatches].sort((a, b) => {
-    const da = `${a.match_date} ${a.match_time}`;
-    const db_ = `${b.match_date} ${b.match_time}`;
-    return da.localeCompare(db_);
-  });
+  const navMatches = [...publicMatches]
+    .sort((a, b) => {
+      const da = `${a.match_date} ${a.match_time}`;
+      const db_ = `${b.match_date} ${b.match_time}`;
+      return da.localeCompare(db_);
+    })
+    .map((m) => ({
+      id: m.id,
+      match_date: m.match_date,
+      match_time: m.match_time,
+      location: m.location,
+    }));
+
+  const selectedMatch = navMatches.find((m) => m.id === selectedId) ?? navMatches[0]!;
+  const nearestId = defaultUpcoming?.id ?? null;
 
   return (
-    <div className="awp-page awp-page--wide space-y-6">
-      <SiteSectionHero
-        kicker="Boisko"
-        title="Składy"
-        subtitle="Publiczne ustawienia drużyn na mecze — wybierz termin poniżej."
-        align="center"
-      />
-
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <Link href="/" className="text-sm font-medium text-emerald-800 hover:underline">
-          ← Strona główna
-        </Link>
-        {navMatches.length > 1 && (
-          <p className="text-xs text-zinc-500 sm:text-right">Wybierz mecz, żeby zobaczyć składy z archiwum.</p>
-        )}
-      </div>
-
-      {navMatches.length > 1 && (
-        <nav
-          className="-mx-1 mb-8 flex gap-2 overflow-x-auto overscroll-x-contain px-1 pb-1 [scrollbar-width:thin] sm:flex-wrap sm:overflow-visible"
-          aria-label="Wybór meczu"
-        >
-          {navMatches.map((m) => {
-            const active = m.id === selectedId;
-            return (
-              <Link
-                key={m.id}
-                href={`/sklady?m=${m.id}`}
-                scroll={false}
-                className={cn(
-                  "shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors sm:text-sm",
-                  active
-                    ? "border-emerald-700 bg-emerald-700 text-white shadow-sm"
-                    : "border-zinc-200 bg-white text-zinc-700 hover:border-emerald-300 hover:bg-emerald-50/80"
-                )}
-              >
-                {m.match_date} · {m.match_time.slice(0, 5)}
-              </Link>
-            );
-          })}
-        </nav>
-      )}
-
+    <SkladyClient
+      variant="list"
+      navMatches={navMatches}
+      selectedId={selectedId}
+      nearestId={nearestId}
+      selectedMatch={selectedMatch}
+    >
       <SkladyContent matchId={selectedId} />
-    </div>
+    </SkladyClient>
   );
 }
 
@@ -154,11 +108,11 @@ async function SkladyContent({ matchId }: { matchId: number }) {
     max: appSettings.lineup_pitch_slots_max,
   };
 
-  const row = await db
+  const row = (await db
     .prepare(
       "SELECT id, match_date, match_time, location, lineup_public FROM matches WHERE id = ? AND lineup_public = 1"
     )
-    .get(matchId) as
+    .get(matchId)) as
     | {
         id: number;
         match_date: string;
@@ -170,16 +124,16 @@ async function SkladyContent({ matchId }: { matchId: number }) {
 
   if (!row) {
     return (
-      <p className="text-center text-sm text-zinc-600">
+      <p className="text-center text-sm text-zinc-600 dark:text-zinc-400">
         Ten mecz nie ma już publicznych składów.{" "}
-        <Link href="/sklady" className="font-semibold text-emerald-700 underline">
+        <Link href="/sklady" className="font-semibold text-[var(--mp-teal-dark)] underline dark:text-teal-300">
           Wróć do listy
         </Link>
       </p>
     );
   }
 
-  const playersRaw = await db
+  const playersRaw = (await db
     .prepare(
       `SELECT u.id AS user_id, u.first_name, u.last_name, u.player_alias AS zawodnik,
               u.profile_photo_path
@@ -188,7 +142,7 @@ async function SkladyContent({ matchId }: { matchId: number }) {
        WHERE ms.match_id = ? AND COALESCE(ms.commitment, 1) = 1
        ORDER BY u.first_name ASC, u.last_name ASC`
     )
-    .all(matchId) as {
+    .all(matchId)) as {
     user_id: number;
     first_name: string;
     last_name: string;
@@ -213,9 +167,9 @@ async function SkladyContent({ matchId }: { matchId: number }) {
     };
   });
 
-  const lineupRows = await db
+  const lineupRows = (await db
     .prepare(`SELECT team, slot_index, user_id FROM match_lineup_slots WHERE match_id = ?`)
-    .all(matchId) as { team: string; slot_index: number; user_id: number }[];
+    .all(matchId)) as { team: string; slot_index: number; user_id: number }[];
 
   const signupCount = playersRaw.length;
   const pitchTotal = pitchSlotTotalFromSignupCount(signupCount, pitchLimits);

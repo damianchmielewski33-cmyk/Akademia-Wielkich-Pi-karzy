@@ -20,6 +20,8 @@ import type { MatchRow } from "@/lib/db";
 import type { PlayersDataEntry } from "@/lib/terminarz-shared";
 import { LoginForm } from "@/components/login-form";
 import { MarketplacePitchPhoto } from "@/components/marketplace-pitch-photo";
+import { MarketplacePhotoStrip } from "@/components/marketplace-photo-strip";
+import { useMarketplacePhotos } from "@/components/marketplace-photos-provider";
 import { MatchLocationWeather } from "@/components/match-location-weather";
 import { MatchSignupsRosterModal } from "@/components/match-signups-roster-modal";
 import { MatchSignupCountsBlock } from "@/components/terminarz-match-counts";
@@ -27,11 +29,12 @@ import { PayButton } from "@/components/pay-button";
 import { PhotoPanel } from "@/components/photo-panel";
 import { SiteAssetImage } from "@/components/site-asset-image";
 import { SiteSectionHero } from "@/components/site-section-hero";
+import { useScreenBlocks } from "@/components/screen-blocks-provider";
 import { useSiteMode } from "@/components/site-mode";
 import { Button } from "@/components/ui/button";
 import { FormInput } from "@/components/ui/form-field";
 import { formSchemas, useValidatedForm } from "@/lib/form-validation";
-import { MARKETPLACE_PITCH_PHOTOS, pitchPhotoAt } from "@/lib/marketplace-photos";
+import { pitchPhotoAt } from "@/lib/marketplace-photos";
 import { terminarzInviteRelativePath } from "@/lib/share-link";
 import { cn } from "@/lib/utils";
 
@@ -353,6 +356,8 @@ export function InviteShareLanding({
   onPayDebt,
 }: InviteShareLandingProps) {
   const { marketplaceEnabled } = useSiteMode();
+  const { photos: mpPhotos } = useMarketplacePhotos();
+  const { isAdmin } = useScreenBlocks();
   const signupToastShownRef = useRef(false);
   const [rosterOpen, setRosterOpen] = useState(false);
   const [guestBusy, setGuestBusy] = useState(false);
@@ -364,7 +369,7 @@ export function InviteShareLanding({
   const matchFuture = match != null && match.match_date >= today;
   const signupKind = userSignupKind[highlightMatchId];
   const matchFull = match != null && match.signed_up >= match.max_slots;
-  const heroPhoto = pitchPhotoAt(match?.id ?? highlightMatchId);
+  const heroPhoto = pitchPhotoAt(match?.id ?? highlightMatchId, mpPhotos);
 
   function resetGuestForm() {
     guestForm.reset({ guestFirst: "", guestLast: "", guestAlias: "" });
@@ -464,13 +469,7 @@ export function InviteShareLanding({
         </div>
       </section>
 
-      <div className="-mx-4 mt-0 flex gap-4 overflow-x-auto bg-zinc-100 px-4 py-4 [scrollbar-width:thin] dark:bg-zinc-900">
-        {MARKETPLACE_PITCH_PHOTOS.slice(0, 8).map((src) => (
-          <div key={src} className="relative h-48 w-72 shrink-0 overflow-hidden rounded-3xl bg-zinc-200">
-            <MarketplacePitchPhoto src={src} sizes="288px" />
-          </div>
-        ))}
-        </div>
+      <MarketplacePhotoStrip isAdmin={isAdmin} />
           </>
         ) : (
           <SiteSectionHero

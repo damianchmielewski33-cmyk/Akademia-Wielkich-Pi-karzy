@@ -7,9 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { adminFieldClass, adminInnerPanelClass } from "@/components/admin-ui";
 import {
+  ChromeIconBadge,
   PaymentsCard,
   paymentsFieldClass,
-  paymentsIconWrapClass,
   paymentsInnerPanelClass,
 } from "@/components/payments-card";
 import { useSiteMode } from "@/components/site-mode";
@@ -29,7 +29,6 @@ export function HotpayPayButtons({
   className,
 }: Props) {
   const { marketplaceEnabled } = useSiteMode();
-  const light = marketplaceEnabled;
   const [topupAmount, setTopupAmount] = useState("");
   const { showError, MessageModal } = useAppMessage();
   const { pay, busy } = useHotpayPayment();
@@ -56,17 +55,13 @@ export function HotpayPayButtons({
       className={className}
       title="Zapłać kartą lub Blikiem"
       description="Ureguluj niedopłatę lub wpłać środki online. Opłatę za konkretny mecz znajdziesz w sekcji „Opłać mecz (koszyk)”."
-      headerExtra={
-        <div className={light ? paymentsIconWrapClass : "flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/15 ring-2 ring-white/30"}>
-          <Wallet className="h-5 w-5 text-white" strokeWidth={2.25} aria-hidden />
-        </div>
-      }
+      headerExtra={<ChromeIconBadge icon={Wallet} marketplace={marketplaceEnabled} />}
     >
-      <div className={cn(light ? paymentsInnerPanelClass : adminInnerPanelClass, "space-y-3")}>
+      <div className={cn(marketplaceEnabled ? paymentsInnerPanelClass : adminInnerPanelClass, "space-y-3")}>
         <p
           className={cn(
             "text-xs font-semibold uppercase tracking-wide",
-            light ? "text-[var(--mp-teal-dark)]" : "text-emerald-100/70"
+            marketplaceEnabled ? "text-[var(--mp-teal-dark)]" : "text-emerald-100/70"
           )}
         >
           Kwota płatności
@@ -79,7 +74,7 @@ export function HotpayPayButtons({
           type="number"
           min={0.01}
           step={0.01}
-          className={light ? paymentsFieldClass : adminFieldClass}
+          className={marketplaceEnabled ? paymentsFieldClass : adminFieldClass}
           value={topupAmount}
           onChange={(e) => setTopupAmount(e.target.value)}
           placeholder="np. 50"
