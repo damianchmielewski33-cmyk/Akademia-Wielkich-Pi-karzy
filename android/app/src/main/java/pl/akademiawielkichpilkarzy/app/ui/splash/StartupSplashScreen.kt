@@ -111,7 +111,7 @@ fun StartupSplashScreen(
             .fillMaxSize()
             .background(bgBrush)
     ) {
-        FallingSoccerBallsLayer(dimmed = marketplaceEnabled)
+        FallingSoccerBallsLayer(dimmed = false)
 
         Column(
             modifier = Modifier
@@ -223,7 +223,7 @@ private fun FallingBallItem(
             .size(spec.sizeDp)
             .rotate(spin)
             .alpha(spec.opacity * opacityScale),
-        contentScale = ContentScale.Crop
+        contentScale = ContentScale.Fit
     )
 }
 

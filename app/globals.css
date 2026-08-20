@@ -1771,6 +1771,16 @@ html {
   .home-fall {
     display: none;
   }
+
+  .awp-startup-splash .home-fall {
+    display: block;
+  }
+
+  .awp-startup-splash .home-fall__item {
+    animation: none;
+    top: 18%;
+    opacity: var(--op, 0.7);
+  }
 }
 
 /* Splash startowy aplikacji iOS (PWA) — spadające piłki + żonglerka */
@@ -1778,15 +1788,37 @@ html {
   background: linear-gradient(180deg, #061410 0%, #0b3d2e 48%, #082018 100%);
   opacity: 1;
   transition: opacity 0.42s ease;
+  overflow: hidden;
+}
+
+.awp-startup-splash .home-fall {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
 }
 
 .awp-startup-splash--v2 {
   background: linear-gradient(180deg, #f4f5f7 0%, #ffffff 48%, #e6faf7 100%);
 }
 
+.awp-startup-splash--v2 .home-fall__item {
+  filter: drop-shadow(0 2px 4px rgba(15, 23, 42, 0.2));
+}
+
 .awp-startup-splash--leave {
   opacity: 0;
   pointer-events: none;
+}
+
+.awp-juggle {
+  display: block;
+}
+
+.awp-juggle__ball,
+.awp-juggle__leg--l,
+.awp-juggle__leg--r,
+.awp-juggle__arms {
+  transform-box: view-box;
 }
 
 .awp-juggle__ball {

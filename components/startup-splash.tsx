@@ -124,7 +124,7 @@ export function StartupSplash({ marketplaceEnabled = false }: { marketplaceEnabl
       aria-busy={phase === "show"}
       aria-label="Uruchamianie aplikacji"
     >
-      {!marketplaceEnabled ? <HomeFallingDecor cover className="!z-[1]" /> : null}
+      <HomeFallingDecor cover />
       <div className="relative z-10 flex flex-col items-center text-center">
         <p
           className={cn(
