@@ -29,6 +29,12 @@ function formatPln(n: number) {
   return new Intl.NumberFormat("pl-PL", { style: "currency", currency: "PLN" }).format(v);
 }
 
+function formatMatchWhen(isoDate: string, time: string) {
+  const [y, m, d] = isoDate.split("-");
+  const date = y && m && d ? `${d}.${m}.${y}` : isoDate;
+  return `${date} · ${time}`;
+}
+
 export default async function PlatnosciPublicPage(ctx: Ctx) {
   const { token } = await ctx.params;
   const link = await loadPublicShareLink(String(token));
@@ -77,7 +83,7 @@ export default async function PlatnosciPublicPage(ctx: Ctx) {
           <CardHeader className="pb-2">
             <CardTitle className="text-lg">Mecz</CardTitle>
             <CardDescription>
-              {view.match.match_date} · {view.match.match_time} · {view.match.location}
+              {formatMatchWhen(view.match.match_date, view.match.match_time)} · {view.match.location}
             </CardDescription>
           </CardHeader>
           {typeof view.match.fee_pln === "number" ? (
@@ -101,7 +107,7 @@ export default async function PlatnosciPublicPage(ctx: Ctx) {
               {view.playerMatches.map((m) => (
                 <li key={m.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2 text-sm">
                   <span>
-                    {m.match_date} · {m.match_time} · {m.location}
+                    {formatMatchWhen(m.match_date, m.match_time)} · {m.location}
                   </span>
                   <span className="font-semibold tabular-nums text-red-700 dark:text-red-300">
                     {m.match_charge_pln != null ? formatPln(-Math.abs(m.match_charge_pln)) : "—"}
@@ -118,7 +124,7 @@ export default async function PlatnosciPublicPage(ctx: Ctx) {
           <CardTitle className="text-lg">Salda</CardTitle>
           <CardDescription>
             {view.match
-              ? "Kolor wiersza: intensywna zieleń = opłacony za ten mecz, intensywna czerwień = nieopłacony."
+              ? "Zieleń = brak zaległości, czerwień = mecz nieopłacony (jest należność na portfelu)."
               : "Ujemne saldo oznacza należność do uregulowania."}
           </CardDescription>
         </CardHeader>
@@ -126,102 +132,94 @@ export default async function PlatnosciPublicPage(ctx: Ctx) {
           {view.rows.length === 0 ? (
             <p className="rounded-xl border border-dashed px-4 py-8 text-center text-sm text-zinc-600">Brak danych.</p>
           ) : (
-            <ul className="max-h-[70vh] space-y-0 overflow-y-auto rounded-xl border border-emerald-900/10 bg-emerald-50/20">
-              {view.rows.map((p, i) => {
+            <ul className="space-y-3">
+              {view.rows.map((p) => {
                 const bal = Number(p.balance_pln ?? 0);
-                const isNegative = bal < 0;
-                const isPositive = bal > 0;
-                const hasMatchPaid = typeof p.match_paid === "number" || view.match != null;
-                const matchPaid = Number(p.match_paid ?? 0) === 1;
+                const unpaid = bal < 0;
+                const showMatchStatus = view.match != null;
                 return (
                   <li
                     key={p.id}
                     className={cn(
-                      "grid gap-2 border-b px-3 py-3 text-sm last:border-b-0 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:gap-3",
-                      hasMatchPaid
-                        ? matchPaid
-                          ? "border-l-4 border-l-green-600 bg-green-100/95 dark:border-l-green-500 dark:bg-green-950/50"
-                          : "border-l-4 border-l-red-600 bg-red-100/95 dark:border-l-red-500 dark:bg-red-950/50"
-                        : isNegative
-                          ? "border-l-4 border-l-red-600 bg-red-50/95 dark:border-l-red-500 dark:bg-red-950/40"
-                          : isPositive
-                            ? "border-l-4 border-l-green-600 bg-green-50/95 dark:border-l-green-500 dark:bg-green-950/45"
-                            : i % 2 === 0
-                              ? "bg-white/60 dark:bg-zinc-900/50"
-                              : "bg-emerald-50/40 dark:bg-zinc-900/30"
+                      "overflow-hidden rounded-xl border px-3 py-3",
+                      unpaid
+                        ? "border-red-500/50 bg-red-950/35"
+                        : "border-emerald-400/40 bg-emerald-950/25"
                     )}
                   >
-                    <div className="flex min-w-0 items-start gap-2">
+                    <div className="flex min-w-0 items-center gap-3">
                       <PlayerAvatar
                         photoPath={p.profile_photo_path}
                         firstName={p.first_name}
                         lastName={p.last_name}
                         size="sm"
+                        className="shrink-0"
                         ringClassName={
-                          hasMatchPaid
-                            ? matchPaid
-                              ? "ring-2 ring-green-600 dark:ring-green-500"
-                              : "ring-2 ring-red-600 dark:ring-red-500"
-                            : undefined
+                          unpaid
+                            ? "ring-2 ring-red-400"
+                            : "ring-2 ring-emerald-300/80"
                         }
                       />
                       <PlayerNameStack
-                        wrap
                         firstName={p.first_name}
                         lastName={p.last_name}
                         nick={p.zawodnik}
-                        className="flex-1"
+                        className="min-w-0 flex-1 overflow-hidden"
+                        primaryClassName="truncate text-white"
+                        secondaryClassName="truncate text-white/70"
                       />
+                      {showMatchStatus ? (
+                        <span
+                          className={cn(
+                            "shrink-0 rounded-md px-2 py-1 text-[10px] font-bold uppercase tracking-wide",
+                            unpaid
+                              ? "bg-red-600 text-white"
+                              : "bg-emerald-500 text-emerald-950"
+                          )}
+                        >
+                          {unpaid ? "Nieopłacony" : "Opłacony"}
+                        </span>
+                      ) : null}
                     </div>
-                    <div className="flex flex-wrap items-center gap-2 pl-10 sm:justify-end sm:pl-0">
-                    {hasMatchPaid ? (
+
+                    <div className="mt-2 flex min-w-0 flex-wrap items-baseline justify-between gap-x-3 gap-y-1 pl-11">
+                      {p.match_charge_pln != null ? (
+                        <span className="text-xs text-white/75">
+                          Składka: {formatPln(-Math.abs(p.match_charge_pln))}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-white/75">Saldo portfela</span>
+                      )}
                       <span
                         className={cn(
-                          "shrink-0 rounded border px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white shadow-sm",
-                          matchPaid
-                            ? "border-green-700 bg-green-600 dark:border-green-400 dark:bg-green-500 dark:text-green-950"
-                            : "border-red-700 bg-red-600 dark:border-red-400 dark:bg-red-500 dark:text-red-950"
+                          "text-sm font-bold tabular-nums",
+                          unpaid ? "text-red-200" : "text-emerald-100"
                         )}
                       >
-                        {matchPaid ? "Opłacony" : "Nieopłacony"}
+                        {formatPln(bal)}
                       </span>
-                    ) : null}
-                    {p.match_charge_pln != null ? (
-                      <span className="text-xs text-zinc-500">Mecz: {formatPln(-Math.abs(p.match_charge_pln))}</span>
-                    ) : null}
-                    <span
-                      className={cn(
-                        "shrink-0 font-semibold tabular-nums",
-                        hasMatchPaid
-                          ? matchPaid
-                            ? "text-green-800 dark:text-green-200"
-                            : "text-red-800 dark:text-red-200"
-                          : isNegative
-                            ? "text-red-700 dark:text-red-200"
-                            : "text-green-800 dark:text-green-200"
-                      )}
-                    >
-                      {formatPln(bal)}
-                    </span>
-                    {isNegative ? (
-                      hotpayEnabled ? (
-                        <PlatnosciPublicPayButton
-                          token={link.token}
-                          userId={p.id}
-                          amountPln={bal}
-                          className="shrink-0"
-                        />
-                      ) : (
-                        <PayButton
-                          variant="default"
-                          amountPln={bal}
-                          label="Opłać"
-                          href="/platnosci"
-                          className="shrink-0"
-                        />
-                      )
-                    ) : null}
                     </div>
+
+                    {unpaid ? (
+                      <div className="mt-3">
+                        {hotpayEnabled ? (
+                          <PlatnosciPublicPayButton
+                            token={link.token}
+                            userId={p.id}
+                            amountPln={bal}
+                            className="w-full justify-center"
+                          />
+                        ) : (
+                          <PayButton
+                            variant="default"
+                            amountPln={bal}
+                            label="Opłać"
+                            href="/platnosci"
+                            fullWidth
+                          />
+                        )}
+                      </div>
+                    ) : null}
                   </li>
                 );
               })}

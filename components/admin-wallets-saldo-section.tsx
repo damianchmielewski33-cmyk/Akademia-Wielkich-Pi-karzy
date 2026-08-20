@@ -62,6 +62,48 @@ function formatPlayedMatchLabel(m: PlayedMatchOption) {
   return `${date} · ${m.match_time} · ${m.location}`;
 }
 
+function localISODate(d = new Date()) {
+  const y = d.getFullYear();
+  const mo = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${mo}-${day}`;
+}
+
+function addDaysISO(iso: string, days: number) {
+  const [y, mo, d] = iso.split("-").map(Number);
+  if (!y || !mo || !d) return iso;
+  const dt = new Date(y, mo - 1, d);
+  dt.setDate(dt.getDate() + days);
+  return localISODate(dt);
+}
+
+type PlayedMatchPeriod = "all" | "7d" | "month" | "year";
+
+const PLAYED_MATCH_PERIOD_OPTIONS: { id: PlayedMatchPeriod; label: string }[] = [
+  { id: "all", label: "Wszystkie" },
+  { id: "7d", label: "7 dni" },
+  { id: "month", label: "Ten miesiąc" },
+  { id: "year", label: "Ten rok" },
+];
+
+function matchInPlayedPeriod(m: PlayedMatchOption, period: PlayedMatchPeriod) {
+  const date = m.match_date;
+  if (!date) return false;
+  if (period === "all") return true;
+  const today = localISODate();
+  if (period === "7d") return date >= addDaysISO(today, -6) && date <= today;
+  if (period === "month") return date.slice(0, 7) === today.slice(0, 7);
+  return date.slice(0, 4) === today.slice(0, 4);
+}
+
+function sortPlayedNewestFirst(list: PlayedMatchOption[]) {
+  return [...list].sort((a, b) => {
+    const ka = `${a.match_date}T${a.match_time}`;
+    const kb = `${b.match_date}T${b.match_time}`;
+    return kb.localeCompare(ka);
+  });
+}
+
 function platnosciPanelClass(embedded: boolean) {
   return embedded
     ? "rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-900/80 sm:p-5"
@@ -289,6 +331,7 @@ export function AdminWalletsSaldoSection({
   const [publicLinkCopied, setPublicLinkCopied] = useState<string | null>(null);
   const [playedMatchId, setPlayedMatchId] = useState<number | null>(null);
   const [playedMatchQuery, setPlayedMatchQuery] = useState("");
+  const [playedMatchPeriod, setPlayedMatchPeriod] = useState<PlayedMatchPeriod>("all");
 
   async function refresh(opts?: { quiet?: boolean }) {
     if (!opts?.quiet) setAdminLoading(true);
@@ -349,12 +392,10 @@ export function AdminWalletsSaldoSection({
   );
   const filteredPlayedMatches = useMemo(() => {
     const q = playedMatchQuery.trim().toLowerCase();
-    const list = playedMatches;
-    if (!q) return list.slice(0, 12);
-    return list
-      .filter((m) => formatPlayedMatchLabel(m).toLowerCase().includes(q))
-      .slice(0, 20);
-  }, [playedMatches, playedMatchQuery]);
+    const inPeriod = sortPlayedNewestFirst(playedMatches.filter((m) => matchInPlayedPeriod(m, playedMatchPeriod)));
+    if (!q) return inPeriod;
+    return inPeriod.filter((m) => formatPlayedMatchLabel(m).toLowerCase().includes(q));
+  }, [playedMatches, playedMatchQuery, playedMatchPeriod]);
 
   async function generatePublicLink(
     kind: "last_match_wallets" | "all_wallets" | "match_wallets",
@@ -878,6 +919,7 @@ export function AdminWalletsSaldoSection({
           <Label htmlFor="wallet-played-match-search">Rozegrany mecz</Label>
           <p className="text-xs text-zinc-500 dark:text-zinc-400">
             Wybierz dowolny rozegrany mecz i skopiuj link z podsumowaniem płatności tylko za ten termin.
+            Lista jest od najnowszych.
           </p>
           {selectedPlayedMatch ? (
             <div className="rounded-xl border border-emerald-200 bg-emerald-50/80 p-3 dark:border-emerald-800/50 dark:bg-emerald-950/35">
@@ -908,6 +950,36 @@ export function AdminWalletsSaldoSection({
             </div>
           ) : (
             <>
+              <div
+                className="flex flex-wrap gap-1.5"
+                role="tablist"
+                aria-label="Filtr rozegranych meczów"
+              >
+                {PLAYED_MATCH_PERIOD_OPTIONS.map((opt) => {
+                  const active = playedMatchPeriod === opt.id;
+                  return (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      role="tab"
+                      aria-selected={active}
+                      onClick={() => setPlayedMatchPeriod(opt.id)}
+                      className={cn(
+                        "rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors",
+                        embedded
+                          ? active
+                            ? "border-emerald-500 bg-emerald-100 text-emerald-950 dark:border-emerald-600 dark:bg-emerald-900/50 dark:text-emerald-50"
+                            : "border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                          : active
+                            ? "border-emerald-400/50 bg-emerald-500/25 text-white"
+                            : "border-white/20 bg-black/10 text-emerald-100/80 hover:bg-white/10 hover:text-white"
+                      )}
+                    >
+                      {opt.label}
+                    </button>
+                  );
+                })}
+              </div>
               <div className="relative">
                 <Search
                   className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400"
@@ -924,7 +996,7 @@ export function AdminWalletsSaldoSection({
                 />
               </div>
               {playedMatches.length ? (
-                <ul className="max-h-52 space-y-0 overflow-y-auto rounded-xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-700 dark:bg-zinc-950/50">
+                <ul className="max-h-64 space-y-0 overflow-y-auto rounded-xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-700 dark:bg-zinc-950/50">
                   {filteredPlayedMatches.length ? (
                     filteredPlayedMatches.map((m) => (
                       <li key={m.id}>
@@ -943,7 +1015,9 @@ export function AdminWalletsSaldoSection({
                       </li>
                     ))
                   ) : (
-                    <li className="px-3 py-4 text-center text-xs text-zinc-500">Brak wyników wyszukiwania.</li>
+                    <li className="px-3 py-4 text-center text-xs text-zinc-500">
+                      Brak rozegranych meczów w tym filtrze.
+                    </li>
                   )}
                 </ul>
               ) : (
@@ -951,6 +1025,17 @@ export function AdminWalletsSaldoSection({
                   {adminLoading ? "Wczytywanie meczów…" : "Brak rozegranych meczów."}
                 </p>
               )}
+              {playedMatches.length > 0 && filteredPlayedMatches.length > 0 ? (
+                <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                  {filteredPlayedMatches.length}{" "}
+                  {filteredPlayedMatches.length === 1
+                    ? "mecz"
+                    : filteredPlayedMatches.length < 5
+                      ? "mecze"
+                      : "meczów"}{" "}
+                  · najnowsze na górze
+                </p>
+              ) : null}
             </>
           )}
           <Button
