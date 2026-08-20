@@ -15,7 +15,6 @@ import { PitchCard, PitchPageHero, pitchLabelClass } from "@/components/ui/pitch
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { MARKETPLACE_PITCH_PHOTOS } from "@/lib/marketplace-photos";
 import type { RankablePlayer } from "@/lib/rankings";
-import { cn } from "@/lib/utils";
 
 export type RankingiSeasonOption = {
   id: number;

@@ -1,5 +1,3 @@
-import { REALMS, type Realm } from "@/lib/realm";
-
 type DbLike = {
   prepare: (sql: string) => { get: (...args: unknown[]) => Promise<unknown> | unknown };
 };
@@ -11,18 +9,18 @@ type RegistrationSettings = {
 /**
  * Rejestracja samoobsługowa graczy jest zawsze włączona (Akademia i PZU Cup).
  * Flaga w panelu / env nie zamyka rejestracji.
+ * Argumenty zachowane dla kompatybilności wywołań API.
  */
 export async function isSelfRegistrationAllowed(
-  _db: DbLike,
-  _settings?: RegistrationSettings,
-  _realm: Realm = REALMS.ACADEMY
+  ...args: [DbLike?, RegistrationSettings?, import("@/lib/realm").Realm?]
 ): Promise<boolean> {
+  void args;
   return true;
 }
 
 export async function isSelfRegistrationAllowedForRealm(
-  _db: DbLike,
-  _realm: Realm
+  ...args: [DbLike?, import("@/lib/realm").Realm?]
 ): Promise<boolean> {
+  void args;
   return true;
 }
