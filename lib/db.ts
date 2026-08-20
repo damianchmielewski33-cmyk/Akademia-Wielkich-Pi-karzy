@@ -10,6 +10,11 @@ import { CAPTAIN_LOTTERY_CREATE_SQL, migrateCaptainLotterySchemaSqlite } from "@
 import { migrateAdImpressionsSchemaSqlite } from "@/lib/ad-impressions-schema";
 import { withTransientNetworkRetries } from "@/lib/transient-network-retry";
 import { BOOKING_SCHEMA_SQL, VENUES_OWNER_INDEX_SQL } from "@/lib/booking";
+import {
+  BOOKINGS_PAYOUT_INDEX_SQL,
+  SETTLEMENT_COLUMN_ALTERS,
+  VENUE_PAYOUTS_SCHEMA_SQL,
+} from "@/lib/venue-settlements";
 
 /** Lokalny plik SQLite (dev) lub Turso (gdy TURSO_DATABASE_URL). */
 export type AppDb = {
@@ -756,6 +761,14 @@ function initSchemaSync(db: Database.Database) {
     db.exec("ALTER TABLE venues ADD COLUMN owner_user_id INTEGER");
   }
   db.exec(VENUES_OWNER_INDEX_SQL);
+  db.exec(VENUE_PAYOUTS_SCHEMA_SQL);
+  for (const alter of SETTLEMENT_COLUMN_ALTERS) {
+    const cols = db.prepare(`PRAGMA table_info(${alter.table})`).all() as { name: string }[];
+    if (cols.length > 0 && !cols.some((c) => c.name === alter.column)) {
+      db.exec(alter.ddl);
+    }
+  }
+  db.exec(BOOKINGS_PAYOUT_INDEX_SQL);
 
   db.exec(`
     CREATE TABLE IF NOT EXISTS match_transport_messages (

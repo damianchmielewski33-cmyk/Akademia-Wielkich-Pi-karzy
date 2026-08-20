@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { toast } from "@/lib/app-toast";
+import { useSiteMode } from "@/components/site-mode";
 import { Bell } from "lucide-react";
 import { z } from "zod";
 import { AppModal } from "@/components/ui/app-modal";
@@ -21,6 +22,7 @@ type MeUser = {
 
 export function MatchNotificationPrompt() {
   const pathname = usePathname();
+  const { mode } = useSiteMode();
   const [user, setUser] = useState<MeUser | null | undefined>(undefined);
   const [consent, setConsent] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -43,8 +45,9 @@ export function MatchNotificationPrompt() {
   }, []);
 
   useEffect(() => {
+    if (mode !== "academy") return;
     void load();
-  }, [load, pathname]);
+  }, [load, pathname, mode]);
 
   useEffect(() => {
     const onUp = () => void load();
@@ -109,7 +112,7 @@ export function MatchNotificationPrompt() {
     }
   };
 
-  if (user === undefined) return null;
+  if (mode !== "academy" || user === undefined) return null;
 
   return (
     <AppModal

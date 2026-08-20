@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { SiteAssetImage } from "@/components/site-asset-image";
+import { useSiteMode } from "@/components/site-mode";
 import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -18,6 +19,8 @@ type Props = {
 };
 
 export function WalletBalanceFloat({ enabled = true }: Props) {
+  const { mode } = useSiteMode();
+  const active = enabled && mode === "academy";
   const [mounted, setMounted] = useState(false);
   const [balancePln, setBalancePln] = useState<number | null>(null);
 
@@ -26,7 +29,7 @@ export function WalletBalanceFloat({ enabled = true }: Props) {
   }, []);
 
   useEffect(() => {
-    if (!enabled) return;
+    if (!active) return;
     let cancelled = false;
     fetch("/api/wallet/me")
       .then((r) => (r.ok ? r.json() : null))
@@ -40,10 +43,10 @@ export function WalletBalanceFloat({ enabled = true }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [enabled]);
+  }, [active]);
 
   // Pokazuj kafelek od razu po mount — wcześniej znikał całkowicie przy błędzie /api/wallet/me.
-  if (!mounted || !enabled) return null;
+  if (!mounted || !active) return null;
 
   const known = balancePln != null;
   const amount = balancePln ?? 0;

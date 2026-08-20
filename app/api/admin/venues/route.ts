@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireAdmin } from "@/lib/api-helpers";
 import { getDb, logActivity } from "@/lib/db";
 import { listVenueCards, replaceVenuePhotos, slugifyVenueName } from "@/lib/booking";
+import { clampVenueCommissionPct } from "@/lib/venue-settlements";
 
 export const runtime = "nodejs";
 
@@ -16,6 +17,7 @@ const venueSchema = z.object({
   photo_url: z.string().trim().max(500).optional(),
   photo_urls: z.array(z.string().trim().max(500)).max(3).optional(),
   published: z.coerce.boolean().optional(),
+  commission_pct: z.coerce.number().min(0).max(50).optional(),
 });
 
 export async function GET() {
@@ -43,8 +45,8 @@ export async function POST(req: Request) {
 
   const result = await db
     .prepare(
-      `INSERT INTO venues (name, slug, city, address, description, phone, email, photo_url, published)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO venues (name, slug, city, address, description, phone, email, photo_url, published, commission_pct)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       parsed.data.name,
@@ -55,7 +57,8 @@ export async function POST(req: Request) {
       parsed.data.phone || null,
       parsed.data.email || null,
       parsed.data.photo_urls?.[0] || parsed.data.photo_url || null,
-      parsed.data.published === false ? 0 : 1
+      parsed.data.published === false ? 0 : 1,
+      clampVenueCommissionPct(parsed.data.commission_pct ?? 15)
     );
   const venueId = Number(result.lastInsertRowid);
   const photos = parsed.data.photo_urls?.length

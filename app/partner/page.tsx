@@ -27,7 +27,7 @@ export default async function PartnerDashboardPage() {
       </h1>
       <p className="mt-3 max-w-2xl text-zinc-600 dark:text-zinc-300">
         Dodaj boiska, ustaw godziny dostępności (to są wolne sloty dla graczy), ceny weekend/szczyt
-        i blokady. Rezerwacje z płatnością HotPay wpadają na listę poniżej.
+        i blokady. Po rozegraniu terminu Twoja część wpada do rozliczenia — akademia robi przelew.
       </p>
       <div className="mt-8">
         <PartnerDashboardClient />

@@ -42,6 +42,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -113,28 +114,29 @@ fun Modifier.pitchMurawaStripes(gold: Boolean = false): Modifier = drawBehind {
     )
 }
 
-/** Tło murawy / boiska jak `.murawa-bg` na stronie. */
+/** Tło ze zdjęciem boiska / stadionu — inne ujęcie na każdym ekranie. */
 @Composable
-fun MurawaBackground(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+fun MurawaBackground(
+    modifier: Modifier = Modifier,
+    theme: ScreenPhotoTheme = ScreenPhotoTheme.Default,
+    content: @Composable () -> Unit
+) {
     Box(
         modifier = modifier
             .fillMaxSize()
             .background(AwpColors.MurawaDark)
     ) {
+        Image(
+            painter = painterResource(id = theme.photoRes()),
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            alignment = theme.photoAlignment(),
+            modifier = Modifier.fillMaxSize()
+        )
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            Color(0xFF0B3D2E).copy(alpha = 0.55f),
-                            AwpColors.MurawaMid,
-                            AwpColors.PitchDeep,
-                            Color(0xFF083628),
-                            AwpColors.MurawaDark
-                        )
-                    )
-                )
+                .background(Brush.verticalGradient(theme.washColors()))
         )
         Box(
             modifier = Modifier
@@ -142,35 +144,10 @@ fun MurawaBackground(modifier: Modifier = Modifier, content: @Composable () -> U
                 .background(
                     Brush.horizontalGradient(
                         colors = listOf(
-                            Color.Black.copy(alpha = 0.40f),
+                            Color.Black.copy(alpha = 0.38f),
                             Color.Transparent,
                             Color.Transparent,
-                            Color.Black.copy(alpha = 0.40f)
-                        )
-                    )
-                )
-        )
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.verticalGradient(
-                        listOf(
-                            Color(0xFF061410).copy(alpha = 0.55f),
-                            Color.Transparent,
-                            Color(0xFF020A08).copy(alpha = 0.82f)
-                        )
-                    )
-                )
-        )
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.radialGradient(
-                        listOf(
-                            AwpColors.NeonGrass.copy(alpha = 0.14f),
-                            Color.Transparent
+                            Color.Black.copy(alpha = 0.38f)
                         )
                     )
                 )
@@ -182,9 +159,10 @@ fun MurawaBackground(modifier: Modifier = Modifier, content: @Composable () -> U
 @Composable
 fun AwpScreen(
     modifier: Modifier = Modifier,
+    theme: ScreenPhotoTheme = ScreenPhotoTheme.Default,
     content: @Composable () -> Unit
 ) {
-    MurawaBackground(modifier = modifier, content = content)
+    MurawaBackground(modifier = modifier, theme = theme, content = content)
 }
 
 @Composable
@@ -882,13 +860,18 @@ fun AwpTextField(
     keyboardType: KeyboardType = KeyboardType.Text,
     singleLine: Boolean = true,
     visualTransformation: VisualTransformation = VisualTransformation.None,
-    error: String? = null
+    error: String? = null,
+    light: Boolean = false
 ) {
     Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(
             label.uppercase(),
             style = MaterialTheme.typography.labelSmall,
-            color = if (error == null) AwpColors.MundialGold else AwpColors.MundialRed
+            color = when {
+                error != null -> AwpColors.MundialRed
+                light -> AwpColors.Zinc400
+                else -> AwpColors.MundialGold
+            }
         )
         OutlinedTextField(
             value = value,
@@ -901,19 +884,33 @@ fun AwpTextField(
                 .heightIn(min = 52.dp),
             shape = RoundedCornerShape(14.dp),
             isError = error != null,
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = AwpColors.MundialTeal,
-                unfocusedBorderColor = Color.White.copy(alpha = 0.32f),
-                errorBorderColor = AwpColors.MundialRed,
-                focusedContainerColor = Color.Black.copy(alpha = 0.14f),
-                unfocusedContainerColor = Color.Black.copy(alpha = 0.12f),
-                errorContainerColor = AwpColors.MundialRed.copy(alpha = 0.08f),
-                cursorColor = AwpColors.MundialGold,
-                focusedTextColor = AwpColors.OnPitch,
-                unfocusedTextColor = AwpColors.OnPitch,
-                focusedLabelColor = AwpColors.MundialGold,
-                unfocusedLabelColor = AwpColors.OnPitchMuted
-            )
+            colors = if (light) {
+                OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = AwpColors.MpTeal,
+                    unfocusedBorderColor = Color(0xFFE4E4E7),
+                    errorBorderColor = AwpColors.MundialRed,
+                    focusedContainerColor = Color.White,
+                    unfocusedContainerColor = Color.White,
+                    errorContainerColor = AwpColors.MundialRed.copy(alpha = 0.08f),
+                    cursorColor = AwpColors.MpTealDark,
+                    focusedTextColor = AwpColors.TextOnLight,
+                    unfocusedTextColor = AwpColors.TextOnLight
+                )
+            } else {
+                OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = AwpColors.MundialTeal,
+                    unfocusedBorderColor = Color.White.copy(alpha = 0.32f),
+                    errorBorderColor = AwpColors.MundialRed,
+                    focusedContainerColor = Color.Black.copy(alpha = 0.14f),
+                    unfocusedContainerColor = Color.Black.copy(alpha = 0.12f),
+                    errorContainerColor = AwpColors.MundialRed.copy(alpha = 0.08f),
+                    cursorColor = AwpColors.MundialGold,
+                    focusedTextColor = AwpColors.OnPitch,
+                    unfocusedTextColor = AwpColors.OnPitch,
+                    focusedLabelColor = AwpColors.MundialGold,
+                    unfocusedLabelColor = AwpColors.OnPitchMuted
+                )
+            }
         )
         if (!error.isNullOrBlank()) {
             Text(error, color = AwpColors.MundialRed, style = MaterialTheme.typography.bodySmall)
@@ -1001,9 +998,10 @@ fun ScreenScaffold(
     subtitle: String? = null,
     kicker: String = "Akademia WP",
     scrollable: Boolean = true,
+    theme: ScreenPhotoTheme = ScreenPhotoTheme.Default,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    AwpScreen {
+    AwpScreen(theme = theme) {
         val scroll = rememberScrollState()
         Column(
             modifier = Modifier

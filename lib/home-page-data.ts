@@ -9,6 +9,7 @@ import { parseYoutubeVideoIdFromUserInput } from "@/lib/site";
 import { isLocalMatchDay } from "@/lib/transport";
 import { getAppSettings } from "@/lib/app-settings";
 import { isHotpayConfigured } from "@/lib/hotpay";
+import type { SiteMode } from "@/lib/site-mode";
 
 export type HomePageClientProps = {
   nextMatch: MatchRow | null;
@@ -31,18 +32,23 @@ export type HomePageClientProps = {
 };
 export async function getHomePageClientProps(
   session: AppSession | null,
-  options?: { showPzuCupTile?: boolean; pageVariant?: "home" | "pzu-cup" }
+  options?: { showPzuCupTile?: boolean; pageVariant?: "home" | "pzu-cup"; siteMode?: SiteMode | null }
 ): Promise<HomePageClientProps> {
   const db = await getDb();
+  const pageVariant = options?.pageVariant ?? "home";
+  const loadAcademy = pageVariant === "pzu-cup" || options?.siteMode === "academy";
+  const loadBooking = pageVariant === "home" && options?.siteMode === "booking";
 
-  const nextMatch = (await db
-    .prepare(
-      `SELECT * FROM matches
+  const nextMatch = loadAcademy
+    ? ((await db
+        .prepare(
+          `SELECT * FROM matches
        WHERE realm = ? AND played = 0 AND COALESCE(cancelled, 0) = 0
          AND datetime(match_date || ' ' || match_time) > datetime('now', 'localtime')
        ORDER BY match_date, match_time LIMIT 1`
-    )
-    .get(REALMS.ACADEMY)) as MatchRow | undefined;
+        )
+        .get(REALMS.ACADEMY)) as MatchRow | undefined)
+    : undefined;
 
   let nextMatchSignup: "none" | "tentative" | "confirmed" | "declined" = "none";
   if (nextMatch && session) {
@@ -79,9 +85,11 @@ export async function getHomePageClientProps(
     zawodnik = nav?.zawodnik ?? session.zawodnik;
   }
 
-  const settingsRow = (await db
-    .prepare("SELECT home_youtube_url FROM app_settings WHERE realm = ?")
-    .get(REALMS.ACADEMY)) as { home_youtube_url: string | null } | undefined;
+  const settingsRow = loadAcademy
+    ? ((await db
+        .prepare("SELECT home_youtube_url FROM app_settings WHERE realm = ?")
+        .get(REALMS.ACADEMY)) as { home_youtube_url: string | null } | undefined)
+    : undefined;
   const youtubeLiveVideoId = settingsRow?.home_youtube_url
     ? parseYoutubeVideoIdFromUserInput(settingsRow.home_youtube_url)
     : null;
@@ -93,11 +101,8 @@ export async function getHomePageClientProps(
         ? { ...nextMatch, gate_pin: null }
         : null;
 
-  const topRankedPlayers =
-    options?.pageVariant === "pzu-cup" ? [] : await getHomeTopPlayers(3);
-
-  const featuredVenues =
-    options?.pageVariant === "pzu-cup" ? [] : (await listVenueCards(db)).slice(0, 8);
+  const topRankedPlayers = loadAcademy && pageVariant !== "pzu-cup" ? await getHomeTopPlayers(3) : [];
+  const featuredVenues = loadBooking ? (await listVenueCards(db)).slice(0, 8) : [];
 
   const appSettings = await getAppSettings(db);
   const hotpayEnabled = isHotpayConfigured() && appSettings.hotpay_enabled;
@@ -116,8 +121,8 @@ export async function getHomePageClientProps(
     zawodnik,
     profilePhotoPath,
     youtubeLiveVideoId,
-    showPzuCupTile: options?.showPzuCupTile ?? false,
-    pageVariant: options?.pageVariant ?? "home",
+    showPzuCupTile: loadAcademy ? (options?.showPzuCupTile ?? false) : false,
+    pageVariant,
     topRankedPlayers,
     featuredVenues,
   };

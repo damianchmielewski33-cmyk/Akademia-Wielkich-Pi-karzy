@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireAdmin } from "@/lib/api-helpers";
 import { getDb, logActivity } from "@/lib/db";
 import { replaceVenuePhotos } from "@/lib/booking";
+import { clampVenueCommissionPct } from "@/lib/venue-settlements";
 
 export const runtime = "nodejs";
 
@@ -16,6 +17,7 @@ const patchSchema = z.object({
   photo_url: z.string().trim().max(500).optional(),
   photo_urls: z.array(z.string().trim().max(500)).max(3).optional(),
   published: z.coerce.boolean().optional(),
+  commission_pct: z.coerce.number().min(0).max(50).optional(),
 });
 
 export async function PATCH(
@@ -43,6 +45,7 @@ export async function PATCH(
            email = COALESCE(?, email),
            photo_url = COALESCE(?, photo_url),
            published = COALESCE(?, published),
+           commission_pct = COALESCE(?, commission_pct),
            updated_at = datetime('now')
        WHERE id = ?`
     )
@@ -55,6 +58,7 @@ export async function PATCH(
       parsed.data.email || null,
       parsed.data.photo_url ?? null,
       parsed.data.published == null ? null : parsed.data.published ? 1 : 0,
+      parsed.data.commission_pct == null ? null : clampVenueCommissionPct(parsed.data.commission_pct),
       id
     );
   if (parsed.data.photo_urls) {

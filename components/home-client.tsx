@@ -8,12 +8,11 @@ import { useHotpayPaymentReturn } from "@/hooks/use-hotpay-payment-return";
 import {
   Activity,
   CalendarDays,
-  LogIn,
-  LogOut,
+  Clock,
+  MapPin,
   Medal,
   Shield,
   Trophy,
-  UserPlus,
   Users,
   Wallet,
 } from "lucide-react";
@@ -23,7 +22,6 @@ import { MarketplaceSearchForm } from "@/components/marketplace-search-form";
 import { MarketplaceVenueCard } from "@/components/marketplace-venue-card";
 import { PlayerAvatar } from "@/components/player-avatar";
 import { MatchTransportSignupDialog } from "@/components/match-transport-signup-dialog";
-import { LogoutConfirmModal } from "@/components/logout-confirm-modal";
 import { Button } from "@/components/ui/button";
 import { AppModal } from "@/components/ui/app-modal";
 import { FormInput } from "@/components/ui/form-field";
@@ -34,6 +32,7 @@ import type { HomeTopPlayer } from "@/lib/rankings-data";
 import { cn } from "@/lib/utils";
 import { useScreenBlocks } from "@/components/screen-blocks-provider";
 import { GymBratCrossLink } from "@/components/gymbrat-cross-link";
+import { useSiteMode } from "@/components/site-mode";
 import { useHotpayPayment } from "@/hooks/use-hotpay-payment";
 
 type Props = {
@@ -60,7 +59,125 @@ type Props = {
   featuredVenues?: VenueCard[];
 };
 
-export function HomeClient({
+export function HomeClient(props: Props) {
+  const { mode } = useSiteMode();
+  const pageVariant = props.pageVariant ?? "home";
+
+  if (pageVariant === "home" && mode === "booking") {
+    return <BookingHomeView featuredVenues={props.featuredVenues ?? []} />;
+  }
+  if (pageVariant === "pzu-cup" || mode === "academy") {
+    return <AcademyHomeView {...props} />;
+  }
+
+  return (
+    <div className="relative flex flex-1 flex-col px-4 py-16 text-zinc-900 dark:text-zinc-50">
+      <div className="mx-auto max-w-xl text-center">
+        <p className="text-sm text-zinc-500">Wybierz, co chcesz zrobić.</p>
+      </div>
+    </div>
+  );
+}
+
+function BookingHomeView({ featuredVenues }: { featuredVenues: VenueCard[] }) {
+  return (
+    <div className="relative flex flex-1 flex-col text-zinc-900 dark:text-zinc-50">
+      <section className="mp-hero relative flex flex-col justify-end overflow-hidden pb-16 pt-16 sm:pb-20 sm:pt-24">
+        <div className="relative z-10 mx-auto w-full max-w-6xl px-4">
+          <p className="text-xs font-black uppercase tracking-[0.22em] text-white/80">Rezerwacja boisk</p>
+          <h1 className="mt-3 max-w-3xl text-4xl font-black tracking-tight text-white sm:text-6xl">
+            Gdzie chcesz zagrać?
+          </h1>
+          <p className="mt-4 max-w-xl text-base text-white/85 sm:text-lg">
+            Wybierz miasto, dzień i godzinę. Wolne boiska widać od razu — rezerwacja i płatność online.
+          </p>
+          <div className="mt-8 max-w-5xl">
+            <MarketplaceSearchForm />
+          </div>
+        </div>
+      </section>
+
+      <div className="relative z-10 mx-auto w-full min-w-0 max-w-6xl px-4 py-10 sm:py-12">
+        <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {[
+            { href: "/obiekty?indoor=1", title: "Boiska halowe", desc: "Kryte obiekty na każdą pogodę" },
+            { href: "/obiekty?indoor=0", title: "Boiska otwarte", desc: "Orliki i nawierzchnie zewnętrzne" },
+            { href: "/obiekty?surface=sztuczna", title: "Sztuczna trawa", desc: "Piłka nożna na tartanie i orliku" },
+          ].map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-950"
+            >
+              <p className="font-black text-zinc-950 dark:text-white">{item.title}</p>
+              <p className="mt-1 text-sm text-zinc-500">{item.desc}</p>
+            </Link>
+          ))}
+        </section>
+
+        <section className="mt-12">
+          <div className="flex items-end justify-between gap-4">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--mp-teal-dark)]">Obiekty</p>
+              <h2 className="mt-1 text-2xl font-black tracking-tight sm:text-3xl">Wybierz boisko i zarezerwuj</h2>
+            </div>
+            <Button asChild variant="outline">
+              <Link href="/obiekty">Wszystkie obiekty</Link>
+            </Button>
+          </div>
+          {featuredVenues.length === 0 ? (
+            <div className="mt-6 rounded-3xl border border-dashed border-zinc-300 bg-white p-8 text-center text-zinc-600 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-300">
+              Brak opublikowanych obiektów. Partner z linku zaproszenia doda pierwszy w panelu obiektu.
+            </div>
+          ) : (
+            <div className="-mx-4 mt-6 flex gap-4 overflow-x-auto px-4 pb-3 [scrollbar-width:thin]">
+              {featuredVenues.map((venue) => (
+                <MarketplaceVenueCard key={venue.id} venue={venue} className="w-72 shrink-0" />
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section className="mt-14 overflow-hidden rounded-3xl bg-[var(--mp-teal)] px-6 py-10 text-white sm:px-10">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+            <div className="max-w-xl">
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/80">Dla obiektów</p>
+              <h2 className="mt-2 text-3xl font-black tracking-tight">Masz halę albo orlik? Wystaw terminy.</h2>
+              <p className="mt-3 text-white/90">
+                Partnerzy z linku dodają boiska, cennik i wolne godziny. Gracze rezerwują i płacą online, Ty widzisz obłożenie.
+              </p>
+            </div>
+            <Button asChild variant="secondary" className="h-12 rounded-full bg-white px-8 font-black text-zinc-950 hover:bg-zinc-100">
+              <Link href="/dla-obiektow">Dodaj swój obiekt</Link>
+            </Button>
+          </div>
+        </section>
+
+        <section id="jak-to-dziala" className="mt-14 grid gap-4 rounded-3xl bg-white p-6 shadow-sm sm:grid-cols-3 dark:bg-zinc-950">
+          {[
+            { n: "1", t: "Znajdź obiekt", d: "Filtruj po mieście, nawierzchni i cenie." },
+            { n: "2", t: "Wybierz godzinę", d: "Zobacz wolne sloty i zablokuj termin." },
+            { n: "3", t: "Opłać online", d: "Potwierdzenie rezerwacji przychodzi od razu." },
+          ].map((step) => (
+            <div key={step.n} className="rounded-2xl bg-zinc-50 p-5 dark:bg-zinc-900">
+              <p className="text-3xl font-black text-[var(--mp-teal)]">{step.n}</p>
+              <p className="mt-2 font-black">{step.t}</p>
+              <p className="mt-1 text-sm text-zinc-500">{step.d}</p>
+            </div>
+          ))}
+        </section>
+      </div>
+    </div>
+  );
+}
+
+function formatHeroDate(isoDate: string) {
+  const [y, m, d] = isoDate.split("-").map(Number);
+  if (!y || !m || !d) return isoDate;
+  return `${String(d).padStart(2, "0")}.${String(m).padStart(2, "0")}.${y}`;
+}
+
+function AcademyHomeView({
   nextMatch,
   nextMatchTentativeLine,
   lineupPublicNextMatch,
@@ -77,15 +194,14 @@ export function HomeClient({
   showPzuCupTile = false,
   pageVariant = "home",
   topRankedPlayers = [],
-  featuredVenues = [],
 }: Props) {
   const router = useRouter();
   const { isHiddenHref } = useScreenBlocks();
+  const isAcademyHome = pageVariant === "home";
   const [transportSignupOpen, setTransportSignupOpen] = useState(false);
   const [transportIntent, setTransportIntent] = useState<"signup" | "confirm">("signup");
   const [tentativeBusy, setTentativeBusy] = useState(false);
   const [signupOpen, setSignupOpen] = useState(false);
-  const [logoutOpen, setLogoutOpen] = useState(false);
   const [statsOpen, setStatsOpen] = useState(false);
   const [walletBalancePln, setWalletBalancePln] = useState<number | null>(null);
   const { pay: payDebt, busy: debtBusy } = useHotpayPayment();
@@ -101,6 +217,7 @@ export function HomeClient({
   const [saves, setSaves] = useState("");
 
   useEffect(() => {
+    if (!isAcademyHome) return;
     fetch("/api/stats/pending")
       .then((r) => r.json())
       .then((data) => {
@@ -115,7 +232,7 @@ export function HomeClient({
         }
       })
       .catch(() => {});
-  }, []);
+  }, [isAcademyHome]);
 
   function refreshWalletBalance() {
     if (!isLoggedIn || !hotpayEnabled) return;
@@ -130,6 +247,7 @@ export function HomeClient({
   }
 
   useEffect(() => {
+    if (!isAcademyHome) return;
     refreshWalletBalance();
     if (!isLoggedIn || !hotpayEnabled) return;
     const onVisible = () => {
@@ -146,10 +264,10 @@ export function HomeClient({
       window.clearInterval(id);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoggedIn, hotpayEnabled]);
+  }, [isLoggedIn, hotpayEnabled, isAcademyHome]);
 
   useHotpayPaymentReturn({
-    enabled: isLoggedIn && hotpayEnabled,
+    enabled: isLoggedIn && hotpayEnabled && isAcademyHome,
     onSettled: () => {
       refreshWalletBalance();
       router.refresh();
@@ -253,120 +371,114 @@ export function HomeClient({
     isLoggedIn ? { href: "/statystyki", icon: Activity, title: "Statystyki", desc: "Twoje liczby z boiska" } : null,
     isLoggedIn ? { href: "/rankingi", icon: Trophy, title: "Rankingi", desc: "Gole, asysty, punkty" } : null,
     showPzuCupTile ? { href: "/pzu-cup", icon: Medal, title: "PZU Cup", desc: "Organizacja turnieju" } : null,
-    isAdmin ? { href: "/panel-admina", icon: Shield, title: "Panel admina", desc: "Zarządzanie akademią" } : null,
-    !isLoggedIn ? { href: "/login", icon: LogIn, title: "Logowanie", desc: "Wejdź na konto" } : null,
-    !isLoggedIn ? { href: "/register", icon: UserPlus, title: "Rejestracja", desc: "Dołącz do akademii" } : null,
+    isAdmin ? { href: "/panel-admina", icon: Shield, title: "Zarządzanie akademią", desc: "Panel admina" } : null,
   ].flatMap((item) => (item && !isHiddenHref(item.href) ? [item] : []));
 
-  const isMarketplaceHome = pageVariant === "home";
+  const quickLinks = [
+    { href: "/terminarz", title: "Terminarz", desc: "Mecze, zapisy i najbliższe terminy" },
+    { href: "/pilkarze", title: "Piłkarze", desc: "Skład akademii i profile" },
+    {
+      href: isLoggedIn ? "/rankingi" : "/login?next=/rankingi",
+      title: "Rankingi",
+      desc: "Gole, asysty i punkty z meczów",
+    },
+  ].filter((item) => !isHiddenHref(item.href.split("?")[0] ?? item.href));
+
+  const moreLinks = academyLinks.filter(
+    (item) => item.href !== "/terminarz" && item.href !== "/pilkarze" && item.href !== "/rankingi"
+  );
 
   return (
     <div className="relative flex flex-1 flex-col text-zinc-900 dark:text-zinc-50">
-      {isMarketplaceHome ? (
+      {pageVariant === "pzu-cup" ? (
         <section className="mp-hero relative flex flex-col justify-end overflow-hidden pb-16 pt-16 sm:pb-20 sm:pt-24">
           <div className="relative z-10 mx-auto w-full max-w-6xl px-4">
-            <p className="text-xs font-black uppercase tracking-[0.22em] text-white/80">Rezerwacja boisk</p>
+            <p className="text-xs font-black uppercase tracking-[0.22em] text-white/80">PZU Cup 2026</p>
             <h1 className="mt-3 max-w-3xl text-4xl font-black tracking-tight text-white sm:text-6xl">
-              Gdzie chcesz zagrać?
+              Organizacja turnieju
             </h1>
-            <p className="mt-4 max-w-xl text-base text-white/85 sm:text-lg">
-              Wybierz miasto, dzień i godzinę. Wolne boiska widać od razu — rezerwacja i płatność online.
-            </p>
-            <div className="mt-8 max-w-5xl">
-              <MarketplaceSearchForm />
-            </div>
           </div>
         </section>
       ) : (
-        <section className="border-b border-zinc-200 bg-white px-4 py-10 dark:border-zinc-800 dark:bg-zinc-950">
-          <div className="mx-auto max-w-6xl">
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-[var(--mp-teal-dark)]">PZU Cup 2026</p>
-            <h1 className="mt-2 text-3xl font-black tracking-tight sm:text-5xl">Organizacja turnieju</h1>
+        <section className="mp-hero relative flex flex-col justify-end overflow-hidden pb-16 pt-16 sm:pb-20 sm:pt-24">
+          <div className="relative z-10 mx-auto w-full max-w-6xl px-4">
+            <p className="text-xs font-black uppercase tracking-[0.22em] text-white/80">Akademia</p>
+            <h1 className="mt-3 max-w-3xl text-4xl font-black tracking-tight text-white sm:text-6xl">
+              Gramy razem.
+            </h1>
+            <p className="mt-4 max-w-xl text-base text-white/85 sm:text-lg">
+              Terminarz meczów, składy i rankingi — osobno od rezerwacji boisk.
+            </p>
+            <div className="mt-8 max-w-5xl">
+              {nextMatch ? (
+                <div className="mp-search-pill p-2 md:p-1.5">
+                  <div className="min-w-0 px-4 py-2">
+                    <span className="block text-[0.65rem] font-bold uppercase tracking-[0.14em] text-zinc-400">
+                      Najbliższy mecz
+                    </span>
+                    <span className="flex items-center gap-2 text-sm font-semibold text-zinc-900">
+                      <CalendarDays className="h-4 w-4 shrink-0 text-zinc-400" aria-hidden />
+                      {formatHeroDate(nextMatch.match_date)}
+                    </span>
+                  </div>
+                  <div className="min-w-0 px-4 py-2">
+                    <span className="block text-[0.65rem] font-bold uppercase tracking-[0.14em] text-zinc-400">
+                      Godzina
+                    </span>
+                    <span className="flex items-center gap-2 text-sm font-semibold text-zinc-900">
+                      <Clock className="h-4 w-4 shrink-0 text-zinc-400" aria-hidden />
+                      {nextMatch.match_time}
+                    </span>
+                  </div>
+                  <div className="min-w-0 px-4 py-2">
+                    <span className="block text-[0.65rem] font-bold uppercase tracking-[0.14em] text-zinc-400">
+                      Miejsce
+                    </span>
+                    <span className="flex items-center gap-2 text-sm font-semibold text-zinc-900">
+                      <MapPin className="h-4 w-4 shrink-0 text-zinc-400" aria-hidden />
+                      <span className="truncate">{nextMatch.location}</span>
+                    </span>
+                  </div>
+                  <Button asChild className="h-12 rounded-full px-8 text-sm font-black uppercase tracking-[0.12em]">
+                    <Link href="/terminarz">Terminarz</Link>
+                  </Button>
+                </div>
+              ) : (
+                <div className="mp-search-pill p-2 md:p-1.5">
+                  <div className="min-w-0 px-4 py-3 md:col-span-3">
+                    <span className="block text-[0.65rem] font-bold uppercase tracking-[0.14em] text-zinc-400">
+                      Terminarz
+                    </span>
+                    <span className="text-sm font-semibold text-zinc-900">
+                      Zobacz mecze akademii i zapisz się na termin.
+                    </span>
+                  </div>
+                  <Button asChild className="h-12 rounded-full px-8 text-sm font-black uppercase tracking-[0.12em]">
+                    <Link href="/terminarz">Terminarz</Link>
+                  </Button>
+                </div>
+              )}
+            </div>
           </div>
         </section>
       )}
 
       <div className="relative z-10 mx-auto w-full min-w-0 max-w-6xl px-4 py-10 sm:py-12">
-        {isMarketplaceHome ? (
-          <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {[
-              { href: "/obiekty?indoor=1", title: "Boiska halowe", desc: "Kryte obiekty na każdą pogodę" },
-              { href: "/obiekty?indoor=0", title: "Boiska otwarte", desc: "Orliki i nawierzchnie zewnętrzne" },
-              { href: "/obiekty?surface=sztuczna", title: "Sztuczna trawa", desc: "Piłka nożna na tartanie i orliku" },
-              { href: "/terminarz", title: "Akademia", desc: "Mecze, zapisy i składy drużyny" },
-            ].map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-950"
-              >
-                <p className="font-black text-zinc-950 dark:text-white">{item.title}</p>
-                <p className="mt-1 text-sm text-zinc-500">{item.desc}</p>
-              </Link>
-            ))}
-          </section>
-        ) : null}
-
-        {isMarketplaceHome ? (
-          <section className="mt-12">
-            <div className="flex items-end justify-between gap-4">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--mp-teal-dark)]">Obiekty</p>
-                <h2 className="mt-1 text-2xl font-black tracking-tight sm:text-3xl">Wybierz boisko i zarezerwuj</h2>
-              </div>
-              <Button asChild variant="outline">
-                <Link href="/obiekty">Wszystkie obiekty</Link>
-              </Button>
-            </div>
-            {featuredVenues.length === 0 ? (
-              <div className="mt-6 rounded-3xl border border-dashed border-zinc-300 bg-white p-8 text-center text-zinc-600 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-300">
-                Brak opublikowanych obiektów. Partner z linku zaproszenia doda pierwszy w panelu obiektu.
-              </div>
-            ) : (
-              <div className="-mx-4 mt-6 flex gap-4 overflow-x-auto px-4 pb-3 [scrollbar-width:thin]">
-                {featuredVenues.map((venue) => (
-                  <MarketplaceVenueCard key={venue.id} venue={venue} className="w-72 shrink-0" />
-                ))}
-              </div>
-            )}
-          </section>
-        ) : null}
-
-        {isMarketplaceHome ? (
-          <section className="mt-14 overflow-hidden rounded-3xl bg-[var(--mp-teal)] px-6 py-10 text-white sm:px-10">
-            <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-              <div className="max-w-xl">
-                <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/80">Dla obiektów</p>
-                <h2 className="mt-2 text-3xl font-black tracking-tight">Masz halę albo orlik? Wystaw terminy.</h2>
-                <p className="mt-3 text-white/90">
-                  Partnerzy z linku dodają boiska, cennik i wolne godziny. Gracze rezerwują i płacą online, Ty widzisz obłożenie.
-                </p>
-              </div>
-              <Button asChild variant="secondary" className="h-12 rounded-full bg-white px-8 font-black text-zinc-950 hover:bg-zinc-100">
-                <Link href="/dla-obiektow">Dodaj swój obiekt</Link>
-              </Button>
-            </div>
-          </section>
-        ) : null}
-
-        {isMarketplaceHome ? (
-          <section id="jak-to-dziala" className="mt-14 grid gap-4 rounded-3xl bg-white p-6 shadow-sm sm:grid-cols-3 dark:bg-zinc-950">
-            {[
-              { n: "1", t: "Znajdź obiekt", d: "Filtruj po mieście, nawierzchni i cenie." },
-              { n: "2", t: "Wybierz godzinę", d: "Zobacz wolne sloty i zablokuj termin." },
-              { n: "3", t: "Opłać online", d: "Potwierdzenie rezerwacji przychodzi od razu." },
-            ].map((step) => (
-              <div key={step.n} className="rounded-2xl bg-zinc-50 p-5 dark:bg-zinc-900">
-                <p className="text-3xl font-black text-[var(--mp-teal)]">{step.n}</p>
-                <p className="mt-2 font-black">{step.t}</p>
-                <p className="mt-1 text-sm text-zinc-500">{step.d}</p>
-              </div>
-            ))}
-          </section>
-        ) : null}
+        <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {quickLinks.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-950"
+            >
+              <p className="font-black text-zinc-950 dark:text-white">{item.title}</p>
+              <p className="mt-1 text-sm text-zinc-500">{item.desc}</p>
+            </Link>
+          ))}
+        </section>
 
         {isLoggedIn ? (
-          <div className="mt-10 flex flex-wrap items-center gap-4 rounded-3xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-950">
+          <div className="mt-10 flex flex-wrap items-center gap-4 rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
             <PlayerAvatar
               photoPath={profilePhotoPath}
               firstName={firstName}
@@ -376,7 +488,7 @@ export function HomeClient({
             />
             <div className="min-w-0 text-left">
               <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Witaj</p>
-              <p className="text-lg font-bold">
+              <p className="text-lg font-black">
                 {`${firstName} ${lastName}`.trim() || zawodnik}
               </p>
               {zawodnik && `${firstName} ${lastName}`.trim() ? (
@@ -387,86 +499,119 @@ export function HomeClient({
         ) : null}
 
         {nextMatch ? (
-          <div className="mt-8">
-            <HomeNextMatchCard
-              match={nextMatch}
-              tentativeLine={nextMatchTentativeLine}
-              lineupPublic={lineupPublicNextMatch}
-              signup={nextMatchSignup}
-              transportActive={transportHomeActive}
-              hotpayEnabled={hotpayEnabled}
-              isLoggedIn={isLoggedIn}
-              tentativeBusy={tentativeBusy}
-              walletBalancePln={walletBalancePln}
-              debtBusy={debtBusy}
-              onPayDebt={(amount) => void payDebt(amount)}
-              onSignup={openTransportSignup}
-              onTentative={() => void signupTentativeHome()}
-              onDeclined={() => void signupDeclinedHome()}
-              onConfirmFromTentative={openConfirmFromTentative}
-            />
-          </div>
+          <section className="mt-12">
+            <div className="flex items-end justify-between gap-4">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--mp-teal-dark)]">Terminarz</p>
+                <h2 className="mt-1 text-2xl font-black tracking-tight sm:text-3xl">Najbliższy mecz</h2>
+              </div>
+              <Button asChild variant="outline">
+                <Link href="/terminarz">Pełny terminarz</Link>
+              </Button>
+            </div>
+            <div className="mt-6">
+              <HomeNextMatchCard
+                match={nextMatch}
+                tentativeLine={nextMatchTentativeLine}
+                lineupPublic={lineupPublicNextMatch}
+                signup={nextMatchSignup}
+                transportActive={transportHomeActive}
+                hotpayEnabled={hotpayEnabled}
+                isLoggedIn={isLoggedIn}
+                tentativeBusy={tentativeBusy}
+                walletBalancePln={walletBalancePln}
+                debtBusy={debtBusy}
+                onPayDebt={(amount) => void payDebt(amount)}
+                onSignup={openTransportSignup}
+                onTentative={() => void signupTentativeHome()}
+                onDeclined={() => void signupDeclinedHome()}
+                onConfirmFromTentative={openConfirmFromTentative}
+              />
+            </div>
+          </section>
         ) : null}
 
-        <section className="mt-12">
-          <div className="flex items-end justify-between gap-4">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--mp-teal-dark)]">Akademia</p>
-              <h2 className="mt-1 text-2xl font-black tracking-tight">Moduły drużyny</h2>
-            </div>
-          </div>
-          <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {academyLinks.map((item) => {
-              const Icon = item.icon;
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className="flex items-start justify-between gap-3 rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-950"
-                >
-                  <div>
-                    <p className="font-black">{item.title}</p>
-                    <p className="mt-1 text-sm text-zinc-500">{item.desc}</p>
-                  </div>
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--mp-teal)]/12 text-[var(--mp-teal-dark)]">
-                    <Icon className="h-5 w-5" />
-                  </span>
-                </Link>
-              );
-            })}
-            {isLoggedIn ? (
-              <button
-                type="button"
-                onClick={() => setLogoutOpen(true)}
-                className="flex items-start justify-between gap-3 rounded-2xl border border-dashed border-zinc-300 bg-white p-5 text-left dark:border-zinc-700 dark:bg-zinc-950"
-              >
-                <div>
-                  <p className="font-black">Wyloguj się</p>
-                  <p className="mt-1 text-sm text-zinc-500">Zakończ sesję</p>
-                </div>
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
-                  <LogOut className="h-5 w-5" />
-                </span>
-              </button>
-            ) : null}
-            <GymBratCrossLink />
-          </div>
-        </section>
-
-        {pageVariant === "home" ? (
-          <div className="mt-10">
+        {isAcademyHome ? (
+          <div className="mt-12">
             <HomeTopRankings players={topRankedPlayers} isLoggedIn={isLoggedIn} />
           </div>
         ) : null}
 
-        {youtubeLiveVideoId ? (
-          <section className="mt-10 overflow-hidden rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
-            <div className="mb-4 flex items-center justify-between gap-3">
+        {moreLinks.length > 0 ? (
+          <section className="mt-12">
+            <div className="flex items-end justify-between gap-4">
               <div>
-                <p className="text-xs font-bold uppercase tracking-[0.16em] text-red-500">Na żywo</p>
-                <h2 className="mt-1 text-xl font-black">Mecz na YouTube</h2>
+                <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--mp-teal-dark)]">Akademia</p>
+                <h2 className="mt-1 text-2xl font-black tracking-tight sm:text-3xl">Więcej w akademii</h2>
               </div>
-              <Button asChild>
+            </div>
+            <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              {moreLinks.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className="flex items-start justify-between gap-3 rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-950"
+                  >
+                    <div>
+                      <p className="font-black text-zinc-950 dark:text-white">{item.title}</p>
+                      <p className="mt-1 text-sm text-zinc-500">{item.desc}</p>
+                    </div>
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--mp-teal)]/12 text-[var(--mp-teal-dark)]">
+                      <Icon className="h-5 w-5" />
+                    </span>
+                  </Link>
+                );
+              })}
+              <GymBratCrossLink />
+            </div>
+          </section>
+        ) : null}
+
+        <section className="mt-14 overflow-hidden rounded-3xl bg-[var(--mp-teal)] px-6 py-10 text-white sm:px-10">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+            <div className="max-w-xl">
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/80">Akademia</p>
+              <h2 className="mt-2 text-3xl font-black tracking-tight">
+                {isLoggedIn ? "Kolejny mecz czeka w terminarzu." : "Chcesz grać z nami?"}
+              </h2>
+              <p className="mt-3 text-white/90">
+                {isLoggedIn
+                  ? "Zapisy, składy i statystyki są w jednym miejscu — osobno od rezerwacji boisk."
+                  : "Dołącz do akademii: terminarz, składy, portfel i rankingi po zalogowaniu."}
+              </p>
+            </div>
+            <Button asChild variant="secondary" className="h-12 rounded-full bg-white px-8 font-black text-zinc-950 hover:bg-zinc-100">
+              <Link href={isLoggedIn ? "/terminarz" : "/register"}>
+                {isLoggedIn ? "Otwórz terminarz" : "Dołącz do akademii"}
+              </Link>
+            </Button>
+          </div>
+        </section>
+
+        <section className="mt-14 grid gap-4 rounded-3xl bg-white p-6 shadow-sm sm:grid-cols-3 dark:bg-zinc-950">
+          {[
+            { n: "1", t: "Zobacz terminarz", d: "Najbliższe mecze akademii i wolne miejsca." },
+            { n: "2", t: "Zapisz się", d: "Potwierdź udział albo zaznacz, że jeszcze nie wiesz." },
+            { n: "3", t: "Graj i licz punkty", d: "Statystyki i rankingi po każdym spotkaniu." },
+          ].map((step) => (
+            <div key={step.n} className="rounded-2xl bg-zinc-50 p-5 dark:bg-zinc-900">
+              <p className="text-3xl font-black text-[var(--mp-teal)]">{step.n}</p>
+              <p className="mt-2 font-black">{step.t}</p>
+              <p className="mt-1 text-sm text-zinc-500">{step.d}</p>
+            </div>
+          ))}
+        </section>
+
+        {youtubeLiveVideoId ? (
+          <section className="mt-14 overflow-hidden rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
+            <div className="mb-4 flex items-end justify-between gap-3">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--mp-teal-dark)]">Na żywo</p>
+                <h2 className="mt-1 text-2xl font-black tracking-tight sm:text-3xl">Mecz na YouTube</h2>
+              </div>
+              <Button asChild variant="outline">
                 <Link
                   href={`https://www.youtube.com/watch?v=${encodeURIComponent(youtubeLiveVideoId)}`}
                   target="_blank"
@@ -491,7 +636,7 @@ export function HomeClient({
         ) : null}
       </div>
 
-      {nextMatch && (
+      {nextMatch ? (
         <MatchTransportSignupDialog
           open={transportSignupOpen}
           onOpenChange={setTransportSignupOpen}
@@ -503,7 +648,7 @@ export function HomeClient({
             router.refresh();
           }}
         />
-      )}
+      ) : null}
 
       <AppModal
         open={signupOpen}
@@ -531,8 +676,6 @@ export function HomeClient({
           </>
         ) : null}
       </AppModal>
-
-      <LogoutConfirmModal open={logoutOpen} onOpenChange={setLogoutOpen} />
 
       <AppModal
         open={statsOpen}

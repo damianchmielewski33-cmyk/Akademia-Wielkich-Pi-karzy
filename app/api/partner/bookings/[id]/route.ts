@@ -4,6 +4,7 @@ import { requireVenuePartner } from "@/lib/api-helpers";
 import { getDb, logActivity } from "@/lib/db";
 import { notifyBookingCancelled, notifyBookingConfirmed } from "@/lib/booking-notifications";
 import { userOwnsBooking } from "@/lib/venue-partners";
+import { bookingIsInPayout } from "@/lib/venue-settlements";
 
 export const runtime = "nodejs";
 
@@ -27,6 +28,12 @@ export async function PATCH(
   const db = await getDb();
   if (!(await userOwnsBooking(db, gate.session.userId, id))) {
     return NextResponse.json({ error: "To nie jest rezerwacja Twojego obiektu" }, { status: 403 });
+  }
+  if (parsed.data.status === "cancelled" && (await bookingIsInPayout(db, id))) {
+    return NextResponse.json(
+      { error: "Ta rezerwacja jest już w wypłacie — nie można jej anulować." },
+      { status: 409 }
+    );
   }
 
   const result = await db

@@ -28,4 +28,8 @@ object AwpColors {
     val EmeraldSoft = Color(0xFFD1FAE5)
     val TextOnLight = Color(0xFF0F172A)
     val PageLight = Color(0xFFF4F6FB)
+    val MpTeal = Color(0xFF00C9B1)
+    val MpTealDark = Color(0xFF00A394)
+    val Zinc400 = Color(0xFFA1A1AA)
+    val Zinc500 = Color(0xFF71717A)
 }

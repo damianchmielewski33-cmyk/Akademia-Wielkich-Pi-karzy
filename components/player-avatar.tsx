@@ -83,6 +83,7 @@ export function PlayerNameStack({
   className,
   primaryClassName,
   secondaryClassName,
+  wrap = false,
 }: {
   firstName: string;
   lastName: string;
@@ -90,22 +91,26 @@ export function PlayerNameStack({
   className?: string;
   primaryClassName?: string;
   secondaryClassName?: string;
+  /** Pełne imię i nazwisko w wąskim widoku (bez ucięcia wielokropkiem). */
+  wrap?: boolean;
 }) {
   const full = `${(firstName || "").trim()} ${(lastName || "").trim()}`.trim();
   const primary = full || nick || "—";
   const showNick = Boolean(nick && full && nick !== full);
+  const overflowClass = wrap ? "whitespace-normal break-words" : "truncate";
   return (
     <div className={cn("min-w-0 text-left", className)}>
       <div
         className={cn(
-          "truncate font-medium text-emerald-950 dark:text-emerald-100",
+          overflowClass,
+          "font-medium text-emerald-950 dark:text-emerald-100",
           primaryClassName
         )}
       >
         {primary}
       </div>
       {showNick ? (
-        <div className={cn("truncate text-xs text-zinc-500 dark:text-zinc-400", secondaryClassName)}>
+        <div className={cn(overflowClass, "text-xs text-zinc-500 dark:text-zinc-400", secondaryClassName)}>
           {nick}
         </div>
       ) : null}

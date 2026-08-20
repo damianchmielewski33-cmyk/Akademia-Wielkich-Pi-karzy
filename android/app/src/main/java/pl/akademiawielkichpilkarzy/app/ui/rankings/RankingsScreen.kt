@@ -32,6 +32,7 @@ import pl.akademiawielkichpilkarzy.app.ui.common.EmptyHint
 import pl.akademiawielkichpilkarzy.app.ui.common.ErrorBlock
 import pl.akademiawielkichpilkarzy.app.ui.common.LoadingBlock
 import pl.akademiawielkichpilkarzy.app.ui.common.MurawaBackground
+import pl.akademiawielkichpilkarzy.app.ui.common.ScreenPhotoTheme
 import pl.akademiawielkichpilkarzy.app.ui.theme.AwpColors
 
 private enum class RankTab(val label: String) {
@@ -66,7 +67,7 @@ fun RankingsScreen() {
 
     LaunchedEffect(Unit) { reload() }
 
-    MurawaBackground {
+    MurawaBackground(theme = ScreenPhotoTheme.Rankings) {
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()

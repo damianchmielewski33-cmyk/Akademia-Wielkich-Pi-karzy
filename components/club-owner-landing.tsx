@@ -31,7 +31,7 @@ export function ClubOwnerLanding() {
         {[
           { t: "Twoje terminy", d: "Godziny otwarcia stają się wolnymi slotami w grafiku." },
           { t: "Twój cennik", d: "Cena bazowa, weekend i szczyt — bez dzwonienia na recepcję." },
-          { t: "Twoje rezerwacje", d: "Potwierdzenia, blokady i anulowanie w jednym panelu." },
+          { t: "Twoje rezerwacje", d: "Potwierdzenia, blokady i rozliczenie z akademią w jednym panelu." },
         ].map((item) => (
           <article key={item.t} className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
             <h2 className="font-black">{item.t}</h2>

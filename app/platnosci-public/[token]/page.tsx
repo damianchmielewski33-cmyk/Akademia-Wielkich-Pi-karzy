@@ -137,7 +137,7 @@ export default async function PlatnosciPublicPage(ctx: Ctx) {
                   <li
                     key={p.id}
                     className={cn(
-                      "flex flex-wrap items-center gap-2 border-b px-3 py-2.5 text-sm last:border-b-0",
+                      "grid gap-2 border-b px-3 py-3 text-sm last:border-b-0 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:gap-3",
                       hasMatchPaid
                         ? matchPaid
                           ? "border-l-4 border-l-green-600 bg-green-100/95 dark:border-l-green-500 dark:bg-green-950/50"
@@ -151,22 +151,29 @@ export default async function PlatnosciPublicPage(ctx: Ctx) {
                               : "bg-emerald-50/40 dark:bg-zinc-900/30"
                     )}
                   >
-                    <PlayerAvatar
-                      photoPath={p.profile_photo_path}
-                      firstName={p.first_name}
-                      lastName={p.last_name}
-                      size="sm"
-                      ringClassName={
-                        hasMatchPaid
-                          ? matchPaid
-                            ? "ring-2 ring-green-600 dark:ring-green-500"
-                            : "ring-2 ring-red-600 dark:ring-red-500"
-                          : undefined
-                      }
-                    />
-                    <div className="min-w-0 flex-1">
-                      <PlayerNameStack firstName={p.first_name} lastName={p.last_name} nick={p.zawodnik} />
+                    <div className="flex min-w-0 items-start gap-2">
+                      <PlayerAvatar
+                        photoPath={p.profile_photo_path}
+                        firstName={p.first_name}
+                        lastName={p.last_name}
+                        size="sm"
+                        ringClassName={
+                          hasMatchPaid
+                            ? matchPaid
+                              ? "ring-2 ring-green-600 dark:ring-green-500"
+                              : "ring-2 ring-red-600 dark:ring-red-500"
+                            : undefined
+                        }
+                      />
+                      <PlayerNameStack
+                        wrap
+                        firstName={p.first_name}
+                        lastName={p.last_name}
+                        nick={p.zawodnik}
+                        className="flex-1"
+                      />
                     </div>
+                    <div className="flex flex-wrap items-center gap-2 pl-10 sm:justify-end sm:pl-0">
                     {hasMatchPaid ? (
                       <span
                         className={cn(
@@ -214,6 +221,7 @@ export default async function PlatnosciPublicPage(ctx: Ctx) {
                         />
                       )
                     ) : null}
+                    </div>
                   </li>
                 );
               })}

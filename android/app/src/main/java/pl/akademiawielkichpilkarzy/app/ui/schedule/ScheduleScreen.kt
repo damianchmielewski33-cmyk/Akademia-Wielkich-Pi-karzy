@@ -59,6 +59,7 @@ import pl.akademiawielkichpilkarzy.app.ui.common.LinkTextButton
 import pl.akademiawielkichpilkarzy.app.ui.common.LoadingBlock
 import pl.akademiawielkichpilkarzy.app.ui.common.MatchSignupCard
 import pl.akademiawielkichpilkarzy.app.ui.common.MurawaBackground
+import pl.akademiawielkichpilkarzy.app.ui.common.ScreenPhotoTheme
 import pl.akademiawielkichpilkarzy.app.ui.common.PitchCard
 import pl.akademiawielkichpilkarzy.app.ui.common.PitchLabel
 import pl.akademiawielkichpilkarzy.app.ui.common.PitchPanel
@@ -76,7 +77,7 @@ fun ScheduleScreen(
     var addMatchOpen by remember { mutableStateOf(false) }
     val matches = viewModel.filteredMatches()
 
-    MurawaBackground {
+    MurawaBackground(theme = ScreenPhotoTheme.Schedule) {
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()

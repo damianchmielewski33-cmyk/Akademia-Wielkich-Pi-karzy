@@ -36,6 +36,7 @@ import { PlayerAliasPicker } from "@/components/player-alias-picker";
 import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
 import { formatWalletPln } from "@/components/player-wallet-panel";
 import { PitchPageHero } from "@/components/ui/pitch-card";
+import { AndroidAppVersionCard } from "@/components/android-app-version-card";
 import type { ProfileDashboard } from "@/lib/profile-data";
 import { normalizeUiTheme, type UiTheme } from "@/lib/ui-theme";
 import { cn } from "@/lib/utils";
@@ -389,6 +390,8 @@ export function ProfilClient({
               </div>
             </div>
           </div>
+
+          <AndroidAppVersionCard />
 
           <div className="awp-card-surface">
             <div>

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ChevronRight, Trophy } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
 import { Button } from "@/components/ui/button";
 import type { HomeTopPlayer } from "@/lib/rankings-data";
@@ -57,17 +57,14 @@ export function HomeTopRankings({ players, isLoggedIn }: Props) {
   const ordered = players.length >= 3 ? [players[1], players[0], players[2]] : players;
 
   return (
-    <section className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-950 sm:p-6">
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+    <section>
+      <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--mp-teal-dark)]">Akademia</p>
-          <h2 className="mt-1 flex items-center gap-2 text-xl font-black">
-            <Trophy className="h-5 w-5 text-[var(--mp-teal)]" aria-hidden />
-            Top 3 rankingu
-          </h2>
+          <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--mp-teal-dark)]">Rankingi</p>
+          <h2 className="mt-1 text-2xl font-black tracking-tight sm:text-3xl">Top 3 rankingu</h2>
           <p className="mt-1 text-sm text-zinc-500">Najlepsi zawodnicy według punktów ze wszystkich meczów.</p>
         </div>
-        <Button asChild variant="outline" size="sm">
+        <Button asChild variant="outline">
           <Link href={isLoggedIn ? "/rankingi" : "/login?next=/rankingi"}>
             Pełne rankingi
             <ChevronRight className="h-4 w-4" aria-hidden />

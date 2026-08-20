@@ -185,4 +185,7 @@ interface AwpApi {
 
     @GET("api/mobile/config")
     suspend fun mobileConfig(): MobileConfigResponse
+
+    @GET("api/venues")
+    suspend fun venues(): VenuesResponse
 }

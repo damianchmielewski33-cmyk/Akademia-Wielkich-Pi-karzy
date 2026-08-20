@@ -10,6 +10,7 @@ import {
   userSignupKindMap,
   type SignupRow,
 } from "@/lib/terminarz-shared";
+import { getUserWalletBalancePln } from "@/lib/wallet";
 
 type PageProps = {
   params: Promise<{ matchId: string }>;
@@ -67,6 +68,8 @@ export default async function ZaproszeniePage({ params }: PageProps) {
   const userSignupKind = userSignupKindMap(signups, session?.zawodnik);
   const appSettings = await getAppSettings(db);
   const hotpayEnabled = isHotpayConfigured() && appSettings.hotpay_enabled;
+  const walletBalancePln =
+    session && hotpayEnabled ? await getUserWalletBalancePln(session.userId, db) : null;
 
   const matchForClient =
     match && userSignupKind[matchId] === "confirmed"
@@ -84,6 +87,7 @@ export default async function ZaproszeniePage({ params }: PageProps) {
         isLoggedIn={Boolean(session)}
         userSignupKind={userSignupKind}
         hotpayEnabled={hotpayEnabled}
+        walletBalancePln={walletBalancePln}
       />
     </div>
   );

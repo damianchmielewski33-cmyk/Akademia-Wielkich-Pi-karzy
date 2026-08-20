@@ -21,6 +21,7 @@ import pl.akademiawielkichpilkarzy.app.BuildConfig
 import pl.akademiawielkichpilkarzy.app.ui.common.AwpModal
 import pl.akademiawielkichpilkarzy.app.ui.common.PitchPanel
 import pl.akademiawielkichpilkarzy.app.update.AppUpdateInfo
+import pl.akademiawielkichpilkarzy.app.update.AppUpdateRequests
 import pl.akademiawielkichpilkarzy.app.update.AppUpdater
 
 @Composable
@@ -34,12 +35,34 @@ fun AppUpdateGate(checkOnStart: Boolean = true) {
     var status by remember { mutableStateOf<String?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     var dismissed by remember { mutableStateOf(false) }
+    var infoMessage by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(checkOnStart) {
-        if (!checkOnStart || dismissed) return@LaunchedEffect
+        if (!checkOnStart) return@LaunchedEffect
         try {
             update = AppUpdater.checkForUpdate()
         } catch (_: Exception) {
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        AppUpdateRequests.manual.collect {
+            if (busy) return@collect
+            dismissed = false
+            error = null
+            status = null
+            try {
+                val info = AppUpdater.checkForUpdate()
+                if (info == null) {
+                    update = null
+                    infoMessage = "Masz najnowszą wersję (${BuildConfig.VERSION_NAME})."
+                } else {
+                    infoMessage = null
+                    update = info
+                }
+            } catch (e: Exception) {
+                infoMessage = e.message ?: "Nie udało się sprawdzić aktualizacji"
+            }
         }
     }
 
@@ -99,87 +122,22 @@ fun AppUpdateGate(checkOnStart: Boolean = true) {
                 }
             }
         }
+    } else if (infoMessage != null) {
+        AwpModal(
+            title = "Aktualizacje",
+            onDismiss = { infoMessage = null },
+            confirmText = "OK",
+            onConfirm = { infoMessage = null }
+        ) {
+            PitchPanel { Text(infoMessage!!) }
+        }
     }
 }
 
 /** Ręczne sprawdzenie (np. z profilu). */
 @Composable
 fun rememberUpdateChecker(): () -> Unit {
-    val context = LocalContext.current
-    val activity = context as? Activity
-    val scope = rememberCoroutineScope()
-    var update by remember { mutableStateOf<AppUpdateInfo?>(null) }
-    var busy by remember { mutableStateOf(false) }
-    var message by remember { mutableStateOf<String?>(null) }
-
-    if (update != null && activity != null) {
-        val info = update!!
-        AwpModal(
-            title = "Aktualizacja ${info.versionName}",
-            onDismiss = { update = null },
-            confirmText = "Aktualizuj",
-            dismissText = "Anuluj",
-            onConfirm = {
-                if (!busy) {
-                    scope.launch {
-                        busy = true
-                        message = null
-                        try {
-                            if (!AppUpdater.canRequestPackageInstalls(activity)) {
-                                AppUpdater.openUnknownSourcesSettings(activity)
-                                message = "Włącz zezwolenie i spróbuj ponownie."
-                                return@launch
-                            }
-                            message = "Pobieranie…"
-                            val file = AppUpdater.downloadApk(activity, info)
-                            AppUpdater.installApk(activity, file)
-                            update = null
-                        } catch (e: Exception) {
-                            message = e.message ?: "Błąd"
-                        } finally {
-                            busy = false
-                        }
-                    }
-                }
-            }
-        ) {
-            PitchPanel {
-                Column {
-                    Text("Zainstalować nową wersję?")
-                    message?.let {
-                        Spacer(Modifier.height(8.dp))
-                        Text(it)
-                    }
-                    if (busy) {
-                        Spacer(Modifier.height(12.dp))
-                        CircularProgressIndicator()
-                    }
-                }
-            }
-        }
-    } else if (message != null) {
-        AwpModal(
-            title = "Aktualizacje",
-            onDismiss = { message = null },
-            confirmText = "OK",
-            onConfirm = { message = null }
-        ) {
-            PitchPanel { Text(message!!) }
-        }
-    }
-
     return {
-        scope.launch {
-            try {
-                val info = AppUpdater.checkForUpdate()
-                if (info == null) {
-                    message = "Masz najnowszą wersję (${BuildConfig.VERSION_NAME})."
-                } else {
-                    update = info
-                }
-            } catch (e: Exception) {
-                message = e.message ?: "Nie udało się sprawdzić aktualizacji"
-            }
-        }
+        AppUpdateRequests.requestManualCheck()
     }
 }

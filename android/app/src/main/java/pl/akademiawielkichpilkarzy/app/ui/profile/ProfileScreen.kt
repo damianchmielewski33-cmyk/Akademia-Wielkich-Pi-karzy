@@ -27,8 +27,10 @@ import pl.akademiawielkichpilkarzy.app.ui.common.LoadingBlock
 import pl.akademiawielkichpilkarzy.app.ui.common.PitchCard
 import pl.akademiawielkichpilkarzy.app.ui.common.PitchLabel
 import pl.akademiawielkichpilkarzy.app.ui.common.ScreenScaffold
+import pl.akademiawielkichpilkarzy.app.ui.common.ScreenPhotoTheme
 import pl.akademiawielkichpilkarzy.app.ui.theme.AwpColors
-import pl.akademiawielkichpilkarzy.app.ui.update.rememberUpdateChecker
+import pl.akademiawielkichpilkarzy.app.update.AppUpdateInfo
+import pl.akademiawielkichpilkarzy.app.update.AppUpdateRequests
 import pl.akademiawielkichpilkarzy.app.update.AppUpdater
 
 @Composable
@@ -39,12 +41,28 @@ fun ProfileScreen(
     var profile by remember { mutableStateOf<ProfileResponse?>(null) }
     var loading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
-    var updateAvailable by remember { mutableStateOf(false) }
+    var updateInfo by remember { mutableStateOf<AppUpdateInfo?>(null) }
+    var updateChecking by remember { mutableStateOf(true) }
+    var updateCheckFailed by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
-    val checkUpdate = rememberUpdateChecker()
+
+    fun refreshUpdateStatus() {
+        scope.launch {
+            updateChecking = true
+            updateCheckFailed = false
+            try {
+                updateInfo = AppUpdater.checkForUpdate()
+            } catch (_: Exception) {
+                updateInfo = null
+                updateCheckFailed = true
+            } finally {
+                updateChecking = false
+            }
+        }
+    }
 
     LaunchedEffect(Unit) {
-        updateAvailable = runCatching { AppUpdater.checkForUpdate() != null }.getOrDefault(false)
+        refreshUpdateStatus()
     }
 
     fun reload() {
@@ -63,7 +81,7 @@ fun ProfileScreen(
 
     LaunchedEffect(Unit) { reload() }
 
-    ScreenScaffold(title = "Profil", subtitle = "Konto zawodnika") {
+    ScreenScaffold(title = "Profil", subtitle = "Konto zawodnika", theme = ScreenPhotoTheme.Profile) {
         when {
             loading -> LoadingBlock()
             error != null -> ErrorBlock(error!!) { reload() }
@@ -111,20 +129,54 @@ fun ProfileScreen(
                     )
                 }
 
+                PitchCard {
+                    PitchLabel("Ustawienia aplikacji")
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        "Wersja ${BuildConfig.VERSION_NAME}",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = AwpColors.OnPitch
+                    )
+                    Text(
+                        "Kompilacja ${BuildConfig.VERSION_CODE}",
+                        color = AwpColors.OnPitchMuted,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        when {
+                            updateChecking -> "Sprawdzanie aktualizacji…"
+                            updateCheckFailed -> "Nie udało się sprawdzić aktualizacji. Spróbuj ponownie."
+                            updateInfo != null -> "Dostępna nowa wersja ${updateInfo!!.versionName}."
+                            else -> "Masz najnowszą wersję. Aktualizacji nie ma."
+                        },
+                        color = AwpColors.OnPitch,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    val notes = updateInfo?.notes?.trim().orEmpty()
+                    if (notes.isNotEmpty()) {
+                        Spacer(Modifier.height(4.dp))
+                        Text(notes, color = AwpColors.OnPitchMuted, style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+
+                if (updateInfo != null) {
+                    AwpGoldButton("Zainstaluj aktualizację ${updateInfo!!.versionName}") {
+                        AppUpdateRequests.requestManualCheck()
+                    }
+                }
+
+                AwpSecondaryButton(
+                    if (updateChecking) "Sprawdzanie…" else "Sprawdź aktualizacje",
+                    enabled = !updateChecking
+                ) {
+                    refreshUpdateStatus()
+                }
                 AwpSecondaryButton("Odśwież profil i dane zawodnika") {
                     reload()
                 }
                 AwpSecondaryButton("Płatności w aplikacji") {
                     onOpenNativeRoute("Płatności", "/platnosci")
-                }
-                if (updateAvailable) {
-                    AwpGoldButton("Dostępna aktualizacja — sprawdź (v${BuildConfig.VERSION_NAME})") {
-                        checkUpdate()
-                    }
-                } else {
-                    AwpSecondaryButton("Sprawdź aktualizacje (v${BuildConfig.VERSION_NAME})") {
-                        checkUpdate()
-                    }
                 }
 
                 Spacer(Modifier.height(8.dp))

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireAdmin } from "@/lib/api-helpers";
 import { getDb, logActivity } from "@/lib/db";
 import { notifyBookingCancelled, notifyBookingConfirmed } from "@/lib/booking-notifications";
+import { bookingIsInPayout } from "@/lib/venue-settlements";
 
 export const runtime = "nodejs";
 
@@ -24,6 +25,12 @@ export async function PATCH(
   if (!parsed.success) return NextResponse.json({ error: "Nieprawidłowy status" }, { status: 400 });
 
   const db = await getDb();
+  if (parsed.data.status === "cancelled" && (await bookingIsInPayout(db, id))) {
+    return NextResponse.json(
+      { error: "Ta rezerwacja jest już w wypłacie — nie można jej anulować." },
+      { status: 409 }
+    );
+  }
   const result = await db
     .prepare(
       `UPDATE bookings

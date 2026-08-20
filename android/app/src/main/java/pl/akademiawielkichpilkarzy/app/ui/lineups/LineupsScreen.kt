@@ -31,6 +31,7 @@ import pl.akademiawielkichpilkarzy.app.ui.common.PitchCard
 import pl.akademiawielkichpilkarzy.app.ui.common.PitchLabel
 import pl.akademiawielkichpilkarzy.app.ui.common.PitchPanel
 import pl.akademiawielkichpilkarzy.app.ui.common.ScreenScaffold
+import pl.akademiawielkichpilkarzy.app.ui.common.ScreenPhotoTheme
 import pl.akademiawielkichpilkarzy.app.ui.theme.AwpColors
 
 @Composable
@@ -56,7 +57,7 @@ fun LineupsScreen() {
 
     LaunchedEffect(Unit) { reload() }
 
-    ScreenScaffold(title = "Składy", subtitle = "Opublikowane ustawienia") {
+    ScreenScaffold(title = "Składy", subtitle = "Opublikowane ustawienia", theme = ScreenPhotoTheme.Lineups) {
         when {
             loading -> LoadingBlock()
             error != null -> ErrorBlock(error!!) { reload() }

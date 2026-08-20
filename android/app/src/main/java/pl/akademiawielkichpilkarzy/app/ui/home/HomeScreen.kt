@@ -49,6 +49,7 @@ import pl.akademiawielkichpilkarzy.app.ui.common.HomeWelcomeBanner
 import pl.akademiawielkichpilkarzy.app.ui.common.LoadingBlock
 import pl.akademiawielkichpilkarzy.app.ui.common.MatchSignupCard
 import pl.akademiawielkichpilkarzy.app.ui.common.MurawaBackground
+import pl.akademiawielkichpilkarzy.app.ui.common.ScreenPhotoTheme
 import pl.akademiawielkichpilkarzy.app.ui.theme.AwpColors
 
 data class HomeNavActions(
@@ -118,7 +119,7 @@ fun HomeScreen(nav: HomeNavActions) {
 
     LaunchedEffect(Unit) { reload() }
 
-    MurawaBackground {
+    MurawaBackground(theme = ScreenPhotoTheme.Home) {
         val scroll = rememberScrollState()
         Column(
             modifier = Modifier

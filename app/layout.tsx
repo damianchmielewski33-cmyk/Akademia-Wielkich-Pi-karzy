@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import type { CSSProperties } from "react";
+import { Suspense, type CSSProperties } from "react";
 import { headers, cookies } from "next/headers";
 import { Geist, Geist_Mono } from "next/font/google";
 import localFont from "next/font/local";
@@ -23,6 +23,7 @@ import { WriteToAdminFloat } from "@/components/write-to-admin-float";
 import { SiteJsonLd } from "@/components/site-json-ld";
 import { SiteAssetsProvider } from "@/components/site-assets-provider";
 import { ScreenBlocksProvider } from "@/components/screen-blocks-provider";
+import { SiteModeProvider } from "@/components/site-mode";
 import { ScreenBlockPlaceholder } from "@/components/screen-block-placeholder";
 import { AdminScreenBlockPreviewBanner } from "@/components/admin-screen-block-preview-banner";
 import { ScreenBlockPreviewContent } from "@/components/screen-block-preview-content";
@@ -40,6 +41,7 @@ import { getUnreadAdminMessageCount } from "@/lib/admin-messages";
 import { isVenuePartner } from "@/lib/venue-partners";
 import { contactAdminRecipientsFromSettings } from "@/lib/contact-admin-recipients";
 import { siteAssetCssUrl } from "@/lib/site-assets";
+import { parseSiteMode, SITE_MODE_COOKIE } from "@/lib/site-mode";
 import { PREVIEW_BLOCKED_COOKIE } from "@/lib/constants";
 import { isPreviewBlockedCookieValue } from "@/lib/screen-block-preview";
 import "./globals.css";
@@ -136,6 +138,7 @@ export default async function RootLayout({
 
   const accountRow = session ? await getAccountNavFields(session.userId) : null;
   const htmlThemeClass = accountRow && normalizeUiTheme(accountRow.uiTheme) === "dark" ? "dark" : "";
+  const initialSiteMode = parseSiteMode(cookieStore.get(SITE_MODE_COOKIE)?.value);
 
   let accountNav: {
     firstName: string;
@@ -312,45 +315,49 @@ export default async function RootLayout({
         <SessionIdleMonitor enabled={sessionIdleLogout} />
         <ShareLinkClientCleanup />
         <PinSetupGate>
-          <AdsenseProvider
-            clientId={adsenseClientId}
-            enabled={appSettings.adsense_enabled}
-            slotFooter={appSettings.adsense_slot_footer}
-            slotInline={appSettings.adsense_slot_inline}
-            slotPopup={appSettings.adsense_slot_popup}
-            popupEnabled={appSettings.adsense_popup_enabled}
-          >
-            <SiteAssetsProvider assets={siteAssets}>
-              <ScreenBlocksProvider
-                blocks={appSettings.screen_blocks}
-                isAdmin={shellIsAdmin}
-                previewAsPlayer={screenBlocksAsPlayer}
+          <Suspense fallback={null}>
+            <SiteModeProvider initialMode={initialSiteMode}>
+              <AdsenseProvider
+                clientId={adsenseClientId}
+                enabled={appSettings.adsense_enabled}
+                slotFooter={appSettings.adsense_slot_footer}
+                slotInline={appSettings.adsense_slot_inline}
+                slotPopup={appSettings.adsense_slot_popup}
+                popupEnabled={appSettings.adsense_popup_enabled}
               >
-                <SiteShell
-                  isLoggedIn={loggedInFull}
-                  isAdmin={shellIsAdmin}
-                  isVenuePartner={isVenuePartnerUser}
-                  account={accountNav}
-                  adminUnreadMessages={adminUnreadMessages}
-                  siteName={appSettings.site_name}
-                >
-                  {testModeActive ? <TestModeBanner /> : null}
-                  {session?.pinChangePending && !session.needsPinSetup ? <PinChangePendingBanner /> : null}
-                  {mainContent}
-                </SiteShell>
-              </ScreenBlocksProvider>
-            </SiteAssetsProvider>
-          </AdsenseProvider>
+                <SiteAssetsProvider assets={siteAssets}>
+                  <ScreenBlocksProvider
+                    blocks={appSettings.screen_blocks}
+                    isAdmin={shellIsAdmin}
+                    previewAsPlayer={screenBlocksAsPlayer}
+                  >
+                    <SiteShell
+                      isLoggedIn={loggedInFull}
+                      isAdmin={shellIsAdmin}
+                      isVenuePartner={isVenuePartnerUser}
+                      account={accountNav}
+                      adminUnreadMessages={adminUnreadMessages}
+                      siteName={appSettings.site_name}
+                    >
+                      {testModeActive ? <TestModeBanner /> : null}
+                      {session?.pinChangePending && !session.needsPinSetup ? <PinChangePendingBanner /> : null}
+                      {mainContent}
+                    </SiteShell>
+                  </ScreenBlocksProvider>
+                </SiteAssetsProvider>
+              </AdsenseProvider>
+              {loggedInFull && !isPzuCupSection ? <WalletBalanceFloat enabled /> : null}
+              {!isPzuCupSection ? (
+                <WriteToAdminFloat
+                  defaults={writeToAdminDefaults}
+                  recipients={contactAdminRecipients}
+                  hideFloat={shellIsAdmin}
+                />
+              ) : null}
+              {!isPzuCupSection && matchNotificationPromptEnabled ? <MatchNotificationPrompt /> : null}
+            </SiteModeProvider>
+          </Suspense>
         </PinSetupGate>
-        {loggedInFull && !isPzuCupSection ? <WalletBalanceFloat enabled /> : null}
-        {!isPzuCupSection ? (
-          <WriteToAdminFloat
-            defaults={writeToAdminDefaults}
-            recipients={contactAdminRecipients}
-            hideFloat={shellIsAdmin}
-          />
-        ) : null}
-        {!isPzuCupSection && matchNotificationPromptEnabled ? <MatchNotificationPrompt /> : null}
         <Toaster
           position="top-center"
           richColors

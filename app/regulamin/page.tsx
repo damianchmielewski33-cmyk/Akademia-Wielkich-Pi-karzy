@@ -244,6 +244,34 @@ export default async function RegulaminPage() {
           </section>
 
           <section>
+            <h2 className="pitch-heading text-lg">6a. Rezerwacje boisk i rozliczenia z obiektami</h2>
+            <p className="mt-2">
+              Rezerwacja boiska w Serwisie jest umową między użytkownikiem a sprzedawcą wskazanym w § 1.
+              Płatność online (HotPay) jest przyjmowana na rzecz sprzedawcy. Właściciel obiektu nie jest
+              stroną płatności kartą / BLIK — otrzymuje należność od sprzedawcy po rozliczeniu.
+            </p>
+            <ul className="mt-2 list-disc space-y-1.5 pl-5">
+              <li>
+                cena slotu pokazywana przy rezerwacji to kwota należna sprzedawcy za udostępnienie
+                terminu; prowizja operatora płatności (HotPay) może być doliczona do kwoty w bramce,
+                tak jak w § 6;
+              </li>
+              <li>
+                sprzedawca rozlicza się z właścicielem obiektu we własnym zakresie (prowizja serwisu
+                od ceny slotu, przelew po rozegraniu terminu);
+              </li>
+              <li>
+                bezpłatne anulowanie rezerwacji boiska jest możliwe do 24 godzin przed rozpoczęciem
+                slotu i zwalnia termin; zwrot środków z bramki płatniczej potwierdza organizator;
+              </li>
+              <li>
+                po upływie tego terminu użytkownik nie wycofuje rezerwacji samodzielnie, a należność
+                za slot pozostaje w rozliczeniu.
+              </li>
+            </ul>
+          </section>
+
+          <section>
             <h2 className="pitch-heading text-lg">7. Reklamacje</h2>
             <p className="mt-2">
               Reklamacje dotyczące działania Serwisu, zapisów, salda portfela lub płatności należy

@@ -8,6 +8,7 @@ import android.graphics.Color as AndroidColor
 import android.net.Uri
 import android.view.ViewGroup
 import android.webkit.CookieManager
+import android.webkit.JavascriptInterface
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
@@ -53,10 +54,24 @@ import pl.akademiawielkichpilkarzy.app.BuildConfig
 import pl.akademiawielkichpilkarzy.app.data.api.ApiClient
 import pl.akademiawielkichpilkarzy.app.data.api.AppBridgeRequest
 import pl.akademiawielkichpilkarzy.app.ui.theme.AwpColors
+import pl.akademiawielkichpilkarzy.app.update.AppUpdateRequests
 
 private fun normalizeSiteBase(): String {
     val raw = BuildConfig.API_BASE_URL.trim()
     return if (raw.endsWith("/")) raw.dropLast(1) else raw
+}
+
+private class AwpAndroidJsBridge {
+    @JavascriptInterface
+    fun getVersionName(): String = BuildConfig.VERSION_NAME
+
+    @JavascriptInterface
+    fun getVersionCode(): Int = BuildConfig.VERSION_CODE
+
+    @JavascriptInterface
+    fun checkUpdate() {
+        AppUpdateRequests.requestManualCheck()
+    }
 }
 
 /** tel/mailto/intent itd. — Custom Tabs lub systemowy handler. */
@@ -248,8 +263,10 @@ fun WebPortalScreen(
                             isVerticalScrollBarEnabled = false
                             isHorizontalScrollBarEnabled = false
                             setBackgroundColor(AndroidColor.TRANSPARENT)
-                            // Znacznik w UA - strona rozpoznaje po nim WebView aplikacji i chowa np. banery pobierania apki.
-                            settings.userAgentString = "${settings.userAgentString} AWPAndroidApp/${BuildConfig.VERSION_NAME}"
+                            // Znacznik w UA - strona rozpoznaje WebView i czyta wersję APK.
+                            settings.userAgentString =
+                                "${settings.userAgentString} AWPAndroidApp/${BuildConfig.VERSION_NAME} AWPAndroidCode/${BuildConfig.VERSION_CODE}"
+                            addJavascriptInterface(AwpAndroidJsBridge(), "AwpAndroid")
                             CookieManager.getInstance().setAcceptCookie(true)
                             CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
 

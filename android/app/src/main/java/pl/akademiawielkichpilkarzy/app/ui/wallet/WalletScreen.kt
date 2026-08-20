@@ -31,6 +31,7 @@ import pl.akademiawielkichpilkarzy.app.ui.common.LoadingBlock
 import pl.akademiawielkichpilkarzy.app.ui.common.PitchCard
 import pl.akademiawielkichpilkarzy.app.ui.common.PitchLabel
 import pl.akademiawielkichpilkarzy.app.ui.common.ScreenScaffold
+import pl.akademiawielkichpilkarzy.app.ui.common.ScreenPhotoTheme
 import pl.akademiawielkichpilkarzy.app.ui.theme.AwpColors
 
 @Composable
@@ -59,7 +60,7 @@ fun WalletScreen(onOpenWebPayments: () -> Unit = {}) {
 
     LaunchedEffect(Unit) { reload() }
 
-    ScreenScaffold(title = "Portfel", subtitle = "Saldo, BLIK oraz płatności online") {
+    ScreenScaffold(title = "Portfel", subtitle = "Saldo, BLIK oraz płatności online", theme = ScreenPhotoTheme.Wallet) {
         when {
             loading -> LoadingBlock()
             error != null -> ErrorBlock(error!!) { reload() }

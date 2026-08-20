@@ -7,6 +7,7 @@ import type { MatchRow } from "@/lib/db";
 import type { PlayersDataEntry } from "@/lib/terminarz-shared";
 import { InviteShareLanding } from "@/components/invite-share-landing";
 import { MatchTransportSignupDialog } from "@/components/match-transport-signup-dialog";
+import { useHotpayPayment } from "@/hooks/use-hotpay-payment";
 import { useHotpayPaymentReturn } from "@/hooks/use-hotpay-payment-return";
 
 type Props = {
@@ -16,6 +17,7 @@ type Props = {
   isLoggedIn: boolean;
   userSignupKind: Record<number, "tentative" | "confirmed" | "declined">;
   hotpayEnabled?: boolean;
+  walletBalancePln?: number | null;
 };
 
 function InviteHotpayReturnHandler({ onSettled }: { onSettled: () => void }) {
@@ -30,6 +32,7 @@ export function InviteMatchClient({
   isLoggedIn,
   userSignupKind,
   hotpayEnabled = false,
+  walletBalancePln = null,
 }: Props) {
   const router = useRouter();
   const [transportSignupOpen, setTransportSignupOpen] = useState(false);
@@ -37,6 +40,7 @@ export function InviteMatchClient({
   const [tentativeBusy, setTentativeBusy] = useState(false);
   const [inviteLoginInline, setInviteLoginInline] = useState(false);
   const [inviteGuestInline, setInviteGuestInline] = useState(false);
+  const { pay: payDebt, busy: debtBusy } = useHotpayPayment();
 
   const openTransportSignup = useCallback(() => {
     setTransportSignupIntent("signup");
@@ -104,7 +108,35 @@ export function InviteMatchClient({
       );
       return;
     }
+    if (hotpayEnabled) {
+      void signupConfirmedNoPay();
+      return;
+    }
     openTransportSignup();
+  }
+
+  async function signupConfirmedNoPay() {
+    setTentativeBusy(true);
+    try {
+      const res = await fetch(`/api/terminarz/signup/${matchId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ drivesCar: false, needsTransport: false }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      if (res.status === 401) {
+        window.location.href = "/login";
+        return;
+      }
+      if (!res.ok) {
+        toast.error(typeof data.error === "string" ? data.error : "Nie udało się zapisać");
+        return;
+      }
+      toast.success("Zapisano na mecz");
+      router.refresh();
+    } finally {
+      setTentativeBusy(false);
+    }
   }
 
   return (
@@ -129,13 +161,20 @@ export function InviteMatchClient({
         onParticipationNie={() => void signupDeclined()}
         onAuthenticated={() => setInviteLoginInline(false)}
         hotpayEnabled={hotpayEnabled}
+        walletBalancePln={walletBalancePln}
+        debtBusy={debtBusy}
+        onPayDebt={
+          walletBalancePln != null && walletBalancePln < 0
+            ? () => void payDebt(Math.abs(walletBalancePln))
+            : undefined
+        }
       />
       <MatchTransportSignupDialog
         open={transportSignupOpen}
         onOpenChange={setTransportSignupOpen}
         matchId={matchId}
         intent={transportSignupIntent === "confirm" ? "confirm" : "signup"}
-        hotpayEnabled={hotpayEnabled}
+        hotpayEnabled={false}
         onCompleted={() => {
           router.refresh();
         }}

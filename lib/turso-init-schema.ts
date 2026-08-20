@@ -4,6 +4,11 @@ import { migrateRealmSchemaLibsql } from "@/lib/realm-migration";
 import { CAPTAIN_LOTTERY_CREATE_SQL, migrateCaptainLotterySchemaLibsql } from "@/lib/captain-lottery-schema";
 import { migrateAdImpressionsSchemaLibsql } from "@/lib/ad-impressions-schema";
 import { BOOKING_SCHEMA_SQL, VENUES_OWNER_INDEX_SQL } from "@/lib/booking";
+import {
+  BOOKINGS_PAYOUT_INDEX_SQL,
+  SETTLEMENT_COLUMN_ALTERS,
+  VENUE_PAYOUTS_SCHEMA_SQL,
+} from "@/lib/venue-settlements";
 
 async function pragmaColumnNames(
   client: Client,
@@ -20,6 +25,7 @@ async function pragmaColumnNames(
     | "wallet_deposit_requests"
     | "hotpay_payments"
     | "venues"
+    | "bookings"
 ): Promise<string[]> {
   const rs = await client.execute(`PRAGMA table_info(${table})`);
   let nameIdx = rs.columns.indexOf("name");
@@ -725,6 +731,14 @@ export async function initLibsqlSchema(client: Client) {
     "ALTER TABLE venues ADD COLUMN owner_user_id INTEGER"
   );
   await client.execute(VENUES_OWNER_INDEX_SQL);
+  await client.executeMultiple(VENUE_PAYOUTS_SCHEMA_SQL);
+  const bookingCols = await pragmaColumnNames(client, "bookings");
+  const venueColsAfterOwner = await pragmaColumnNames(client, "venues");
+  for (const alter of SETTLEMENT_COLUMN_ALTERS) {
+    const cols = alter.table === "venues" ? venueColsAfterOwner : bookingCols;
+    await addColumnIfMissing(client, cols, alter.column, alter.ddl);
+  }
+  await client.execute(BOOKINGS_PAYOUT_INDEX_SQL);
 
   const lineupSqlRs = await client.execute(
     `SELECT sql FROM sqlite_master WHERE type='table' AND name='match_lineup_slots'`

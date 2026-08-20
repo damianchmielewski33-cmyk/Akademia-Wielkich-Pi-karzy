@@ -37,6 +37,7 @@ import pl.akademiawielkichpilkarzy.app.ui.common.EmptyHint
 import pl.akademiawielkichpilkarzy.app.ui.common.ErrorBlock
 import pl.akademiawielkichpilkarzy.app.ui.common.LoadingBlock
 import pl.akademiawielkichpilkarzy.app.ui.common.ScreenScaffold
+import pl.akademiawielkichpilkarzy.app.ui.common.ScreenPhotoTheme
 import pl.akademiawielkichpilkarzy.app.ui.theme.AwpColors
 
 @Composable
@@ -57,7 +58,7 @@ fun PlayersScreen() {
             .onFailure { error = it.message ?: "Nie udało się pobrać piłkarzy"; loading = false }
     }
 
-    ScreenScaffold(title = "Piłkarze", subtitle = "Lista zawodników akademii", kicker = "Drużyna") {
+    ScreenScaffold(title = "Piłkarze", subtitle = "Lista zawodników akademii", kicker = "Drużyna", theme = ScreenPhotoTheme.Players) {
         when {
             loading -> LoadingBlock()
             error != null -> ErrorBlock(error!!) { reload() }
@@ -92,7 +93,7 @@ fun GalleryScreen() {
             .onFailure { error = it.message ?: "Nie udało się pobrać galerii"; loading = false }
     }
 
-    ScreenScaffold(title = "Galeria", subtitle = "Filmy i materiały z boiska", kicker = "Wideo") {
+    ScreenScaffold(title = "Galeria", subtitle = "Filmy i materiały z boiska", kicker = "Wideo", theme = ScreenPhotoTheme.Gallery) {
         when {
             loading -> LoadingBlock()
             error != null -> ErrorBlock(error!!) { reload() }
@@ -114,7 +115,7 @@ fun GalleryScreen() {
 
 @Composable
 fun AboutScreen() {
-    ScreenScaffold(title = "O nas", subtitle = "Zasady akademii i klimat gry", kicker = "Akademia") {
+    ScreenScaffold(title = "O nas", subtitle = "Zasady akademii i klimat gry", kicker = "Akademia", theme = ScreenPhotoTheme.About) {
         AwpSectionCard(title = "Jak gramy") {
             Text("Umawiamy mecze, zapisujemy obecność, publikujemy składy i prowadzimy statystyki sezonu.", color = AwpColors.OnPitch)
         }
@@ -126,7 +127,7 @@ fun AboutScreen() {
 
 @Composable
 fun ContactScreen() {
-    ScreenScaffold(title = "Kontakt", subtitle = "Szybki kontakt z organizatorami", kicker = "Szatnia") {
+    ScreenScaffold(title = "Kontakt", subtitle = "Szybki kontakt z organizatorami", kicker = "Szatnia", theme = ScreenPhotoTheme.Contact) {
         AwpSectionCard(title = "Organizatorzy") {
             AwpListRow(title = "Damian", subtitle = "Kontakt organizacyjny", trailing = "Telefon")
             Spacer(Modifier.height(8.dp))
@@ -161,7 +162,7 @@ fun TransportScreen(matchId: Int) {
             .onFailure { error = it.message ?: "Nie udało się pobrać transportu"; loading = false }
     }
 
-    ScreenScaffold(title = "Transport", subtitle = "Mecz #$matchId", kicker = "Przejazd") {
+    ScreenScaffold(title = "Transport", subtitle = "Mecz #$matchId", kicker = "Przejazd", theme = ScreenPhotoTheme.Transport) {
         AwpSectionCard(title = "Moje preferencje") {
             TransportCheck("Jadę autem", drives) { drives = it }
             TransportCheck("Mogę zabrać pasażerów", seats) { seats = it }
@@ -240,7 +241,7 @@ fun PzuCupScreen(onOpenSchedule: () -> Unit, onOpenRankings: () -> Unit) {
         }
     }
 
-    ScreenScaffold(title = "PZU Cup", subtitle = "Turniejowy tryb akademii", kicker = "Turniej") {
+    ScreenScaffold(title = "PZU Cup", subtitle = "Turniejowy tryb akademii", kicker = "Turniej", theme = ScreenPhotoTheme.Cup) {
         AwpSectionCard(title = "Centrum PZU Cup", subtitle = "Natywny ekran zastępujący mini-stronę WWW.") {
             AwpMetricGrid(
                 listOf(
@@ -324,7 +325,7 @@ fun AdminShellScreen() {
         }
     }
 
-    ScreenScaffold(title = "Panel admina", subtitle = "Natywne centrum zarządzania", kicker = "Admin") {
+    ScreenScaffold(title = "Panel admina", subtitle = "Natywne centrum zarządzania", kicker = "Admin", theme = ScreenPhotoTheme.Admin) {
         when {
             loading -> LoadingBlock()
             error != null -> ErrorBlock(error!!) { reload() }

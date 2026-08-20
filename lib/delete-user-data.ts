@@ -63,6 +63,12 @@ export async function deleteUserAccountData(db: AppDb, userId: number): Promise<
       .prepare("UPDATE venue_partner_invites SET created_by_admin_id = ? WHERE created_by_admin_id = ?")
       .run(fallbackAdminId, userId);
     await db
+      .prepare("UPDATE venue_payouts SET created_by_admin_id = ? WHERE created_by_admin_id = ?")
+      .run(fallbackAdminId, userId);
+    await db
+      .prepare("UPDATE venue_payouts SET paid_by_admin_id = ? WHERE paid_by_admin_id = ?")
+      .run(fallbackAdminId, userId);
+    await db
       .prepare("UPDATE ranking_seasons SET started_by_admin_id = ? WHERE started_by_admin_id = ?")
       .run(fallbackAdminId, userId);
     await db
@@ -72,6 +78,8 @@ export async function deleteUserAccountData(db: AppDb, userId: number): Promise<
     await db.prepare("DELETE FROM match_attendance WHERE marked_by_admin_id = ?").run(userId);
     await db.prepare("DELETE FROM match_wallet_charges WHERE created_by_admin_id = ?").run(userId);
     await db.prepare("DELETE FROM venue_partner_invites WHERE created_by_admin_id = ?").run(userId);
+    await db.prepare("UPDATE venue_payouts SET paid_by_admin_id = NULL WHERE paid_by_admin_id = ?").run(userId);
+    await db.prepare("DELETE FROM venue_payouts WHERE created_by_admin_id = ?").run(userId);
     await db.prepare("DELETE FROM public_share_links WHERE created_by_admin_id = ?").run(userId);
     await db.prepare("DELETE FROM ranking_seasons WHERE started_by_admin_id = ?").run(userId);
   }

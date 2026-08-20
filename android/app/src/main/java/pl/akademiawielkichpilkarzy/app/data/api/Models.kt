@@ -359,6 +359,20 @@ data class WeatherDay(
     val precipChance: Int? = null
 )
 
+data class VenuesResponse(
+    val venues: List<VenueCardDto> = emptyList()
+)
+
+data class VenueCardDto(
+    val id: Int = 0,
+    val name: String = "",
+    val slug: String = "",
+    val city: String = "",
+    val address: String = "",
+    @Json(name = "photo_url") val photoUrl: String? = null,
+    @Json(name = "min_price_pln") val minPricePln: Double? = null
+)
+
 data class PlayerStatsResponse(
     @Json(name = "first_name") val firstName: String? = null,
     @Json(name = "last_name") val lastName: String? = null,

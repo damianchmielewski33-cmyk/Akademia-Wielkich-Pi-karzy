@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { FormInput, FormTextarea } from "@/components/ui/form-field";
 import { Badge } from "@/components/ui/badge";
 import { PartnerWeekCalendar } from "@/components/partner-week-calendar";
+import { PartnerSettlementsCard } from "@/components/partner-settlements-card";
 
 type VenueForm = {
   name: string;
@@ -245,6 +246,7 @@ export function PartnerDashboardClient() {
   return (
     <div className="space-y-6">
       <PartnerWeekCalendar pitches={pitches} />
+      <PartnerSettlementsCard />
       <div className="grid gap-6 xl:grid-cols-2">
         <section className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
           <h2 className="text-lg font-black">Nowy obiekt</h2>
@@ -445,6 +447,7 @@ export function PartnerDashboardClient() {
                   </p>
                   <p className="text-sm text-zinc-500">
                     {booking.user_name ?? booking.contact_name} · {Number(booking.amount_pln).toFixed(2)} zł
+                    {booking.owner_payout_pln != null ? ` · dla Ciebie ${Number(booking.owner_payout_pln).toFixed(2)} zł` : ""}
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">

@@ -27,6 +27,7 @@ import pl.akademiawielkichpilkarzy.app.ui.common.EmptyHint
 import pl.akademiawielkichpilkarzy.app.ui.common.ErrorBlock
 import pl.akademiawielkichpilkarzy.app.ui.common.LoadingBlock
 import pl.akademiawielkichpilkarzy.app.ui.common.MurawaBackground
+import pl.akademiawielkichpilkarzy.app.ui.common.ScreenPhotoTheme
 import pl.akademiawielkichpilkarzy.app.ui.common.PitchCard
 import pl.akademiawielkichpilkarzy.app.ui.common.PitchLabel
 
@@ -56,7 +57,7 @@ fun StatsScreen() {
 
     LaunchedEffect(Unit) { reload() }
 
-    MurawaBackground {
+    MurawaBackground(theme = ScreenPhotoTheme.Stats) {
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()

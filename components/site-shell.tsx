@@ -46,6 +46,7 @@ import { isAdsenseInlinePath } from "@/lib/adsense";
 import { cn } from "@/lib/utils";
 import { SITE_NAME } from "@/lib/site";
 import { useScreenBlocks } from "@/components/screen-blocks-provider";
+import { useSiteMode } from "@/components/site-mode";
 
 type Props = {
   children: ReactNode;
@@ -105,6 +106,7 @@ export function SiteShell({
   const router = useRouter();
   const pathname = usePathname();
   const { isHiddenHref } = useScreenBlocks();
+  const { mode, setMode } = useSiteMode();
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [themeBusy, setThemeBusy] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -137,18 +139,23 @@ export function SiteShell({
     return <>{children}</>;
   }
 
-  const primaryNav: NavItem[] = [
+  const bookingNav: NavItem[] = [
+    { href: "/", label: "Start", visible: true, icon: Home },
     { href: "/obiekty", label: "Znajdź boisko", visible: true, icon: MapPin },
-    { href: "/terminarz", label: "Terminarz akademii", visible: true, icon: CalendarDays },
     { href: "/rezerwacje", label: "Moje rezerwacje", visible: isLoggedIn, icon: ClipboardCheck },
     { href: "/dla-obiektow", label: "Dla obiektów", visible: !isVenuePartner, icon: Store },
     { href: "/partner", label: "Mój obiekt", visible: isVenuePartner, icon: Building2 },
+    { href: "/panel-admina", label: "Panel admina", visible: isAdmin, icon: Shield },
   ];
 
-  const academyNav: NavItem[] = [
+  const academyPrimaryNav: NavItem[] = [
     { href: "/", label: "Start", visible: true, icon: Home },
+    { href: "/terminarz", label: "Terminarz", visible: true, icon: CalendarDays },
     { href: "/platnosci", label: "Płatności", visible: isLoggedIn, icon: Wallet },
     { href: "/pilkarze", label: "Piłkarze", visible: true, icon: Users },
+  ];
+
+  const academyMoreNav: NavItem[] = [
     { href: "/sklady", label: "Składy", visible: true, icon: Medal },
     { href: "/galeria", label: "Galeria", visible: true, icon: Camera },
     { href: "/statystyki", label: "Statystyki", visible: isLoggedIn, icon: Activity },
@@ -164,10 +171,15 @@ export function SiteShell({
     { href: "/register", label: "Rejestracja", visible: !isLoggedIn, icon: UserPlus },
   ];
 
-  const visiblePrimary = primaryNav.filter((x) => x.visible && !isHiddenHref(x.href));
-  const visibleAcademy = academyNav.filter((x) => x.visible && !isHiddenHref(x.href));
+  const visiblePrimary = (
+    mode === "academy" ? academyPrimaryNav : mode === "booking" ? bookingNav : []
+  ).filter((x) => x.visible && !isHiddenHref(x.href));
+  const visibleAcademyMore = academyMoreNav.filter((x) => x.visible && !isHiddenHref(x.href));
   const visibleAuth = authNav.filter((x) => x.visible && !isHiddenHref(x.href));
-  const visibleMobile = [...visiblePrimary, ...visibleAcademy, ...visibleAuth];
+  const visibleMobile =
+    mode === "academy"
+      ? [...visiblePrimary, ...visibleAcademyMore, ...visibleAuth]
+      : [...visiblePrimary, ...visibleAuth];
 
   const isDarkNow =
     typeof document !== "undefined" ? document.documentElement.classList.contains("dark") : false;
@@ -219,10 +231,12 @@ export function SiteShell({
       <NavigationLoadingOverlay />
       <AnalyticsTracker />
       <div className="sticky top-0 z-40 pt-[env(safe-area-inset-top)]">
-        <AndroidAppBanner />
-        <Suspense fallback={null}>
-          <SisterSiteArrivalBanner />
-        </Suspense>
+        {mode === "academy" ? <AndroidAppBanner /> : null}
+        {mode === "academy" ? (
+          <Suspense fallback={null}>
+            <SisterSiteArrivalBanner />
+          </Suspense>
+        ) : null}
         <header className="mp-header relative z-30 text-zinc-900 dark:text-zinc-50">
           <div className="relative mx-auto flex max-w-6xl items-center justify-between gap-3 px-3 py-3 xs:px-4 sm:py-3.5">
             <Link
@@ -242,11 +256,11 @@ export function SiteShell({
               </span>
               <span className="min-w-0 text-left">
                 <span className="block truncate text-sm font-black tracking-tight text-zinc-950 dark:text-white sm:text-base">
-                  <span className="sm:hidden">Akademia WP</span>
+                  <span className="sm:hidden">{mode === "booking" ? "Boiska" : "Akademia WP"}</span>
                   <span className="hidden sm:inline">{siteName}</span>
                 </span>
                 <span className="hidden text-[0.65rem] font-semibold uppercase tracking-[0.16em] text-[var(--mp-teal-dark)] xs:block">
-                  Rezerwacja boisk
+                  {mode === "academy" ? "Akademia" : mode === "booking" ? "Rezerwacja boisk" : "\u00a0"}
                 </span>
               </span>
             </Link>
@@ -256,11 +270,12 @@ export function SiteShell({
                 {isAdmin ? <AdminHeaderMessagesButton initialUnreadCount={adminUnreadMessages} /> : null}
 
                 {visiblePrimary.map((x) => (
-                  <NavLink key={x.href} href={x.href} active={pathname === x.href || pathname?.startsWith(`${x.href}/`)}>
+                  <NavLink key={x.href} href={x.href} active={pathname === x.href || (x.href !== "/" && pathname?.startsWith(`${x.href}/`))}>
                     {x.label}
                   </NavLink>
                 ))}
 
+                {mode === "academy" ? (
                 <div className="relative">
                   <button
                     type="button"
@@ -271,12 +286,12 @@ export function SiteShell({
                     )}
                     aria-expanded={academyOpen}
                   >
-                    Akademia
+                    Więcej
                     <ChevronDown className={cn("h-3.5 w-3.5 transition", academyOpen && "rotate-180")} aria-hidden />
                   </button>
                   {academyOpen ? (
                     <div className="absolute right-0 top-full z-50 mt-2 w-56 overflow-hidden rounded-2xl border border-zinc-200 bg-white py-2 shadow-xl dark:border-zinc-700 dark:bg-zinc-950">
-                      {visibleAcademy.map((x) => (
+                      {visibleAcademyMore.map((x) => (
                         <Link
                           key={x.href}
                           href={x.href}
@@ -290,10 +305,21 @@ export function SiteShell({
                     </div>
                   ) : null}
                 </div>
+                ) : null}
+
+                {mode ? (
+                  <button
+                    type="button"
+                    onClick={() => setMode(mode === "booking" ? "academy" : "booking", { navigateHome: true })}
+                    className="awp-focus-ring ml-1 rounded-full border border-zinc-200 px-3 py-1.5 text-[0.65rem] font-bold uppercase tracking-[0.12em] text-zinc-600 hover:border-[var(--mp-teal)] hover:text-[var(--mp-teal-dark)] dark:border-zinc-700 dark:text-zinc-300"
+                  >
+                    {mode === "booking" ? "Gram z wami" : "Szukam boiska"}
+                  </button>
+                ) : null}
 
                 {themeButton}
 
-                {isLoggedIn && account ? (
+                {isLoggedIn && account && mode === "academy" ? (
                   <Link
                     href="/profil"
                     className={cn(
@@ -318,6 +344,19 @@ export function SiteShell({
                       secondaryClassName="truncate text-xs text-zinc-500"
                     />
                   </Link>
+                ) : isLoggedIn && account ? (
+                  <span className="ml-1 flex max-w-[min(100%,14rem)] items-center gap-2 rounded-full border border-zinc-200 px-2 py-1.5 dark:border-zinc-700">
+                    <PlayerAvatar
+                      photoPath={account.profilePhotoPath}
+                      firstName={account.firstName}
+                      lastName={account.lastName}
+                      size="sm"
+                      ringClassName="ring-2 ring-[var(--mp-teal)]/40"
+                    />
+                    <span className="truncate text-sm font-semibold text-zinc-900 dark:text-white">
+                      {`${account.firstName} ${account.lastName}`.trim()}
+                    </span>
+                  </span>
                 ) : (
                   visibleAuth.map((x) => (
                     <Link
@@ -349,7 +388,7 @@ export function SiteShell({
               <div className="flex items-center gap-1.5 lg:hidden">
                 {isAdmin ? <AdminHeaderMessagesButton initialUnreadCount={adminUnreadMessages} compact /> : null}
                 {themeButton}
-                {isLoggedIn && account ? (
+                {isLoggedIn && account && mode === "academy" ? (
                   <Link
                     href="/profil"
                     className="awp-focus-ring flex items-center rounded-full p-0.5"
@@ -415,6 +454,21 @@ export function SiteShell({
             </div>
 
             <nav className="flex-1 overflow-y-auto overscroll-contain px-3 py-3" aria-label="Nawigacja mobilna">
+              {mode ? (
+                <button
+                  type="button"
+                  className="mb-3 w-full rounded-2xl border border-zinc-200 px-3 py-3 text-left text-sm font-semibold dark:border-zinc-700"
+                  onClick={() => {
+                    setMobileNavOpen(false);
+                    setMode(mode === "booking" ? "academy" : "booking", { navigateHome: true });
+                  }}
+                >
+                  {mode === "booking" ? "Przełącz: Gram z wami" : "Przełącz: Szukam boiska"}
+                  <span className="mt-0.5 block text-xs font-normal text-zinc-500">
+                    {mode === "booking" ? "Terminarz akademii i składy" : "Rezerwacja boisk online"}
+                  </span>
+                </button>
+              ) : null}
               <ul className="space-y-1">
                 {visibleMobile.map((x) => {
                   const Icon = x.icon;
@@ -491,29 +545,57 @@ export function SiteShell({
             />
             <p className="mt-4 text-sm font-semibold text-white">{siteName}</p>
             <p className="mt-2 text-sm text-zinc-400">
-              Rezerwuj boiska online. Terminarz akademii, składy i społeczność zostają w osobnym module.
+              {mode === "academy"
+                ? "Terminarz akademii, składy i społeczność."
+                : mode === "booking"
+                  ? "Rezerwuj boiska online — hale i orliki."
+                  : "Dwa osobne miejsca: rezerwacja boisk albo akademia."}
             </p>
           </div>
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.16em] text-white">Dla Ciebie</p>
+            <p className="text-xs font-bold uppercase tracking-[0.16em] text-white">
+              {mode === "academy" ? "Akademia" : mode === "booking" ? "Dla Ciebie" : "Wybierz"}
+            </p>
             <div className="mt-4 flex flex-col gap-2 text-sm text-zinc-300">
-              <Link href="/obiekty" className="hover:text-white">Znajdź boisko</Link>
-              {isLoggedIn ? <Link href="/rezerwacje" className="hover:text-white">Moje rezerwacje</Link> : null}
-              {isVenuePartner ? <Link href="/partner" className="hover:text-white">Mój obiekt</Link> : null}
-              <Link href="/dla-obiektow" className="hover:text-white">Dla obiektów</Link>
-              <Link href="/terminarz" className="hover:text-white">Terminarz akademii</Link>
-              <Link href="/rankingi" className="hover:text-white">Rankingi</Link>
+              {mode === "academy" ? (
+                <>
+                  <Link href="/terminarz" className="hover:text-white">Terminarz</Link>
+                  {isLoggedIn ? <Link href="/platnosci" className="hover:text-white">Płatności</Link> : null}
+                  <Link href="/pilkarze" className="hover:text-white">Piłkarze</Link>
+                  <Link href="/rankingi" className="hover:text-white">Rankingi</Link>
+                </>
+              ) : mode === "booking" ? (
+                <>
+                  <Link href="/obiekty" className="hover:text-white">Znajdź boisko</Link>
+                  {isLoggedIn ? <Link href="/rezerwacje" className="hover:text-white">Moje rezerwacje</Link> : null}
+                  {isVenuePartner ? <Link href="/partner" className="hover:text-white">Mój obiekt</Link> : null}
+                  <Link href="/dla-obiektow" className="hover:text-white">Dla obiektów</Link>
+                </>
+              ) : null}
+              {mode ? (
+                <button
+                  type="button"
+                  className="text-left hover:text-white"
+                  onClick={() => setMode(mode === "academy" ? "booking" : "academy", { navigateHome: true })}
+                >
+                  {mode === "academy" ? "Szukam boiska" : "Gram z wami"}
+                </button>
+              ) : null}
             </div>
           </div>
+          {mode === "academy" ? (
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.16em] text-white">Akademia</p>
+            <p className="text-xs font-bold uppercase tracking-[0.16em] text-white">
+              Więcej
+            </p>
             <div className="mt-4 flex flex-col gap-2 text-sm text-zinc-300">
-              <Link href="/pilkarze" className="hover:text-white">Piłkarze</Link>
+              <Link href="/sklady" className="hover:text-white">Składy</Link>
               <Link href="/galeria" className="hover:text-white">Galeria</Link>
               <Link href="/blog" className="hover:text-white">Blog</Link>
               <Link href="/o-nas" className="hover:text-white">O nas</Link>
             </div>
           </div>
+          ) : null}
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.16em] text-white">Kontakt</p>
             <div className="mt-4 flex flex-col gap-2 text-sm text-zinc-300">
@@ -523,7 +605,7 @@ export function SiteShell({
               <Link href="/polityka-prywatnosci" className="hover:text-white">Polityka prywatności</Link>
               <Link href="/cookies" className="hover:text-white">Cookies</Link>
               <CookieConsentFooterLink />
-              <GymBratCrossLink variant="footer" />
+              {mode === "academy" ? <GymBratCrossLink variant="footer" /> : null}
             </div>
           </div>
         </div>

@@ -10,6 +10,7 @@ import { FormInput, FormTextarea } from "@/components/ui/form-field";
 import { Badge } from "@/components/ui/badge";
 import { AdminCard, AdminTableShell } from "@/components/admin-ui";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { AdminSettlementsCard } from "@/components/admin-settlements-card";
 
 type VenueForm = {
   name: string;
@@ -234,6 +235,7 @@ export function AdminBookingsTab() {
 
   return (
     <div className="space-y-6">
+      <AdminSettlementsCard />
       <AdminCard
         title="Link dla partnera"
         description="Wyślij ten adres właścicielowi hali. Po rejestracji doda swoje boiska, cennik i wolne terminy — bez dostępu do panelu akademii."
@@ -460,7 +462,12 @@ export function AdminBookingsTab() {
                     </TableCell>
                     <TableCell>{booking.user_name ?? booking.contact_name}</TableCell>
                     <TableCell><Badge>{booking.status}</Badge></TableCell>
-                    <TableCell className="text-right">{Number(booking.amount_pln).toFixed(2)} zł</TableCell>
+                    <TableCell className="text-right">
+                      <p>{Number(booking.amount_pln).toFixed(2)} zł</p>
+                      {booking.owner_payout_pln != null ? (
+                        <p className="text-xs text-zinc-500">hala {Number(booking.owner_payout_pln).toFixed(2)}</p>
+                      ) : null}
+                    </TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-2">
                         <Button size="sm" variant="outline" onClick={() => void updateBookingStatus(booking.id, "confirmed")}>

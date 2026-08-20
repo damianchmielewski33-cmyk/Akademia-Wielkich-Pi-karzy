@@ -1,4 +1,5 @@
 import type { AppDb } from "@/lib/db";
+import { ensureSettlementSchema, splitBookingAmount, clampVenueCommissionPct } from "@/lib/venue-settlements";
 
 export const BOOKING_STATUSES = ["pending", "confirmed", "cancelled", "expired"] as const;
 export type BookingStatus = (typeof BOOKING_STATUSES)[number];
@@ -17,6 +18,7 @@ export type VenueRow = {
   photo_url: string | null;
   published: number;
   owner_user_id?: number | null;
+  commission_pct?: number | null;
   created_at: string;
   updated_at: string;
 };
@@ -45,6 +47,9 @@ export type BookingRow = {
   start_time: string;
   end_time: string;
   amount_pln: number;
+  platform_fee_pln?: number | null;
+  owner_payout_pln?: number | null;
+  payout_id?: number | null;
   status: BookingStatus;
   contact_name: string;
   contact_phone: string;
@@ -123,6 +128,7 @@ export const BOOKING_SCHEMA_SQL = `
     photo_url TEXT,
     published INTEGER NOT NULL DEFAULT 1,
     owner_user_id INTEGER,
+    commission_pct REAL NOT NULL DEFAULT 15,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
@@ -222,6 +228,9 @@ export const BOOKING_SCHEMA_SQL = `
     start_time TEXT NOT NULL,
     end_time TEXT NOT NULL,
     amount_pln REAL NOT NULL,
+    platform_fee_pln REAL,
+    owner_payout_pln REAL,
+    payout_id INTEGER,
     status TEXT NOT NULL CHECK (status IN ('pending','confirmed','cancelled','expired')) DEFAULT 'pending',
     contact_name TEXT NOT NULL,
     contact_phone TEXT NOT NULL,
@@ -250,6 +259,25 @@ export const BOOKING_SCHEMA_SQL = `
   );
   CREATE INDEX IF NOT EXISTS idx_booking_payments_booking ON booking_payments(booking_id);
   CREATE INDEX IF NOT EXISTS idx_booking_payments_session ON booking_payments(hotpay_session_id);
+
+  CREATE TABLE IF NOT EXISTS venue_payouts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    venue_id INTEGER NOT NULL,
+    gross_pln REAL NOT NULL,
+    platform_fee_pln REAL NOT NULL,
+    owner_payout_pln REAL NOT NULL,
+    booking_count INTEGER NOT NULL,
+    status TEXT NOT NULL CHECK (status IN ('pending','paid')) DEFAULT 'pending',
+    note TEXT,
+    created_by_admin_id INTEGER NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    paid_at TEXT,
+    paid_by_admin_id INTEGER,
+    FOREIGN KEY (venue_id) REFERENCES venues(id),
+    FOREIGN KEY (created_by_admin_id) REFERENCES users(id),
+    FOREIGN KEY (paid_by_admin_id) REFERENCES users(id)
+  );
+  CREATE INDEX IF NOT EXISTS idx_venue_payouts_venue_created ON venue_payouts(venue_id, created_at);
 `;
 
 function two(n: number): string {
@@ -306,6 +334,7 @@ export async function ensureBookingSchema(db: AppDb): Promise<void> {
     await db.exec("ALTER TABLE venues ADD COLUMN owner_user_id INTEGER");
   }
   await db.exec(VENUES_OWNER_INDEX_SQL);
+  await ensureSettlementSchema(db);
 }
 
 export async function expireStaleBookings(db: AppDb): Promise<void> {
@@ -506,6 +535,9 @@ export async function cancelUserBooking(
   await expireStaleBookings(db);
   const booking = await getBookingById(db, args.bookingId, args.userId);
   if (!booking) return { ok: false, error: "Nie znaleziono rezerwacji." };
+  if (booking.payout_id) {
+    return { ok: false, error: "Ta rezerwacja jest już w rozliczeniu z obiektem i nie da się jej anulować." };
+  }
   const meta = describeUserCancel(booking);
   if (!meta.can_cancel) {
     return {
@@ -571,6 +603,7 @@ export async function createVenue(
     photoUrl?: string | null;
     published?: boolean;
     ownerUserId?: number | null;
+    commissionPct?: number | null;
   }
 ): Promise<{ id: number; slug: string }> {
   const baseSlug = slugifyVenueName(args.name);
@@ -582,8 +615,8 @@ export async function createVenue(
   }
   const result = await db
     .prepare(
-      `INSERT INTO venues (name, slug, city, address, description, phone, email, photo_url, published, owner_user_id)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO venues (name, slug, city, address, description, phone, email, photo_url, published, owner_user_id, commission_pct)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       args.name,
@@ -595,7 +628,8 @@ export async function createVenue(
       args.email || null,
       args.photoUrl || null,
       args.published === false ? 0 : 1,
-      args.ownerUserId ?? null
+      args.ownerUserId ?? null,
+      clampVenueCommissionPct(args.commissionPct ?? 15)
     );
   return { id: Number(result.lastInsertRowid), slug };
 }
@@ -936,13 +970,20 @@ export async function createBookingHold(
     if (!availability) return { ok: false as const, error: "Boisko jest niedostępne." };
     const slot = availability.slots.find((s) => s.start_time === start);
     if (!slot || !slot.available) return { ok: false as const, error: "Ten termin jest już zajęty." };
+    const venue = await tx
+      .prepare(
+        `SELECT COALESCE(v.commission_pct, 15) AS commission_pct
+         FROM pitches p JOIN venues v ON v.id = p.venue_id WHERE p.id = ?`
+      )
+      .get<{ commission_pct: number }>(args.pitchId);
+    const split = splitBookingAmount(slot.amount_pln, venue?.commission_pct);
 
     const result = await tx
       .prepare(
         `INSERT INTO bookings
-          (user_id, pitch_id, booking_date, start_time, end_time, amount_pln, status,
+          (user_id, pitch_id, booking_date, start_time, end_time, amount_pln, platform_fee_pln, owner_payout_pln, status,
            contact_name, contact_phone, note, expires_at)
-         VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, datetime('now', '+15 minutes'))`
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, datetime('now', '+15 minutes'))`
       )
       .run(
         args.userId,
@@ -950,7 +991,9 @@ export async function createBookingHold(
         args.date,
         slot.start_time,
         slot.end_time,
-        slot.amount_pln,
+        split.amount_pln,
+        split.platform_fee_pln,
+        split.owner_payout_pln,
         args.contactName.trim(),
         args.contactPhone.trim(),
         args.note?.trim() || null
