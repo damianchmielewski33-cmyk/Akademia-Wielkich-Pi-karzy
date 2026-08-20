@@ -4,7 +4,6 @@ import { getAccountNavFields } from "@/lib/account-server";
 import { getServerSession } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { StatystykiClient } from "@/components/statystyki-client";
-import { PitchPageHero } from "@/components/ui/pitch-card";
 
 export const metadata: Metadata = {
   title: "Statystyki",
@@ -54,22 +53,15 @@ export default async function StatystykiPage() {
   }[];
 
   return (
-    <div className="awp-page awp-page--default text-center">
-      <PitchPageHero
-        title="Statystyki"
-        subtitle="Twoje gole, asysty, dystans i obrony z rozegranych meczów"
-      />
-
-      <StatystykiClient
-        me={me}
-        matches={userStats}
-        liga={{
-          playersCount,
-          totalMatches,
-          playedMatches,
-          upcomingMatches,
-        }}
-      />
-    </div>
+    <StatystykiClient
+      me={me}
+      matches={userStats}
+      liga={{
+        playersCount,
+        totalMatches,
+        playedMatches,
+        upcomingMatches,
+      }}
+    />
   );
 }

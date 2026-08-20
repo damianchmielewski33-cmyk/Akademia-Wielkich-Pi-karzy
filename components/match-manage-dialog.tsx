@@ -34,6 +34,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { formSchemas, useValidatedForm } from "@/lib/form-validation";
+import { useSiteMode } from "@/components/site-mode";
 
 type ManageTab = "edit" | "guest" | "signups" | "cancel";
 
@@ -83,8 +84,11 @@ const tabTriggerClass = modalTabTriggerClass;
 
 const panelClass = modalPanelClass;
 
-const readOnlyInputClass =
-  "cursor-default border-emerald-100/90 bg-white/70 text-emerald-950 dark:border-emerald-800/50 dark:bg-zinc-900/50 dark:text-emerald-100";
+function readOnlyInputClass(light: boolean) {
+  return light
+    ? "cursor-default border-zinc-200 bg-zinc-50 text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900/60 dark:text-zinc-100"
+    : "cursor-default border-emerald-100/90 bg-white/70 text-emerald-950 dark:border-emerald-800/50 dark:bg-zinc-900/50 dark:text-emerald-100";
+}
 
 function matchToFormValues(m: MatchRow) {
   return {
@@ -121,6 +125,9 @@ export function MatchManageDialog({
   initialTab = "edit",
   cancelReasons = MATCH_CANCEL_REASONS,
 }: Props) {
+  const { marketplaceEnabled } = useSiteMode();
+  const light = marketplaceEnabled;
+  const primaryVariant = light ? "default" : "pitch";
   const [tab, setTab] = useState<ManageTab>("edit");
   const [cancelReason, setCancelReason] = useState("weather");
   const [busy, setBusy] = useState(false);
@@ -427,7 +434,7 @@ export function MatchManageDialog({
             <Button type="button" variant="outline" disabled={busy} onClick={cancelEdit}>
               Anuluj edycję
             </Button>
-            <Button type="button" variant="pitch" disabled={busy} onClick={() => void saveEdit()}>
+            <Button type="button" variant={primaryVariant} disabled={busy} onClick={() => void saveEdit()}>
               {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
               Zapisz zmiany
             </Button>
@@ -439,7 +446,7 @@ export function MatchManageDialog({
           <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
             Zamknij
           </Button>
-          <Button type="button" variant="pitch" onClick={() => setIsEditing(true)}>
+          <Button type="button" variant={primaryVariant} onClick={() => setIsEditing(true)}>
             <Pencil className="h-4 w-4" aria-hidden />
             Edytuj termin
           </Button>
@@ -453,7 +460,7 @@ export function MatchManageDialog({
           <Button type="button" variant="outline" onClick={() => handleOpenChange(false)} disabled={busy}>
             Zamknij
           </Button>
-          <Button type="button" variant="pitch" disabled={busy} onClick={() => void addGuest()}>
+          <Button type="button" variant={primaryVariant} disabled={busy} onClick={() => void addGuest()}>
             {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
             <UserPlus className="h-4 w-4" aria-hidden />
             Dodaj gościa
@@ -490,9 +497,17 @@ export function MatchManageDialog({
       size="lg"
       scrollable
       title="Zarządzaj meczem"
-      description="Edytuj termin, dopisz gościa, zarządzaj zapisami lub odwołaj mecz — zmiany widzą zapisani zawodnicy."
+      headerKicker={light ? "Terminarz" : undefined}
+      description="Edytuj termin, dopisz gościa, zarządzaj składem lub odwołaj mecz — zmiany widzą zapisani zawodnicy."
       footer={renderFooter()}
       contentClassName="space-y-4"
+      icon={
+        light ? (
+          <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[var(--mp-teal)] text-white shadow-sm">
+            <Pencil className="h-4 w-4" strokeWidth={2.25} aria-hidden />
+          </span>
+        ) : undefined
+      }
     >
       <ModalMatchSummary match={match} />
 
@@ -511,22 +526,53 @@ export function MatchManageDialog({
             setFeeError(undefined);
           }}
         >
-          <TabsList className={cn(modalTabListClass, "grid-cols-2 sm:grid-cols-4")}>
-            <TabsTrigger value="edit" className={tabTriggerClass}>
+          <TabsList
+            className={cn(
+              modalTabListClass,
+              "grid-cols-2 sm:grid-cols-4",
+              light && "bg-zinc-100 dark:bg-zinc-900"
+            )}
+          >
+            <TabsTrigger
+              value="edit"
+              className={cn(
+                tabTriggerClass,
+                light &&
+                  "data-[state=active]:bg-[var(--mp-teal)] data-[state=active]:text-white dark:data-[state=active]:bg-[var(--mp-teal)] dark:data-[state=active]:text-white"
+              )}
+            >
               <Pencil className="mr-1.5 h-3.5 w-3.5" aria-hidden />
               Edycja
             </TabsTrigger>
-            <TabsTrigger value="guest" className={tabTriggerClass}>
+            <TabsTrigger
+              value="guest"
+              className={cn(
+                tabTriggerClass,
+                light &&
+                  "data-[state=active]:bg-[var(--mp-teal)] data-[state=active]:text-white dark:data-[state=active]:bg-[var(--mp-teal)] dark:data-[state=active]:text-white"
+              )}
+            >
               <UserPlus className="mr-1.5 h-3.5 w-3.5" aria-hidden />
               Gość
             </TabsTrigger>
-            <TabsTrigger value="signups" className={tabTriggerClass}>
+            <TabsTrigger
+              value="signups"
+              className={cn(
+                tabTriggerClass,
+                light &&
+                  "data-[state=active]:bg-[var(--mp-teal)] data-[state=active]:text-white dark:data-[state=active]:bg-[var(--mp-teal)] dark:data-[state=active]:text-white"
+              )}
+            >
               <Users className="mr-1.5 h-3.5 w-3.5" aria-hidden />
-              Zapisami
+              Skład
             </TabsTrigger>
             <TabsTrigger
               value="cancel"
-              className={cn(tabTriggerClass, "data-[state=active]:text-red-800 dark:data-[state=active]:text-red-200")}
+              className={cn(
+                tabTriggerClass,
+                "data-[state=active]:text-red-800 dark:data-[state=active]:text-red-200",
+                light && "data-[state=active]:bg-red-600 data-[state=active]:text-white dark:data-[state=active]:bg-red-600 dark:data-[state=active]:text-white"
+              )}
             >
               <XCircle className="mr-1.5 h-3.5 w-3.5" aria-hidden />
               Anuluj
@@ -551,7 +597,7 @@ export function MatchManageDialog({
                 onChange={(e) => editForm.setValue("date", e.target.value)}
                 onBlur={() => editForm.setFieldTouched("date")}
                 error={editForm.errors.date}
-                inputClassName={cn(!isEditing && readOnlyInputClass)}
+                inputClassName={cn(!isEditing && readOnlyInputClass(light))}
               />
               <FormInput
                 id="mm-time"
@@ -564,7 +610,7 @@ export function MatchManageDialog({
                 onChange={(e) => editForm.setValue("time", e.target.value)}
                 onBlur={() => editForm.setFieldTouched("time")}
                 error={editForm.errors.time}
-                inputClassName={cn(!isEditing && readOnlyInputClass)}
+                inputClassName={cn(!isEditing && readOnlyInputClass(light))}
               />
               <FormInput
                 id="mm-location"
@@ -576,7 +622,7 @@ export function MatchManageDialog({
                 onChange={(e) => editForm.setValue("location", e.target.value)}
                 onBlur={() => editForm.setFieldTouched("location")}
                 error={editForm.errors.location}
-                inputClassName={cn(!isEditing && readOnlyInputClass)}
+                inputClassName={cn(!isEditing && readOnlyInputClass(light))}
               />
               <FormInput
                 id="mm-slots"
@@ -591,7 +637,7 @@ export function MatchManageDialog({
                 onBlur={() => editForm.setFieldTouched("maxSlots")}
                 error={editForm.errors.maxSlots}
                 hint={`Obecnie zapisanych: ${match.signed_up}`}
-                inputClassName={cn(!isEditing && readOnlyInputClass)}
+                inputClassName={cn(!isEditing && readOnlyInputClass(light))}
               />
               <FormInput
                 id="mm-fee"
@@ -620,7 +666,7 @@ export function MatchManageDialog({
                     return `Składka na osobę: ${formatMatchFeePln(per)} (${match.signed_up} zapisanych)`;
                   })()
                 }
-                inputClassName={cn(!isEditing && readOnlyInputClass)}
+                inputClassName={cn(!isEditing && readOnlyInputClass(light))}
               />
               <FormInput
                 id="mm-gate-pin"
@@ -639,7 +685,7 @@ export function MatchManageDialog({
                 onBlur={() => editForm.setFieldTouched("gatePin")}
                 error={editForm.errors.gatePin}
                 hint="Kod na bramę boiska — widoczny na stronie głównej przy najbliższym meczu."
-                inputClassName={cn(!isEditing && readOnlyInputClass)}
+                inputClassName={cn(!isEditing && readOnlyInputClass(light))}
               />
             </div>
           </TabsContent>
@@ -656,7 +702,12 @@ export function MatchManageDialog({
                 {guestRows.map((g) => (
                   <div
                     key={g.user_id}
-                    className="flex items-center justify-between gap-3 border-b border-emerald-900/8 px-4 py-3 last:border-b-0 dark:border-emerald-800/40"
+                    className={cn(
+                      "flex items-center justify-between gap-3 border-b px-4 py-3 last:border-b-0",
+                      light
+                        ? "border-zinc-100 dark:border-zinc-800"
+                        : "border-emerald-900/8 dark:border-emerald-800/40"
+                    )}
                   >
                     <div className="flex min-w-0 flex-1 items-center gap-3">
                       <PlayerAvatar
@@ -760,14 +811,23 @@ export function MatchManageDialog({
                   return (
                     <div
                       key={u.id}
-                      className="flex items-center gap-3 rounded-xl border border-emerald-900/10 bg-white px-3 py-2 dark:bg-zinc-900"
+                      className={cn(
+                        "flex items-center gap-3 rounded-xl border bg-white px-3 py-2 dark:bg-zinc-900",
+                        light ? "border-zinc-200 dark:border-zinc-800" : "border-emerald-900/10"
+                      )}
                     >
                       <PlayerAvatar
                         photoPath={u.profile_photo_path}
                         firstName={u.first_name}
                         lastName={u.last_name}
                         size="sm"
-                        ringClassName={isSigned ? "ring-2 ring-emerald-200/90" : "ring-2 ring-zinc-200/80"}
+                        ringClassName={
+                          isSigned
+                            ? light
+                              ? "ring-2 ring-[var(--mp-teal)]/35"
+                              : "ring-2 ring-emerald-200/90"
+                            : "ring-2 ring-zinc-200/80"
+                        }
                       />
                       <div className="min-w-0 flex-1">
                         <PlayerNameStack firstName={u.first_name} lastName={u.last_name} nick={u.zawodnik} />
@@ -787,7 +847,7 @@ export function MatchManageDialog({
                       ) : (
                         <Button
                           type="button"
-                          variant="pitch"
+                          variant={primaryVariant}
                           disabled={signupsLoading}
                           onClick={() => void adminAddToMatch(u.id)}
                           title="Dopisz do meczu"

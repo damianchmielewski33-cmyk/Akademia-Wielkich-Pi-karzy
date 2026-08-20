@@ -3,6 +3,7 @@
 import type { ComponentType, ReactNode } from "react";
 import Link from "next/link";
 import { PhotoPanel } from "@/components/photo-panel";
+import { useSiteMode } from "@/components/site-mode";
 import { pitchPhotoAt } from "@/lib/marketplace-photos";
 import { cn } from "@/lib/utils";
 
@@ -41,13 +42,17 @@ export function AdminNavTile({
   href,
   className,
 }: Props) {
+  const { marketplaceEnabled } = useSiteMode();
   const inner = (
     <PhotoPanel
       src={pitchPhotoAt(adminPhotoIndex(photoKey))}
       className={cn(
         "h-full border-2 border-white/30 shadow-md shadow-emerald-950/12 ring-1 ring-emerald-950/10 transition-[transform,box-shadow] motion-safe:hover:-translate-y-0.5 hover:shadow-xl",
         compact ? "min-h-[3.75rem] rounded-xl" : "min-h-[5.5rem]",
-        active && "ring-2 ring-[var(--mundial-gold,#f5c518)] ring-offset-2 ring-offset-[var(--mundial-navy,#0a1628)]",
+        active &&
+          (marketplaceEnabled
+            ? "ring-2 ring-[var(--mp-teal)] ring-offset-2 ring-offset-zinc-950"
+            : "ring-2 ring-[var(--mundial-gold,#f5c518)] ring-offset-2 ring-offset-[var(--mundial-navy,#0a1628)]"),
         disabled && "opacity-60"
       )}
       contentClassName={cn("flex h-full items-center gap-3", compact ? "px-3 py-2" : "px-4 py-3.5 sm:gap-4 sm:py-4")}

@@ -8,6 +8,7 @@ import { SiteShell } from "@/components/site-shell";
 import { ShareLinkClientCleanup } from "@/components/share-link-client-cleanup";
 import { PwaRegister } from "@/components/pwa-register";
 import { AndroidAppUpdatePrompt } from "@/components/android-app-update-prompt";
+import { StartupSplash } from "@/components/startup-splash";
 import { WebPushEnabler } from "@/components/web-push-enabler";
 import { MatchNotificationPrompt } from "@/components/match-notification-prompt";
 import { PinChangePendingBanner } from "@/components/pin-change-pending-banner";
@@ -324,6 +325,14 @@ export default async function RootLayout({
               : "(function(){try{var t=localStorage.getItem('awp-ui-theme');if(t==='light'){document.documentElement.classList.remove('dark');}else{document.documentElement.classList.add('dark');}}catch(e){}})();",
           }}
         />
+        <script
+          // iOS PWA: zakryj treść zanim React zamontuje splash — kolor zależny od V1/V2.
+          dangerouslySetInnerHTML={{
+            __html: marketplaceEnabled
+              ? `(function(){try{var ua=navigator.userAgent;if(/AWP-Android/i.test(ua))return;var ios=/iPad|iPhone|iPod/.test(ua)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);if(!ios)return;var st=window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;if(!st)return;if(sessionStorage.getItem('awp-startup-splash-shown')==='1')return;document.documentElement.classList.add('awp-boot-splash-pending');var d=document.createElement('div');d.id='awp-boot-splash';d.setAttribute('aria-hidden','true');d.style.cssText='position:fixed;inset:0;z-index:9999;background:linear-gradient(180deg,#f4f5f7 0%,#ffffff 48%,#e6faf7 100%);';document.documentElement.appendChild(d);}catch(e){}})();`
+              : `(function(){try{var ua=navigator.userAgent;if(/AWP-Android/i.test(ua))return;var ios=/iPad|iPhone|iPod/.test(ua)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);if(!ios)return;var st=window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;if(!st)return;if(sessionStorage.getItem('awp-startup-splash-shown')==='1')return;document.documentElement.classList.add('awp-boot-splash-pending');var d=document.createElement('div');d.id='awp-boot-splash';d.setAttribute('aria-hidden','true');d.style.cssText='position:fixed;inset:0;z-index:9999;background:linear-gradient(180deg,#061410 0%,#0b3d2e 48%,#082018 100%);';document.documentElement.appendChild(d);}catch(e){}})();`,
+          }}
+        />
         <SiteJsonLd
           siteName={appSettings.site_name}
           siteDescription={appSettings.site_description}
@@ -332,6 +341,7 @@ export default async function RootLayout({
           logoUrl={siteAssets.logo_favicon}
         />
         <PwaRegister />
+        <StartupSplash marketplaceEnabled={marketplaceEnabled} />
         <AndroidAppUpdatePrompt />
         {loggedInFull ? <WebPushEnabler /> : null}
         <SessionIdleMonitor enabled={sessionIdleLogout} />

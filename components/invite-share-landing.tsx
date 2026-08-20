@@ -20,7 +20,6 @@ import type { MatchRow } from "@/lib/db";
 import type { PlayersDataEntry } from "@/lib/terminarz-shared";
 import { LoginForm } from "@/components/login-form";
 import { MarketplacePitchPhoto } from "@/components/marketplace-pitch-photo";
-import { MarketplacePhotoStrip } from "@/components/marketplace-photo-strip";
 import { useMarketplacePhotos } from "@/components/marketplace-photos-provider";
 import { MatchLocationWeather } from "@/components/match-location-weather";
 import { MatchSignupsRosterModal } from "@/components/match-signups-roster-modal";
@@ -29,7 +28,6 @@ import { PayButton } from "@/components/pay-button";
 import { PhotoPanel } from "@/components/photo-panel";
 import { SiteAssetImage } from "@/components/site-asset-image";
 import { SiteSectionHero } from "@/components/site-section-hero";
-import { useScreenBlocks } from "@/components/screen-blocks-provider";
 import { useSiteMode } from "@/components/site-mode";
 import { Button } from "@/components/ui/button";
 import { FormInput } from "@/components/ui/form-field";
@@ -357,7 +355,6 @@ export function InviteShareLanding({
 }: InviteShareLandingProps) {
   const { marketplaceEnabled } = useSiteMode();
   const { photos: mpPhotos } = useMarketplacePhotos();
-  const { isAdmin } = useScreenBlocks();
   const signupToastShownRef = useRef(false);
   const [rosterOpen, setRosterOpen] = useState(false);
   const [guestBusy, setGuestBusy] = useState(false);
@@ -468,8 +465,6 @@ export function InviteShareLanding({
           </p>
         </div>
       </section>
-
-      <MarketplacePhotoStrip isAdmin={isAdmin} />
           </>
         ) : (
           <SiteSectionHero

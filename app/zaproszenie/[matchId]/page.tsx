@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { InviteMatchClient } from "@/components/invite-match-client";
+import { OpenDeepLinkInApp } from "@/components/open-deep-link-in-app";
 import { getAppSettings } from "@/lib/app-settings";
 import { getServerSession } from "@/lib/auth";
 import { getDb, type MatchRow } from "@/lib/db";
@@ -79,14 +80,17 @@ export default async function ZaproszeniePage({ params }: PageProps) {
         : null;
 
   return (
-    <InviteMatchClient
-      matchId={matchId}
-      match={matchForClient ?? null}
-      playersData={playersData}
-      isLoggedIn={Boolean(session)}
-      userSignupKind={userSignupKind}
-      hotpayEnabled={hotpayEnabled}
-      walletBalancePln={walletBalancePln}
-    />
+    <>
+      <OpenDeepLinkInApp />
+      <InviteMatchClient
+        matchId={matchId}
+        match={matchForClient ?? null}
+        playersData={playersData}
+        isLoggedIn={Boolean(session)}
+        userSignupKind={userSignupKind}
+        hotpayEnabled={hotpayEnabled}
+        walletBalancePln={walletBalancePln}
+      />
+    </>
   );
 }

@@ -295,9 +295,8 @@ export async function PUT(req: Request) {
     next.facebook_mateusz_url = url ?? APP_SETTINGS_DEFAULTS.facebook_mateusz_url;
   }
 
-  if (body.allow_self_registration !== undefined) {
-    next.allow_self_registration = body.allow_self_registration;
-  }
+  // Rejestracja graczy jest zawsze włączona — ignorujemy próby wyłączenia.
+  next.allow_self_registration = true;
 
   if (body.default_match_max_slots !== undefined) {
     next.default_match_max_slots = body.default_match_max_slots;
@@ -434,6 +433,7 @@ export async function PUT(req: Request) {
       facebook_mateusz_url: fbMateusz ?? current.mobile_settings.facebook_mateusz_url,
       match_cancel_reasons: cleanedReasons,
       login_banner: m.login_banner.trim().slice(0, 300),
+      allow_self_registration: true,
     };
     next.mobile_settings = mobileNext;
   }

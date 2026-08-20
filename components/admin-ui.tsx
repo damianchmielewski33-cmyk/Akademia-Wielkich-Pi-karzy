@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ComponentType, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ComponentType, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Calendar, ChevronDown, Loader2, LogOut, Moon, Sun } from "lucide-react";
+import { ArrowLeft, Calendar, ChevronDown, Loader2, LogOut, Menu, Moon, Sun } from "lucide-react";
 import { PitchCard } from "@/components/ui/pitch-card";
 import { SiteSectionHero } from "@/components/site-section-hero";
 import { SiteAssetImage } from "@/components/site-asset-image";
@@ -11,6 +11,8 @@ import { AdminNavTile, adminPhotoIndex } from "@/components/admin-nav-tile";
 import { AdminTestModeSidebarButton } from "@/components/admin-test-mode-sidebar-button";
 import { AdminOperatorPaymentsSidebarButton } from "@/components/admin-operator-payments-sidebar-button";
 import { AdminMarketplaceSidebarButton } from "@/components/admin-marketplace-sidebar-button";
+import { MarketplaceSection } from "@/components/marketplace-section";
+import { useSiteMode } from "@/components/site-mode";
 import { pitchPhotoAt } from "@/lib/marketplace-photos";
 import { adminGoldBtnClass } from "@/lib/admin-chrome-button";
 import { cn } from "@/lib/utils";
@@ -161,6 +163,14 @@ export function AdminShell({
   mobileShortcuts,
 }: AdminShellProps) {
   const router = useRouter();
+  const { marketplaceEnabled } = useSiteMode();
+  const mainRef = useRef<HTMLElement>(null);
+  const accentRing = marketplaceEnabled
+    ? "ring-2 ring-[var(--mp-teal)]"
+    : "ring-2 ring-[var(--mundial-gold,#f5c518)]";
+  const accentText = marketplaceEnabled
+    ? "text-[var(--mp-teal)]"
+    : "text-[var(--mundial-gold,#f5c518)]";
   const isDarkNow =
     typeof document !== "undefined" ? document.documentElement.classList.contains("dark") : true;
 
@@ -171,6 +181,14 @@ export function AdminShell({
     return navGroups[0]?.id ?? "";
   }, [navGroups, activeTab]);
 
+  const activeTabMeta = useMemo(() => {
+    for (const g of navGroups) {
+      const t = g.items.find((item) => item.id === activeTab);
+      if (t) return { group: g, tab: t };
+    }
+    return null;
+  }, [navGroups, activeTab]);
+
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
     const init: Record<string, boolean> = {};
     for (const g of navGroups) {
@@ -178,6 +196,10 @@ export function AdminShell({
     }
     return init;
   });
+
+  /** Mobile: menu = pełny wybór kategorii/zakładek; content = ekran sekcji. */
+  const [mobilePhase, setMobilePhase] = useState<"menu" | "content">("content");
+  const [mobileMenuGroupId, setMobileMenuGroupId] = useState<string | null>(null);
 
   useEffect(() => {
     setOpenGroups((prev) => {
@@ -190,13 +212,43 @@ export function AdminShell({
     });
   }, [activeTab, navGroups]);
 
-  const mobileGroup = useMemo(
-    () => navGroups.find((g) => g.id === activeGroupId) ?? navGroups[0],
-    [navGroups, activeGroupId]
-  );
+  useEffect(() => {
+    mainRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+    if (typeof window !== "undefined" && window.matchMedia("(max-width: 1023px)").matches) {
+      setMobilePhase("content");
+      setMobileMenuGroupId(null);
+    }
+  }, [activeTab]);
 
-  function toggleGroup(id: string) {
-    setOpenGroups((prev) => ({ ...prev, [id]: !prev[id] }));
+  const mobileBrowseGroup = useMemo(() => {
+    const id = mobileMenuGroupId ?? activeGroupId;
+    return navGroups.find((g) => g.id === id) ?? navGroups[0];
+  }, [navGroups, mobileMenuGroupId, activeGroupId]);
+
+  function openMobileMenu() {
+    setMobileMenuGroupId(null);
+    setMobilePhase("menu");
+  }
+
+  function selectMobileGroup(g: AdminNavGroup) {
+    if (g.items.length === 1) {
+      onTabChange(g.items[0].id);
+      setMobilePhase("content");
+      setMobileMenuGroupId(null);
+      return;
+    }
+    setMobileMenuGroupId(g.id);
+  }
+
+  function selectMobileTab(id: string) {
+    onTabChange(id);
+    setMobilePhase("content");
+    setMobileMenuGroupId(null);
+  }
+
+  function openDesktopGroup(g: AdminNavGroup) {
+    setOpenGroups((prev) => ({ ...prev, [g.id]: true }));
+    if (g.items[0]) onTabChange(g.items[0].id);
   }
 
   async function toggleTheme() {
@@ -215,9 +267,28 @@ export function AdminShell({
     }
   }
 
+  const showMobileMenu = mobilePhase === "menu";
+
   return (
-    <div className="murawa-bg flex min-h-screen flex-col text-white lg:flex-row">
-      <aside className="relative z-30 shrink-0 border-b border-white/20 shadow-lg lg:w-80 lg:border-b-0 lg:border-r lg:border-white/15">
+    <div
+      className={cn(
+        "flex min-h-screen flex-col lg:flex-row",
+        marketplaceEnabled
+          ? "admin-shell--v2 bg-zinc-100 text-zinc-950 dark:bg-zinc-950 dark:text-zinc-50"
+          : "murawa-bg text-white"
+      )}
+    >
+      <aside
+        className={cn(
+          "relative z-30 shrink-0 shadow-lg lg:w-80 lg:border-b-0 lg:border-r",
+          marketplaceEnabled
+            ? "border-b border-zinc-200 bg-zinc-950 text-white dark:border-zinc-800 lg:border-zinc-800"
+            : "border-b border-white/20 lg:border-white/15",
+          showMobileMenu ? "flex min-h-screen flex-col lg:min-h-0" : undefined,
+          !showMobileMenu && "lg:block",
+          !showMobileMenu && "hidden lg:block"
+        )}
+      >
         <div className="relative flex flex-col gap-3 p-3 xs:p-4 lg:sticky lg:top-0 lg:h-screen lg:max-h-screen lg:gap-3 lg:overflow-hidden lg:pt-[max(1rem,env(safe-area-inset-top))] lg:pb-[max(0.75rem,env(safe-area-inset-bottom))]">
           <PhotoPanel
             src={pitchPhotoAt(0)}
@@ -238,8 +309,13 @@ export function AdminShell({
               />
             </span>
             <div className="min-w-0">
-              <p className="text-[0.65rem] font-bold uppercase tracking-[0.16em] text-[var(--mundial-gold,#f5c518)]">
-                Panel admina
+              <p
+                className={cn(
+                  "text-[0.65rem] font-bold uppercase tracking-[0.16em]",
+                  marketplaceEnabled ? "text-[var(--mp-teal)]" : "text-[var(--mundial-gold,#f5c518)]"
+                )}
+              >
+                Panel admina{marketplaceEnabled ? " · V2" : ""}
               </p>
               <p className="mt-1 truncate text-lg font-black leading-tight text-white drop-shadow-sm">
                 Sterowanie akademią
@@ -250,95 +326,95 @@ export function AdminShell({
 
           {searchSlot ? <div className="relative z-40 shrink-0">{searchSlot}</div> : null}
 
-          {/* Mobile: always-visible shortcuts */}
-          {mobileShortcuts && mobileShortcuts.length > 0 ? (
-            <div className="flex shrink-0 gap-1.5 lg:hidden" aria-label="Szybkie skróty">
-              {mobileShortcuts.map((s) => {
-                const active = activeTab === s.id;
-                return (
-                  <button
-                    key={s.id}
-                    type="button"
-                    onClick={() => onTabChange(s.id)}
-                    className="min-w-0 flex-1"
-                  >
-                    <PhotoPanel
-                      src={pitchPhotoAt(adminPhotoIndex(s.id))}
-                      className={cn(
-                        "min-h-[2.75rem] rounded-xl",
-                        active && "ring-2 ring-[var(--mundial-gold,#f5c518)]"
-                      )}
-                      contentClassName="flex min-h-[2.75rem] items-center justify-center gap-1.5 px-2 py-2"
-                      sizes="160px"
-                    >
-                      <span className="truncate text-xs font-bold text-white drop-shadow-sm">{s.label}</span>
-                      {s.badgeCount != null && s.badgeCount > 0 ? (
-                        <span className="inline-flex min-h-[1.1rem] min-w-[1.1rem] items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white">
-                          {s.badgeCount > 99 ? "99+" : s.badgeCount}
-                        </span>
-                      ) : s.badge ? (
-                        <span className="h-1.5 w-1.5 rounded-full bg-red-500" aria-hidden />
-                      ) : null}
-                    </PhotoPanel>
-                  </button>
-                );
-              })}
-            </div>
-          ) : null}
-
-          {/* Mobile: category chips + tabs of active category */}
-          <div className="flex shrink-0 flex-col gap-2 lg:hidden">
-            <nav
-              className="-mx-3 flex gap-1.5 overflow-x-auto overscroll-x-contain px-3 pb-0.5 [scrollbar-width:thin]"
-              aria-label="Kategorie panelu admina"
-            >
-              {navGroups.map((g) => {
-                const selected = g.id === activeGroupId;
-                const groupAlert = g.items.some(tabHasAlert);
-                const chipLabel = g.label ?? g.items[0]?.label ?? g.id;
-                return (
-                  <button
-                    key={g.id}
-                    type="button"
-                    onClick={() => {
-                      if (!selected && g.items[0]) onTabChange(g.items[0].id);
-                    }}
-                    className="min-w-0 shrink-0"
-                  >
-                    <PhotoPanel
-                      src={pitchPhotoAt(adminPhotoIndex(`group-${g.id}`))}
-                      className={cn(
-                        "min-h-[2.5rem] rounded-full",
-                        selected && "ring-2 ring-[var(--mundial-gold,#f5c518)]"
-                      )}
-                      contentClassName="flex min-h-[2.5rem] items-center gap-2 px-3.5 py-1.5"
-                      sizes="180px"
-                    >
-                      <span className="truncate text-xs font-bold text-white drop-shadow-sm">{chipLabel}</span>
-                      {groupAlert && !selected ? (
-                        <span className="h-1.5 w-1.5 rounded-full bg-red-500" aria-hidden />
-                      ) : null}
-                    </PhotoPanel>
-                  </button>
-                );
-              })}
-            </nav>
-            {mobileGroup ? (
-              <nav
-                className="-mx-3 flex gap-1.5 overflow-x-auto overscroll-x-contain px-3 pb-1 [scrollbar-width:thin]"
-                aria-label={mobileGroup.label ? `Zakładki: ${mobileGroup.label}` : "Zakładki panelu admina"}
-              >
-                {mobileGroup.items.map((t) => (
-                  <NavTabButton
-                    key={t.id}
-                    tab={t}
-                    active={activeTab === t.id}
-                    onSelect={() => onTabChange(t.id)}
-                    compact
-                  />
-                ))}
-              </nav>
-            ) : null}
+          {/* Mobile: pełne menu kategorii / zakładek (nie pasek chipów na dole) */}
+          <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-contain lg:hidden">
+            {mobileMenuGroupId && mobileBrowseGroup ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setMobileMenuGroupId(null)}
+                  className="awp-focus-ring inline-flex items-center gap-2 self-start rounded-xl px-2 py-1.5 text-sm font-semibold text-white/90 hover:bg-white/10"
+                >
+                  <ArrowLeft className="h-4 w-4" aria-hidden />
+                  Kategorie
+                </button>
+                <p className="text-xs font-bold uppercase tracking-[0.14em] text-white/70">
+                  {mobileBrowseGroup.label ?? "Zakładki"}
+                </p>
+                <nav className="flex flex-col gap-2" aria-label={`Zakładki: ${mobileBrowseGroup.label ?? ""}`}>
+                  {mobileBrowseGroup.items.map((t) => (
+                    <NavTabButton
+                      key={t.id}
+                      tab={t}
+                      active={activeTab === t.id}
+                      onSelect={() => selectMobileTab(t.id)}
+                    />
+                  ))}
+                </nav>
+              </>
+            ) : (
+              <>
+                {mobileShortcuts && mobileShortcuts.length > 0 ? (
+                  <div className="grid grid-cols-2 gap-2" aria-label="Szybkie skróty">
+                    {mobileShortcuts.map((s) => {
+                      const active = activeTab === s.id;
+                      return (
+                        <button
+                          key={s.id}
+                          type="button"
+                          onClick={() => selectMobileTab(s.id)}
+                          className="min-w-0"
+                        >
+                          <PhotoPanel
+                            src={pitchPhotoAt(adminPhotoIndex(s.id))}
+                            className={cn("min-h-[3.25rem] rounded-xl", active && accentRing)}
+                            contentClassName="flex min-h-[3.25rem] items-center justify-center gap-1.5 px-2 py-2"
+                            sizes="160px"
+                          >
+                            <span className="truncate text-xs font-bold text-white drop-shadow-sm">{s.label}</span>
+                            {s.badgeCount != null && s.badgeCount > 0 ? (
+                              <span className="inline-flex min-h-[1.1rem] min-w-[1.1rem] items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white">
+                                {s.badgeCount > 99 ? "99+" : s.badgeCount}
+                              </span>
+                            ) : s.badge ? (
+                              <span className="h-1.5 w-1.5 rounded-full bg-red-500" aria-hidden />
+                            ) : null}
+                          </PhotoPanel>
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : null}
+                <p className="text-xs font-bold uppercase tracking-[0.14em] text-white/70">Wszystkie sekcje</p>
+                <nav className="flex flex-col gap-2" aria-label="Kategorie panelu admina">
+                  {navGroups.map((g) => {
+                    const groupAlert = g.items.some(tabHasAlert);
+                    const chipLabel = g.label ?? g.items[0]?.label ?? g.id;
+                    const selected = g.id === activeGroupId;
+                    return (
+                      <button key={g.id} type="button" onClick={() => selectMobileGroup(g)} className="w-full text-left">
+                        <PhotoPanel
+                          src={pitchPhotoAt(adminPhotoIndex(`group-${g.id}`))}
+                          className={cn("min-h-[4.5rem] border-2 border-white/30", selected && accentRing)}
+                          contentClassName="flex min-h-[4.5rem] items-center gap-3 px-4 py-3"
+                          sizes="320px"
+                        >
+                          <span className="min-w-0 flex-1">
+                            <span className="block text-base font-bold text-white drop-shadow-sm">{chipLabel}</span>
+                            <span className="mt-0.5 block text-xs text-white/75">
+                              {g.items.length === 1
+                                ? g.items[0].label
+                                : `${g.items.length} sekcje — otwórz listę`}
+                            </span>
+                          </span>
+                          {groupAlert ? <span className="h-2 w-2 rounded-full bg-red-500" aria-hidden /> : null}
+                        </PhotoPanel>
+                      </button>
+                    );
+                  })}
+                </nav>
+              </>
+            )}
           </div>
 
           {/* Desktop: collapsible category groups (scroll independently) */}
@@ -371,13 +447,11 @@ export function AdminShell({
                 <div key={g.id} className="mb-0.5">
                   <button
                     type="button"
-                    onClick={() => toggleGroup(g.id)}
+                    onClick={() => openDesktopGroup(g)}
                     aria-expanded={isOpen}
                     className={cn(
                       "awp-focus-ring flex w-full items-center gap-2 rounded-xl px-2 py-2.5 text-left text-sm font-bold uppercase tracking-[0.12em] transition-colors",
-                      containsActive
-                        ? "text-[var(--mundial-gold,#f5c518)]"
-                        : "text-white/70 hover:text-white"
+                      containsActive ? accentText : "text-white/70 hover:text-white"
                     )}
                   >
                     <ChevronDown
@@ -416,7 +490,10 @@ export function AdminShell({
               <AdminMarketplaceSidebarButton />
               <AdminOperatorPaymentsSidebarButton
                 active={activeTab === "operator-payments"}
-                onOpen={() => onTabChange("operator-payments")}
+                onOpen={() => {
+                  onTabChange("operator-payments");
+                  setMobilePhase("content");
+                }}
               />
             </div>
             <div className="grid grid-cols-2 gap-1.5 lg:grid-cols-1">
@@ -453,27 +530,69 @@ export function AdminShell({
         </div>
       </aside>
 
-      <main className="relative flex-1 overflow-x-hidden">
+      <main
+        ref={mainRef}
+        className={cn(
+          "relative flex-1 overflow-x-hidden",
+          showMobileMenu && "hidden lg:block",
+          marketplaceEnabled && "bg-zinc-100 dark:bg-zinc-950"
+        )}
+      >
         <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
           <SiteAssetImage
             asset="bg_soccer_ball"
             decorative
             width={220}
             height={220}
-            className="absolute -right-16 top-8 h-auto w-[220px] max-w-none opacity-[0.14] sm:top-12"
+            className={cn(
+              "absolute -right-16 top-8 h-auto w-[220px] max-w-none sm:top-12",
+              marketplaceEnabled ? "opacity-[0.06]" : "opacity-[0.14]"
+            )}
           />
           <SiteAssetImage
             asset="bg_soccer_ball"
             decorative
             width={160}
             height={160}
-            className="absolute -left-10 bottom-24 h-auto w-[160px] max-w-none opacity-[0.12] sm:bottom-32"
+            className={cn(
+              "absolute -left-10 bottom-24 h-auto w-[160px] max-w-none sm:bottom-32",
+              marketplaceEnabled ? "opacity-[0.05]" : "opacity-[0.12]"
+            )}
           />
+        </div>
+
+        <div className="relative z-20 border-b border-zinc-200/80 bg-white/90 px-3 py-2 backdrop-blur-md dark:border-zinc-800 dark:bg-zinc-950/90 lg:hidden">
+          <div className="mx-auto flex max-w-6xl items-center gap-2">
+            <button
+              type="button"
+              onClick={openMobileMenu}
+              className={cn(
+                "awp-focus-ring inline-flex items-center gap-2 rounded-xl px-2.5 py-2 text-sm font-bold",
+                marketplaceEnabled
+                  ? "bg-[var(--mp-teal)] text-white"
+                  : "bg-[var(--mundial-gold,#f5c518)] text-[var(--mundial-navy,#0a1628)]"
+              )}
+            >
+              <Menu className="h-4 w-4" aria-hidden />
+              Menu
+            </button>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-bold text-zinc-950 dark:text-white">
+                {activeTabMeta?.tab.label ?? "Panel"}
+              </p>
+              {activeTabMeta?.group.label ? (
+                <p className="truncate text-xs text-zinc-500">{activeTabMeta.group.label}</p>
+              ) : null}
+            </div>
+          </div>
         </div>
 
         {loading ? (
           <div
-            className="pointer-events-none absolute right-6 top-6 z-20 flex items-center gap-2 text-sm text-emerald-100/80"
+            className={cn(
+              "pointer-events-none absolute right-6 top-16 z-20 flex items-center gap-2 text-sm lg:top-6",
+              marketplaceEnabled ? "text-zinc-500" : "text-emerald-100/80"
+            )}
             aria-live="polite"
           >
             <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
@@ -509,16 +628,16 @@ export function AdminToolbar({
 }) {
   void onReload;
   void loading;
+  const { marketplaceEnabled } = useSiteMode();
   return (
     <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
       <SiteSectionHero
-        kicker={kicker}
+        kicker={marketplaceEnabled ? `${kicker} · V2` : kicker}
         title={title}
         subtitle={description}
         showCrest
         size="default"
         align="left"
-        variant="stadium"
         className="min-w-0 flex-1"
       />
       {children ? (
@@ -548,29 +667,55 @@ export function AdminCard({
   tone?: "pitch" | "data";
   id?: string;
 }) {
+  const { marketplaceEnabled } = useSiteMode();
+
+  if (tone === "data") {
+    const header =
+      title || description || headerExtra ? (
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
+            {title ? <h2 className="pitch-heading text-xl font-black tracking-tight sm:text-2xl">{title}</h2> : null}
+            {description ? (
+              <p className="admin-data-muted mt-1.5 text-sm leading-relaxed sm:text-base">{description}</p>
+            ) : null}
+          </div>
+          {headerExtra}
+        </div>
+      ) : null;
+    return (
+      <section id={id} className={cn("admin-data-card", className)} data-admin-card="">
+        {header}
+        {children}
+      </section>
+    );
+  }
+
+  if (marketplaceEnabled) {
+    return (
+      <MarketplaceSection
+        id={id}
+        title={title}
+        description={description}
+        headerExtra={headerExtra}
+        className={className}
+      >
+        {children}
+      </MarketplaceSection>
+    );
+  }
+
   const header =
     title || description || headerExtra ? (
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           {title ? <h2 className="pitch-heading text-xl font-black tracking-tight sm:text-2xl">{title}</h2> : null}
           {description ? (
-            <p className={cn("mt-1.5 text-sm leading-relaxed sm:text-base", tone === "data" ? "admin-data-muted" : "pitch-muted")}>
-              {description}
-            </p>
+            <p className="pitch-muted mt-1.5 text-sm leading-relaxed sm:text-base">{description}</p>
           ) : null}
         </div>
         {headerExtra}
       </div>
     ) : null;
-
-  if (tone === "data") {
-    return (
-      <section id={id} className={cn("admin-data-card", className)}>
-        {header}
-        {children}
-      </section>
-    );
-  }
 
   return (
     <PitchCard id={id} variant="pitch" className={cn(className)} contentClassName="p-5 sm:p-6">

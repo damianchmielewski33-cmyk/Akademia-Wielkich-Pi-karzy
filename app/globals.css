@@ -136,6 +136,39 @@ html.site-chrome-academy {
     @apply inline-flex items-center gap-1.5 rounded-lg bg-emerald-100 px-3 py-2 text-sm font-semibold tabular-nums text-emerald-950 shadow-md shadow-emerald-950/20;
   }
 
+  /* Jasne karty marketplace / panel admina V2: stare text-white nie giną na białym tle */
+  .admin-shell--v2 [data-admin-card] :where(.text-white):not([class*="bg-emerald"]):not([class*="bg-red"]):not([class*="bg-lime"]):not([class*="bg-[var(--mp-teal"]) {
+    color: #18181b;
+  }
+  .dark .admin-shell--v2 [data-admin-card] :where(.text-white):not([class*="bg-emerald"]):not([class*="bg-red"]):not([class*="bg-lime"]):not([class*="bg-[var(--mp-teal"]) {
+    color: #f8fafc;
+  }
+  .admin-shell--v2 [data-admin-card] :where([class*="text-emerald-100"], [class*="text-emerald-50"]) {
+    color: #52525b;
+  }
+  .dark .admin-shell--v2 [data-admin-card] :where([class*="text-emerald-100"], [class*="text-emerald-50"]) {
+    color: #a1a1aa;
+  }
+  .admin-shell--v2 [data-admin-card] :where(.text-emerald-400, .text-emerald-300) {
+    color: var(--mp-teal-dark);
+  }
+
+  .admin-shell--v2 .admin-table-shell {
+    @apply border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900;
+  }
+  .admin-shell--v2 .admin-table-shell :where(th) {
+    color: var(--mp-teal-dark);
+  }
+  .dark .admin-shell--v2 .admin-table-shell :where(th) {
+    color: var(--mp-teal);
+  }
+  .admin-shell--v2 .admin-table-shell :where(td) {
+    @apply text-zinc-800 dark:text-zinc-100;
+  }
+  .admin-shell--v2 .admin-table-shell :where(tbody tr) {
+    @apply border-zinc-100 hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-800/60;
+  }
+
   /* ========== Panel admina — tabele i powierzchnie na murawie ========== */
   .admin-table-shell {
     @apply overflow-x-auto overflow-y-hidden rounded-xl border border-white/25 bg-black/10 backdrop-blur-sm [scrollbar-width:thin];
@@ -1739,3 +1772,97 @@ html {
     display: none;
   }
 }
+
+/* Splash startowy aplikacji iOS (PWA) — spadające piłki + żonglerka */
+.awp-startup-splash {
+  background: linear-gradient(180deg, #061410 0%, #0b3d2e 48%, #082018 100%);
+  opacity: 1;
+  transition: opacity 0.42s ease;
+}
+
+.awp-startup-splash--v2 {
+  background: linear-gradient(180deg, #f4f5f7 0%, #ffffff 48%, #e6faf7 100%);
+}
+
+.awp-startup-splash--leave {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.awp-juggle__ball {
+  transform-origin: 100px 108px;
+  animation: awp-juggle-ball 0.9s linear infinite;
+}
+
+.awp-juggle__leg--l {
+  transform-origin: 86px 132px;
+  animation: awp-juggle-leg-l 0.9s ease-in-out infinite;
+}
+
+.awp-juggle__leg--r {
+  transform-origin: 114px 132px;
+  animation: awp-juggle-leg-r 0.9s ease-in-out infinite;
+}
+
+.awp-juggle__arms {
+  transform-origin: 100px 78px;
+  animation: awp-juggle-arms 0.9s ease-in-out infinite;
+}
+
+@keyframes awp-juggle-ball {
+  0%,
+  100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  25% {
+    transform: translate(-4px, -72px) rotate(90deg);
+  }
+  50% {
+    transform: translate(0, 0) rotate(180deg);
+  }
+  75% {
+    transform: translate(4px, -72px) rotate(270deg);
+  }
+}
+
+@keyframes awp-juggle-leg-l {
+  0%,
+  45%,
+  100% {
+    transform: rotate(0deg);
+  }
+  20% {
+    transform: rotate(-18deg) translateY(-6px);
+  }
+}
+
+@keyframes awp-juggle-leg-r {
+  0%,
+  50%,
+  100% {
+    transform: rotate(0deg);
+  }
+  70% {
+    transform: rotate(18deg) translateY(-6px);
+  }
+}
+
+@keyframes awp-juggle-arms {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(-4deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .awp-juggle__ball,
+  .awp-juggle__leg--l,
+  .awp-juggle__leg--r,
+  .awp-juggle__arms {
+    animation: none;
+  }
+}
+

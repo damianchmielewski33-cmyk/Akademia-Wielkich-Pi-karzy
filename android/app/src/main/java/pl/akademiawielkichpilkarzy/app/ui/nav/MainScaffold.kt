@@ -221,6 +221,9 @@ private fun NativeMainScaffold(
             initialPath?.startsWith("/zaproszenie") == true -> {
                 openPortal("Zaproszenie", initialPath, requireAuth = false)
             }
+            initialPath?.startsWith("/platnosci-public") == true -> {
+                openPortal("Płatności", initialPath, requireAuth = false)
+            }
             initialPath?.startsWith("/platnosci") == true -> {
                 openPortal("Płatności", initialPath, requireAuth = true)
             }

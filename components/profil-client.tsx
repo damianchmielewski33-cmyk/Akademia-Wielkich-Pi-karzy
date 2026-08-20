@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type ComponentType } from "react";
 import { toast } from "@/lib/app-toast";
+import { formatBytesMb, prepareImageForUpload } from "@/lib/prepare-image-for-upload";
 import {
   Activity,
   Camera,
@@ -143,8 +144,24 @@ export function ProfilClient({
     if (!file) return;
     setUploadingPhoto(true);
     try {
+      let prepared;
+      try {
+        prepared = await prepareImageForUpload(file, {
+          maxBytes: Math.floor(2 * 1024 * 1024),
+          maxEdge: 1280,
+          preferMime: "image/webp",
+        });
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Nie udało się przygotować zdjęcia");
+        return;
+      }
+      if (prepared.resized) {
+        toast.message(
+          `Zmniejszono zdjęcie: ${formatBytesMb(prepared.originalBytes)} → ${formatBytesMb(prepared.finalBytes)}`
+        );
+      }
       const fd = new FormData();
-      fd.set("photo", file);
+      fd.set("photo", prepared.file);
       const res = await fetch("/api/profile/photo", { method: "POST", body: fd });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) {

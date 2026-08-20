@@ -5,6 +5,8 @@
     <color name="awp_pitch">#0D5C45</color>
     <color name="awp_navy">#1A2D5A</color>
     <color name="awp_gold">#F5C518</color>
+    <color name="awp_mp_bg">#F4F5F7</color>
+    <color name="awp_mp_teal">#00C9B1</color>
     <!-- Tło adaptive icon — navy Mundial -->
     <color name="ic_launcher_background">#1A2D5A</color>
 </resources>

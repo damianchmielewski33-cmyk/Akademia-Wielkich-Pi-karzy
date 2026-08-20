@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { Loader2 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { ArrowLeft, Loader2, Search, Settings2 } from "lucide-react";
 import { toast } from "@/lib/app-toast";
 import {
   AdminCard,
@@ -18,6 +18,7 @@ import { YesNoSwitchRow } from "@/components/ui/yes-no-switch";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { useSiteMode } from "@/components/site-mode";
 import type { AppSettingsApiResponse } from "@/app/api/admin/app-settings/route";
 import type { MatchCancelReasonEntry } from "@/lib/app-settings";
 import { AdminSiteAssetField } from "@/components/admin-site-asset-field";
@@ -44,45 +45,50 @@ function settingsApiUrl(realm: "academy" | "pzu_cup") {
   return realm === "pzu_cup" ? "/api/admin/app-settings?realm=pzu_cup" : "/api/admin/app-settings";
 }
 
-type SettingsTocItem = { id: string; label: string };
+type SettingsTocItem = { id: string; label: string; keywords?: string };
 
-type SettingsTocGroup = { label: string; items: SettingsTocItem[] };
+type SettingsTocGroup = { label: string; items: SettingsTocItem[]; hint?: string };
 
 const WEB_SETTINGS_TOC: SettingsTocGroup[] = [
   {
     label: "System",
+    hint: "Tryb testowy, wersja V1/V2, status serwera",
     items: [
-      { id: "settings-test-mode", label: "Tryb testowy" },
-      { id: "settings-marketplace", label: "Wersja aplikacji" },
-      { id: "settings-system", label: "Co działa na serwerze" },
+      { id: "settings-test-mode", label: "Tryb testowy", keywords: "sandbox test" },
+      { id: "settings-marketplace", label: "Wersja aplikacji", keywords: "v1 v2 wersja marketplace hale rezerwacje" },
+      { id: "settings-system", label: "Co działa na serwerze", keywords: "smtp produkcja rejestracja status" },
     ],
   },
   {
     label: "Marka i treści",
+    hint: "Nazwa, logo, film, zdjęcia marketplace",
     items: [
-      { id: "settings-brand", label: "Nazwa i opis" },
-      { id: "settings-assets", label: "Logo i tła" },
-      { id: "settings-home-video", label: "Film na stronie głównej" },
+      { id: "settings-brand", label: "Nazwa i opis", keywords: "nazwa branding seo opis" },
+      { id: "settings-assets", label: "Logo i tła", keywords: "logo tło grafika asset zdjęcia boiska gramy razem" },
+      { id: "settings-home-video", label: "Film na stronie głównej", keywords: "youtube film video" },
     ],
   },
   {
     label: "Kontakt",
-    items: [{ id: "settings-contact", label: "Kontakt i organizatorzy" }],
+    hint: "E-mail, telefon, organizatorzy",
+    items: [{ id: "settings-contact", label: "Kontakt i organizatorzy", keywords: "email telefon blik facebook" }],
   },
   {
     label: "Reklamy i rejestracja",
+    hint: "AdSense i konta graczy",
     items: [
-      { id: "settings-adsense", label: "Google AdSense" },
-      { id: "settings-registration", label: "Rejestracja i powiadomienia" },
+      { id: "settings-adsense", label: "Google AdSense", keywords: "reklamy adsense" },
+      { id: "settings-registration", label: "Rejestracja i powiadomienia", keywords: "rejestracja mail powiadomienia" },
     ],
   },
   {
     label: "Mecze i rankingi",
+    hint: "Domyślne mecze, punkty, plan boiska",
     items: [
-      { id: "settings-match-defaults", label: "Domyślne mecze" },
-      { id: "settings-ranking-points", label: "Punkty rankingowe" },
-      { id: "settings-pitch-plan", label: "Plan boiska" },
-      { id: "settings-cancel-reasons", label: "Powody anulowania" },
+      { id: "settings-match-defaults", label: "Domyślne mecze", keywords: "miejsca lokalizacja mecz" },
+      { id: "settings-ranking-points", label: "Punkty rankingowe", keywords: "ranking punkty gol asysta" },
+      { id: "settings-pitch-plan", label: "Plan boiska", keywords: "składy boisko" },
+      { id: "settings-cancel-reasons", label: "Powody anulowania", keywords: "anuluj powód" },
     ],
   },
 ];
@@ -90,17 +96,19 @@ const WEB_SETTINGS_TOC: SettingsTocGroup[] = [
 const MOBILE_SETTINGS_TOC: SettingsTocGroup[] = [
   {
     label: "Aplikacja",
+    hint: "Nazwa i kontakt w aplikacji",
     items: [
-      { id: "settings-m-name", label: "Nazwa w aplikacji" },
-      { id: "settings-m-contact", label: "Kontakt" },
+      { id: "settings-m-name", label: "Nazwa w aplikacji", keywords: "nazwa app android" },
+      { id: "settings-m-contact", label: "Kontakt", keywords: "email telefon blik" },
     ],
   },
   {
     label: "Mecze i rankingi",
+    hint: "Domyślne wartości w aplikacji",
     items: [
-      { id: "settings-m-matches", label: "Domyślne mecze" },
-      { id: "settings-m-ranking", label: "Punkty rankingowe" },
-      { id: "settings-m-cancel", label: "Powody anulowania" },
+      { id: "settings-m-matches", label: "Domyślne mecze", keywords: "miejsca lokalizacja" },
+      { id: "settings-m-ranking", label: "Punkty rankingowe", keywords: "ranking punkty" },
+      { id: "settings-m-cancel", label: "Powody anulowania", keywords: "anuluj powód" },
     ],
   },
 ];
@@ -118,59 +126,125 @@ function categoryForSectionId(sectionId: string, groups: SettingsTocGroup[]): st
   return null;
 }
 
-function SettingsCategoryNav({
-  groups,
-  activeLabel,
+function SettingsSearchBar({
+  value,
   onChange,
+  marketplace,
 }: {
-  groups: SettingsTocGroup[];
-  activeLabel: string;
-  onChange: (label: string) => void;
+  value: string;
+  onChange: (v: string) => void;
+  marketplace: boolean;
 }) {
   return (
-    <nav
-      className="-mx-1 mb-4 flex gap-1.5 overflow-x-auto overscroll-x-contain px-1 pb-1 [scrollbar-width:thin]"
-      aria-label="Kategorie ustawień"
+    <div
+      className={cn(
+        "relative mb-4",
+        marketplace
+          ? "rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-700 dark:bg-zinc-900"
+          : "rounded-2xl border border-white/20 bg-black/20"
+      )}
     >
-      {groups.map((g) => {
-        const active = g.label === activeLabel;
-        return (
-          <button
-            key={g.label}
-            type="button"
-            onClick={() => onChange(g.label)}
-            className={cn(
-              "awp-focus-ring shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors",
-              active
-                ? "bg-[var(--mundial-gold)]/25 text-white ring-1 ring-[var(--mundial-gold)]/50"
-                : "border border-white/20 bg-black/15 text-emerald-100/90 hover:bg-white/10 hover:text-white"
-            )}
-          >
-            {g.label}
-          </button>
-        );
-      })}
-    </nav>
+      <Search
+        className={cn(
+          "pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2",
+          marketplace ? "text-[var(--mp-teal-dark)]" : "text-white/70"
+        )}
+        aria-hidden
+      />
+      <input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="Szukaj ustawienia (np. logo, V2, AdSense, ranking…)"
+        className={cn(
+          "w-full rounded-2xl bg-transparent py-3.5 pl-11 pr-4 text-base outline-none",
+          marketplace
+            ? "text-zinc-950 placeholder:text-zinc-400 dark:text-white dark:placeholder:text-zinc-500"
+            : "text-white placeholder:text-white/50"
+        )}
+        aria-label="Szukaj w ustawieniach"
+      />
+    </div>
+  );
+}
+
+function SettingsHub({
+  groups,
+  onOpenGroup,
+  marketplace,
+}: {
+  groups: SettingsTocGroup[];
+  onOpenGroup: (label: string) => void;
+  marketplace: boolean;
+}) {
+  return (
+    <div className="mb-2 grid gap-2 sm:grid-cols-2">
+      {groups.map((g) => (
+        <button
+          key={g.label}
+          type="button"
+          onClick={() => onOpenGroup(g.label)}
+          className={cn(
+            "awp-focus-ring rounded-2xl border p-4 text-left transition hover:-translate-y-0.5",
+            marketplace
+              ? "border-zinc-200 bg-white shadow-sm hover:border-[var(--mp-teal)] dark:border-zinc-700 dark:bg-zinc-900"
+              : "border-white/20 bg-black/15 hover:bg-white/10"
+          )}
+        >
+          <span className="flex items-start gap-3">
+            <span
+              className={cn(
+                "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl",
+                marketplace ? "bg-[var(--mp-teal)] text-white" : "bg-white/15 text-white"
+              )}
+            >
+              <Settings2 className="h-4 w-4" aria-hidden />
+            </span>
+            <span className="min-w-0">
+              <span
+                className={cn(
+                  "block text-base font-bold",
+                  marketplace ? "text-zinc-950 dark:text-white" : "text-white"
+                )}
+              >
+                {g.label}
+              </span>
+              <span
+                className={cn(
+                  "mt-0.5 block text-sm",
+                  marketplace ? "text-zinc-500" : "text-emerald-100/80"
+                )}
+              >
+                {g.hint ?? `${g.items.length} sekcje`}
+              </span>
+            </span>
+          </span>
+        </button>
+      ))}
+    </div>
   );
 }
 
 function SettingsSectionNav({
   items,
+  marketplace,
 }: {
   items: SettingsTocItem[];
+  marketplace?: boolean;
 }) {
   if (items.length <= 1) return null;
   return (
-    <nav
-      className="mb-4 flex flex-wrap gap-1.5"
-      aria-label="Sekcje w kategorii"
-    >
+    <nav className="mb-4 flex flex-wrap gap-1.5" aria-label="Sekcje w kategorii">
       {items.map((item) => (
         <button
           key={item.id}
           type="button"
           onClick={() => scrollToSettingsSection(item.id)}
-          className="awp-focus-ring rounded-lg border border-white/15 bg-black/10 px-2.5 py-1 text-xs font-medium text-emerald-100/85 transition-colors hover:bg-white/10 hover:text-white"
+          className={cn(
+            "awp-focus-ring rounded-lg border px-2.5 py-1 text-xs font-medium transition-colors",
+            marketplace
+              ? "border-zinc-200 bg-zinc-50 text-zinc-700 hover:border-[var(--mp-teal)] hover:text-zinc-950 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200"
+              : "border-white/15 bg-black/10 text-emerald-100/85 hover:bg-white/10 hover:text-white"
+          )}
         >
           {item.label}
         </button>
@@ -211,9 +285,17 @@ function FieldRow({
   hint?: string;
   children: React.ReactNode;
 }) {
+  const { marketplaceEnabled } = useSiteMode();
   return (
     <div className="grid gap-1.5">
-      <Label className="text-sm font-semibold text-white">{label}</Label>
+      <Label
+        className={cn(
+          "text-sm font-semibold",
+          marketplaceEnabled ? "text-zinc-900 dark:text-zinc-50" : "text-white"
+        )}
+      >
+        {label}
+      </Label>
       {hint ? <p className="text-sm leading-relaxed pitch-muted">{hint}</p> : null}
       {children}
     </div>
@@ -227,8 +309,11 @@ export function AdminSettingsTab({
   focusSectionId,
   onFocusSectionConsumed,
 }: Props) {
+  const { marketplaceEnabled } = useSiteMode();
   const [channel, setChannel] = useState<ClientChannel>("web");
   const [settingsCategory, setSettingsCategory] = useState(WEB_SETTINGS_TOC[0]?.label ?? "System");
+  const [settingsBrowse, setSettingsBrowse] = useState<"hub" | "category">("hub");
+  const [settingsQuery, setSettingsQuery] = useState("");
   const [settings, setSettings] = useState<AppSettingsApiResponse | null>(null);
   const [saving, setSaving] = useState(false);
   const [fetching, setFetching] = useState(true);
@@ -241,15 +326,26 @@ export function AdminSettingsTab({
 
   useEffect(() => {
     setSettingsCategory(activeTocGroups[0]?.label ?? "System");
+    setSettingsBrowse("hub");
+    setSettingsQuery("");
   }, [channel, activeTocGroups]);
 
   useEffect(() => {
     if (!focusSectionId) return;
-    const cat = categoryForSectionId(focusSectionId, WEB_SETTINGS_TOC);
-    if (cat) {
+    const webCat = categoryForSectionId(focusSectionId, WEB_SETTINGS_TOC);
+    const mobileCat = categoryForSectionId(focusSectionId, MOBILE_SETTINGS_TOC);
+    if (webCat) {
       setChannel("web");
-      setSettingsCategory(cat);
+      setSettingsCategory(webCat);
+      setSettingsBrowse("category");
+      setSettingsQuery("");
       window.setTimeout(() => scrollToSettingsSection(focusSectionId), 120);
+    } else if (mobileCat) {
+      setChannel("mobile");
+      setSettingsCategory(mobileCat);
+      setSettingsBrowse("category");
+      setSettingsQuery("");
+      window.setTimeout(() => scrollToSettingsSection(focusSectionId), 160);
     }
     onFocusSectionConsumed?.();
   }, [focusSectionId, onFocusSectionConsumed]);
@@ -408,7 +504,24 @@ export function AdminSettingsTab({
   const busy = loading || fetching || saving;
   const mobile = settings?.mobile_settings;
   const activeGroup = activeTocGroups.find((g) => g.label === settingsCategory) ?? activeTocGroups[0];
-  const visibleSectionIds = new Set(activeGroup?.items.map((i) => i.id) ?? []);
+  const searchQ = settingsQuery.trim().toLowerCase();
+  const searchHits = useMemo(() => {
+    if (!searchQ) return [] as SettingsTocItem[];
+    const hits: SettingsTocItem[] = [];
+    for (const g of activeTocGroups) {
+      for (const item of g.items) {
+        const hay = `${item.label} ${item.keywords ?? ""} ${g.label}`.toLowerCase();
+        if (hay.includes(searchQ)) hits.push(item);
+      }
+    }
+    return hits;
+  }, [activeTocGroups, searchQ]);
+
+  const visibleSectionIds = useMemo(() => {
+    if (searchQ) return new Set(searchHits.map((i) => i.id));
+    if (settingsBrowse === "hub") return new Set<string>();
+    return new Set(activeGroup?.items.map((i) => i.id) ?? []);
+  }, [searchQ, searchHits, settingsBrowse, activeGroup]);
 
   const sectionVisible = (id: string) => visibleSectionIds.has(id);
 
@@ -432,15 +545,7 @@ export function AdminSettingsTab({
     );
   }
 
-  const registrationStatusLabel = (() => {
-    if (settings.allow_self_registration === false) {
-      return "Wyłączona — nowe konta zakłada administrator";
-    }
-    if (settings.system.self_registration_env_override) {
-      return "Włączona dodatkowo na serwerze (zmienna env)";
-    }
-    return "Włączona — gracze mogą zakładać konta samodzielnie";
-  })();
+  const registrationStatusLabel = "Włączona — gracze mogą zakładać konta samodzielnie";
 
   return (
     <div className="space-y-6">
@@ -500,13 +605,96 @@ export function AdminSettingsTab({
 
       <AdminChannelToggle channel={channel} onChange={setChannel} />
 
-      <SettingsCategoryNav
-        groups={activeTocGroups}
-        activeLabel={settingsCategory}
-        onChange={setSettingsCategory}
+      <SettingsSearchBar
+        value={settingsQuery}
+        onChange={(v) => {
+          setSettingsQuery(v);
+          if (v.trim()) setSettingsBrowse("category");
+        }}
+        marketplace={marketplaceEnabled}
       />
-      <SettingsSectionNav items={activeGroup?.items ?? []} />
 
+      {!searchQ && settingsBrowse === "hub" ? (
+        <SettingsHub
+          groups={activeTocGroups}
+          marketplace={marketplaceEnabled}
+          onOpenGroup={(label) => {
+            setSettingsCategory(label);
+            setSettingsBrowse("category");
+          }}
+        />
+      ) : null}
+
+      {!searchQ && settingsBrowse === "category" ? (
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              setSettingsBrowse("hub");
+              setSettingsQuery("");
+            }}
+            className={cn(
+              "awp-focus-ring inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold",
+              marketplaceEnabled
+                ? "border border-zinc-200 bg-white text-zinc-800 hover:border-[var(--mp-teal)] dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+                : "border border-white/20 bg-black/15 text-white hover:bg-white/10"
+            )}
+          >
+            <ArrowLeft className="h-4 w-4" aria-hidden />
+            Wszystkie kategorie
+          </button>
+          <p
+            className={cn(
+              "text-sm font-bold",
+              marketplaceEnabled ? "text-zinc-950 dark:text-white" : "text-white"
+            )}
+          >
+            {activeGroup?.label}
+          </p>
+        </div>
+      ) : null}
+
+      {searchQ ? (
+        <div className="mb-4 space-y-2">
+          <p
+            className={cn(
+              "text-sm",
+              marketplaceEnabled ? "text-zinc-500" : "text-emerald-100/80"
+            )}
+          >
+            {searchHits.length === 0
+              ? "Brak ustawień pasujących do frazy."
+              : `Znaleziono ${searchHits.length} ${searchHits.length === 1 ? "ustawienie" : "ustawienia"}:`}
+          </p>
+          {searchHits.length > 0 ? (
+            <ul className="flex flex-wrap gap-1.5">
+              {searchHits.map((hit) => (
+                <li key={hit.id}>
+                  <button
+                    type="button"
+                    onClick={() => scrollToSettingsSection(hit.id)}
+                    className={cn(
+                      "awp-focus-ring rounded-lg border px-2.5 py-1.5 text-xs font-semibold",
+                      marketplaceEnabled
+                        ? "border-[var(--mp-teal)]/40 bg-teal-50 text-[var(--mp-teal-dark)] dark:border-teal-700 dark:bg-teal-950/40 dark:text-teal-200"
+                        : "border-white/20 bg-black/15 text-white"
+                    )}
+                  >
+                    {hit.label}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
+      ) : null}
+
+      {!searchQ && settingsBrowse === "category" ? (
+        <SettingsSectionNav items={activeGroup?.items ?? []} marketplace={marketplaceEnabled} />
+      ) : null}
+
+      {searchQ || settingsBrowse === "category" ? (
+        <>
       {channel === "mobile" && mobile ? (
         <MobileSettingsEditor
           mobile={mobile}
@@ -931,27 +1119,15 @@ export function AdminSettingsTab({
         id="settings-registration"
         hidden={!sectionVisible("settings-registration")}
         title="Rejestracja i powiadomienia"
-        description="Kto może założyć konto samodzielnie oraz czy gracze dostają e-maile o nowych terminach."
+        description="Rejestracja nowych graczy jest zawsze otwarta. Tutaj ustawiasz powiadomienia e-mail o meczach."
       >
-        <FieldRow
-          label="Czy nowi gracze mogą sami zakładać konta?"
-          hint="Domyślnie rejestracja jest otwarta. Wyłącz, jeśli nowe konta ma zakładać tylko administrator."
-        >
-          <select
-            className={cn("awp-native-select h-10 w-full rounded-xl px-3 text-sm", adminFieldClass)}
-            value={settings.allow_self_registration === false ? "closed" : "open"}
-            disabled={busy}
-            onChange={(e) => {
-              const v = e.target.value;
-              void save({
-                allow_self_registration: v === "closed" ? false : true,
-              });
-            }}
-          >
-            <option value="open">Włączona — gracze sami zakładają konta</option>
-            <option value="closed">Wyłączona — tylko administrator dodaje graczy</option>
-          </select>
-        </FieldRow>
+        <div className={cn(adminStatusChipClass, "mb-2")}>
+          <span className="text-emerald-100/70">Rejestracja nowych graczy:</span>{" "}
+          <strong className="text-emerald-300">Zawsze włączona</strong>
+          <p className="mt-1 text-sm text-emerald-100/75">
+            Gracze mogą sami zakładać konta — tej opcji nie da się wyłączyć.
+          </p>
+        </div>
         <YesNoSwitchRow
           className={adminToggleRowClass}
           label="Pytaj gracza o e-mail po logowaniu"
@@ -1182,6 +1358,8 @@ export function AdminSettingsTab({
       </p>
         </>
       )}
+        </>
+      ) : null}
     </div>
   );
 }
@@ -1282,12 +1460,10 @@ function MobileSettingsEditor({
             </Button>
           </div>
         </FieldRow>
-        <YesNoSwitchRow
-          label="Rejestracja z aplikacji (WebView)"
-          checked={mobile.allow_self_registration !== false}
-          disabled={busy}
-          onCheckedChange={(v) => onSavePatch({ allow_self_registration: v })}
-        />
+        <div className={cn(adminStatusChipClass)}>
+          <span className="text-emerald-100/70">Rejestracja z aplikacji:</span>{" "}
+          <strong className="text-emerald-300">Zawsze włączona</strong>
+        </div>
       </SettingsSection>
 
       <SettingsSection id="settings-m-contact" hidden={!show("settings-m-contact")} title="Kontakt w aplikacji">

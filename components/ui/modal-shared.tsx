@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { Calendar, Clock, Info, Loader2, MapPin, TriangleAlert, Users, XCircle } from "lucide-react";
+import { useSiteMode } from "@/components/site-mode";
 import { cn } from "@/lib/utils";
 
 export const modalPanelClass =
@@ -42,6 +43,10 @@ export function ModalLoadingRow({ label = "Wczytywanie…" }: { label?: string }
 }
 
 export function ModalMatchSummary({ match }: { match: MatchLike }) {
+  const { marketplaceEnabled } = useSiteMode();
+  const accent = marketplaceEnabled
+    ? "text-[var(--mp-teal-dark)] dark:text-teal-300"
+    : "text-emerald-600 dark:text-emerald-400";
   const dateLabel = match.match_date.slice(5).replace("-", ".");
   const year = match.match_date.slice(0, 4);
   const time = match.match_time.length >= 5 ? match.match_time.slice(0, 5) : match.match_time;
@@ -50,8 +55,8 @@ export function ModalMatchSummary({ match }: { match: MatchLike }) {
     <div className={cn(modalPanelClass, "flex flex-wrap items-center gap-3 sm:gap-4")}>
       <div className="flex items-center gap-3">
         <div className="flex flex-col items-center rounded-xl border border-zinc-200/90 bg-white px-3 py-1.5 shadow-sm dark:border-zinc-600 dark:bg-zinc-900/80">
-          <Calendar className="h-4 w-4 text-emerald-600 dark:text-emerald-400" aria-hidden />
-          <span className="mt-0.5 text-sm font-bold tabular-nums text-[var(--mundial-navy)] dark:text-zinc-100">
+          <Calendar className={cn("h-4 w-4", accent)} aria-hidden />
+          <span className="mt-0.5 text-sm font-bold tabular-nums text-zinc-950 dark:text-zinc-100">
             {dateLabel}
           </span>
           <span className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
@@ -59,19 +64,19 @@ export function ModalMatchSummary({ match }: { match: MatchLike }) {
           </span>
         </div>
         <div>
-          <div className="flex items-center gap-1.5 text-[var(--mundial-navy)] dark:text-zinc-100">
-            <Clock className="h-4 w-4 text-emerald-600 dark:text-emerald-400" aria-hidden />
+          <div className="flex items-center gap-1.5 text-zinc-950 dark:text-zinc-100">
+            <Clock className={cn("h-4 w-4", accent)} aria-hidden />
             <span className="text-lg font-bold tabular-nums">{time}</span>
           </div>
           <p className="mt-1 flex items-start gap-1.5 text-sm text-zinc-600 dark:text-zinc-400">
-            <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden />
+            <MapPin className={cn("mt-0.5 h-3.5 w-3.5 shrink-0", accent)} aria-hidden />
             <span className="leading-snug">{match.location}</span>
           </p>
         </div>
       </div>
       {match.signed_up != null && match.max_slots != null ? (
-        <div className="flex items-center gap-1.5 rounded-xl border border-zinc-200/90 bg-white px-3 py-1.5 text-sm font-semibold text-[var(--mundial-navy)] dark:border-zinc-600 dark:bg-zinc-900/70 dark:text-zinc-100">
-          <Users className="h-4 w-4 text-emerald-600 dark:text-emerald-400" aria-hidden />
+        <div className="flex items-center gap-1.5 rounded-xl border border-zinc-200/90 bg-white px-3 py-1.5 text-sm font-semibold text-zinc-950 dark:border-zinc-600 dark:bg-zinc-900/70 dark:text-zinc-100">
+          <Users className={cn("h-4 w-4", accent)} aria-hidden />
           <span className="tabular-nums">
             {match.signed_up}/{match.max_slots}
           </span>

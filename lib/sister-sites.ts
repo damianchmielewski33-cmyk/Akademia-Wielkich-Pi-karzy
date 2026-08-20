@@ -4,6 +4,10 @@ export const DEFAULT_GYMBRAT_URL = "https://gym-brat.vercel.app";
 export const GYMBRAT_SITE_NAME = "GymBrat";
 export const GYMBRAT_SITE_TAGLINE = "Trening i dieta — siostrzana aplikacja";
 
+/** Zdjęcie siłowni na kafelku GymBrat (ekran główny) — nie boisko. */
+export const GYMBRAT_GYM_PHOTO =
+  "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=1600&q=80";
+
 /** Publiczny URL GymBrat (bez końcowego „/”). */
 export function getGymBratUrl(): string {
   const fromEnv = process.env.NEXT_PUBLIC_GYMBRAT_URL?.trim();

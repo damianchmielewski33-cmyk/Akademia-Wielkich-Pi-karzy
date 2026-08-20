@@ -106,6 +106,10 @@ fun LoginScreen(
                 ?: cfg.appSettings?.siteDescription?.takeIf { it.isNotBlank() }
                 ?: siteDescription
             marketplaceEnabled = cfg.appSettings?.bookingMarketplaceEnabled == true
+            try {
+                AwpApp.instance.appConfigStore.setMarketplaceEnabled(marketplaceEnabled)
+            } catch (_: Exception) {
+            }
         } catch (_: Exception) {
         }
         if (marketplaceEnabled) {

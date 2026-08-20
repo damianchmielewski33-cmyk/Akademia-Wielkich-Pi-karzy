@@ -4,6 +4,7 @@ import { getServerSession } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { getAppSettings } from "@/lib/app-settings";
 import { isHotpayConfigured } from "@/lib/hotpay";
+import { OpenDeepLinkInApp } from "@/components/open-deep-link-in-app";
 import { PlatnosciClient } from "@/components/platnosci-client";
 
 export const metadata: Metadata = {
@@ -17,12 +18,15 @@ export default async function PlatnosciPage() {
   const appSettings = await getAppSettings(db);
 
   return (
-    <Suspense fallback={<div className="p-8 text-center text-sm text-zinc-500 dark:text-zinc-400">Ładowanie płatności…</div>}>
-      <PlatnosciClient
-        isLoggedIn={Boolean(session)}
-        isAdmin={session?.isAdmin ?? false}
-        hotpayEnabled={isHotpayConfigured() && appSettings.hotpay_enabled}
-      />
-    </Suspense>
+    <>
+      <OpenDeepLinkInApp />
+      <Suspense fallback={<div className="p-8 text-center text-sm text-zinc-500 dark:text-zinc-400">Ładowanie płatności…</div>}>
+        <PlatnosciClient
+          isLoggedIn={Boolean(session)}
+          isAdmin={session?.isAdmin ?? false}
+          hotpayEnabled={isHotpayConfigured() && appSettings.hotpay_enabled}
+        />
+      </Suspense>
+    </>
   );
 }

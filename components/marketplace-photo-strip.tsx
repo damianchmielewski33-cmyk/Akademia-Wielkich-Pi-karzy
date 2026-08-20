@@ -10,9 +10,12 @@ import { MarketplacePitchPhoto } from "@/components/marketplace-pitch-photo";
 import { AppModal } from "@/components/ui/app-modal";
 import { Button } from "@/components/ui/button";
 import { canOptimizeMarketplacePhoto, MARKETPLACE_STRIP_VISIBLE } from "@/lib/marketplace-photos";
+import { formatBytesMb, prepareImageForUpload } from "@/lib/prepare-image-for-upload";
 import { siteAssetNeedsUnoptimized } from "@/lib/site-assets";
 import { cn } from "@/lib/utils";
 import type { AppSettings } from "@/lib/app-settings";
+
+const MAX_UPLOAD_BYTES = Math.floor(3.5 * 1024 * 1024);
 
 type EditResult = {
   photos: string[];
@@ -83,13 +86,27 @@ export function MarketplacePitchPhotoEditModal({
   const isCustom = Boolean(customSlots[slot]?.trim());
 
   async function handleFile(file: File) {
-    if (file.size > 3.5 * 1024 * 1024) {
-      toast.error("Plik jest za duży (max 3,5 MB).");
-      return;
-    }
     setBusy(true);
     try {
-      const result = await uploadSlot(slot, file);
+      let prepared;
+      try {
+        prepared = await prepareImageForUpload(file, {
+          maxBytes: MAX_UPLOAD_BYTES,
+          maxEdge: 2560,
+          preferMime: "image/jpeg",
+        });
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Nie udało się przygotować zdjęcia");
+        return;
+      }
+
+      if (prepared.resized) {
+        toast.message(
+          `Zmniejszono zdjęcie: ${formatBytesMb(prepared.originalBytes)} → ${formatBytesMb(prepared.finalBytes)}`
+        );
+      }
+
+      const result = await uploadSlot(slot, prepared.file);
       if (!result) return;
       applyUpdate(result.photos, result.custom);
       if (result.settings) onUpdated?.(result.settings);
@@ -139,7 +156,8 @@ export function MarketplacePitchPhotoEditModal({
           ) : null}
         </div>
         <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          {isCustom ? "Używasz własnego zdjęcia." : "Aktualnie widać zdjęcie domyślne."}
+          {isCustom ? "Używasz własnego zdjęcia." : "Aktualnie widać zdjęcie domyślne."}{" "}
+          Duże pliki (powyżej 3,5 MB) strona automatycznie zmniejszy przed wgraniem.
         </p>
         <input
           ref={inputRef}
@@ -241,7 +259,23 @@ export function AdminMarketplacePitchPhotosSection({
   async function onPick(index: number, file: File) {
     setBusyIndex(index);
     try {
-      const result = await uploadSlot(index, file);
+      let prepared;
+      try {
+        prepared = await prepareImageForUpload(file, {
+          maxBytes: MAX_UPLOAD_BYTES,
+          maxEdge: 2560,
+          preferMime: "image/jpeg",
+        });
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Nie udało się przygotować zdjęcia");
+        return;
+      }
+      if (prepared.resized) {
+        toast.message(
+          `Zmniejszono zdjęcie: ${formatBytesMb(prepared.originalBytes)} → ${formatBytesMb(prepared.finalBytes)}`
+        );
+      }
+      const result = await uploadSlot(index, prepared.file);
       if (!result) return;
       applyUpdate(result.photos, result.custom);
       if (result.settings) onUpdated?.(result.settings);
@@ -266,7 +300,7 @@ export function AdminMarketplacePitchPhotosSection({
     <div className="space-y-3">
       <p className="text-sm text-emerald-100/85">
         Zdjęcia paska pod „Gramy razem” (V2) oraz puli hero/kafelków. Kliknij też zdjęcie na stronie głównej lub w
-        terminarzu, aby je zmienić.
+        terminarzu, aby je zmienić. Pliki powyżej 3,5 MB są automatycznie zmniejszane przed wgraniem.
       </p>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {photos.map((src, i) => {

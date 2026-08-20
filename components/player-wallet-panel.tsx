@@ -64,14 +64,37 @@ export function formatWalletPln(n: number) {
   return new Intl.NumberFormat("pl-PL", { style: "currency", currency: "PLN" }).format(v);
 }
 
-function formatTxDateParts(raw: string) {
+function parseTxDate(raw: string): Date | null {
   const normalized = raw.includes("T") ? raw : raw.replace(" ", "T");
   const dt = new Date(normalized);
-  if (Number.isNaN(dt.getTime())) return { date: raw, time: "" };
-  return {
-    date: dt.toLocaleDateString("pl-PL", { day: "2-digit", month: "2-digit", year: "numeric" }),
-    time: dt.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" }),
-  };
+  return Number.isNaN(dt.getTime()) ? null : dt;
+}
+
+function localDayKey(dt: Date): string {
+  const y = dt.getFullYear();
+  const m = String(dt.getMonth() + 1).padStart(2, "0");
+  const d = String(dt.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+function formatDayHeading(dayKey: string): string {
+  const today = localDayKey(new Date());
+  if (dayKey === today) return "Dziś";
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  if (dayKey === localDayKey(yesterday)) return "Wczoraj";
+  const dt = new Date(`${dayKey}T12:00:00`);
+  return dt.toLocaleDateString("pl-PL", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  });
+}
+
+function formatTxTime(raw: string): string {
+  const dt = parseTxDate(raw);
+  if (!dt) return "";
+  return dt.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
 }
 
 function relatedUserLabel(tx: WalletMeTransaction): string | null {
@@ -103,45 +126,58 @@ function matchLabel(tx: WalletMeTransaction): string | null {
 
 function walletTxMeta(tx: WalletMeTransaction) {
   const amount = Number(tx.amount_pln ?? 0);
+  const related = relatedUserLabel(tx);
   switch (tx.kind) {
     case "deposit":
       return {
-        label: amount >= 0 ? "Doładowanie" : "Korekta wpłaty",
+        title: amount >= 0 ? "Doładowanie" : "Korekta wpłaty",
         Icon: ArrowDownLeft,
       };
     case "match_charge":
       return {
-        label: amount < 0 ? "Opłata za mecz" : "Zwrot / uznanie meczu",
+        title: amount < 0 ? "Opłata za mecz" : "Zwrot za mecz",
         Icon: ArrowUpRight,
       };
     case "adjustment":
       return {
-        label: amount > 0 ? "Zwrot / uznanie" : "Korekta",
+        title: amount > 0 ? "Zwrot na konto" : "Korekta salda",
         Icon: SlidersHorizontal,
       };
     case "transfer":
+      if (related) {
+        return {
+          title: amount > 0 ? `Od ${related}` : `Do ${related}`,
+          Icon: ArrowLeftRight,
+        };
+      }
       return {
-        label: amount > 0 ? "Przelew otrzymany" : "Przelew wysłany",
+        title: amount > 0 ? "Przelew otrzymany" : "Przelew wysłany",
         Icon: ArrowLeftRight,
       };
     default:
-      return { label: String(tx.kind), Icon: SlidersHorizontal };
+      return { title: String(tx.kind), Icon: SlidersHorizontal };
   }
 }
 
-function walletKindLabel(kind: WalletTransactionRow["wallet_kind"] | null | undefined) {
-  if (kind === "operator") return "Online";
-  return "Gotówka";
-}
+function txSubtitle(tx: WalletMeTransaction): string | null {
+  const time = formatTxTime(tx.created_at);
+  const bits: string[] = [];
+  if (time) bits.push(time);
 
-function txDetailLine(tx: WalletMeTransaction, amount: number): string | null {
-  const match = matchLabel(tx);
-  if (match) return match;
-  const related = relatedUserLabel(tx);
-  if (related) return `${amount > 0 ? "Od" : "Do"}: ${related}`;
-  const note = tx.note?.trim();
-  if (note) return note.length > 90 ? `${note.slice(0, 90)}…` : note;
-  return null;
+  if (tx.kind === "match_charge") {
+    const match = matchLabel(tx);
+    if (match) bits.push(match);
+  } else if (tx.kind === "transfer") {
+    const note = tx.note?.trim();
+    if (note) bits.push(note.length > 60 ? `${note.slice(0, 60)}…` : note);
+  } else {
+    const note = tx.note?.trim();
+    if (note) bits.push(note.length > 70 ? `${note.slice(0, 70)}…` : note);
+    else if (tx.kind === "deposit" && tx.wallet_kind === "operator") bits.push("Płatność online");
+    else if (tx.kind === "deposit") bits.push("Gotówka / BLIK u admina");
+  }
+
+  return bits.length ? bits.join(" · ") : null;
 }
 
 export function WalletBalanceHistory({
@@ -164,34 +200,31 @@ export function WalletBalanceHistory({
   const [filter, setFilter] = useState<HistoryFilter>("all");
   const [query, setQuery] = useState("");
 
-  const counts = useMemo(() => {
-    const c = { all: transactions.length, deposit: 0, match_charge: 0, transfer: 0, adjustment: 0 };
-    for (const tx of transactions) {
-      if (tx.kind in c) c[tx.kind as Exclude<HistoryFilter, "all">] += 1;
-    }
-    return c;
-  }, [transactions]);
-
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return transactions.filter((tx) => {
       if (filter !== "all" && tx.kind !== filter) return false;
       if (!q) return true;
-      const hay = [
-        tx.note,
-        tx.kind,
-        matchLabel(tx),
-        relatedUserLabel(tx),
-        String(tx.id),
-        String(tx.match_id ?? ""),
-        walletKindLabel(tx.wallet_kind),
-      ]
+      const meta = walletTxMeta(tx);
+      const hay = [tx.note, meta.title, matchLabel(tx), relatedUserLabel(tx), String(tx.match_id ?? "")]
         .filter(Boolean)
         .join(" ")
         .toLowerCase();
       return hay.includes(q);
     });
   }, [transactions, filter, query]);
+
+  const groups = useMemo(() => {
+    const map = new Map<string, WalletMeTransaction[]>();
+    for (const tx of filtered) {
+      const dt = parseTxDate(tx.created_at);
+      const key = dt ? localDayKey(dt) : "unknown";
+      const list = map.get(key);
+      if (list) list.push(tx);
+      else map.set(key, [tx]);
+    }
+    return Array.from(map.entries());
+  }, [filtered]);
 
   if (loading && transactions.length === 0) {
     return (
@@ -234,9 +267,6 @@ export function WalletBalanceHistory({
             )}
           >
             {f.label}
-            {filter === f.id || f.id === "all" ? (
-              <span className="ml-1 tabular-nums opacity-75">{counts[f.id]}</span>
-            ) : null}
           </button>
         ))}
       </div>
@@ -245,7 +275,7 @@ export function WalletBalanceHistory({
         type="search"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        placeholder="Szukaj…"
+        placeholder="Szukaj po meczu, osobie lub notatce…"
         className={cn(
           light ? paymentsFieldClass : cn(adminFieldClass, "w-full rounded-xl px-3 py-2 text-sm outline-none"),
           "h-10"
@@ -254,78 +284,101 @@ export function WalletBalanceHistory({
 
       {filtered.length === 0 ? (
         <p className={cn("py-8 text-center text-sm", light ? "text-zinc-500" : "pitch-muted")}>
-          Brak wpisów dla wybranego filtra.
+          Nic nie pasuje do filtra.
         </p>
       ) : (
-        <ul className="max-h-[min(70vh,36rem)] space-y-2 overflow-y-auto overscroll-contain pr-0.5">
-          {filtered.map((tx) => {
-            const amount = Number(tx.amount_pln ?? 0);
-            const balanceAfter = Number(tx.balance_after_pln ?? 0);
-            const isPositive = amount > 0;
-            const isNegative = amount < 0;
-            const { date, time } = formatTxDateParts(tx.created_at);
-            const meta = walletTxMeta(tx);
-            const Icon = meta.Icon;
-            const detail = txDetailLine(tx, amount);
-            const isTest = Boolean(tx.is_test);
-
-            return (
-              <li
-                key={tx.id}
+        <div
+          className={cn(
+            "max-h-[min(70vh,36rem)] overflow-y-auto overscroll-contain",
+            light
+              ? "rounded-2xl border border-zinc-200 dark:border-zinc-800"
+              : "rounded-2xl border border-white/15 bg-black/15"
+          )}
+        >
+          {groups.map(([dayKey, dayTxs]) => (
+            <section key={dayKey}>
+              <h3
                 className={cn(
-                  "flex items-start gap-3 rounded-2xl px-3 py-3",
+                  "sticky top-0 z-[1] px-3 py-2 text-xs font-semibold capitalize",
                   light
-                    ? "border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950"
-                    : "border border-white/15 bg-black/20"
+                    ? "bg-zinc-50 text-zinc-600 dark:bg-zinc-900 dark:text-zinc-300"
+                    : "bg-black/40 text-emerald-100/80 backdrop-blur-sm"
                 )}
               >
-                <span
-                  className={cn(
-                    "mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl",
-                    light
-                      ? isNegative
-                        ? "bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-300"
-                        : isPositive
-                          ? "bg-teal-50 text-[var(--mp-teal-dark)] dark:bg-teal-950/40 dark:text-teal-200"
-                          : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300"
-                      : isNegative
-                        ? "bg-red-500/20 text-red-200"
-                        : "bg-white/10 text-white"
-                  )}
-                  aria-hidden
-                >
-                  <Icon className="h-4 w-4" />
-                </span>
+                {dayKey === "unknown" ? "Bez daty" : formatDayHeading(dayKey)}
+              </h3>
+              <ul>
+                {dayTxs.map((tx, idx) => {
+                  const amount = Number(tx.amount_pln ?? 0);
+                  const isPositive = amount > 0;
+                  const isNegative = amount < 0;
+                  const meta = walletTxMeta(tx);
+                  const Icon = meta.Icon;
+                  const subtitle = txSubtitle(tx);
+                  const isTest = Boolean(tx.is_test);
 
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p
+                  return (
+                    <li
+                      key={tx.id}
+                      className={cn(
+                        "flex items-center gap-3 px-3 py-3",
+                        idx > 0 && (light ? "border-t border-zinc-100 dark:border-zinc-800" : "border-t border-white/10")
+                      )}
+                    >
+                      <span
                         className={cn(
-                          "truncate text-sm font-semibold",
-                          light ? "text-zinc-950 dark:text-white" : "text-white"
+                          "flex h-9 w-9 shrink-0 items-center justify-center rounded-full",
+                          light
+                            ? isNegative
+                              ? "bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-300"
+                              : isPositive
+                                ? "bg-teal-50 text-[var(--mp-teal-dark)] dark:bg-teal-950/40 dark:text-teal-200"
+                                : "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-300"
+                            : isNegative
+                              ? "bg-red-500/20 text-red-200"
+                              : isPositive
+                                ? "bg-emerald-500/20 text-emerald-200"
+                                : "bg-white/10 text-white"
                         )}
+                        aria-hidden
                       >
-                        {meta.label}
-                        {isTest ? (
-                          <span
+                        <Icon className="h-4 w-4" />
+                      </span>
+
+                      <div className="min-w-0 flex-1">
+                        <p
+                          className={cn(
+                            "truncate text-sm font-medium",
+                            light ? "text-zinc-950 dark:text-white" : "text-white"
+                          )}
+                        >
+                          {meta.title}
+                          {isTest ? (
+                            <span
+                              className={cn(
+                                "ml-1.5 text-[10px] font-bold uppercase tracking-wide",
+                                light ? "text-amber-600" : "text-amber-200"
+                              )}
+                            >
+                              Test
+                            </span>
+                          ) : null}
+                        </p>
+                        {subtitle ? (
+                          <p
                             className={cn(
-                              "ml-2 align-middle text-[10px] font-bold uppercase tracking-wide",
-                              light ? "text-amber-600" : "text-amber-200"
+                              "mt-0.5 truncate text-xs",
+                              light ? "text-zinc-500 dark:text-zinc-400" : "text-emerald-100/65"
                             )}
                           >
-                            Test
-                          </span>
+                            {subtitle}
+                          </p>
                         ) : null}
-                      </p>
-                      <p className={cn("mt-0.5 truncate text-xs", light ? "text-zinc-500" : "text-emerald-100/70")}>
-                        {[detail, walletKindLabel(tx.wallet_kind)].filter(Boolean).join(" · ")}
-                      </p>
-                    </div>
-                    <div className="shrink-0 text-right">
+                      </div>
+
                       <p
                         className={cn(
-                          "text-sm font-bold tabular-nums leading-none",
+                          "shrink-0 text-sm font-semibold tabular-nums",
                           isPositive && (light ? "text-[var(--mp-teal-dark)]" : "text-emerald-300"),
                           isNegative && (light ? "text-red-600 dark:text-red-300" : "text-red-300"),
                           !isPositive && !isNegative && (light ? "text-zinc-900 dark:text-white" : "text-white")
@@ -334,30 +387,17 @@ export function WalletBalanceHistory({
                         {isPositive ? "+" : ""}
                         {formatWalletPln(amount)}
                       </p>
-                      <p className={cn("mt-1 text-[11px] tabular-nums", light ? "text-zinc-400" : "text-emerald-100/55")}>
-                        {date}
-                        {time ? ` ${time}` : ""}
-                      </p>
-                      <p className={cn("mt-0.5 text-[11px] tabular-nums", light ? "text-zinc-400" : "text-emerald-100/45")}>
-                        saldo {formatWalletPln(balanceAfter)}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </li>
-            );
-          })}
-        </ul>
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          ))}
+        </div>
       )}
 
-      <p className={cn("text-center text-[11px] tabular-nums", light ? "text-zinc-400" : "pitch-muted")}>
-        {filtered.length}
-        {filtered.length !== transactions.length ? ` z ${transactions.length}` : ""}
-        {total > transactions.length ? ` · łącznie ${total}` : ""}
-      </p>
-
       {hasMore && onLoadMore ? (
-        <div className="flex justify-center pt-1">
+        <div className="flex flex-col items-center gap-1.5 pt-1">
           <Button
             type="button"
             variant={light ? "outline" : "gold"}
@@ -367,8 +407,13 @@ export function WalletBalanceHistory({
             onClick={() => onLoadMore()}
           >
             {loadingMore ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
-            Starsze wpisy
+            Pokaż starsze
           </Button>
+          {total > transactions.length ? (
+            <p className={cn("text-[11px] tabular-nums", light ? "text-zinc-400" : "pitch-muted")}>
+              Załadowano {transactions.length} z {total}
+            </p>
+          ) : null}
         </div>
       ) : null}
     </div>
@@ -784,8 +829,8 @@ export function PlayerWalletPanel({
       )}
 
       <PaymentsCard
-        title="Historia salda"
-        description="Wszystkie doładowania, opłaty meczów, przelewy, zwroty i korekty — z saldem po każdej operacji. Najnowsze na górze."
+        title="Historia operacji"
+        description="Wpłaty, mecze i przelewy — pogrupowane według dnia. Najnowsze na górze."
         headerExtra={<ChromeIconBadge icon={Wallet} marketplace={marketplaceEnabled} />}
       >
         <WalletBalanceHistory

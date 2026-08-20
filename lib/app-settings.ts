@@ -370,7 +370,6 @@ export function resolveAppSettings(
       ? { ...APP_SETTINGS_DEFAULTS, ...PZU_CUP_APP_SETTINGS_DEFAULTS }
       : APP_SETTINGS_DEFAULTS;
   const d = baseDefaults;
-  const allowRaw = row?.allow_self_registration;
   const assetUrls = siteAssetUrlsFromRow(row);
   return {
     match_notification_prompt_enabled: sqlFlagOn(row?.match_notification_prompt_enabled, false),
@@ -393,8 +392,8 @@ export function resolveAppSettings(
     organizer_mateusz_email: nonEmptyString(row?.organizer_mateusz_email, d.organizer_mateusz_email),
     facebook_damian_url: nonEmptyString(row?.facebook_damian_url, d.facebook_damian_url),
     facebook_mateusz_url: nonEmptyString(row?.facebook_mateusz_url, d.facebook_mateusz_url),
-    allow_self_registration:
-      allowRaw === null || allowRaw === undefined ? true : sqlFlagOn(allowRaw, true),
+    /** Rejestracja graczy jest zawsze otwarta — nie da się jej wyłączyć. */
+    allow_self_registration: true,
     default_match_max_slots:
       typeof row?.default_match_max_slots === "number" && row.default_match_max_slots >= 1
         ? row.default_match_max_slots
@@ -601,7 +600,7 @@ export async function saveAppSettings(db: DbWriteLike, realm: Realm, settings: A
       settings.organizer_mateusz_email,
       settings.facebook_damian_url,
       settings.facebook_mateusz_url,
-      settings.allow_self_registration === null ? null : settings.allow_self_registration ? 1 : 0,
+      1, // allow_self_registration — zawsze włączona
       settings.default_match_max_slots,
       settings.default_match_fee_pln,
       settings.default_match_location || null,

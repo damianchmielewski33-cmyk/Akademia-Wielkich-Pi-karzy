@@ -97,7 +97,7 @@ export const SITE_ASSET_UPLOAD_SPECS: Record<SiteAssetKey, ImageUploadSpec> = {
     aspectRatio: "16:9 — poziomy panoramiczny",
     formats: "JPG, WebP, PNG lub SVG",
     maxFileSize: "3,5 MB",
-    fillTip: "Ważne elementy trzymaj bliżej środka — brzegi mogą być przycięte na wąskich ekranach. Duże zdjęcia skompresuj przed wgraniem.",
+    fillTip: "Ważne elementy trzymaj bliżej środka — brzegi mogą być przycięte na wąskich ekranach. Zbyt duże pliki strona zmniejszy automatycznie przed wgraniem.",
   },
   bg_pitch_lines: {
     label: SITE_ASSET_META.bg_pitch_lines.label,

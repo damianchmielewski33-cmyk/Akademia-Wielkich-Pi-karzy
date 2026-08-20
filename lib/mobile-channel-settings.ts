@@ -232,10 +232,7 @@ export function parseMobileSettingsJson(
         typeof parsed.facebook_mateusz_url === "string" && parsed.facebook_mateusz_url.trim()
           ? parsed.facebook_mateusz_url.trim()
           : base.facebook_mateusz_url,
-      allow_self_registration:
-        parsed.allow_self_registration === null || typeof parsed.allow_self_registration === "boolean"
-          ? parsed.allow_self_registration
-          : base.allow_self_registration,
+      allow_self_registration: true,
       default_match_max_slots:
         typeof parsed.default_match_max_slots === "number" && parsed.default_match_max_slots >= 1
           ? parsed.default_match_max_slots

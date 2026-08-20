@@ -621,7 +621,7 @@ function AcademyHomeView({
             ) : (
               <LogoutPitchTile onClick={() => setLogoutOpen(true)} />
             )}
-            <GymBratCrossLink />
+            <GymBratCrossLink className="min-h-[7rem]" />
           </div>
 
           {isAcademyHome ? (
@@ -816,10 +816,7 @@ function AcademyHomeView({
                   </HomePhotoTile>
                 );
               })}
-              <GymBratCrossLink
-                photoSrc={marketplaceEnabled ? homeTilePhoto(photoPool, moreLinks.length + 6) : undefined}
-                className={marketplaceEnabled ? "min-h-[15rem]" : undefined}
-              />
+              <GymBratCrossLink className="min-h-[15rem]" />
             </div>
           </section>
         ) : null}

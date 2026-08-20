@@ -10,6 +10,8 @@ import {
   X,
 } from "lucide-react";
 import { PhotoPanel } from "@/components/photo-panel";
+import { useSiteMode } from "@/components/site-mode";
+import { ADMIN_SETTINGS_SEARCH_INDEX } from "@/lib/admin-settings-search";
 import { pitchPhotoAt } from "@/lib/marketplace-photos";
 import { cn } from "@/lib/utils";
 
@@ -24,25 +26,15 @@ type Props = {
   className?: string;
 };
 
-const SETTINGS_HITS: { id: string; label: string; keywords: string }[] = [
-  { id: "settings-test-mode", label: "Tryb testowy", keywords: "sandbox test" },
-  { id: "settings-marketplace", label: "Wersja aplikacji", keywords: "v1 v2 wersja marketplace hale rezerwacje wyłącznik" },
-  { id: "settings-brand", label: "Nazwa i opis strony", keywords: "nazwa branding seo" },
-  { id: "settings-assets", label: "Logo i tła", keywords: "logo tło grafika asset" },
-  { id: "settings-contact", label: "Kontakt i organizatorzy", keywords: "email telefon blik facebook" },
-  { id: "settings-home-video", label: "Film na stronie głównej", keywords: "youtube film video" },
-  { id: "settings-adsense", label: "Google AdSense", keywords: "reklamy adsense" },
-  { id: "settings-registration", label: "Rejestracja i powiadomienia", keywords: "rejestracja mail" },
-  { id: "settings-match-defaults", label: "Domyślne mecze", keywords: "miejsca lokalizacja mecz" },
-  { id: "settings-ranking-points", label: "Punkty rankingowe", keywords: "ranking punkty gol" },
-  { id: "settings-pitch-plan", label: "Plan boiska", keywords: "składy boisko" },
-  { id: "settings-cancel-reasons", label: "Powody anulowania", keywords: "anuluj powód" },
-];
-
 const TAB_HITS: { tab: string; label: string; keywords: string }[] = [
   { tab: "dashboard", label: "Przegląd", keywords: "start dashboard" },
   { tab: "users", label: "Użytkownicy", keywords: "konta pin gracze" },
   { tab: "messages", label: "Wiadomości", keywords: "inbox chat" },
+  {
+    tab: "mobile-apps",
+    label: "Aplikacje mobilne",
+    keywords: "android ios pwa instalacja telefon aplikacja",
+  },
   { tab: "matches", label: "Mecze", keywords: "terminarz zapisy" },
   { tab: "bookings", label: "Rezerwacje boisk", keywords: "hale terminy rezerwacje booking" },
   { tab: "lineups", label: "Składy na mecz", keywords: "skład boisko" },
@@ -66,6 +58,7 @@ type SearchResult = {
 };
 
 export function AdminCommandSearch({ onJump, className }: Props) {
+  const { marketplaceEnabled } = useSiteMode();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
@@ -157,12 +150,12 @@ export function AdminCommandSearch({ onJump, className }: Props) {
         });
       }
     }
-    for (const s of SETTINGS_HITS) {
-      if (`${s.label} ${s.keywords}`.toLowerCase().includes(q)) {
+    for (const s of ADMIN_SETTINGS_SEARCH_INDEX) {
+      if (`${s.label} ${s.keywords} ${s.group}`.toLowerCase().includes(q)) {
         out.push({
           key: `set-${s.id}`,
           label: s.label,
-          hint: "Ustawienia",
+          hint: `Ustawienia · ${s.group}`,
           icon: Settings2,
           jump: { type: "settings", sectionId: s.id },
         });
@@ -186,7 +179,7 @@ export function AdminCommandSearch({ onJump, className }: Props) {
         jump: { type: "match", matchId: m.id },
       });
     }
-    return out.slice(0, 12);
+    return out.slice(0, 24);
   }, [query, remote]);
 
   const select = useCallback(
@@ -208,14 +201,17 @@ export function AdminCommandSearch({ onJump, className }: Props) {
       >
         <PhotoPanel
           src={pitchPhotoAt(3)}
-          className="min-h-[3.25rem] border-2 border-white/30"
+          className={cn(
+            "min-h-[3.25rem] border-2 border-white/30",
+            marketplaceEnabled && open && "ring-2 ring-[var(--mp-teal)]"
+          )}
           contentClassName="flex min-h-[3.25rem] items-center gap-2.5 px-3 py-2.5"
           overlayClassName="bg-gradient-to-r from-black/75 via-black/50 to-black/20"
           sizes="320px"
         >
           <Search className="h-5 w-5 shrink-0 text-white" aria-hidden />
           <span className="min-w-0 flex-1 truncate text-sm font-bold text-white drop-shadow-sm sm:text-base">
-            Szukaj w panelu…
+            Szukaj w panelu i ustawieniach…
           </span>
           <kbd className="hidden rounded-md border border-white/35 bg-black/25 px-1.5 py-0.5 text-[10px] font-semibold text-white/80 sm:inline">
             Ctrl+K
@@ -224,14 +220,21 @@ export function AdminCommandSearch({ onJump, className }: Props) {
       </button>
 
       {open ? (
-        <div className="absolute left-0 right-0 top-full z-50 mt-1.5 overflow-hidden rounded-2xl border-2 border-white/25 bg-emerald-950/95 shadow-2xl backdrop-blur-md">
+        <div
+          className={cn(
+            "absolute left-0 right-0 top-full z-50 mt-1.5 overflow-hidden rounded-2xl border-2 shadow-2xl backdrop-blur-md",
+            marketplaceEnabled
+              ? "border-[var(--mp-teal)]/40 bg-zinc-950/95"
+              : "border-white/25 bg-emerald-950/95"
+          )}
+        >
           <div className="flex items-center gap-2 border-b border-white/15 px-3 py-3">
             <Search className="h-5 w-5 shrink-0 text-white/80" aria-hidden />
             <input
               ref={inputRef}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Użytkownik, mecz, ustawienie…"
+              placeholder="Użytkownik, mecz, ustawienie, zakładka…"
               className="min-w-0 flex-1 bg-transparent text-base font-medium text-white outline-none placeholder:text-white/50"
               aria-label="Fraza wyszukiwania"
             />
@@ -245,7 +248,7 @@ export function AdminCommandSearch({ onJump, className }: Props) {
               <X className="h-4 w-4" aria-hidden />
             </button>
           </div>
-          <ul className="max-h-72 overflow-y-auto py-1" role="listbox">
+          <ul className="max-h-80 overflow-y-auto py-1" role="listbox">
             {results.length === 0 ? (
               <li className="px-3 py-4 text-center text-base text-white/70">Brak wyników</li>
             ) : (

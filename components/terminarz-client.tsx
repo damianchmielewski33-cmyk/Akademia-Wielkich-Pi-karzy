@@ -1502,49 +1502,52 @@ export function TerminarzClient({
             </p>
             <div className="mt-8 max-w-5xl">
               {heroMatch ? (
-                <div className="mp-search-pill p-2 md:p-1.5">
-                  <div className="min-w-0 px-4 py-2">
-                    <span className="block text-[0.65rem] font-bold uppercase tracking-[0.14em] text-zinc-400">
+                <PhotoPanel
+                  src={heroPhoto}
+                  priority
+                  className="min-h-[13rem] shadow-2xl sm:min-h-[15rem]"
+                  contentClassName="flex h-full min-h-[13rem] flex-col justify-end gap-4 p-5 sm:min-h-[15rem] sm:flex-row sm:items-end sm:justify-between sm:p-6"
+                  sizes="(max-width: 768px) 100vw, 1024px"
+                >
+                  <div className="min-w-0">
+                    <p className="text-[0.65rem] font-bold uppercase tracking-[0.16em] text-white/80">
                       Najbliższy mecz
-                    </span>
-                    <span className="flex items-center gap-2 text-sm font-semibold text-zinc-900">
-                      <CalendarDays className="h-4 w-4 shrink-0 text-zinc-400" aria-hidden />
-                      {formatHeroDate(heroMatch.match_date)}
-                    </span>
+                    </p>
+                    <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-2xl font-black tracking-tight text-white drop-shadow-sm sm:text-3xl">
+                      <span className="inline-flex items-center gap-2">
+                        <CalendarDays className="h-5 w-5 shrink-0 text-[var(--mp-teal)]" aria-hidden />
+                        {formatHeroDate(heroMatch.match_date)}
+                      </span>
+                      <span className="inline-flex items-center gap-2 tabular-nums">
+                        <Clock className="h-5 w-5 shrink-0 text-[var(--mp-teal)]" aria-hidden />
+                        {heroMatch.match_time}
+                      </span>
+                    </p>
+                    <p className="mt-2 flex min-w-0 items-start gap-2 text-sm font-medium text-white/90 sm:text-base">
+                      <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[var(--mp-teal)]" aria-hidden />
+                      <span className="leading-snug">{heroMatch.location}</span>
+                    </p>
                   </div>
-                  <div className="min-w-0 px-4 py-2">
-                    <span className="block text-[0.65rem] font-bold uppercase tracking-[0.14em] text-zinc-400">
-                      Godzina
-                    </span>
-                    <span className="flex items-center gap-2 text-sm font-semibold text-zinc-900">
-                      <Clock className="h-4 w-4 shrink-0 text-zinc-400" aria-hidden />
-                      {heroMatch.match_time}
-                    </span>
-                  </div>
-                  <div className="min-w-0 px-4 py-2">
-                    <span className="block text-[0.65rem] font-bold uppercase tracking-[0.14em] text-zinc-400">
-                      Miejsce
-                    </span>
-                    <span className="flex items-center gap-2 text-sm font-semibold text-zinc-900">
-                      <MapPin className="h-4 w-4 shrink-0 text-zinc-400" aria-hidden />
-                      <span className="truncate">{heroMatch.location}</span>
-                    </span>
-                  </div>
-                  <Button asChild className="h-12 rounded-full px-8 text-sm font-black uppercase tracking-[0.12em]">
+                  <Button
+                    asChild
+                    className="h-12 w-full shrink-0 rounded-full px-8 text-sm font-black uppercase tracking-[0.12em] sm:w-auto"
+                  >
                     <a href={`#mecz-${heroMatch.id}`}>Zobacz mecz</a>
                   </Button>
-                </div>
+                </PhotoPanel>
               ) : (
-                <div className="mp-search-pill p-2 md:p-1.5">
-                  <div className="min-w-0 px-4 py-3 md:col-span-3">
-                    <span className="block text-[0.65rem] font-bold uppercase tracking-[0.14em] text-zinc-400">
-                      Terminarz
-                    </span>
-                    <span className="text-sm font-semibold text-zinc-900">
-                      Brak zaplanowanego meczu — sprawdź archiwum albo wróć później.
-                    </span>
-                  </div>
-                </div>
+                <PhotoPanel
+                  src={heroPhoto}
+                  priority
+                  className="min-h-[10rem]"
+                  contentClassName="flex min-h-[10rem] flex-col justify-end p-5 sm:p-6"
+                  sizes="(max-width: 768px) 100vw, 1024px"
+                >
+                  <p className="text-[0.65rem] font-bold uppercase tracking-[0.16em] text-white/80">Terminarz</p>
+                  <p className="mt-2 text-lg font-bold text-white drop-shadow-sm sm:text-xl">
+                    Brak zaplanowanego meczu — sprawdź archiwum albo wróć później.
+                  </p>
+                </PhotoPanel>
               )}
             </div>
           </div>
@@ -1607,9 +1610,9 @@ export function TerminarzClient({
                   </span>
                   <Button
                     type="button"
-                    variant="gold"
+                    variant={marketplaceEnabled ? "default" : "gold"}
                     size="lg"
-                    className="w-full sm:w-auto"
+                    className={cn("w-full sm:w-auto", marketplaceEnabled && "rounded-full font-bold")}
                     onClick={() => setAddOpen(true)}
                   >
                     <Plus className="h-4 w-4 shrink-0" aria-hidden />
@@ -1625,11 +1628,26 @@ export function TerminarzClient({
             {highlightMatch && (
               <div
                 role="status"
-                className="rounded-xl border-2 border-[var(--mundial-gold,#f5c518)] bg-black/70 px-4 py-3 text-sm leading-relaxed text-white shadow-sm"
+                className={cn(
+                  "rounded-xl border-2 px-4 py-3 text-sm leading-relaxed text-white shadow-sm",
+                  marketplaceEnabled
+                    ? "border-[var(--mp-teal)] bg-black/70"
+                    : "border-[var(--mundial-gold,#f5c518)] bg-black/70"
+                )}
               >
                 <span className="font-semibold">Z powiadomienia e-mail: </span>
-                poniżej <span className="font-medium text-[var(--mundial-gold,#f5c518)]">złotą ramką</span> wyróżniony
-                jest mecz, którego dotyczyła wiadomość — możesz od razu przejść do zapisu.
+                poniżej{" "}
+                <span
+                  className={cn(
+                    "font-medium",
+                    marketplaceEnabled
+                      ? "text-[var(--mp-teal)]"
+                      : "text-[var(--mundial-gold,#f5c518)]"
+                  )}
+                >
+                  {marketplaceEnabled ? "tealową ramką" : "złotą ramką"}
+                </span>{" "}
+                wyróżniony jest mecz, którego dotyczyła wiadomość — możesz od razu przejść do zapisu.
               </div>
             )}
             {highlightMatchId && !highlightMatch && (
@@ -1642,7 +1660,14 @@ export function TerminarzClient({
             )}
             <PhotoPanel src={pitchPhotoAt(3, mpPhotos)} className="mt-4" contentClassName="p-4 sm:p-5" sizes="(max-width: 768px) 100vw, 1152px">
               <details className="group rounded-xl border border-white/20 bg-black/20">
-                <summary className="awp-focus-ring flex cursor-pointer list-none items-center gap-2 px-3 py-2.5 text-xs font-semibold uppercase tracking-[0.1em] text-[var(--mundial-gold,#f5c518)] [&::-webkit-details-marker]:hidden">
+                <summary
+                  className={cn(
+                    "awp-focus-ring flex cursor-pointer list-none items-center gap-2 px-3 py-2.5 text-xs font-semibold uppercase tracking-[0.1em] [&::-webkit-details-marker]:hidden",
+                    marketplaceEnabled
+                      ? "text-[var(--mp-teal)]"
+                      : "text-[var(--mundial-gold,#f5c518)]"
+                  )}
+                >
                   <Search className="h-4 w-4 shrink-0" aria-hidden />
                   <span className="min-w-0 flex-1">
                     Wyszukaj mecz
@@ -1928,7 +1953,7 @@ export function TerminarzClient({
               {isLoggedIn && calPopup.played === 1 && missingStatsSet.has(calPopup.id) && (
                 <Button
                   type="button"
-                  variant="pitch"
+                  variant={marketplaceEnabled ? "default" : "pitch"}
                   className="h-auto min-h-9 w-full gap-2 whitespace-normal py-2 text-left sm:w-auto"
                   onClick={() => {
                     const m = calPopup;
@@ -2010,7 +2035,12 @@ export function TerminarzClient({
               href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(calPopup.location)}`}
               target="_blank"
               rel="noreferrer"
-              className="inline-block text-sm font-medium text-emerald-700 underline underline-offset-2 hover:text-emerald-900 dark:text-emerald-400 dark:hover:text-emerald-300"
+              className={cn(
+                "inline-block text-sm font-medium underline underline-offset-2",
+                marketplaceEnabled
+                  ? "text-[var(--mp-teal-dark)] hover:text-[var(--mp-teal)] dark:text-teal-300 dark:hover:text-teal-200"
+                  : "text-emerald-700 hover:text-emerald-900 dark:text-emerald-400 dark:hover:text-emerald-300"
+              )}
             >
               Otwórz miejsce w Mapach Google
             </a>
@@ -2025,6 +2055,14 @@ export function TerminarzClient({
         scrollable
         title={
           selectedData ? `Zawodnicy – ${selectedData.date} ${selectedData.time}` : "Zawodnicy"
+        }
+        headerKicker={marketplaceEnabled ? "Skład" : undefined}
+        icon={
+          marketplaceEnabled ? (
+            <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[var(--mp-teal)] text-white shadow-sm">
+              <Users className="h-5 w-5" strokeWidth={2.25} aria-hidden />
+            </span>
+          ) : undefined
         }
         contentClassName="space-y-3"
       >
@@ -2173,6 +2211,7 @@ export function TerminarzClient({
       size="lg"
       scrollable
       title="Obecność na meczu"
+      headerKicker={marketplaceEnabled ? "Administrator" : undefined}
       description="Zaznacz osoby, które faktycznie brały udział w meczu."
       footer={
         <>
@@ -2181,7 +2220,7 @@ export function TerminarzClient({
           </Button>
           <Button
             type="button"
-            variant="pitch"
+            variant={marketplaceEnabled ? "default" : "pitch"}
             disabled={attendanceBusy || !attendanceMatch}
             onClick={() => void saveAttendance()}
           >
@@ -2229,14 +2268,16 @@ export function TerminarzClient({
                     });
                   }}
                   size="sm"
-                  tone="pitch"
+                  tone={marketplaceEnabled ? "light" : "pitch"}
                   aria-label={`Obecność: ${p.first_name} ${p.last_name}`}
                 />
                 <Badge
                   variant="outline"
                   className={
                     checked
-                      ? "border-emerald-300 bg-emerald-50 text-emerald-950 dark:border-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-100"
+                      ? marketplaceEnabled
+                        ? "border-[var(--mp-teal)]/40 bg-[var(--mp-teal)]/10 text-[var(--mp-teal-dark)] dark:border-teal-700 dark:bg-teal-950/50 dark:text-teal-100"
+                        : "border-emerald-300 bg-emerald-50 text-emerald-950 dark:border-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-100"
                       : "border-zinc-200 bg-zinc-50 text-zinc-700 dark:border-zinc-600 dark:bg-zinc-800/50 dark:text-zinc-300"
                   }
                 >
@@ -2264,6 +2305,7 @@ export function TerminarzClient({
         size="lg"
         scrollable
         title="Rozlicz mecz"
+        headerKicker={marketplaceEnabled ? "Administrator" : undefined}
         description="Domyślnie wpisuje równą składkę na osobę (wynajem boiska ÷ liczba obecnych, zaokrąglenie w górę do 0,50 zł). Nieobecni z zaliczką dostają pełny zwrot do portfela."
         footer={
           <>
@@ -2272,7 +2314,7 @@ export function TerminarzClient({
             </Button>
             <Button
               type="button"
-              variant="pitch"
+              variant={marketplaceEnabled ? "default" : "pitch"}
               disabled={settleSubmitting || settleLoading}
               onClick={() => void submitSettlement()}
             >
@@ -2469,7 +2511,12 @@ export function TerminarzClient({
             <Button type="button" variant="outline" disabled={statsBusy} onClick={() => setStatsMatch(null)}>
               Anuluj
             </Button>
-            <Button type="button" variant="pitch" disabled={statsBusy} onClick={() => void saveMatchStats()}>
+            <Button
+              type="button"
+              variant={marketplaceEnabled ? "default" : "pitch"}
+              disabled={statsBusy}
+              onClick={() => void saveMatchStats()}
+            >
               {statsBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
               Zapisz statystyki
             </Button>
@@ -2602,6 +2649,7 @@ function CalendarView({
   onPick: (m: MatchRow) => void;
 }) {
   const { photos: mpPhotos } = useMarketplacePhotos();
+  const { marketplaceEnabled } = useSiteMode();
   const names = [
     "Styczeń",
     "Luty",
@@ -2650,7 +2698,10 @@ function CalendarView({
         key={d}
         className={cn(
           "relative min-h-[104px] overflow-hidden rounded-xl border border-white/20 bg-white/10 p-2",
-          isToday && "ring-2 ring-[var(--mundial-gold,#f5c518)] ring-offset-2 ring-offset-transparent"
+          isToday &&
+            (marketplaceEnabled
+              ? "ring-2 ring-[var(--mp-teal)] ring-offset-2 ring-offset-transparent"
+              : "ring-2 ring-[var(--mundial-gold,#f5c518)] ring-offset-2 ring-offset-transparent")
         )}
       >
         {list.length > 0 ? (
@@ -2713,7 +2764,13 @@ function CalendarView({
             <span className="text-center text-base font-black text-white drop-shadow-sm">
               {names[month]} {year}
             </span>
-            <Button type="button" size="sm" variant="gold" onClick={onToday}>
+            <Button
+              type="button"
+              size="sm"
+              variant={marketplaceEnabled ? "default" : "gold"}
+              className={marketplaceEnabled ? "rounded-full font-bold" : undefined}
+              onClick={onToday}
+            >
               Przejdź do dziś
             </Button>
           </div>
@@ -2755,6 +2812,8 @@ function AddMatchDialog({
   onDone: () => void;
   defaults: { maxSlots: number; location: string; feePln?: number | null };
 }) {
+  const { marketplaceEnabled } = useSiteMode();
+  const light = marketplaceEnabled;
   const { busy, run } = useAsyncAction();
   const form = useValidatedForm({
     initialValues: {
@@ -2832,13 +2891,21 @@ function AddMatchDialog({
       title="Dodaj mecz"
       headerKicker="Terminarz"
       description="Uzupełnij termin, lokalizację, wynajem boiska i kod bramy — mecz pojawi się na stronie głównej i w terminarzu."
-      icon={<CalendarPlus className="h-5 w-5 text-[var(--mundial-gold)]" strokeWidth={2.25} aria-hidden />}
+      icon={
+        light ? (
+          <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[var(--mp-teal)] text-white shadow-sm">
+            <CalendarPlus className="h-5 w-5" strokeWidth={2.25} aria-hidden />
+          </span>
+        ) : (
+          <CalendarPlus className="h-5 w-5 text-[var(--mundial-gold)]" strokeWidth={2.25} aria-hidden />
+        )
+      }
       footer={
         <>
           <Button type="button" variant="outline" disabled={busy} onClick={() => onOpenChange(false)}>
             Anuluj
           </Button>
-          <Button type="submit" form="add-match-form" variant="pitch" disabled={busy}>
+          <Button type="submit" form="add-match-form" variant={light ? "default" : "pitch"} disabled={busy}>
             {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
             Zapisz mecz
           </Button>

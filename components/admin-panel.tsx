@@ -21,6 +21,7 @@ import {
   Search,
   Settings2,
   Shield,
+  Smartphone,
   Table2,
   Trophy,
   UserPlus,
@@ -28,6 +29,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { toast } from "@/lib/app-toast";
+import { useSiteMode } from "@/components/site-mode";
 import { PlayerAliasPicker } from "@/components/player-alias-picker";
 import { FormInput } from "@/components/ui/form-field";
 import { formSchemas, useValidatedForm } from "@/lib/form-validation";
@@ -84,6 +86,7 @@ import { AdminPzuCupTab } from "@/components/admin-pzu-cup-tab";
 import { AdminFilterChips, AdminRowActions } from "@/components/admin-row-actions";
 import { AdminGalleryTab } from "@/components/admin-gallery-tab";
 import { AdminMessagesTab } from "@/components/admin-messages-tab";
+import { AdminMobileAppsTab } from "@/components/admin-mobile-apps-tab";
 import { AdminRankingSeasonsTab } from "@/components/admin-ranking-seasons-tab";
 import { AdminBookingsTab } from "@/components/admin-bookings-tab";
 import { MatchLineupAdmin } from "@/components/match-lineup-admin";
@@ -99,6 +102,7 @@ import {
   type AdminSectionId,
 } from "@/lib/admin-permissions";
 import {
+  cn,
   formatDateLocalYmd,
 } from "@/lib/utils";
 
@@ -292,6 +296,12 @@ const navGroupDefs = [
     items: [
       { id: "users", label: "Użytkownicy", desc: "Konta, PIN-y i uprawnienia", icon: Users },
       { id: "messages", label: "Wiadomości", desc: "Skrzynka od graczy i gości", icon: MessageCircle },
+      {
+        id: "mobile-apps",
+        label: "Aplikacje mobilne",
+        desc: "Kto ma Android / iOS — wyszukiwanie po nazwisku",
+        icon: Smartphone,
+      },
     ],
   },
   {
@@ -1214,6 +1224,7 @@ export function AdminPanel() {
       tab === "settings" ||
       tab === "gallery" ||
       tab === "messages" ||
+      tab === "mobile-apps" ||
       tab === "rankings" ||
       tab === "pzu-cup"
     )
@@ -1266,6 +1277,7 @@ export function AdminPanel() {
     tab === "settings" ||
     tab === "gallery" ||
     tab === "messages" ||
+    tab === "mobile-apps" ||
     tab === "rankings" ||
     tab === "pzu-cup" ||
     tab === "screen-blocks"
@@ -1353,6 +1365,7 @@ export function AdminPanel() {
           />
         )}
         {tab === "messages" && <AdminMessagesTab onUnreadChange={loadSummaryOnly} />}
+        {tab === "mobile-apps" && <AdminMobileAppsTab />}
         {tab === "bookings" && <AdminBookingsTab />}
         {tab === "wallets" && <AdminWalletsSaldoSection />}
         {tab === "operator-payments" && <AdminOperatorPaymentsTab />}
@@ -2004,6 +2017,25 @@ function DashboardView({
   onReload: () => void;
   onGoToTab: (t: TabId, opts?: { matchId?: number }) => void;
 }) {
+  const { marketplaceEnabled } = useSiteMode();
+  const sectionLabel = marketplaceEnabled
+    ? "text-xs font-bold uppercase tracking-[0.14em] text-[var(--mp-teal-dark)] dark:text-[var(--mp-teal)]"
+    : "text-xs font-bold uppercase tracking-[0.14em] text-[var(--mundial-gold,#f5c518)]";
+  const activityBorder = marketplaceEnabled
+    ? "border-l-2 border-[var(--mp-teal)]/50 pl-4"
+    : "border-l-2 border-[var(--mundial-gold)]/50 pl-4";
+  const bodyMuted = marketplaceEnabled
+    ? "mt-1 mb-3 text-sm text-zinc-600 dark:text-zinc-400 sm:text-base"
+    : "mt-1 mb-3 text-sm text-white/85 sm:text-base";
+  const actorNameClass = marketplaceEnabled
+    ? "text-base font-bold text-zinc-950 dark:text-white"
+    : "text-base font-bold text-white drop-shadow-sm";
+  const activityTextClass = marketplaceEnabled
+    ? "text-sm leading-relaxed text-zinc-600 dark:text-zinc-300 sm:text-base"
+    : "text-sm leading-relaxed text-emerald-50/90 sm:text-base";
+  const timeClass = marketplaceEnabled
+    ? "shrink-0 text-sm tabular-nums text-zinc-500 sm:pt-0.5"
+    : "shrink-0 text-sm tabular-nums text-white/80 sm:pt-0.5";
 
   const metrics = [
     {
@@ -2159,10 +2191,10 @@ function DashboardView({
 
       {(summary?.next_matches?.length ?? 0) > 0 ? (
         <section className="mb-8">
-          <h2 className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--mundial-gold,#f5c518)]">
+          <h2 className={sectionLabel}>
             Najbliższe mecze
           </h2>
-          <p className="mt-1 mb-3 text-sm text-white/85 sm:text-base">Kliknij kafelek, aby otworzyć zapisy.</p>
+          <p className={bodyMuted}>Kliknij kafelek, aby otworzyć zapisy.</p>
           <ul className="grid gap-2 sm:grid-cols-2">
             {summary!.next_matches!.map((m) => (
               <li key={m.id}>
@@ -2196,10 +2228,10 @@ function DashboardView({
       <div className="mt-10 space-y-8">
         {shortcuts.map((block) => (
           <section key={block.category}>
-            <h2 className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--mundial-gold,#f5c518)]">
+            <h2 className={sectionLabel}>
               {block.category}
             </h2>
-            <p className="mt-1 mb-3 text-sm text-white/85 sm:text-base">{block.description}</p>
+            <p className={bodyMuted}>{block.description}</p>
             <div className="grid gap-2 sm:grid-cols-2">
               {block.links.map((link) => (
                 <AdminNavTile
@@ -2231,16 +2263,16 @@ function DashboardView({
             {activity.map((item, i) => (
               <li
                 key={`${item.time}-${i}`}
-                className="flex flex-col gap-1 border-l-2 border-[var(--mundial-gold)]/50 pl-4 sm:flex-row sm:items-start sm:justify-between sm:gap-4"
+                className={cn("flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between sm:gap-4", activityBorder)}
               >
                 <div className="min-w-0 flex-1 space-y-0.5">
-                  <p className="text-base font-bold text-white drop-shadow-sm">
+                  <p className={actorNameClass}>
                     {item.actorLabel ?? item.actorName ?? "—"}
                   </p>
-                  <p className="text-sm leading-relaxed text-emerald-50/90 sm:text-base">{item.text}</p>
+                  <p className={activityTextClass}>{item.text}</p>
                 </div>
                 <time
-                  className="shrink-0 text-sm tabular-nums text-white/80 sm:pt-0.5"
+                  className={timeClass}
                   dateTime={item.time}
                   title={item.time}
                 >

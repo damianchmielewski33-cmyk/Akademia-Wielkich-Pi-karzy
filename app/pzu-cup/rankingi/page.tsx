@@ -68,6 +68,7 @@ export default async function PzuCupRankingiPage({ searchParams }: Props) {
         seasons={seasons}
         selectedSeasonId={season.id}
         basePath="/pzu-cup/rankingi"
+        light={false}
       />
 
       <div className="mt-8 overflow-hidden rounded-2xl border border-sky-400/20 bg-sky-950/30">

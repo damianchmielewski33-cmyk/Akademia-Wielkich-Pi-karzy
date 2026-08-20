@@ -17,6 +17,7 @@ export const TAB_TO_SECTION: Record<string, AdminSectionId> = {
   dashboard: "overview",
   users: "people",
   messages: "people",
+  "mobile-apps": "people",
   matches: "matches",
   bookings: "matches",
   lineups: "matches",
@@ -45,7 +46,8 @@ export function adminSectionForApiPath(pathname: string): AdminSectionId | null 
   if (
     p.includes("/api/admin/users") ||
     p.includes("/api/admin/user/") ||
-    p.includes("/api/admin/messages")
+    p.includes("/api/admin/messages") ||
+    p.includes("/api/admin/mobile-apps")
   ) {
     return "people";
   }

@@ -17,6 +17,7 @@ import { SITE_ASSET_UPLOAD_SPECS } from "@/lib/image-upload-specs";
 import { ImageUploadSpecDetails } from "@/components/admin-image-specs";
 import type { AppSettings } from "@/lib/app-settings";
 import { adminInnerPanelClass } from "@/components/admin-ui";
+import { formatBytesMb, prepareImageForUpload } from "@/lib/prepare-image-for-upload";
 
 type Props = {
   assetKey: SiteAssetKey;
@@ -26,6 +27,8 @@ type Props = {
   onUpdated: (settings: AppSettings) => void;
 };
 
+const MAX_UPLOAD_BYTES = Math.floor(3.5 * 1024 * 1024);
+
 export function AdminSiteAssetField({ assetKey, currentUrl, customUrl, disabled, onUpdated }: Props) {
   const meta = SITE_ASSET_META[assetKey];
   const spec = SITE_ASSET_UPLOAD_SPECS[assetKey];
@@ -34,18 +37,29 @@ export function AdminSiteAssetField({ assetKey, currentUrl, customUrl, disabled,
   const router = useRouter();
 
   async function upload(file: File) {
-    const maxBytes = 3.5 * 1024 * 1024;
-    if (file.size > maxBytes) {
-      toast.error("Plik jest za duży (max 3,5 MB). Skompresuj tło (WebP/JPG ~80%) i wgraj ponownie.");
-      if (inputRef.current) inputRef.current.value = "";
-      return;
-    }
-
     setBusy(true);
     try {
+      let prepared;
+      try {
+        prepared = await prepareImageForUpload(file, {
+          maxBytes: MAX_UPLOAD_BYTES,
+          maxEdge: assetKey.startsWith("bg_") ? 2560 : 1600,
+          preferMime: assetKey.startsWith("bg_") ? "image/jpeg" : "image/webp",
+        });
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Nie udało się przygotować zdjęcia");
+        return;
+      }
+
+      if (prepared.resized) {
+        toast.message(
+          `Zmniejszono zdjęcie: ${formatBytesMb(prepared.originalBytes)} → ${formatBytesMb(prepared.finalBytes)}`
+        );
+      }
+
       const form = new FormData();
       form.set("asset", assetKey);
-      form.set("file", file);
+      form.set("file", prepared.file);
       const res = await fetch("/api/admin/site-assets", { method: "POST", body: form });
       const raw = await res.text();
       let j: { error?: string; settings?: AppSettings } = {};
@@ -58,7 +72,7 @@ export function AdminSiteAssetField({ assetKey, currentUrl, customUrl, disabled,
         if (typeof j.error === "string" && j.error.trim()) {
           toast.error(j.error);
         } else if (res.status === 413) {
-          toast.error("Plik za duży dla serwera — skompresuj do max 3,5 MB.");
+          toast.error("Plik za duży dla serwera — spróbuj ponownie lub wybierz inny kadr.");
         } else if (res.status === 503) {
           toast.error("Magazyn grafik niedostępny — na Vercel dodaj BLOB_READ_WRITE_TOKEN.");
         } else {
@@ -176,8 +190,10 @@ export function AdminSiteAssetField({ assetKey, currentUrl, customUrl, disabled,
             </Button>
           </div>
           <p className="text-xs text-emerald-100/60">
-            Akceptowane: {spec.formats} · maks. 3,5 MB
-            {assetKey.startsWith("bg_") ? " · duże tła skompresuj do WebP/JPG" : ""}
+            Akceptowane: {spec.formats} · limit serwera 3,5 MB
+            {assetKey.startsWith("bg_")
+              ? " · zbyt duże zdjęcia strona zmniejszy automatycznie"
+              : " · duże pliki są automatycznie zmniejszane"}
           </p>
         </div>
       </div>
