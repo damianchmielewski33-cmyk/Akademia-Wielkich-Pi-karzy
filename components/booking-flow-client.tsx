@@ -128,17 +128,20 @@ export function BookingFlowClient({ venue, pitches, isLoggedIn, userName, initia
     }
   }
 
+  const canSubmit = Boolean(selected && !busy && acceptedTerms);
+  const showMobileSticky = Boolean(selected);
+
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
-      <section className="rounded-3xl border border-zinc-200 bg-white p-5 text-zinc-900 shadow-sm dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-50">
-        <div className="flex flex-wrap gap-2">
+    <div className={cn("grid gap-4 sm:gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]", showMobileSticky && "pb-24 lg:pb-0")}>
+      <section className="rounded-2xl border border-zinc-200 bg-white p-4 text-zinc-900 shadow-sm xs:rounded-3xl xs:p-5 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-50">
+        <div className="mp-h-scroll gap-2">
           {pitches.map((p) => (
             <button
               key={p.id}
               type="button"
               onClick={() => setPitchId(p.id)}
               className={cn(
-                "rounded-full border px-4 py-2 text-sm font-bold transition",
+                "min-h-11 shrink-0 touch-manipulation rounded-full border px-4 py-2.5 text-sm font-bold transition",
                 pitchId === p.id
                   ? "border-[var(--mp-teal)] bg-[var(--mp-teal)] text-white"
                   : "border-zinc-200 bg-zinc-50 hover:border-[var(--mp-teal)] dark:border-zinc-700 dark:bg-zinc-900"
@@ -149,14 +152,14 @@ export function BookingFlowClient({ venue, pitches, isLoggedIn, userName, initia
           ))}
         </div>
 
-        <div className="mt-5 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:thin]">
+        <div className="mp-h-scroll mt-4 gap-2 pb-1 sm:mt-5">
           {days.map((day) => (
             <button
               key={day.iso}
               type="button"
               onClick={() => setDate(day.iso)}
               className={cn(
-                "flex min-w-[4.25rem] flex-col items-center rounded-2xl border px-3 py-2 text-center",
+                "flex min-h-[4.5rem] min-w-[4.5rem] touch-manipulation flex-col items-center justify-center rounded-2xl border px-3 py-2 text-center",
                 date === day.iso
                   ? "border-[var(--mp-teal)] bg-[var(--mp-teal)] text-white"
                   : "border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900"
@@ -169,7 +172,7 @@ export function BookingFlowClient({ venue, pitches, isLoggedIn, userName, initia
         </div>
 
         {pitch ? (
-          <div className="mt-5 flex flex-wrap gap-2">
+          <div className="mt-4 flex flex-wrap gap-2 sm:mt-5">
             <Badge>{pitch.surface}</Badge>
             <Badge>{pitch.players} osób</Badge>
             {pitch.indoor ? <Badge>Kryte</Badge> : <Badge>Otwarte</Badge>}
@@ -177,7 +180,7 @@ export function BookingFlowClient({ venue, pitches, isLoggedIn, userName, initia
           </div>
         ) : null}
 
-        <div className="mt-6 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+        <div className="mt-5 grid grid-cols-2 gap-2 sm:mt-6 sm:grid-cols-3 lg:grid-cols-4">
           {loadingSlots ? (
             <p className="col-span-full text-sm text-zinc-500">Ładowanie godzin...</p>
           ) : slots.length === 0 ? (
@@ -190,7 +193,7 @@ export function BookingFlowClient({ venue, pitches, isLoggedIn, userName, initia
                 disabled={!slot.available}
                 onClick={() => setSelected(slot)}
                 className={cn(
-                  "rounded-2xl border px-3 py-3 text-left transition disabled:cursor-not-allowed",
+                  "min-h-[4.25rem] touch-manipulation rounded-2xl border px-3 py-3 text-left transition disabled:cursor-not-allowed",
                   !slot.available
                     ? "border-zinc-100 bg-zinc-100 text-zinc-400 dark:border-zinc-800 dark:bg-zinc-900"
                     : selected?.start_time === slot.start_time
@@ -198,7 +201,7 @@ export function BookingFlowClient({ venue, pitches, isLoggedIn, userName, initia
                       : "border-zinc-200 bg-zinc-50 hover:border-[var(--mp-teal)] dark:border-zinc-800 dark:bg-zinc-900"
                 )}
               >
-                <span className="block font-semibold">
+                <span className="block text-sm font-semibold sm:text-base">
                   {slot.start_time}–{slot.end_time}
                 </span>
                 <span className="text-sm opacity-80">
@@ -210,17 +213,17 @@ export function BookingFlowClient({ venue, pitches, isLoggedIn, userName, initia
         </div>
       </section>
 
-      <aside className="h-fit rounded-3xl border border-zinc-200 bg-white p-5 text-zinc-950 shadow-sm lg:sticky lg:top-24 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-50">
+      <aside className="h-fit rounded-2xl border border-zinc-200 bg-white p-4 text-zinc-950 shadow-sm xs:rounded-3xl xs:p-5 lg:sticky lg:top-24 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-50">
         <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--mp-teal-dark)]">Rezerwacja</p>
-        <h2 className="mt-2 text-2xl font-black">{venue.name}</h2>
+        <h2 className="mt-2 text-xl font-black sm:text-2xl">{venue.name}</h2>
         <p className="mt-1 text-sm text-zinc-500">
           {venue.address}, {venue.city}
         </p>
-        <div className="mt-5 rounded-2xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900">
+        <div className="mt-4 rounded-2xl border border-zinc-200 bg-zinc-50 p-4 sm:mt-5 dark:border-zinc-800 dark:bg-zinc-900">
           {selected ? (
             <>
               <p className="font-semibold">{selected.date}</p>
-              <p className="mp-price mt-1 text-2xl">
+              <p className="mp-price mt-1 text-xl sm:text-2xl">
                 {selected.start_time} - {selected.end_time}
               </p>
               <p className="text-sm text-zinc-500">{selected.amount_pln.toFixed(2)} zł</p>
@@ -253,7 +256,7 @@ export function BookingFlowClient({ venue, pitches, isLoggedIn, userName, initia
             type="checkbox"
             checked={acceptedTerms}
             onChange={(e) => setAcceptedTerms(e.target.checked)}
-            className="mt-1 h-4 w-4 rounded border-zinc-300 text-[var(--mp-teal)]"
+            className="mt-1 h-5 w-5 rounded border-zinc-300 text-[var(--mp-teal)]"
           />
           <span>
             Akceptuję{" "}
@@ -263,7 +266,11 @@ export function BookingFlowClient({ venue, pitches, isLoggedIn, userName, initia
             rezerwacji boiska.
           </span>
         </label>
-        <Button className="mt-5 w-full font-black uppercase tracking-[0.12em]" disabled={!selected || busy || !acceptedTerms} onClick={bookAndPay}>
+        <Button
+          className="mt-5 hidden h-12 w-full font-black uppercase tracking-[0.12em] lg:inline-flex"
+          disabled={!canSubmit}
+          onClick={() => void bookAndPay()}
+        >
           {busy ? "Tworzenie rezerwacji..." : "Zarezerwuj i opłać"}
         </Button>
         {!isLoggedIn ? (
@@ -272,6 +279,26 @@ export function BookingFlowClient({ venue, pitches, isLoggedIn, userName, initia
           </p>
         ) : null}
       </aside>
+
+      {showMobileSticky ? (
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-zinc-200 bg-white/95 px-3 pt-3 shadow-[0_-12px_40px_-20px_rgba(15,23,42,0.35)] backdrop-blur-md lg:hidden dark:border-zinc-800 dark:bg-zinc-950/95 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+          <div className="mx-auto flex max-w-6xl items-center gap-3">
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-xs font-semibold text-zinc-500">
+                {selected!.date} · {selected!.start_time}–{selected!.end_time}
+              </p>
+              <p className="mp-price text-lg leading-tight">{selected!.amount_pln.toFixed(0)} zł</p>
+            </div>
+            <Button
+              className="h-12 shrink-0 touch-manipulation px-5 font-black uppercase tracking-[0.1em]"
+              disabled={!canSubmit}
+              onClick={() => void bookAndPay()}
+            >
+              {busy ? "…" : "Opłać"}
+            </Button>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

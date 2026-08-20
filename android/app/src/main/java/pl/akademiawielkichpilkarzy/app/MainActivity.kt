@@ -50,14 +50,14 @@ class MainActivity : FragmentActivity() {
                                 title = if (guestMarketplacePath.startsWith("/zaproszenie")) "Zaproszenie" else "Rezerwacja boiska",
                                 path = guestMarketplacePath,
                                 requireAuth = false,
-                                showTopBar = !guestMarketplacePath.startsWith("/zaproszenie")
+                                showTopBar = false
                             )
                         } else if (browsePitches) {
                             WebPortalScreen(
                                 title = "Rezerwacja boiska",
                                 path = "/?mode=booking",
                                 requireAuth = false,
-                                showTopBar = true,
+                                showTopBar = false,
                                 onBack = { browsePitches = false }
                             )
                         } else {

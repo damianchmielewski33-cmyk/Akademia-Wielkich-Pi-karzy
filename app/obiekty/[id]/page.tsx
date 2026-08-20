@@ -87,24 +87,24 @@ export default async function VenueDetailsPage({
       : [];
 
   return (
-    <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:py-10">
-      <section className="mb-6 overflow-hidden rounded-3xl bg-white shadow-sm dark:bg-zinc-950">
+    <main className="mx-auto w-full max-w-6xl flex-1 px-3 py-5 xs:px-4 sm:py-10">
+      <section className="mb-5 overflow-hidden rounded-2xl bg-white shadow-sm xs:rounded-3xl sm:mb-6 dark:bg-zinc-950">
         <VenueGallery photos={photos} name={data.venue.name} />
-        <div className="p-6 sm:p-8">
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--mp-teal-dark)]">
+        <div className="p-4 xs:p-6 sm:p-8">
+          <p className="text-[0.65rem] font-bold uppercase tracking-[0.18em] text-[var(--mp-teal-dark)] sm:text-xs">
             {data.venue.city}
           </p>
-          <h1 className="mt-2 text-3xl font-black tracking-tight text-zinc-950 sm:text-5xl dark:text-white">
+          <h1 className="mt-2 text-2xl font-black tracking-tight text-zinc-950 xs:text-3xl sm:text-5xl dark:text-white">
             {data.venue.name}
           </h1>
           {data.venue.description ? (
-            <p className="mt-3 max-w-3xl text-zinc-600 dark:text-zinc-300">{data.venue.description}</p>
+            <p className="mt-3 max-w-3xl text-sm text-zinc-600 sm:text-base dark:text-zinc-300">{data.venue.description}</p>
           ) : null}
-          <p className="mt-4 text-sm text-zinc-500">
+          <p className="mt-3 text-sm text-zinc-500 sm:mt-4">
             {data.venue.address}
             {data.venue.phone ? ` · tel. ${data.venue.phone}` : ""}
           </p>
-          <div className="mt-5 flex flex-wrap gap-2">
+          <div className="mt-4 flex flex-wrap gap-2 sm:mt-5">
             {data.pitches.some((p) => p.indoor) ? (
               <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-bold uppercase tracking-wide text-zinc-600">Kryte</span>
             ) : null}

@@ -1072,13 +1072,21 @@ html {
 
 .mp-hero {
   position: relative;
-  min-height: clamp(22rem, 58vw, 32rem);
+  min-height: clamp(18rem, 72dvh, 26rem);
+  padding-top: max(0.5rem, env(safe-area-inset-top));
   background-color: #0b1c18;
   background-image:
     linear-gradient(180deg, rgba(8, 16, 24, 0.28) 0%, rgba(8, 16, 24, 0.62) 100%),
     var(--awp-bg-stadium, url("/stadium-bg.svg"));
   background-size: cover;
   background-position: center;
+}
+
+@media (min-width: 768px) {
+  .mp-hero {
+    min-height: clamp(22rem, 58vw, 32rem);
+    padding-top: 0;
+  }
 }
 
 .mp-hero--photo {
@@ -1093,6 +1101,17 @@ html {
   box-shadow: 0 18px 50px -24px rgba(15, 23, 42, 0.45);
 }
 
+.mp-search-pill input,
+.mp-search-pill select {
+  font-size: 16px; /* iOS: bez auto-zoomu przy focus */
+  min-height: 2.75rem;
+}
+
+.mp-search-pill > label,
+.mp-search-pill > .mp-search-field {
+  min-height: 3.25rem;
+}
+
 @media (min-width: 768px) {
   .mp-search-pill {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.4fr) auto;
@@ -1100,8 +1119,15 @@ html {
     border-radius: 9999px;
   }
 
+  .mp-search-pill input,
+  .mp-search-pill select {
+    font-size: 0.875rem;
+    min-height: 2rem;
+  }
+
   .mp-search-pill > label,
   .mp-search-pill > .mp-search-field {
+    min-height: 0;
     border-right: 1px solid #e5e7eb;
   }
 
@@ -1124,13 +1150,35 @@ html {
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.mp-venue-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 18px 40px -24px rgba(15, 23, 42, 0.45);
+@media (hover: hover) and (pointer: fine) {
+  .mp-venue-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 18px 40px -24px rgba(15, 23, 42, 0.45);
+  }
 }
 
 .dark .mp-venue-card {
   background: #111827;
+}
+
+/* Poziomy scroll chipów / karuzeli V2 (snap, safe touch) */
+.mp-h-scroll {
+  display: flex;
+  gap: 0.75rem;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.mp-h-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.mp-h-scroll > * {
+  scroll-snap-align: start;
+  flex-shrink: 0;
 }
 
 .mp-chat-widget {

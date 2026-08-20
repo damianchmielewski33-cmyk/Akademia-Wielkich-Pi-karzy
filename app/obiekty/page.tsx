@@ -34,18 +34,18 @@ export default async function VenuesPage({
   const suffix = detailsQuery.toString() ? `?${detailsQuery.toString()}` : "";
 
   return (
-    <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:py-12">
+    <main className="mx-auto w-full max-w-6xl flex-1 px-3 py-6 xs:px-4 sm:py-12">
       <section>
-        <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--mp-teal-dark)]">
+        <p className="text-[0.65rem] font-bold uppercase tracking-[0.18em] text-[var(--mp-teal-dark)] sm:text-xs">
           Rezerwacja boisk
         </p>
-        <h1 className="mt-2 text-3xl font-black tracking-tight text-zinc-950 sm:text-5xl dark:text-white">
+        <h1 className="mt-2 text-2xl font-black tracking-tight text-zinc-950 xs:text-3xl sm:text-5xl dark:text-white">
           {sp.city ? `Boiska w mieście ${sp.city}` : "Znajdź wolne boisko"}
         </h1>
-        <p className="mt-3 max-w-2xl text-sm text-zinc-500 sm:text-base">
+        <p className="mt-2 max-w-2xl text-sm text-zinc-500 sm:mt-3 sm:text-base">
           Jak na rynku: miasto, dzień, godzina, potem karta obiektu i slot wolny/zajęty.
         </p>
-        <div className="mt-4 flex flex-wrap gap-2">
+        <div className="mp-h-scroll -mx-3 mt-4 gap-2 px-3 xs:-mx-4 xs:px-4">
           {[
             { href: "/obiekty", label: "Wszystkie", active: !sp.city && sp.indoor !== "1" && sp.indoor !== "0" },
             { href: "/obiekty?city=Warszawa", label: "Warszawa", active: sp.city === "Warszawa" },
@@ -61,15 +61,15 @@ export default async function VenuesPage({
               href={chip.href}
               className={
                 chip.active
-                  ? "rounded-full border border-[var(--mp-teal)] bg-[var(--mp-teal)] px-3 py-1.5 text-sm font-semibold text-white"
-                  : "rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-sm font-semibold text-zinc-700 hover:border-[var(--mp-teal)] hover:text-[var(--mp-teal-dark)]"
+                  ? "shrink-0 rounded-full border border-[var(--mp-teal)] bg-[var(--mp-teal)] px-3.5 py-2 text-sm font-semibold text-white"
+                  : "shrink-0 rounded-full border border-zinc-200 bg-white px-3.5 py-2 text-sm font-semibold text-zinc-700 hover:border-[var(--mp-teal)] hover:text-[var(--mp-teal-dark)]"
               }
             >
               {chip.label}
             </Link>
           ))}
         </div>
-        <div className="mt-6">
+        <div className="mt-5 sm:mt-6">
           <MarketplaceSearchForm
             variant="page"
             defaults={{
@@ -85,12 +85,12 @@ export default async function VenuesPage({
         </div>
       </section>
 
-      <p className="mt-6 text-sm font-semibold text-zinc-500">
+      <p className="mt-5 text-sm font-semibold text-zinc-500 sm:mt-6">
         {venues.length === 1 ? "1 obiekt" : `${venues.length} obiektów`}
       </p>
-      <section className="mt-4 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+      <section className="mt-3 grid gap-4 sm:mt-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
         {venues.length === 0 ? (
-          <div className="rounded-3xl border border-dashed border-zinc-300 bg-white p-8 text-center text-zinc-600 sm:col-span-2 lg:col-span-3 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-300">
+          <div className="rounded-3xl border border-dashed border-zinc-300 bg-white p-6 text-center text-zinc-600 sm:col-span-2 sm:p-8 lg:col-span-3 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-300">
             Brak obiektów dla wybranych filtrów. Priorytet katalogu: 5–15 hal w Warszawie ze zdjęciami i cennikiem.{" "}
             <Link href="/dla-obiektow" className="font-semibold text-[var(--mp-teal-dark)] underline">
               Zgłoś halę

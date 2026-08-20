@@ -94,24 +94,26 @@ function BookingHomeView({ featuredVenues }: { featuredVenues: VenueCard[] }) {
   return (
     <div className="relative flex flex-1 flex-col text-zinc-900 dark:text-zinc-50">
       <HomeFallingDecor />
-      <section className="mp-hero mp-hero--photo relative z-10 flex flex-col justify-end overflow-hidden pb-16 pt-16 sm:pb-20 sm:pt-24">
+      <section className="mp-hero mp-hero--photo relative z-10 flex flex-col justify-end overflow-hidden pb-10 pt-12 sm:pb-20 sm:pt-24">
         <MarketplacePitchPhoto src={heroPhoto} priority className="z-0" />
         <div className="absolute inset-0 z-[1] bg-gradient-to-t from-black/75 via-black/40 to-black/20" />
-        <div className="relative z-10 mx-auto w-full max-w-6xl px-4">
-          <p className="text-xs font-black uppercase tracking-[0.22em] text-white/80">Rezerwacja boisk</p>
-          <h1 className="mt-3 max-w-3xl text-4xl font-black tracking-tight text-white sm:text-6xl">
+        <div className="relative z-10 mx-auto w-full max-w-6xl px-3 xs:px-4">
+          <p className="text-[0.65rem] font-black uppercase tracking-[0.22em] text-white/80 sm:text-xs">
+            Rezerwacja boisk
+          </p>
+          <h1 className="mt-2 max-w-3xl text-[1.85rem] font-black leading-tight tracking-tight text-white xs:text-4xl sm:mt-3 sm:text-6xl">
             Gdzie chcesz zagrać?
           </h1>
-          <p className="mt-4 max-w-xl text-base text-white/85 sm:text-lg">
+          <p className="mt-3 max-w-xl text-sm text-white/85 sm:mt-4 sm:text-lg">
             Wybierz miasto, dzień i godzinę. Wolne boiska widać od razu — rezerwacja i płatność online.
           </p>
-          <div className="mt-8 max-w-5xl">
+          <div className="mt-6 max-w-5xl sm:mt-8">
             <MarketplaceSearchForm />
           </div>
         </div>
       </section>
 
-      <div className="relative z-10 mx-auto w-full min-w-0 max-w-6xl px-4 py-10 sm:py-12">
+      <div className="relative z-10 mx-auto w-full min-w-0 max-w-6xl px-3 py-8 xs:px-4 sm:py-12">
         <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {[
             { href: "/obiekty?indoor=1", title: "Boiska halowe", desc: "Kryte obiekty na każdą pogodę" },
@@ -121,8 +123,8 @@ function BookingHomeView({ featuredVenues }: { featuredVenues: VenueCard[] }) {
             <Link key={item.href} href={item.href} className="block">
               <PhotoPanel
                 src={homeTilePhoto(photoPool, i)}
-                className="min-h-[12rem] transition hover:-translate-y-0.5 hover:shadow-xl"
-                contentClassName="flex min-h-[12rem] flex-col justify-end p-5"
+                className="min-h-[10.5rem] transition hover:-translate-y-0.5 hover:shadow-xl sm:min-h-[12rem]"
+                contentClassName="flex min-h-[10.5rem] flex-col justify-end p-4 sm:min-h-[12rem] sm:p-5"
                 sizes="(max-width: 768px) 100vw, 400px"
               >
                 <p className="font-black text-white drop-shadow-sm">{item.title}</p>
@@ -132,18 +134,18 @@ function BookingHomeView({ featuredVenues }: { featuredVenues: VenueCard[] }) {
           ))}
         </section>
 
-        <section className="mt-12">
-          <div className="flex items-end justify-between gap-4">
+        <section className="mt-10 sm:mt-12">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--mp-teal-dark)]">Obiekty</p>
-              <h2 className="mt-1 text-2xl font-black tracking-tight sm:text-3xl">Wybierz boisko i zarezerwuj</h2>
+              <h2 className="mt-1 text-xl font-black tracking-tight sm:text-3xl">Wybierz boisko i zarezerwuj</h2>
             </div>
-            <Button asChild variant="outline">
+            <Button asChild variant="outline" className="w-full sm:w-auto">
               <Link href="/obiekty">Wszystkie obiekty</Link>
             </Button>
           </div>
           {featuredVenues.length === 0 ? (
-            <div className="mt-6 rounded-3xl border border-dashed border-zinc-300 bg-white p-8 text-center text-zinc-600 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-300">
+            <div className="mt-6 rounded-3xl border border-dashed border-zinc-300 bg-white p-6 text-center text-zinc-600 sm:p-8 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-300">
               <p className="font-semibold">Katalog startuje od Warszawy.</p>
               <p className="mt-2 text-sm">
                 Potrzebujemy 5–15 hal w jednym mieście: zdjęcia, cennik, godziny, oświetlenie. Potem kolejne miasto.
@@ -155,9 +157,13 @@ function BookingHomeView({ featuredVenues }: { featuredVenues: VenueCard[] }) {
               </div>
             </div>
           ) : (
-            <div className="-mx-4 mt-6 flex gap-4 overflow-x-auto px-4 pb-3 [scrollbar-width:thin]">
+            <div className="mp-h-scroll -mx-3 mt-6 px-3 pb-3 xs:-mx-4 xs:px-4">
               {featuredVenues.map((venue) => (
-                <MarketplaceVenueCard key={venue.id} venue={venue} className="w-72 shrink-0" />
+                <MarketplaceVenueCard
+                  key={venue.id}
+                  venue={venue}
+                  className="w-[min(78vw,18rem)]"
+                />
               ))}
             </div>
           )}
@@ -165,25 +171,31 @@ function BookingHomeView({ featuredVenues }: { featuredVenues: VenueCard[] }) {
 
         <PhotoPanel
           src={homeTilePhoto(photoPool, 6)}
-          className="mt-14 min-h-[18rem] rounded-3xl"
-          contentClassName="flex min-h-[18rem] flex-col justify-center gap-6 px-6 py-10 sm:px-10 lg:flex-row lg:items-center lg:justify-between"
+          className="mt-12 min-h-[16rem] rounded-3xl sm:mt-14 sm:min-h-[18rem]"
+          contentClassName="flex min-h-[16rem] flex-col justify-center gap-5 px-4 py-8 xs:px-6 sm:min-h-[18rem] sm:gap-6 sm:px-10 sm:py-10 lg:flex-row lg:items-center lg:justify-between"
           overlayClassName="bg-gradient-to-r from-black/55 via-black/30 to-black/15"
           sizes="(max-width: 768px) 100vw, 1152px"
         >
           <div className="max-w-xl">
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/80">Dla obiektów</p>
-            <h2 className="mt-2 text-3xl font-black tracking-tight drop-shadow-sm">Masz halę albo orlik? Wystaw terminy.</h2>
-            <p className="mt-3 text-white/90">
+            <h2 className="mt-2 text-2xl font-black tracking-tight drop-shadow-sm sm:text-3xl">
+              Masz halę albo orlik? Wystaw terminy.
+            </h2>
+            <p className="mt-3 text-sm text-white/90 sm:text-base">
               Zgłoś halę na stronie — bez tokenu od znajomych. Po weryfikacji publikujemy obiekt. Gracze rezerwują i
               płacą online, Ty widzisz obrót, prowizję i termin przelewu.
             </p>
           </div>
-          <Button asChild variant="secondary" className="h-12 shrink-0 rounded-full bg-white px-8 font-black text-zinc-950 hover:bg-zinc-100">
+          <Button
+            asChild
+            variant="secondary"
+            className="h-12 w-full shrink-0 rounded-full bg-white px-8 font-black text-zinc-950 hover:bg-zinc-100 sm:w-auto"
+          >
             <Link href="/dla-obiektow">Dodaj swój obiekt</Link>
           </Button>
         </PhotoPanel>
 
-        <section id="jak-to-dziala" className="mt-14 grid gap-4 sm:grid-cols-3">
+        <section id="jak-to-dziala" className="mt-12 grid gap-3 sm:mt-14 sm:grid-cols-3 sm:gap-4">
           {[
             { n: "1", t: "Znajdź obiekt", d: "Filtruj po mieście, nawierzchni i cenie." },
             { n: "2", t: "Wybierz godzinę", d: "Zobacz wolne sloty i zablokuj termin." },
@@ -192,8 +204,8 @@ function BookingHomeView({ featuredVenues }: { featuredVenues: VenueCard[] }) {
             <PhotoPanel
               key={step.n}
               src={homeTilePhoto(photoPool, i + 8)}
-              className="min-h-[15rem]"
-              contentClassName="flex min-h-[15rem] flex-col justify-end p-5"
+              className="min-h-[13rem] sm:min-h-[15rem]"
+              contentClassName="flex min-h-[13rem] flex-col justify-end p-4 sm:min-h-[15rem] sm:p-5"
               overlayClassName="bg-gradient-to-t from-black/75 via-black/30 to-black/10"
               sizes="(max-width: 768px) 100vw, 400px"
             >
