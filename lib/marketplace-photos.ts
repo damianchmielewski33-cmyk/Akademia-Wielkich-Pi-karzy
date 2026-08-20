@@ -16,6 +16,12 @@ export const MARKETPLACE_PITCH_PHOTOS = [
   "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1600&q=80",
 ] as const;
 
+export function pitchPhotoAt(index: number): string {
+  const n = MARKETPLACE_PITCH_PHOTOS.length;
+  const i = ((index % n) + n) % n;
+  return MARKETPLACE_PITCH_PHOTOS[i] ?? MARKETPLACE_PITCH_PHOTOS[0];
+}
+
 export function canOptimizeMarketplacePhoto(src: string): boolean {
   if (!src.startsWith("http://") && !src.startsWith("https://")) return true;
   try {

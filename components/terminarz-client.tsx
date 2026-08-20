@@ -2,7 +2,9 @@
 
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { SiteSectionHero } from "@/components/site-section-hero";
+import { PhotoPanel } from "@/components/photo-panel";
+import { MarketplacePitchPhoto } from "@/components/marketplace-pitch-photo";
+import { MARKETPLACE_PITCH_PHOTOS, pitchPhotoAt } from "@/lib/marketplace-photos";
 import { useRouter } from "next/navigation";
 import { toast } from "@/lib/app-toast";
 import {
@@ -11,11 +13,13 @@ import {
   CalendarPlus,
   ChevronLeft,
   ChevronRight,
+  Clock,
   Crown,
   List,
   Loader2,
   LogIn,
   HelpCircle,
+  MapPin,
   Plus,
   RotateCcw,
   Search,
@@ -104,6 +108,12 @@ type Props = {
 };
 
 const todayISO = () => new Date().toISOString().slice(0, 10);
+
+function formatHeroDate(isoDate: string) {
+  const [y, m, d] = isoDate.split("-").map(Number);
+  if (!y || !m || !d) return isoDate;
+  return `${String(d).padStart(2, "0")}.${String(m).padStart(2, "0")}.${y}`;
+}
 
 type AdminMatchSignupRow = {
   user_id: number;
@@ -1465,33 +1475,93 @@ export function TerminarzClient({
     );
   }
 
+  const heroMatch = upcoming.find((m) => m.cancelled !== 1 && m.match_date >= todayISO()) ?? upcoming[0] ?? null;
+  const heroPhoto = pitchPhotoAt(heroMatch?.id ?? 1);
+
   return (
     <>
-      <div className="awp-page awp-page--default space-y-6">
-        <SiteSectionHero
-          kicker="Mecze"
-          title="Terminarz"
-          titleId="terminarz-page-title"
-          subtitle="Zapisz się na boisko, sprawdź terminy meczów i skład drużyn."
-          align="center"
-        />
+      <div className="relative flex flex-1 flex-col text-zinc-900 dark:text-zinc-50">
+        <section className="mp-hero mp-hero--photo relative flex flex-col justify-end overflow-hidden pb-16 pt-16 sm:pb-20 sm:pt-24">
+          <MarketplacePitchPhoto src={heroPhoto} priority className="z-0" />
+          <div className="absolute inset-0 z-[1] bg-gradient-to-t from-black/75 via-black/40 to-black/20" />
+          <div className="relative z-10 mx-auto w-full max-w-6xl px-4">
+            <p className="text-xs font-black uppercase tracking-[0.22em] text-white/80">Terminarz</p>
+            <h1 id="terminarz-page-title" className="mt-3 max-w-3xl text-4xl font-black tracking-tight text-white sm:text-6xl">
+              Najbliższe mecze
+            </h1>
+            <p className="mt-4 max-w-xl text-base text-white/85 sm:text-lg">
+              Zapisz się na boisko, sprawdź składy i terminy — tak samo jak na stronie startowej.
+            </p>
+            <div className="mt-8 max-w-5xl">
+              {heroMatch ? (
+                <div className="mp-search-pill p-2 md:p-1.5">
+                  <div className="min-w-0 px-4 py-2">
+                    <span className="block text-[0.65rem] font-bold uppercase tracking-[0.14em] text-zinc-400">
+                      Najbliższy mecz
+                    </span>
+                    <span className="flex items-center gap-2 text-sm font-semibold text-zinc-900">
+                      <CalendarDays className="h-4 w-4 shrink-0 text-zinc-400" aria-hidden />
+                      {formatHeroDate(heroMatch.match_date)}
+                    </span>
+                  </div>
+                  <div className="min-w-0 px-4 py-2">
+                    <span className="block text-[0.65rem] font-bold uppercase tracking-[0.14em] text-zinc-400">
+                      Godzina
+                    </span>
+                    <span className="flex items-center gap-2 text-sm font-semibold text-zinc-900">
+                      <Clock className="h-4 w-4 shrink-0 text-zinc-400" aria-hidden />
+                      {heroMatch.match_time}
+                    </span>
+                  </div>
+                  <div className="min-w-0 px-4 py-2">
+                    <span className="block text-[0.65rem] font-bold uppercase tracking-[0.14em] text-zinc-400">
+                      Miejsce
+                    </span>
+                    <span className="flex items-center gap-2 text-sm font-semibold text-zinc-900">
+                      <MapPin className="h-4 w-4 shrink-0 text-zinc-400" aria-hidden />
+                      <span className="truncate">{heroMatch.location}</span>
+                    </span>
+                  </div>
+                  <Button asChild className="h-12 rounded-full px-8 text-sm font-black uppercase tracking-[0.12em]">
+                    <a href={`#mecz-${heroMatch.id}`}>Zobacz mecz</a>
+                  </Button>
+                </div>
+              ) : (
+                <div className="mp-search-pill p-2 md:p-1.5">
+                  <div className="min-w-0 px-4 py-3 md:col-span-3">
+                    <span className="block text-[0.65rem] font-bold uppercase tracking-[0.14em] text-zinc-400">
+                      Terminarz
+                    </span>
+                    <span className="text-sm font-semibold text-zinc-900">
+                      Brak zaplanowanego meczu — sprawdź archiwum albo wróć później.
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
 
-        <div className="mx-auto max-w-4xl">
-          <div className="relative overflow-hidden rounded-2xl border border-zinc-200 bg-white text-zinc-900 shadow-sm dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-50">
-            <div className="relative flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+        <div className="-mx-4 mt-0 flex gap-4 overflow-x-auto bg-zinc-100 px-4 py-4 [scrollbar-width:thin] dark:bg-zinc-900">
+          {MARKETPLACE_PITCH_PHOTOS.slice(0, 8).map((src) => (
+            <div key={src} className="relative h-48 w-72 shrink-0 overflow-hidden rounded-3xl bg-zinc-200">
+              <MarketplacePitchPhoto src={src} sizes="288px" />
+            </div>
+          ))}
+        </div>
+
+        <div className="relative z-10 mx-auto w-full min-w-0 max-w-6xl px-4 py-10 sm:py-12">
+        <PhotoPanel src={pitchPhotoAt(2)} className="mb-5" contentClassName="p-4 sm:p-5" sizes="(max-width: 768px) 100vw, 1152px">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex flex-col gap-2.5">
-                <span className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--mp-teal-dark)]">
-                  Widok terminarza
-                </span>
-                <div className="inline-flex rounded-xl border border-zinc-200 bg-zinc-50 p-1 dark:border-zinc-800 dark:bg-zinc-900">
+                <span className="text-xs font-bold uppercase tracking-[0.16em] text-white/80">Widok terminarza</span>
+                <div className="inline-flex rounded-xl border border-white/20 bg-black/25 p-1">
                   <button
                     type="button"
                     onClick={() => setView("list")}
                     className={cn(
                       "inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-all",
-                      view === "list"
-                        ? "bg-[var(--mp-teal)] text-white shadow-sm"
-                        : "text-zinc-600 hover:bg-white dark:text-zinc-300 dark:hover:bg-zinc-800"
+                      view === "list" ? "bg-white text-zinc-950 shadow-sm" : "text-white/85 hover:bg-white/10"
                     )}
                   >
                     <List className="h-4 w-4 shrink-0" aria-hidden />
@@ -1502,9 +1572,7 @@ export function TerminarzClient({
                     onClick={() => setView("cal")}
                     className={cn(
                       "inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-all",
-                      view === "cal"
-                        ? "bg-[var(--mp-teal)] text-white shadow-sm"
-                        : "text-zinc-600 hover:bg-white dark:text-zinc-300 dark:hover:bg-zinc-800"
+                      view === "cal" ? "bg-white text-zinc-950 shadow-sm" : "text-white/85 hover:bg-white/10"
                     )}
                   >
                     <CalendarDays className="h-4 w-4 shrink-0" aria-hidden />
@@ -1515,12 +1583,12 @@ export function TerminarzClient({
 
               {isAdmin && (
                 <div className="flex flex-col gap-1.5 sm:items-end">
-                  <span className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--mp-teal-dark)] sm:text-right">
+                  <span className="text-xs font-bold uppercase tracking-[0.16em] text-white/80 sm:text-right">
                     Administrator
                   </span>
                   <Button
                     type="button"
-                    variant="pitch"
+                    variant="gold"
                     size="lg"
                     className="w-full sm:w-auto"
                     onClick={() => setAddOpen(true)}
@@ -1531,19 +1599,18 @@ export function TerminarzClient({
                 </div>
               )}
             </div>
-          </div>
-        </div>
+        </PhotoPanel>
 
         {view === "list" && (
-          <div className="mx-auto mt-5 max-w-4xl space-y-4">
+            <div className="mt-5">
             {highlightMatch && (
               <div
                 role="status"
-                className="rounded-xl border-2 border-emerald-500 bg-emerald-50/95 px-4 py-3 text-sm leading-relaxed text-emerald-950 shadow-sm dark:border-emerald-500 dark:bg-emerald-950/40 dark:text-emerald-50"
+                className="rounded-xl border-2 border-[var(--mundial-gold,#f5c518)] bg-black/70 px-4 py-3 text-sm leading-relaxed text-white shadow-sm"
               >
                 <span className="font-semibold">Z powiadomienia e-mail: </span>
-                poniżej <span className="font-medium">zieloną ramką</span> wyróżniony jest mecz, którego dotyczyła
-                wiadomość — możesz od razu przejść do zapisu.
+                poniżej <span className="font-medium text-[var(--mundial-gold,#f5c518)]">złotą ramką</span> wyróżniony
+                jest mecz, którego dotyczyła wiadomość — możesz od razu przejść do zapisu.
               </div>
             )}
             {highlightMatchId && !highlightMatch && (
@@ -1554,29 +1621,29 @@ export function TerminarzClient({
                 Nie znaleziono meczu o tym numerze — mógł zostać usunięty z terminarza.
               </div>
             )}
-            <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-900/80 sm:p-5">
-              <details className="group rounded-xl border border-zinc-200 dark:border-zinc-600">
-                <summary className="awp-focus-ring flex cursor-pointer list-none items-center gap-2 px-3 py-2.5 text-xs font-semibold uppercase tracking-[0.1em] text-emerald-800 dark:text-[var(--mundial-gold,#f5c518)] [&::-webkit-details-marker]:hidden">
+            <PhotoPanel src={pitchPhotoAt(3)} className="mt-4" contentClassName="p-4 sm:p-5" sizes="(max-width: 768px) 100vw, 1152px">
+              <details className="group rounded-xl border border-white/20 bg-black/20">
+                <summary className="awp-focus-ring flex cursor-pointer list-none items-center gap-2 px-3 py-2.5 text-xs font-semibold uppercase tracking-[0.1em] text-[var(--mundial-gold,#f5c518)] [&::-webkit-details-marker]:hidden">
                   <Search className="h-4 w-4 shrink-0" aria-hidden />
                   <span className="min-w-0 flex-1">
                     Wyszukaj mecz
                     {search.trim() || filter !== "all" || period !== "all" || onlyMine ? (
-                      <span className="ml-1.5 text-[10px] font-normal normal-case tracking-normal text-zinc-500 dark:text-zinc-400">
+                      <span className="ml-1.5 text-[10px] font-normal normal-case tracking-normal text-white/70">
                         · filtry aktywne
                       </span>
                     ) : null}
                   </span>
-                  <span className="shrink-0 text-[10px] font-medium normal-case tracking-normal text-zinc-500 group-open:hidden dark:text-zinc-400">
+                  <span className="shrink-0 text-[10px] font-medium normal-case tracking-normal text-white/70 group-open:hidden">
                     Rozwiń
                   </span>
-                  <span className="hidden shrink-0 text-[10px] font-medium normal-case tracking-normal text-zinc-500 group-open:inline dark:text-zinc-400">
+                  <span className="hidden shrink-0 text-[10px] font-medium normal-case tracking-normal text-white/70 group-open:inline">
                     Zwiń
                   </span>
                 </summary>
 
-                <div id="terminarz-search-panel" className="space-y-4 border-t border-zinc-200 px-3 pb-3 pt-3 dark:border-zinc-600">
+                <div id="terminarz-search-panel" className="space-y-4 border-t border-white/15 px-3 pb-3 pt-3">
                   <div className="max-w-md">
-                    <Label htmlFor="terminarz-search" className="text-xs text-zinc-600 dark:text-zinc-400">
+                    <Label htmlFor="terminarz-search" className="text-xs text-white/80">
                       Szukaj miejsca
                     </Label>
                     <div className="relative mt-1">
@@ -1594,7 +1661,7 @@ export function TerminarzClient({
 
                   <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 lg:items-end">
                     <div>
-                      <Label className="text-xs text-zinc-600 dark:text-zinc-400">Zakres dat (lista aktywna)</Label>
+                      <Label className="text-xs text-white/80">Zakres dat (lista aktywna)</Label>
                       <select
                         className={cn(nativeSelectClasses, "mt-1 w-full")}
                         value={period}
@@ -1606,7 +1673,7 @@ export function TerminarzClient({
                       </select>
                     </div>
                     <div>
-                      <Label className="text-xs text-zinc-600 dark:text-zinc-400">Miejsca</Label>
+                      <Label className="text-xs text-white/80">Miejsca</Label>
                       <select
                         className={cn(nativeSelectClasses, "mt-1 w-full")}
                         value={filter}
@@ -1630,12 +1697,9 @@ export function TerminarzClient({
                       </select>
                       <Button
                         type="button"
-                        variant={onlyMine ? "default" : "outline"}
+                        variant={onlyMine ? "gold" : "secondary"}
                         size="sm"
-                        className={cn(
-                          onlyMine && "bg-emerald-700 hover:bg-emerald-800",
-                          "h-10 shrink-0 px-3"
-                        )}
+                        className="h-10 shrink-0 px-3"
                         onClick={() => setOnlyMine((v) => !v)}
                       >
                         Tylko moje
@@ -1644,49 +1708,60 @@ export function TerminarzClient({
                   </div>
                 </div>
               </details>
-            </div>
+            </PhotoPanel>
 
-            <div className="flex flex-wrap gap-3 rounded-xl border border-emerald-100 bg-emerald-50/50 px-4 py-3 text-sm dark:border-emerald-900/40 dark:bg-emerald-950/30">
+            <PhotoPanel src={pitchPhotoAt(4)} className="mt-4" contentClassName="px-4 py-3" sizes="(max-width: 768px) 100vw, 1152px">
+              <div className="flex flex-wrap gap-3 text-sm text-white">
               {listTab === "active" ? (
                 <>
-                  <span className="text-emerald-900 dark:text-emerald-100">
+                  <span>
                     W widoku: <strong>{statsActive.total}</strong> meczów
                   </span>
-                  <span className="hidden text-emerald-800/40 dark:text-emerald-700/50 sm:inline">·</span>
-                  <span className="text-emerald-800 dark:text-emerald-200">
+                  <span className="hidden text-white/40 sm:inline">·</span>
+                  <span>
                     Wolne terminy: <strong>{statsActive.free}</strong>
                   </span>
-                  <span className="hidden text-emerald-800/40 dark:text-emerald-700/50 sm:inline">·</span>
-                  <span className="text-emerald-800 dark:text-emerald-200">
+                  <span className="hidden text-white/40 sm:inline">·</span>
+                  <span>
                     Pełne: <strong>{statsActive.full}</strong>
                   </span>
                   {isLoggedIn && (
                     <>
-                      <span className="hidden text-emerald-800/40 dark:text-emerald-700/50 sm:inline">·</span>
-                      <span className="text-emerald-800 dark:text-emerald-200">
+                      <span className="hidden text-white/40 sm:inline">·</span>
+                      <span>
                         Twoje zapisy tutaj: <strong>{statsActive.mine}</strong>
                       </span>
                     </>
                   )}
                 </>
               ) : (
-                <span className="text-emerald-900 dark:text-emerald-100">
+                <span>
                   Rozegrane w widoku: <strong>{filteredArchive.length}</strong>
                 </span>
               )}
+              </div>
+            </PhotoPanel>
+
+            <div className="mt-10 flex items-end justify-between gap-4">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--mp-teal-dark)]">Terminarz</p>
+                <h2 className="mt-1 text-2xl font-black tracking-tight sm:text-3xl">
+                  {listTab === "archive" ? "Rozegrane mecze" : "Mecze do rozegrania"}
+                </h2>
+              </div>
             </div>
 
-            <Tabs value={listTab} onValueChange={(v) => setListTab(v as "active" | "archive")}>
-              <TabsList className="grid h-auto w-full grid-cols-2 gap-1 rounded-xl bg-emerald-100/60 p-1 dark:bg-emerald-950/50 sm:inline-flex sm:w-auto">
+            <Tabs value={listTab} onValueChange={(v) => setListTab(v as "active" | "archive")} className="mt-5">
+              <TabsList className="grid h-auto w-full grid-cols-2 gap-1 rounded-xl bg-zinc-900 p-1 sm:inline-flex sm:w-auto">
                 <TabsTrigger
                   value="active"
-                  className="rounded-lg px-4 py-2.5 data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-800 dark:data-[state=inactive]:text-emerald-200/90"
+                  className="rounded-lg px-4 py-2.5 text-white/80 data-[state=active]:bg-white data-[state=active]:text-zinc-950"
                 >
                   Mecze do rozegrania
                 </TabsTrigger>
                 <TabsTrigger
                   value="archive"
-                  className="rounded-lg px-4 py-2.5 data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-800 dark:data-[state=inactive]:text-emerald-200/90"
+                  className="rounded-lg px-4 py-2.5 text-white/80 data-[state=active]:bg-white data-[state=active]:text-zinc-950"
                 >
                   Archiwum (rozegrane)
                 </TabsTrigger>
@@ -1713,9 +1788,11 @@ export function TerminarzClient({
                   })}
                 </div>
                 {filteredActive.length === 0 && (
-                  <p className="rounded-xl border border-dashed border-zinc-200 bg-zinc-50/80 py-10 text-center text-sm text-zinc-600 dark:border-zinc-600 dark:bg-zinc-800/50 dark:text-zinc-400">
-                    Brak meczów spełniających kryteria. Zmień filtry lub zakres dat.
-                  </p>
+                  <PhotoPanel src={pitchPhotoAt(8)} className="mt-2 min-h-[12rem]" contentClassName="flex min-h-[12rem] items-center justify-center p-8 text-center">
+                    <p className="text-sm font-semibold text-white/90">
+                      Brak meczów spełniających kryteria. Zmień filtry lub zakres dat.
+                    </p>
+                  </PhotoPanel>
                 )}
               </TabsContent>
 
@@ -1736,9 +1813,9 @@ export function TerminarzClient({
                   ))}
                 </div>
                 {filteredArchive.length === 0 && (
-                  <p className="rounded-xl border border-dashed border-zinc-200 py-10 text-center text-sm text-zinc-600 dark:border-zinc-600 dark:text-zinc-400">
-                    Brak rozegranych meczów do wyświetlenia.
-                  </p>
+                  <PhotoPanel src={pitchPhotoAt(9)} className="mt-2 min-h-[12rem]" contentClassName="flex min-h-[12rem] items-center justify-center p-8 text-center">
+                    <p className="text-sm font-semibold text-white/90">Brak rozegranych meczów do wyświetlenia.</p>
+                  </PhotoPanel>
                 )}
               </TabsContent>
             </Tabs>
@@ -1767,6 +1844,54 @@ export function TerminarzClient({
             onPick={setCalPopup}
           />
         )}
+
+        <section className="mt-14 grid gap-4 sm:grid-cols-3">
+          {[
+            { n: "1", t: "Wybierz mecz", d: "Lista albo kalendarz — data, godzina i boisko." },
+            { n: "2", t: "Zapisz się", d: "Potwierdź udział albo zaznacz, że jeszcze nie wiesz." },
+            { n: "3", t: "Przyjdź na boisko", d: "Skład, pogoda i pin bramy są przy terminie." },
+          ].map((step, i) => (
+            <PhotoPanel
+              key={step.n}
+              src={pitchPhotoAt(10 + i)}
+              className="min-h-[15rem]"
+              contentClassName="flex min-h-[15rem] flex-col justify-end p-5"
+              sizes="(max-width: 768px) 100vw, 360px"
+            >
+              <p className="text-3xl font-black text-white drop-shadow-sm">{step.n}</p>
+              <p className="mt-2 font-black text-white drop-shadow-sm">{step.t}</p>
+              <p className="mt-1 text-sm text-white/85">{step.d}</p>
+            </PhotoPanel>
+          ))}
+        </section>
+
+        <section className="relative mt-14 overflow-hidden rounded-3xl px-6 py-10 text-white shadow-lg sm:px-10">
+          <MarketplacePitchPhoto
+            src={pitchPhotoAt(13)}
+            className="absolute inset-0 z-0 h-full w-full"
+            sizes="(max-width: 768px) 100vw, 1152px"
+          />
+          <div className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-r from-black/70 via-black/55 to-black/45" aria-hidden />
+          <div className="relative z-10 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+            <div className="max-w-xl">
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/80">Akademia</p>
+              <h2 className="mt-2 text-3xl font-black tracking-tight drop-shadow-sm">
+                {isLoggedIn ? "Kolejny mecz czeka na zapis." : "Chcesz grać z nami?"}
+              </h2>
+              <p className="mt-3 text-white/90">
+                {isLoggedIn
+                  ? "Zapisy, składy i statystyki są przy każdym terminie — osobno od rezerwacji boisk."
+                  : "Dołącz do akademii: terminarz, składy, portfel i rankingi po zalogowaniu."}
+              </p>
+            </div>
+            <Button asChild variant="secondary" className="h-12 rounded-full bg-white px-8 font-black text-zinc-950 hover:bg-zinc-100">
+              <Link href={isLoggedIn ? "/rankingi" : "/register"}>
+                {isLoggedIn ? "Zobacz rankingi" : "Dołącz do akademii"}
+              </Link>
+            </Button>
+          </div>
+        </section>
+        </div>
       </div>
 
       <AppModal
@@ -2487,7 +2612,7 @@ function CalendarView({
     cells.push(
       <div
         key={`e-${i}`}
-        className="min-h-[72px] rounded-lg border border-dashed border-zinc-200 bg-zinc-50/60 dark:border-zinc-600 dark:bg-zinc-800/50"
+        className="min-h-[72px] rounded-lg border border-dashed border-white/15 bg-white/5"
       />
     );
   }
@@ -2500,11 +2625,18 @@ function CalendarView({
       <div
         key={d}
         className={cn(
-          "min-h-[104px] rounded-xl border border-zinc-200 bg-white p-2 shadow-sm dark:border-zinc-600 dark:bg-zinc-800/80",
-          isToday && "ring-2 ring-emerald-600 ring-offset-2 dark:ring-emerald-500 dark:ring-offset-zinc-900"
+          "relative min-h-[104px] overflow-hidden rounded-xl border border-white/20 bg-white/10 p-2",
+          isToday && "ring-2 ring-[var(--mundial-gold,#f5c518)] ring-offset-2 ring-offset-transparent"
         )}
       >
-        <div className="text-sm font-bold text-emerald-950 dark:text-emerald-100">{d}</div>
+        {list.length > 0 ? (
+          <div className="absolute inset-0 z-0">
+            <MarketplacePitchPhoto src={pitchPhotoAt(list[0].id)} sizes="120px" />
+            <div className="absolute inset-0 bg-black/50" aria-hidden />
+          </div>
+        ) : null}
+        <div className="relative z-10">
+          <div className="text-sm font-bold text-white drop-shadow-sm">{d}</div>
         <div className="mt-1 space-y-1">
           {list.map((m) => {
             const free = m.max_slots - m.signed_up;
@@ -2541,43 +2673,42 @@ function CalendarView({
             );
           })}
         </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto mt-6 max-w-4xl">
-      <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-600 dark:bg-zinc-900/80 sm:p-6">
+    <PhotoPanel src={pitchPhotoAt(year * 12 + month)} className="mt-6" contentClassName="p-4 sm:p-6" sizes="(max-width: 768px) 100vw, 1152px">
         <div className="mb-5 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <Button type="button" size="sm" variant="outline" className="gap-1 border-zinc-200 dark:border-zinc-600" onClick={onPrev}>
+          <Button type="button" size="sm" variant="secondary" className="gap-1" onClick={onPrev}>
             <ChevronLeft className="h-4 w-4" />
             Poprzedni
           </Button>
           <div className="flex flex-col items-center gap-2 sm:flex-row">
-            <span className="text-center text-base font-bold text-emerald-950 dark:text-emerald-100">
+            <span className="text-center text-base font-black text-white drop-shadow-sm">
               {names[month]} {year}
             </span>
-            <Button type="button" size="sm" variant="secondary" className="text-emerald-900 dark:text-emerald-100" onClick={onToday}>
+            <Button type="button" size="sm" variant="gold" onClick={onToday}>
               Przejdź do dziś
             </Button>
           </div>
-          <Button type="button" size="sm" variant="outline" className="gap-1 border-zinc-200 dark:border-zinc-600" onClick={onNext}>
+          <Button type="button" size="sm" variant="secondary" className="gap-1" onClick={onNext}>
             Następny
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
-        <p className="mb-3 text-center text-xs text-zinc-500 dark:text-zinc-400 sm:text-left">
+        <p className="mb-3 text-center text-xs text-white/80 sm:text-left">
           Kliknij wpis, by zobaczyć szczegóły. Szare — rozegrane; zielone — wolne miejsca; czerwone — pełny skład. Trzecia
           linijka (gdy jest) — ile osób ma status «jeszcze nie wiem».
         </p>
-        <div className="mb-2 grid grid-cols-7 gap-1.5 text-center text-[0.65rem] font-bold uppercase tracking-wide text-emerald-800/80 dark:text-emerald-300/90 sm:gap-2 sm:text-xs">
+        <div className="mb-2 grid grid-cols-7 gap-1.5 text-center text-[0.65rem] font-bold uppercase tracking-wide text-white/80 sm:gap-2 sm:text-xs">
           {dayNames.map((d) => (
             <div key={d}>{d}</div>
           ))}
         </div>
         <div className="grid grid-cols-7 gap-1.5 sm:gap-2">{cells}</div>
-      </div>
-    </div>
+    </PhotoPanel>
   );
 }
 

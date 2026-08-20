@@ -55,9 +55,8 @@ export default async function TerminarzPage({
   const appSettings = await getAppSettings(db);
 
   return (
-    <div className="container mx-auto max-w-7xl flex-1 px-4 py-8 sm:py-10">
-      <Suspense fallback={<p className="text-center text-sm text-zinc-500">Ładowanie terminarza…</p>}>
-        <TerminarzClient
+    <Suspense fallback={<p className="p-8 text-center text-sm text-zinc-500">Ładowanie terminarza…</p>}>
+      <TerminarzClient
           upcoming={data.upcoming}
           playedConfirmed={data.playedConfirmed}
           allMatches={data.matches}
@@ -81,6 +80,5 @@ export default async function TerminarzPage({
           hotpayEnabled={isHotpayConfigured() && appSettings.hotpay_enabled}
         />
       </Suspense>
-    </div>
   );
 }

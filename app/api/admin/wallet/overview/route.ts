@@ -75,9 +75,9 @@ export async function GET() {
       `
       SELECT id, match_date, match_time, location, max_slots, signed_up, played, fee_pln
       FROM matches
-      WHERE played = 1
+      WHERE played = 1 AND COALESCE(cancelled, 0) = 0
       ORDER BY match_date DESC, match_time DESC
-      LIMIT 30
+      LIMIT 500
     `
     )
     .all();

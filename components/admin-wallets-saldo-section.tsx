@@ -21,9 +21,20 @@ type AdminWalletPlayerRow = PlatnosciUserLite & {
   operator_balance_pln?: number;
 };
 
+type PlayedMatchOption = {
+  id: number;
+  match_date: string;
+  match_time: string;
+  location: string;
+  signed_up?: number;
+  max_slots?: number;
+  fee_pln?: number | null;
+};
+
 type AdminWalletOverview = {
   players: AdminWalletPlayerRow[];
   walletUsers?: (AdminWalletPlayerRow & { is_admin?: number })[];
+  playedMatches?: PlayedMatchOption[];
 };
 
 async function fetchJson<T>(url: string, init?: RequestInit): Promise<{ ok: true; data: T } | { ok: false; error: string }> {
@@ -43,6 +54,12 @@ async function fetchJson<T>(url: string, init?: RequestInit): Promise<{ ok: true
 function formatPln(n: number) {
   const v = Math.round(n * 100) / 100;
   return new Intl.NumberFormat("pl-PL", { style: "currency", currency: "PLN" }).format(v);
+}
+
+function formatPlayedMatchLabel(m: PlayedMatchOption) {
+  const [y, mo, d] = m.match_date.split("-");
+  const date = y && mo && d ? `${d}.${mo}.${y}` : m.match_date;
+  return `${date} · ${m.match_time} · ${m.location}`;
 }
 
 function platnosciPanelClass(embedded: boolean) {
@@ -233,7 +250,7 @@ type AdminWalletsSaldoSectionProps = {
    * false: pełny nagłówek (np. zakładka Portfele w panelu admina).
    */
   embedded?: boolean;
-  /** Przyciski generowania linków publicznych (ostatni mecz + zbiorczo). */
+  /** Przyciski generowania linków publicznych (ostatni mecz, zbiorczo, wybrany mecz). */
   showPublicLinks?: boolean;
   /** Formularz doładowania salda po otrzymanym przelewie (ekran /platnosci). */
   showTopUp?: boolean;
@@ -270,6 +287,8 @@ export function AdminWalletsSaldoSection({
   const [topUpOperatorReason, setTopUpOperatorReason] = useState("");
   const [publicLinkBusy, setPublicLinkBusy] = useState(false);
   const [publicLinkCopied, setPublicLinkCopied] = useState<string | null>(null);
+  const [playedMatchId, setPlayedMatchId] = useState<number | null>(null);
+  const [playedMatchQuery, setPlayedMatchQuery] = useState("");
 
   async function refresh(opts?: { quiet?: boolean }) {
     if (!opts?.quiet) setAdminLoading(true);
@@ -323,13 +342,38 @@ export function AdminWalletsSaldoSection({
     [balancePlayerList, topUpUserId]
   );
 
-  async function generatePublicLink(kind: "last_match_wallets" | "all_wallets") {
+  const playedMatches = adminOverview?.playedMatches ?? [];
+  const selectedPlayedMatch = useMemo(
+    () => (playedMatchId != null ? playedMatches.find((m) => m.id === playedMatchId) : undefined),
+    [playedMatches, playedMatchId]
+  );
+  const filteredPlayedMatches = useMemo(() => {
+    const q = playedMatchQuery.trim().toLowerCase();
+    const list = playedMatches;
+    if (!q) return list.slice(0, 12);
+    return list
+      .filter((m) => formatPlayedMatchLabel(m).toLowerCase().includes(q))
+      .slice(0, 20);
+  }, [playedMatches, playedMatchQuery]);
+
+  async function generatePublicLink(
+    kind: "last_match_wallets" | "all_wallets" | "match_wallets",
+    matchId?: number
+  ) {
+    if (kind === "match_wallets" && !matchId) {
+      toast.error("Wybierz rozegrany mecz");
+      return;
+    }
     setPublicLinkBusy(true);
     try {
       const r = await fetchJson<{ ok: true; token: string; path: string }>("/api/admin/wallet/public-links", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ kind, expires_in_days: 30 }),
+        body: JSON.stringify({
+          kind,
+          expires_in_days: 30,
+          ...(kind === "match_wallets" && matchId ? { match_id: matchId } : {}),
+        }),
       });
       if (!r.ok) {
         toast.error(r.error);
@@ -337,7 +381,7 @@ export function AdminWalletsSaldoSection({
       }
       const url = `${window.location.origin}${r.data.path}`;
       await navigator.clipboard.writeText(url);
-      setPublicLinkCopied(kind);
+      setPublicLinkCopied(kind === "match_wallets" && matchId ? `match_wallets:${matchId}` : kind);
       toast.success("Skopiowano link do schowka");
       setTimeout(() => setPublicLinkCopied(null), 2000);
     } catch {
@@ -797,34 +841,132 @@ export function AdminWalletsSaldoSection({
   }
 
   function renderPublicLinkButtons() {
+    const matchCopied =
+      playedMatchId != null && publicLinkCopied === `match_wallets:${playedMatchId}`;
     return (
-      <div className="mt-1 flex flex-wrap gap-2">
-        <Button
-          type="button"
-          variant="gold"
-          disabled={publicLinkBusy}
-          onClick={() => void generatePublicLink("last_match_wallets")}
-        >
-          {publicLinkCopied === "last_match_wallets" ? (
-            <Check className="mr-2 h-4 w-4" aria-hidden />
+      <div className="mt-1 space-y-4">
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            variant="gold"
+            disabled={publicLinkBusy}
+            onClick={() => void generatePublicLink("last_match_wallets")}
+          >
+            {publicLinkCopied === "last_match_wallets" ? (
+              <Check className="mr-2 h-4 w-4" aria-hidden />
+            ) : (
+              <ClipboardCopy className="mr-2 h-4 w-4" aria-hidden />
+            )}
+            Ostatni mecz
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={publicLinkBusy}
+            onClick={() => void generatePublicLink("all_wallets")}
+          >
+            {publicLinkCopied === "all_wallets" ? (
+              <Check className="mr-2 h-4 w-4" aria-hidden />
+            ) : (
+              <ClipboardCopy className="mr-2 h-4 w-4" aria-hidden />
+            )}
+            Zbiorczo — wszystkie salda
+          </Button>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="wallet-played-match-search">Rozegrany mecz</Label>
+          <p className="text-xs text-zinc-500 dark:text-zinc-400">
+            Wybierz dowolny rozegrany mecz i skopiuj link z podsumowaniem płatności tylko za ten termin.
+          </p>
+          {selectedPlayedMatch ? (
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50/80 p-3 dark:border-emerald-800/50 dark:bg-emerald-950/35">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-emerald-950 dark:text-emerald-50">
+                    {formatPlayedMatchLabel(selectedPlayedMatch)}
+                  </p>
+                  {selectedPlayedMatch.signed_up != null && selectedPlayedMatch.max_slots != null ? (
+                    <p className="mt-1 text-xs text-emerald-800/90 dark:text-emerald-200/80">
+                      {selectedPlayedMatch.signed_up}/{selectedPlayedMatch.max_slots} zapisanych
+                    </p>
+                  ) : null}
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="shrink-0"
+                  onClick={() => {
+                    setPlayedMatchId(null);
+                    setPlayedMatchQuery("");
+                  }}
+                >
+                  Zmień mecz
+                </Button>
+              </div>
+            </div>
           ) : (
-            <ClipboardCopy className="mr-2 h-4 w-4" aria-hidden />
+            <>
+              <div className="relative">
+                <Search
+                  className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400"
+                  aria-hidden
+                />
+                <Input
+                  id="wallet-played-match-search"
+                  type="search"
+                  placeholder="Szukaj po dacie, godzinie lub miejscu…"
+                  value={playedMatchQuery}
+                  onChange={(e) => setPlayedMatchQuery(e.target.value)}
+                  autoComplete="off"
+                  className="pl-9"
+                />
+              </div>
+              {playedMatches.length ? (
+                <ul className="max-h-52 space-y-0 overflow-y-auto rounded-xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-700 dark:bg-zinc-950/50">
+                  {filteredPlayedMatches.length ? (
+                    filteredPlayedMatches.map((m) => (
+                      <li key={m.id}>
+                        <button
+                          type="button"
+                          className="flex w-full items-center gap-2 border-b border-zinc-100 px-3 py-2.5 text-left text-sm last:border-b-0 hover:bg-emerald-50 dark:border-zinc-800 dark:hover:bg-emerald-950/40"
+                          onClick={() => {
+                            setPlayedMatchId(m.id);
+                            setPlayedMatchQuery("");
+                          }}
+                        >
+                          <span className="min-w-0 flex-1 truncate font-medium text-zinc-900 dark:text-zinc-100">
+                            {formatPlayedMatchLabel(m)}
+                          </span>
+                        </button>
+                      </li>
+                    ))
+                  ) : (
+                    <li className="px-3 py-4 text-center text-xs text-zinc-500">Brak wyników wyszukiwania.</li>
+                  )}
+                </ul>
+              ) : (
+                <p className="rounded-lg border border-dashed border-zinc-200 bg-zinc-50/80 px-3 py-2.5 text-xs text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900/40 dark:text-zinc-400">
+                  {adminLoading ? "Wczytywanie meczów…" : "Brak rozegranych meczów."}
+                </p>
+              )}
+            </>
           )}
-          Ostatni mecz
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          disabled={publicLinkBusy}
-          onClick={() => void generatePublicLink("all_wallets")}
-        >
-          {publicLinkCopied === "all_wallets" ? (
-            <Check className="mr-2 h-4 w-4" aria-hidden />
-          ) : (
-            <ClipboardCopy className="mr-2 h-4 w-4" aria-hidden />
-          )}
-          Zbiorczo — wszystkie salda
-        </Button>
+          <Button
+            type="button"
+            variant="gold"
+            disabled={publicLinkBusy || !playedMatchId}
+            onClick={() => void generatePublicLink("match_wallets", playedMatchId ?? undefined)}
+          >
+            {matchCopied ? (
+              <Check className="mr-2 h-4 w-4" aria-hidden />
+            ) : (
+              <ClipboardCopy className="mr-2 h-4 w-4" aria-hidden />
+            )}
+            Link podsumowania wybranego meczu
+          </Button>
+        </div>
       </div>
     );
   }
@@ -907,7 +1049,7 @@ export function AdminWalletsSaldoSection({
                 embedded={embedded}
                 className="mt-0"
                 title="Linki do podsumowania płatności"
-                description="Wyślij zawodnikom link z podglądem sald — ostatni mecz lub zbiorcze salda wszystkich graczy."
+                description="Wyślij zawodnikom link z podglądem sald — ostatni mecz, zbiorczo albo dowolny rozegrany mecz."
               >
                 {renderPublicLinkButtons()}
               </PlatnosciCollapsible>
@@ -938,7 +1080,7 @@ export function AdminWalletsSaldoSection({
                 : activeWalletTab === "adjust"
                   ? "Korekta docelowego salda: Gotówka/BLIK (G) albo płatności online (O). Różnica trafia do historii jako „Korekta”."
                   : activeWalletTab === "links"
-                    ? "Wyślij zawodnikom link z podglądem sald — ostatni mecz lub zbiorcze salda wszystkich graczy."
+                    ? "Wyślij zawodnikom link z podglądem sald — ostatni mecz, zbiorczo albo dowolny rozegrany mecz."
                     : "Podgląd sald: łącznie oraz G (gotówka/BLIK) i O (online)."
             }
           >

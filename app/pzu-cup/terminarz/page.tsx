@@ -45,8 +45,7 @@ export default async function PzuCupTerminarzPage({ searchParams }: PageProps) {
   const data = await getTerminarzPageData(REALMS.PZU_CUP, session);
 
   return (
-    <div className="container mx-auto max-w-7xl flex-1 px-4 py-8 sm:py-10">
-      <TerminarzClient
+    <TerminarzClient
         upcoming={data.upcoming}
         playedConfirmed={data.playedConfirmed}
         allMatches={data.matches}
@@ -68,6 +67,5 @@ export default async function PzuCupTerminarzPage({ searchParams }: PageProps) {
         captainLotteryData={data.captainLotteryData}
         captainLotteryHistory={data.captainLotteryHistory}
       />
-    </div>
   );
 }

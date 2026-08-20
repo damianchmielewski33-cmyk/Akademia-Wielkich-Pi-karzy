@@ -7,9 +7,10 @@ import type { MatchRow } from "@/lib/db";
 import type { PlayersDataEntry } from "@/lib/terminarz-shared";
 import { MatchSignupCountsBlock } from "@/components/terminarz-match-counts";
 import { MatchLocationWeather } from "@/components/match-location-weather";
+import { PhotoPanel } from "@/components/photo-panel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { pitchLabelClass, pitchPanelClass } from "@/components/ui/pitch-card";
+import { pitchPhotoAt } from "@/lib/marketplace-photos";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -23,6 +24,7 @@ type Props = {
   onCopyInvite?: () => void;
   onOpenPlayers?: () => void;
   archive?: boolean;
+  photoSrc?: string;
 };
 
 function capacityTone(signed: number, max: number) {
@@ -44,54 +46,60 @@ export function TerminarzMatchCard({
   onCopyInvite,
   onOpenPlayers,
   archive,
+  photoSrc,
 }: Props) {
   const tone = capacityTone(m.signed_up, m.max_slots);
   const pct = m.max_slots > 0 ? (m.signed_up / m.max_slots) * 100 : 0;
   const cancelled = m.cancelled === 1;
+  const src = photoSrc ?? pitchPhotoAt(m.id);
 
   return (
-    <article
-      data-mecz-highlight={highlight ? m.id : undefined}
+    <PhotoPanel
+      src={src}
       className={cn(
-        "pitch-card group relative flex flex-col shadow-sm transition-shadow hover:shadow-md",
+        "flex min-h-[22rem] flex-col transition hover:-translate-y-0.5 hover:shadow-xl",
         cancelled && "opacity-90",
-        highlight && "ring-2 ring-[var(--mp-teal)] ring-offset-2 ring-offset-[var(--background)]"
+        highlight && "ring-2 ring-[var(--mundial-gold,#f5c518)] ring-offset-2 ring-offset-transparent"
       )}
+      contentClassName="flex h-full flex-col p-4 sm:p-5"
+      sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 380px"
     >
-      <div className="relative px-4 py-3 sm:px-5">
-        <span className={pitchLabelClass}>{cancelled ? "Anulowany" : past ? "Archiwum" : "Mecz"}</span>
-        <div className="mt-2 flex flex-wrap items-start justify-between gap-2">
+      <article data-mecz-highlight={highlight ? m.id : undefined} id={`mecz-${m.id}`} className="flex h-full min-w-0 flex-col">
+        <span className="text-[0.65rem] font-bold uppercase tracking-[0.16em] text-white/80">
+          {cancelled ? "Anulowany" : past ? "Archiwum" : "Mecz"}
+        </span>
+        <div className="mt-3 flex flex-wrap items-start justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="flex flex-col items-center rounded-xl bg-zinc-100 px-3 py-1.5 dark:bg-zinc-800">
-              <Calendar className="h-4 w-4 text-[var(--mp-teal-dark)]" aria-hidden />
-              <span className="mt-0.5 text-sm font-bold tabular-nums text-zinc-950 dark:text-white">{m.match_date.slice(5).replace("-", ".")}</span>
-              <span className="text-[10px] font-medium uppercase tracking-wide text-zinc-500">
+            <div className="flex flex-col items-center rounded-xl bg-white/90 px-3 py-1.5 text-emerald-950 shadow-md">
+              <Calendar className="h-4 w-4 text-emerald-800" aria-hidden />
+              <span className="mt-0.5 text-sm font-bold tabular-nums">{m.match_date.slice(5).replace("-", ".")}</span>
+              <span className="text-[10px] font-medium uppercase tracking-wide text-emerald-800/70">
                 {m.match_date.slice(0, 4)}
               </span>
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4 text-[var(--mp-teal-dark)]" aria-hidden />
-                <span className="text-lg font-bold tabular-nums text-zinc-950 dark:text-white">{m.match_time}</span>
+                <Clock className="h-4 w-4 text-[var(--mundial-gold,#f5c518)]" aria-hidden />
+                <span className="text-lg font-black tabular-nums text-white drop-shadow-sm">{m.match_time}</span>
               </div>
               <div className="mt-1 flex flex-wrap gap-1.5">
-                {cancelled && (
+                {cancelled ? (
                   <Badge className="border-red-300/40 bg-red-500/90 text-white hover:bg-red-500/90">Anulowany</Badge>
-                )}
-                {past && !archive && !cancelled && (
-                  <Badge variant="outline" className="border-amber-300/50 bg-amber-500/20 text-amber-100">
+                ) : null}
+                {past && !archive && !cancelled ? (
+                  <Badge variant="outline" className="border-amber-200/50 bg-amber-500/30 text-amber-50">
                     Termin minął
                   </Badge>
-                )}
-                {archive && (
+                ) : null}
+                {archive ? (
                   <Badge variant="outline" className="border-white/30 bg-white/10 text-white">
                     Rozegrany
                   </Badge>
-                )}
+                ) : null}
               </div>
             </div>
           </div>
-          <div className="text-right text-zinc-950 dark:text-white">
+          <div className="text-right">
             <MatchSignupCountsBlock
               matchId={m.id}
               signedUp={m.signed_up}
@@ -102,25 +110,23 @@ export function TerminarzMatchCard({
             />
           </div>
         </div>
-      </div>
 
-      <div className={cn(pitchPanelClass, "relative mx-4 mb-4 flex flex-1 flex-col px-4 py-4 sm:mx-5 sm:px-5")}>
-        <div className="flex items-start gap-2 text-sm text-zinc-600 dark:text-zinc-300">
-          <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[var(--mp-teal-dark)]" aria-hidden />
+        <div className="mt-4 flex items-start gap-2 text-sm text-white">
+          <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[var(--mundial-gold,#f5c518)]" aria-hidden />
           <div className="min-w-0">
-            <p className="font-medium leading-snug">{m.location}</p>
+            <p className="font-medium leading-snug drop-shadow-sm">{m.location}</p>
             <a
               href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(m.location)}`}
               target="_blank"
               rel="noreferrer"
-              className="pitch-link mt-0.5 inline-block text-xs"
+              className="mt-0.5 inline-block text-xs font-semibold text-white/80 underline decoration-white/30 underline-offset-2 hover:text-white"
             >
               Mapa
             </a>
           </div>
         </div>
 
-        <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800">
+        <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-white/20">
           <div
             className={cn(
               "h-full rounded-full transition-all",
@@ -131,7 +137,7 @@ export function TerminarzMatchCard({
         </div>
 
         <div className="mt-4 flex flex-wrap gap-2">
-          {onOpenPlayers && (
+          {onOpenPlayers ? (
             <Button
               type="button"
               size="sm"
@@ -142,8 +148,8 @@ export function TerminarzMatchCard({
               <Users className="h-4 w-4" aria-hidden />
               Skład
             </Button>
-          )}
-          {!past && onCopyInvite && (
+          ) : null}
+          {!past && onCopyInvite ? (
             <Button
               type="button"
               size="sm"
@@ -154,8 +160,8 @@ export function TerminarzMatchCard({
               <Link2 className="h-4 w-4" aria-hidden />
               Zaproszenie
             </Button>
-          )}
-          {isAdmin && onManage && !cancelled && (
+          ) : null}
+          {isAdmin && onManage && !cancelled ? (
             <Button
               type="button"
               size="sm"
@@ -166,25 +172,25 @@ export function TerminarzMatchCard({
               <Settings className="h-4 w-4" aria-hidden />
               Zarządzaj
             </Button>
-          )}
+          ) : null}
         </div>
 
         <div className="mt-4 flex flex-col gap-2 border-t border-white/20 pt-4 sm:flex-row sm:flex-wrap [&_a]:w-full [&_button]:w-full sm:[&_a]:w-auto sm:[&_button]:w-auto">
           {actions}
         </div>
 
-        {!archive && (
-          <details className="pitch-panel mt-3">
+        {!archive ? (
+          <details className="mt-3 rounded-xl border border-white/20 bg-black/20">
             <summary className="cursor-pointer list-none px-3 py-2 text-xs font-semibold uppercase tracking-[0.1em] text-[var(--mundial-gold,#f5c518)] [&::-webkit-details-marker]:hidden">
               Pogoda — rozwiń
             </summary>
             <div className="border-t border-white/15 px-2 pb-2 pt-1">
-              <MatchLocationWeather location={m.location} className="mt-0 border-t-0 pt-2" />
+              <MatchLocationWeather location={m.location} matchDate={m.match_date} className="mt-0 border-t-0 pt-2" />
             </div>
           </details>
-        )}
-      </div>
-    </article>
+        ) : null}
+      </article>
+    </PhotoPanel>
   );
 }
 
@@ -224,21 +230,16 @@ export function TerminarzQuickBtn({
   if (href) {
     return (
       <Button type="button" size="sm" variant="ghost" className={cls} asChild>
-        <Link href={href}>{icon}{children}</Link>
+        <Link href={href}>
+          {icon}
+          {children}
+        </Link>
       </Button>
     );
   }
 
   return (
-    <Button
-      type="button"
-      size="sm"
-      variant="ghost"
-      disabled={disabled}
-      title={title}
-      className={cls}
-      onClick={onClick}
-    >
+    <Button type="button" size="sm" variant="ghost" className={cls} onClick={onClick} disabled={disabled} title={title}>
       {icon}
       {children}
     </Button>

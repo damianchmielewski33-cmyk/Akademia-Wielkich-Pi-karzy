@@ -2,6 +2,7 @@
 
 import { Dumbbell, ExternalLink } from "lucide-react";
 import { MarketplacePitchPhoto } from "@/components/marketplace-pitch-photo";
+import { useSiteMode } from "@/components/site-mode";
 import { GYMBRAT_SITE_NAME, GYMBRAT_SITE_TAGLINE, getGymBratCrossLink } from "@/lib/sister-sites";
 import { cn } from "@/lib/utils";
 
@@ -16,6 +17,7 @@ export function GymBratCrossLink({
   photoSrc?: string;
 }) {
   const href = getGymBratCrossLink("/");
+  const { marketplaceEnabled } = useSiteMode();
 
   if (variant === "footer" || variant === "inline") {
     return (
@@ -37,6 +39,7 @@ export function GymBratCrossLink({
   }
 
   const photoTile = Boolean(photoSrc);
+  const stadiumTile = !photoTile && !marketplaceEnabled;
 
   return (
     <a
@@ -47,7 +50,9 @@ export function GymBratCrossLink({
         "flex h-full min-h-[7rem] items-start justify-between gap-3 rounded-2xl p-5 text-left transition hover:-translate-y-0.5",
         photoTile
           ? "relative overflow-hidden text-white shadow-lg hover:shadow-xl"
-          : "border border-zinc-200 bg-white shadow-sm hover:shadow-md dark:border-zinc-800 dark:bg-zinc-950",
+          : stadiumTile
+            ? "relative overflow-hidden border-2 border-white/30 text-white shadow-md shadow-emerald-950/12 ring-1 ring-emerald-950/10 hover:shadow-lg"
+            : "border border-zinc-200 bg-white shadow-sm hover:shadow-md dark:border-zinc-800 dark:bg-zinc-950",
         className
       )}
     >
@@ -63,16 +68,25 @@ export function GymBratCrossLink({
             aria-hidden
           />
         </>
+      ) : stadiumTile ? (
+        <div className="home-pitch-tile absolute inset-0" aria-hidden />
       ) : null}
-      <div className={cn("min-w-0", photoTile && "relative z-10")}>
-        <p className={cn("font-black", photoTile ? "text-white drop-shadow-sm" : "text-zinc-950 dark:text-white")}>
+      <div className={cn("min-w-0", (photoTile || stadiumTile) && "relative z-10")}>
+        <p
+          className={cn(
+            "font-black",
+            photoTile || stadiumTile ? "text-white drop-shadow-sm" : "text-zinc-950 dark:text-white"
+          )}
+        >
           {GYMBRAT_SITE_NAME}
         </p>
-        <p className={cn("mt-1 text-sm", photoTile ? "text-white/80" : "text-zinc-500")}>{GYMBRAT_SITE_TAGLINE}</p>
+        <p className={cn("mt-1 text-sm", photoTile || stadiumTile ? "text-white/80" : "text-zinc-500")}>
+          {GYMBRAT_SITE_TAGLINE}
+        </p>
         <span
           className={cn(
             "mt-3 inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wide",
-            photoTile ? "text-white/90" : "text-[var(--mp-teal-dark)]"
+            photoTile || stadiumTile ? "text-white/90" : "text-[var(--mp-teal-dark)]"
           )}
         >
           Otwórz
@@ -82,7 +96,7 @@ export function GymBratCrossLink({
       <span
         className={cn(
           "flex h-10 w-10 shrink-0 items-center justify-center rounded-full",
-          photoTile
+          photoTile || stadiumTile
             ? "relative z-10 bg-white/15 text-white ring-1 ring-white/30"
             : "bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-200"
         )}

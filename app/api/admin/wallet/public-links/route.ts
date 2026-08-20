@@ -45,8 +45,13 @@ export async function POST(req: Request) {
   const db = await getDb();
 
   if (parsed.data.kind === "match_wallets") {
-    const exists = await db.prepare("SELECT id FROM matches WHERE id = ?").get(parsed.data.match_id);
-    if (!exists) return NextResponse.json({ error: "Mecz nie znaleziony" }, { status: 404 });
+    const match = (await db
+      .prepare("SELECT id, played FROM matches WHERE id = ?")
+      .get(parsed.data.match_id)) as { id: number; played: number } | undefined;
+    if (!match) return NextResponse.json({ error: "Mecz nie znaleziony" }, { status: 404 });
+    if (Number(match.played) !== 1) {
+      return NextResponse.json({ error: "Podsumowanie dotyczy tylko rozegranego meczu" }, { status: 400 });
+    }
   }
   if (parsed.data.kind === "player_wallets") {
     const exists = await db.prepare("SELECT id FROM users WHERE id = ?").get(parsed.data.user_id);

@@ -8,11 +8,12 @@ import { cn } from "@/lib/utils";
 export const pitchLabelClass =
   "pitch-label text-xs font-semibold uppercase tracking-[0.14em] text-[var(--mp-teal-dark)]";
 
-export const pitchPanelClass =
-  "pitch-panel rounded-xl border border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900";
+/** Tło ustawia CSS: jasne na marketplace, półprzezroczyste na kafelkach murawy. */
+export const pitchPanelClass = "pitch-panel rounded-xl";
 
+/** Przyciski na karcie meczu / murawie — nie używać marketplace’owego dark:bg-zinc-900. */
 export const pitchSecondaryBtnClass =
-  "inline-flex w-full items-center justify-center gap-2 rounded-lg border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-800 transition-colors hover:bg-zinc-50 disabled:pointer-events-none disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800";
+  "inline-flex w-full items-center justify-center gap-2 rounded-lg border border-white/25 bg-black/10 px-4 py-2.5 text-sm font-semibold text-white/95 backdrop-blur-sm transition-colors hover:bg-white/10 disabled:pointer-events-none disabled:opacity-50";
 
 type PitchCardProps<T extends ElementType = "section"> = {
   as?: T;

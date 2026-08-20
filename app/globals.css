@@ -99,8 +99,10 @@
   }
 
   .home-pitch-tile .pitch-panel,
-  .home-pitch-tile-gold .pitch-panel {
-    @apply border-white/25 bg-black/10;
+  .home-pitch-tile-gold .pitch-panel,
+  .dark .home-pitch-tile .pitch-panel,
+  .dark .home-pitch-tile-gold .pitch-panel {
+    @apply border-white/25 bg-black/10 backdrop-blur-sm;
   }
 
   .home-pitch-tile .pitch-link,
