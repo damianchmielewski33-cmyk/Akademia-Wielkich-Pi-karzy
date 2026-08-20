@@ -74,19 +74,25 @@ function NavLink({
   href,
   children,
   active,
+  stadium = false,
 }: {
   href: string;
   children: ReactNode;
   active?: boolean;
+  stadium?: boolean;
 }) {
   return (
     <Link
       href={href}
       className={cn(
         "awp-focus-ring rounded-lg px-2.5 py-2 text-[0.7rem] font-bold uppercase tracking-[0.12em] transition-colors",
-        active
-          ? "text-[var(--mp-teal-dark)]"
-          : "text-zinc-600 hover:text-zinc-950 dark:text-zinc-300 dark:hover:text-white"
+        stadium
+          ? active
+            ? "text-[var(--mundial-gold)]"
+            : "text-white/80 hover:text-white"
+          : active
+            ? "text-[var(--mp-teal-dark)]"
+            : "text-zinc-600 hover:text-zinc-950 dark:text-zinc-300 dark:hover:text-white"
       )}
     >
       {children}
@@ -107,6 +113,7 @@ export function SiteShell({
   const pathname = usePathname();
   const { isHiddenHref } = useScreenBlocks();
   const { mode, setMode, marketplaceEnabled } = useSiteMode();
+  const stadium = !marketplaceEnabled;
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [themeBusy, setThemeBusy] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -216,7 +223,10 @@ export function SiteShell({
       onClick={() => void toggleTheme()}
       disabled={themeBusy}
       className={cn(
-        "awp-focus-ring inline-flex h-10 w-10 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-700 shadow-sm transition-colors hover:border-zinc-300 hover:text-zinc-950 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200",
+        "awp-focus-ring inline-flex h-10 w-10 items-center justify-center rounded-full border shadow-sm transition-colors",
+        stadium
+          ? "border-white/25 bg-white/10 text-white hover:bg-white/15"
+          : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-300 hover:text-zinc-950 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200",
         themeBusy && "opacity-70"
       )}
       aria-label={isDarkNow ? "Przełącz na jasny motyw" : "Przełącz na ciemny motyw"}
@@ -227,7 +237,12 @@ export function SiteShell({
   );
 
   return (
-    <div className="flex min-h-screen flex-col overflow-x-clip bg-[var(--background)] text-zinc-900 dark:text-zinc-100">
+    <div
+      className={cn(
+        "flex min-h-screen flex-col overflow-x-clip",
+        stadium ? "text-white" : "bg-[var(--background)] text-zinc-900 dark:text-zinc-100"
+      )}
+    >
       <NavigationLoadingOverlay />
       <AnalyticsTracker />
       <div className="sticky top-0 z-40 pt-[env(safe-area-inset-top)]">
@@ -237,13 +252,25 @@ export function SiteShell({
             <SisterSiteArrivalBanner />
           </Suspense>
         ) : null}
-        <header className="mp-header relative z-30 text-zinc-900 dark:text-zinc-50">
+        <header
+          className={cn(
+            "relative z-30",
+            stadium
+              ? "mundial-header border-b border-[var(--mundial-gold)]/30 text-white shadow-lg"
+              : "mp-header text-zinc-900 dark:text-zinc-50"
+          )}
+        >
           <div className="relative mx-auto flex max-w-6xl items-center justify-between gap-3 px-3 py-3 xs:px-4 sm:py-3.5">
             <Link
               href="/"
               className="awp-focus-ring flex min-w-0 items-center gap-2.5 rounded-xl pr-1"
             >
-              <span className="relative z-[1] flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[var(--mp-teal)] shadow-sm">
+              <span
+                className={cn(
+                  "relative z-[1] flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl shadow-sm",
+                  stadium ? "bg-white/10 ring-1 ring-white/25" : "bg-[var(--mp-teal)]"
+                )}
+              >
                 <SiteAssetImage
                   asset="logo_header"
                   alt="Logo"
@@ -255,11 +282,21 @@ export function SiteShell({
                 />
               </span>
               <span className="min-w-0 text-left">
-                <span className="block truncate text-sm font-black tracking-tight text-zinc-950 dark:text-white sm:text-base">
+                <span
+                  className={cn(
+                    "block truncate text-sm font-black tracking-tight sm:text-base",
+                    stadium ? "text-white" : "text-zinc-950 dark:text-white"
+                  )}
+                >
                   <span className="sm:hidden">{mode === "booking" ? "Boiska" : "Akademia WP"}</span>
                   <span className="hidden sm:inline">{siteName}</span>
                 </span>
-                <span className="hidden text-[0.65rem] font-semibold uppercase tracking-[0.16em] text-[var(--mp-teal-dark)] xs:block">
+                <span
+                  className={cn(
+                    "hidden text-[0.65rem] font-semibold uppercase tracking-[0.16em] xs:block",
+                    stadium ? "text-[var(--mundial-gold)]" : "text-[var(--mp-teal-dark)]"
+                  )}
+                >
                   {mode === "academy" ? "Akademia" : mode === "booking" ? "Rezerwacja boisk" : "\u00a0"}
                 </span>
               </span>
@@ -270,7 +307,12 @@ export function SiteShell({
                 {isAdmin ? <AdminHeaderMessagesButton initialUnreadCount={adminUnreadMessages} /> : null}
 
                 {visiblePrimary.map((x) => (
-                  <NavLink key={x.href} href={x.href} active={pathname === x.href || (x.href !== "/" && pathname?.startsWith(`${x.href}/`))}>
+                  <NavLink
+                    key={x.href}
+                    href={x.href}
+                    stadium={stadium}
+                    active={pathname === x.href || (x.href !== "/" && pathname?.startsWith(`${x.href}/`))}
+                  >
                     {x.label}
                   </NavLink>
                 ))}
@@ -281,8 +323,14 @@ export function SiteShell({
                     type="button"
                     onClick={() => setAcademyOpen((open) => !open)}
                     className={cn(
-                      "awp-focus-ring inline-flex items-center gap-1 rounded-lg px-2.5 py-2 text-[0.7rem] font-bold uppercase tracking-[0.12em] text-zinc-600 hover:text-zinc-950 dark:text-zinc-300 dark:hover:text-white",
-                      academyOpen && "text-[var(--mp-teal-dark)]"
+                      "awp-focus-ring inline-flex items-center gap-1 rounded-lg px-2.5 py-2 text-[0.7rem] font-bold uppercase tracking-[0.12em]",
+                      stadium
+                        ? academyOpen
+                          ? "text-[var(--mundial-gold)]"
+                          : "text-white/80 hover:text-white"
+                        : academyOpen
+                          ? "text-[var(--mp-teal-dark)]"
+                          : "text-zinc-600 hover:text-zinc-950 dark:text-zinc-300 dark:hover:text-white"
                     )}
                     aria-expanded={academyOpen}
                   >
@@ -290,15 +338,30 @@ export function SiteShell({
                     <ChevronDown className={cn("h-3.5 w-3.5 transition", academyOpen && "rotate-180")} aria-hidden />
                   </button>
                   {academyOpen ? (
-                    <div className="absolute right-0 top-full z-50 mt-2 w-56 overflow-hidden rounded-2xl border border-zinc-200 bg-white py-2 shadow-xl dark:border-zinc-700 dark:bg-zinc-950">
+                    <div
+                      className={cn(
+                        "absolute right-0 top-full z-50 mt-2 w-56 overflow-hidden rounded-2xl border py-2 shadow-xl",
+                        stadium
+                          ? "border-white/20 bg-[var(--mundial-navy)]"
+                          : "border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-950"
+                      )}
+                    >
                       {visibleAcademyMore.map((x) => (
                         <Link
                           key={x.href}
                           href={x.href}
                           onClick={() => setAcademyOpen(false)}
-                          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50 dark:text-zinc-200 dark:hover:bg-zinc-900"
+                          className={cn(
+                            "flex items-center gap-2 px-4 py-2 text-sm font-medium",
+                            stadium
+                              ? "text-white/90 hover:bg-white/10"
+                              : "text-zinc-700 hover:bg-zinc-50 dark:text-zinc-200 dark:hover:bg-zinc-900"
+                          )}
                         >
-                          <x.icon className="h-4 w-4 text-[var(--mp-teal-dark)]" aria-hidden />
+                          <x.icon
+                            className={cn("h-4 w-4", stadium ? "text-[var(--mundial-gold)]" : "text-[var(--mp-teal-dark)]")}
+                            aria-hidden
+                          />
                           {x.label}
                         </Link>
                       ))}
@@ -311,7 +374,12 @@ export function SiteShell({
                   <button
                     type="button"
                     onClick={() => setMode(mode === "booking" ? "academy" : "booking", { navigateHome: true })}
-                    className="awp-focus-ring ml-1 rounded-full border border-zinc-200 px-3 py-1.5 text-[0.65rem] font-bold uppercase tracking-[0.12em] text-zinc-600 hover:border-[var(--mp-teal)] hover:text-[var(--mp-teal-dark)] dark:border-zinc-700 dark:text-zinc-300"
+                    className={cn(
+                      "awp-focus-ring ml-1 rounded-full border px-3 py-1.5 text-[0.65rem] font-bold uppercase tracking-[0.12em]",
+                      stadium
+                        ? "border-white/25 text-white/85 hover:border-[var(--mundial-gold)] hover:text-[var(--mundial-gold)]"
+                        : "border-zinc-200 text-zinc-600 hover:border-[var(--mp-teal)] hover:text-[var(--mp-teal-dark)] dark:border-zinc-700 dark:text-zinc-300"
+                    )}
                   >
                     {mode === "booking" ? "Gram z wami" : "Szukam boiska"}
                   </button>
@@ -323,8 +391,11 @@ export function SiteShell({
                   <Link
                     href="/profil"
                     className={cn(
-                      "awp-focus-ring ml-1 flex max-w-[min(100%,14rem)] items-center gap-2 rounded-full border border-zinc-200 px-2 py-1.5 transition-colors hover:border-zinc-300 dark:border-zinc-700",
-                      pathname === "/profil" && "border-[var(--mp-teal)]"
+                      "awp-focus-ring ml-1 flex max-w-[min(100%,14rem)] items-center gap-2 rounded-full border px-2 py-1.5 transition-colors",
+                      stadium
+                        ? "border-white/25 hover:border-white/50"
+                        : "border-zinc-200 hover:border-zinc-300 dark:border-zinc-700",
+                      pathname === "/profil" && (stadium ? "border-[var(--mundial-gold)]" : "border-[var(--mp-teal)]")
                     )}
                     aria-label="Mój profil"
                     title="Mój profil"
@@ -340,8 +411,11 @@ export function SiteShell({
                       firstName={account.firstName}
                       lastName={account.lastName}
                       nick={account.zawodnik}
-                      primaryClassName="truncate text-sm font-semibold text-zinc-900 dark:text-white"
-                      secondaryClassName="truncate text-xs text-zinc-500"
+                      primaryClassName={cn(
+                        "truncate text-sm font-semibold",
+                        stadium ? "text-white" : "text-zinc-900 dark:text-white"
+                      )}
+                      secondaryClassName={cn("truncate text-xs", stadium ? "text-white/70" : "text-zinc-500")}
                     />
                   </Link>
                 ) : isLoggedIn && account ? (
@@ -378,7 +452,10 @@ export function SiteShell({
                   <button
                     type="button"
                     onClick={() => setLogoutOpen(true)}
-                    className="awp-focus-ring rounded-lg px-2.5 py-2 text-[0.7rem] font-bold uppercase tracking-[0.12em] text-zinc-500 hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white"
+                    className={cn(
+                      "awp-focus-ring rounded-lg px-2.5 py-2 text-[0.7rem] font-bold uppercase tracking-[0.12em]",
+                      stadium ? "text-white/75 hover:text-white" : "text-zinc-500 hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white"
+                    )}
                   >
                     Wyloguj
                   </button>
@@ -407,7 +484,12 @@ export function SiteShell({
                 <button
                   type="button"
                   onClick={() => setMobileNavOpen(true)}
-                  className="awp-focus-ring inline-flex h-10 w-10 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-800 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+                  className={cn(
+                    "awp-focus-ring inline-flex h-10 w-10 items-center justify-center rounded-full border",
+                    stadium
+                      ? "border-white/25 bg-white/10 text-white"
+                      : "border-zinc-200 bg-white text-zinc-800 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+                  )}
                   aria-label="Otwórz menu"
                   aria-expanded={mobileNavOpen}
                   aria-controls="awp-mobile-nav"
@@ -434,14 +516,27 @@ export function SiteShell({
             role="dialog"
             aria-modal="true"
             aria-labelledby={mobileNavTitleId}
-            className="absolute inset-y-0 right-0 flex w-[min(100%,20.5rem)] flex-col border-l border-zinc-200 bg-white shadow-2xl dark:border-zinc-800 dark:bg-zinc-950 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
+            className={cn(
+              "absolute inset-y-0 right-0 flex w-[min(100%,20.5rem)] flex-col border-l shadow-2xl pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]",
+              stadium
+                ? "border-white/15 bg-[var(--mundial-navy)] text-white"
+                : "border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950"
+            )}
           >
-            <div className="flex items-center justify-between gap-3 border-b border-zinc-100 px-4 py-3.5 dark:border-zinc-800">
+            <div
+              className={cn(
+                "flex items-center justify-between gap-3 border-b px-4 py-3.5",
+                stadium ? "border-white/15" : "border-zinc-100 dark:border-zinc-800"
+              )}
+            >
               <div className="min-w-0">
-                <p id={mobileNavTitleId} className="text-sm font-semibold text-zinc-950 dark:text-white">
+                <p
+                  id={mobileNavTitleId}
+                  className={cn("text-sm font-semibold", stadium ? "text-white" : "text-zinc-950 dark:text-white")}
+                >
                   Menu
                 </p>
-                <p className="truncate text-xs text-zinc-500">{siteName}</p>
+                <p className={cn("truncate text-xs", stadium ? "text-white/70" : "text-zinc-500")}>{siteName}</p>
               </div>
               <button
                 type="button"

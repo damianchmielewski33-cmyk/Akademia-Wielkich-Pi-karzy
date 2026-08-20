@@ -2,12 +2,14 @@
 
 import type { ComponentPropsWithoutRef, ElementType, ReactNode } from "react";
 import { SiteSectionHero, PAGE_HERO_KICKER } from "@/components/site-section-hero";
+import { useSiteMode } from "@/components/site-mode";
 import { cn } from "@/lib/utils";
 
 export const pitchLabelClass =
-  "text-xs font-semibold uppercase tracking-[0.14em] text-[var(--mp-teal-dark)]";
+  "pitch-label text-xs font-semibold uppercase tracking-[0.14em] text-[var(--mp-teal-dark)]";
 
-export const pitchPanelClass = "rounded-xl border border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900";
+export const pitchPanelClass =
+  "pitch-panel rounded-xl border border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900";
 
 export const pitchSecondaryBtnClass =
   "inline-flex w-full items-center justify-center gap-2 rounded-lg border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-800 transition-colors hover:bg-zinc-50 disabled:pointer-events-none disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800";
@@ -22,16 +24,18 @@ type PitchCardProps<T extends ElementType = "section"> = {
 
 export function PitchCard<T extends ElementType = "section">({
   as,
-  variant = "marketplace",
+  variant,
   showDecorations,
   className,
   contentClassName,
   children,
   ...props
 }: PitchCardProps<T>) {
+  const { marketplaceEnabled } = useSiteMode();
   const Comp = as ?? "section";
-  const stadium = variant === "pitch" || variant === "gold";
-  const bgClass = variant === "gold" ? "home-pitch-tile-gold" : variant === "pitch" ? "home-pitch-tile" : "";
+  const resolvedVariant = variant ?? (marketplaceEnabled ? "marketplace" : "pitch");
+  const stadium = resolvedVariant === "pitch" || resolvedVariant === "gold";
+  const bgClass = resolvedVariant === "gold" ? "home-pitch-tile-gold" : resolvedVariant === "pitch" ? "home-pitch-tile" : "";
   const decorations = showDecorations ?? stadium;
 
   return (
@@ -79,6 +83,7 @@ export function PitchPageHero({
   showCrest = true,
   children,
 }: PitchPageHeroProps) {
+  const { marketplaceEnabled } = useSiteMode();
   return (
     <SiteSectionHero
       kicker={kicker}
@@ -86,6 +91,7 @@ export function PitchPageHero({
       subtitle={subtitle}
       align={align}
       showCrest={showCrest}
+      variant={marketplaceEnabled ? "marketplace" : "stadium"}
       className={cn("mx-auto w-full max-w-3xl", className)}
     >
       {children}

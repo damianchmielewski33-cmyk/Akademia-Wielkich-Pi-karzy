@@ -1,5 +1,8 @@
+"use client";
+
 import type { ReactNode } from "react";
 import { SiteAssetImage } from "@/components/site-asset-image";
+import { useSiteMode } from "@/components/site-mode";
 import { cn } from "@/lib/utils";
 
 export const PAGE_HERO_KICKER = "Akademia Wielkich Piłkarzy";
@@ -25,17 +28,19 @@ export function SiteSectionHero({
   showCrest = true,
   align = "left",
   size = "default",
-  variant = "marketplace",
+  variant,
   titleId,
   children,
 }: Props) {
+  const { marketplaceEnabled } = useSiteMode();
+  const resolvedVariant = variant ?? (marketplaceEnabled ? "marketplace" : "stadium");
   const centered = align === "center";
 
   return (
     <header
       className={cn(
         "awp-section-hero",
-        variant === "stadium" && "awp-section-hero--stadium",
+        resolvedVariant === "stadium" && "awp-section-hero--stadium",
         size === "compact" && "awp-section-hero--compact",
         centered && "awp-section-hero--center",
         className

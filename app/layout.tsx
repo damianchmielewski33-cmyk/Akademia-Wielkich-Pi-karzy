@@ -67,12 +67,16 @@ const displayFont = localFont({
 });
 
 /** iPhone / PWA: dopasowanie do ekranu + kolor startowy zamiast czerni. */
-export const viewport: Viewport = {
-  width: "device-width",
-  initialScale: 1,
-  viewportFit: "cover",
-  themeColor: "#00C9B1",
-};
+export async function generateViewport(): Promise<Viewport> {
+  const settings = await getRequestAppSettings();
+  const marketplace = settings.booking_marketplace_enabled === true;
+  return {
+    width: "device-width",
+    initialScale: 1,
+    viewportFit: "cover",
+    themeColor: marketplace ? "#00C9B1" : "#1A2D5A",
+  };
+}
 
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await getRequestAppSettings();
@@ -137,7 +141,6 @@ export default async function RootLayout({
   );
 
   const accountRow = session ? await getAccountNavFields(session.userId) : null;
-  const htmlThemeClass = accountRow && normalizeUiTheme(accountRow.uiTheme) === "dark" ? "dark" : "";
 
   let accountNav: {
     firstName: string;
@@ -158,6 +161,13 @@ export default async function RootLayout({
 
   const [db, appSettings] = await Promise.all([getDb(), getRequestAppSettings()]);
   const marketplaceEnabled = appSettings.booking_marketplace_enabled === true;
+  const htmlThemeClass = accountRow
+    ? normalizeUiTheme(accountRow.uiTheme) === "dark"
+      ? "dark"
+      : ""
+    : marketplaceEnabled
+      ? ""
+      : "dark";
   const initialSiteMode = marketplaceEnabled
     ? parseSiteMode(cookieStore.get(SITE_MODE_COOKIE)?.value)
     : "academy";
@@ -239,14 +249,23 @@ export default async function RootLayout({
   } as CSSProperties;
 
   return (
-    <html lang="pl" className={htmlThemeClass} style={assetCssVars}>
+    <html
+      lang="pl"
+      className={`${htmlThemeClass} ${marketplaceEnabled ? "site-chrome-marketplace" : "site-chrome-academy"}`.trim()}
+      style={assetCssVars}
+    >
       <head>
         <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta
+          name="apple-mobile-web-app-status-bar-style"
+          content={marketplaceEnabled ? "default" : "black-translucent"}
+        />
         <meta name="mobile-web-app-capable" content="yes" />
         <style
           dangerouslySetInnerHTML={{
-            __html: "html,body{background-color:#f4f5f7;}",
+            __html: marketplaceEnabled
+              ? "html,body{background-color:#f4f5f7;}"
+              : "html,body{background-color:#1A2D5A;}",
           }}
         />
         {/* iOS PWA splash — solid brand color (Safari ignores manifest background_color). */}
@@ -294,13 +313,14 @@ export default async function RootLayout({
         {/* Skrypt AdSense ładujemy dopiero po zgodzie marketingowej (AdsenseProvider). */}
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${displayFont.variable} marketplace-bg min-h-screen antialiased font-sans`}
+        className={`${geistSans.variable} ${geistMono.variable} ${displayFont.variable} min-h-screen antialiased font-sans ${marketplaceEnabled ? "marketplace-bg" : "murawa-bg"}`}
       >
         <script
-          // Publiczny marketplace jest jasny. Ten skrypt zapamiętuje wybór motywu.
+          // Marketplace: domyślnie jasny. Akademia (rezerwacje wyłączone): domyślnie stadion / ciemny.
           dangerouslySetInnerHTML={{
-            __html:
-              "(function(){try{var t=localStorage.getItem('awp-ui-theme');if(t==='dark'){document.documentElement.classList.add('dark');}else{document.documentElement.classList.remove('dark');}}catch(e){}})();",
+            __html: marketplaceEnabled
+              ? "(function(){try{var t=localStorage.getItem('awp-ui-theme');if(t==='dark'){document.documentElement.classList.add('dark');}else{document.documentElement.classList.remove('dark');}}catch(e){}})();"
+              : "(function(){try{var t=localStorage.getItem('awp-ui-theme');if(t==='light'){document.documentElement.classList.remove('dark');}else{document.documentElement.classList.add('dark');}}catch(e){}})();",
           }}
         />
         <SiteJsonLd
