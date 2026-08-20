@@ -109,19 +109,19 @@
   }
 
   /* Jasne karty: stare klasy stadionowe nie giną na białym tle */
-  .pitch-card:not(.home-pitch-tile):not(.home-pitch-tile-gold) :where(.text-white):not([class*="bg-emerald"]):not([class*="bg-red"]):not([class*="bg-lime"]) {
+  .pitch-card:not(.home-pitch-tile):not(.home-pitch-tile-gold):not(.home-next-match-card) :where(.text-white):not([class*="bg-emerald"]):not([class*="bg-red"]):not([class*="bg-lime"]) {
     color: #18181b;
   }
-  .dark .pitch-card:not(.home-pitch-tile):not(.home-pitch-tile-gold) :where(.text-white):not([class*="bg-emerald"]):not([class*="bg-red"]):not([class*="bg-lime"]) {
+  .dark .pitch-card:not(.home-pitch-tile):not(.home-pitch-tile-gold):not(.home-next-match-card) :where(.text-white):not([class*="bg-emerald"]):not([class*="bg-red"]):not([class*="bg-lime"]) {
     color: #f8fafc;
   }
-  .pitch-card:not(.home-pitch-tile):not(.home-pitch-tile-gold) :where([class*="text-emerald-100"], [class*="text-emerald-50"]) {
+  .pitch-card:not(.home-pitch-tile):not(.home-pitch-tile-gold):not(.home-next-match-card) :where([class*="text-emerald-100"], [class*="text-emerald-50"]) {
     color: #52525b;
   }
-  .dark .pitch-card:not(.home-pitch-tile):not(.home-pitch-tile-gold) :where([class*="text-emerald-100"], [class*="text-emerald-50"]) {
+  .dark .pitch-card:not(.home-pitch-tile):not(.home-pitch-tile-gold):not(.home-next-match-card) :where([class*="text-emerald-100"], [class*="text-emerald-50"]) {
     color: #a1a1aa;
   }
-  .pitch-card:not(.home-pitch-tile):not(.home-pitch-tile-gold) :where(.text-emerald-400, .text-emerald-300) {
+  .pitch-card:not(.home-pitch-tile):not(.home-pitch-tile-gold):not(.home-next-match-card) :where(.text-emerald-400, .text-emerald-300) {
     color: var(--mp-teal-dark);
   }
 

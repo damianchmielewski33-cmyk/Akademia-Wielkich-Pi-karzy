@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Calendar, Car, Clock, HelpCircle, KeyRound, LayoutGrid, MapPin, Wallet } from "lucide-react";
+import { MarketplacePitchPhoto } from "@/components/marketplace-pitch-photo";
 import { SiteAssetImage } from "@/components/site-asset-image";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,6 +21,7 @@ type SignupState = "none" | "tentative" | "confirmed" | "declined";
 
 type Props = {
   match: MatchRow;
+  backgroundSrc: string;
   tentativeLine: string;
   lineupPublic: boolean;
   signup: SignupState;
@@ -58,6 +60,7 @@ function slotMeta(signed: number, max: number) {
 
 export function HomeNextMatchCard({
   match,
+  backgroundSrc,
   tentativeLine,
   lineupPublic,
   signup,
@@ -86,13 +89,19 @@ export function HomeNextMatchCard({
   return (
     <PitchCard
       as="section"
-      className="mt-0"
+      className="home-next-match-card mt-0 border-0 text-white shadow-lg"
       contentClassName="px-5 py-5 sm:px-6 sm:py-6"
       aria-labelledby="home-next-match-heading"
     >
+        <MarketplacePitchPhoto src={backgroundSrc} className="z-0" sizes="(max-width: 768px) 100vw, 720px" />
+        <div
+          className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-b from-black/50 via-black/55 to-black/75"
+          aria-hidden
+        />
+        <div className="relative z-10">
         <div className="mb-4 flex flex-col items-center gap-2 text-center">
-          <span className={pitchLabelClass}>Kolejny termin</span>
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-zinc-100 ring-2 ring-[var(--mp-teal)]/25 dark:bg-zinc-800">
+          <span className={cn(pitchLabelClass, "text-white/80")}>Kolejny termin</span>
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/90 ring-2 ring-white/40">
             <SiteAssetImage
               asset="logo_crest"
               alt=""
@@ -102,10 +111,10 @@ export function HomeNextMatchCard({
               sizes="40px"
             />
           </div>
-          <h2 id="home-next-match-heading" className="text-xl font-bold tracking-tight drop-shadow-sm sm:text-[1.35rem]">
+          <h2 id="home-next-match-heading" className="text-xl font-bold tracking-tight text-white drop-shadow-sm sm:text-[1.35rem]">
             Najbliższy mecz
           </h2>
-          {when.weekday ? <p className="text-sm font-medium capitalize text-zinc-500">{when.weekday}</p> : null}
+          {when.weekday ? <p className="text-sm font-medium capitalize text-white/80">{when.weekday}</p> : null}
         </div>
 
         <div className={cn(pitchPanelClass, "mx-auto max-w-md px-3.5 py-3.5")}>
@@ -120,15 +129,15 @@ export function HomeNextMatchCard({
               {match.match_time}
             </span>
           </div>
-          <div className="mx-auto mt-3 flex max-w-sm items-start justify-center gap-2 text-sm text-emerald-50/95">
-            <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[var(--mundial-gold,#f5c518)]" aria-hidden />
+          <div className="mx-auto mt-3 flex max-w-sm items-start justify-center gap-2 text-sm text-zinc-800 dark:text-zinc-100">
+            <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[var(--mp-teal-dark)]" aria-hidden />
             <div className="min-w-0 text-left">
               <p className="leading-snug">{match.location}</p>
               <Link
                 href={mapsUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-1 inline-block text-xs font-semibold text-white/80 underline decoration-white/30 underline-offset-2 hover:text-white"
+                className="mt-1 inline-block text-xs font-semibold text-[var(--mp-teal-dark)] underline decoration-[var(--mp-teal)]/40 underline-offset-2 hover:text-[var(--mp-teal)]"
               >
                 Mapa
               </Link>
@@ -145,32 +154,32 @@ export function HomeNextMatchCard({
           <div className={cn(pitchPanelClass, "mx-auto mt-3 max-w-md px-3.5 py-3")}>
             <span className={cn(pitchLabelClass, "mb-2 block text-center")}>Składka</span>
             <div className="flex items-center justify-center gap-3">
-              <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/15 ring-2 ring-white/35">
-                <Wallet className="h-5 w-5 text-[var(--mundial-gold,#f5c518)]" strokeWidth={2.25} aria-hidden />
+              <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--mp-teal)]/15 ring-2 ring-[var(--mp-teal)]/30">
+                <Wallet className="h-5 w-5 text-[var(--mp-teal-dark)]" strokeWidth={2.25} aria-hidden />
               </span>
               <div className="min-w-0 text-left">
                 {perPersonFee != null ? (
                   <>
-                    <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-100/85">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
                       Na osobę
                     </p>
-                    <p className="text-2xl font-bold tabular-nums tracking-tight text-white drop-shadow-sm">
+                    <p className="text-2xl font-bold tabular-nums tracking-tight text-zinc-950 dark:text-white">
                       {formatMatchFeePln(perPersonFee)}
                     </p>
                   </>
                 ) : (
                   <>
-                    <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-100/85">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
                       Wynajem boiska
                     </p>
-                    <p className="text-2xl font-bold tabular-nums tracking-tight text-white drop-shadow-sm">
+                    <p className="text-2xl font-bold tabular-nums tracking-tight text-zinc-950 dark:text-white">
                       {formatMatchFeePln(rentalTotal)}
                     </p>
                   </>
                 )}
               </div>
             </div>
-            <p className="mt-2 text-center text-[11px] leading-snug text-emerald-100/85">
+            <p className="mt-2 text-center text-[11px] leading-snug text-zinc-500">
               {perPersonFee != null
                 ? `Wynajem ${formatMatchFeePln(rentalTotal)} ÷ ${match.signed_up} ${
                     match.signed_up === 1 ? "osoba" : match.signed_up < 5 ? "osoby" : "osób"
@@ -184,15 +193,15 @@ export function HomeNextMatchCard({
           <div className={cn(pitchPanelClass, "mx-auto mt-3 max-w-md px-3.5 py-3")}>
             <span className={cn(pitchLabelClass, "mb-2 block text-center")}>Wejście na boisko</span>
             <div className="flex items-center justify-center gap-3">
-              <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/15 ring-2 ring-white/35">
-                <KeyRound className="h-5 w-5 text-[var(--mundial-gold,#f5c518)]" strokeWidth={2.25} aria-hidden />
+              <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--mp-teal)]/15 ring-2 ring-[var(--mp-teal)]/30">
+                <KeyRound className="h-5 w-5 text-[var(--mp-teal-dark)]" strokeWidth={2.25} aria-hidden />
               </span>
               <div className="text-left">
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-100/85">PIN do bramy</p>
-                <p className="text-2xl font-bold tabular-nums tracking-[0.2em] text-white drop-shadow-sm">{gatePin}</p>
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">PIN do bramy</p>
+                <p className="text-2xl font-bold tabular-nums tracking-[0.2em] text-zinc-950 dark:text-white">{gatePin}</p>
               </div>
             </div>
-            <p className="mt-2 text-center text-[11px] leading-snug text-emerald-100/85">
+            <p className="mt-2 text-center text-[11px] leading-snug text-zinc-500">
               Wpisz ten kod na bramie, aby wejść na boisko.
             </p>
           </div>
@@ -200,19 +209,19 @@ export function HomeNextMatchCard({
 
         <div className={cn(pitchPanelClass, "mx-auto mt-3 max-w-md px-3.5 py-3")}>
           <span className={cn(pitchLabelClass, "mb-2 block")}>Skład</span>
-          <div className="flex items-center justify-between gap-2 text-xs font-semibold uppercase tracking-wider text-white/80">
+          <div className="flex items-center justify-between gap-2 text-xs font-semibold uppercase tracking-wider text-zinc-600 dark:text-zinc-300">
             <span>
               {match.signed_up}/{match.max_slots} zapisanych
             </span>
             {slots.tone === "full" ? (
-              <span className="text-red-200">Pełny skład</span>
+              <span className="text-red-600">Pełny skład</span>
             ) : slots.free > 0 ? (
-              <span className="normal-case tracking-normal text-emerald-100/90">
+              <span className="normal-case tracking-normal text-zinc-600">
                 {slots.free} {slots.free === 1 ? "miejsce" : slots.free < 5 ? "miejsca" : "miejsc"}
               </span>
             ) : null}
           </div>
-          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/15">
+          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-700">
             <div
               className={cn("h-full rounded-full transition-[width] duration-500", barClass)}
               style={{ width: `${slots.pct}%` }}
@@ -224,14 +233,14 @@ export function HomeNextMatchCard({
             />
           </div>
           {tentativeLine ? (
-            <p className="mt-2 text-[11px] font-semibold normal-case tracking-normal text-amber-100/95">
+            <p className="mt-2 text-[11px] font-semibold normal-case tracking-normal text-amber-800 dark:text-amber-200">
               {tentativeLine}
             </p>
           ) : null}
         </div>
 
         <div className="mx-auto mt-4 max-w-md space-y-2.5">
-          <span className={cn(pitchLabelClass, "block text-center")}>Zapis na mecz</span>
+          <span className={cn(pitchLabelClass, "block text-center text-white/85")}>Zapis na mecz</span>
 
           {isLoggedIn ? (
             signup === "confirmed" ? (
@@ -246,7 +255,7 @@ export function HomeNextMatchCard({
                     Potwierdzam — wpadam na mecz
                   </Button>
                 ) : (
-                  <p className="text-center text-xs text-emerald-100/90">
+                  <p className="text-center text-xs text-white/85">
                     Skład jest pełny — nie możesz teraz potwierdzić udziału.
                   </p>
                 )}
@@ -261,7 +270,7 @@ export function HomeNextMatchCard({
                     Zmieniam zdanie — wpadam na mecz
                   </Button>
                 ) : (
-                  <p className="text-center text-xs text-emerald-100/90">
+                  <p className="text-center text-xs text-white/85">
                     Skład jest pełny — nie możesz teraz dołączyć do składu.
                   </p>
                 )}
@@ -273,7 +282,7 @@ export function HomeNextMatchCard({
                     Zapisz się na mecz
                   </Button>
                 ) : (
-                  <p className="text-center text-xs text-emerald-100/90">
+                  <p className="text-center text-xs text-white/85">
                     Skład pełny — możesz oznaczyć wstępne zainteresowanie.
                   </p>
                 )}
@@ -297,7 +306,7 @@ export function HomeNextMatchCard({
 
         {isLoggedIn && hotpayEnabled && walletBalancePln !== null && walletBalancePln < 0 && onPayDebt ? (
           <div className="mx-auto mt-4 max-w-md space-y-2">
-            <span className={cn(pitchLabelClass, "block text-center")}>Zaległość</span>
+            <span className={cn(pitchLabelClass, "block text-center text-white/85")}>Zaległość</span>
             <PayButton
               variant="hero"
               amountPln={walletBalancePln}
@@ -310,7 +319,7 @@ export function HomeNextMatchCard({
 
         {isLoggedIn && signup === "confirmed" && (
           <div className="mx-auto mt-4 max-w-md space-y-2">
-            <span className={cn(pitchLabelClass, "block text-center")}>Transport</span>
+            <span className={cn(pitchLabelClass, "block text-center text-white/85")}>Transport</span>
             {transportActive ? (
               <Button variant="gold" className="w-full" asChild>
                 <Link href={`/transport/${match.id}`} className="inline-flex items-center justify-center gap-2">
@@ -330,7 +339,7 @@ export function HomeNextMatchCard({
                   <Car className="h-4 w-4 shrink-0 opacity-70" aria-hidden />
                   Transport na mecz
                 </button>
-                <p id="transport-home-hint" className="text-center text-xs text-emerald-100/85">
+                <p id="transport-home-hint" className="text-center text-xs text-white/85">
                   Przycisk będzie aktywny w dniu meczu (lista kierowców, potrzebujących dojazdu i czat).
                 </p>
               </>
@@ -339,7 +348,7 @@ export function HomeNextMatchCard({
         )}
 
         <div className="mx-auto mt-4 max-w-md space-y-2 border-t border-white/20 pt-4">
-          <span className={cn(pitchLabelClass, "block text-center")}>Składy</span>
+          <span className={cn(pitchLabelClass, "block text-center text-white/85")}>Składy</span>
           {lineupPublic ? (
             <Button variant="gold" className="w-full" asChild>
               <Link href="/sklady" className="inline-flex items-center justify-center gap-2">
@@ -359,11 +368,12 @@ export function HomeNextMatchCard({
                 <LayoutGrid className="h-4 w-4 shrink-0 opacity-70" aria-hidden />
                 Składy na mecz
               </button>
-              <p id="sklady-home-hint" className="text-center text-xs text-emerald-100/85">
+              <p id="sklady-home-hint" className="text-center text-xs text-white/80">
                 Przycisk będzie aktywny, gdy administrator udostępni składy.
               </p>
             </>
           )}
+        </div>
         </div>
     </PitchCard>
   );

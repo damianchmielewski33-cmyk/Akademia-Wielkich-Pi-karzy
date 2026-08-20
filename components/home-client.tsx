@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "@/lib/app-toast";
@@ -503,37 +503,37 @@ function AcademyHomeView({
 
       <div className="relative z-10 mx-auto w-full min-w-0 max-w-6xl px-4 py-10 sm:py-12">
         <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {quickLinks.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-950"
-            >
-              <p className="font-black text-zinc-950 dark:text-white">{item.title}</p>
-              <p className="mt-1 text-sm text-zinc-500">{item.desc}</p>
-            </Link>
+          {quickLinks.map((item, i) => (
+            <HomePhotoTile key={item.href} href={item.href} src={homeTilePhoto(pitchPhotos, i + 2)}>
+              <p className="font-black text-white drop-shadow-sm">{item.title}</p>
+              <p className="mt-1 text-sm text-white/80">{item.desc}</p>
+            </HomePhotoTile>
           ))}
         </section>
 
         {isLoggedIn ? (
-          <div className="mt-10 flex flex-wrap items-center gap-4 rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
+          <HomePhotoTile
+            className="mt-10"
+            contentClassName="flex flex-wrap items-center gap-4"
+            src={homeTilePhoto(pitchPhotos, 5)}
+          >
             <PlayerAvatar
               photoPath={profilePhotoPath}
               firstName={firstName}
               lastName={lastName}
               size="lg"
-              className="shadow-md ring-2 ring-[var(--mp-teal)]/30"
+              className="shadow-md ring-2 ring-white/50"
             />
             <div className="min-w-0 text-left">
-              <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Witaj</p>
-              <p className="text-lg font-black">
+              <p className="text-xs font-semibold uppercase tracking-wide text-white/80">Witaj</p>
+              <p className="text-lg font-black text-white drop-shadow-sm">
                 {`${firstName} ${lastName}`.trim() || zawodnik}
               </p>
               {zawodnik && `${firstName} ${lastName}`.trim() ? (
-                <p className="text-sm text-zinc-500">{zawodnik}</p>
+                <p className="text-sm text-white/80">{zawodnik}</p>
               ) : null}
             </div>
-          </div>
+          </HomePhotoTile>
         ) : null}
 
         {nextMatch ? (
@@ -550,6 +550,7 @@ function AcademyHomeView({
             <div className="mt-6">
               <HomeNextMatchCard
                 match={nextMatch}
+                backgroundSrc={pitchPhotos[1] ?? heroPhoto}
                 tentativeLine={nextMatchTentativeLine}
                 lineupPublic={lineupPublicNextMatch}
                 signup={nextMatchSignup}
@@ -758,4 +759,43 @@ function AcademyHomeView({
       </AppModal>
     </div>
   );
+}
+
+function homeTilePhoto(photos: string[], index: number): string {
+  const pool = photos.length > 0 ? photos : [...MARKETPLACE_PITCH_PHOTOS];
+  return pool[index % pool.length] ?? MARKETPLACE_PITCH_PHOTOS[0];
+}
+
+function HomePhotoTile({
+  src,
+  href,
+  className,
+  contentClassName,
+  children,
+}: {
+  src: string;
+  href?: string;
+  className?: string;
+  contentClassName?: string;
+  children: ReactNode;
+}) {
+  const body = (
+    <>
+      <MarketplacePitchPhoto src={src} className="z-0" sizes="(max-width: 768px) 100vw, 400px" />
+      <div
+        className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-b from-black/45 via-black/55 to-black/70"
+        aria-hidden
+      />
+      <div className={cn("relative z-10", contentClassName)}>{children}</div>
+    </>
+  );
+  const cls = cn("relative overflow-hidden rounded-2xl p-5 text-white shadow-lg", className);
+  if (href) {
+    return (
+      <Link href={href} className={cn(cls, "block transition hover:-translate-y-0.5 hover:shadow-xl")}>
+        {body}
+      </Link>
+    );
+  }
+  return <div className={cls}>{body}</div>;
 }

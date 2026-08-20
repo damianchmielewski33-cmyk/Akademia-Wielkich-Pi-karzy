@@ -253,6 +253,16 @@ export function AdminSettingsTab({
     onFocusSectionConsumed?.();
   }, [focusSectionId, onFocusSectionConsumed]);
 
+  useEffect(() => {
+    function onMarketplaceChanged(ev: Event) {
+      const enabled = (ev as CustomEvent<{ enabled?: boolean }>).detail?.enabled;
+      if (typeof enabled !== "boolean") return;
+      setSettings((prev) => (prev ? { ...prev, booking_marketplace_enabled: enabled } : prev));
+    }
+    window.addEventListener("awp-marketplace-settings-changed", onMarketplaceChanged);
+    return () => window.removeEventListener("awp-marketplace-settings-changed", onMarketplaceChanged);
+  }, []);
+
   const load = useCallback(async () => {
     setFetching(true);
     try {
@@ -356,6 +366,13 @@ export function AdminSettingsTab({
         setCancelReasonsDraft(
           channel === "mobile" ? j.mobile_settings.match_cancel_reasons : j.match_cancel_reasons
         );
+        if (typeof patch.booking_marketplace_enabled === "boolean") {
+          window.dispatchEvent(
+            new CustomEvent("awp-marketplace-settings-changed", {
+              detail: { enabled: j.booking_marketplace_enabled === true },
+            })
+          );
+        }
         toast.success("Zapisano", { id: toastId });
         setSaveFlash("saved");
         window.setTimeout(() => setSaveFlash("idle"), 1800);

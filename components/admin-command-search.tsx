@@ -23,7 +23,8 @@ type Props = {
 };
 
 const SETTINGS_HITS: { id: string; label: string; keywords: string }[] = [
-  { id: "settings-system", label: "Co działa na serwerze", keywords: "smtp serwer system" },
+  { id: "settings-test-mode", label: "Tryb testowy", keywords: "sandbox test" },
+  { id: "settings-marketplace", label: "Rezerwacja boisk", keywords: "marketplace hale rezerwacje wyłącznik" },
   { id: "settings-brand", label: "Nazwa i opis strony", keywords: "nazwa branding seo" },
   { id: "settings-assets", label: "Logo i tła", keywords: "logo tło grafika asset" },
   { id: "settings-contact", label: "Kontakt i organizatorzy", keywords: "email telefon blik facebook" },

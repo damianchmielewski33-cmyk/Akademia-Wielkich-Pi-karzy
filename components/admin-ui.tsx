@@ -9,6 +9,7 @@ import { SiteSectionHero } from "@/components/site-section-hero";
 import { SiteAssetImage } from "@/components/site-asset-image";
 import { AdminTestModeSidebarButton } from "@/components/admin-test-mode-sidebar-button";
 import { AdminOperatorPaymentsSidebarButton } from "@/components/admin-operator-payments-sidebar-button";
+import { AdminMarketplaceSidebarButton } from "@/components/admin-marketplace-sidebar-button";
 import {
   adminChromeBtnActiveClass,
   adminChromeBtnBaseClass,
@@ -420,10 +421,11 @@ export function AdminShell({
             })}
           </nav>
 
-          {/* Zawsze widoczne: tryb testowy + płatności operatora + stopka */}
+          {/* Zawsze widoczne: tryb testowy + rezerwacje + płatności operatora + stopka */}
           <div className="relative z-10 flex shrink-0 flex-col gap-3 border-t border-white/20 pt-3">
             <div className="flex flex-col gap-1.5">
               <AdminTestModeSidebarButton />
+              <AdminMarketplaceSidebarButton />
               <AdminOperatorPaymentsSidebarButton
                 active={activeTab === "operator-payments"}
                 onOpen={() => onTabChange("operator-payments")}
