@@ -1,25 +1,37 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ComponentType, type ReactNode } from "react";
 import Link from "next/link";
-import { SiteAssetImage } from "@/components/site-asset-image";
-import { CalendarDays, HelpCircle, KeyRound, Loader2, LogIn, MapPin, UserPlus, Users } from "lucide-react";
+import {
+  Calendar,
+  CalendarDays,
+  Clock,
+  HelpCircle,
+  KeyRound,
+  Loader2,
+  LogIn,
+  MapPin,
+  UserPlus,
+  Users,
+} from "lucide-react";
 import { toast } from "@/lib/app-toast";
 import { z } from "zod";
 import type { MatchRow } from "@/lib/db";
 import type { PlayersDataEntry } from "@/lib/terminarz-shared";
 import { LoginForm } from "@/components/login-form";
+import { MarketplacePitchPhoto } from "@/components/marketplace-pitch-photo";
+import { MatchLocationWeather } from "@/components/match-location-weather";
 import { MatchSignupsRosterModal } from "@/components/match-signups-roster-modal";
 import { MatchSignupCountsBlock } from "@/components/terminarz-match-counts";
 import { PayButton } from "@/components/pay-button";
-import { SiteSectionHero } from "@/components/site-section-hero";
+import { PhotoPanel } from "@/components/photo-panel";
+import { SiteAssetImage } from "@/components/site-asset-image";
 import { Button } from "@/components/ui/button";
 import { FormInput } from "@/components/ui/form-field";
 import { formSchemas, useValidatedForm } from "@/lib/form-validation";
+import { MARKETPLACE_PITCH_PHOTOS, pitchPhotoAt } from "@/lib/marketplace-photos";
 import { terminarzInviteRelativePath } from "@/lib/share-link";
 import { cn } from "@/lib/utils";
-
-const invitePanelClass = "awp-invite-panel mx-auto max-w-2xl space-y-4";
 
 const guestSchema = z.object({
   guestFirst: formSchemas.requiredName("Imię"),
@@ -27,24 +39,15 @@ const guestSchema = z.object({
   guestAlias: formSchemas.playerAlias,
 });
 
-const STAMP_MONTHS = ["STY", "LUT", "MAR", "KWI", "MAJ", "CZE", "LIP", "SIE", "WRZ", "PAŹ", "LIS", "GRU"] as const;
-
 function formatMatchWhen(isoDate: string, time: string) {
   const [y, m, d] = isoDate.split("-").map(Number);
   if (!y || !m || !d) {
-    return { label: `${isoDate} · ${time}`, weekday: "", stampDay: "", stampMonth: "", stampYear: "" };
+    return { label: `${isoDate} · ${time}`, weekday: "" };
   }
   const dt = new Date(y, m - 1, d);
   const weekday = dt.toLocaleDateString("pl-PL", { weekday: "long" });
   const label = `${String(d).padStart(2, "0")}.${String(m).padStart(2, "0")}.${y}`;
-  return {
-    label,
-    weekday,
-    time,
-    stampDay: String(d).padStart(2, "0"),
-    stampMonth: STAMP_MONTHS[m - 1] ?? "",
-    stampYear: String(y).slice(-2),
-  };
+  return { label, weekday, time };
 }
 
 function slotMeta(signed: number, max: number) {
@@ -54,6 +57,105 @@ function slotMeta(signed: number, max: number) {
   if (signed >= max) return { pct, free, tone: "full" as const };
   if (pct >= 80) return { pct, free, tone: "warn" as const };
   return { pct, free, tone: "ok" as const };
+}
+
+function InvitePhotoAction({
+  src,
+  title,
+  desc,
+  icon: Icon,
+  onClick,
+  href,
+  disabled,
+  busy,
+}: {
+  src: string;
+  title: string;
+  desc?: string;
+  icon?: ComponentType<{ className?: string }>;
+  onClick?: () => void;
+  href?: string;
+  disabled?: boolean;
+  busy?: boolean;
+}) {
+  const inner = (
+    <PhotoPanel
+      src={src}
+      className={cn(
+        "min-h-[12rem] transition",
+        !disabled && "hover:-translate-y-0.5 hover:shadow-xl",
+        disabled && "opacity-60"
+      )}
+      contentClassName="flex min-h-[12rem] items-end justify-between gap-3 p-5"
+      overlayClassName="bg-gradient-to-t from-black/75 via-black/30 to-black/10"
+      sizes="(max-width: 768px) 100vw, 400px"
+    >
+      <div className="min-w-0">
+        <p className="font-black text-white drop-shadow-sm">{title}</p>
+        {desc ? <p className="mt-1 text-sm text-white/85">{desc}</p> : null}
+      </div>
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/15 text-white ring-1 ring-white/30">
+        {busy ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden /> : Icon ? <Icon className="h-5 w-5" /> : null}
+      </span>
+    </PhotoPanel>
+  );
+
+  if (href && !disabled) {
+    return (
+      <Link href={href} className="block">
+        {inner}
+      </Link>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      className="w-full text-left disabled:cursor-not-allowed"
+      disabled={disabled || busy}
+      onClick={onClick}
+    >
+      {inner}
+    </button>
+  );
+}
+
+function InviteFormPanel({
+  src,
+  kicker,
+  title,
+  subtitle,
+  onBack,
+  children,
+}: {
+  src: string;
+  kicker: string;
+  title: string;
+  subtitle: string;
+  onBack: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <PhotoPanel
+      src={src}
+      className="min-h-[18rem]"
+      contentClassName="p-5 sm:p-6"
+      overlayClassName="bg-gradient-to-t from-black/80 via-black/50 to-black/20"
+      sizes="(max-width: 768px) 100vw, 720px"
+    >
+      <p className="text-xs font-bold uppercase tracking-[0.16em] text-white/80">{kicker}</p>
+      <h2 className="mt-2 text-2xl font-black tracking-tight text-white drop-shadow-sm sm:text-3xl">{title}</h2>
+      <p className="mt-2 text-sm text-white/85">{subtitle}</p>
+      <button
+        type="button"
+        className="mt-3 text-left text-sm font-semibold text-white underline-offset-2 hover:underline"
+        onClick={onBack}
+      >
+        ← Wróć
+      </button>
+      <div className="mt-4 rounded-2xl bg-white/95 p-4 text-zinc-900 shadow-lg">{children}</div>
+    </PhotoPanel>
+  );
 }
 
 export function InviteMatchCard({
@@ -71,77 +173,94 @@ export function InviteMatchCard({
   const slots = slotMeta(match.signed_up, match.max_slots);
   const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(match.location)}`;
   const gatePin = match.gate_pin?.trim() ?? "";
-
+  const src = pitchPhotoAt(match.id);
   const barClass =
     slots.tone === "full" ? "bg-red-400/90" : slots.tone === "warn" ? "bg-amber-400/90" : "bg-emerald-100";
 
   return (
-    <section className="awp-postcard relative z-10 mx-auto max-w-2xl" aria-labelledby="invite-match-heading">
-      <div className="awp-postcard__hero">
-        <div className="awp-postcard__stamp" aria-label={`Znaczek: ${when.label}`}>
-          <div className="awp-postcard__stampFace">
-            <span className="awp-postcard__stampDay">{when.stampDay || "—"}</span>
-            <span className="awp-postcard__stampMonth">
-              {when.stampMonth || "—"} {when.stampYear || ""}
-            </span>
+    <PhotoPanel
+      src={src}
+      className="min-h-[22rem]"
+      contentClassName="flex h-full flex-col p-5 sm:p-6"
+      overlayClassName="bg-gradient-to-t from-black/80 via-black/50 to-black/25"
+      sizes="(max-width: 768px) 100vw, 720px"
+      priority
+    >
+      <section aria-labelledby="invite-match-heading">
+        <p className="text-xs font-bold uppercase tracking-[0.16em] text-white/80">Zaproszenie na mecz</p>
+        <div className="mt-3 flex items-start justify-between gap-3">
+          <div>
+            <h2 id="invite-match-heading" className="text-2xl font-black tracking-tight text-white drop-shadow-sm sm:text-3xl">
+              {when.weekday ? <span className="capitalize">{when.weekday}</span> : "Najbliższy mecz"}
+            </h2>
+            <p className="mt-1 text-sm text-white/85">
+              {when.label} · {match.match_time}
+            </p>
+          </div>
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white/90 ring-2 ring-white/40">
             <SiteAssetImage
-              asset="logo_header"
+              asset="logo_crest"
               alt=""
-              width={22}
-              height={22}
-              className="awp-postcard__stampLogo"
+              width={128}
+              height={128}
+              className="h-10 w-10 drop-shadow"
+              sizes="40px"
             />
           </div>
         </div>
-        <div className="awp-postcard__postmark" aria-hidden>
-          <span className="awp-postcard__postmarkRing">
-            <span className="awp-postcard__postmarkTop">AKADEMIA WIELKICH PIŁKARZY</span>
-            <span className="awp-postcard__postmarkDate">{when.label || match.match_date}</span>
-            <span className="awp-postcard__postmarkBottom">{when.time || match.match_time}</span>
+
+        <div className="mt-5 flex flex-wrap items-center gap-2">
+          <span className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-100 px-3 py-2 text-sm font-semibold tabular-nums text-emerald-950 shadow-md shadow-emerald-950/20">
+            <Calendar className="h-3.5 w-3.5 text-emerald-800" aria-hidden />
+            {when.label}
+          </span>
+          <span className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-100 px-3 py-2 text-sm font-semibold tabular-nums text-emerald-950 shadow-md shadow-emerald-950/20">
+            <Clock className="h-3.5 w-3.5 text-emerald-800" aria-hidden />
+            {match.match_time}
           </span>
         </div>
-        <div className="awp-postcard__heroInner">
-          <p className="awp-postcard__kicker">Zaproszenie na mecz</p>
-          <h2 id="invite-match-heading" className="awp-postcard__title">
-            {when.weekday ? (
-              <>
-                <span className="capitalize">{when.weekday}</span>
-                <span className="awp-postcard__subtitle">
-                  {when.label} · {when.time}
-                </span>
-              </>
-            ) : (
-              <span>
-                {when.label} · {when.time}
-              </span>
-            )}
-          </h2>
-          <div className="awp-postcard__heroRule" aria-hidden />
-          <div className="awp-postcard__location">
-            <MapPin className="h-4 w-4 shrink-0" aria-hidden />
-            <span className="font-semibold leading-snug">{match.location}</span>
+
+        <div className="mt-4 flex items-start gap-2 text-sm text-white">
+          <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[var(--mundial-gold,#f5c518)]" aria-hidden />
+          <div className="min-w-0">
+            <p className="font-medium leading-snug drop-shadow-sm">{match.location}</p>
+            <a
+              href={mapsUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-1 inline-block text-xs font-semibold text-white/80 underline decoration-white/30 underline-offset-2 hover:text-white"
+            >
+              Otwórz miejsce w Mapach Google
+            </a>
           </div>
         </div>
-      </div>
 
-      <div className="awp-postcard__body">
-        <div className="awp-postcard__content">
-          <div className="awp-postcard__section">
-            <p className="awp-postcard__label">Skład</p>
-            <div className="mt-1 space-y-1.5">
-              <div className="flex items-center justify-between gap-2 text-xs font-medium text-zinc-600 dark:text-zinc-300">
-                <span className="tabular-nums">
-                  {match.signed_up}/{match.max_slots}
-                </span>
-                <span>{slots.free > 0 ? `${slots.free} wolnych` : "pełny skład"}</span>
-              </div>
-              <div className="h-2 overflow-hidden rounded-full bg-zinc-200/70 dark:bg-zinc-700/60">
-                <div className={cn("h-full rounded-full transition-all", barClass)} style={{ width: `${slots.pct}%` }} />
-              </div>
-            </div>
+        <div className="mt-5 rounded-xl bg-black/25 p-3.5 ring-1 ring-white/15">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-white/80">Skład</p>
+          <div className="mt-2 flex items-center justify-between gap-2 text-xs font-semibold uppercase tracking-wider text-white/80">
+            <span>
+              {match.signed_up}/{match.max_slots} zapisanych
+            </span>
+            {slots.tone === "full" ? (
+              <span className="text-red-200">Pełny skład</span>
+            ) : slots.free > 0 ? (
+              <span className="normal-case tracking-normal text-white/80">
+                {slots.free} {slots.free === 1 ? "miejsce" : slots.free < 5 ? "miejsca" : "miejsc"}
+              </span>
+            ) : null}
           </div>
-
-          <div className="awp-postcard__section">
+          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/20">
+            <div
+              className={cn("h-full rounded-full transition-[width] duration-500", barClass)}
+              style={{ width: `${slots.pct}%` }}
+              role="progressbar"
+              aria-valuenow={match.signed_up}
+              aria-valuemin={0}
+              aria-valuemax={match.max_slots}
+              aria-label={`Zapełnienie składu: ${match.signed_up} z ${match.max_slots}`}
+            />
+          </div>
+          <div className="mt-3">
             <MatchSignupCountsBlock
               matchId={match.id}
               signedUp={match.signed_up}
@@ -150,47 +269,41 @@ export function InviteMatchCard({
               variant="card"
               tone="zinc"
             />
-            {onViewRoster ? (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="mt-2 w-full gap-2 border-zinc-300/80 bg-white/70 text-zinc-800 hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900/50 dark:text-zinc-100 dark:hover:bg-zinc-800/60"
-                onClick={onViewRoster}
-              >
-                <Users className="h-4 w-4 shrink-0" aria-hidden />
-                Zobacz kto jest zapisany
-              </Button>
-            ) : null}
           </div>
+          {onViewRoster ? (
+            <Button type="button" variant="gold" className="mt-3 w-full gap-2" onClick={onViewRoster}>
+              <Users className="h-4 w-4 shrink-0" aria-hidden />
+              Zobacz kto jest zapisany
+            </Button>
+          ) : null}
+        </div>
 
-          <a href={mapsUrl} target="_blank" rel="noreferrer" className="awp-postcard__cta">
-            <MapPin className="h-4 w-4 shrink-0" aria-hidden />
-            Otwórz miejsce w Mapach Google
-          </a>
+        <div className="mt-4">
+          <MatchLocationWeather
+            location={match.location}
+            matchDate={match.match_date}
+            className="mx-auto mt-0 max-w-none border-t-0 pt-0 text-white"
+          />
         </div>
 
         {gatePin && showGatePin ? (
-          <div className="awp-postcard__pin">
-            <KeyRound className="mt-0.5 h-5 w-5 shrink-0 text-[var(--mundial-navy,#1a2d5a)] dark:text-emerald-100" aria-hidden />
-            <div className="min-w-0 text-left">
-              <p className="awp-postcard__label">Wejście na boisko</p>
-              <p className="mt-1 font-mono text-2xl font-bold tracking-[0.2em] text-[var(--mundial-navy,#1a2d5a)] tabular-nums dark:text-white">
+          <div className="mt-4 flex items-center gap-3 rounded-xl bg-black/25 p-3.5 ring-1 ring-white/15">
+            <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/15 ring-2 ring-white/35">
+              <KeyRound className="h-5 w-5 text-[var(--mundial-gold,#f5c518)]" strokeWidth={2.25} aria-hidden />
+            </span>
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-white/75">Wejście na boisko</p>
+              <p className="font-mono text-2xl font-bold tabular-nums tracking-[0.2em] text-white drop-shadow-sm">
                 {gatePin}
               </p>
-              <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-300">PIN do bramy przy tym meczu.</p>
+              <p className="mt-1 text-xs text-white/80">PIN do bramy przy tym meczu.</p>
             </div>
           </div>
         ) : (
-          <div className="awp-postcard__backnote" aria-hidden>
-            <p className="awp-postcard__label">Do zobaczenia na boisku</p>
-            <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-300">
-              Zapisz się, żeby potwierdzić udział i ogarnąć transport.
-            </p>
-          </div>
+          <p className="mt-4 text-sm text-white/85">Zapisz się, żeby potwierdzić udział i ogarnąć transport.</p>
         )}
-      </div>
-    </section>
+      </section>
+    </PhotoPanel>
   );
 }
 
@@ -210,7 +323,6 @@ type InviteShareLandingProps = {
   onParticipationTentative: () => void | Promise<void>;
   onParticipationNie: () => void | Promise<void>;
   onAuthenticated: () => void;
-  /** Gdy operator płatności włączony — po formularzu gościa pytanie o zaliczkę. */
   hotpayEnabled?: boolean;
   walletBalancePln?: number | null;
   debtBusy?: boolean;
@@ -249,6 +361,7 @@ export function InviteShareLanding({
   const matchFuture = match != null && match.match_date >= today;
   const signupKind = userSignupKind[highlightMatchId];
   const matchFull = match != null && match.signed_up >= match.max_slots;
+  const heroPhoto = pitchPhotoAt(match?.id ?? highlightMatchId);
 
   function resetGuestForm() {
     guestForm.reset({ guestFirst: "", guestLast: "", guestAlias: "" });
@@ -327,270 +440,339 @@ export function InviteShareLanding({
       : "/register";
 
   return (
-    <div className="awp-invite-page space-y-6 pb-2">
-      <SiteSectionHero
-        className="relative z-10 max-w-2xl"
-        kicker="Zaproszenie"
-        title="Zapis na mecz"
-        subtitle="Potwierdź udział, zaloguj się lub zapisz się jednorazowo jako gość."
-        align="center"
-      />
-
-      {!match ? (
-        <div
-          role="status"
-          className="mx-auto max-w-2xl rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-950 dark:border-amber-800/60 dark:bg-amber-950/35 dark:text-amber-100"
-        >
-          Nie znaleziono meczu o tym numerze — mógł zostać usunięty z terminarza.
+    <div className="relative flex flex-1 flex-col text-zinc-900 dark:text-zinc-50">
+      <section className="mp-hero mp-hero--photo relative flex flex-col justify-end overflow-hidden pb-16 pt-16 sm:pb-20 sm:pt-24">
+        <MarketplacePitchPhoto src={heroPhoto} priority className="z-0" />
+        <div className="absolute inset-0 z-[1] bg-gradient-to-t from-black/75 via-black/40 to-black/20" />
+        <div className="relative z-10 mx-auto w-full max-w-6xl px-4">
+          <p className="text-xs font-black uppercase tracking-[0.22em] text-white/80">Zaproszenie</p>
+          <h1 className="mt-3 max-w-3xl text-4xl font-black tracking-tight text-white sm:text-6xl">Gramy razem.</h1>
+          <p className="mt-4 max-w-xl text-base text-white/85 sm:text-lg">
+            Potwierdź udział, zaloguj się albo zapisz się jednorazowo jako gość.
+          </p>
         </div>
-      ) : !matchFuture ? (
-        <div
-          role="status"
-          className="mx-auto max-w-2xl rounded-2xl border border-zinc-200 bg-white px-4 py-4 text-sm text-zinc-700 shadow-sm dark:border-zinc-700 dark:bg-zinc-900/80 dark:text-zinc-300"
-        >
-          Ten termin już minął. Sprawdź aktualny terminarz, aby zapisać się na kolejne mecze.
-        </div>
-      ) : (
-        <>
-          <InviteMatchCard
-            match={match}
-            playersData={playersData}
-            showGatePin={signupKind === "confirmed"}
-            onViewRoster={() => setRosterOpen(true)}
-          />
+      </section>
 
-          <MatchSignupsRosterModal
-            open={rosterOpen}
-            onOpenChange={setRosterOpen}
-            match={match}
-            matchId={highlightMatchId}
-            playersData={playersData}
-          />
+      <div className="-mx-4 mt-0 flex gap-4 overflow-x-auto bg-zinc-100 px-4 py-4 [scrollbar-width:thin] dark:bg-zinc-900">
+        {MARKETPLACE_PITCH_PHOTOS.slice(0, 8).map((src) => (
+          <div key={src} className="relative h-48 w-72 shrink-0 overflow-hidden rounded-3xl bg-zinc-200">
+            <MarketplacePitchPhoto src={src} sizes="288px" />
+          </div>
+        ))}
+      </div>
 
-          <div className={invitePanelClass}>
-            {!isLoggedIn ? (
-              inviteLoginInline ? (
+      <div className="relative z-10 mx-auto w-full min-w-0 max-w-6xl px-4 py-10 sm:py-12">
+        {!match ? (
+          <PhotoPanel
+            src={pitchPhotoAt(3)}
+            className="min-h-[12rem]"
+            contentClassName="flex min-h-[12rem] flex-col justify-end p-6"
+          >
+            <p className="text-xs font-bold uppercase tracking-[0.16em] text-white/80">Zaproszenie</p>
+            <h2 className="mt-2 text-2xl font-black text-white drop-shadow-sm">Nie znaleziono meczu</h2>
+            <p className="mt-2 text-sm text-white/85">
+              Nie znaleziono meczu o tym numerze — mógł zostać usunięty z terminarza.
+            </p>
+          </PhotoPanel>
+        ) : !matchFuture ? (
+          <PhotoPanel
+            src={pitchPhotoAt(match.id)}
+            className="min-h-[12rem]"
+            contentClassName="flex min-h-[12rem] flex-col justify-end p-6"
+          >
+            <p className="text-xs font-bold uppercase tracking-[0.16em] text-white/80">Terminarz</p>
+            <h2 className="mt-2 text-2xl font-black text-white drop-shadow-sm">Ten termin już minął</h2>
+            <p className="mt-2 text-sm text-white/85">
+              Sprawdź aktualny terminarz, aby zapisać się na kolejne mecze.
+            </p>
+          </PhotoPanel>
+        ) : (
+          <>
+            <div className="flex items-end justify-between gap-4">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--mp-teal-dark)]">Terminarz</p>
+                <h2 className="mt-1 text-2xl font-black tracking-tight sm:text-3xl">Zapis na mecz</h2>
+              </div>
+              <Button asChild variant="outline">
+                <Link href="/terminarz">Pełny terminarz</Link>
+              </Button>
+            </div>
+
+            <div className="mt-6">
+              <InviteMatchCard
+                match={match}
+                playersData={playersData}
+                showGatePin={signupKind === "confirmed"}
+                onViewRoster={() => setRosterOpen(true)}
+              />
+            </div>
+
+            <MatchSignupsRosterModal
+              open={rosterOpen}
+              onOpenChange={setRosterOpen}
+              match={match}
+              matchId={highlightMatchId}
+              playersData={playersData}
+            />
+
+            <div className="mt-8 space-y-4">
+              {!isLoggedIn ? (
+                inviteLoginInline ? (
+                  <InviteFormPanel
+                    src={pitchPhotoAt(match.id + 2)}
+                    kicker="Akademia"
+                    title="Logowanie"
+                    subtitle="Wpisz imię, nazwisko i PIN (4–6 cyfr) — tak jak na stronie logowania."
+                    onBack={backToAuthChoices}
+                  >
+                    <LoginForm
+                      nextPath={terminarzInviteRelativePath(highlightMatchId)}
+                      embedMode
+                      onAuthenticated={onAuthenticated}
+                    />
+                  </InviteFormPanel>
+                ) : inviteGuestInline ? (
+                  <InviteFormPanel
+                    src={pitchPhotoAt(match.id + 3)}
+                    kicker="Zapis"
+                    title="Zapis gościa na mecz"
+                    subtitle="Gram jednorazowo — podaj dane i unikalny pseudonim. Gość nie loguje się do systemu; zapis dotyczy tylko tego terminu."
+                    onBack={backToAuthChoices}
+                  >
+                    <div className="space-y-3">
+                      <FormInput
+                        id="invite-gfirst"
+                        label="Imię"
+                        required
+                        value={guestForm.values.guestFirst}
+                        onChange={(e) => guestForm.setValue("guestFirst", e.target.value)}
+                        onBlur={() => guestForm.setFieldTouched("guestFirst")}
+                        error={guestForm.errors.guestFirst}
+                        disabled={guestBusy}
+                      />
+                      <FormInput
+                        id="invite-glast"
+                        label="Nazwisko"
+                        required
+                        value={guestForm.values.guestLast}
+                        onChange={(e) => guestForm.setValue("guestLast", e.target.value)}
+                        onBlur={() => guestForm.setFieldTouched("guestLast")}
+                        error={guestForm.errors.guestLast}
+                        disabled={guestBusy}
+                      />
+                      <FormInput
+                        id="invite-galias"
+                        label="Pseudonim (unikalny)"
+                        required
+                        value={guestForm.values.guestAlias}
+                        onChange={(e) => guestForm.setValue("guestAlias", e.target.value)}
+                        onBlur={() => guestForm.setFieldTouched("guestAlias")}
+                        error={guestForm.errors.guestAlias}
+                        disabled={guestBusy}
+                      />
+                      <Button
+                        type="button"
+                        variant="gold"
+                        className="w-full gap-2"
+                        disabled={guestBusy || matchFull}
+                        onClick={() => openGuestPayPrompt()}
+                      >
+                        {guestBusy ? (
+                          <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
+                        ) : (
+                          <UserPlus className="h-4 w-4 shrink-0" aria-hidden />
+                        )}
+                        Zapisz się jako gość
+                      </Button>
+                      {matchFull ? (
+                        <p className="text-center text-sm text-amber-800">
+                          Skład jest pełny — nie można dodać kolejnego gościa.
+                        </p>
+                      ) : null}
+                    </div>
+                  </InviteFormPanel>
+                ) : (
+                  <>
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--mp-teal-dark)]">Zapis</p>
+                      <h2 className="mt-1 text-2xl font-black tracking-tight sm:text-3xl">Czy grasz w tym terminie?</h2>
+                      <p className="mt-2 max-w-2xl text-sm text-zinc-600 dark:text-zinc-400">
+                        Zaloguj się albo załóż konto, żeby odpowiedzieć: tak, jeszcze nie wiem albo nie biorę udziału.
+                        Możesz też zapisać się jednorazowo jako gość.
+                      </p>
+                    </div>
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                      <InvitePhotoAction
+                        src={pitchPhotoAt(match.id + 4)}
+                        title="Zaloguj się"
+                        desc="PIN akademii — tak jak na starcie."
+                        icon={LogIn}
+                        onClick={showLoginInline}
+                      />
+                      <InvitePhotoAction
+                        src={pitchPhotoAt(match.id + 5)}
+                        title="Utwórz konto"
+                        desc="Dołącz na stałe i zapisuj się na mecze."
+                        icon={UserPlus}
+                        href={registerHref}
+                      />
+                      <InvitePhotoAction
+                        src={pitchPhotoAt(match.id + 6)}
+                        title="Zapisz się jako gość"
+                        desc="Jednorazowo na ten termin."
+                        icon={UserPlus}
+                        disabled={matchFull}
+                        onClick={showGuestInline}
+                      />
+                    </div>
+                    {matchFull ? (
+                      <p className="text-sm text-amber-800 dark:text-amber-200">
+                        Skład jest pełny — zapis gościa nie jest możliwy.
+                      </p>
+                    ) : null}
+                  </>
+                )
+              ) : signupKind == null ? (
                 <>
-                  <div className="space-y-1 text-center sm:text-left">
-                    <h2 className="text-lg font-semibold text-[var(--mundial-navy,#1a2d5a)] dark:text-zinc-100">
-                      Logowanie
-                    </h2>
-                    <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                      Wpisz imię, nazwisko i PIN (4–6 cyfr) — tak jak na stronie logowania.
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    className="text-left text-sm font-medium text-[var(--mundial-navy,#1a2d5a)] underline-offset-2 hover:underline dark:text-amber-200/90"
-                    onClick={backToAuthChoices}
+                  <PhotoPanel
+                    src={pitchPhotoAt(match.id + 7)}
+                    className="min-h-[14rem]"
+                    contentClassName="flex min-h-[14rem] flex-col justify-end gap-4 p-5 sm:p-6"
+                    overlayClassName="bg-gradient-to-t from-black/80 via-black/45 to-black/15"
                   >
-                    ← Wróć
-                  </button>
-                  <LoginForm
-                    nextPath={terminarzInviteRelativePath(highlightMatchId)}
-                    embedMode
-                    onAuthenticated={onAuthenticated}
-                  />
-                </>
-              ) : inviteGuestInline ? (
-                <>
-                  <div className="space-y-1 text-center sm:text-left">
-                    <h2 className="text-lg font-semibold text-[var(--mundial-navy,#1a2d5a)] dark:text-zinc-100">
-                      Zapis gościa na mecz
-                    </h2>
-                    <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                      Gram jednorazowo — podaj dane i unikalny pseudonim. Gość nie loguje się do systemu; zapis dotyczy
-                      tylko tego terminu.
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    className="text-left text-sm font-medium text-[var(--mundial-navy,#1a2d5a)] underline-offset-2 hover:underline dark:text-amber-200/90"
-                    onClick={backToAuthChoices}
-                  >
-                    ← Wróć
-                  </button>
-                  <div className="space-y-3">
-                    <FormInput
-                      id="invite-gfirst"
-                      label="Imię"
-                      required
-                      value={guestForm.values.guestFirst}
-                      onChange={(e) => guestForm.setValue("guestFirst", e.target.value)}
-                      onBlur={() => guestForm.setFieldTouched("guestFirst")}
-                      error={guestForm.errors.guestFirst}
-                      disabled={guestBusy}
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-[0.16em] text-white/80">Zapis na mecz</p>
+                      <h2 className="mt-2 text-2xl font-black text-white drop-shadow-sm">Czy bierzesz udział?</h2>
+                      <p className="mt-2 text-sm text-white/85">
+                        Wybierz jedną opcję. Przy odpowiedzi tak (gdy są wolne miejsca) wybierzesz też transport.
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="gold"
+                      className="w-full"
+                      disabled={tentativeBusy}
+                      onClick={onParticipationTak}
+                    >
+                      {tentativeBusy ? <Loader2 className="mr-2 h-4 w-4 shrink-0 animate-spin" aria-hidden /> : null}
+                      Tak, biorę udział
+                    </Button>
+                  </PhotoPanel>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <InvitePhotoAction
+                      src={pitchPhotoAt(match.id + 8)}
+                      title="Jeszcze nie wiem"
+                      desc="Bez miejsca w składzie — potwierdzisz później."
+                      icon={HelpCircle}
+                      busy={tentativeBusy}
+                      onClick={() => void onParticipationTentative()}
                     />
-                    <FormInput
-                      id="invite-glast"
-                      label="Nazwisko"
-                      required
-                      value={guestForm.values.guestLast}
-                      onChange={(e) => guestForm.setValue("guestLast", e.target.value)}
-                      onBlur={() => guestForm.setFieldTouched("guestLast")}
-                      error={guestForm.errors.guestLast}
-                      disabled={guestBusy}
-                    />
-                    <FormInput
-                      id="invite-galias"
-                      label="Pseudonim (unikalny)"
-                      required
-                      value={guestForm.values.guestAlias}
-                      onChange={(e) => guestForm.setValue("guestAlias", e.target.value)}
-                      onBlur={() => guestForm.setFieldTouched("guestAlias")}
-                      error={guestForm.errors.guestAlias}
-                      disabled={guestBusy}
+                    <InvitePhotoAction
+                      src={pitchPhotoAt(match.id + 9)}
+                      title="Nie biorę udziału"
+                      desc="Zaznacz, jeśli w tym terminie nie grasz."
+                      busy={tentativeBusy}
+                      onClick={() => void onParticipationNie()}
                     />
                   </div>
-                  <Button
-                    type="button"
-                    className="w-full gap-2"
-                    disabled={guestBusy || matchFull}
-                    onClick={() => openGuestPayPrompt()}
-                  >
-                    {guestBusy ? (
-                      <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
-                    ) : (
-                      <UserPlus className="h-4 w-4 shrink-0" aria-hidden />
-                    )}
-                    Zapisz się jako gość
-                  </Button>
-                  {matchFull ? (
-                    <p className="text-center text-sm text-amber-800 dark:text-amber-200">
-                      Skład jest pełny — nie można dodać kolejnego gościa.
-                    </p>
-                  ) : null}
                 </>
               ) : (
-                <>
-                  <div className="space-y-1 text-center sm:text-left">
-                    <h2 className="text-lg font-semibold text-[var(--mundial-navy,#1a2d5a)] dark:text-zinc-100">
-                      Czy grasz w tym terminie?
-                    </h2>
-                    <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                      Zaloguj się lub załóż konto, żeby odpowiedzieć: <strong>tak</strong>,{" "}
-                      <strong>jeszcze nie wiem</strong> albo <strong>nie biorę udziału</strong>. Możesz też zapisać się
-                      jednorazowo jako gość.
+                <PhotoPanel
+                  src={pitchPhotoAt(match.id + 7)}
+                  className="min-h-[14rem]"
+                  contentClassName="flex min-h-[14rem] flex-col justify-end gap-4 p-5 sm:p-6"
+                >
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-[0.16em] text-white/80">Twój status</p>
+                    <h2 className="mt-2 text-2xl font-black text-white drop-shadow-sm">Twój status na ten mecz</h2>
+                    <p className="mt-2 text-sm text-white/85">
+                      {signupKind === "confirmed"
+                        ? "Jesteś zapisany na ten mecz. Szczegóły i transport znajdziesz w terminarzu."
+                        : signupKind === "tentative"
+                          ? "Masz status «jeszcze nie wiem». Potwierdź udział w terminarzu, gdy będziesz wiedzieć."
+                          : "Zaznaczyłeś «nie biorę udziału». Możesz to zmienić w terminarzu."}
                     </p>
                   </div>
-                  <div className="flex flex-col gap-2 sm:flex-row">
-                    <Button type="button" className="flex-1 gap-2" onClick={showLoginInline}>
-                      <LogIn className="h-4 w-4 shrink-0" aria-hidden />
-                      Zaloguj się
-                    </Button>
-                    <Button variant="outline" className="flex-1 gap-2" asChild>
-                      <Link href={registerHref}>
-                        <UserPlus className="h-4 w-4 shrink-0" aria-hidden />
-                        Utwórz konto
-                      </Link>
-                    </Button>
+                  <Button variant="gold" className="w-full sm:w-auto" asChild>
+                    <Link href="/terminarz" className="inline-flex items-center justify-center gap-2">
+                      <CalendarDays className="h-4 w-4 shrink-0" aria-hidden />
+                      Otwórz terminarz
+                    </Link>
+                  </Button>
+                </PhotoPanel>
+              )}
+              {isLoggedIn && hotpayEnabled && walletBalancePln != null && walletBalancePln < 0 && onPayDebt ? (
+                <PhotoPanel
+                  src={pitchPhotoAt(match.id + 10)}
+                  contentClassName="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6"
+                >
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-[0.16em] text-white/80">Zaległość</p>
+                    <h2 className="mt-1 text-xl font-black text-white drop-shadow-sm">Opłać mecz</h2>
                   </div>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    className="w-full gap-2"
-                    disabled={matchFull}
-                    onClick={showGuestInline}
-                  >
-                    <UserPlus className="h-4 w-4 shrink-0" aria-hidden />
-                    Zapisz się jako gość (jednorazowo)
-                  </Button>
-                  {matchFull ? (
-                    <p className="text-center text-sm text-amber-800 dark:text-amber-200">
-                      Skład jest pełny — zapis gościa nie jest możliwy.
-                    </p>
-                  ) : null}
-                </>
-              )
-            ) : signupKind == null ? (
-              <>
-                <div className="space-y-1 text-center sm:text-left">
-                  <h2 className="text-lg font-semibold text-[var(--mundial-navy,#1a2d5a)] dark:text-zinc-100">
-                    Czy bierzesz udział?
-                  </h2>
-                  <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                    Wybierz jedną opcję. Przy odpowiedzi <strong>tak</strong> (gdy są wolne miejsca) wybierzesz też
-                    transport.
-                  </p>
-                </div>
-                <div className="flex flex-col gap-2">
-                  <Button type="button" className="w-full" disabled={tentativeBusy} onClick={onParticipationTak}>
-                    {tentativeBusy ? (
-                      <Loader2 className="mr-2 h-4 w-4 shrink-0 animate-spin" aria-hidden />
-                    ) : null}
-                    Tak, biorę udział
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full"
-                    disabled={tentativeBusy}
-                    onClick={() => void onParticipationTentative()}
-                  >
-                    {tentativeBusy ? (
-                      <Loader2 className="mr-2 h-4 w-4 shrink-0 animate-spin" aria-hidden />
-                    ) : (
-                      <HelpCircle className="mr-2 h-4 w-4 shrink-0" aria-hidden />
-                    )}
-                    Jeszcze nie wiem
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    className="w-full text-zinc-700 dark:text-zinc-300"
-                    disabled={tentativeBusy}
-                    onClick={() => void onParticipationNie()}
-                  >
-                    Nie, nie biorę udziału
-                  </Button>
-                </div>
-              </>
-            ) : (
-              <div className="space-y-3 text-center sm:text-left">
-                <h2 className="text-lg font-semibold text-[var(--mundial-navy,#1a2d5a)] dark:text-zinc-100">
-                  Twój status na ten mecz
-                </h2>
-                <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                  {signupKind === "confirmed"
-                    ? "Jesteś zapisany na ten mecz. Szczegóły i transport znajdziesz w terminarzu."
-                    : signupKind === "tentative"
-                      ? "Masz status «jeszcze nie wiem». Potwierdź udział w terminarzu, gdy będziesz wiedzieć."
-                      : "Zaznaczyłeś «nie biorę udziału». Możesz to zmienić w terminarzu."}
-                </p>
-                <Button variant="outline" className="w-full sm:w-auto" asChild>
-                  <Link href={`/zaproszenie/${highlightMatchId}`}>Wróć do wizytówki meczu</Link>
-                </Button>
-              </div>
-            )}
-            {isLoggedIn && hotpayEnabled && walletBalancePln != null && walletBalancePln < 0 && onPayDebt ? (
-              <PayButton
-                variant="default"
-                amountPln={walletBalancePln}
-                label="Opłać mecz"
-                busy={debtBusy}
-                fullWidth
-                onClick={onPayDebt}
-              />
-            ) : null}
+                  <PayButton
+                    variant="hero"
+                    amountPln={walletBalancePln}
+                    label="Opłać mecz"
+                    busy={debtBusy}
+                    fullWidth
+                    onClick={onPayDebt}
+                  />
+                </PhotoPanel>
+              ) : null}
+            </div>
+          </>
+        )}
+
+        <PhotoPanel
+          src={pitchPhotoAt((match?.id ?? highlightMatchId) + 11)}
+          className="mt-14 min-h-[18rem] rounded-3xl"
+          contentClassName="flex min-h-[18rem] flex-col justify-center gap-6 px-6 py-10 sm:px-10 lg:flex-row lg:items-center lg:justify-between"
+          overlayClassName="bg-gradient-to-r from-black/70 via-black/55 to-black/45"
+          sizes="(max-width: 768px) 100vw, 1152px"
+        >
+          <div className="max-w-xl">
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/80">Akademia</p>
+            <h2 className="mt-2 text-3xl font-black tracking-tight drop-shadow-sm">
+              {isLoggedIn ? "Kolejny mecz czeka w terminarzu." : "Chcesz grać z nami?"}
+            </h2>
+            <p className="mt-3 text-white/90">
+              {isLoggedIn
+                ? "Zapisy, składy i statystyki są w jednym miejscu."
+                : "Dołącz do akademii: terminarz, składy, portfel i rankingi po zalogowaniu."}
+            </p>
           </div>
-        </>
-      )}
+          <Button
+            asChild
+            variant="secondary"
+            className="h-12 shrink-0 rounded-full bg-white px-8 font-black text-zinc-950 hover:bg-zinc-100"
+          >
+            <Link href={isLoggedIn ? "/terminarz" : "/register"}>
+              {isLoggedIn ? "Otwórz terminarz" : "Dołącz do akademii"}
+            </Link>
+          </Button>
+        </PhotoPanel>
 
-      <p className="relative z-10 text-center text-sm text-zinc-600 dark:text-zinc-400">
-        <Link href="/terminarz" className="awp-invite-footer-link">
-          <CalendarDays className="h-4 w-4 shrink-0" aria-hidden />
-          Pełny terminarz Akademii
-        </Link>
-      </p>
-
-      <div className="relative z-10 flex justify-center pb-2">
-        <SiteAssetImage
-          asset="logo_header"
-          decorative
-          width={40}
-          height={40}
-          className="h-12 w-12 opacity-90 drop-shadow"
-        />
+        <section className="mt-14 grid gap-4 sm:grid-cols-3">
+          {[
+            { n: "1", t: "Zobacz zaproszenie", d: "Termin, miejsce i wolne miejsca w składzie." },
+            { n: "2", t: "Zapisz się", d: "Potwierdź udział albo zaznacz, że jeszcze nie wiesz." },
+            { n: "3", t: "Przyjdź na boisko", d: "PIN do bramy i transport po potwierdzeniu." },
+          ].map((step, i) => (
+            <PhotoPanel
+              key={step.n}
+              src={pitchPhotoAt((match?.id ?? highlightMatchId) + 12 + i)}
+              className="min-h-[15rem]"
+              contentClassName="flex min-h-[15rem] flex-col justify-end p-5"
+              overlayClassName="bg-gradient-to-t from-black/75 via-black/30 to-black/10"
+              sizes="(max-width: 768px) 100vw, 400px"
+            >
+              <p className="text-3xl font-black text-white drop-shadow-sm">{step.n}</p>
+              <p className="mt-2 font-black text-white drop-shadow-sm">{step.t}</p>
+              <p className="mt-1 text-sm text-white/85">{step.d}</p>
+            </PhotoPanel>
+          ))}
+        </section>
       </div>
     </div>
   );

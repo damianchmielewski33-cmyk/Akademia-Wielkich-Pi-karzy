@@ -1750,3 +1750,78 @@ html {
     opacity: 0.85;
   }
 }
+
+/* Spadające piłki i gwiazdy — boczne tło strony start */
+.home-fall {
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.home-fall__rail {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: clamp(3.75rem, calc((100vw - 64rem) / 2), 14rem);
+}
+
+.home-fall__rail--left {
+  left: 0;
+}
+
+.home-fall__rail--right {
+  right: 0;
+}
+
+.home-fall__item {
+  position: absolute;
+  top: -12%;
+  display: block;
+  animation: home-fall-down var(--dur, 14s) linear infinite;
+  animation-delay: var(--delay, 0s);
+  will-change: transform, opacity;
+}
+
+.home-fall__star {
+  display: block;
+  color: var(--mundial-gold, #f5c518);
+  filter: drop-shadow(0 0 6px rgba(245, 197, 24, 0.55));
+  animation: home-fall-twinkle 2.6s ease-in-out infinite;
+}
+
+@keyframes home-fall-twinkle {
+  0%,
+  100% {
+    opacity: 0.55;
+    filter: drop-shadow(0 0 3px rgba(245, 197, 24, 0.3));
+  }
+  50% {
+    opacity: 1;
+    filter: drop-shadow(0 0 10px rgba(245, 197, 24, 0.85));
+  }
+}
+
+@keyframes home-fall-down {
+  0% {
+    transform: translate3d(0, -12vh, 0) rotate(0deg);
+    opacity: 0;
+  }
+  7% {
+    opacity: var(--op, 0.7);
+  }
+  88% {
+    opacity: var(--op, 0.7);
+  }
+  100% {
+    transform: translate3d(var(--drift, 0px), 118vh, 0) rotate(var(--spin, 360deg));
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-fall {
+    display: none;
+  }
+}

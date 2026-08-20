@@ -9,10 +9,8 @@ import {
   Activity,
   CalendarDays,
   ChevronRight,
-  Clock,
   LogIn,
   LogOut,
-  MapPin,
   Medal,
   Shield,
   Trophy,
@@ -20,9 +18,11 @@ import {
   Users,
   Wallet,
 } from "lucide-react";
+import { HomeFallingDecor } from "@/components/home-falling-decor";
 import { HomeNextMatchCard } from "@/components/home-next-match-card";
 import { HomeTopRankings } from "@/components/home-top-rankings";
 import { MarketplacePitchPhoto } from "@/components/marketplace-pitch-photo";
+import { PhotoPanel } from "@/components/photo-panel";
 import { MarketplaceSearchForm } from "@/components/marketplace-search-form";
 import { MarketplaceVenueCard } from "@/components/marketplace-venue-card";
 import { PlayerAvatar } from "@/components/player-avatar";
@@ -88,9 +88,13 @@ export function HomeClient(props: Props) {
 }
 
 function BookingHomeView({ featuredVenues }: { featuredVenues: VenueCard[] }) {
-  const heroPhoto = pitchPhotosFromVenues(featuredVenues)[0] ?? MARKETPLACE_PITCH_PHOTOS[0];
+  const photos = pitchPhotosFromVenues(featuredVenues);
+  const photoPool = [...new Set([...photos, ...MARKETPLACE_PITCH_PHOTOS])];
+  const heroPhoto = photos[0] ?? MARKETPLACE_PITCH_PHOTOS[0];
   return (
     <div className="relative flex flex-1 flex-col text-zinc-900 dark:text-zinc-50">
+      <HomeFallingDecor />
+      <div className="relative z-10 flex flex-1 flex-col">
       <section className="mp-hero mp-hero--photo relative flex flex-col justify-end overflow-hidden pb-16 pt-16 sm:pb-20 sm:pt-24">
         <MarketplacePitchPhoto src={heroPhoto} priority className="z-0" />
         <div className="absolute inset-0 z-[1] bg-gradient-to-t from-black/75 via-black/40 to-black/20" />
@@ -114,14 +118,17 @@ function BookingHomeView({ featuredVenues }: { featuredVenues: VenueCard[] }) {
             { href: "/obiekty?indoor=1", title: "Boiska halowe", desc: "Kryte obiekty na każdą pogodę" },
             { href: "/obiekty?indoor=0", title: "Boiska otwarte", desc: "Orliki i nawierzchnie zewnętrzne" },
             { href: "/obiekty?surface=sztuczna", title: "Sztuczna trawa", desc: "Piłka nożna na tartanie i orliku" },
-          ].map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-950"
-            >
-              <p className="font-black text-zinc-950 dark:text-white">{item.title}</p>
-              <p className="mt-1 text-sm text-zinc-500">{item.desc}</p>
+          ].map((item, i) => (
+            <Link key={item.href} href={item.href} className="block">
+              <PhotoPanel
+                src={homeTilePhoto(photoPool, i)}
+                className="min-h-[12rem] transition hover:-translate-y-0.5 hover:shadow-xl"
+                contentClassName="flex min-h-[12rem] flex-col justify-end p-5"
+                sizes="(max-width: 768px) 100vw, 400px"
+              >
+                <p className="font-black text-white drop-shadow-sm">{item.title}</p>
+                <p className="mt-1 text-sm text-white/85">{item.desc}</p>
+              </PhotoPanel>
             </Link>
           ))}
         </section>
@@ -157,44 +164,50 @@ function BookingHomeView({ featuredVenues }: { featuredVenues: VenueCard[] }) {
           )}
         </section>
 
-        <section className="mt-14 overflow-hidden rounded-3xl bg-[var(--mp-teal)] px-6 py-10 text-white sm:px-10">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-            <div className="max-w-xl">
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/80">Dla obiektów</p>
-              <h2 className="mt-2 text-3xl font-black tracking-tight">Masz halę albo orlik? Wystaw terminy.</h2>
-              <p className="mt-3 text-white/90">
-                Zgłoś halę na stronie — bez tokenu od znajomych. Po weryfikacji publikujemy obiekt. Gracze rezerwują i
-                płacą online, Ty widzisz obrót, prowizję i termin przelewu.
-              </p>
-            </div>
-            <Button asChild variant="secondary" className="h-12 rounded-full bg-white px-8 font-black text-zinc-950 hover:bg-zinc-100">
-              <Link href="/dla-obiektow">Dodaj swój obiekt</Link>
-            </Button>
+        <PhotoPanel
+          src={homeTilePhoto(photoPool, 6)}
+          className="mt-14 min-h-[18rem] rounded-3xl"
+          contentClassName="flex min-h-[18rem] flex-col justify-center gap-6 px-6 py-10 sm:px-10 lg:flex-row lg:items-center lg:justify-between"
+          overlayClassName="bg-gradient-to-r from-black/55 via-black/30 to-black/15"
+          sizes="(max-width: 768px) 100vw, 1152px"
+        >
+          <div className="max-w-xl">
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/80">Dla obiektów</p>
+            <h2 className="mt-2 text-3xl font-black tracking-tight drop-shadow-sm">Masz halę albo orlik? Wystaw terminy.</h2>
+            <p className="mt-3 text-white/90">
+              Zgłoś halę na stronie — bez tokenu od znajomych. Po weryfikacji publikujemy obiekt. Gracze rezerwują i
+              płacą online, Ty widzisz obrót, prowizję i termin przelewu.
+            </p>
           </div>
-        </section>
+          <Button asChild variant="secondary" className="h-12 shrink-0 rounded-full bg-white px-8 font-black text-zinc-950 hover:bg-zinc-100">
+            <Link href="/dla-obiektow">Dodaj swój obiekt</Link>
+          </Button>
+        </PhotoPanel>
 
-        <section id="jak-to-dziala" className="mt-14 grid gap-4 rounded-3xl bg-white p-6 shadow-sm sm:grid-cols-3 dark:bg-zinc-950">
+        <section id="jak-to-dziala" className="mt-14 grid gap-4 sm:grid-cols-3">
           {[
             { n: "1", t: "Znajdź obiekt", d: "Filtruj po mieście, nawierzchni i cenie." },
             { n: "2", t: "Wybierz godzinę", d: "Zobacz wolne sloty i zablokuj termin." },
             { n: "3", t: "Opłać online", d: "Potwierdzenie na e-mail — bez PIN-u akademii." },
-          ].map((step) => (
-            <div key={step.n} className="rounded-2xl bg-zinc-50 p-5 dark:bg-zinc-900">
-              <p className="text-3xl font-black text-[var(--mp-teal)]">{step.n}</p>
-              <p className="mt-2 font-black">{step.t}</p>
-              <p className="mt-1 text-sm text-zinc-500">{step.d}</p>
-            </div>
+          ].map((step, i) => (
+            <PhotoPanel
+              key={step.n}
+              src={homeTilePhoto(photoPool, i + 8)}
+              className="min-h-[15rem]"
+              contentClassName="flex min-h-[15rem] flex-col justify-end p-5"
+              overlayClassName="bg-gradient-to-t from-black/75 via-black/30 to-black/10"
+              sizes="(max-width: 768px) 100vw, 400px"
+            >
+              <p className="text-3xl font-black text-white drop-shadow-sm">{step.n}</p>
+              <p className="mt-2 font-black text-white drop-shadow-sm">{step.t}</p>
+              <p className="mt-1 text-sm text-white/85">{step.d}</p>
+            </PhotoPanel>
           ))}
         </section>
       </div>
+      </div>
     </div>
   );
-}
-
-function formatHeroDate(isoDate: string) {
-  const [y, m, d] = isoDate.split("-").map(Number);
-  if (!y || !m || !d) return isoDate;
-  return `${String(d).padStart(2, "0")}.${String(m).padStart(2, "0")}.${y}`;
 }
 
 function AcademyHomeView({
@@ -503,8 +516,9 @@ function AcademyHomeView({
 
   if (!marketplaceEnabled) {
     return (
-      <div className="flex flex-1 flex-col">
-        <div className="awp-page awp-page--default text-center">
+      <div className="relative flex flex-1 flex-col">
+        {isAcademyHome ? <HomeFallingDecor /> : null}
+        <div className="awp-page awp-page--default relative z-10 text-center">
           {isLoggedIn ? (
             <div className="mb-8 flex items-center justify-center gap-4">
               <PlayerAvatar
@@ -640,6 +654,8 @@ function AcademyHomeView({
 
   return (
     <div className="relative flex flex-1 flex-col text-zinc-900 dark:text-zinc-50">
+      {isAcademyHome ? <HomeFallingDecor /> : null}
+      <div className="relative z-10 flex flex-1 flex-col">
       {pageVariant === "pzu-cup" ? (
         <section className="mp-hero mp-hero--photo relative flex flex-col justify-end overflow-hidden pb-16 pt-16 sm:pb-20 sm:pt-24">
           <MarketplacePitchPhoto src={heroPhoto} priority className="z-0" />
@@ -661,71 +677,15 @@ function AcademyHomeView({
               Gramy razem.
             </h1>
             <p className="mt-4 max-w-xl text-base text-white/85 sm:text-lg">
-              Terminarz meczów, składy i rankingi — osobno od rezerwacji boisk.
+              Terminarz meczów, składy i rankingi akademii.
             </p>
-            <div className="mt-8 max-w-5xl">
-              {nextMatch ? (
-                <div className="mp-search-pill p-2 md:p-1.5">
-                  <div className="min-w-0 px-4 py-2">
-                    <span className="block text-[0.65rem] font-bold uppercase tracking-[0.14em] text-zinc-400">
-                      Najbliższy mecz
-                    </span>
-                    <span className="flex items-center gap-2 text-sm font-semibold text-zinc-900">
-                      <CalendarDays className="h-4 w-4 shrink-0 text-zinc-400" aria-hidden />
-                      {formatHeroDate(nextMatch.match_date)}
-                    </span>
-                  </div>
-                  <div className="min-w-0 px-4 py-2">
-                    <span className="block text-[0.65rem] font-bold uppercase tracking-[0.14em] text-zinc-400">
-                      Godzina
-                    </span>
-                    <span className="flex items-center gap-2 text-sm font-semibold text-zinc-900">
-                      <Clock className="h-4 w-4 shrink-0 text-zinc-400" aria-hidden />
-                      {nextMatch.match_time}
-                    </span>
-                  </div>
-                  <div className="min-w-0 px-4 py-2">
-                    <span className="block text-[0.65rem] font-bold uppercase tracking-[0.14em] text-zinc-400">
-                      Miejsce
-                    </span>
-                    <span className="flex items-center gap-2 text-sm font-semibold text-zinc-900">
-                      <MapPin className="h-4 w-4 shrink-0 text-zinc-400" aria-hidden />
-                      <span className="truncate">{nextMatch.location}</span>
-                    </span>
-                  </div>
-                  <Button asChild className="h-12 rounded-full px-8 text-sm font-black uppercase tracking-[0.12em]">
-                    <Link href="/terminarz">Terminarz</Link>
-                  </Button>
-                </div>
-              ) : (
-                <div className="mp-search-pill p-2 md:p-1.5">
-                  <div className="min-w-0 px-4 py-3 md:col-span-3">
-                    <span className="block text-[0.65rem] font-bold uppercase tracking-[0.14em] text-zinc-400">
-                      Terminarz
-                    </span>
-                    <span className="text-sm font-semibold text-zinc-900">
-                      Zobacz mecze akademii i zapisz się na termin.
-                    </span>
-                  </div>
-                  <Button asChild className="h-12 rounded-full px-8 text-sm font-black uppercase tracking-[0.12em]">
-                    <Link href="/terminarz">Terminarz</Link>
-                  </Button>
-                </div>
-              )}
-            </div>
           </div>
         </section>
       )}
 
-      {isAcademyHome && marketplaceEnabled && featuredVenues.length > 0 ? (
+      {isAcademyHome ? (
         <div className="-mx-4 mt-0 flex gap-4 overflow-x-auto bg-zinc-100 px-4 py-4 [scrollbar-width:thin] dark:bg-zinc-900">
-          {featuredVenues.map((venue) => (
-            <MarketplaceVenueCard key={venue.id} venue={venue} className="w-72 shrink-0" />
-          ))}
-        </div>
-      ) : isAcademyHome ? (
-        <div className="-mx-4 mt-0 flex gap-4 overflow-x-auto bg-zinc-100 px-4 py-4 [scrollbar-width:thin] dark:bg-zinc-900">
-          {pitchPhotos.slice(0, 8).map((src) => (
+          {photoPool.slice(0, 8).map((src) => (
             <div key={src} className="relative h-48 w-72 shrink-0 overflow-hidden rounded-3xl bg-zinc-200">
               <MarketplacePitchPhoto src={src} sizes="288px" />
             </div>
@@ -736,7 +696,13 @@ function AcademyHomeView({
       <div className="relative z-10 mx-auto w-full min-w-0 max-w-6xl px-4 py-10 sm:py-12">
         <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {quickLinks.map((item, i) => (
-            <HomePhotoTile key={item.href} href={item.href} src={homeTilePhoto(photoPool, i + 2)}>
+            <HomePhotoTile
+              key={item.href}
+              href={item.href}
+              src={homeTilePhoto(photoPool, i + 2)}
+              className="min-h-[12rem]"
+              contentClassName="flex min-h-[12rem] flex-col justify-end"
+            >
               <p className="font-black text-white drop-shadow-sm">{item.title}</p>
               <p className="mt-1 text-sm text-white/80">{item.desc}</p>
             </HomePhotoTile>
@@ -805,7 +771,11 @@ function AcademyHomeView({
 
         {isAcademyHome ? (
           <div className="mt-12">
-            <HomeTopRankings players={topRankedPlayers} isLoggedIn={isLoggedIn} />
+            <HomeTopRankings
+              players={topRankedPlayers}
+              isLoggedIn={isLoggedIn}
+              photoPool={marketplaceEnabled ? photoPool : undefined}
+            />
           </div>
         ) : null}
 
@@ -825,7 +795,8 @@ function AcademyHomeView({
                     key={item.href}
                     href={item.href}
                     src={homeTilePhoto(photoPool, i + 6)}
-                    contentClassName="flex items-start justify-between gap-3"
+                    className="min-h-[15rem]"
+                    contentClassName="flex min-h-[15rem] items-start justify-between gap-3"
                   >
                     <div>
                       <p className="font-black text-white drop-shadow-sm">{item.title}</p>
@@ -837,7 +808,10 @@ function AcademyHomeView({
                   </HomePhotoTile>
                 );
               })}
-              <GymBratCrossLink photoSrc={marketplaceEnabled ? homeTilePhoto(photoPool, moreLinks.length + 6) : undefined} />
+              <GymBratCrossLink
+                photoSrc={marketplaceEnabled ? homeTilePhoto(photoPool, moreLinks.length + 6) : undefined}
+                className={marketplaceEnabled ? "min-h-[15rem]" : undefined}
+              />
             </div>
           </section>
         ) : null}
@@ -857,7 +831,7 @@ function AcademyHomeView({
               </h2>
               <p className="mt-3 text-white/90">
                 {isLoggedIn
-                  ? "Zapisy, składy i statystyki są w jednym miejscu — osobno od rezerwacji boisk."
+                  ? "Zapisy, składy i statystyki są w jednym miejscu."
                   : "Dołącz do akademii: terminarz, składy, portfel i rankingi po zalogowaniu."}
               </p>
             </div>
@@ -875,7 +849,12 @@ function AcademyHomeView({
             { n: "2", t: "Zapisz się", d: "Potwierdź udział albo zaznacz, że jeszcze nie wiesz." },
             { n: "3", t: "Graj i licz punkty", d: "Statystyki i rankingi po każdym spotkaniu." },
           ].map((step, i) => (
-            <HomePhotoTile key={step.n} src={homeTilePhoto(photoPool, i + 10)} className="min-h-[15rem]">
+            <HomePhotoTile
+              key={step.n}
+              src={homeTilePhoto(photoPool, i + 10)}
+              className="min-h-[15rem]"
+              contentClassName="flex min-h-[15rem] flex-col justify-end"
+            >
               <p className="text-3xl font-black text-white drop-shadow-sm">{step.n}</p>
               <p className="mt-2 font-black text-white drop-shadow-sm">{step.t}</p>
               <p className="mt-1 text-sm text-white/85">{step.d}</p>
@@ -916,6 +895,7 @@ function AcademyHomeView({
       </div>
 
       {academyDialogs}
+      </div>
     </div>
   );
 }
@@ -944,7 +924,7 @@ function HomePhotoTile({
         <MarketplacePitchPhoto src={src} sizes="(max-width: 768px) 100vw, 400px" />
       </div>
       <div
-        className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-t from-black/75 via-black/35 to-black/15"
+        className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-t from-black/70 via-black/25 to-black/10"
         aria-hidden
       />
       <div className={cn("relative z-10", contentClassName)}>{children}</div>

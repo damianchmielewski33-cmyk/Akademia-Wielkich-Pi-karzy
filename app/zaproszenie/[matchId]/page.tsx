@@ -79,16 +79,14 @@ export default async function ZaproszeniePage({ params }: PageProps) {
         : null;
 
   return (
-    <div className="awp-page awp-page--default">
-      <InviteMatchClient
-        matchId={matchId}
-        match={matchForClient ?? null}
-        playersData={playersData}
-        isLoggedIn={Boolean(session)}
-        userSignupKind={userSignupKind}
-        hotpayEnabled={hotpayEnabled}
-        walletBalancePln={walletBalancePln}
-      />
-    </div>
+    <InviteMatchClient
+      matchId={matchId}
+      match={matchForClient ?? null}
+      playersData={playersData}
+      isLoggedIn={Boolean(session)}
+      userSignupKind={userSignupKind}
+      hotpayEnabled={hotpayEnabled}
+      walletBalancePln={walletBalancePln}
+    />
   );
 }
