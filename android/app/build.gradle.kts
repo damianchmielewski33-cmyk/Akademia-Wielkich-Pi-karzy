@@ -45,10 +45,11 @@ android {
         // Nowe ID — czysta instalacja obok starych prób
         applicationId = "pl.akademiawielkichpilkarzy.player"
         minSdk = 26
-        // Sideload (nie Play): 33 zaliczane przez lint; działa na Android 12 (S10+).
-        targetSdk = 33
-        versionCode = 29
-        versionName = "1.10.6"
+        // targetSdk musi być aktualny — inaczej Android 14+ pokazuje ostrzeżenie
+        // „aplikacja jest na starszą wersję Androida…” przy instalacji APK.
+        targetSdk = 35
+        versionCode = 30
+        versionName = "1.10.7"
 
         ndk {
             abiFilters += listOf("armeabi-v7a", "arm64-v8a")
