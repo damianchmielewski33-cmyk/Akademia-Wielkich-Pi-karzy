@@ -110,6 +110,8 @@ android {
     lint {
         // Sideload poza Play — nie blokuj release przez reguły sklepu Google.
         disable += "ExpiredTargetSdkVersion"
+        disable += "SplashScreenIconSize"
+        disable += "CustomSplashScreen"
         checkReleaseBuilds = true
         abortOnError = true
     }

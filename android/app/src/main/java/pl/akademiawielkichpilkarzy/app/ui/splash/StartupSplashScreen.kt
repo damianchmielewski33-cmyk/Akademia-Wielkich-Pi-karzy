@@ -29,9 +29,6 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.BlendMode
-import androidx.compose.ui.graphics.CompositingStrategy
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -259,12 +256,7 @@ fun PhotographicJuggler(modifier: Modifier = Modifier) {
     Image(
         painter = painterResource(R.drawable.splash_juggle_player),
         contentDescription = null,
-        modifier = modifier
-            .offset(y = offsetY)
-            .graphicsLayer {
-                compositingStrategy = CompositingStrategy.Offscreen
-                blendMode = BlendMode.Lighten
-            },
+        modifier = modifier.offset(y = offsetY),
         contentScale = ContentScale.Fit
     )
 }

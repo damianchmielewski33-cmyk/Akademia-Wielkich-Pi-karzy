@@ -12,7 +12,8 @@
     <!-- System splash od pierwszego kadru procesu — potem Compose przejmuje animację. -->
     <style name="Theme.Awp.Splash" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">@color/awp_green_dark</item>
-        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher_round</item>
+        <!-- Bitmap (nie adaptive mipmap) — unika lint SplashScreenIconSize na CI. -->
+        <item name="windowSplashScreenAnimatedIcon">@drawable/app_logo</item>
         <item name="postSplashScreenTheme">@style/Theme.Awp</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@color/awp_green_dark</item>
