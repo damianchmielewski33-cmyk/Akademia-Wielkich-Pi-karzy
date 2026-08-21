@@ -357,7 +357,7 @@ export function TerminarzClient({
           window.setTimeout(() => window.location.assign(result.url), 400);
           return;
         }
-        toast.success(`Opłacono mecz · ${formatMatchFeePln(result.amount_pln)}`);
+        toast.successCrowd(`Opłacono mecz · ${formatMatchFeePln(result.amount_pln)}`, { sound: "cheer" });
         router.refresh();
       } catch (e) {
         toast.error(e instanceof Error ? e.message : "Nie udało się opłacić meczu");
@@ -542,7 +542,7 @@ export function TerminarzClient({
       );
       return;
     }
-    toast.success("Zaktualizowano");
+    toast.successCrowd("Zaktualizowano", { sound: played ? "whistle" : "applause" });
     if (played) {
       const m = allMatches.find((x) => x.id === id);
       if (m) void openAttendanceDialog(m);
@@ -821,7 +821,10 @@ export function TerminarzClient({
       const res = await fetch("/api/stats/save", { method: "POST", body: fd });
       const text = await res.text();
       if (res.ok && text === "OK") {
-        toast.success("Statystyki zapisane");
+        const goals = Number(nz(statsGoals));
+        toast.successCrowd("Statystyki zapisane", {
+          sound: Number.isFinite(goals) && goals > 0 ? "goal" : "applause",
+        });
         setStatsMatch(null);
         router.refresh();
         return;
@@ -2890,16 +2893,9 @@ function AddMatchDialog({
       size="lg"
       title="Dodaj mecz"
       headerKicker="Terminarz"
+      headerPhotoSeed={11}
       description="Uzupełnij termin, lokalizację, wynajem boiska i kod bramy — mecz pojawi się na stronie głównej i w terminarzu."
-      icon={
-        light ? (
-          <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[var(--mp-teal)] text-white shadow-sm">
-            <CalendarPlus className="h-5 w-5" strokeWidth={2.25} aria-hidden />
-          </span>
-        ) : (
-          <CalendarPlus className="h-5 w-5 text-[var(--mundial-gold)]" strokeWidth={2.25} aria-hidden />
-        )
-      }
+      icon={<CalendarPlus className="h-5 w-5" strokeWidth={2.25} aria-hidden />}
       footer={
         <>
           <Button type="button" variant="outline" disabled={busy} onClick={() => onOpenChange(false)}>

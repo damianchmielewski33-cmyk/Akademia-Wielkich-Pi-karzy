@@ -17,6 +17,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.fragment.app.FragmentActivity
 import kotlinx.coroutines.delay
 import pl.akademiawielkichpilkarzy.app.data.api.ApiClient
@@ -30,7 +31,13 @@ import pl.akademiawielkichpilkarzy.app.ui.web.WebPortalScreen
 class MainActivity : FragmentActivity() {
     private val deepLinkPathState = mutableStateOf<String?>(null)
 
+    /** Systemowy splash trzymany, aż Compose narysuje pierwszą klatkę animacji. */
+    private val composeSplashDrawn = mutableStateOf(false)
+
     override fun onCreate(savedInstanceState: Bundle?) {
+        val splashScreen = installSplashScreen()
+        splashScreen.setKeepOnScreenCondition { !composeSplashDrawn.value }
+
         super.onCreate(savedInstanceState)
         deepLinkPathState.value = intent.deepLinkPathOrNull()
 
@@ -92,9 +99,9 @@ class MainActivity : FragmentActivity() {
                         initialContentReady = true
                     }
 
-                    // Splash zastępuje loadery: treść ładuje się pod spodem, znika dopiero
-                    // po min. czasie animacji i gotowości pierwszego ekranu.
-                    val showSplash = !sessionReady || !splashMinTimeDone || !initialContentReady
+                    // Splash zakrywa ładowanie: znika dopiero po min. czasie animacji
+                    // (od pierwszej widocznej klatki) ORAZ gotowości pierwszego ekranu.
+                    val showSplash = !splashMinTimeDone || !sessionReady || !initialContentReady
                     val guestMarketplacePath =
                         deepLinkPath?.takeIf {
                             it.startsWith("/obiekty") ||
@@ -157,6 +164,7 @@ class MainActivity : FragmentActivity() {
                         ) {
                             StartupSplashScreen(
                                 marketplaceEnabled = marketplaceEnabled,
+                                onFirstFrame = { composeSplashDrawn.value = true },
                                 onFinished = { splashMinTimeDone = true }
                             )
                         }

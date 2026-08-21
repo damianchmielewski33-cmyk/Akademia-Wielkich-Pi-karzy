@@ -46,10 +46,10 @@ function MobileNavLink({
         "awp-focus-ring flex min-h-12 touch-manipulation items-center gap-3 px-3 py-2.5 text-sm font-semibold transition-colors",
         light
           ? cn(
-              "rounded-2xl",
+              "rounded-2xl border",
               active
-                ? "bg-white text-[var(--mp-teal-dark)] shadow-sm ring-1 ring-[var(--mp-teal)]/30 dark:bg-zinc-900"
-                : "bg-white/80 text-zinc-800 hover:bg-white dark:bg-zinc-900/70 dark:text-zinc-100 dark:hover:bg-zinc-900"
+                ? "border-transparent bg-[var(--mp-teal)] text-white shadow-md shadow-teal-950/15"
+                : "border-zinc-200/90 bg-white text-zinc-800 shadow-sm hover:border-teal-200 hover:bg-teal-50/80 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-900"
             )
           : cn("rounded-xl", active ? "bg-white/15 text-[var(--mundial-gold)]" : "text-white/90 hover:bg-white/10")
       )}
@@ -59,8 +59,8 @@ function MobileNavLink({
           "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl",
           light
             ? active
-              ? "bg-[var(--mp-teal)] text-white"
-              : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-200"
+              ? "bg-white/20 text-white"
+              : "bg-teal-50 text-[var(--mp-teal-dark)] dark:bg-teal-950/50 dark:text-teal-300"
             : active
               ? "bg-[var(--mundial-gold)]/20 text-[var(--mundial-gold)]"
               : "bg-white/10 text-white/85"
@@ -135,7 +135,7 @@ export function SiteMobileNav({
           "absolute inset-y-0 right-0 flex w-[min(100%,21.5rem)] flex-col shadow-2xl pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]",
           stadium
             ? "border-l border-white/15 bg-[var(--mundial-navy)] text-white"
-            : "border-l border-zinc-200/80 bg-[#f4f5f7] dark:border-zinc-800 dark:bg-zinc-950"
+            : "border-l border-zinc-200/90 bg-[#f4f5f7] text-zinc-950 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-50"
         )}
       >
         {stadium ? (

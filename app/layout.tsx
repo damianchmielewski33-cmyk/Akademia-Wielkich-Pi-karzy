@@ -9,6 +9,7 @@ import { ShareLinkClientCleanup } from "@/components/share-link-client-cleanup";
 import { PwaRegister } from "@/components/pwa-register";
 import { AndroidAppUpdatePrompt } from "@/components/android-app-update-prompt";
 import { StartupSplash } from "@/components/startup-splash";
+import { StadiumSoundsUnlock } from "@/components/stadium-sounds";
 import { AndroidColdStartPreloaderUnlock } from "@/components/android-cold-start-preloader-unlock";
 import { WebPushEnabler } from "@/components/web-push-enabler";
 import { MatchNotificationPrompt } from "@/components/match-notification-prompt";
@@ -330,8 +331,8 @@ export default async function RootLayout({
           // iOS PWA: zakryj treść zanim React zamontuje splash — kolor zależny od V1/V2.
           dangerouslySetInnerHTML={{
             __html: marketplaceEnabled
-              ? `(function(){try{var ua=navigator.userAgent;if(/AWP-Android/i.test(ua))return;var ios=/iPad|iPhone|iPod/.test(ua)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);if(!ios)return;var st=window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;if(!st)return;if(sessionStorage.getItem('awp-startup-splash-shown')==='1')return;document.documentElement.classList.add('awp-boot-splash-pending');var d=document.createElement('div');d.id='awp-boot-splash';d.setAttribute('aria-hidden','true');d.style.cssText='position:fixed;inset:0;z-index:9999;background:linear-gradient(180deg,#f4f5f7 0%,#ffffff 48%,#e6faf7 100%);';document.documentElement.appendChild(d);}catch(e){}})();`
-              : `(function(){try{var ua=navigator.userAgent;if(/AWP-Android/i.test(ua))return;var ios=/iPad|iPhone|iPod/.test(ua)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);if(!ios)return;var st=window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;if(!st)return;if(sessionStorage.getItem('awp-startup-splash-shown')==='1')return;document.documentElement.classList.add('awp-boot-splash-pending');var d=document.createElement('div');d.id='awp-boot-splash';d.setAttribute('aria-hidden','true');d.style.cssText='position:fixed;inset:0;z-index:9999;background:linear-gradient(180deg,#061410 0%,#0b3d2e 48%,#082018 100%);';document.documentElement.appendChild(d);}catch(e){}})();`,
+              ? `(function(){try{var ua=navigator.userAgent;if(/AWP-Android/i.test(ua))return;var ios=/iPad|iPhone|iPod/.test(ua)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);if(!ios)return;var st=window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;if(!st)return;if(sessionStorage.getItem('awp-startup-splash-shown')==='1')return;document.documentElement.classList.add('awp-boot-splash-pending');var d=document.createElement('div');d.id='awp-boot-splash';d.setAttribute('aria-hidden','true');d.style.cssText='position:fixed;inset:0;z-index:9999;background:#0a1c1f';document.documentElement.appendChild(d);}catch(e){}})();`
+              : `(function(){try{var ua=navigator.userAgent;if(/AWP-Android/i.test(ua))return;var ios=/iPad|iPhone|iPod/.test(ua)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);if(!ios)return;var st=window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;if(!st)return;if(sessionStorage.getItem('awp-startup-splash-shown')==='1')return;document.documentElement.classList.add('awp-boot-splash-pending');var d=document.createElement('div');d.id='awp-boot-splash';d.setAttribute('aria-hidden','true');d.style.cssText='position:fixed;inset:0;z-index:9999;background:#061410';document.documentElement.appendChild(d);}catch(e){}})();`,
           }}
         />
         <SiteJsonLd
@@ -345,6 +346,7 @@ export default async function RootLayout({
         <StartupSplash marketplaceEnabled={marketplaceEnabled} />
         <AndroidColdStartPreloaderUnlock />
         <AndroidAppUpdatePrompt />
+        <StadiumSoundsUnlock />
         {loggedInFull ? <WebPushEnabler /> : null}
         <SessionIdleMonitor enabled={sessionIdleLogout} />
         <ShareLinkClientCleanup />

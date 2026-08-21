@@ -18,10 +18,23 @@ function sportMessage(message: unknown): string {
 export const toast = {
   ...sonnerToast,
   error(message: unknown, opts?: ToastOpts) {
+    void import("@/lib/haptics").then((m) => m.triggerHaptic("error"));
     return sonnerToast.error(toSportError(message), opts);
   },
   success(message: unknown, opts?: ToastOpts) {
     return sonnerToast.success(toSportSuccess(message), opts);
+  },
+  /** Sukces z aplauzem kibiców (zapis na mecz, gol itd.). */
+  successCrowd(message: unknown, opts?: ToastOpts & { sound?: "applause" | "cheer" | "goal" | "whistle" }) {
+    const sound = opts?.sound ?? "applause";
+    void import("@/lib/stadium-sounds").then((m) => {
+      if (sound === "goal") m.playStadiumGoal();
+      else if (sound === "cheer") m.playStadiumCheer();
+      else if (sound === "whistle") m.playStadiumWhistle();
+      else m.playStadiumApplause();
+    });
+    const { sound: _s, ...rest } = opts ?? {};
+    return sonnerToast.success(toSportSuccess(message), rest);
   },
   message(message: unknown, opts?: ToastOpts) {
     return sonnerToast.message(sportMessage(message), opts);

@@ -17,6 +17,7 @@ import { SiteAssetImage } from "@/components/site-asset-image";
 import { SiteMobileNav, type ShellNavItem } from "@/components/site-mobile-nav";
 import { AdsenseSlot } from "@/components/adsense-slot";
 import { CookieConsentFooterLink } from "@/components/cookie-consent-footer-link";
+import { StadiumSoundsToggle } from "@/components/stadium-sounds";
 import { isAdsenseInlinePath } from "@/lib/adsense";
 import { cn } from "@/lib/utils";
 import { SITE_NAME } from "@/lib/site";
@@ -230,6 +231,17 @@ export function SiteShell({
     </button>
   );
 
+  const soundsToggle = (
+    <StadiumSoundsToggle
+      compact
+      className={cn(
+        stadium
+          ? "h-10 w-10 justify-center border-white/25 bg-white/10 text-white hover:bg-white/15"
+          : "h-10 w-10 justify-center border-zinc-200 bg-white text-zinc-700 hover:border-zinc-300 hover:text-zinc-950 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200"
+      )}
+    />
+  );
+
   return (
     <div
       className={cn(
@@ -380,6 +392,7 @@ export function SiteShell({
                 ) : null}
 
                 {themeButton}
+                {soundsToggle}
 
                 {isLoggedIn && account && mode === "academy" ? (
                   <Link
@@ -459,6 +472,7 @@ export function SiteShell({
               <div className="flex items-center gap-1.5 lg:hidden">
                 {isAdmin ? <AdminHeaderMessagesButton initialUnreadCount={adminUnreadMessages} compact /> : null}
                 {themeButton}
+                {soundsToggle}
                 {isLoggedIn && account && mode === "academy" ? (
                   <Link
                     href="/profil"

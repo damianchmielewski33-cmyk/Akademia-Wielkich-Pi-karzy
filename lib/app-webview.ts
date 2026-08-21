@@ -16,6 +16,8 @@ declare global {
       getVersionName: () => string;
       getVersionCode: () => number;
       checkUpdate: () => void;
+      /** CSV ms: "40" albo "0,40,60,40" (vibrate/pause). */
+      vibrate?: (patternCsv: string) => void;
     };
   }
 }

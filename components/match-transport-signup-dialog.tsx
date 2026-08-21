@@ -81,7 +81,7 @@ export function MatchTransportSignupDialog({
       }
 
       if (!pay) {
-        toast.success(intent === "confirm" ? "Potwierdzono zapis" : "Zapisano na mecz");
+        toast.successCrowd(intent === "confirm" ? "Potwierdzono zapis" : "Zapisano na mecz");
         onOpenChange(false);
         onCompleted();
         return;
@@ -92,7 +92,7 @@ export function MatchTransportSignupDialog({
         const me = (await meRes.json().catch(() => ({}))) as { user_id?: number };
         const myId = Number(me.user_id);
         if (!Number.isFinite(myId) || myId <= 0) {
-          toast.success("Zapisano na mecz. Opłatę uregulujesz w zakładce Płatności.");
+          toast.successCrowd("Zapisano na mecz. Opłatę uregulujesz w zakładce Płatności.");
           onOpenChange(false);
           onCompleted();
           return;
@@ -113,15 +113,16 @@ export function MatchTransportSignupDialog({
           return;
         }
 
-        toast.success(
+        toast.successCrowd(
           intent === "confirm"
             ? `Potwierdzono i opłacono · ${formatMatchFeePln(result.amount_pln)}`
-            : `Zapisano i opłacono · ${formatMatchFeePln(result.amount_pln)}`
+            : `Zapisano i opłacono · ${formatMatchFeePln(result.amount_pln)}`,
+          { sound: "cheer" }
         );
         onOpenChange(false);
         onCompleted();
       } catch {
-        toast.success("Zapisano na mecz. Opłatę możesz uregulować z portfela w zakładce Płatności.");
+        toast.successCrowd("Zapisano na mecz. Opłatę możesz uregulować z portfela w zakładce Płatności.");
         onOpenChange(false);
         onCompleted();
       }

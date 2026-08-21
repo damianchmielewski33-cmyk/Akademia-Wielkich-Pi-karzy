@@ -137,6 +137,51 @@ function NavTabButton({
   onSelect: () => void;
   compact?: boolean;
 }) {
+  const { marketplaceEnabled } = useSiteMode();
+
+  if (marketplaceEnabled) {
+    const Icon = tab.icon;
+    return (
+      <button
+        type="button"
+        onClick={onSelect}
+        aria-current={active ? "page" : undefined}
+        className={cn(
+          "awp-focus-ring group flex w-full items-center gap-3 rounded-2xl border px-3 py-2.5 text-left transition-colors",
+          compact && "w-auto min-w-[11rem] shrink-0",
+          active
+            ? "border-transparent bg-[var(--mp-teal)] text-white shadow-md shadow-teal-950/15"
+            : "border-zinc-200/90 bg-white text-zinc-800 shadow-sm hover:border-teal-200 hover:bg-teal-50/70 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:border-teal-800 dark:hover:bg-teal-950/40"
+        )}
+      >
+        <span
+          className={cn(
+            "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl",
+            active
+              ? "bg-white/20 text-white"
+              : "bg-teal-50 text-[var(--mp-teal-dark)] dark:bg-teal-950/50 dark:text-teal-300"
+          )}
+        >
+          <Icon className="h-4 w-4" strokeWidth={2.25} aria-hidden />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-sm font-bold leading-tight tracking-tight">{tab.label}</span>
+          {tab.desc && !compact ? (
+            <span
+              className={cn(
+                "mt-0.5 block truncate text-xs leading-snug",
+                active ? "text-white/85" : "text-zinc-500 dark:text-zinc-400"
+              )}
+            >
+              {tab.desc}
+            </span>
+          ) : null}
+        </span>
+        <TabBadge tab={tab} />
+      </button>
+    );
+  }
+
   return (
     <AdminNavTile
       title={tab.label}
@@ -280,10 +325,10 @@ export function AdminShell({
     >
       <aside
         className={cn(
-          "relative z-30 shrink-0 shadow-lg lg:w-80 lg:border-b-0 lg:border-r",
+          "relative z-30 shrink-0 lg:w-80 lg:border-b-0 lg:border-r",
           marketplaceEnabled
-            ? "border-b border-zinc-200 bg-zinc-950 text-white dark:border-zinc-800 lg:border-zinc-800"
-            : "border-b border-white/20 lg:border-white/15",
+            ? "border-b border-zinc-200 bg-[#f4f5f7] text-zinc-950 shadow-sm dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-50 lg:border-zinc-200 dark:lg:border-zinc-800"
+            : "border-b border-white/20 shadow-lg lg:border-white/15",
           showMobileMenu ? "flex min-h-screen flex-col lg:min-h-0" : undefined,
           !showMobileMenu && "lg:block",
           !showMobileMenu && "hidden lg:block"
@@ -292,13 +337,21 @@ export function AdminShell({
         <div className="relative flex flex-col gap-3 p-3 xs:p-4 lg:sticky lg:top-0 lg:h-screen lg:max-h-screen lg:gap-3 lg:overflow-hidden lg:pt-[max(1rem,env(safe-area-inset-top))] lg:pb-[max(0.75rem,env(safe-area-inset-bottom))]">
           <PhotoPanel
             src={pitchPhotoAt(0)}
-            className="shrink-0"
+            className={cn(
+              "shrink-0 overflow-hidden rounded-3xl",
+              marketplaceEnabled && "border border-zinc-200/80 shadow-sm dark:border-zinc-800"
+            )}
             contentClassName="flex items-center gap-3 p-4"
             overlayClassName="bg-gradient-to-r from-black/75 via-black/50 to-black/20"
             sizes="320px"
             priority
           >
-            <span className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/15 ring-2 ring-white/35">
+            <span
+              className={cn(
+                "relative flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-white shadow-sm",
+                marketplaceEnabled ? "bg-[var(--mp-teal)]" : "bg-white/15 ring-2 ring-white/35"
+              )}
+            >
               <SiteAssetImage
                 asset="logo_crest"
                 alt=""
@@ -333,12 +386,24 @@ export function AdminShell({
                 <button
                   type="button"
                   onClick={() => setMobileMenuGroupId(null)}
-                  className="awp-focus-ring inline-flex items-center gap-2 self-start rounded-xl px-2 py-1.5 text-sm font-semibold text-white/90 hover:bg-white/10"
+                  className={cn(
+                    "awp-focus-ring inline-flex items-center gap-2 self-start rounded-xl px-2 py-1.5 text-sm font-semibold",
+                    marketplaceEnabled
+                      ? "text-zinc-700 hover:bg-zinc-200/80 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                      : "text-white/90 hover:bg-white/10"
+                  )}
                 >
                   <ArrowLeft className="h-4 w-4" aria-hidden />
                   Kategorie
                 </button>
-                <p className="text-xs font-bold uppercase tracking-[0.14em] text-white/70">
+                <p
+                  className={cn(
+                    "text-xs font-bold uppercase tracking-[0.14em]",
+                    marketplaceEnabled
+                      ? "text-[var(--mp-teal-dark)] dark:text-teal-300"
+                      : "text-white/70"
+                  )}
+                >
                   {mobileBrowseGroup.label ?? "Zakładki"}
                 </p>
                 <nav className="flex flex-col gap-2" aria-label={`Zakładki: ${mobileBrowseGroup.label ?? ""}`}>
@@ -365,27 +430,56 @@ export function AdminShell({
                           onClick={() => selectMobileTab(s.id)}
                           className="min-w-0"
                         >
-                          <PhotoPanel
-                            src={pitchPhotoAt(adminPhotoIndex(s.id))}
-                            className={cn("min-h-[3.25rem] rounded-xl", active && accentRing)}
-                            contentClassName="flex min-h-[3.25rem] items-center justify-center gap-1.5 px-2 py-2"
-                            sizes="160px"
-                          >
-                            <span className="truncate text-xs font-bold text-white drop-shadow-sm">{s.label}</span>
-                            {s.badgeCount != null && s.badgeCount > 0 ? (
-                              <span className="inline-flex min-h-[1.1rem] min-w-[1.1rem] items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white">
-                                {s.badgeCount > 99 ? "99+" : s.badgeCount}
-                              </span>
-                            ) : s.badge ? (
-                              <span className="h-1.5 w-1.5 rounded-full bg-red-500" aria-hidden />
-                            ) : null}
-                          </PhotoPanel>
+                          {marketplaceEnabled ? (
+                            <span
+                              className={cn(
+                                "flex min-h-[3.25rem] items-center justify-center gap-1.5 rounded-2xl border px-2 py-2 text-xs font-bold shadow-sm",
+                                active
+                                  ? "border-transparent bg-[var(--mp-teal)] text-white"
+                                  : "border-zinc-200 bg-white text-zinc-800 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+                              )}
+                            >
+                              <span className="truncate">{s.label}</span>
+                              {s.badgeCount != null && s.badgeCount > 0 ? (
+                                <span className="inline-flex min-h-[1.1rem] min-w-[1.1rem] items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white">
+                                  {s.badgeCount > 99 ? "99+" : s.badgeCount}
+                                </span>
+                              ) : s.badge ? (
+                                <span className="h-1.5 w-1.5 rounded-full bg-red-500" aria-hidden />
+                              ) : null}
+                            </span>
+                          ) : (
+                            <PhotoPanel
+                              src={pitchPhotoAt(adminPhotoIndex(s.id))}
+                              className={cn("min-h-[3.25rem] rounded-xl", active && accentRing)}
+                              contentClassName="flex min-h-[3.25rem] items-center justify-center gap-1.5 px-2 py-2"
+                              sizes="160px"
+                            >
+                              <span className="truncate text-xs font-bold text-white drop-shadow-sm">{s.label}</span>
+                              {s.badgeCount != null && s.badgeCount > 0 ? (
+                                <span className="inline-flex min-h-[1.1rem] min-w-[1.1rem] items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white">
+                                  {s.badgeCount > 99 ? "99+" : s.badgeCount}
+                                </span>
+                              ) : s.badge ? (
+                                <span className="h-1.5 w-1.5 rounded-full bg-red-500" aria-hidden />
+                              ) : null}
+                            </PhotoPanel>
+                          )}
                         </button>
                       );
                     })}
                   </div>
                 ) : null}
-                <p className="text-xs font-bold uppercase tracking-[0.14em] text-white/70">Wszystkie sekcje</p>
+                <p
+                  className={cn(
+                    "text-xs font-bold uppercase tracking-[0.14em]",
+                    marketplaceEnabled
+                      ? "text-[var(--mp-teal-dark)] dark:text-teal-300"
+                      : "text-white/70"
+                  )}
+                >
+                  Wszystkie sekcje
+                </p>
                 <nav className="flex flex-col gap-2" aria-label="Kategorie panelu admina">
                   {navGroups.map((g) => {
                     const groupAlert = g.items.some(tabHasAlert);
@@ -393,22 +487,48 @@ export function AdminShell({
                     const selected = g.id === activeGroupId;
                     return (
                       <button key={g.id} type="button" onClick={() => selectMobileGroup(g)} className="w-full text-left">
-                        <PhotoPanel
-                          src={pitchPhotoAt(adminPhotoIndex(`group-${g.id}`))}
-                          className={cn("min-h-[4.5rem] border-2 border-white/30", selected && accentRing)}
-                          contentClassName="flex min-h-[4.5rem] items-center gap-3 px-4 py-3"
-                          sizes="320px"
-                        >
-                          <span className="min-w-0 flex-1">
-                            <span className="block text-base font-bold text-white drop-shadow-sm">{chipLabel}</span>
-                            <span className="mt-0.5 block text-xs text-white/75">
-                              {g.items.length === 1
-                                ? g.items[0].label
-                                : `${g.items.length} sekcje — otwórz listę`}
+                        {marketplaceEnabled ? (
+                          <span
+                            className={cn(
+                              "flex min-h-[4.5rem] items-center gap-3 rounded-2xl border px-4 py-3 shadow-sm transition-colors",
+                              selected
+                                ? "border-transparent bg-[var(--mp-teal)] text-white"
+                                : "border-zinc-200 bg-white text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
+                            )}
+                          >
+                            <span className="min-w-0 flex-1">
+                              <span className="block text-base font-bold">{chipLabel}</span>
+                              <span
+                                className={cn(
+                                  "mt-0.5 block text-xs",
+                                  selected ? "text-white/80" : "text-zinc-500 dark:text-zinc-400"
+                                )}
+                              >
+                                {g.items.length === 1
+                                  ? g.items[0].label
+                                  : `${g.items.length} sekcje — otwórz listę`}
+                              </span>
                             </span>
+                            {groupAlert ? <span className="h-2 w-2 rounded-full bg-red-500" aria-hidden /> : null}
                           </span>
-                          {groupAlert ? <span className="h-2 w-2 rounded-full bg-red-500" aria-hidden /> : null}
-                        </PhotoPanel>
+                        ) : (
+                          <PhotoPanel
+                            src={pitchPhotoAt(adminPhotoIndex(`group-${g.id}`))}
+                            className={cn("min-h-[4.5rem] border-2 border-white/30", selected && accentRing)}
+                            contentClassName="flex min-h-[4.5rem] items-center gap-3 px-4 py-3"
+                            sizes="320px"
+                          >
+                            <span className="min-w-0 flex-1">
+                              <span className="block text-base font-bold text-white drop-shadow-sm">{chipLabel}</span>
+                              <span className="mt-0.5 block text-xs text-white/75">
+                                {g.items.length === 1
+                                  ? g.items[0].label
+                                  : `${g.items.length} sekcje — otwórz listę`}
+                              </span>
+                            </span>
+                            {groupAlert ? <span className="h-2 w-2 rounded-full bg-red-500" aria-hidden /> : null}
+                          </PhotoPanel>
+                        )}
                       </button>
                     );
                   })}
@@ -451,7 +571,11 @@ export function AdminShell({
                     aria-expanded={isOpen}
                     className={cn(
                       "awp-focus-ring flex w-full items-center gap-2 rounded-xl px-2 py-2.5 text-left text-sm font-bold uppercase tracking-[0.12em] transition-colors",
-                      containsActive ? accentText : "text-white/70 hover:text-white"
+                      containsActive
+                        ? accentText
+                        : marketplaceEnabled
+                          ? "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+                          : "text-white/70 hover:text-white"
                     )}
                   >
                     <ChevronDown
@@ -484,7 +608,14 @@ export function AdminShell({
           </nav>
 
           {/* Zawsze widoczne: tryb testowy + rezerwacje + płatności operatora + stopka */}
-          <div className="relative z-10 flex shrink-0 flex-col gap-2 border-t border-white/20 pt-3">
+          <div
+            className={cn(
+              "relative z-10 flex shrink-0 flex-col gap-2 border-t pt-3",
+              marketplaceEnabled
+                ? "border-zinc-200 dark:border-zinc-800"
+                : "border-white/20"
+            )}
+          >
             <div className="flex flex-col gap-1.5">
               <AdminTestModeSidebarButton />
               <AdminMarketplaceSidebarButton />

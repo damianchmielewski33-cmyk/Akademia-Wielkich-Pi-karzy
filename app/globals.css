@@ -537,7 +537,7 @@ html.site-chrome-academy {
     @apply mt-4;
   }
 
-  /* Modal — nagłówek formularza (Mundial) */
+  /* Modal — nagłówek formularza (Mundial V1) */
   .awp-modal-form-header {
     @apply relative overflow-hidden border-b border-[var(--mundial-gold)]/25 px-5 py-4 text-white;
     background: linear-gradient(
@@ -561,6 +561,28 @@ html.site-chrome-academy {
       rgba(255, 255, 255, 0.08) 28px
     );
     pointer-events: none;
+  }
+
+  /* V2 — photo hero + teal, bez stadionowego złota/navy */
+  .awp-modal-form-header--v2 {
+    @apply border-b border-zinc-200/20 px-5 py-5;
+    background: #0f172a;
+  }
+
+  .awp-modal-form-header--v2::before {
+    display: none;
+  }
+
+  .awp-modal-form-header--v2 .awp-modal-form-header__kicker {
+    @apply text-white/75;
+  }
+
+  .awp-modal-form-header--v2 .awp-modal-form-header__description {
+    @apply text-white/85;
+  }
+
+  .awp-modal-form-header--v2 .awp-modal-form-header__icon {
+    @apply bg-[var(--mp-teal)] shadow-sm ring-0;
   }
 
   .awp-modal-form-header__kicker {
@@ -1683,20 +1705,28 @@ html {
   }
 }
 
-/* Spadające piłki i gwiazdy — na telefonie przez cały ekran, na dużym z boków */
+/* Spadające piłki i gwiazdy — tylko po bokach (nie zasłaniają przycisków na środku).
+   `home-fall--cover` (splash / auth): pełny ekran, ale bez przechwytywania kliknięć. */
 .home-fall {
-  pointer-events: none;
+  pointer-events: none !important;
   position: fixed;
   inset: 0;
-  z-index: 2;
+  z-index: 0;
   overflow: hidden;
+}
+
+.home-fall *,
+.home-fall *::before,
+.home-fall *::after {
+  pointer-events: none !important;
 }
 
 .home-fall__rail {
   position: absolute;
   top: 0;
   bottom: 0;
-  width: 50%;
+  /* Wąskie pasy przy krawędziach — środek UI zostaje wolny */
+  width: min(4.75rem, 18vw);
 }
 
 .home-fall__rail--left {
@@ -1707,11 +1737,11 @@ html {
   right: 0;
 }
 
-@media (min-width: 1024px) {
-  .home-fall:not(.home-fall--cover) {
-    z-index: 0;
-  }
+.home-fall--cover .home-fall__rail {
+  width: 50%;
+}
 
+@media (min-width: 1024px) {
   .home-fall:not(.home-fall--cover) .home-fall__rail {
     width: clamp(4.5rem, calc((100vw - 64rem) / 2), 16rem);
   }
@@ -1721,6 +1751,7 @@ html {
   position: absolute;
   top: -12%;
   display: block;
+  pointer-events: none !important;
   animation: home-fall-down var(--dur, 14s) linear infinite;
   animation-delay: var(--delay, 0s);
   will-change: transform, opacity;
@@ -1783,12 +1814,32 @@ html {
   }
 }
 
-/* Splash startowy aplikacji iOS (PWA) — spadające piłki + żonglerka */
+/* Splash startowy aplikacji iOS (PWA) — stadion + fotograficzny piłkarz */
 .awp-startup-splash {
-  background: linear-gradient(180deg, #061410 0%, #0b3d2e 48%, #082018 100%);
+  background: #061410;
   opacity: 1;
   transition: opacity 0.42s ease;
   overflow: hidden;
+}
+
+.awp-startup-splash__stadium {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.awp-startup-splash__stadium-scrim {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(4, 12, 10, 0.55) 0%, rgba(6, 20, 16, 0.35) 42%, rgba(4, 10, 18, 0.72) 100%),
+    radial-gradient(ellipse 70% 55% at 50% 72%, rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0.55));
+}
+
+.awp-startup-splash--v2 .awp-startup-splash__stadium-scrim {
+  background:
+    linear-gradient(180deg, rgba(6, 28, 32, 0.5) 0%, rgba(8, 24, 28, 0.32) 40%, rgba(4, 16, 22, 0.78) 100%),
+    radial-gradient(ellipse 70% 55% at 50% 72%, rgba(0, 201, 177, 0.08), rgba(0, 0, 0, 0.5));
 }
 
 .awp-startup-splash .home-fall {
@@ -1798,16 +1849,43 @@ html {
 }
 
 .awp-startup-splash--v2 {
-  background: linear-gradient(180deg, #f4f5f7 0%, #ffffff 48%, #e6faf7 100%);
+  background: #0a1c1f;
 }
 
 .awp-startup-splash--v2 .home-fall__item {
-  filter: drop-shadow(0 2px 4px rgba(15, 23, 42, 0.2));
+  filter: drop-shadow(0 2px 4px rgba(15, 23, 42, 0.35));
 }
 
 .awp-startup-splash--leave {
   opacity: 0;
   pointer-events: none;
+}
+
+.awp-juggle-photo {
+  display: block;
+  animation: awp-juggle-photo-float 2.4s ease-in-out infinite;
+  filter: drop-shadow(0 18px 28px rgba(0, 0, 0, 0.45));
+}
+
+.awp-juggle-photo__img {
+  /* Ciemne studio w PNG zlewa się ze stadionem */
+  mix-blend-mode: lighten;
+}
+
+@keyframes awp-juggle-photo-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .awp-juggle-photo {
+    animation: none;
+  }
 }
 
 .awp-juggle {

@@ -132,7 +132,7 @@ export function InviteMatchClient({
         toast.error(typeof data.error === "string" ? data.error : "Nie udało się zapisać");
         return;
       }
-      toast.success("Zapisano na mecz");
+      toast.successCrowd("Zapisano na mecz");
       router.refresh();
     } finally {
       setTentativeBusy(false);

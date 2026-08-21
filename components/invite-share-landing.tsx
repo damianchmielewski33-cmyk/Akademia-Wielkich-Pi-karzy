@@ -172,13 +172,20 @@ export function InviteMatchCard({
   showGatePin?: boolean;
   onViewRoster?: () => void;
 }) {
+  const { marketplaceEnabled } = useSiteMode();
   const when = formatMatchWhen(match.match_date, match.match_time);
   const slots = slotMeta(match.signed_up, match.max_slots);
   const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(match.location)}`;
   const gatePin = match.gate_pin?.trim() ?? "";
   const src = pitchPhotoAt(match.id);
   const barClass =
-    slots.tone === "full" ? "bg-red-400/90" : slots.tone === "warn" ? "bg-amber-400/90" : "bg-emerald-100";
+    slots.tone === "full"
+      ? "bg-red-400/90"
+      : slots.tone === "warn"
+        ? "bg-amber-400/90"
+        : marketplaceEnabled
+          ? "bg-[var(--mp-teal)]"
+          : "bg-emerald-100";
 
   return (
     <PhotoPanel
@@ -213,18 +220,44 @@ export function InviteMatchCard({
         </div>
 
         <div className="mt-5 flex flex-wrap items-center gap-2">
-          <span className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-100 px-3 py-2 text-sm font-semibold tabular-nums text-emerald-950 shadow-md shadow-emerald-950/20">
-            <Calendar className="h-3.5 w-3.5 text-emerald-800" aria-hidden />
+          <span
+            className={cn(
+              "inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold tabular-nums shadow-md",
+              marketplaceEnabled
+                ? "bg-white/95 text-zinc-950 shadow-black/20"
+                : "bg-emerald-100 text-emerald-950 shadow-emerald-950/20"
+            )}
+          >
+            <Calendar
+              className={cn("h-3.5 w-3.5", marketplaceEnabled ? "text-[var(--mp-teal-dark)]" : "text-emerald-800")}
+              aria-hidden
+            />
             {when.label}
           </span>
-          <span className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-100 px-3 py-2 text-sm font-semibold tabular-nums text-emerald-950 shadow-md shadow-emerald-950/20">
-            <Clock className="h-3.5 w-3.5 text-emerald-800" aria-hidden />
+          <span
+            className={cn(
+              "inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold tabular-nums shadow-md",
+              marketplaceEnabled
+                ? "bg-white/95 text-zinc-950 shadow-black/20"
+                : "bg-emerald-100 text-emerald-950 shadow-emerald-950/20"
+            )}
+          >
+            <Clock
+              className={cn("h-3.5 w-3.5", marketplaceEnabled ? "text-[var(--mp-teal-dark)]" : "text-emerald-800")}
+              aria-hidden
+            />
             {match.match_time}
           </span>
         </div>
 
         <div className="mt-4 flex items-start gap-2 text-sm text-white">
-          <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[var(--mundial-gold,#f5c518)]" aria-hidden />
+          <MapPin
+            className={cn(
+              "mt-0.5 h-4 w-4 shrink-0",
+              marketplaceEnabled ? "text-[var(--mp-teal)]" : "text-[var(--mundial-gold,#f5c518)]"
+            )}
+            aria-hidden
+          />
           <div className="min-w-0">
             <p className="font-medium leading-snug drop-shadow-sm">{match.location}</p>
             <a
@@ -274,7 +307,12 @@ export function InviteMatchCard({
             />
           </div>
           {onViewRoster ? (
-            <Button type="button" variant="gold" className="mt-3 w-full gap-2" onClick={onViewRoster}>
+            <Button
+              type="button"
+              variant={marketplaceEnabled ? "default" : "gold"}
+              className="mt-3 w-full gap-2"
+              onClick={onViewRoster}
+            >
               <Users className="h-4 w-4 shrink-0" aria-hidden />
               Zobacz kto jest zapisany
             </Button>
@@ -292,7 +330,14 @@ export function InviteMatchCard({
         {gatePin && showGatePin ? (
           <div className="mt-4 flex items-center gap-3 rounded-xl bg-black/25 p-3.5 ring-1 ring-white/15">
             <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/15 ring-2 ring-white/35">
-              <KeyRound className="h-5 w-5 text-[var(--mundial-gold,#f5c518)]" strokeWidth={2.25} aria-hidden />
+              <KeyRound
+                className={cn(
+                  "h-5 w-5",
+                  marketplaceEnabled ? "text-[var(--mp-teal)]" : "text-[var(--mundial-gold,#f5c518)]"
+                )}
+                strokeWidth={2.25}
+                aria-hidden
+              />
             </span>
             <div className="min-w-0">
               <p className="text-[11px] font-semibold uppercase tracking-wide text-white/75">Wejście na boisko</p>
@@ -418,7 +463,7 @@ export function InviteShareLanding({
         return;
       }
 
-      toast.success("Gość zapisany na mecz");
+      toast.successCrowd("Gość zapisany na mecz");
       resetGuestForm();
       setInviteGuestInline(false);
       onGuestSignedUp?.();

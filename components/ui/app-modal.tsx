@@ -46,6 +46,8 @@ export type AppModalProps = {
   hideCloseButton?: boolean;
   /** Ukrywa domyślny nagłówek — treść w `children` (np. ModalPromptHeader). */
   hideHeader?: boolean;
+  /** Seed zdjęcia boiska w nagłówku V2. */
+  headerPhotoSeed?: number;
 };
 
 /**
@@ -69,6 +71,7 @@ export function AppModal({
   preventDismiss = false,
   hideCloseButton = false,
   hideHeader = false,
+  headerPhotoSeed = 2,
 }: AppModalProps) {
   const formHeader = Boolean(icon) && !hideHeader;
 
@@ -106,6 +109,7 @@ export function AppModal({
               title={title}
               description={description}
               kicker={headerKicker ?? "Formularz"}
+              photoSeed={headerPhotoSeed}
             />
             <DialogHeader className="sr-only">
               <DialogTitle>{title}</DialogTitle>

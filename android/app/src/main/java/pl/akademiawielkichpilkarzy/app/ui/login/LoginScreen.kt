@@ -64,6 +64,8 @@ import pl.akademiawielkichpilkarzy.app.data.api.VenueCardDto
 import pl.akademiawielkichpilkarzy.app.data.auth.BiometricCredentialsStore
 import pl.akademiawielkichpilkarzy.app.push.PushRegistrar
 import pl.akademiawielkichpilkarzy.app.ui.common.AwpTextField
+import pl.akademiawielkichpilkarzy.app.ui.haptics.AwpHaptic
+import pl.akademiawielkichpilkarzy.app.ui.haptics.awpVibrate
 import pl.akademiawielkichpilkarzy.app.ui.theme.AwpColors
 import pl.akademiawielkichpilkarzy.app.ui.theme.AwpTheme
 import retrofit2.HttpException
@@ -125,7 +127,7 @@ fun LoginScreen(
             BiometricHelper.authenticate(
                 activity = activity,
                 onSuccess = {
-                    scope.launch { loginWithBiometrics(biometricStore, onLoggedIn) { error = it } }
+                    scope.launch { loginWithBiometrics(context, biometricStore, onLoggedIn) { error = it } }
                 },
                 onError = { /* zostaw formularz PIN */ },
                 onCancel = {}
@@ -170,6 +172,7 @@ fun LoginScreen(
                         // Odśwież zapisane dane (np. nowy PIN), bez pokazywania biometrii po zalogowaniu.
                         biometricStore.enable(creds)
                     }
+                    context.awpVibrate(AwpHaptic.Success)
                     onLoggedIn()
                 }
             } catch (e: HttpException) {
@@ -270,7 +273,7 @@ fun LoginScreen(
                                         scope.launch {
                                             loading = true
                                             try {
-                                                loginWithBiometrics(biometricStore, onLoggedIn) { error = it }
+                                                loginWithBiometrics(context, biometricStore, onLoggedIn) { error = it }
                                             } finally {
                                                 loading = false
                                             }
@@ -655,6 +658,7 @@ private fun absoluteMediaUrl(raw: String?): String? {
 }
 
 private suspend fun loginWithBiometrics(
+    context: android.content.Context,
     biometricStore: BiometricCredentialsStore,
     onLoggedIn: () -> Unit,
     onError: (String) -> Unit
@@ -689,6 +693,7 @@ private suspend fun loginWithBiometrics(
             isAdmin = user.isAdmin == 1
         )
         PushRegistrar.enablePush()
+        context.awpVibrate(AwpHaptic.Success)
         onLoggedIn()
     } catch (e: HttpException) {
         val msg = try {

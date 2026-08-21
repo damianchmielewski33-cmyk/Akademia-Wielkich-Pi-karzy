@@ -3,6 +3,8 @@
 import { useCallback, useMemo, useState } from "react";
 import { LayoutGrid, Users } from "lucide-react";
 import { LineupPlayerStatsDialog } from "@/components/lineup-player-stats-dialog";
+import { MarketplacePitchPhoto } from "@/components/marketplace-pitch-photo";
+import { useMarketplacePitchPhotoAt } from "@/components/marketplace-photos-provider";
 import { MarketplaceSection } from "@/components/payments-card";
 import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
 import { useSiteMode } from "@/components/site-mode";
@@ -388,6 +390,7 @@ function TeamHalfReadOnly({
 export function MatchLineupView({ matchDate, matchTime, location, players, home, away }: Props) {
   const { marketplaceEnabled } = useSiteMode();
   const light = marketplaceEnabled;
+  const heroPhoto = useMarketplacePitchPhotoAt(matchDate.length + matchTime.length + location.length);
   const playerById = useMemo(() => {
     const map = new Map<number, LineupPlayer>();
     for (const p of players) map.set(p.userId, p);
@@ -416,10 +419,14 @@ export function MatchLineupView({ matchDate, matchTime, location, players, home,
 
   const pitch = (
     <div
-      className="relative mx-auto aspect-[9/16] w-full max-w-[min(100%,32rem)] overflow-hidden rounded-xl border-2 border-white/40 shadow-inner xs:aspect-[3/5] xs:rounded-2xl sm:aspect-[3/4]"
+      className={cn(
+        "relative mx-auto aspect-[9/16] w-full max-w-[min(100%,32rem)] overflow-hidden rounded-xl shadow-inner xs:aspect-[3/5] xs:rounded-2xl sm:aspect-[3/4]",
+        light ? "border-2 border-[var(--mp-teal)]/45 ring-1 ring-[var(--mp-teal)]/20" : "border-2 border-white/40"
+      )}
       style={{
-        background:
-          "linear-gradient(180deg, #14532d 0%, #166534 18%, #15803d 50%, #166534 82%, #14532d 100%)",
+        background: light
+          ? "linear-gradient(180deg, #0f766e 0%, #115e59 18%, #0d9488 50%, #115e59 82%, #134e4a 100%)"
+          : "linear-gradient(180deg, #14532d 0%, #166534 18%, #15803d 50%, #166534 82%, #14532d 100%)",
         boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.12)",
       }}
     >
@@ -462,6 +469,28 @@ export function MatchLineupView({ matchDate, matchTime, location, players, home,
   if (light) {
     return (
       <div className="min-w-0 space-y-5 overflow-x-hidden">
+        <div className="overflow-hidden rounded-3xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
+          <div className="relative min-h-[8rem]">
+            <MarketplacePitchPhoto
+              src={heroPhoto}
+              className="z-0"
+              sizes="(max-width: 768px) 100vw, 720px"
+            />
+            <div className="absolute inset-0 z-[1] bg-gradient-to-t from-black/80 via-black/45 to-black/25" />
+            <div className="relative z-10 flex min-h-[8rem] flex-col justify-end p-5">
+              <p className="text-[0.65rem] font-black uppercase tracking-[0.2em] text-white/75">Składy</p>
+              <h2 className="mt-1 text-2xl font-black tracking-tight text-white">Ten mecz</h2>
+              <p className="mt-1 text-sm text-white/85">
+                <span className="whitespace-nowrap">
+                  {matchDate} · {matchTime}
+                </span>
+                <span className="mx-1.5 text-white/50">·</span>
+                <span>{location}</span>
+              </p>
+            </div>
+          </div>
+        </div>
+
         <MarketplaceSection
           icon={LayoutGrid}
           title="Ustawienie"

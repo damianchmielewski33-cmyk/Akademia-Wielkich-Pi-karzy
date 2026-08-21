@@ -1,8 +1,10 @@
 "use client";
 
+import { Users } from "lucide-react";
 import type { MatchRow } from "@/lib/db";
 import type { PlayersDataEntry } from "@/lib/terminarz-shared";
 import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
+import { useSiteMode } from "@/components/site-mode";
 import { MatchSignupCountsBlock } from "@/components/terminarz-match-counts";
 import { AppModal } from "@/components/ui/app-modal";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +20,7 @@ type Props = {
 
 export function MatchSignupsRosterModal({ open, onOpenChange, match, matchId, playersData }: Props) {
   const data = playersData[matchId];
+  const { marketplaceEnabled } = useSiteMode();
 
   return (
     <AppModal
@@ -26,6 +29,9 @@ export function MatchSignupsRosterModal({ open, onOpenChange, match, matchId, pl
       size="lg"
       scrollable
       title={data ? `Zapisani – ${data.date} ${data.time}` : "Zapisani na mecz"}
+      headerKicker={marketplaceEnabled ? "Terminarz" : undefined}
+      headerPhotoSeed={matchId}
+      icon={marketplaceEnabled ? <Users className="h-4 w-4" strokeWidth={2.25} aria-hidden /> : undefined}
       contentClassName="space-y-3"
     >
       {match && data ? (

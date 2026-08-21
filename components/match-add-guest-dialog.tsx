@@ -84,7 +84,7 @@ export function MatchAddGuestDialog({
         toast.error(r.error);
         return;
       }
-      toast.success("Gość zapisany na mecz");
+      toast.successCrowd("Gość zapisany na mecz");
       guestForm.reset({ guestFirst: "", guestLast: "", guestAlias: "" });
       handleOpenChange(false);
       onDone();

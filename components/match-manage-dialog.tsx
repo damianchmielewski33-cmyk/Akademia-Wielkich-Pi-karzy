@@ -338,7 +338,7 @@ export function MatchManageDialog({
         toast.error(r.error);
         return;
       }
-      toast.success("Gość zapisany na mecz");
+      toast.successCrowd("Gość zapisany na mecz");
       guestForm.reset({ guestFirst: "", guestLast: "", guestAlias: "" });
       onDone();
       await loadGuests();
@@ -498,16 +498,11 @@ export function MatchManageDialog({
       scrollable
       title="Zarządzaj meczem"
       headerKicker={light ? "Terminarz" : undefined}
+      headerPhotoSeed={match?.id ?? 4}
       description="Edytuj termin, dopisz gościa, zarządzaj składem lub odwołaj mecz — zmiany widzą zapisani zawodnicy."
       footer={renderFooter()}
       contentClassName="space-y-4"
-      icon={
-        light ? (
-          <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[var(--mp-teal)] text-white shadow-sm">
-            <Pencil className="h-4 w-4" strokeWidth={2.25} aria-hidden />
-          </span>
-        ) : undefined
-      }
+      icon={light ? <Pencil className="h-4 w-4" strokeWidth={2.25} aria-hidden /> : undefined}
     >
       <ModalMatchSummary match={match} />
 

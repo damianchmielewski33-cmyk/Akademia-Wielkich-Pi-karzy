@@ -28,6 +28,7 @@ import {
 import { cn } from "@/lib/utils";
 import { appendShareSessionQuery, captainLotteryRelativePath } from "@/lib/share-link";
 import { REALMS, type Realm } from "@/lib/realm";
+import { useSiteMode } from "@/components/site-mode";
 
 type ApiLottery = Parameters<typeof captainLotteryEntryFromApi>[0];
 
@@ -84,6 +85,7 @@ function CaptainLotteryHistoryList({ rounds }: { rounds: CaptainLotteryEntry[] }
 }
 
 function CaptainLotterySummary({ lottery }: { lottery: CaptainLotteryEntry }) {
+  const { marketplaceEnabled } = useSiteMode();
   const drawerFull = `${lottery.drawnByFirstName} ${lottery.drawnByLastName}`.trim();
   const drawerLabel = drawerFull || lottery.drawnByZawodnik || "—";
   const drawerWithNick =
@@ -95,7 +97,14 @@ function CaptainLotterySummary({ lottery }: { lottery: CaptainLotteryEntry }) {
 
   return (
     <div className={cn(modalPanelClass, "space-y-3")} role="status">
-      <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--mundial-navy)] dark:text-emerald-100/90">
+      <p
+        className={cn(
+          "text-xs font-bold uppercase tracking-[0.14em]",
+          marketplaceEnabled
+            ? "text-[var(--mp-teal-dark)] dark:text-teal-300"
+            : "text-[var(--mundial-navy)] dark:text-emerald-100/90"
+        )}
+      >
         Wynik losowania · runda {lottery.roundNumber}
       </p>
 
@@ -105,9 +114,18 @@ function CaptainLotterySummary({ lottery }: { lottery: CaptainLotteryEntry }) {
           firstName={lottery.drawnByFirstName}
           lastName={lottery.drawnByLastName}
           size="sm"
-          ringClassName="ring-2 ring-emerald-300/80 dark:ring-emerald-600/70"
+          ringClassName={
+            marketplaceEnabled
+              ? "ring-2 ring-[var(--mp-teal)]/50"
+              : "ring-2 ring-emerald-300/80 dark:ring-emerald-600/70"
+          }
         />
-        <div className="min-w-0 flex-1 text-sm text-[var(--mundial-navy)] dark:text-zinc-100">
+        <div
+          className={cn(
+            "min-w-0 flex-1 text-sm",
+            marketplaceEnabled ? "text-zinc-950 dark:text-zinc-100" : "text-[var(--mundial-navy)] dark:text-zinc-100"
+          )}
+        >
           <p>
             <span className="font-semibold text-zinc-700 dark:text-zinc-300">Losował: </span>
             {drawerWithNick}
@@ -120,8 +138,21 @@ function CaptainLotterySummary({ lottery }: { lottery: CaptainLotteryEntry }) {
         </div>
       </div>
 
-      <p className="flex items-center gap-2 text-sm font-semibold text-[var(--mundial-navy)] dark:text-zinc-100">
-        <Crown className="h-4 w-4 text-emerald-600 dark:text-[var(--mundial-gold,#f5c518)]" aria-hidden />
+      <p
+        className={cn(
+          "flex items-center gap-2 text-sm font-semibold",
+          marketplaceEnabled ? "text-zinc-950 dark:text-zinc-100" : "text-[var(--mundial-navy)] dark:text-zinc-100"
+        )}
+      >
+        <Crown
+          className={cn(
+            "h-4 w-4",
+            marketplaceEnabled
+              ? "text-[var(--mp-teal)]"
+              : "text-emerald-600 dark:text-[var(--mundial-gold,#f5c518)]"
+          )}
+          aria-hidden
+        />
         {lottery.captains.length === 1
           ? "Kapitan meczu"
           : `Kapitanowie meczu (${lottery.captains.length})`}
@@ -134,7 +165,10 @@ function CaptainLotterySummary({ lottery }: { lottery: CaptainLotteryEntry }) {
             className="flex items-center gap-3 rounded-xl border border-zinc-200/90 bg-white px-3 py-2.5 shadow-sm dark:border-zinc-600 dark:bg-zinc-900/70"
           >
             <span
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-xs font-extrabold text-white shadow-sm dark:bg-emerald-500"
+              className={cn(
+                "flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-extrabold text-white shadow-sm",
+                marketplaceEnabled ? "bg-[var(--mp-teal)]" : "bg-emerald-600 dark:bg-emerald-500"
+              )}
             >
               {i + 1}
             </span>
@@ -143,12 +177,22 @@ function CaptainLotterySummary({ lottery }: { lottery: CaptainLotteryEntry }) {
               firstName={p.firstName}
               lastName={p.lastName}
               size="sm"
-              ringClassName="ring-2 ring-emerald-300/80 dark:ring-emerald-600/70"
+              ringClassName={
+                marketplaceEnabled
+                  ? "ring-2 ring-[var(--mp-teal)]/50"
+                  : "ring-2 ring-emerald-300/80 dark:ring-emerald-600/70"
+              }
             />
             <div className="min-w-0 flex-1">
               <PlayerNameStack firstName={p.firstName} lastName={p.lastName} nick={p.zawodnik} />
             </div>
-            <Crown className="h-5 w-5 shrink-0 text-[var(--mundial-gold,#f5c518)]" aria-hidden />
+            <Crown
+              className={cn(
+                "h-5 w-5 shrink-0",
+                marketplaceEnabled ? "text-[var(--mp-teal)]" : "text-[var(--mundial-gold,#f5c518)]"
+              )}
+              aria-hidden
+            />
           </li>
         ))}
       </ul>
@@ -173,6 +217,7 @@ function CaptainCountSlider({
   spinning: boolean;
   onChange: (n: number) => void;
 }) {
+  const { marketplaceEnabled } = useSiteMode();
   return (
     <ModalFormSection
       title="Liczba kapitanów"
@@ -180,11 +225,24 @@ function CaptainCountSlider({
       className={spinning ? "pointer-events-none opacity-60" : undefined}
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <Label htmlFor="captain-count-slider" className="text-sm font-semibold text-[var(--mundial-navy)] dark:text-zinc-100">
+        <Label
+          htmlFor="captain-count-slider"
+          className={cn(
+            "text-sm font-semibold",
+            marketplaceEnabled
+              ? "text-zinc-950 dark:text-zinc-100"
+              : "text-[var(--mundial-navy)] dark:text-zinc-100"
+          )}
+        >
           Wybierz liczbę
         </Label>
         <span
-          className="inline-flex min-h-9 min-w-9 items-center justify-center rounded-xl border border-zinc-200/90 bg-white px-3 text-base font-extrabold tabular-nums text-[var(--mundial-navy)] shadow-sm dark:border-zinc-600 dark:bg-zinc-900/80 dark:text-zinc-100"
+          className={cn(
+            "inline-flex min-h-9 min-w-9 items-center justify-center rounded-xl border px-3 text-base font-extrabold tabular-nums shadow-sm",
+            marketplaceEnabled
+              ? "border-teal-200 bg-teal-50 text-[var(--mp-teal-dark)] dark:border-teal-800 dark:bg-teal-950/40 dark:text-teal-200"
+              : "border-zinc-200/90 bg-white text-[var(--mundial-navy)] dark:border-zinc-600 dark:bg-zinc-900/80 dark:text-zinc-100"
+          )}
         >
           {effectiveCount}
         </span>
@@ -200,8 +258,12 @@ function CaptainCountSlider({
             className={cn(
               "min-h-9 min-w-9 rounded-lg border text-sm font-bold transition-colors",
               effectiveCount === n
-                ? "border-emerald-600 bg-emerald-600 text-white shadow-sm dark:border-emerald-500 dark:bg-emerald-500"
-                : "border-zinc-200 bg-white text-zinc-700 hover:border-emerald-400 hover:bg-emerald-50 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:border-emerald-600 dark:hover:bg-emerald-950/50"
+                ? marketplaceEnabled
+                  ? "border-[var(--mp-teal)] bg-[var(--mp-teal)] text-white shadow-sm"
+                  : "border-emerald-600 bg-emerald-600 text-white shadow-sm dark:border-emerald-500 dark:bg-emerald-500"
+                : marketplaceEnabled
+                  ? "border-zinc-200 bg-white text-zinc-700 hover:border-teal-400 hover:bg-teal-50 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-200"
+                  : "border-zinc-200 bg-white text-zinc-700 hover:border-emerald-400 hover:bg-emerald-50 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:border-emerald-600 dark:hover:bg-emerald-950/50"
             )}
           >
             {n}
@@ -218,7 +280,10 @@ function CaptainCountSlider({
         value={effectiveCount}
         disabled={spinning}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="mt-4 h-2 w-full cursor-pointer appearance-none rounded-full bg-zinc-200 accent-emerald-600 dark:bg-zinc-600"
+        className={cn(
+          "mt-4 h-2 w-full cursor-pointer appearance-none rounded-full bg-zinc-200 dark:bg-zinc-600",
+          marketplaceEnabled ? "accent-[var(--mp-teal)]" : "accent-emerald-600"
+        )}
       />
     </ModalFormSection>
   );
@@ -237,6 +302,7 @@ export function CaptainLotteryDialog({
   onAuthenticated,
   onLotteryChange,
 }: Props) {
+  const { marketplaceEnabled } = useSiteMode();
   const pool = useMemo(() => captainLotteryPoolFromPlayersData(playersData), [playersData]);
   const maxCaptains = Math.min(5, pool.length);
   const [lottery, setLottery] = useState<CaptainLotteryEntry | null>(initialLottery);
@@ -333,6 +399,7 @@ export function CaptainLotteryDialog({
         return [entry, ...without].sort((a, b) => b.roundNumber - a.roundNumber);
       });
       setPendingLottery(null);
+      void import("@/lib/stadium-sounds").then((m) => m.playStadiumCheer());
     }
     setPredeterminedWinners(null);
   };
@@ -350,6 +417,7 @@ export function CaptainLotteryDialog({
   }
 
   const title = "Losowanie kapitanów";
+  const light = marketplaceEnabled;
 
   return (
     <AppModal
@@ -359,7 +427,8 @@ export function CaptainLotteryDialog({
       title={title}
       description="Koło fortuny wybiera kapitanów spośród graczy z potwierdzonym udziałem w meczu."
       icon={<Crown className="h-5 w-5" aria-hidden />}
-      headerKicker="Koło fortuny"
+      headerKicker={light ? "Terminarz" : "Koło fortuny"}
+      headerPhotoSeed={match?.id ?? 7}
       preventDismiss={spinning || loginInline}
       scrollable
       contentClassName="space-y-4"
@@ -386,8 +455,18 @@ export function CaptainLotteryDialog({
         <div className="space-y-3">
           <ModalMatchSummary match={match} />
           <div className="flex flex-wrap gap-2">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-zinc-200/90 bg-white px-3 py-1 text-xs font-semibold text-[var(--mundial-navy)] dark:border-zinc-600 dark:bg-zinc-900/70 dark:text-zinc-100">
-              <Users className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" aria-hidden />
+            <span
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold",
+                light
+                  ? "border-teal-200 bg-teal-50 text-[var(--mp-teal-dark)] dark:border-teal-800 dark:bg-teal-950/40 dark:text-teal-200"
+                  : "border-zinc-200/90 bg-white text-[var(--mundial-navy)] dark:border-zinc-600 dark:bg-zinc-900/70 dark:text-zinc-100"
+              )}
+            >
+              <Users
+                className={cn("h-3.5 w-3.5", light ? "text-[var(--mp-teal)]" : "text-emerald-600 dark:text-emerald-400")}
+                aria-hidden
+              />
               {pool.length} w puli losowania
             </span>
           </div>

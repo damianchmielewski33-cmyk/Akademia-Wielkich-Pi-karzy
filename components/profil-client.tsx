@@ -234,7 +234,10 @@ export function ProfilClient({
     if (text === "OK") {
       setStatsOpen(false);
       setStatsCtx(null);
-      toast.success("Statystyki zapisane");
+      const goals = Number(nz(statsCtx.goals));
+      toast.successCrowd("Statystyki zapisane", {
+        sound: Number.isFinite(goals) && goals > 0 ? "goal" : "applause",
+      });
       await reloadDashboard();
       router.refresh();
       return;

@@ -20,7 +20,7 @@ export function ConfirmPlayedClient({ matchId }: { matchId: string }) {
       const res = await fetch(`/api/admin/match/${id}/set-played`, { method: "POST" });
       if (res.ok) {
         setStatus("ok");
-        toast.success("Mecz oznaczony jako rozegrany");
+        toast.successCrowd("Mecz oznaczony jako rozegrany", { sound: "whistle" });
         router.replace(`/terminarz?mecz=${encodeURIComponent(String(id))}&obecnosc=1`);
       } else {
         setStatus("err");

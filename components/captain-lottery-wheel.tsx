@@ -3,11 +3,12 @@
 import { Loader2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { PlayerEntry } from "@/lib/terminarz-shared";
+import { useSiteMode } from "@/components/site-mode";
 import { modalPanelClass } from "@/components/ui/modal-shared";
 import { cn } from "@/lib/utils";
 
-/** Paleta segmentów — kolory strony (navy, teal, purple, gold). */
-const SEGMENT_FILLS = [
+/** Paleta segmentów V1 — navy / emerald / gold. */
+const SEGMENT_FILLS_V1 = [
   "#1a2d5a",
   "#00a651",
   "#3d2a6e",
@@ -18,6 +19,20 @@ const SEGMENT_FILLS = [
   "#b45309",
   "#2563eb",
   "#ca8a04",
+] as const;
+
+/** Paleta segmentów V2 — teal marketplace. */
+const SEGMENT_FILLS_V2 = [
+  "#0f766e",
+  "#00C9B1",
+  "#115e59",
+  "#14b8a6",
+  "#042f2e",
+  "#2dd4bf",
+  "#0d9488",
+  "#5eead4",
+  "#134e4a",
+  "#99f6e4",
 ] as const;
 
 const SPIN_DURATION_MS = 4800;
@@ -108,6 +123,11 @@ export function CaptainLotteryWheel({
   const fontSize = labelFontSize(n);
   const labelR = labelRadius(n);
   const lineGap = fontSize * 1.15;
+  const { marketplaceEnabled } = useSiteMode();
+  const segmentFills = marketplaceEnabled ? SEGMENT_FILLS_V2 : SEGMENT_FILLS_V1;
+  const pointerColor = marketplaceEnabled ? "var(--mp-teal)" : "var(--mundial-gold,#f5c518)";
+  const hubFill = marketplaceEnabled ? "#0f766e" : "#1a2d5a";
+  const hubStroke = marketplaceEnabled ? "rgba(0,201,177,0.45)" : "rgba(245,197,24,0.35)";
 
   const labels = useMemo(
     () => players.map((p) => wheelLabel(p, segmentAngle)),
@@ -181,16 +201,31 @@ export function CaptainLotteryWheel({
         className={cn(
           modalPanelClass,
           "relative overflow-hidden px-3 pb-4 pt-5 sm:px-5 sm:pb-5 sm:pt-6",
-          isActive && "ring-2 ring-emerald-500/35 ring-offset-2 ring-offset-white dark:ring-offset-zinc-900"
+          isActive &&
+            (marketplaceEnabled
+              ? "ring-2 ring-[var(--mp-teal)]/40 ring-offset-2 ring-offset-white dark:ring-offset-zinc-900"
+              : "ring-2 ring-emerald-500/35 ring-offset-2 ring-offset-white dark:ring-offset-zinc-900")
         )}
       >
         <div className="home-pitch-tile pointer-events-none absolute inset-0 opacity-[0.06] dark:opacity-[0.1]" aria-hidden />
         <div
-          className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--mundial-gold,#f5c518)]/50 to-transparent"
+          className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent to-transparent"
+          style={{
+            backgroundImage: marketplaceEnabled
+              ? "linear-gradient(90deg, transparent, rgba(0,201,177,0.55), transparent)"
+              : "linear-gradient(90deg, transparent, rgba(245,197,24,0.5), transparent)",
+          }}
           aria-hidden
         />
 
-        <p className="relative z-10 mb-3 text-center text-xs font-bold uppercase tracking-[0.18em] text-[var(--mundial-navy)] dark:text-emerald-100/90 sm:mb-4">
+        <p
+          className={cn(
+            "relative z-10 mb-3 text-center text-xs font-bold uppercase tracking-[0.18em] sm:mb-4",
+            marketplaceEnabled
+              ? "text-[var(--mp-teal-dark)] dark:text-teal-300"
+              : "text-[var(--mundial-navy)] dark:text-emerald-100/90"
+          )}
+        >
           Koło fortuny
         </p>
 
@@ -201,9 +236,13 @@ export function CaptainLotteryWheel({
           >
             <div className="flex flex-col items-center">
               <div
-                className="h-0 w-0 border-x-[12px] border-b-[20px] border-x-transparent border-b-[var(--mundial-gold,#f5c518)] drop-shadow-[0_2px_4px_rgba(0,0,0,0.2)] sm:border-x-[15px] sm:border-b-[24px]"
+                className="h-0 w-0 border-x-[12px] border-b-[20px] border-x-transparent drop-shadow-[0_2px_4px_rgba(0,0,0,0.2)] sm:border-x-[15px] sm:border-b-[24px]"
+                style={{ borderBottomColor: pointerColor }}
               />
-              <div className="h-2 w-2 rounded-full bg-[var(--mundial-gold,#f5c518)] shadow-[0_0_6px_rgba(245,197,24,0.6)] sm:h-2.5 sm:w-2.5" />
+              <div
+                className="h-2 w-2 rounded-full sm:h-2.5 sm:w-2.5"
+                style={{ backgroundColor: pointerColor, boxShadow: `0 0 6px ${pointerColor}` }}
+              />
             </div>
           </div>
 
@@ -225,13 +264,13 @@ export function CaptainLotteryWheel({
               }}
             >
               <svg viewBox="0 0 200 200" className="h-full w-full" aria-hidden>
-                <circle cx="100" cy="100" r="99" fill="#1a2d5a" />
+                <circle cx="100" cy="100" r="99" fill={hubFill} />
                 <circle
                   cx="100"
                   cy="100"
                   r="98"
                   fill="none"
-                  stroke="rgba(245,197,24,0.35)"
+                  stroke={hubStroke}
                   strokeWidth="1.5"
                 />
 
@@ -245,7 +284,7 @@ export function CaptainLotteryWheel({
                   const x2 = 100 + 98 * Math.cos(endRad);
                   const y2 = 100 + 98 * Math.sin(endRad);
                   const largeArc = segmentAngle > 180 ? 1 : 0;
-                  const color = SEGMENT_FILLS[i % SEGMENT_FILLS.length];
+                  const color = segmentFills[i % segmentFills.length];
                   return (
                     <path
                       key={players[i].userId}
@@ -298,8 +337,15 @@ export function CaptainLotteryWheel({
                   disabled={!canSpin || spinning}
                   onClick={() => onSpin?.()}
                   className={cn(
-                    "flex h-full w-full flex-col items-center justify-center rounded-full border-2 border-emerald-700/20 bg-emerald-600 text-white shadow-md shadow-emerald-950/25 transition-transform dark:border-emerald-400/25 dark:bg-emerald-500",
-                    canSpin && !spinning && "hover:scale-[1.04] hover:bg-emerald-700 active:scale-[0.97] dark:hover:bg-emerald-400",
+                    "flex h-full w-full flex-col items-center justify-center rounded-full border-2 text-white shadow-md transition-transform",
+                    marketplaceEnabled
+                      ? "border-teal-700/20 bg-[var(--mp-teal)] shadow-teal-950/25 dark:border-teal-400/25"
+                      : "border-emerald-700/20 bg-emerald-600 shadow-emerald-950/25 dark:border-emerald-400/25 dark:bg-emerald-500",
+                    canSpin &&
+                      !spinning &&
+                      (marketplaceEnabled
+                        ? "hover:scale-[1.04] hover:bg-[var(--mp-teal-dark)] active:scale-[0.97]"
+                        : "hover:scale-[1.04] hover:bg-emerald-700 active:scale-[0.97] dark:hover:bg-emerald-400"),
                     spinning && "cursor-wait opacity-95"
                   )}
                   aria-label={spinning ? "Kręcimy koło fortuny" : "Zakręć koło fortuny — losuj kapitana"}

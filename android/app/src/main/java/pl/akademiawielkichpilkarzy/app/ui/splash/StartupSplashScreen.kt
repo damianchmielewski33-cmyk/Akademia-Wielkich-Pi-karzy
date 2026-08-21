@@ -6,7 +6,6 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -23,19 +22,16 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -47,8 +43,6 @@ import kotlinx.coroutines.delay
 import pl.akademiawielkichpilkarzy.app.R
 import pl.akademiawielkichpilkarzy.app.ui.theme.AwpColors
 import kotlin.math.PI
-import kotlin.math.abs
-import kotlin.math.cos
 import kotlin.math.sin
 
 private data class FallingBallSpec(
@@ -73,45 +67,65 @@ private val FALLING_BALLS = listOf(
 )
 
 /**
- * Ekran startowy Androida: spadające piłki + piłkarz żonglujący piłką.
- * [marketplaceEnabled] = V2 (jasny teal) vs V1 (murawa).
- * Po [minVisibleMs] wywołuje [onFinished] — MainActivity trzyma splash dłużej,
- * aż pierwszy ekran będzie gotowy (animacja zastępuje loadery, nie dodaje kolejki).
+ * Ekran startowy Androida: stadion + fotograficzny piłkarz + spadające piłki.
+ *
+ * [onFirstFrame] — po pierwszej narysowanej klatce (zwolnij systemowy SplashScreen).
+ * [onFinished] — po [minVisibleMs] od tej klatki (nie od startu procesu).
  */
 @Composable
 fun StartupSplashScreen(
     onFinished: () -> Unit,
+    onFirstFrame: () -> Unit = {},
     marketplaceEnabled: Boolean = false,
-    minVisibleMs: Long = 1400L
+    minVisibleMs: Long = 2200L
 ) {
     LaunchedEffect(Unit) {
+        // Dwie klatki: layout + pierwsze narysowanie obrazów.
+        withFrameNanos { }
+        withFrameNanos { }
+        onFirstFrame()
         delay(minVisibleMs)
         onFinished()
     }
 
-    val bgBrush =
+    val kickerColor = if (marketplaceEnabled) AwpColors.MpTeal else AwpColors.MundialGold
+    val scrimBrush =
         if (marketplaceEnabled) {
             Brush.verticalGradient(
                 listOf(
-                    Color(0xFFF4F5F7),
-                    Color(0xFFFFFFFF),
-                    Color(0xFFE6FAF7)
+                    Color(0x80061C20),
+                    Color(0x5208181C),
+                    Color(0xC7041016)
                 )
             )
         } else {
             Brush.verticalGradient(
-                listOf(AwpColors.MurawaDark, AwpColors.PitchDeep, Color(0xFF082018))
+                listOf(
+                    Color(0x8C040C0A),
+                    Color(0x59061410),
+                    Color(0xB8040A12)
+                )
             )
         }
-    val titleColor = if (marketplaceEnabled) AwpColors.TextOnLight else Color.White
-    val mutedColor = if (marketplaceEnabled) AwpColors.Zinc500 else AwpColors.OnPitchMuted
-    val kickerColor = if (marketplaceEnabled) AwpColors.MpTealDark else AwpColors.MundialGold
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(bgBrush)
+            // Natychmiastowy kolor — zanim JPEG się zdekoduje.
+            .background(Color(0xFF061410))
     ) {
+        Image(
+            painter = painterResource(R.drawable.splash_stadium_bg),
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop
+        )
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(scrimBrush)
+        )
+
         FallingSoccerBallsLayer(dimmed = false)
 
         Column(
@@ -139,23 +153,22 @@ fun StartupSplashScreen(
             Spacer(modifier = Modifier.height(12.dp))
             Text(
                 text = "Akademia Wielkich Piłkarzy",
-                color = titleColor,
+                color = Color.White,
                 fontWeight = FontWeight.Black,
                 fontSize = 20.sp,
                 textAlign = TextAlign.Center
             )
             Text(
                 text = if (marketplaceEnabled) "Przygotowujemy boiska…" else "Rozgrzewka…",
-                color = mutedColor,
+                color = Color.White.copy(alpha = 0.85f),
                 fontSize = 14.sp,
                 modifier = Modifier.padding(top = 4.dp)
             )
-            Spacer(modifier = Modifier.height(28.dp))
-            JugglingPlayerAnimation(
-                marketplaceEnabled = marketplaceEnabled,
+            Spacer(modifier = Modifier.height(20.dp))
+            PhotographicJuggler(
                 modifier = Modifier
-                    .width(200.dp)
-                    .height(220.dp)
+                    .width(176.dp)
+                    .height(232.dp)
             )
         }
     }
@@ -228,168 +241,30 @@ private fun FallingBallItem(
     )
 }
 
-/** Stylizowany piłkarz żonglujący piłką (keepy-uppy). */
+/** Niemal fotograficzny piłkarz żonglujący — wariant D + lekki float. */
 @Composable
-fun JugglingPlayerAnimation(
-    modifier: Modifier = Modifier,
-    marketplaceEnabled: Boolean = false
-) {
-    val transition = rememberInfiniteTransition(label = "juggle")
-    val t by transition.animateFloat(
+fun PhotographicJuggler(modifier: Modifier = Modifier) {
+    val transition = rememberInfiniteTransition(label = "juggle-photo")
+    val floatY by transition.animateFloat(
         initialValue = 0f,
         targetValue = 1f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 900, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
+            animation = tween(durationMillis = 2400, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
         ),
-        label = "juggle-t"
+        label = "juggle-float"
     )
+    val offsetY = (-10f + floatY * 10f).dp
 
-    val jersey = remember(marketplaceEnabled) {
-        if (marketplaceEnabled) AwpColors.MpTeal else Color(0xFF00A651)
-    }
-    val shorts = remember(marketplaceEnabled) {
-        if (marketplaceEnabled) Color(0xFF171717) else Color(0xFF1A2D5A)
-    }
-    val skin = remember { Color(0xFFF2C4A0) }
-    val outline = remember(marketplaceEnabled) {
-        if (marketplaceEnabled) Color(0x33000000) else Color(0xE6FFFFFF)
-    }
-    val shadowAlpha = if (marketplaceEnabled) 0.12f else 0.22f
-
-    Canvas(modifier = modifier) {
-        val w = size.width
-        val h = size.height
-        val cx = w * 0.5f
-
-        // Faza żonglerki: 0→0.5 w górę, 0.5→1 w dół; naprzemienne nogi
-        val phase = t
-        val ballLift = abs(sin(phase * PI.toFloat()))
-        val kickSide = if (phase < 0.5f) -1f else 1f
-        val kickBend = sin(phase * PI.toFloat() * 2f).coerceAtLeast(0f)
-
-        val headR = w * 0.09f
-        val headY = h * 0.18f
-        val torsoTop = headY + headR + h * 0.02f
-        val torsoBottom = h * 0.52f
-        val hipY = torsoBottom
-        val footY = h * 0.88f
-
-        // Cień pod stopami
-        drawOval(
-            color = Color.Black.copy(alpha = shadowAlpha),
-            topLeft = Offset(cx - w * 0.22f, h * 0.92f),
-            size = Size(w * 0.44f, h * 0.05f)
-        )
-
-        // Tułów
-        val torsoPath = Path().apply {
-            moveTo(cx - w * 0.11f, torsoTop)
-            lineTo(cx + w * 0.11f, torsoTop)
-            lineTo(cx + w * 0.13f, torsoBottom)
-            lineTo(cx - w * 0.13f, torsoBottom)
-            close()
-        }
-        drawPath(torsoPath, color = jersey)
-        drawPath(torsoPath, color = outline, style = Stroke(width = 2.5f))
-
-        // Głowa
-        drawCircle(color = skin, radius = headR, center = Offset(cx, headY))
-        drawCircle(
-            color = outline,
-            radius = headR,
-            center = Offset(cx, headY),
-            style = Stroke(width = 2.5f)
-        )
-        // Włosy
-        drawArc(
-            color = Color(0xFF2A1A12),
-            startAngle = 200f,
-            sweepAngle = 140f,
-            useCenter = true,
-            topLeft = Offset(cx - headR, headY - headR),
-            size = Size(headR * 2f, headR * 2f)
-        )
-
-        // Ręce (lekki balans)
-        val armSwing = sin(phase * PI.toFloat() * 2f) * w * 0.04f
-        drawLine(
-            color = skin,
-            start = Offset(cx - w * 0.11f, torsoTop + h * 0.06f),
-            end = Offset(cx - w * 0.28f, torsoTop + h * 0.22f + armSwing),
-            strokeWidth = w * 0.045f,
-            cap = StrokeCap.Round
-        )
-        drawLine(
-            color = skin,
-            start = Offset(cx + w * 0.11f, torsoTop + h * 0.06f),
-            end = Offset(cx + w * 0.28f, torsoTop + h * 0.22f - armSwing),
-            strokeWidth = w * 0.045f,
-            cap = StrokeCap.Round
-        )
-
-        // Spodenki
-        drawRect(
-            color = shorts,
-            topLeft = Offset(cx - w * 0.13f, hipY - h * 0.02f),
-            size = Size(w * 0.26f, h * 0.1f)
-        )
-
-        // Nogi
-        fun drawLeg(side: Float, kicking: Boolean) {
-            val hipX = cx + side * w * 0.07f
-            val kneeBend = if (kicking) kickBend * h * 0.08f else 0f
-            val footLift = if (kicking) kickBend * h * 0.12f else 0f
-            val knee = Offset(hipX + side * w * 0.02f, hipY + h * 0.18f - kneeBend)
-            val foot = Offset(hipX + side * w * 0.04f, footY - footLift)
-            drawLine(
-                color = skin,
-                start = Offset(hipX, hipY + h * 0.04f),
-                end = knee,
-                strokeWidth = w * 0.055f,
-                cap = StrokeCap.Round
-            )
-            drawLine(
-                color = skin,
-                start = knee,
-                end = foot,
-                strokeWidth = w * 0.05f,
-                cap = StrokeCap.Round
-            )
-            // But
-            drawOval(
-                color = Color(0xFFE8E8E8),
-                topLeft = Offset(foot.x - w * 0.06f, foot.y - h * 0.015f),
-                size = Size(w * 0.12f, h * 0.035f)
-            )
-        }
-        drawLeg(-1f, kicking = kickSide < 0f)
-        drawLeg(1f, kicking = kickSide > 0f)
-
-        // Piłka żonglowana
-        val ballR = w * 0.085f
-        val ballBaseY = hipY - h * 0.02f
-        val ballY = ballBaseY - ballLift * h * 0.38f
-        val ballX = cx + kickSide * w * 0.02f * (1f - ballLift)
-        val ballCenter = Offset(ballX, ballY)
-
-        rotate(degrees = phase * 360f, pivot = ballCenter) {
-            drawCircle(color = Color.White, radius = ballR, center = ballCenter)
-            drawCircle(
-                color = Color.Black.copy(alpha = 0.85f),
-                radius = ballR,
-                center = ballCenter,
-                style = Stroke(width = 2f)
-            )
-            // Panele
-            for (i in 0 until 5) {
-                val a = i * (2f * PI.toFloat() / 5f)
-                val p = Offset(
-                    ballCenter.x + cos(a) * ballR * 0.45f,
-                    ballCenter.y + sin(a) * ballR * 0.45f
-                )
-                drawCircle(color = Color(0xFF1A1A1A), radius = ballR * 0.18f, center = p)
-            }
-        }
-    }
+    Image(
+        painter = painterResource(R.drawable.splash_juggle_player),
+        contentDescription = null,
+        modifier = modifier
+            .offset(y = offsetY)
+            .graphicsLayer {
+                compositingStrategy = CompositingStrategy.Offscreen
+                blendMode = BlendMode.Lighten
+            },
+        contentScale = ContentScale.Fit
+    )
 }

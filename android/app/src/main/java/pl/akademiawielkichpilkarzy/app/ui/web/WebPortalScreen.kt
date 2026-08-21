@@ -2,10 +2,15 @@ package pl.akademiawielkichpilkarzy.app.ui.web
 
 import android.annotation.SuppressLint
 import android.content.ActivityNotFoundException
+import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Color as AndroidColor
 import android.net.Uri
+import android.os.Build
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
 import android.view.ViewGroup
 import android.webkit.CookieManager
 import android.webkit.JavascriptInterface
@@ -63,7 +68,7 @@ private fun normalizeSiteBase(): String {
     return if (raw.endsWith("/")) raw.dropLast(1) else raw
 }
 
-private class AwpAndroidJsBridge {
+private class AwpAndroidJsBridge(private val appContext: Context) {
     @JavascriptInterface
     fun getVersionName(): String = BuildConfig.VERSION_NAME
 
@@ -73,6 +78,58 @@ private class AwpAndroidJsBridge {
     @JavascriptInterface
     fun checkUpdate() {
         AppUpdateRequests.requestInstall()
+    }
+
+    /**
+     * Wzorzec wibracji CSV jak Vibration API: "40" albo "28,40,28" (vibrate/pause/vibrate…).
+     * Na Androidzie pierwszy timing w Waveform to opóźnienie — doklejamy 0 na początku.
+     */
+    @JavascriptInterface
+    fun vibrate(patternCsv: String) {
+        val webPattern = patternCsv
+            .split(',')
+            .mapNotNull { it.trim().toLongOrNull() }
+            .filter { it >= 0L }
+        if (webPattern.isEmpty()) return
+
+        val timings =
+            if (webPattern.size == 1 || webPattern.first() != 0L) {
+                longArrayOf(0L) + webPattern.toLongArray()
+            } else {
+                webPattern.toLongArray()
+            }
+
+        val vibrator = resolveVibrator(appContext) ?: return
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                if (timings.size == 2 && timings[0] == 0L) {
+                    vibrator.vibrate(
+                        VibrationEffect.createOneShot(
+                            timings[1].coerceAtLeast(1L),
+                            VibrationEffect.DEFAULT_AMPLITUDE
+                        )
+                    )
+                } else {
+                    vibrator.vibrate(VibrationEffect.createWaveform(timings, -1))
+                }
+            } else {
+                @Suppress("DEPRECATION")
+                vibrator.vibrate(timings, -1)
+            }
+        } catch (_: Exception) {
+            /* urządzenie bez wibracji / ograniczenia systemu */
+        }
+    }
+
+    private fun resolveVibrator(context: Context): Vibrator? {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val manager = context.getSystemService(VibratorManager::class.java)
+            manager?.defaultVibrator
+        } else {
+            @Suppress("DEPRECATION")
+            context.getSystemService(Vibrator::class.java)
+                ?: context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+        }
     }
 }
 
@@ -284,7 +341,7 @@ fun WebPortalScreen(
                             // Znacznik w UA - strona rozpoznaje WebView i czyta wersję APK.
                             settings.userAgentString =
                                 "${settings.userAgentString} AWPAndroidApp/${BuildConfig.VERSION_NAME} AWPAndroidCode/${BuildConfig.VERSION_CODE}"
-                            addJavascriptInterface(AwpAndroidJsBridge(), "AwpAndroid")
+                            addJavascriptInterface(AwpAndroidJsBridge(ctx.applicationContext), "AwpAndroid")
                             CookieManager.getInstance().setAcceptCookie(true)
                             CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
 

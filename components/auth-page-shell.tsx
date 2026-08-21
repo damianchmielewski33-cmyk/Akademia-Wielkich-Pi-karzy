@@ -61,7 +61,7 @@ export function AuthPageShell({
 
   return (
     <div className="relative flex flex-1 flex-col text-zinc-900 dark:text-zinc-50">
-      <HomeFallingDecor cover />
+      <HomeFallingDecor />
 
       <section className="mp-hero mp-hero--photo relative z-0 flex flex-col justify-end overflow-hidden pb-16 pt-16 sm:pb-20 sm:pt-24">
         <MarketplacePitchPhoto src={heroPhoto} priority className="z-0" />

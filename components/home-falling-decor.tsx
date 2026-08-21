@@ -75,6 +75,7 @@ function FallPiece({ item }: { item: FallItem }) {
           left: item.x,
           width: item.size,
           height: item.size,
+          pointerEvents: "none",
           "--dur": `${item.duration}s`,
           "--delay": `${item.delay}s`,
           "--drift": item.drift,
@@ -88,10 +89,15 @@ function FallPiece({ item }: { item: FallItem }) {
   );
 }
 
-/** Spadające piłki nożne i gwiazdy. `cover` — przez cały ekran, także na telefonie. */
+/** Spadające piłki i gwiazdy (dekoracja — nigdy nie przechwytuje kliknięć).
+ *  Domyślnie tylko przy bokach ekranu. `cover` — pełna szerokość (splash / logowanie). */
 export function HomeFallingDecor({ className, cover = false }: { className?: string; cover?: boolean }) {
   return (
-    <div className={cn("home-fall", cover && "home-fall--cover", className)} aria-hidden>
+    <div
+      className={cn("home-fall", cover && "home-fall--cover", className)}
+      aria-hidden
+      style={{ pointerEvents: "none" }}
+    >
       <div className="home-fall__rail home-fall__rail--left">
         {LEFT.map((item, i) => (
           <FallPiece key={`l-${i}`} item={item} />
