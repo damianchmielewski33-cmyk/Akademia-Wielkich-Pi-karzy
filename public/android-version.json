@@ -1,7 +1,7 @@
 {
-  "versionCode": 29,
-  "versionName": "1.10.6",
+  "versionCode": 30,
+  "versionName": "1.10.7",
   "apkUrl": "https://github.com/damianchmielewski33-cmyk/Akademia-Wielkich-Pi-karzy/releases/download/android-latest/akademia-wp.apk",
-  "releasedAt": "2026-08-21T08:32:32Z",
-  "commit": "44bae298e4de72be89195424c218c1c791ebf29f"
+  "releasedAt": "2026-08-21T08:46:08Z",
+  "commit": "e66077905606dffc358e95bf4d634e98c4685804"
 }
