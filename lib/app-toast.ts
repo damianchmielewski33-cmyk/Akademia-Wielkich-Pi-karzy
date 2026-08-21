@@ -33,7 +33,8 @@ export const toast = {
       else if (sound === "whistle") m.playStadiumWhistle();
       else m.playStadiumApplause();
     });
-    const { sound: _s, ...rest } = opts ?? {};
+    const rest = { ...opts };
+    delete rest.sound;
     return sonnerToast.success(toSportSuccess(message), rest);
   },
   message(message: unknown, opts?: ToastOpts) {
