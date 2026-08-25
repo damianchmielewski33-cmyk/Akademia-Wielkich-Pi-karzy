@@ -1,5 +1,6 @@
 package pl.akademiawielkichpilkarzy.app.data.api
 
+import android.os.Build
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import kotlinx.coroutines.runBlocking
@@ -10,6 +11,7 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.logging.HttpLoggingInterceptor
 import pl.akademiawielkichpilkarzy.app.BuildConfig
+import pl.akademiawielkichpilkarzy.app.data.auth.SessionInvalidator
 import pl.akademiawielkichpilkarzy.app.data.auth.SessionStore
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
@@ -20,6 +22,12 @@ object ApiClient {
 
     fun init(store: SessionStore) {
         sessionStore = store
+    }
+
+    /** Wymusza lokalne wylogowanie (np. po wykryciu wygasłej sesji poza interceptorami). */
+    fun invalidateLocalSession() {
+        if (!::sessionStore.isInitialized) return
+        SessionInvalidator.clearLocalSession(sessionStore)
     }
 
     private val moshi: Moshi = Moshi.Builder()
@@ -69,15 +77,44 @@ object ApiClient {
         Thread {
             try {
                 val json = clientLogAdapter.toJson(body)
-                val req = Request.Builder()
+                val token = if (::sessionStore.isInitialized) {
+                    runBlocking { sessionStore.getToken() }
+                } else {
+                    null
+                }
+                val builder = Request.Builder()
                     .url(baseUrl + "api/client-log")
                     .post(json.toRequestBody("application/json; charset=utf-8".toMediaType()))
                     .header("Accept", "application/json")
-                    .build()
-                plainHttp.newCall(req).execute().close()
+                    .header("X-AWP-Client", "android")
+                if (!token.isNullOrBlank()) {
+                    builder.header("Authorization", "Bearer $token")
+                }
+                plainHttp.newCall(builder.build()).execute().close()
             } catch (_: Exception) {
             }
         }.start()
+    }
+
+    private fun deviceLogFields(): Triple<String?, String?, String?> =
+        Triple(Build.MODEL, Build.VERSION.RELEASE, BuildConfig.VERSION_NAME)
+
+    /**
+     * 401 na chronionych endpointach = nieważny JWT → lokalne wylogowanie.
+     * MainActivity słucha tokenFlow i wraca na login.
+     */
+    private val sessionGuardInterceptor = Interceptor { chain ->
+        val request = chain.request()
+        val path = request.url.encodedPath
+        val response = chain.proceed(request)
+        if (
+            response.code == 401 &&
+            ::sessionStore.isInitialized &&
+            SessionInvalidator.shouldInvalidateOn401(path)
+        ) {
+            SessionInvalidator.clearLocalSession(sessionStore)
+        }
+        response
     }
 
     private val errorReportInterceptor = Interceptor { chain ->
@@ -86,14 +123,20 @@ object ApiClient {
         if (path.contains("client-log")) {
             return@Interceptor chain.proceed(request)
         }
+        val (phone, androidVer, appVer) = deviceLogFields()
         try {
             val response = chain.proceed(request)
-            if (!response.isSuccessful && response.code >= 400) {
+            // 401 z wygasłą sesją to oczekiwany scenariusz — nie spamuj activity_log.
+            val sessionExpired401 =
+                response.code == 401 && SessionInvalidator.shouldInvalidateOn401(path)
+            if (!response.isSuccessful && response.code >= 400 && !sessionExpired401) {
                 reportAsync(
                     ClientLogRequest(
                         kind = "api_error",
                         message = "HTTP ${response.code} ${request.method} $path",
-                        appVersion = BuildConfig.VERSION_NAME,
+                        phoneModel = phone,
+                        androidVersion = androidVer,
+                        appVersion = appVer,
                         details = "base=$baseUrl"
                     )
                 )
@@ -104,7 +147,9 @@ object ApiClient {
                 ClientLogRequest(
                     kind = "download_failed",
                     message = e.message ?: e.javaClass.simpleName,
-                    appVersion = BuildConfig.VERSION_NAME,
+                    phoneModel = phone,
+                    androidVersion = androidVer,
+                    appVersion = appVer,
                     details = "${request.method} $path"
                 )
             )
@@ -116,6 +161,7 @@ object ApiClient {
         .connectTimeout(30, TimeUnit.SECONDS)
         .readTimeout(30, TimeUnit.SECONDS)
         .addInterceptor(authInterceptor)
+        .addInterceptor(sessionGuardInterceptor)
         .addInterceptor(errorReportInterceptor)
         .addInterceptor(logging)
         .build()

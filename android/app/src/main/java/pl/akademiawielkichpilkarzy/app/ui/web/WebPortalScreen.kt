@@ -62,6 +62,7 @@ import pl.akademiawielkichpilkarzy.app.data.api.ApiClient
 import pl.akademiawielkichpilkarzy.app.data.api.AppBridgeRequest
 import pl.akademiawielkichpilkarzy.app.ui.theme.AwpColors
 import pl.akademiawielkichpilkarzy.app.update.AppUpdateRequests
+import retrofit2.HttpException
 
 private fun normalizeSiteBase(): String {
     val raw = BuildConfig.API_BASE_URL.trim()
@@ -219,6 +220,14 @@ fun WebPortalScreen(
                 }
             } else {
                 startUrl = siteBase + path
+            }
+        } catch (e: HttpException) {
+            if (e.code() == 401) {
+                // Interceptor czyści JWT; MainActivity wraca na login przez tokenFlow.
+                error = "Sesja wygasła — zaloguj się ponownie"
+                onLoginLatest.value?.invoke()
+            } else {
+                error = e.message ?: "Błąd serwera (${e.code()})"
             }
         } catch (e: Exception) {
             error = e.message ?: "Brak połączenia z serwerem"

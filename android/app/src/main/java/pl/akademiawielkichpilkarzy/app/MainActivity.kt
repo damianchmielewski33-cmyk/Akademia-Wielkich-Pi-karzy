@@ -27,6 +27,7 @@ import pl.akademiawielkichpilkarzy.app.ui.splash.StartupSplashScreen
 import pl.akademiawielkichpilkarzy.app.ui.theme.AwpTheme
 import pl.akademiawielkichpilkarzy.app.ui.update.AppUpdateGate
 import pl.akademiawielkichpilkarzy.app.ui.web.WebPortalScreen
+import retrofit2.HttpException
 
 class MainActivity : FragmentActivity() {
     private val deepLinkPathState = mutableStateOf<String?>(null)
@@ -78,7 +79,26 @@ class MainActivity : FragmentActivity() {
                     LaunchedEffect(Unit) {
                         val store = AwpApp.instance.sessionStore
                         val configStore = AwpApp.instance.appConfigStore
-                        token = store.getToken()
+                        var current = store.getToken()
+                        // Wygasły / unieważniony JWT w DataStore → od razu login, bez „zawieszonego” UI.
+                        // Uwaga: /api/auth/me zwraca 200 + user:null (nie 401) przy braku sesji.
+                        if (!current.isNullOrBlank()) {
+                            try {
+                                val me = ApiClient.api.me()
+                                if (me.user == null) {
+                                    ApiClient.invalidateLocalSession()
+                                    current = null
+                                }
+                            } catch (e: HttpException) {
+                                if (e.code() == 401) {
+                                    ApiClient.invalidateLocalSession()
+                                    current = null
+                                }
+                            } catch (_: Exception) {
+                                /* brak sieci — zostaw lokalną sesję */
+                            }
+                        }
+                        token = current
                         marketplaceEnabled = configStore.isMarketplaceEnabled()
                         sessionReady = true
                         try {
