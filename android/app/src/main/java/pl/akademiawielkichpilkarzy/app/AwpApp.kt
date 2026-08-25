@@ -1,9 +1,11 @@
 package pl.akademiawielkichpilkarzy.app
 
+import android.app.Activity
 import android.app.Application
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.os.Build
+import android.os.Bundle
 import pl.akademiawielkichpilkarzy.app.data.AppConfigStore
 import pl.akademiawielkichpilkarzy.app.data.api.ApiClient
 import pl.akademiawielkichpilkarzy.app.data.auth.BiometricCredentialsStore
@@ -17,6 +19,13 @@ class AwpApp : Application() {
     lateinit var appConfigStore: AppConfigStore
         private set
 
+    @Volatile
+    var startedActivities: Int = 0
+        private set
+
+    val isInForeground: Boolean
+        get() = startedActivities > 0
+
     override fun onCreate() {
         super.onCreate()
         instance = this
@@ -25,6 +34,21 @@ class AwpApp : Application() {
         appConfigStore = AppConfigStore(this)
         ApiClient.init(sessionStore)
         createNotificationChannels()
+        registerActivityLifecycleCallbacks(
+            object : ActivityLifecycleCallbacks {
+                override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {}
+                override fun onActivityStarted(activity: Activity) {
+                    startedActivities++
+                }
+                override fun onActivityResumed(activity: Activity) {}
+                override fun onActivityPaused(activity: Activity) {}
+                override fun onActivityStopped(activity: Activity) {
+                    startedActivities = (startedActivities - 1).coerceAtLeast(0)
+                }
+                override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) {}
+                override fun onActivityDestroyed(activity: Activity) {}
+            }
+        )
     }
 
     private fun createNotificationChannels() {

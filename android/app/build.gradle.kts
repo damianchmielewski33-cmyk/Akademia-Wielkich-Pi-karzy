@@ -48,8 +48,8 @@ android {
         // targetSdk musi być aktualny — inaczej Android 14+ pokazuje ostrzeżenie
         // „aplikacja jest na starszą wersję Androida…” przy instalacji APK.
         targetSdk = 35
-        versionCode = 34
-        versionName = "1.10.11"
+        versionCode = 35
+        versionName = "1.10.12"
 
         ndk {
             abiFilters += listOf("armeabi-v7a", "arm64-v8a")
@@ -147,6 +147,7 @@ dependencies {
 
     implementation(platform("com.google.firebase:firebase-bom:33.6.0"))
     implementation("com.google.firebase:firebase-messaging-ktx")
+    implementation("me.leolin:ShortcutBadger:1.1.22@aar")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
 }

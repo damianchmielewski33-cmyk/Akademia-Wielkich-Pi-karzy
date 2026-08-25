@@ -116,20 +116,14 @@ async function sendFcmToToken(args: {
         body: JSON.stringify({
           message: {
             token: args.token,
-            notification: {
+            // Tylko `data` — wtedy Android zawsze woła onMessageReceived (cyferka na ikonie).
+            data: {
+              ...(args.data ?? {}),
               title: args.title,
               body: args.body,
             },
-            data: args.data,
             android: {
               priority: "HIGH",
-              notification: {
-                channel_id: "matches",
-                default_sound: true,
-                default_vibrate_timings: true,
-                notification_priority: "PRIORITY_MAX",
-                visibility: "PUBLIC",
-              },
             },
           },
         }),

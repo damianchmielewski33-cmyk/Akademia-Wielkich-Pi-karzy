@@ -53,11 +53,18 @@ class AwpFirebaseMessagingService : FirebaseMessagingService() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        val unread = if (AwpApp.instance.isInForeground) {
+            NotificationBadge.unread(this)
+        } else {
+            NotificationBadge.increment(this)
+        }
         val notification = NotificationCompat.Builder(this, AwpApp.CHANNEL_MATCHES)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentTitle(title)
             .setContentText(body)
             .setStyle(NotificationCompat.BigTextStyle().bigText(body))
+            .setNumber(unread)
+            .setBadgeIconType(NotificationCompat.BADGE_ICON_SMALL)
             .setAutoCancel(true)
             .setContentIntent(pending)
             .setPriority(NotificationCompat.PRIORITY_HIGH)

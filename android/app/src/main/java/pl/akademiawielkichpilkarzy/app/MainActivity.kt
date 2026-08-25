@@ -21,6 +21,7 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.fragment.app.FragmentActivity
 import kotlinx.coroutines.delay
 import pl.akademiawielkichpilkarzy.app.data.api.ApiClient
+import pl.akademiawielkichpilkarzy.app.push.NotificationBadge
 import pl.akademiawielkichpilkarzy.app.ui.login.LoginScreen
 import pl.akademiawielkichpilkarzy.app.ui.nav.MainScaffold
 import pl.akademiawielkichpilkarzy.app.ui.splash.StartupSplashScreen
@@ -192,6 +193,11 @@ class MainActivity : FragmentActivity() {
                 }
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        NotificationBadge.clear(this)
     }
 
     override fun onNewIntent(intent: Intent) {
