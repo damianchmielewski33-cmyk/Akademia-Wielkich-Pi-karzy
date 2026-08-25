@@ -36,6 +36,7 @@ import { FormInput } from "@/components/ui/form-field";
 import { ModalMatchSummary, modalPanelClass } from "@/components/ui/modal-shared";
 import { SiteSectionHero } from "@/components/site-section-hero";
 import type { MatchRow } from "@/lib/db";
+import type { PlayersDataEntry } from "@/lib/terminarz-shared";
 import type { VenueCard } from "@/lib/booking-shared";
 import { pitchPhotosFromVenues, MARKETPLACE_PITCH_PHOTOS } from "@/lib/marketplace-photos";
 import type { HomeTopPlayer } from "@/lib/rankings-data";
@@ -47,6 +48,7 @@ import { useHotpayPayment } from "@/hooks/use-hotpay-payment";
 
 type Props = {
   nextMatch: MatchRow | null;
+  nextMatchPlayersData: PlayersDataEntry | null;
   /** Np. „3 osoby się zastanawiają” — pusty gdy brak zapisów «jeszcze nie wiem». */
   nextMatchTentativeLine: string;
   lineupPublicNextMatch: boolean;
@@ -225,6 +227,7 @@ function BookingHomeView({ featuredVenues }: { featuredVenues: VenueCard[] }) {
 
 function AcademyHomeView({
   nextMatch,
+  nextMatchPlayersData,
   nextMatchTentativeLine,
   lineupPublicNextMatch,
   nextMatchSignup,
@@ -557,6 +560,7 @@ function AcademyHomeView({
             <div className="mb-8">
               <HomeNextMatchCard
                 match={nextMatch}
+                playersData={nextMatchPlayersData}
                 tentativeLine={nextMatchTentativeLine}
                 lineupPublic={lineupPublicNextMatch}
                 signup={nextMatchSignup}
@@ -713,6 +717,7 @@ function AcademyHomeView({
               match={nextMatch}
               backgroundSrc={pitchPhotos[1] ?? heroPhoto}
               photoPool={marketplaceEnabled ? photoPool : undefined}
+              playersData={nextMatchPlayersData}
               tentativeLine={nextMatchTentativeLine}
               lineupPublic={lineupPublicNextMatch}
               signup={nextMatchSignup}

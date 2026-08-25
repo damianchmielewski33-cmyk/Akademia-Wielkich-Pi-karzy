@@ -4,7 +4,13 @@ import { listVenueCards, type VenueCard } from "@/lib/booking";
 import { getDb, type MatchRow } from "@/lib/db";
 import { getHomeTopPlayers, type HomeTopPlayer } from "@/lib/rankings-data";
 import { REALMS } from "@/lib/realm";
-import { formatPonderingPlayersPolish } from "@/lib/terminarz-shared";
+import {
+  buildPlayersData,
+  type PlayersDataEntry,
+  type SignupRow,
+  MATCH_SIGNUPS_PLAYER_SQL,
+  formatPonderingPlayersPolish,
+} from "@/lib/terminarz-shared";
 import { parseYoutubeVideoIdFromUserInput } from "@/lib/site";
 import { isLocalMatchDay } from "@/lib/transport";
 import { getRequestAppSettings } from "@/lib/request-app-settings";
@@ -13,6 +19,8 @@ import type { SiteMode } from "@/lib/site-mode";
 
 export type HomePageClientProps = {
   nextMatch: MatchRow | null;
+  /** Potwierdzeni + wstępni + odmówienia — podgląd składu na karcie „Najbliższy mecz”. */
+  nextMatchPlayersData: PlayersDataEntry | null;
   nextMatchTentativeLine: string;
   lineupPublicNextMatch: boolean;
   nextMatchSignup: "none" | "tentative" | "confirmed" | "declined";
@@ -82,6 +90,14 @@ export async function getHomePageClientProps(
 
   const lineupPublicNextMatch = Boolean(nextMatch && nextMatch.lineup_public === 1);
 
+  let nextMatchPlayersData: PlayersDataEntry | null = null;
+  if (nextMatch) {
+    const signups = (await db
+      .prepare(`${MATCH_SIGNUPS_PLAYER_SQL} WHERE ms.match_id = ? ORDER BY u.first_name ASC, u.last_name ASC`)
+      .all(nextMatch.id)) as SignupRow[];
+    nextMatchPlayersData = buildPlayersData([nextMatch], signups)[nextMatch.id] ?? null;
+  }
+
   let profilePhotoPath: string | null = null;
   let zawodnik = "";
   if (session) {
@@ -105,6 +121,7 @@ export async function getHomePageClientProps(
 
   return {
     nextMatch: nextMatchForClient,
+    nextMatchPlayersData,
     nextMatchTentativeLine,
     lineupPublicNextMatch,
     nextMatchSignup,

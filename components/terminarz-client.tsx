@@ -2059,13 +2059,16 @@ export function TerminarzClient({
         title={
           selectedData ? `Zawodnicy – ${selectedData.date} ${selectedData.time}` : "Zawodnicy"
         }
-        headerKicker={marketplaceEnabled ? "Skład" : undefined}
+        headerKicker="Skład"
         icon={
-          marketplaceEnabled ? (
-            <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[var(--mp-teal)] text-white shadow-sm">
-              <Users className="h-5 w-5" strokeWidth={2.25} aria-hidden />
-            </span>
-          ) : undefined
+          <span
+            className={cn(
+              "flex h-10 w-10 items-center justify-center rounded-2xl text-white shadow-sm",
+              marketplaceEnabled ? "bg-[var(--mp-teal)]" : "bg-emerald-700"
+            )}
+          >
+            <Users className="h-5 w-5" strokeWidth={2.25} aria-hidden />
+          </span>
         }
         contentClassName="space-y-3"
       >

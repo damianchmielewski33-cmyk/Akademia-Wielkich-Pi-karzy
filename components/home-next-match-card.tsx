@@ -1,8 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { useMemo, useState, type ReactNode } from "react";
 import { Calendar, Car, Clock, HelpCircle, KeyRound, LayoutGrid, MapPin, Wallet } from "lucide-react";
 import { MarketplacePitchPhoto } from "@/components/marketplace-pitch-photo";
+import { MatchSignupsRosterModal } from "@/components/match-signups-roster-modal";
+import { MatchSignupRosterPreview } from "@/components/match-signup-roster-preview";
 import { SiteAssetImage } from "@/components/site-asset-image";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,8 +18,8 @@ import { MatchLocationWeather } from "@/components/match-location-weather";
 import { cn, isValidMatchFee } from "@/lib/utils";
 import { formatMatchFeePln, perPersonMatchFeePln } from "@/lib/match-fee";
 import type { MatchRow } from "@/lib/db";
+import type { PlayersDataEntry } from "@/lib/terminarz-shared";
 import { PayButton } from "@/components/pay-button";
-import type { ReactNode } from "react";
 
 type SignupState = "none" | "tentative" | "confirmed" | "declined";
 
@@ -24,6 +27,7 @@ type Props = {
   match: MatchRow;
   backgroundSrc?: string;
   photoPool?: string[];
+  playersData?: PlayersDataEntry | null;
   tentativeLine: string;
   lineupPublic: boolean;
   signup: SignupState;
@@ -118,6 +122,7 @@ export function HomeNextMatchCard({
   match,
   backgroundSrc = "",
   photoPool,
+  playersData = null,
   tentativeLine,
   lineupPublic,
   signup,
@@ -133,6 +138,16 @@ export function HomeNextMatchCard({
   onDeclined,
   onConfirmFromTentative,
 }: Props) {
+  const [rosterOpen, setRosterOpen] = useState(false);
+  const rosterPlayersData = useMemo(
+    () => (playersData ? { [match.id]: playersData } : {}),
+    [match.id, playersData]
+  );
+  const hasRoster =
+    Boolean(playersData) &&
+    (playersData!.players.length > 0 ||
+      playersData!.tentativePlayers.length > 0 ||
+      playersData!.declinedPlayers.length > 0);
   const when = formatMatchWhen(match.match_date, match.match_time);
   const slots = slotMeta(match.signed_up, match.max_slots);
   const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(match.location)}`;
@@ -299,12 +314,26 @@ export function HomeNextMatchCard({
               aria-label={`Zapełnienie składu: ${match.signed_up} z ${match.max_slots}`}
             />
           </div>
-          {tentativeLine ? (
+          {tentativeLine && !playersData?.tentativePlayers.length ? (
             <p className="mt-2 text-[11px] font-semibold normal-case tracking-normal text-amber-100/95">
               {tentativeLine}
             </p>
           ) : null}
+          <MatchSignupRosterPreview
+            entry={playersData}
+            onViewAll={hasRoster ? () => setRosterOpen(true) : undefined}
+          />
         </SectionPanel>
+
+        {hasRoster ? (
+          <MatchSignupsRosterModal
+            open={rosterOpen}
+            onOpenChange={setRosterOpen}
+            match={match}
+            matchId={match.id}
+            playersData={rosterPlayersData}
+          />
+        ) : null}
 
         <div className="mx-auto mt-4 max-w-md space-y-2.5">
           <span className={cn(pitchLabelClass, "block text-center text-white/85")}>Zapis na mecz</span>

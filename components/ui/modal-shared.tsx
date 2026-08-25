@@ -59,15 +59,22 @@ export function ModalMatchSummary({ match }: { match: MatchLike }) {
     return (
       <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
         <div className="relative min-h-[7.5rem] sm:min-h-[8.5rem]">
-          <MarketplacePitchPhoto src={photo} className="z-0" sizes="(max-width: 640px) 100vw, 560px" />
-          <div className="absolute inset-0 z-[1] bg-gradient-to-t from-black/80 via-black/45 to-black/20" />
+          <MarketplacePitchPhoto
+            src={photo}
+            className="pointer-events-none z-0"
+            sizes="(max-width: 640px) 100vw, 560px"
+          />
+          <div
+            className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-t from-black/80 via-black/45 to-black/20"
+            aria-hidden
+          />
           <div className="relative z-10 flex h-full min-h-[7.5rem] flex-wrap items-end gap-3 p-4 sm:min-h-[8.5rem] sm:gap-4 sm:p-5">
             <div className="flex flex-col items-center rounded-xl border border-white/25 bg-black/35 px-3 py-1.5 backdrop-blur-sm">
               <Calendar className="h-4 w-4 text-[var(--mp-teal)]" aria-hidden />
               <span className="mt-0.5 text-sm font-bold tabular-nums text-white">{dateLabel}</span>
               <span className="text-[10px] font-semibold uppercase tracking-wide text-white/70">{year}</span>
             </div>
-            <div className="min-w-0 flex-1">
+            <div className="min-w-0 flex-1 pr-8">
               <div className="flex items-center gap-1.5 text-white">
                 <Clock className="h-4 w-4 text-[var(--mp-teal)]" aria-hidden />
                 <span className="text-lg font-bold tabular-nums">{time}</span>
@@ -147,9 +154,16 @@ export function ModalFormHeader({
   if (marketplaceEnabled) {
     return (
       <div className="awp-modal-form-header awp-modal-form-header--v2 shrink-0">
-        <MarketplacePitchPhoto src={photo} className="absolute inset-0 z-0" sizes="(max-width: 640px) 100vw, 640px" />
-        <div className="absolute inset-0 z-[1] bg-gradient-to-t from-black/85 via-black/55 to-black/30" />
-        <div className="relative z-10 flex items-start gap-3.5 pr-10 text-left">
+        <MarketplacePitchPhoto
+          src={photo}
+          className="pointer-events-none absolute inset-0 z-0"
+          sizes="(max-width: 640px) 100vw, 640px"
+        />
+        <div
+          className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-t from-black/85 via-black/55 to-black/30"
+          aria-hidden
+        />
+        <div className="relative z-10 flex items-start gap-3.5 pr-12 text-left">
           <div className="awp-modal-form-header__icon">{icon}</div>
           <div className="min-w-0 flex-1">
             <p className="awp-modal-form-header__kicker">{kicker}</p>
@@ -163,7 +177,7 @@ export function ModalFormHeader({
 
   return (
     <div className="awp-modal-form-header shrink-0">
-      <div className="relative flex items-start gap-3.5 pr-10 text-left">
+      <div className="relative flex items-start gap-3.5 pr-12 text-left">
         <div className="awp-modal-form-header__icon">{icon}</div>
         <div className="min-w-0 flex-1">
           <p className="awp-modal-form-header__kicker">{kicker}</p>

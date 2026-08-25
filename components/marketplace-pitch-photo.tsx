@@ -23,7 +23,7 @@ export function MarketplacePitchPhoto({ src, className, sizes = "100vw", priorit
   const displaySrc = failed && resolved !== FALLBACK_SRC ? FALLBACK_SRC : resolved;
 
   if (!marketplaceEnabled) {
-    return <div className={cn("absolute inset-0 home-pitch-tile", className)} aria-hidden />;
+    return <div className={cn("pointer-events-none absolute inset-0 home-pitch-tile", className)} aria-hidden />;
   }
 
   function onError() {
@@ -32,20 +32,28 @@ export function MarketplacePitchPhoto({ src, className, sizes = "100vw", priorit
 
   if (canOptimizeMarketplacePhoto(displaySrc)) {
     return (
-      <Image
-        src={displaySrc}
-        alt=""
-        fill
-        priority={priority}
-        sizes={sizes}
-        className={cn("object-cover", className)}
-        unoptimized={siteAssetNeedsUnoptimized(displaySrc)}
-        onError={onError}
-      />
+      <span className={cn("pointer-events-none absolute inset-0", className)} aria-hidden>
+        <Image
+          src={displaySrc}
+          alt=""
+          fill
+          priority={priority}
+          sizes={sizes}
+          className="object-cover"
+          unoptimized={siteAssetNeedsUnoptimized(displaySrc)}
+          onError={onError}
+        />
+      </span>
     );
   }
   return (
     // eslint-disable-next-line @next/next/no-img-element
-    <img src={displaySrc} alt="" className={cn("absolute inset-0 h-full w-full object-cover", className)} onError={onError} />
+    <img
+      src={displaySrc}
+      alt=""
+      className={cn("pointer-events-none absolute inset-0 h-full w-full object-cover", className)}
+      onError={onError}
+      aria-hidden
+    />
   );
 }

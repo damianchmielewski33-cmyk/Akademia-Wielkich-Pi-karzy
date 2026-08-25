@@ -20,7 +20,8 @@ const sizeClasses = {
   full: "sm:max-w-[min(96vw,56rem)]",
 } as const;
 
-const modalMaxH = "max-h-[min(90dvh,calc(100dvh-2rem))]";
+const modalMaxH =
+  "max-h-[calc(100dvh-1.5rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] sm:max-h-[min(90dvh,calc(100dvh-2rem))]";
 
 export type AppModalProps = {
   open: boolean;
@@ -87,11 +88,10 @@ export function AppModal({
         className={cn(
           sizeClasses[size],
           formHeader && "awp-modal-content--form gap-0 p-0 pt-0",
-          // Przy długiej treści: sztywny max-h, środek się kurczy i przewija; przy krótkiej — h-fit
-          scrollable && !formHeader && cn("h-fit", modalMaxH, "overflow-y-auto"),
-          scrollable &&
-            formHeader &&
-            cn(modalMaxH, "overflow-hidden"),
+          // Przy długiej treści: max-h + przewijanie. Bez h-fit — na iOS fit-content + overflow-hidden
+          // ucina listę (zapisani w terminarzu) zamiast pozwolić przewinąć.
+          scrollable && !formHeader && cn(modalMaxH, "min-h-0 overflow-y-auto"),
+          scrollable && formHeader && cn(modalMaxH, "min-h-0 overflow-hidden"),
           hideCloseButton && "[&>button]:hidden",
           className
         )}
@@ -134,7 +134,10 @@ export function AppModal({
             className={cn(
               "space-y-3",
               formHeader
-                ? cn("min-h-0 overflow-y-auto px-5 py-4", scrollable && "flex-1")
+                ? cn(
+                    "min-h-0 overflow-y-auto overscroll-contain px-5 py-4 [-webkit-overflow-scrolling:touch]",
+                    scrollable && "flex-1"
+                  )
                 : "py-0.5",
               contentClassName
             )}

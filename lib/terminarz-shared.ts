@@ -59,6 +59,12 @@ export function formatPonderingPlayersPolish(n: number): string {
   return `${n} osób się zastanawia`;
 }
 
+export const MATCH_SIGNUPS_PLAYER_SQL = `SELECT ms.match_id, ms.paid, COALESCE(ms.commitment, 1) AS commitment,
+              u.id AS user_id, u.first_name, u.last_name,
+              u.player_alias AS zawodnik, u.profile_photo_path
+       FROM match_signups ms
+       JOIN users u ON u.id = ms.user_id`;
+
 export function buildPlayersData(
   matches: MatchRow[],
   signups: SignupRow[]
