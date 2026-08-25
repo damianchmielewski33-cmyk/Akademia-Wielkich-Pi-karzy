@@ -9,6 +9,7 @@ import {
   type MatchSignupRow,
 } from "@/lib/match-signup";
 import { screenBlockApiResponse } from "@/lib/screen-block-api";
+import { notifyAdminsAboutMatchRosterChange } from "@/lib/match-notifications";
 
 export const runtime = "nodejs";
 
@@ -190,6 +191,19 @@ export async function POST(req: Request, ctx: Ctx) {
     gate.session.userId,
     `Zapisał się na mecz ${match.match_date} ${match.match_time} (${match.location}), id ${mid}`
   );
+
+  try {
+    await notifyAdminsAboutMatchRosterChange({
+      action: "signup",
+      matchId: mid,
+      matchDate: match.match_date,
+      matchTime: match.match_time,
+      location: match.location,
+      playerUserId: gate.session.userId,
+    });
+  } catch (e) {
+    console.error("[terminarz/signup] notifyAdminsAboutMatchRosterChange:", e);
+  }
 
   return NextResponse.json({ ok: true });
 }

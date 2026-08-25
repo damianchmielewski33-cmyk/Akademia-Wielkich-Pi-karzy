@@ -152,3 +152,86 @@ export async function notifySignedUpPlayersAboutCancelledMatch(args: {
     },
   });
 }
+
+export type MatchRosterAdminAction = "signup" | "unsubscribe";
+
+export function adminIdsForRosterPush(adminIds: number[], excludeUserId?: number): number[] {
+  const unique = [...new Set(adminIds.filter((id) => Number.isFinite(id) && id > 0))];
+  if (excludeUserId == null) return unique;
+  return unique.filter((id) => id !== excludeUserId);
+}
+
+export function adminMatchRosterPushCopy(args: {
+  action: MatchRosterAdminAction;
+  playerName: string;
+  matchDate: string;
+  matchTime: string;
+  location: string;
+}): { title: string; body: string } {
+  const when = `${args.matchDate} ${args.matchTime} · ${args.location}`;
+  if (args.action === "signup") {
+    return {
+      title: "Nowy zapis na mecz",
+      body: `${args.playerName} — zapis na mecz ${when}`,
+    };
+  }
+  return {
+    title: "Wypis z meczu",
+    body: `${args.playerName} — wypis z meczu ${when}`,
+  };
+}
+
+async function playerDisplayName(userId: number): Promise<string> {
+  const db = await getDb();
+  const row = (await db
+    .prepare("SELECT first_name, last_name, player_alias FROM users WHERE id = ?")
+    .get(userId)) as { first_name: string; last_name: string; player_alias: string | null } | undefined;
+  if (!row) return "Zawodnik";
+  const full = `${row.first_name} ${row.last_name}`.trim();
+  const nick = row.player_alias?.trim();
+  if (full && nick) return `${full} (${nick})`;
+  return full || nick || "Zawodnik";
+}
+
+/**
+ * Push na telefony administratorów (FCM Android + Web Push), gdy ktoś zapisze się
+ * lub wypisze z meczu. Pomija osobę, która wykonała akcję (np. admin dopisujący ręcznie).
+ */
+export async function notifyAdminsAboutMatchRosterChange(args: {
+  action: MatchRosterAdminAction;
+  matchId: number;
+  matchDate: string;
+  matchTime: string;
+  location: string;
+  playerUserId: number;
+  excludeUserId?: number;
+}): Promise<void> {
+  const db = await getDb();
+  const admins = (await db
+    .prepare("SELECT id FROM users WHERE COALESCE(is_admin, 0) = 1")
+    .all()) as { id: number }[];
+  const userIds = adminIdsForRosterPush(
+    admins.map((a) => a.id),
+    args.excludeUserId ?? args.playerUserId
+  );
+  if (userIds.length === 0) return;
+
+  const playerName = await playerDisplayName(args.playerUserId);
+  const copy = adminMatchRosterPushCopy({
+    action: args.action,
+    playerName,
+    matchDate: args.matchDate,
+    matchTime: args.matchTime,
+    location: args.location,
+  });
+
+  await sendPushToUserIds({
+    userIds,
+    title: copy.title,
+    body: copy.body,
+    data: {
+      type: args.action === "signup" ? "match_signup" : "match_unsubscribe",
+      match_id: String(args.matchId),
+    },
+  });
+}

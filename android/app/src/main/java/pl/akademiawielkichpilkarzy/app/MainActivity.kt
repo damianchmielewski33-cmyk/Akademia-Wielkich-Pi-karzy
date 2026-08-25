@@ -200,19 +200,29 @@ class MainActivity : FragmentActivity() {
         deepLinkPathState.value = intent.deepLinkPathOrNull()
     }
 
-    /** App Links: zaproszenia, płatności publiczne / portfel, powrót HotPay, terminarz. */
+    /** App Links: zaproszenia, płatności publiczne / portfel, powrót HotPay, terminarz.
+     *  Push FCM przekazuje match_id w extra, bez URI. */
     private fun Intent?.deepLinkPathOrNull(): String? {
-        val uri = this?.data ?: return null
-        val path = uri.encodedPath?.takeIf {
-            it.startsWith("/zaproszenie") ||
-                it.startsWith("/platnosci-public") ||
-                it.startsWith("/platnosci") ||
-                it.startsWith("/terminarz") ||
-                it.startsWith("/obiekty") ||
-                it.startsWith("/rezerwacje") ||
-                it.startsWith("/dla-obiektow")
-        } ?: return null
-        val query = uri.encodedQuery?.takeIf { it.isNotBlank() }?.let { "?$it" }.orEmpty()
-        return path + query
+        val uri = this?.data
+        if (uri != null) {
+            val path = uri.encodedPath?.takeIf {
+                it.startsWith("/zaproszenie") ||
+                    it.startsWith("/platnosci-public") ||
+                    it.startsWith("/platnosci") ||
+                    it.startsWith("/terminarz") ||
+                    it.startsWith("/obiekty") ||
+                    it.startsWith("/rezerwacje") ||
+                    it.startsWith("/dla-obiektow")
+            }
+            if (path != null) {
+                val query = uri.encodedQuery?.takeIf { it.isNotBlank() }?.let { "?$it" }.orEmpty()
+                return path + query
+            }
+        }
+        val matchId = this?.getStringExtra("match_id")?.trim().orEmpty()
+        if (matchId.isNotEmpty() && matchId.all { it.isDigit() }) {
+            return "/terminarz?mecz=$matchId"
+        }
+        return null
     }
 }

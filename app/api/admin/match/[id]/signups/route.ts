@@ -10,6 +10,7 @@ import {
   decrementMatchSignedUp,
   tryIncrementMatchSignedUp,
 } from "@/lib/match-signup";
+import { notifyAdminsAboutMatchRosterChange } from "@/lib/match-notifications";
 
 export const runtime = "nodejs";
 
@@ -266,6 +267,20 @@ export async function POST(req: Request, context: RouteContext) {
     `Dopisał ręcznie do meczu ${match.match_date} ${match.match_time} (${match.location}), id ${mid}: ${who.first_name} ${who.last_name} (id ${uid})`
   );
 
+  try {
+    await notifyAdminsAboutMatchRosterChange({
+      action: "signup",
+      matchId: mid,
+      matchDate: match.match_date,
+      matchTime: match.match_time,
+      location: match.location,
+      playerUserId: uid,
+      excludeUserId: gate.session.userId,
+    });
+  } catch (e) {
+    console.error("[admin/match/signups] notifyAdminsAboutMatchRosterChange signup:", e);
+  }
+
   return NextResponse.json({ ok: true });
 }
 
@@ -338,6 +353,20 @@ export async function DELETE(req: Request, context: RouteContext) {
       refundedPln > 0 ? ` · zwrot koszyka ${refundedPln.toFixed(2)} PLN` : ""
     }`
   );
+
+  try {
+    await notifyAdminsAboutMatchRosterChange({
+      action: "unsubscribe",
+      matchId: mid,
+      matchDate: match.match_date,
+      matchTime: match.match_time,
+      location: match.location,
+      playerUserId: uid,
+      excludeUserId: gate.session.userId,
+    });
+  } catch (e) {
+    console.error("[admin/match/signups] notifyAdminsAboutMatchRosterChange unsubscribe:", e);
+  }
 
   return NextResponse.json({ ok: true, refunded_pln: refundedPln });
 }

@@ -161,6 +161,9 @@ function withClickUrl(data?: Record<string, string>): Record<string, string> | u
   if (data.url) return data;
   const matchId = data.match_id?.trim();
   if (matchId && /^\d+$/.test(matchId)) {
+    if (data.type === "match_signup" || data.type === "match_unsubscribe") {
+      return { ...data, url: `/terminarz?mecz=${matchId}` };
+    }
     return { ...data, url: `/zaproszenie/${matchId}` };
   }
   if (data.type === "match_cancelled") {

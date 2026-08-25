@@ -1,6 +1,7 @@
 import { getDb, logActivity } from "@/lib/db";
 import { normalizePlayerAlias } from "@/lib/player-alias";
 import { assertMatchOpenForSignup, tryIncrementMatchSignedUp } from "@/lib/match-signup";
+import { notifyAdminsAboutMatchRosterChange } from "@/lib/match-notifications";
 
 export type AddMatchGuestInput = {
   matchId: number;
@@ -93,6 +94,20 @@ export async function addMatchGuest(input: AddMatchGuestInput): Promise<AddMatch
     input.activityMessage ??
     `Dodał gościnnego piłkarza ${firstName} ${lastName} (${playerAlias}) na mecz id ${input.matchId} (${match.match_date} ${match.match_time}, ${match.location})`;
   await logActivity(input.actorUserId, activityMessage);
+
+  try {
+    await notifyAdminsAboutMatchRosterChange({
+      action: "signup",
+      matchId: input.matchId,
+      matchDate: match.match_date,
+      matchTime: match.match_time,
+      location: match.location,
+      playerUserId: userId,
+      excludeUserId: input.actorUserId ?? undefined,
+    });
+  } catch (e) {
+    console.error("[add-match-guest] notifyAdminsAboutMatchRosterChange:", e);
+  }
 
   return { ok: true, userId };
 }

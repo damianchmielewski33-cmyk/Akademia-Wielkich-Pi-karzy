@@ -15,7 +15,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -45,7 +44,6 @@ import pl.akademiawielkichpilkarzy.app.data.api.AddMatchRequest
 import pl.akademiawielkichpilkarzy.app.data.api.AdminMatchSignupRow
 import pl.akademiawielkichpilkarzy.app.data.api.AdminUserDto
 import pl.akademiawielkichpilkarzy.app.data.api.MatchDto
-import pl.akademiawielkichpilkarzy.app.data.api.PlayersDataEntryDto
 import pl.akademiawielkichpilkarzy.app.ui.common.AwpGoldButton
 import pl.akademiawielkichpilkarzy.app.ui.common.AwpHeroCard
 import pl.akademiawielkichpilkarzy.app.ui.common.AwpStatusMessage
@@ -57,6 +55,7 @@ import pl.akademiawielkichpilkarzy.app.ui.common.EmptyHint
 import pl.akademiawielkichpilkarzy.app.ui.common.ErrorBlock
 import pl.akademiawielkichpilkarzy.app.ui.common.LinkTextButton
 import pl.akademiawielkichpilkarzy.app.ui.common.LoadingBlock
+import pl.akademiawielkichpilkarzy.app.ui.common.MatchRosterDialog
 import pl.akademiawielkichpilkarzy.app.ui.common.MatchSignupCard
 import pl.akademiawielkichpilkarzy.app.ui.common.MurawaBackground
 import pl.akademiawielkichpilkarzy.app.ui.common.ScreenPhotoTheme
@@ -156,7 +155,7 @@ fun ScheduleScreen(
     }
 
     rosterMatch?.let { match ->
-        RosterDialog(
+        MatchRosterDialog(
             match = match,
             entry = state.data?.playersData?.get(match.id.toString()),
             onDismiss = { rosterMatch = null }
@@ -296,7 +295,6 @@ private fun ScheduleMatchCard(
     MatchSignupCard(
         match = match,
         signupKind = state.data?.userSignupKind?.get(match.id.toString()),
-        playersEntry = state.data?.playersData?.get(match.id.toString()),
         weatherLine = state.weatherByMatchId[match.id],
         showArchiveBadge = showArchiveBadge,
         needsStats = match.id in state.missingStatsIds,
@@ -355,28 +353,6 @@ private fun CalendarView(
             }
         }
     }
-}
-
-@Composable
-private fun RosterDialog(match: MatchDto, entry: PlayersDataEntryDto?, onDismiss: () -> Unit) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Zamknij") } },
-        title = { Text("Skład: ${match.matchDate}") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                RosterGroup("Potwierdzeni", entry?.players.orEmpty())
-                RosterGroup("Jeszcze nie wiedzą", entry?.tentativePlayers.orEmpty())
-                RosterGroup("Nie biorą", entry?.declinedPlayers.orEmpty())
-            }
-        }
-    )
-}
-
-@Composable
-private fun RosterGroup(title: String, players: List<pl.akademiawielkichpilkarzy.app.data.api.TerminarzPlayerEntry>) {
-    PitchLabel("$title (${players.size})")
-    Text(players.joinToString { it.displayName }.ifBlank { "Brak" }, color = AwpColors.OnPitch)
 }
 
 @Composable

@@ -37,6 +37,7 @@ import android.net.Uri
 import kotlinx.coroutines.launch
 import pl.akademiawielkichpilkarzy.app.data.api.ApiClient
 import pl.akademiawielkichpilkarzy.app.data.api.LineupSelected
+import pl.akademiawielkichpilkarzy.app.data.api.MatchDto
 import pl.akademiawielkichpilkarzy.app.data.api.MeUser
 import pl.akademiawielkichpilkarzy.app.data.api.SignupRequest
 import pl.akademiawielkichpilkarzy.app.data.api.TerminarzResponse
@@ -47,6 +48,7 @@ import pl.akademiawielkichpilkarzy.app.ui.common.HomeLogoutTile
 import pl.akademiawielkichpilkarzy.app.ui.common.HomePitchTile
 import pl.akademiawielkichpilkarzy.app.ui.common.HomeWelcomeBanner
 import pl.akademiawielkichpilkarzy.app.ui.common.LoadingBlock
+import pl.akademiawielkichpilkarzy.app.ui.common.MatchRosterDialog
 import pl.akademiawielkichpilkarzy.app.ui.common.MatchSignupCard
 import pl.akademiawielkichpilkarzy.app.ui.common.MurawaBackground
 import pl.akademiawielkichpilkarzy.app.ui.common.ScreenPhotoTheme
@@ -77,6 +79,7 @@ fun HomeScreen(
     var loading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
     var actionError by remember { mutableStateOf<String?>(null) }
+    var rosterMatch by remember { mutableStateOf<MatchDto?>(null) }
     val scope = rememberCoroutineScope()
 
     fun reload() {
@@ -154,7 +157,6 @@ fun HomeScreen(
                         MatchSignupCard(
                             match = next,
                             signupKind = data?.userSignupKind?.get(next.id.toString()),
-                            playersEntry = data?.playersData?.get(next.id.toString()),
                             weatherLine = weatherLine,
                             lineup = nextLineup,
                             onConfirmSignup = {
@@ -210,7 +212,8 @@ fun HomeScreen(
                                 }
                             },
                             onTransport = { nav.onOpenTransport(next.id) },
-                            onOpenLineups = { nav.onNative("lineups") }
+                            onOpenLineups = { nav.onNative("lineups") },
+                            onOpenRoster = { rosterMatch = next }
                         )
                         if (actionError != null) {
                             Text(
@@ -235,6 +238,14 @@ fun HomeScreen(
 
             Spacer(Modifier.height(8.dp))
         }
+    }
+
+    rosterMatch?.let { match ->
+        MatchRosterDialog(
+            match = match,
+            entry = data?.playersData?.get(match.id.toString()),
+            onDismiss = { rosterMatch = null }
+        )
     }
 }
 

@@ -19,13 +19,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Link
-import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
@@ -55,7 +56,6 @@ import pl.akademiawielkichpilkarzy.app.ui.theme.AwpColors
 fun MatchSignupCard(
     match: MatchDto,
     signupKind: String?,
-    playersEntry: PlayersDataEntryDto? = null,
     weatherLine: String? = null,
     showArchiveBadge: Boolean = false,
     needsStats: Boolean = false,
@@ -82,9 +82,6 @@ fun MatchSignupCard(
     val weekday = formatMatchWeekday(match.matchDate)
     val dateLabel = formatMatchDate(match.matchDate)
     val perPersonFee = match.feePln?.takeIf { it > 0.0 && signed > 0 }?.div(signed)
-    val tentativeLine = playersEntry?.tentativePlayers?.takeIf { it.isNotEmpty() }?.let { players ->
-        "Jeszcze nie wiedzą (${players.size}): ${players.joinToString { it.displayName }}"
-    }
 
     PitchCard(gold = isCancelled) {
         Column(
@@ -258,24 +255,18 @@ fun MatchSignupCard(
                 maxSlots = maxSlots,
                 fillPercent = fillPercent
             )
-            tentativeLine?.let {
-                Spacer(Modifier.height(8.dp))
-                Text(it, color = Color(0xFFFFF3C4), style = MaterialTheme.typography.bodySmall)
+            if (onOpenRoster != null) {
+                Spacer(Modifier.height(10.dp))
+                AwpSecondaryButton("Zobacz zapisanych graczy", onClick = onOpenRoster)
             }
         }
 
         MatchAdminActionsRow(
-            onOpenRoster = onOpenRoster,
             onCopyInvite = onCopyInvite,
             onManage = onManage,
             isArchive = isArchive,
             isAdmin = isAdmin
         )
-
-        if (playersEntry != null) {
-            Spacer(Modifier.height(6.dp))
-            MatchRosterBlock(playersEntry)
-        }
 
         if (isArchive) {
             if (needsStats && onAddStats != null) {
@@ -713,17 +704,36 @@ private data class MatchAdminAction(
 )
 
 @Composable
+fun MatchRosterDialog(
+    match: MatchDto,
+    entry: PlayersDataEntryDto?,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Zamknij") } },
+        title = { Text("Zapisani gracze") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    "${match.matchDate} · ${match.matchTime}",
+                    color = AwpColors.OnPitchMuted,
+                    style = MaterialTheme.typography.bodySmall
+                )
+                MatchRosterBlock(entry)
+            }
+        }
+    )
+}
+
+@Composable
 private fun MatchAdminActionsRow(
-    onOpenRoster: (() -> Unit)?,
     onCopyInvite: (() -> Unit)?,
     onManage: (() -> Unit)?,
     isArchive: Boolean,
     isAdmin: Boolean
 ) {
     val actions = buildList {
-        if (onOpenRoster != null) {
-            add(MatchAdminAction("Skład", onOpenRoster, icon = Icons.Filled.Groups))
-        }
         if (!isArchive && onCopyInvite != null) {
             add(MatchAdminAction("Zaproszenie", onCopyInvite, icon = Icons.Filled.Link))
         }
@@ -893,10 +903,9 @@ private fun SmallPitchAction(
 }
 
 @Composable
-private fun MatchRosterBlock(entry: PlayersDataEntryDto) {
+private fun MatchRosterBlock(entry: PlayersDataEntryDto?) {
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        PitchLabel("Skład")
-        if (entry.players.isEmpty() && entry.tentativePlayers.isEmpty() && entry.declinedPlayers.isEmpty()) {
+        if (entry == null || (entry.players.isEmpty() && entry.tentativePlayers.isEmpty() && entry.declinedPlayers.isEmpty())) {
             Text("Brak zapisanych.", color = AwpColors.OnPitchMuted, style = MaterialTheme.typography.bodySmall)
         } else {
             if (entry.players.isNotEmpty()) {

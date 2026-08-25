@@ -39,14 +39,16 @@ class AwpFirebaseMessagingService : FirebaseMessagingService() {
             ?: message.data["body"]
             ?: return
 
+        val matchId = message.data["match_id"]
         val intent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
-            message.data["match_id"]?.let { putExtra("match_id", it) }
+            matchId?.let { putExtra("match_id", it) }
             message.data["type"]?.let { putExtra("push_type", it) }
         }
+        val requestCode = matchId?.toIntOrNull() ?: 0
         val pending = PendingIntent.getActivity(
             this,
-            0,
+            requestCode,
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )

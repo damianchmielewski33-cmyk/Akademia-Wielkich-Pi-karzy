@@ -2,10 +2,9 @@
 
 import Link from "next/link";
 import { useMemo, useState, type ReactNode } from "react";
-import { Calendar, Car, Clock, HelpCircle, KeyRound, LayoutGrid, MapPin, Wallet } from "lucide-react";
+import { Calendar, Car, Clock, HelpCircle, KeyRound, LayoutGrid, MapPin, Users, Wallet } from "lucide-react";
 import { MarketplacePitchPhoto } from "@/components/marketplace-pitch-photo";
 import { MatchSignupsRosterModal } from "@/components/match-signups-roster-modal";
-import { MatchSignupRosterPreview } from "@/components/match-signup-roster-preview";
 import { SiteAssetImage } from "@/components/site-asset-image";
 import { Button } from "@/components/ui/button";
 import {
@@ -143,11 +142,6 @@ export function HomeNextMatchCard({
     () => (playersData ? { [match.id]: playersData } : {}),
     [match.id, playersData]
   );
-  const hasRoster =
-    Boolean(playersData) &&
-    (playersData!.players.length > 0 ||
-      playersData!.tentativePlayers.length > 0 ||
-      playersData!.declinedPlayers.length > 0);
   const when = formatMatchWhen(match.match_date, match.match_time);
   const slots = slotMeta(match.signed_up, match.max_slots);
   const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(match.location)}`;
@@ -314,18 +308,28 @@ export function HomeNextMatchCard({
               aria-label={`Zapełnienie składu: ${match.signed_up} z ${match.max_slots}`}
             />
           </div>
-          {tentativeLine && !playersData?.tentativePlayers.length ? (
+          {tentativeLine ? (
             <p className="mt-2 text-[11px] font-semibold normal-case tracking-normal text-amber-100/95">
               {tentativeLine}
             </p>
           ) : null}
-          <MatchSignupRosterPreview
-            entry={playersData}
-            onViewAll={hasRoster ? () => setRosterOpen(true) : undefined}
-          />
+          {playersData ? (
+            <button
+              type="button"
+              className={cn(pitchSecondaryBtnClass, "mt-3")}
+              onClick={() => setRosterOpen(true)}
+            >
+              <Users className="h-4 w-4 shrink-0" aria-hidden />
+              Zobacz zapisanych graczy
+            </button>
+          ) : (
+            <p className="mt-3 text-center text-xs font-medium normal-case tracking-normal text-white/75">
+              Jeszcze nikt się nie zapisał — bądź pierwszy.
+            </p>
+          )}
         </SectionPanel>
 
-        {hasRoster ? (
+        {playersData ? (
           <MatchSignupsRosterModal
             open={rosterOpen}
             onOpenChange={setRosterOpen}

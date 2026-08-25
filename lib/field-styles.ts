@@ -5,12 +5,6 @@ import { cn } from "@/lib/utils";
 export const fieldBaseClasses =
   "awp-focus-ring flex w-full rounded-xl border bg-zinc-50/90 px-3.5 py-2.5 text-base text-zinc-900 shadow-[inset_0_1px_2px_rgba(15,23,42,0.04)] ring-offset-transparent transition-[border-color,box-shadow,background-color] file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-zinc-400 disabled:cursor-not-allowed disabled:opacity-55 dark:bg-zinc-900/70 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:shadow-[inset_0_1px_2px_rgba(0,0,0,0.2)]";
 
-/** Natywny `<select>` — spójny z polami formularza (lista rozwijana przez przeglądarkę). */
-export const nativeSelectClasses = cn(
-  fieldControlClasses({ height: "min-h-12 py-2" }),
-  "awp-native-select block cursor-pointer pr-9"
-);
-
 export const fieldDefaultBorder =
   "border-zinc-200/90 hover:border-zinc-300 focus-visible:border-emerald-500/70 focus-visible:bg-white focus-visible:shadow-[0_0_0_4px_rgba(16,185,129,0.12)] dark:border-zinc-600/80 dark:hover:border-zinc-500 dark:focus-visible:border-emerald-400/60 dark:focus-visible:bg-zinc-900 dark:focus-visible:shadow-[0_0_0_4px_rgba(52,211,153,0.14)]";
 
@@ -40,3 +34,9 @@ export function fieldControlClasses({
     className
   );
 }
+
+/** Natywny `<select>` — spójny z polami formularza (lista rozwijana przez przeglądarkę). */
+export const nativeSelectClasses = cn(
+  fieldControlClasses({ height: "min-h-12 py-2" }),
+  "awp-native-select block cursor-pointer pr-9"
+);
