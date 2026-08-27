@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
+import { PhotoPanel } from "@/components/photo-panel";
 import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
 import { MarketplacePitchPhoto } from "@/components/marketplace-pitch-photo";
 import { useSiteMode } from "@/components/site-mode";
