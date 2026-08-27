@@ -26,7 +26,7 @@ export function MarketplaceVenueCard({ venue, href, className }: Props) {
   const photo = venue.photo_url ? resolveMarketplacePhoto(venue.photo_url) : null;
   return (
     <Link href={to} className={cn("mp-venue-card group block min-w-[16.5rem] text-left", className)}>
-      <div className="relative h-44 overflow-hidden bg-zinc-200 sm:h-48">
+      <div className="relative h-36 overflow-hidden bg-zinc-200 sm:h-48">
         {photo && canOptimizeMarketplacePhoto(photo) ? (
           <Image
             src={photo}
@@ -52,7 +52,7 @@ export function MarketplaceVenueCard({ venue, href, className }: Props) {
           {venue.city}
         </span>
         {/* Touch: zawsze widoczne. Hover (desktop): delikatne wejście. */}
-        <span className="absolute inset-x-3 bottom-3 rounded-full bg-[var(--mp-teal)] px-3 py-2 text-center text-xs font-black uppercase tracking-wide text-white shadow-lg opacity-100 translate-y-0 [@media(hover:hover)_and_(pointer:fine)]:translate-y-2 [@media(hover:hover)_and_(pointer:fine)]:opacity-0 [@media(hover:hover)_and_(pointer:fine)]:transition [@media(hover:hover)_and_(pointer:fine)]:group-hover:translate-y-0 [@media(hover:hover)_and_(pointer:fine)]:group-hover:opacity-100">
+        <span className="absolute inset-x-3 bottom-3 hidden rounded-full bg-[var(--mp-teal)] px-3 py-2 text-center text-xs font-black uppercase tracking-wide text-white shadow-lg sm:block [@media(hover:hover)_and_(pointer:fine)]:translate-y-2 [@media(hover:hover)_and_(pointer:fine)]:opacity-0 [@media(hover:hover)_and_(pointer:fine)]:transition [@media(hover:hover)_and_(pointer:fine)]:group-hover:translate-y-0 [@media(hover:hover)_and_(pointer:fine)]:group-hover:opacity-100">
           Rezerwuj
         </span>
       </div>

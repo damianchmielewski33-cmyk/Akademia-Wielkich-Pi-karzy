@@ -18,12 +18,35 @@ export function GymBratCrossLink({
   photoSrc = GYMBRAT_GYM_PHOTO,
 }: {
   className?: string;
-  variant?: "tile" | "footer" | "inline";
+  variant?: "tile" | "footer" | "inline" | "row";
   /** Nadpisanie zdjęcia; domyślnie siłownia (nie boisko). */
   photoSrc?: string | null;
 }) {
   const href = getGymBratCrossLink("/");
   const { marketplaceEnabled } = useSiteMode();
+
+  if (variant === "row") {
+    return (
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={cn(
+          "flex min-h-14 items-center gap-3 rounded-2xl border border-zinc-200 bg-white px-3 py-3 shadow-sm dark:border-zinc-800 dark:bg-zinc-950",
+          className
+        )}
+      >
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-rose-50 text-rose-700 dark:bg-rose-950 dark:text-rose-200">
+          <Dumbbell className="h-4 w-4" aria-hidden />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-bold text-zinc-950 dark:text-white">{GYMBRAT_SITE_NAME}</span>
+          <span className="block text-xs text-zinc-500">{GYMBRAT_SITE_TAGLINE}</span>
+        </span>
+        <ExternalLink className="h-4 w-4 shrink-0 text-zinc-400" aria-hidden />
+      </a>
+    );
+  }
 
   if (variant === "footer" || variant === "inline") {
     return (

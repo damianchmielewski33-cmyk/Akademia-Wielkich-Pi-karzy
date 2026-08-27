@@ -2,10 +2,8 @@
 
 import Link from "next/link";
 import { LogOut, Moon, Sun, X, type LucideIcon } from "lucide-react";
-import { MarketplacePitchPhoto } from "@/components/marketplace-pitch-photo";
 import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
 import type { SiteMode } from "@/lib/site-mode";
-import { MARKETPLACE_PITCH_PHOTOS } from "@/lib/marketplace-photos";
 import { cn } from "@/lib/utils";
 
 export type ShellNavItem = {
@@ -156,33 +154,23 @@ export function SiteMobileNav({
             </button>
           </div>
         ) : (
-          <div className="relative shrink-0 overflow-hidden">
-            <div className="relative h-[7.75rem]">
-              <MarketplacePitchPhoto
-                src={mode === "booking" ? MARKETPLACE_PITCH_PHOTOS[0] : MARKETPLACE_PITCH_PHOTOS[3]}
-                className="z-0"
-                sizes="360px"
-              />
-              <div className="absolute inset-0 z-[1] bg-gradient-to-t from-black/75 via-black/40 to-black/25" />
-              <div className="relative z-10 flex h-full items-start justify-between gap-3 px-4 pb-4 pt-3.5">
-                <div className="min-w-0 self-end">
-                  <p className="text-[0.65rem] font-black uppercase tracking-[0.18em] text-white/80">
-                    {mode === "booking" ? "Rezerwacja boisk" : mode === "academy" ? "Akademia" : "Menu"}
-                  </p>
-                  <p id={titleId} className="mt-1 truncate text-lg font-black text-white">
-                    {siteName}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="awp-focus-ring inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/20 text-white ring-1 ring-white/30 backdrop-blur-sm hover:bg-white/30"
-                  aria-label="Zamknij menu"
-                >
-                  <X className="h-5 w-5" aria-hidden />
-                </button>
-              </div>
+          <div className="flex items-center justify-between gap-3 border-b border-zinc-200 px-4 py-3.5 dark:border-zinc-800">
+            <div className="min-w-0">
+              <p className="text-[0.65rem] font-black uppercase tracking-[0.16em] text-[var(--mp-teal-dark)]">
+                {mode === "booking" ? "Rezerwacja" : mode === "academy" ? "Akademia" : "Menu"}
+              </p>
+              <p id={titleId} className="truncate text-base font-black text-zinc-950 dark:text-white">
+                {siteName}
+              </p>
             </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="awp-focus-ring inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-800 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+              aria-label="Zamknij menu"
+            >
+              <X className="h-5 w-5" aria-hidden />
+            </button>
           </div>
         )}
 
@@ -220,10 +208,10 @@ export function SiteMobileNav({
               <button
                 type="button"
                 className={cn(
-                  "overflow-hidden rounded-2xl border text-left shadow-sm transition touch-manipulation",
+                  "min-h-11 rounded-2xl border px-3 py-2.5 text-left text-sm font-bold shadow-sm touch-manipulation",
                   mode === "booking"
-                    ? "border-[var(--mp-teal)] ring-2 ring-[var(--mp-teal)]/25"
-                    : "border-zinc-200 dark:border-zinc-700"
+                    ? "border-[var(--mp-teal)] bg-[var(--mp-teal)] text-white"
+                    : "border-zinc-200 bg-white text-zinc-800 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
                 )}
                 onClick={() => {
                   if (mode === "booking") return;
@@ -231,21 +219,15 @@ export function SiteMobileNav({
                   onSetMode("booking", { navigateHome: true });
                 }}
               >
-                <span className="relative block h-14 w-full bg-zinc-200">
-                  <MarketplacePitchPhoto src={MARKETPLACE_PITCH_PHOTOS[0]} sizes="160px" />
-                  <span className="absolute inset-0 bg-gradient-to-t from-black/55 to-transparent" />
-                  <span className="absolute bottom-1.5 left-2 right-2 text-[11px] font-black text-white">
-                    Szukam boiska
-                  </span>
-                </span>
+                Szukam boiska
               </button>
               <button
                 type="button"
                 className={cn(
-                  "overflow-hidden rounded-2xl border text-left shadow-sm transition touch-manipulation",
+                  "min-h-11 rounded-2xl border px-3 py-2.5 text-left text-sm font-bold shadow-sm touch-manipulation",
                   mode === "academy"
-                    ? "border-[var(--mp-teal)] ring-2 ring-[var(--mp-teal)]/25"
-                    : "border-zinc-200 dark:border-zinc-700"
+                    ? "border-[var(--mp-teal)] bg-[var(--mp-teal)] text-white"
+                    : "border-zinc-200 bg-white text-zinc-800 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
                 )}
                 onClick={() => {
                   if (mode === "academy") return;
@@ -253,13 +235,7 @@ export function SiteMobileNav({
                   onSetMode("academy", { navigateHome: true });
                 }}
               >
-                <span className="relative block h-14 w-full bg-zinc-200">
-                  <MarketplacePitchPhoto src={MARKETPLACE_PITCH_PHOTOS[3]} sizes="160px" />
-                  <span className="absolute inset-0 bg-gradient-to-t from-black/55 to-transparent" />
-                  <span className="absolute bottom-1.5 left-2 right-2 text-[11px] font-black text-white">
-                    Gram z wami
-                  </span>
-                </span>
+                Gram z wami
               </button>
             </div>
           ) : null}

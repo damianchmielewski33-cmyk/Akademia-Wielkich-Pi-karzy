@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, type ComponentType, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Calendar, ChevronDown, Loader2, LogOut, Menu, Moon, Sun } from "lucide-react";
+import { ArrowLeft, Calendar, ChevronDown, Loader2, LogOut, Menu, Moon, Sun, X } from "lucide-react";
 import { PitchCard } from "@/components/ui/pitch-card";
 import { SiteSectionHero } from "@/components/site-section-hero";
 import { SiteAssetImage } from "@/components/site-asset-image";
@@ -94,8 +94,6 @@ type AdminShellProps = {
   children: ReactNode;
   /** Wyszukiwarka / skróty — renderowane pod logo. */
   searchSlot?: ReactNode;
-  /** Stałe skróty mobilne (np. Wiadomości / Mecze / Ustawienia). */
-  mobileShortcuts?: readonly { id: string; label: string; badge?: boolean; badgeCount?: number }[];
 };
 
 function tabHasAlert(t: AdminTab) {
@@ -169,7 +167,7 @@ function NavTabButton({
           {tab.desc && !compact ? (
             <span
               className={cn(
-                "mt-0.5 block truncate text-xs leading-snug",
+                "mt-0.5 hidden truncate text-xs leading-snug lg:block",
                 active ? "text-white/85" : "text-zinc-500 dark:text-zinc-400"
               )}
             >
@@ -205,26 +203,15 @@ export function AdminShell({
   loading,
   children,
   searchSlot,
-  mobileShortcuts,
 }: AdminShellProps) {
   const router = useRouter();
   const { marketplaceEnabled } = useSiteMode();
   const mainRef = useRef<HTMLElement>(null);
-  const accentRing = marketplaceEnabled
-    ? "ring-2 ring-[var(--mp-teal)]"
-    : "ring-2 ring-[var(--mundial-gold,#f5c518)]";
   const accentText = marketplaceEnabled
     ? "text-[var(--mp-teal)]"
     : "text-[var(--mundial-gold,#f5c518)]";
   const isDarkNow =
     typeof document !== "undefined" ? document.documentElement.classList.contains("dark") : true;
-
-  const activeGroupId = useMemo(() => {
-    for (const g of navGroups) {
-      if (g.items.some((t) => t.id === activeTab)) return g.id;
-    }
-    return navGroups[0]?.id ?? "";
-  }, [navGroups, activeTab]);
 
   const activeTabMeta = useMemo(() => {
     for (const g of navGroups) {
@@ -242,9 +229,8 @@ export function AdminShell({
     return init;
   });
 
-  /** Mobile: menu = pełny wybór kategorii/zakładek; content = ekran sekcji. */
+  /** Mobile: menu = lista sekcji; content = ekran wybranej zakładki. */
   const [mobilePhase, setMobilePhase] = useState<"menu" | "content">("content");
-  const [mobileMenuGroupId, setMobileMenuGroupId] = useState<string | null>(null);
 
   useEffect(() => {
     setOpenGroups((prev) => {
@@ -261,34 +247,20 @@ export function AdminShell({
     mainRef.current?.scrollTo({ top: 0, behavior: "smooth" });
     if (typeof window !== "undefined" && window.matchMedia("(max-width: 1023px)").matches) {
       setMobilePhase("content");
-      setMobileMenuGroupId(null);
     }
   }, [activeTab]);
 
-  const mobileBrowseGroup = useMemo(() => {
-    const id = mobileMenuGroupId ?? activeGroupId;
-    return navGroups.find((g) => g.id === id) ?? navGroups[0];
-  }, [navGroups, mobileMenuGroupId, activeGroupId]);
-
   function openMobileMenu() {
-    setMobileMenuGroupId(null);
     setMobilePhase("menu");
   }
 
-  function selectMobileGroup(g: AdminNavGroup) {
-    if (g.items.length === 1) {
-      onTabChange(g.items[0].id);
-      setMobilePhase("content");
-      setMobileMenuGroupId(null);
-      return;
-    }
-    setMobileMenuGroupId(g.id);
+  function closeMobileMenu() {
+    setMobilePhase("content");
   }
 
   function selectMobileTab(id: string) {
     onTabChange(id);
     setMobilePhase("content");
-    setMobileMenuGroupId(null);
   }
 
   function openDesktopGroup(g: AdminNavGroup) {
@@ -335,21 +307,18 @@ export function AdminShell({
         )}
       >
         <div className="relative flex flex-col gap-3 p-3 xs:p-4 lg:sticky lg:top-0 lg:h-screen lg:max-h-screen lg:gap-3 lg:overflow-hidden lg:pt-[max(1rem,env(safe-area-inset-top))] lg:pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-          <PhotoPanel
-            src={pitchPhotoAt(0)}
+          <div
             className={cn(
-              "shrink-0 overflow-hidden rounded-3xl",
-              marketplaceEnabled && "border border-zinc-200/80 shadow-sm dark:border-zinc-800"
+              "flex shrink-0 items-center gap-3 rounded-2xl border px-3 py-3 lg:hidden",
+              marketplaceEnabled
+                ? "border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900"
+                : "border-white/20 bg-white/10"
             )}
-            contentClassName="flex items-center gap-3 p-4"
-            overlayClassName="bg-gradient-to-r from-black/75 via-black/50 to-black/20"
-            sizes="320px"
-            priority
           >
             <span
               className={cn(
-                "relative flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-white shadow-sm",
-                marketplaceEnabled ? "bg-[var(--mp-teal)]" : "bg-white/15 ring-2 ring-white/35"
+                "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl",
+                marketplaceEnabled ? "bg-[var(--mp-teal)] text-white" : "bg-white/15 text-white"
               )}
             >
               <SiteAssetImage
@@ -357,185 +326,118 @@ export function AdminShell({
                 alt=""
                 width={128}
                 height={128}
-                className="h-10 w-10 drop-shadow"
-                sizes="48px"
+                className="h-8 w-8 drop-shadow"
+                sizes="32px"
               />
             </span>
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <p
                 className={cn(
-                  "text-[0.65rem] font-bold uppercase tracking-[0.16em]",
-                  marketplaceEnabled ? "text-[var(--mp-teal)]" : "text-[var(--mundial-gold,#f5c518)]"
+                  "text-[0.65rem] font-bold uppercase tracking-[0.14em]",
+                  marketplaceEnabled ? "text-[var(--mp-teal-dark)]" : "text-[var(--mundial-gold,#f5c518)]"
                 )}
               >
-                Panel admina{marketplaceEnabled ? " · V2" : ""}
+                Panel admina
               </p>
-              <p className="mt-1 truncate text-lg font-black leading-tight text-white drop-shadow-sm">
-                Sterowanie akademią
+              <p
+                className={cn(
+                  "truncate text-sm font-black",
+                  marketplaceEnabled ? "text-zinc-950 dark:text-white" : "text-white"
+                )}
+              >
+                Wybierz sekcję
               </p>
-              <p className="mt-0.5 truncate text-xs text-white/80">Mecze, gracze, portfele i ustawienia.</p>
             </div>
-          </PhotoPanel>
+            <button
+              type="button"
+              onClick={closeMobileMenu}
+              className={cn(
+                "awp-focus-ring inline-flex h-10 w-10 items-center justify-center rounded-full",
+                marketplaceEnabled
+                  ? "border border-zinc-200 bg-zinc-50 text-zinc-800 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+                  : "border border-white/25 bg-white/10 text-white"
+              )}
+              aria-label="Zamknij menu"
+            >
+              <X className="h-5 w-5" aria-hidden />
+            </button>
+          </div>
+
+          <div className="hidden lg:block">
+            <PhotoPanel
+              src={pitchPhotoAt(0)}
+              className={cn(
+                "shrink-0 overflow-hidden rounded-3xl",
+                marketplaceEnabled && "border border-zinc-200/80 shadow-sm dark:border-zinc-800"
+              )}
+              contentClassName="flex items-center gap-3 p-4"
+              overlayClassName="bg-gradient-to-r from-black/75 via-black/50 to-black/20"
+              sizes="320px"
+              priority
+            >
+              <span
+                className={cn(
+                  "relative flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-white shadow-sm",
+                  marketplaceEnabled ? "bg-[var(--mp-teal)]" : "bg-white/15 ring-2 ring-white/35"
+                )}
+              >
+                <SiteAssetImage
+                  asset="logo_crest"
+                  alt=""
+                  width={128}
+                  height={128}
+                  className="h-10 w-10 drop-shadow"
+                  sizes="48px"
+                />
+              </span>
+              <div className="min-w-0">
+                <p
+                  className={cn(
+                    "text-[0.65rem] font-bold uppercase tracking-[0.16em]",
+                    marketplaceEnabled ? "text-[var(--mp-teal)]" : "text-[var(--mundial-gold,#f5c518)]"
+                  )}
+                >
+                  Panel admina{marketplaceEnabled ? " · V2" : ""}
+                </p>
+                <p className="mt-1 truncate text-lg font-black leading-tight text-white drop-shadow-sm">
+                  Sterowanie akademią
+                </p>
+                <p className="mt-0.5 truncate text-xs text-white/80">Mecze, gracze, portfele i ustawienia.</p>
+              </div>
+            </PhotoPanel>
+          </div>
 
           {searchSlot ? <div className="relative z-40 shrink-0">{searchSlot}</div> : null}
 
-          {/* Mobile: pełne menu kategorii / zakładek (nie pasek chipów na dole) */}
-          <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-contain lg:hidden">
-            {mobileMenuGroupId && mobileBrowseGroup ? (
-              <>
-                <button
-                  type="button"
-                  onClick={() => setMobileMenuGroupId(null)}
-                  className={cn(
-                    "awp-focus-ring inline-flex items-center gap-2 self-start rounded-xl px-2 py-1.5 text-sm font-semibold",
-                    marketplaceEnabled
-                      ? "text-zinc-700 hover:bg-zinc-200/80 dark:text-zinc-200 dark:hover:bg-zinc-800"
-                      : "text-white/90 hover:bg-white/10"
-                  )}
-                >
-                  <ArrowLeft className="h-4 w-4" aria-hidden />
-                  Kategorie
-                </button>
-                <p
-                  className={cn(
-                    "text-xs font-bold uppercase tracking-[0.14em]",
-                    marketplaceEnabled
-                      ? "text-[var(--mp-teal-dark)] dark:text-teal-300"
-                      : "text-white/70"
-                  )}
-                >
-                  {mobileBrowseGroup.label ?? "Zakładki"}
-                </p>
-                <nav className="flex flex-col gap-2" aria-label={`Zakładki: ${mobileBrowseGroup.label ?? ""}`}>
-                  {mobileBrowseGroup.items.map((t) => (
-                    <NavTabButton
-                      key={t.id}
-                      tab={t}
-                      active={activeTab === t.id}
-                      onSelect={() => selectMobileTab(t.id)}
-                    />
-                  ))}
-                </nav>
-              </>
-            ) : (
-              <>
-                {mobileShortcuts && mobileShortcuts.length > 0 ? (
-                  <div className="grid grid-cols-2 gap-2" aria-label="Szybkie skróty">
-                    {mobileShortcuts.map((s) => {
-                      const active = activeTab === s.id;
-                      return (
-                        <button
-                          key={s.id}
-                          type="button"
-                          onClick={() => selectMobileTab(s.id)}
-                          className="min-w-0"
-                        >
-                          {marketplaceEnabled ? (
-                            <span
-                              className={cn(
-                                "flex min-h-[3.25rem] items-center justify-center gap-1.5 rounded-2xl border px-2 py-2 text-xs font-bold shadow-sm",
-                                active
-                                  ? "border-transparent bg-[var(--mp-teal)] text-white"
-                                  : "border-zinc-200 bg-white text-zinc-800 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-                              )}
-                            >
-                              <span className="truncate">{s.label}</span>
-                              {s.badgeCount != null && s.badgeCount > 0 ? (
-                                <span className="inline-flex min-h-[1.1rem] min-w-[1.1rem] items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white">
-                                  {s.badgeCount > 99 ? "99+" : s.badgeCount}
-                                </span>
-                              ) : s.badge ? (
-                                <span className="h-1.5 w-1.5 rounded-full bg-red-500" aria-hidden />
-                              ) : null}
-                            </span>
-                          ) : (
-                            <PhotoPanel
-                              src={pitchPhotoAt(adminPhotoIndex(s.id))}
-                              className={cn("min-h-[3.25rem] rounded-xl", active && accentRing)}
-                              contentClassName="flex min-h-[3.25rem] items-center justify-center gap-1.5 px-2 py-2"
-                              sizes="160px"
-                            >
-                              <span className="truncate text-xs font-bold text-white drop-shadow-sm">{s.label}</span>
-                              {s.badgeCount != null && s.badgeCount > 0 ? (
-                                <span className="inline-flex min-h-[1.1rem] min-w-[1.1rem] items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white">
-                                  {s.badgeCount > 99 ? "99+" : s.badgeCount}
-                                </span>
-                              ) : s.badge ? (
-                                <span className="h-1.5 w-1.5 rounded-full bg-red-500" aria-hidden />
-                              ) : null}
-                            </PhotoPanel>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
+          <nav
+            className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-contain lg:hidden"
+            aria-label="Sekcje panelu admina"
+          >
+            {navGroups.map((g) => (
+              <div key={g.id} className="flex flex-col gap-1.5">
+                {g.label ? (
+                  <p
+                    className={cn(
+                      "px-1 text-[0.65rem] font-bold uppercase tracking-[0.14em]",
+                      marketplaceEnabled
+                        ? "text-[var(--mp-teal-dark)] dark:text-teal-300"
+                        : "text-white/70"
+                    )}
+                  >
+                    {g.label}
+                  </p>
                 ) : null}
-                <p
-                  className={cn(
-                    "text-xs font-bold uppercase tracking-[0.14em]",
-                    marketplaceEnabled
-                      ? "text-[var(--mp-teal-dark)] dark:text-teal-300"
-                      : "text-white/70"
-                  )}
-                >
-                  Wszystkie sekcje
-                </p>
-                <nav className="flex flex-col gap-2" aria-label="Kategorie panelu admina">
-                  {navGroups.map((g) => {
-                    const groupAlert = g.items.some(tabHasAlert);
-                    const chipLabel = g.label ?? g.items[0]?.label ?? g.id;
-                    const selected = g.id === activeGroupId;
-                    return (
-                      <button key={g.id} type="button" onClick={() => selectMobileGroup(g)} className="w-full text-left">
-                        {marketplaceEnabled ? (
-                          <span
-                            className={cn(
-                              "flex min-h-[4.5rem] items-center gap-3 rounded-2xl border px-4 py-3 shadow-sm transition-colors",
-                              selected
-                                ? "border-transparent bg-[var(--mp-teal)] text-white"
-                                : "border-zinc-200 bg-white text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
-                            )}
-                          >
-                            <span className="min-w-0 flex-1">
-                              <span className="block text-base font-bold">{chipLabel}</span>
-                              <span
-                                className={cn(
-                                  "mt-0.5 block text-xs",
-                                  selected ? "text-white/80" : "text-zinc-500 dark:text-zinc-400"
-                                )}
-                              >
-                                {g.items.length === 1
-                                  ? g.items[0].label
-                                  : `${g.items.length} sekcje — otwórz listę`}
-                              </span>
-                            </span>
-                            {groupAlert ? <span className="h-2 w-2 rounded-full bg-red-500" aria-hidden /> : null}
-                          </span>
-                        ) : (
-                          <PhotoPanel
-                            src={pitchPhotoAt(adminPhotoIndex(`group-${g.id}`))}
-                            className={cn("min-h-[4.5rem] border-2 border-white/30", selected && accentRing)}
-                            contentClassName="flex min-h-[4.5rem] items-center gap-3 px-4 py-3"
-                            sizes="320px"
-                          >
-                            <span className="min-w-0 flex-1">
-                              <span className="block text-base font-bold text-white drop-shadow-sm">{chipLabel}</span>
-                              <span className="mt-0.5 block text-xs text-white/75">
-                                {g.items.length === 1
-                                  ? g.items[0].label
-                                  : `${g.items.length} sekcje — otwórz listę`}
-                              </span>
-                            </span>
-                            {groupAlert ? <span className="h-2 w-2 rounded-full bg-red-500" aria-hidden /> : null}
-                          </PhotoPanel>
-                        )}
-                      </button>
-                    );
-                  })}
-                </nav>
-              </>
-            )}
-          </div>
+                {g.items.map((t) => (
+                  <NavTabButton
+                    key={t.id}
+                    tab={{ ...t, desc: undefined }}
+                    active={activeTab === t.id}
+                    onSelect={() => selectMobileTab(t.id)}
+                  />
+                ))}
+              </div>
+            ))}
+          </nav>
 
           {/* Desktop: collapsible category groups (scroll independently) */}
           <nav
@@ -705,7 +607,7 @@ export function AdminShell({
               )}
             >
               <Menu className="h-4 w-4" aria-hidden />
-              Menu
+              Sekcje
             </button>
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-bold text-zinc-950 dark:text-white">
@@ -761,7 +663,7 @@ export function AdminToolbar({
   void loading;
   const { marketplaceEnabled } = useSiteMode();
   return (
-    <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+    <div className="mb-4 flex flex-col gap-3 lg:mb-6 lg:flex-row lg:items-start lg:justify-between lg:gap-4">
       <SiteSectionHero
         kicker={marketplaceEnabled ? `${kicker} · V2` : kicker}
         title={title}
@@ -769,10 +671,10 @@ export function AdminToolbar({
         showCrest
         size="default"
         align="left"
-        className="min-w-0 flex-1"
+        className="hidden min-w-0 flex-1 lg:block"
       />
       {children ? (
-        <div className="flex shrink-0 flex-wrap items-center gap-2 lg:pt-2">{children}</div>
+        <div className="flex w-full shrink-0 flex-wrap items-center gap-2 lg:w-auto lg:pt-2">{children}</div>
       ) : null}
     </div>
   );
@@ -840,9 +742,9 @@ export function AdminCard({
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           {title ? <h2 className="pitch-heading text-xl font-black tracking-tight sm:text-2xl">{title}</h2> : null}
-          {description ? (
-            <p className="pitch-muted mt-1.5 text-sm leading-relaxed sm:text-base">{description}</p>
-          ) : null}
+            {description ? (
+              <p className="pitch-muted mt-1.5 hidden text-sm leading-relaxed sm:block sm:text-base">{description}</p>
+            ) : null}
         </div>
         {headerExtra}
       </div>
@@ -871,8 +773,43 @@ export function AdminMetricTile({
   onClick: () => void;
   photoKey?: string;
 }) {
+  const { marketplaceEnabled } = useSiteMode();
   return (
     <button type="button" onClick={onClick} className="group awp-focus-ring block h-full w-full text-left">
+      <div
+        className={cn(
+          "flex min-h-[5.5rem] flex-col justify-between rounded-2xl border p-4 shadow-sm lg:hidden",
+          marketplaceEnabled
+            ? "border-zinc-200 bg-white text-zinc-950 dark:border-zinc-800 dark:bg-zinc-950 dark:text-white"
+            : "border-white/25 bg-black/20 text-white"
+        )}
+      >
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <p className="text-sm font-bold">{label}</p>
+            <p className={cn("mt-0.5 text-xs", marketplaceEnabled ? "text-zinc-500" : "text-white/70")}>{hint}</p>
+          </div>
+          <span
+            className={cn(
+              "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl",
+              marketplaceEnabled
+                ? "bg-teal-50 text-[var(--mp-teal-dark)] dark:bg-teal-950/50 dark:text-teal-300"
+                : "bg-white/15 text-white"
+            )}
+          >
+            <Icon className="h-4 w-4" aria-hidden />
+          </span>
+        </div>
+        <p
+          className={cn(
+            "mt-2 text-2xl font-black tabular-nums tracking-tight",
+            marketplaceEnabled ? "text-[var(--mp-teal-dark)] dark:text-teal-300" : "text-[var(--mundial-gold,#f5c518)]"
+          )}
+        >
+          {value ?? "–"}
+        </p>
+      </div>
+      <div className="hidden lg:block">
       <PhotoPanel
         src={pitchPhotoAt(adminPhotoIndex(photoKey ?? label))}
         className="min-h-[8.5rem] border-2 border-white/30 shadow-md shadow-emerald-950/12 ring-1 ring-emerald-950/10 transition-[transform,box-shadow] motion-safe:hover:-translate-y-0.5 hover:shadow-xl"
@@ -893,6 +830,7 @@ export function AdminMetricTile({
           {value ?? "–"}
         </p>
       </PhotoPanel>
+      </div>
     </button>
   );
 }

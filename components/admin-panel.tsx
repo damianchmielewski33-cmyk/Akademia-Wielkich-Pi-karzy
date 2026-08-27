@@ -1337,14 +1337,6 @@ export function AdminPanel() {
         onLogout={() => setLogoutOpen(true)}
         loading={shellLoading}
         searchSlot={<AdminCommandSearch onJump={onSearchJump} />}
-        mobileShortcuts={[
-          ...(canAccessTab(adminSections, "messages")
-            ? [{ id: "messages", label: "Wiadomości", badgeCount: unreadMessages }]
-            : []),
-          ...(canAccessTab(adminSections, "matches") ? [{ id: "matches", label: "Mecze" }] : []),
-          ...(canAccessTab(adminSections, "bookings") ? [{ id: "bookings", label: "Rezerwacje" }] : []),
-          ...(canAccessTab(adminSections, "settings") ? [{ id: "settings", label: "Ustawienia" }] : []),
-        ]}
       >
         {tab === "dashboard" && (
           <DashboardView
@@ -2225,13 +2217,13 @@ function DashboardView({
         ))}
       </div>
 
-      <div className="mt-10 space-y-8">
+      <div className="mt-10 hidden space-y-8 lg:block">
         {shortcuts.map((block) => (
           <section key={block.category}>
             <h2 className={sectionLabel}>
               {block.category}
             </h2>
-            <p className={bodyMuted}>{block.description}</p>
+            <p className={cn(bodyMuted, "hidden sm:block")}>{block.description}</p>
             <div className="grid gap-2 sm:grid-cols-2">
               {block.links.map((link) => (
                 <AdminNavTile

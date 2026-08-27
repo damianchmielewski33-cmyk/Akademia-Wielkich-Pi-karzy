@@ -14,7 +14,6 @@ import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -100,8 +99,9 @@ fun MainScaffold(
         else -> current
     }
     var mobileConfig by remember { mutableStateOf<MobileConfigResponse?>(null) }
-    var configLoaded by remember { mutableStateOf(false) }
-    val useWebView = mobileConfig?.settings?.androidUiMode != "native"
+    val cachedNative = remember { AwpApp.instance.appConfigStore.isNativeUiBlocking() }
+    val useWebView =
+        (mobileConfig?.settings?.androidUiMode ?: if (cachedNative) "native" else "webview") != "native"
 
     LaunchedEffect(Unit) {
         try {
@@ -117,9 +117,10 @@ fun MainScaffold(
                 if ((mobileConfig?.isAdmin ?: 0) == 1) {
                     AwpApp.instance.sessionStore.setIsAdmin(true)
                 }
+                AwpApp.instance.appConfigStore.setNativeUi(
+                    mobileConfig?.settings?.androidUiMode == "native"
+                )
             } catch (_: Exception) {
-            } finally {
-                configLoaded = true
             }
             delay(45_000L)
         }
@@ -131,16 +132,6 @@ fun MainScaffold(
     }
 
     when {
-        !configLoaded -> {
-            MurawaBackground {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator(color = AwpColors.MundialGold)
-                }
-            }
-        }
         useWebView -> {
             WebAppShell(
                 isBlocked = { key -> isBlocked(key) },

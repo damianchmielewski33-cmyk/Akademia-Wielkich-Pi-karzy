@@ -190,6 +190,17 @@ html.site-chrome-academy {
     @apply align-middle text-emerald-50/95;
   }
 
+  @media (max-width: 1023px) {
+    .admin-table-shell :where(th),
+    .admin-data-table-shell :where(th) {
+      @apply whitespace-nowrap px-2 py-2 text-[0.7rem];
+    }
+    .admin-table-shell :where(td),
+    .admin-data-table-shell :where(td) {
+      @apply px-2 py-2 text-sm;
+    }
+  }
+
   .admin-table-shell :where(.admin-table-sort-btn) {
     @apply inline-flex items-center gap-1.5 font-medium text-emerald-50/95 hover:text-white;
   }
@@ -1127,7 +1138,7 @@ html {
 
 .mp-hero {
   position: relative;
-  min-height: clamp(18rem, 72dvh, 26rem);
+  min-height: 0;
   padding-top: max(0.5rem, env(safe-area-inset-top));
   background-color: #0b1c18;
   background-image:
@@ -1150,10 +1161,16 @@ html {
 
 .mp-search-pill {
   display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 0.5rem;
   border-radius: 1.5rem;
   background: #fff;
   box-shadow: 0 18px 50px -24px rgba(15, 23, 42, 0.45);
+}
+
+.mp-search-pill > :first-child,
+.mp-search-pill > :last-child {
+  grid-column: 1 / -1;
 }
 
 .mp-search-pill input,
@@ -1172,6 +1189,11 @@ html {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.4fr) auto;
     align-items: stretch;
     border-radius: 9999px;
+  }
+
+  .mp-search-pill > :first-child,
+  .mp-search-pill > :last-child {
+    grid-column: auto;
   }
 
   .mp-search-pill input,
@@ -1741,6 +1763,12 @@ html {
   width: 50%;
 }
 
+@media (max-width: 1023px) {
+  .home-fall:not(.home-fall--cover) {
+    display: none;
+  }
+}
+
 @media (min-width: 1024px) {
   .home-fall:not(.home-fall--cover) .home-fall__rail {
     width: clamp(4.5rem, calc((100vw - 64rem) / 2), 16rem);
@@ -1804,56 +1832,147 @@ html {
   }
 
   .awp-startup-splash .home-fall {
-    display: block;
+    display: none;
   }
 
   .awp-startup-splash .home-fall__item {
     animation: none;
-    top: 18%;
-    opacity: var(--op, 0.7);
   }
 }
 
-/* Splash startowy aplikacji iOS (PWA) — stadion + fotograficzny piłkarz */
+/* Splash startowy — filmowe wejście marki (stadion, herb, pasek) */
 .awp-startup-splash {
   background: #061410;
   opacity: 1;
-  transition: opacity 0.42s ease;
   overflow: hidden;
+  transition: opacity 0.52s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .awp-startup-splash__stadium {
   position: absolute;
   inset: 0;
   z-index: 0;
+  overflow: hidden;
+}
+
+.awp-startup-splash__stadium-img {
+  animation: awp-splash-kenburns 3.2s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .awp-startup-splash__stadium-scrim {
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(180deg, rgba(4, 12, 10, 0.55) 0%, rgba(6, 20, 16, 0.35) 42%, rgba(4, 10, 18, 0.72) 100%),
-    radial-gradient(ellipse 70% 55% at 50% 72%, rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0.55));
-}
-
-.awp-startup-splash--v2 .awp-startup-splash__stadium-scrim {
-  background:
-    linear-gradient(180deg, rgba(6, 28, 32, 0.5) 0%, rgba(8, 24, 28, 0.32) 40%, rgba(4, 16, 22, 0.78) 100%),
-    radial-gradient(ellipse 70% 55% at 50% 72%, rgba(0, 201, 177, 0.08), rgba(0, 0, 0, 0.5));
-}
-
-.awp-startup-splash .home-fall {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
+    linear-gradient(180deg, rgba(4, 12, 10, 0.62) 0%, rgba(6, 20, 16, 0.38) 45%, rgba(4, 8, 14, 0.88) 100%),
+    radial-gradient(ellipse 80% 50% at 50% 100%, rgba(0, 0, 0, 0.35), transparent 70%);
 }
 
 .awp-startup-splash--v2 {
   background: #0a1c1f;
 }
 
-.awp-startup-splash--v2 .home-fall__item {
-  filter: drop-shadow(0 2px 4px rgba(15, 23, 42, 0.35));
+.awp-startup-splash--v2 .awp-startup-splash__stadium-scrim {
+  background:
+    linear-gradient(180deg, rgba(6, 28, 32, 0.58) 0%, rgba(8, 24, 28, 0.36) 44%, rgba(4, 12, 18, 0.9) 100%),
+    radial-gradient(ellipse 70% 45% at 50% 100%, rgba(0, 201, 177, 0.12), transparent 68%);
+}
+
+.awp-startup-splash__stage {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.awp-startup-splash__kicker {
+  margin: 0;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--mundial-gold, #f5c518);
+  animation: awp-splash-rise 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.06s both;
+}
+
+.awp-startup-splash--v2 .awp-startup-splash__kicker {
+  color: var(--mp-teal, #00c9b1);
+}
+
+.awp-startup-splash__crest-wrap {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 7.5rem;
+  height: 7.5rem;
+  margin-top: 1.15rem;
+  animation: awp-splash-crest 0.95s cubic-bezier(0.16, 1, 0.3, 1) 0.12s both;
+}
+
+.awp-startup-splash__crest-glow {
+  position: absolute;
+  inset: 8%;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(245, 197, 24, 0.38) 0%, rgba(245, 197, 24, 0) 70%);
+  animation: awp-splash-glow 1.7s ease-out 0.18s both;
+}
+
+.awp-startup-splash--v2 .awp-startup-splash__crest-glow {
+  background: radial-gradient(circle, rgba(0, 201, 177, 0.4) 0%, rgba(0, 201, 177, 0) 70%);
+}
+
+.awp-startup-splash__crest {
+  position: relative;
+  z-index: 1;
+  height: 5.5rem;
+  width: 5.5rem;
+  filter: drop-shadow(0 10px 24px rgba(0, 0, 0, 0.45));
+}
+
+.awp-startup-splash__title {
+  margin: 1.1rem 0 0;
+  max-width: 18rem;
+  font-family: var(--font-display);
+  font-size: 1.55rem;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  line-height: 1.2;
+  color: #fff;
+  text-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+  animation: awp-splash-rise 0.75s cubic-bezier(0.16, 1, 0.3, 1) 0.26s both;
+}
+
+.awp-startup-splash__subtitle {
+  margin: 0.55rem 0 0;
+  font-size: 0.9rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: rgba(255, 255, 255, 0.72);
+  animation: awp-splash-rise 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.38s both;
+}
+
+.awp-startup-splash__progress {
+  width: 8.5rem;
+  height: 2px;
+  margin-top: 1.75rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  animation: awp-splash-rise 0.55s cubic-bezier(0.16, 1, 0.3, 1) 0.48s both;
+}
+
+.awp-startup-splash__progress-bar {
+  display: block;
+  height: 100%;
+  width: 40%;
+  border-radius: inherit;
+  background: var(--mundial-gold, #f5c518);
+  animation: awp-splash-indeterminate 1.15s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.awp-startup-splash--v2 .awp-startup-splash__progress-bar {
+  background: var(--mp-teal, #00c9b1);
 }
 
 .awp-startup-splash--leave {
@@ -1861,118 +1980,82 @@ html {
   pointer-events: none;
 }
 
-.awp-juggle-photo {
-  display: block;
-  animation: awp-juggle-photo-float 2.4s ease-in-out infinite;
-  filter: drop-shadow(0 18px 28px rgba(0, 0, 0, 0.45));
+.awp-startup-splash--leave .awp-startup-splash__stage {
+  transform: scale(0.985);
+  transition: transform 0.52s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.awp-juggle-photo__img {
-  /* Ciemne studio w PNG zlewa się ze stadionem */
-  mix-blend-mode: lighten;
-}
-
-@keyframes awp-juggle-photo-float {
-  0%,
-  100% {
-    transform: translateY(0);
+@keyframes awp-splash-kenburns {
+  from {
+    transform: scale(1.1);
   }
-  50% {
-    transform: translateY(-10px);
+  to {
+    transform: scale(1);
+  }
+}
+
+@keyframes awp-splash-rise {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 14px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes awp-splash-crest {
+  from {
+    opacity: 0;
+    transform: scale(0.84);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes awp-splash-glow {
+  0% {
+    opacity: 0;
+    transform: scale(0.55);
+  }
+  45% {
+    opacity: 0.85;
+  }
+  100% {
+    opacity: 0.4;
+    transform: scale(1);
+  }
+}
+
+@keyframes awp-splash-indeterminate {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(350%);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .awp-juggle-photo {
+  .awp-startup-splash__stadium-img,
+  .awp-startup-splash__kicker,
+  .awp-startup-splash__crest-wrap,
+  .awp-startup-splash__crest-glow,
+  .awp-startup-splash__title,
+  .awp-startup-splash__subtitle,
+  .awp-startup-splash__progress,
+  .awp-startup-splash__progress-bar {
     animation: none;
   }
-}
 
-.awp-juggle {
-  display: block;
-}
-
-.awp-juggle__ball,
-.awp-juggle__leg--l,
-.awp-juggle__leg--r,
-.awp-juggle__arms {
-  transform-box: view-box;
-}
-
-.awp-juggle__ball {
-  transform-origin: 100px 108px;
-  animation: awp-juggle-ball 0.9s linear infinite;
-}
-
-.awp-juggle__leg--l {
-  transform-origin: 86px 132px;
-  animation: awp-juggle-leg-l 0.9s ease-in-out infinite;
-}
-
-.awp-juggle__leg--r {
-  transform-origin: 114px 132px;
-  animation: awp-juggle-leg-r 0.9s ease-in-out infinite;
-}
-
-.awp-juggle__arms {
-  transform-origin: 100px 78px;
-  animation: awp-juggle-arms 0.9s ease-in-out infinite;
-}
-
-@keyframes awp-juggle-ball {
-  0%,
-  100% {
-    transform: translate(0, 0) rotate(0deg);
-  }
-  25% {
-    transform: translate(-4px, -72px) rotate(90deg);
-  }
-  50% {
-    transform: translate(0, 0) rotate(180deg);
-  }
-  75% {
-    transform: translate(4px, -72px) rotate(270deg);
-  }
-}
-
-@keyframes awp-juggle-leg-l {
-  0%,
-  45%,
-  100% {
-    transform: rotate(0deg);
-  }
-  20% {
-    transform: rotate(-18deg) translateY(-6px);
-  }
-}
-
-@keyframes awp-juggle-leg-r {
-  0%,
-  50%,
-  100% {
-    transform: rotate(0deg);
-  }
-  70% {
-    transform: rotate(18deg) translateY(-6px);
-  }
-}
-
-@keyframes awp-juggle-arms {
-  0%,
-  100% {
-    transform: rotate(0deg);
-  }
-  50% {
-    transform: rotate(-4deg);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .awp-juggle__ball,
-  .awp-juggle__leg--l,
-  .awp-juggle__leg--r,
-  .awp-juggle__arms {
+  .awp-startup-splash__progress-bar {
     animation: none;
+    width: 45%;
+    transform: none;
   }
 }
+
 

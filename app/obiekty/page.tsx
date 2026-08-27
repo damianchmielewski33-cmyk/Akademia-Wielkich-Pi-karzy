@@ -45,7 +45,7 @@ export default async function VenuesPage({
         <p className="mt-2 max-w-2xl text-sm text-zinc-500 sm:mt-3 sm:text-base">
           Jak na rynku: miasto, dzień, godzina, potem karta obiektu i slot wolny/zajęty.
         </p>
-        <div className="mp-h-scroll -mx-3 mt-4 gap-2 px-3 xs:-mx-4 xs:px-4">
+        <div className="mp-h-scroll -mx-3 mt-4 gap-2 px-3 xs:-mx-4 xs:px-4 md:flex-wrap md:overflow-visible">
           {[
             { href: "/obiekty", label: "Wszystkie", active: !sp.city && sp.indoor !== "1" && sp.indoor !== "0" },
             { href: "/obiekty?city=Warszawa", label: "Warszawa", active: sp.city === "Warszawa" },
@@ -69,7 +69,26 @@ export default async function VenuesPage({
             </Link>
           ))}
         </div>
-        <div className="mt-5 sm:mt-6">
+        <details className="mt-5 rounded-2xl border border-zinc-200 bg-white p-3 shadow-sm md:hidden dark:border-zinc-800 dark:bg-zinc-950">
+          <summary className="cursor-pointer list-none text-sm font-bold text-zinc-950 dark:text-white [&::-webkit-details-marker]:hidden">
+            Szukaj i filtruj
+          </summary>
+          <div className="mt-3">
+            <MarketplaceSearchForm
+              variant="page"
+              defaults={{
+                city: sp.city,
+                q: sp.q,
+                date: sp.date,
+                time: sp.time,
+                surface: sp.surface,
+                indoor: sp.indoor,
+                max_price: sp.max_price,
+              }}
+            />
+          </div>
+        </details>
+        <div className="mt-6 hidden md:block">
           <MarketplaceSearchForm
             variant="page"
             defaults={{

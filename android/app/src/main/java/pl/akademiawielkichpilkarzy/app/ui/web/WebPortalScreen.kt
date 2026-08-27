@@ -373,6 +373,10 @@ fun WebPortalScreen(
                                     progress = 0.05f
                                 }
 
+                                override fun onPageCommitVisible(view: WebView?, url: String?) {
+                                    markInitialReady()
+                                }
+
                                 override fun onPageFinished(view: WebView?, url: String?) {
                                     progress = 1f
                                     CookieManager.getInstance().flush()
@@ -390,6 +394,7 @@ fun WebPortalScreen(
                             webChromeClient = object : WebChromeClient() {
                                 override fun onProgressChanged(view: WebView?, newProgress: Int) {
                                     progress = newProgress / 100f
+                                    if (newProgress >= 35) markInitialReady()
                                 }
 
                                 override fun onShowFileChooser(

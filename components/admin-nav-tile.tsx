@@ -1,11 +1,23 @@
 "use client";
 
-import type { ComponentType, ReactNode } from "react";
+import { useEffect, useState, type ComponentType, type ReactNode } from "react";
 import Link from "next/link";
 import { PhotoPanel } from "@/components/photo-panel";
 import { useSiteMode } from "@/components/site-mode";
 import { pitchPhotoAt } from "@/lib/marketplace-photos";
 import { cn } from "@/lib/utils";
+
+function useDesktopNavChrome() {
+  const [desktop, setDesktop] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 1024px)");
+    const sync = () => setDesktop(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
+  return desktop;
+}
 
 export function adminPhotoIndex(key: string): number {
   let h = 7;
@@ -43,39 +55,48 @@ export function AdminNavTile({
   className,
 }: Props) {
   const { marketplaceEnabled } = useSiteMode();
+  const desktop = useDesktopNavChrome();
+  const photoTile = !marketplaceEnabled && desktop;
 
-  if (marketplaceEnabled) {
+  if (!photoTile) {
     const inner = (
       <span
         className={cn(
           "flex h-full w-full items-center gap-3 rounded-2xl border px-3 shadow-sm transition-colors",
-          compact ? "min-h-[3.75rem] py-2" : "min-h-[5rem] py-3.5",
-          active
-            ? "border-transparent bg-[var(--mp-teal)] text-white shadow-md shadow-teal-950/15"
-            : "border-zinc-200/90 bg-white text-zinc-900 hover:border-teal-200 hover:bg-teal-50/70 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50 dark:hover:border-teal-800",
+          compact ? "min-h-[3.25rem] py-2" : "min-h-[3.25rem] py-2 lg:min-h-[5rem] lg:py-3.5",
+          marketplaceEnabled
+            ? active
+              ? "border-transparent bg-[var(--mp-teal)] text-white shadow-md shadow-teal-950/15"
+              : "border-zinc-200/90 bg-white text-zinc-900 hover:border-teal-200 hover:bg-teal-50/70 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50 dark:hover:border-teal-800"
+            : active
+              ? "border-[var(--mundial-gold,#f5c518)]/80 bg-white/15 text-white"
+              : "border-white/20 bg-white/10 text-white hover:bg-white/15",
           disabled && "opacity-60"
         )}
       >
         <span
           className={cn(
-            "flex shrink-0 items-center justify-center rounded-xl",
-            compact ? "h-9 w-9" : "h-11 w-11",
-            active
-              ? "bg-white/20 text-white"
-              : "bg-teal-50 text-[var(--mp-teal-dark)] dark:bg-teal-950/50 dark:text-teal-300"
+            "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl",
+            marketplaceEnabled
+              ? active
+                ? "bg-white/20 text-white"
+                : "bg-teal-50 text-[var(--mp-teal-dark)] dark:bg-teal-950/50 dark:text-teal-300"
+              : "bg-white/15 text-white"
           )}
         >
-          <Icon className={cn(compact ? "h-4 w-4" : "h-5 w-5")} strokeWidth={2.25} aria-hidden />
+          <Icon className="h-4 w-4" strokeWidth={2.25} aria-hidden />
         </span>
         <span className="min-w-0 flex-1 text-left">
-          <span className={cn("block truncate font-bold leading-tight", compact ? "text-sm" : "text-base")}>
-            {title}
-          </span>
+          <span className="block truncate text-sm font-bold leading-tight">{title}</span>
           {!compact && desc ? (
             <span
               className={cn(
-                "mt-0.5 block truncate text-xs leading-snug",
-                active ? "text-white/85" : "text-zinc-500 dark:text-zinc-400"
+                "mt-0.5 hidden truncate text-xs leading-snug lg:block",
+                marketplaceEnabled
+                  ? active
+                    ? "text-white/85"
+                    : "text-zinc-500 dark:text-zinc-400"
+                  : "text-white/75"
               )}
             >
               {desc}

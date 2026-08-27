@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import { HomeFallingDecor } from "@/components/home-falling-decor";
 import { SiteAssetImage } from "@/components/site-asset-image";
 import { isInstalledAndroidAppClient } from "@/lib/app-webview";
 import { cn } from "@/lib/utils";
@@ -11,11 +10,9 @@ const SESSION_KEY = "awp-startup-splash-shown";
 const ANDROID_COLD_PRELOADER_KEY = "awp-android-route-preloader-ok";
 const BOOT_SPLASH_ID = "awp-boot-splash";
 const ACTIVE_CLASS = "awp-startup-splash-active";
-/** Minimalny czas marki — nie dłuższy niż realne ładowanie + ta wartość. */
-const MIN_VISIBLE_MS = 1400;
-/** Górny limit, gdy treść długo nie jest gotowa. */
-const MAX_VISIBLE_MS = 4500;
-const FADE_MS = 420;
+/** Górny limit, gdy treść długo nie zgłosi gotowości. */
+const MAX_VISIBLE_MS = 3200;
+const FADE_MS = 280;
 
 function isIosDevice(): boolean {
   if (typeof navigator === "undefined") return false;
@@ -84,35 +81,18 @@ function setSplashActiveClass(active: boolean) {
   document.documentElement.classList.toggle(ACTIVE_CLASS, active);
 }
 
-function whenDocumentReady(): Promise<void> {
+function whenFirstScreenReady(): Promise<void> {
   if (typeof document === "undefined") return Promise.resolve();
-  if (document.readyState === "complete") {
-    return new Promise((resolve) => {
-      requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
-    });
-  }
   return new Promise((resolve) => {
-    const done = () => {
+    const paint = () => {
       requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
     };
-    window.addEventListener("load", done, { once: true });
+    if (document.readyState === "interactive" || document.readyState === "complete") {
+      paint();
+      return;
+    }
+    document.addEventListener("DOMContentLoaded", paint, { once: true });
   });
-}
-
-function PhotographicJuggler({ className }: { className?: string }) {
-  return (
-    <div className={cn("awp-juggle-photo", className)} aria-hidden>
-      <Image
-        src="/splash/juggle-player.jpg"
-        alt=""
-        width={480}
-        height={640}
-        className="awp-juggle-photo__img h-full w-full object-contain object-bottom"
-        sizes="(max-width: 480px) 70vw, 220px"
-        priority
-      />
-    </div>
-  );
 }
 
 export function StartupSplash({ marketplaceEnabled = false }: { marketplaceEnabled?: boolean }) {
@@ -134,8 +114,6 @@ export function StartupSplash({ marketplaceEnabled = false }: { marketplaceEnabl
     setSplashActiveClass(true);
     removeBootSplashDom();
 
-    const startedAt = Date.now();
-    let leaveTimer: number | undefined;
     let hideTimer: number | undefined;
     let cancelled = false;
 
@@ -149,15 +127,13 @@ export function StartupSplash({ marketplaceEnabled = false }: { marketplaceEnabl
     };
 
     const run = async () => {
-      const ready = whenDocumentReady();
+      const ready = whenFirstScreenReady();
       const maxWait = new Promise<void>((resolve) => {
         window.setTimeout(resolve, MAX_VISIBLE_MS);
       });
       await Promise.race([ready, maxWait]);
       if (cancelled) return;
-      const elapsed = Date.now() - startedAt;
-      const remainMin = Math.max(0, MIN_VISIBLE_MS - elapsed);
-      leaveTimer = window.setTimeout(beginLeave, remainMin);
+      beginLeave();
     };
 
     void run();
@@ -165,7 +141,6 @@ export function StartupSplash({ marketplaceEnabled = false }: { marketplaceEnabl
     return () => {
       cancelled = true;
       setSplashActiveClass(false);
-      if (leaveTimer) window.clearTimeout(leaveTimer);
       if (hideTimer) window.clearTimeout(hideTimer);
     };
   }, []);
@@ -191,36 +166,33 @@ export function StartupSplash({ marketplaceEnabled = false }: { marketplaceEnabl
           fill
           priority
           sizes="100vw"
-          className="object-cover object-center"
+          className="awp-startup-splash__stadium-img object-cover object-center"
         />
         <div className="awp-startup-splash__stadium-scrim" />
       </div>
-      <HomeFallingDecor cover />
-      <div className="relative z-10 flex flex-col items-center text-center">
-        <p
-          className={cn(
-            "text-[0.65rem] font-bold uppercase tracking-[0.2em] text-white/90 drop-shadow-sm",
-            marketplaceEnabled ? "text-[var(--mp-teal)]" : "text-[var(--mundial-gold,#f5c518)]"
-          )}
-        >
+      <div className="awp-startup-splash__stage">
+        <p className="awp-startup-splash__kicker">
           {marketplaceEnabled ? "Wersja V2" : "Akademia"}
         </p>
-        <SiteAssetImage
-          asset="logo_crest"
-          alt=""
-          width={144}
-          height={144}
-          className="mt-3 h-[4.5rem] w-[4.5rem] drop-shadow-md"
-          sizes="72px"
-          priority
-        />
-        <p className="mt-3 font-[family-name:var(--font-display)] text-2xl font-black tracking-tight text-white drop-shadow-md">
-          Akademia Wielkich Piłkarzy
+        <div className="awp-startup-splash__crest-wrap">
+          <span className="awp-startup-splash__crest-glow" aria-hidden />
+          <SiteAssetImage
+            asset="logo_crest"
+            alt=""
+            width={160}
+            height={160}
+            className="awp-startup-splash__crest"
+            sizes="88px"
+            priority
+          />
+        </div>
+        <p className="awp-startup-splash__title">Akademia Wielkich Piłkarzy</p>
+        <p className="awp-startup-splash__subtitle">
+          {marketplaceEnabled ? "Przygotowujemy boiska" : "Rozgrzewka"}
         </p>
-        <p className="mt-1 text-sm text-white/85 drop-shadow-sm">
-          {marketplaceEnabled ? "Przygotowujemy boiska…" : "Rozgrzewka…"}
-        </p>
-        <PhotographicJuggler className="mt-6 h-[14.5rem] w-[11rem] sm:h-[16rem] sm:w-[12rem]" />
+        <div className="awp-startup-splash__progress" aria-hidden>
+          <span className="awp-startup-splash__progress-bar" />
+        </div>
       </div>
     </div>
   );

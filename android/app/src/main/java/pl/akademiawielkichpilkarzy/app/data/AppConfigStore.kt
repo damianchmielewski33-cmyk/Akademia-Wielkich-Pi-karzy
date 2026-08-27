@@ -18,6 +18,7 @@ private val Context.appConfigDataStore: DataStore<Preferences> by preferencesDat
  */
 class AppConfigStore(private val context: Context) {
     private val marketplaceKey = booleanPreferencesKey("booking_marketplace_enabled")
+    private val nativeUiKey = booleanPreferencesKey("android_ui_native")
 
     val marketplaceEnabledFlow: Flow<Boolean> =
         context.appConfigDataStore.data.map { it[marketplaceKey] == true }
@@ -41,8 +42,20 @@ class AppConfigStore(private val context: Context) {
             .apply()
     }
 
+    fun isNativeUiBlocking(): Boolean =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(PREF_NATIVE_UI, false)
+
+    suspend fun setNativeUi(native: Boolean) {
+        context.appConfigDataStore.edit { it[nativeUiKey] = native }
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit()
+            .putBoolean(PREF_NATIVE_UI, native)
+            .apply()
+    }
+
     companion object {
         private const val PREFS = "awp_app_config_mirror"
         private const val PREF_MARKETPLACE = "booking_marketplace_enabled"
+        private const val PREF_NATIVE_UI = "android_ui_native"
     }
 }

@@ -125,7 +125,7 @@ export function HomeTopRankings({ players, isLoggedIn, photoPool }: Props) {
 
   return (
     <section>
-      <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+      <div className="mb-4 flex items-end justify-between gap-3 md:mb-5">
         <div>
           <p
             className={cn(
@@ -137,31 +137,76 @@ export function HomeTopRankings({ players, isLoggedIn, photoPool }: Props) {
           </p>
           <h2
             className={cn(
-              "mt-1 text-2xl font-black tracking-tight sm:text-3xl",
+              "mt-1 text-xl font-black tracking-tight sm:text-3xl",
               stadium && "text-white drop-shadow-sm"
             )}
           >
-            Top 3 rankingu
+            Top 3
           </h2>
-          <p className={cn("mt-1 text-sm", stadium ? "text-white/80" : "text-zinc-500")}>
+          <p className={cn("mt-1 hidden text-sm sm:block", stadium ? "text-white/80" : "text-zinc-500")}>
             Najlepsi zawodnicy według punktów ze wszystkich meczów.
           </p>
         </div>
-        <Button asChild variant={stadium ? "pitch" : "outline"}>
+        <Button asChild variant={stadium ? "pitch" : "outline"} className="hidden md:inline-flex">
           <Link href={isLoggedIn ? "/rankingi" : "/login?next=/rankingi"}>
             Pełne rankingi
             <ChevronRight className="h-4 w-4" aria-hidden />
           </Link>
         </Button>
       </div>
+      <ul className="divide-y divide-zinc-100 overflow-hidden rounded-2xl border border-zinc-200 bg-white md:hidden dark:divide-zinc-800 dark:border-zinc-800 dark:bg-zinc-950">
+        {[...players]
+          .sort((a, b) => a.rank - b.rank)
+          .map((player) => (
+            <li key={player.userId} className="flex items-center gap-3 px-3 py-3">
+              <span
+                className={cn(
+                  "w-8 shrink-0 text-sm font-black tabular-nums",
+                  stadium ? "text-[var(--mundial-gold)]" : "text-[var(--mp-teal-dark)]"
+                )}
+              >
+                #{player.rank}
+              </span>
+              <PlayerAvatar
+                photoPath={player.profilePhotoPath}
+                firstName={player.firstName}
+                lastName={player.lastName}
+                size="sm"
+                className="shrink-0"
+              />
+              <div className="min-w-0 flex-1">
+                <PlayerNameStack
+                  firstName={player.firstName}
+                  lastName={player.lastName}
+                  nick={player.zawodnik}
+                  primaryClassName="truncate text-sm font-bold text-zinc-950 dark:text-white"
+                  secondaryClassName="truncate text-xs text-zinc-500"
+                />
+              </div>
+              <p className="shrink-0 text-sm font-extrabold tabular-nums text-zinc-950 dark:text-white">
+                {player.punkty.toFixed(2)}
+                <span className="ml-1 text-xs font-semibold text-zinc-400">pkt</span>
+              </p>
+            </li>
+          ))}
+        <li>
+          <Link
+            href={isLoggedIn ? "/rankingi" : "/login?next=/rankingi"}
+            className="flex items-center justify-between px-3 py-3 text-sm font-semibold text-[var(--mp-teal-dark)]"
+          >
+            Pełne rankingi
+            <ChevronRight className="h-4 w-4" aria-hidden />
+          </Link>
+        </li>
+      </ul>
       <div
         className={cn(
-          "grid gap-3",
+          "hidden gap-3 md:grid",
           ordered.length === 1
             ? "grid-cols-1"
             : ordered.length === 2
-              ? "grid-cols-1 sm:grid-cols-2"
-              : "grid-cols-1 sm:grid-cols-3 sm:items-end"
+              ? "grid-cols-2"
+              : "grid-cols-3 items-end"
         )}
       >
         {ordered.map((player, i) => (

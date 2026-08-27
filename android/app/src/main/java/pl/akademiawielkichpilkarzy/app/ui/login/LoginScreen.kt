@@ -97,6 +97,7 @@ fun LoginScreen(
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
+        onInitialContentReady?.invoke()
         biometricsAvailable = BiometricHelper.canUseBiometrics(context)
         biometricEnabled = biometricStore.isEnabled()
         try {
@@ -121,7 +122,6 @@ fun LoginScreen(
             } catch (_: Exception) {
             }
         }
-        onInitialContentReady?.invoke()
         // Auto-prompt biometrii przy starcie, jeśli włączona.
         if (biometricsAvailable && biometricEnabled && activity != null) {
             BiometricHelper.authenticate(

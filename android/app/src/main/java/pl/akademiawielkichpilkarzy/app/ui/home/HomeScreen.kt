@@ -123,12 +123,9 @@ fun HomeScreen(
         }
     }
 
-    LaunchedEffect(Unit) { reload() }
-
-    LaunchedEffect(loading) {
-        if (!loading) {
-            onInitialContentReady?.invoke()
-        }
+    LaunchedEffect(Unit) {
+        onInitialContentReady?.invoke()
+        reload()
     }
 
     MurawaBackground(theme = ScreenPhotoTheme.Home) {

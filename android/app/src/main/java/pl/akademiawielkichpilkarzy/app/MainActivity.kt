@@ -6,6 +6,8 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -69,7 +71,6 @@ class MainActivity : FragmentActivity() {
         setContent {
             AwpTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
-                    var splashMinTimeDone by remember { mutableStateOf(false) }
                     var sessionReady by remember { mutableStateOf(false) }
                     var initialContentReady by remember { mutableStateOf(false) }
                     var token by remember { mutableStateOf<String?>(null) }
@@ -81,48 +82,49 @@ class MainActivity : FragmentActivity() {
                         val store = AwpApp.instance.sessionStore
                         val configStore = AwpApp.instance.appConfigStore
                         var current = store.getToken()
-                        // Wygasły / unieważniony JWT w DataStore → od razu login, bez „zawieszonego” UI.
-                        // Uwaga: /api/auth/me zwraca 200 + user:null (nie 401) przy braku sesji.
+                        token = current
+                        marketplaceEnabled = configStore.isMarketplaceEnabled()
+                        sessionReady = true
+
                         if (!current.isNullOrBlank()) {
                             try {
                                 val me = ApiClient.api.me()
                                 if (me.user == null) {
                                     ApiClient.invalidateLocalSession()
                                     current = null
+                                    token = null
                                 }
                             } catch (e: HttpException) {
                                 if (e.code() == 401) {
                                     ApiClient.invalidateLocalSession()
                                     current = null
+                                    token = null
                                 }
                             } catch (_: Exception) {
                                 /* brak sieci — zostaw lokalną sesję */
                             }
                         }
-                        token = current
-                        marketplaceEnabled = configStore.isMarketplaceEnabled()
-                        sessionReady = true
                         try {
                             val cfg = ApiClient.api.mobileConfig()
                             val mp = cfg.appSettings?.bookingMarketplaceEnabled == true
                             marketplaceEnabled = mp
                             configStore.setMarketplaceEnabled(mp)
+                            configStore.setNativeUi(cfg.settings?.androidUiMode == "native")
                         } catch (_: Exception) {
                             /* zostaw cache */
                         }
                         store.tokenFlow.collect { token = it }
                     }
 
-                    // Nie blokuj startu w nieskończoność, gdy ekran nie zgłosi gotowości.
+                    // Awaryjnie: nie trzymaj splash w nieskończoność, gdy ekran nie zgłosi gotowości.
                     LaunchedEffect(sessionReady) {
                         if (!sessionReady) return@LaunchedEffect
-                        delay(5_000L)
+                        delay(2_400L)
                         initialContentReady = true
                     }
 
-                    // Splash zakrywa ładowanie: znika dopiero po min. czasie animacji
-                    // (od pierwszej widocznej klatki) ORAZ gotowości pierwszego ekranu.
-                    val showSplash = !splashMinTimeDone || !sessionReady || !initialContentReady
+                    // Animacja startowa tylko do pierwszego ekranu — bez dodatkowego „min. czasu marki”.
+                    val showSplash = !sessionReady || !initialContentReady
                     val guestMarketplacePath =
                         deepLinkPath?.takeIf {
                             it.startsWith("/obiekty") ||
@@ -181,12 +183,11 @@ class MainActivity : FragmentActivity() {
 
                         AnimatedVisibility(
                             visible = showSplash,
-                            exit = fadeOut()
+                            exit = fadeOut(animationSpec = tween(durationMillis = 280, easing = FastOutSlowInEasing))
                         ) {
                             StartupSplashScreen(
                                 marketplaceEnabled = marketplaceEnabled,
-                                onFirstFrame = { composeSplashDrawn.value = true },
-                                onFinished = { splashMinTimeDone = true }
+                                onFirstFrame = { composeSplashDrawn.value = true }
                             )
                         }
                     }

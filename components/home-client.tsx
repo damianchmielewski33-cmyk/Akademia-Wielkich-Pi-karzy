@@ -91,6 +91,24 @@ export function HomeClient(props: Props) {
   );
 }
 
+const BOOKING_CATEGORY_LINKS = [
+  { href: "/obiekty?indoor=1", title: "Boiska halowe", desc: "Kryte obiekty na każdą pogodę" },
+  { href: "/obiekty?indoor=0", title: "Boiska otwarte", desc: "Orliki i nawierzchnie zewnętrzne" },
+  { href: "/obiekty?surface=sztuczna", title: "Sztuczna trawa", desc: "Piłka nożna na tartanie i orliku" },
+] as const;
+
+const BOOKING_STEPS = [
+  { n: "1", t: "Znajdź obiekt", d: "Filtruj po mieście, nawierzchni i cenie." },
+  { n: "2", t: "Wybierz godzinę", d: "Zobacz wolne sloty i zablokuj termin." },
+  { n: "3", t: "Opłać online", d: "Potwierdzenie na e-mail — bez PIN-u akademii." },
+] as const;
+
+const ACADEMY_STEPS = [
+  { n: "1", t: "Zobacz terminarz", d: "Najbliższe mecze akademii i wolne miejsca." },
+  { n: "2", t: "Zapisz się", d: "Potwierdź udział albo zaznacz, że jeszcze nie wiesz." },
+  { n: "3", t: "Graj i licz punkty", d: "Statystyki i rankingi po każdym spotkaniu." },
+] as const;
+
 function BookingHomeView({ featuredVenues }: { featuredVenues: VenueCard[] }) {
   const { photos: mpPhotos } = useMarketplacePhotos();
   const photos = pitchPhotosFromVenues(featuredVenues);
@@ -98,38 +116,45 @@ function BookingHomeView({ featuredVenues }: { featuredVenues: VenueCard[] }) {
   const heroPhoto = photos[0] ?? mpPhotos[0];
   return (
     <div className="relative flex flex-1 flex-col text-zinc-900 dark:text-zinc-50">
-      <HomeFallingDecor />
-      <section className="mp-hero mp-hero--photo relative z-10 flex flex-col justify-end overflow-hidden pb-10 pt-12 sm:pb-20 sm:pt-24">
+      <HomeFallingDecor className="hidden lg:block" />
+      <section className="mp-hero mp-hero--photo relative z-10 flex flex-col justify-end overflow-hidden pb-5 pt-6 sm:pb-20 sm:pt-24">
         <MarketplacePitchPhoto src={heroPhoto} priority className="z-0" />
         <div className="absolute inset-0 z-[1] bg-gradient-to-t from-black/75 via-black/40 to-black/20" />
         <div className="relative z-10 mx-auto w-full max-w-6xl px-3 xs:px-4">
           <p className="text-[0.65rem] font-black uppercase tracking-[0.22em] text-white/80 sm:text-xs">
             Rezerwacja boisk
           </p>
-          <h1 className="mt-2 max-w-3xl text-[1.85rem] font-black leading-tight tracking-tight text-white xs:text-4xl sm:mt-3 sm:text-6xl">
+          <h1 className="mt-2 max-w-3xl text-[1.65rem] font-black leading-tight tracking-tight text-white xs:text-4xl sm:mt-3 sm:text-6xl">
             Gdzie chcesz zagrać?
           </h1>
-          <p className="mt-3 max-w-xl text-sm text-white/85 sm:mt-4 sm:text-lg">
+          <p className="mt-2 hidden max-w-xl text-sm text-white/85 sm:mt-4 sm:block sm:text-lg">
             Wybierz miasto, dzień i godzinę. Wolne boiska widać od razu — rezerwacja i płatność online.
           </p>
-          <div className="mt-6 max-w-5xl sm:mt-8">
+          <div className="mt-4 max-w-5xl sm:mt-8">
             <MarketplaceSearchForm />
           </div>
         </div>
       </section>
 
-      <div className="relative z-10 mx-auto w-full min-w-0 max-w-6xl px-3 py-8 xs:px-4 sm:py-12">
-        <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {[
-            { href: "/obiekty?indoor=1", title: "Boiska halowe", desc: "Kryte obiekty na każdą pogodę" },
-            { href: "/obiekty?indoor=0", title: "Boiska otwarte", desc: "Orliki i nawierzchnie zewnętrzne" },
-            { href: "/obiekty?surface=sztuczna", title: "Sztuczna trawa", desc: "Piłka nożna na tartanie i orliku" },
-          ].map((item, i) => (
+      <div className="relative z-10 mx-auto w-full min-w-0 max-w-6xl px-3 py-6 xs:px-4 sm:py-12">
+        <nav className="mp-h-scroll -mx-3 px-3 pb-1 md:hidden" aria-label="Rodzaj boiska">
+          {BOOKING_CATEGORY_LINKS.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="shrink-0 rounded-full border border-zinc-200 bg-white px-4 py-2.5 text-sm font-bold text-zinc-900 shadow-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-white"
+            >
+              {item.title}
+            </Link>
+          ))}
+        </nav>
+        <section className="hidden gap-3 sm:grid-cols-2 md:grid lg:grid-cols-3">
+          {BOOKING_CATEGORY_LINKS.map((item, i) => (
             <Link key={item.href} href={item.href} className="block">
               <PhotoPanel
                 src={homeTilePhoto(photoPool, i)}
-                className="min-h-[10.5rem] transition hover:-translate-y-0.5 hover:shadow-xl sm:min-h-[12rem]"
-                contentClassName="flex min-h-[10.5rem] flex-col justify-end p-4 sm:min-h-[12rem] sm:p-5"
+                className="min-h-[12rem] transition hover:-translate-y-0.5 hover:shadow-xl"
+                contentClassName="flex min-h-[12rem] flex-col justify-end p-5"
                 sizes="(max-width: 768px) 100vw, 400px"
               >
                 <p className="font-black text-white drop-shadow-sm">{item.title}</p>
@@ -139,15 +164,21 @@ function BookingHomeView({ featuredVenues }: { featuredVenues: VenueCard[] }) {
           ))}
         </section>
 
-        <section className="mt-10 sm:mt-12">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
+        <section className="mt-8 sm:mt-12">
+          <div className="flex items-end justify-between gap-3">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--mp-teal-dark)]">Obiekty</p>
-              <h2 className="mt-1 text-xl font-black tracking-tight sm:text-3xl">Wybierz boisko i zarezerwuj</h2>
+              <h2 className="mt-1 text-xl font-black tracking-tight sm:text-3xl">Wybierz boisko</h2>
             </div>
-            <Button asChild variant="outline" className="w-full sm:w-auto">
+            <Button asChild variant="outline" className="hidden sm:inline-flex">
               <Link href="/obiekty">Wszystkie obiekty</Link>
             </Button>
+            <Link
+              href="/obiekty"
+              className="shrink-0 text-sm font-semibold text-[var(--mp-teal-dark)] sm:hidden"
+            >
+              Wszystkie
+            </Link>
           </div>
           {featuredVenues.length === 0 ? (
             <div className="mt-6 rounded-3xl border border-dashed border-zinc-300 bg-white p-6 text-center text-zinc-600 sm:p-8 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-300">
@@ -174,19 +205,40 @@ function BookingHomeView({ featuredVenues }: { featuredVenues: VenueCard[] }) {
           )}
         </section>
 
+        <details className="mt-6 rounded-2xl border border-zinc-200 bg-white p-3 shadow-sm md:hidden dark:border-zinc-800 dark:bg-zinc-950">
+          <summary className="cursor-pointer list-none text-sm font-bold text-zinc-950 dark:text-white [&::-webkit-details-marker]:hidden">
+            Jak to działa i dla obiektów
+          </summary>
+          <ol className="mt-3 space-y-2">
+            {BOOKING_STEPS.map((step) => (
+              <li key={step.n} className="flex gap-3">
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--mp-teal)] text-xs font-black text-white">
+                  {step.n}
+                </span>
+                <div className="min-w-0">
+                  <p className="text-sm font-bold text-zinc-950 dark:text-white">{step.t}</p>
+                  <p className="text-xs text-zinc-500">{step.d}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+          <Button asChild className="mt-3 w-full">
+            <Link href="/dla-obiektow">Dodaj swój obiekt</Link>
+          </Button>
+        </details>
         <PhotoPanel
           src={homeTilePhoto(photoPool, 6)}
-          className="mt-12 min-h-[16rem] rounded-3xl sm:mt-14 sm:min-h-[18rem]"
-          contentClassName="flex min-h-[16rem] flex-col justify-center gap-5 px-4 py-8 xs:px-6 sm:min-h-[18rem] sm:gap-6 sm:px-10 sm:py-10 lg:flex-row lg:items-center lg:justify-between"
+          className="mt-14 hidden min-h-[18rem] rounded-3xl md:block"
+          contentClassName="flex min-h-[18rem] flex-col justify-center gap-6 px-10 py-10 lg:flex-row lg:items-center lg:justify-between"
           overlayClassName="bg-gradient-to-r from-black/55 via-black/30 to-black/15"
           sizes="(max-width: 768px) 100vw, 1152px"
         >
           <div className="max-w-xl">
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/80">Dla obiektów</p>
-            <h2 className="mt-2 text-2xl font-black tracking-tight drop-shadow-sm sm:text-3xl">
+            <h2 className="mt-2 text-3xl font-black tracking-tight drop-shadow-sm">
               Masz halę albo orlik? Wystaw terminy.
             </h2>
-            <p className="mt-3 text-sm text-white/90 sm:text-base">
+            <p className="mt-3 text-base text-white/90">
               Zgłoś halę na stronie — bez tokenu od znajomych. Po weryfikacji publikujemy obiekt. Gracze rezerwują i
               płacą online, Ty widzisz obrót, prowizję i termin przelewu.
             </p>
@@ -194,31 +246,29 @@ function BookingHomeView({ featuredVenues }: { featuredVenues: VenueCard[] }) {
           <Button
             asChild
             variant="secondary"
-            className="h-12 w-full shrink-0 rounded-full bg-white px-8 font-black text-zinc-950 hover:bg-zinc-100 sm:w-auto"
+            className="h-12 w-auto shrink-0 rounded-full bg-white px-8 font-black text-zinc-950 hover:bg-zinc-100"
           >
             <Link href="/dla-obiektow">Dodaj swój obiekt</Link>
           </Button>
         </PhotoPanel>
 
-        <section id="jak-to-dziala" className="mt-12 grid gap-3 sm:mt-14 sm:grid-cols-3 sm:gap-4">
-          {[
-            { n: "1", t: "Znajdź obiekt", d: "Filtruj po mieście, nawierzchni i cenie." },
-            { n: "2", t: "Wybierz godzinę", d: "Zobacz wolne sloty i zablokuj termin." },
-            { n: "3", t: "Opłać online", d: "Potwierdzenie na e-mail — bez PIN-u akademii." },
-          ].map((step, i) => (
-            <PhotoPanel
-              key={step.n}
-              src={homeTilePhoto(photoPool, i + 8)}
-              className="min-h-[13rem] sm:min-h-[15rem]"
-              contentClassName="flex min-h-[13rem] flex-col justify-end p-4 sm:min-h-[15rem] sm:p-5"
-              overlayClassName="bg-gradient-to-t from-black/75 via-black/30 to-black/10"
-              sizes="(max-width: 768px) 100vw, 400px"
-            >
-              <p className="text-3xl font-black text-white drop-shadow-sm">{step.n}</p>
-              <p className="mt-2 font-black text-white drop-shadow-sm">{step.t}</p>
-              <p className="mt-1 text-sm text-white/85">{step.d}</p>
-            </PhotoPanel>
-          ))}
+        <section id="jak-to-dziala" className="mt-8 hidden sm:mt-14 md:block">
+          <div className="hidden gap-4 md:grid md:grid-cols-3">
+            {BOOKING_STEPS.map((step, i) => (
+              <PhotoPanel
+                key={step.n}
+                src={homeTilePhoto(photoPool, i + 8)}
+                className="min-h-[15rem]"
+                contentClassName="flex min-h-[15rem] flex-col justify-end p-5"
+                overlayClassName="bg-gradient-to-t from-black/75 via-black/30 to-black/10"
+                sizes="(max-width: 768px) 100vw, 400px"
+              >
+                <p className="text-3xl font-black text-white drop-shadow-sm">{step.n}</p>
+                <p className="mt-2 font-black text-white drop-shadow-sm">{step.t}</p>
+                <p className="mt-1 text-sm text-white/85">{step.d}</p>
+              </PhotoPanel>
+            ))}
+          </div>
         </section>
       </div>
     </div>
@@ -671,44 +721,64 @@ function AcademyHomeView({
 
   return (
     <div className="relative flex flex-1 flex-col text-zinc-900 dark:text-zinc-50">
-      {isAcademyHome ? <HomeFallingDecor /> : null}
+      {isAcademyHome ? <HomeFallingDecor className="hidden lg:block" /> : null}
 
       {isLoggedIn ? (
         <section className="relative z-10 mx-auto w-full min-w-0 max-w-6xl px-3 pt-4 xs:px-4 sm:pt-6">
-          <HomePhotoTile
-            contentClassName="flex flex-wrap items-center gap-4"
-            src={homeTilePhoto(photoPool, 5)}
-          >
+          <div className="flex items-center gap-3 rounded-2xl border border-zinc-200 bg-white p-3 shadow-sm md:hidden dark:border-zinc-800 dark:bg-zinc-950">
             <PlayerAvatar
               photoPath={profilePhotoPath}
               firstName={firstName}
               lastName={lastName}
-              size="lg"
-              className="shadow-md ring-2 ring-white/50"
+              size="md"
+              className="shadow-sm"
             />
             <div className="min-w-0 text-left">
-              <p className="text-xs font-semibold uppercase tracking-wide text-white/80">Witaj</p>
-              <p className="text-lg font-black text-white drop-shadow-sm">
+              <p className="text-[0.65rem] font-bold uppercase tracking-[0.14em] text-[var(--mp-teal-dark)]">Witaj</p>
+              <p className="truncate text-base font-black text-zinc-950 dark:text-white">
                 {`${firstName} ${lastName}`.trim() || zawodnik}
               </p>
               {zawodnik && `${firstName} ${lastName}`.trim() ? (
-                <p className="text-sm text-white/80">{zawodnik}</p>
+                <p className="truncate text-sm text-zinc-500">{zawodnik}</p>
               ) : null}
             </div>
-          </HomePhotoTile>
+          </div>
+          <div className="hidden md:block">
+            <HomePhotoTile
+              contentClassName="flex flex-wrap items-center gap-4"
+              src={homeTilePhoto(photoPool, 5)}
+            >
+              <PlayerAvatar
+                photoPath={profilePhotoPath}
+                firstName={firstName}
+                lastName={lastName}
+                size="lg"
+                className="shadow-md ring-2 ring-white/50"
+              />
+              <div className="min-w-0 text-left">
+                <p className="text-xs font-semibold uppercase tracking-wide text-white/80">Witaj</p>
+                <p className="text-lg font-black text-white drop-shadow-sm">
+                  {`${firstName} ${lastName}`.trim() || zawodnik}
+                </p>
+                {zawodnik && `${firstName} ${lastName}`.trim() ? (
+                  <p className="text-sm text-white/80">{zawodnik}</p>
+                ) : null}
+              </div>
+            </HomePhotoTile>
+          </div>
         </section>
       ) : null}
 
       {nextMatch ? (
         <section className="relative z-10 mx-auto w-full min-w-0 max-w-6xl px-3 pb-2 pt-4 xs:px-4 sm:pt-6">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
+          <div className="hidden flex-col gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-4 md:flex">
             <div>
-              <p className="text-[0.65rem] font-bold uppercase tracking-[0.16em] text-[var(--mp-teal-dark)] sm:text-xs">
+              <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--mp-teal-dark)]">
                 Terminarz
               </p>
-              <h2 className="mt-1 text-xl font-black tracking-tight sm:text-3xl">Najbliższy mecz</h2>
+              <h2 className="mt-1 text-3xl font-black tracking-tight">Najbliższy mecz</h2>
             </div>
-            <Button asChild variant="outline" className="w-full sm:w-auto">
+            <Button asChild variant="outline" className="w-auto">
               <Link href="/terminarz">Pełny terminarz</Link>
             </Button>
           </div>
@@ -738,36 +808,53 @@ function AcademyHomeView({
       ) : null}
 
       {pageVariant === "pzu-cup" ? (
-        <section className="mp-hero mp-hero--photo relative z-0 flex flex-col justify-end overflow-hidden pb-16 pt-16 sm:pb-20 sm:pt-24">
+        <section className="mp-hero mp-hero--photo relative z-0 flex flex-col justify-end overflow-hidden pb-8 pt-8 sm:pb-20 sm:pt-24">
           <MarketplacePitchPhoto src={heroPhoto} priority className="z-0" />
           <div className="absolute inset-0 z-[1] bg-gradient-to-t from-black/75 via-black/40 to-black/20" />
           <div className="relative z-10 mx-auto w-full max-w-6xl px-4">
             <p className="text-xs font-black uppercase tracking-[0.22em] text-white/80">PZU Cup 2026</p>
-            <h1 className="mt-3 max-w-3xl text-4xl font-black tracking-tight text-white sm:text-6xl">
+            <h1 className="mt-3 max-w-3xl text-3xl font-black tracking-tight text-white sm:text-6xl">
               Organizacja turnieju
             </h1>
           </div>
         </section>
       ) : (
-        <section className="mp-hero mp-hero--photo relative z-0 flex flex-col justify-end overflow-hidden pb-12 pt-10 sm:pb-20 sm:pt-24">
+        <section
+          className={cn(
+            "mp-hero mp-hero--photo relative z-0 flex-col justify-end overflow-hidden pb-8 pt-8 sm:pb-20 sm:pt-24",
+            isLoggedIn || nextMatch ? "hidden md:flex" : "flex"
+          )}
+        >
           <MarketplacePitchPhoto src={heroPhoto} priority={!nextMatch} className="z-0" />
           <div className="absolute inset-0 z-[1] bg-gradient-to-t from-black/75 via-black/40 to-black/20" />
           <div className="relative z-10 mx-auto w-full max-w-6xl px-4">
             <p className="text-xs font-black uppercase tracking-[0.22em] text-white/80">Akademia</p>
-            <h1 className="mt-3 max-w-3xl text-4xl font-black tracking-tight text-white sm:text-6xl">
+            <h1 className="mt-3 max-w-3xl text-3xl font-black tracking-tight text-white sm:text-6xl">
               Gramy razem.
             </h1>
-            <p className="mt-4 max-w-xl text-base text-white/85 sm:text-lg">
+            <p className="mt-3 hidden max-w-xl text-base text-white/85 sm:block sm:text-lg">
               Terminarz meczów, składy i rankingi akademii.
             </p>
           </div>
         </section>
       )}
 
-      {isAcademyHome ? <MarketplacePhotoStrip isAdmin={isAdmin} /> : null}
+      {isAcademyHome ? <MarketplacePhotoStrip isAdmin={isAdmin} className="hidden md:flex" /> : null}
 
-      <div className="relative z-10 mx-auto w-full min-w-0 max-w-6xl px-4 py-10 sm:py-12">
-        <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="relative z-10 mx-auto w-full min-w-0 max-w-6xl px-3 py-6 xs:px-4 sm:px-4 sm:py-12">
+        <nav className="grid grid-cols-2 gap-2 md:hidden" aria-label="Sekcje akademii">
+          {academyLinks.map((item) => (
+            <HomeShortcutTile
+              key={item.href}
+              href={item.href}
+              icon={item.icon}
+              title={item.title.replace(" akademii", "")}
+            />
+          ))}
+          <GymBratCrossLink variant="row" className="col-span-2" />
+        </nav>
+
+        <section className="hidden gap-3 md:grid md:grid-cols-2 lg:grid-cols-3">
           {quickLinks.map((item, i) => (
             <HomePhotoTile
               key={item.href}
@@ -783,7 +870,7 @@ function AcademyHomeView({
         </section>
 
         {isAcademyHome ? (
-          <div className="mt-12">
+          <div className="mt-8 sm:mt-12">
             <HomeTopRankings
               players={topRankedPlayers}
               isLoggedIn={isLoggedIn}
@@ -793,7 +880,7 @@ function AcademyHomeView({
         ) : null}
 
         {moreLinks.length > 0 ? (
-          <section className="mt-12">
+          <section className="mt-12 hidden md:block">
             <div className="flex items-end justify-between gap-4">
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--mp-teal-dark)]">Akademia</p>
@@ -826,7 +913,25 @@ function AcademyHomeView({
           </section>
         ) : null}
 
-        <section className="relative mt-14 overflow-hidden rounded-3xl px-6 py-10 text-white shadow-lg sm:px-10">
+        {!nextMatch ? (
+        <div className="mt-8 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm md:hidden dark:border-zinc-800 dark:bg-zinc-950">
+          <p className="text-[0.65rem] font-bold uppercase tracking-[0.16em] text-[var(--mp-teal-dark)]">Akademia</p>
+          <h2 className="mt-1 text-lg font-black tracking-tight text-zinc-950 dark:text-white">
+            {isLoggedIn ? "Kolejny mecz w terminarzu" : "Chcesz grać z nami?"}
+          </h2>
+          <p className="mt-1 text-sm text-zinc-500">
+            {isLoggedIn
+              ? "Zapisy, składy i statystyki są w jednym miejscu."
+              : "Dołącz: terminarz, składy, portfel i rankingi po zalogowaniu."}
+          </p>
+          <Button asChild className="mt-3 w-full">
+            <Link href={isLoggedIn ? "/terminarz" : "/register"}>
+              {isLoggedIn ? "Otwórz terminarz" : "Dołącz do akademii"}
+            </Link>
+          </Button>
+        </div>
+        ) : null}
+        <section className="relative mt-14 hidden overflow-hidden rounded-3xl px-10 py-10 text-white shadow-lg md:block">
           <MarketplacePitchPhoto
             src={homeTilePhoto(photoPool, 9)}
             className="absolute inset-0 z-0 h-full w-full"
@@ -853,23 +958,21 @@ function AcademyHomeView({
           </div>
         </section>
 
-        <section className="mt-14 grid gap-4 sm:grid-cols-3">
-          {[
-            { n: "1", t: "Zobacz terminarz", d: "Najbliższe mecze akademii i wolne miejsca." },
-            { n: "2", t: "Zapisz się", d: "Potwierdź udział albo zaznacz, że jeszcze nie wiesz." },
-            { n: "3", t: "Graj i licz punkty", d: "Statystyki i rankingi po każdym spotkaniu." },
-          ].map((step, i) => (
-            <HomePhotoTile
-              key={step.n}
-              src={homeTilePhoto(photoPool, i + 10)}
-              className="min-h-[15rem]"
-              contentClassName="flex min-h-[15rem] flex-col justify-end"
-            >
-              <p className="text-3xl font-black text-white drop-shadow-sm">{step.n}</p>
-              <p className="mt-2 font-black text-white drop-shadow-sm">{step.t}</p>
-              <p className="mt-1 text-sm text-white/85">{step.d}</p>
-            </HomePhotoTile>
-          ))}
+        <section className="mt-8 hidden sm:mt-14 md:block">
+          <div className="hidden gap-4 md:grid md:grid-cols-3">
+            {ACADEMY_STEPS.map((step, i) => (
+              <HomePhotoTile
+                key={step.n}
+                src={homeTilePhoto(photoPool, i + 10)}
+                className="min-h-[15rem]"
+                contentClassName="flex min-h-[15rem] flex-col justify-end"
+              >
+                <p className="text-3xl font-black text-white drop-shadow-sm">{step.n}</p>
+                <p className="mt-2 font-black text-white drop-shadow-sm">{step.t}</p>
+                <p className="mt-1 text-sm text-white/85">{step.d}</p>
+              </HomePhotoTile>
+            ))}
+          </div>
         </section>
 
         {youtubeLiveVideoId ? (
@@ -912,6 +1015,28 @@ function AcademyHomeView({
 function homeTilePhoto(photos: string[], index: number): string {
   const pool = photos.length > 0 ? photos : [...MARKETPLACE_PITCH_PHOTOS];
   return pool[index % pool.length] ?? MARKETPLACE_PITCH_PHOTOS[0];
+}
+
+function HomeShortcutTile({
+  href,
+  icon: Icon,
+  title,
+}: {
+  href: string;
+  icon: ComponentType<{ className?: string }>;
+  title: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="flex min-h-[4.75rem] flex-col justify-between rounded-2xl border border-zinc-200 bg-white p-3 shadow-sm dark:border-zinc-800 dark:bg-zinc-950"
+    >
+      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-teal-50 text-[var(--mp-teal-dark)] dark:bg-teal-950/50 dark:text-teal-300">
+        <Icon className="h-4 w-4" aria-hidden />
+      </span>
+      <span className="mt-2 text-sm font-bold leading-tight text-zinc-950 dark:text-white">{title}</span>
+    </Link>
+  );
 }
 
 function HomePhotoTile({
