@@ -135,16 +135,21 @@ function BookingHomeView({ featuredVenues }: { featuredVenues: VenueCard[] }) {
           </div>
         </div>
       </section>
+      <MarketplacePhotoStrip />
 
       <div className="relative z-10 mx-auto w-full min-w-0 max-w-6xl px-3 py-6 xs:px-4 sm:py-12">
         <nav className="mp-h-scroll -mx-3 px-3 pb-1 md:hidden" aria-label="Rodzaj boiska">
-          {BOOKING_CATEGORY_LINKS.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="shrink-0 rounded-full border border-zinc-200 bg-white px-4 py-2.5 text-sm font-bold text-zinc-900 shadow-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-white"
-            >
-              {item.title}
+          {BOOKING_CATEGORY_LINKS.map((item, i) => (
+            <Link key={item.href} href={item.href} className="block w-[min(72vw,16.5rem)] shrink-0">
+              <PhotoPanel
+                src={homeTilePhoto(photoPool, i)}
+                className="min-h-[8.5rem]"
+                contentClassName="flex min-h-[8.5rem] flex-col justify-end p-3.5"
+                sizes="70vw"
+              >
+                <p className="font-black text-white drop-shadow-sm">{item.title}</p>
+                <p className="mt-0.5 text-xs text-white/85">{item.desc}</p>
+              </PhotoPanel>
             </Link>
           ))}
         </nav>
@@ -205,37 +210,16 @@ function BookingHomeView({ featuredVenues }: { featuredVenues: VenueCard[] }) {
           )}
         </section>
 
-        <details className="mt-6 rounded-2xl border border-zinc-200 bg-white p-3 shadow-sm md:hidden dark:border-zinc-800 dark:bg-zinc-950">
-          <summary className="cursor-pointer list-none text-sm font-bold text-zinc-950 dark:text-white [&::-webkit-details-marker]:hidden">
-            Jak to działa i dla obiektów
-          </summary>
-          <ol className="mt-3 space-y-2">
-            {BOOKING_STEPS.map((step) => (
-              <li key={step.n} className="flex gap-3">
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--mp-teal)] text-xs font-black text-white">
-                  {step.n}
-                </span>
-                <div className="min-w-0">
-                  <p className="text-sm font-bold text-zinc-950 dark:text-white">{step.t}</p>
-                  <p className="text-xs text-zinc-500">{step.d}</p>
-                </div>
-              </li>
-            ))}
-          </ol>
-          <Button asChild className="mt-3 w-full">
-            <Link href="/dla-obiektow">Dodaj swój obiekt</Link>
-          </Button>
-        </details>
         <PhotoPanel
           src={homeTilePhoto(photoPool, 6)}
-          className="mt-14 hidden min-h-[18rem] rounded-3xl md:block"
-          contentClassName="flex min-h-[18rem] flex-col justify-center gap-6 px-10 py-10 lg:flex-row lg:items-center lg:justify-between"
+          className="mt-8 min-h-[12rem] rounded-3xl md:mt-14 md:min-h-[18rem]"
+          contentClassName="flex min-h-[12rem] flex-col justify-end gap-4 p-5 md:min-h-[18rem] md:flex-row md:items-center md:justify-between md:px-10 md:py-10"
           overlayClassName="bg-gradient-to-r from-black/55 via-black/30 to-black/15"
           sizes="(max-width: 768px) 100vw, 1152px"
         >
           <div className="max-w-xl">
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/80">Dla obiektów</p>
-            <h2 className="mt-2 text-3xl font-black tracking-tight drop-shadow-sm">
+            <h2 className="mt-2 text-xl font-black tracking-tight drop-shadow-sm md:text-3xl">
               Masz halę albo orlik? Wystaw terminy.
             </h2>
             <p className="mt-3 text-base text-white/90">
@@ -246,13 +230,29 @@ function BookingHomeView({ featuredVenues }: { featuredVenues: VenueCard[] }) {
           <Button
             asChild
             variant="secondary"
-            className="h-12 w-auto shrink-0 rounded-full bg-white px-8 font-black text-zinc-950 hover:bg-zinc-100"
+            className="h-11 w-full shrink-0 rounded-full bg-white px-6 font-black text-zinc-950 hover:bg-zinc-100 md:h-12 md:w-auto md:px-8"
           >
             <Link href="/dla-obiektow">Dodaj swój obiekt</Link>
           </Button>
         </PhotoPanel>
 
-        <section id="jak-to-dziala" className="mt-8 hidden sm:mt-14 md:block">
+        <section id="jak-to-dziala" className="mt-8 sm:mt-14">
+          <div className="mp-h-scroll -mx-3 px-3 pb-1 md:hidden">
+            {BOOKING_STEPS.map((step, i) => (
+              <PhotoPanel
+                key={step.n}
+                src={homeTilePhoto(photoPool, i + 8)}
+                className="min-h-[11rem] w-[min(78vw,17rem)]"
+                contentClassName="flex min-h-[11rem] flex-col justify-end p-4"
+                overlayClassName="bg-gradient-to-t from-black/75 via-black/30 to-black/10"
+                sizes="78vw"
+              >
+                <p className="text-2xl font-black text-white drop-shadow-sm">{step.n}</p>
+                <p className="mt-2 font-black text-white drop-shadow-sm">{step.t}</p>
+                <p className="mt-1 text-sm text-white/85">{step.d}</p>
+              </PhotoPanel>
+            ))}
+          </div>
           <div className="hidden gap-4 md:grid md:grid-cols-3">
             {BOOKING_STEPS.map((step, i) => (
               <PhotoPanel
@@ -261,7 +261,7 @@ function BookingHomeView({ featuredVenues }: { featuredVenues: VenueCard[] }) {
                 className="min-h-[15rem]"
                 contentClassName="flex min-h-[15rem] flex-col justify-end p-5"
                 overlayClassName="bg-gradient-to-t from-black/75 via-black/30 to-black/10"
-                sizes="(max-width: 768px) 100vw, 400px"
+                sizes="400px"
               >
                 <p className="text-3xl font-black text-white drop-shadow-sm">{step.n}</p>
                 <p className="mt-2 font-black text-white drop-shadow-sm">{step.t}</p>
@@ -725,47 +725,35 @@ function AcademyHomeView({
 
       {isLoggedIn ? (
         <section className="relative z-10 mx-auto w-full min-w-0 max-w-6xl px-3 pt-4 xs:px-4 sm:pt-6">
-          <div className="flex items-center gap-3 rounded-2xl border border-zinc-200 bg-white p-3 shadow-sm md:hidden dark:border-zinc-800 dark:bg-zinc-950">
+          <HomePhotoTile
+            contentClassName="flex flex-wrap items-center gap-3 sm:gap-4"
+            src={homeTilePhoto(photoPool, 5)}
+            className="min-h-0"
+          >
             <PlayerAvatar
               photoPath={profilePhotoPath}
               firstName={firstName}
               lastName={lastName}
               size="md"
-              className="shadow-sm"
+              className="shadow-md ring-2 ring-white/50 md:hidden"
+            />
+            <PlayerAvatar
+              photoPath={profilePhotoPath}
+              firstName={firstName}
+              lastName={lastName}
+              size="lg"
+              className="hidden shadow-md ring-2 ring-white/50 md:inline-flex"
             />
             <div className="min-w-0 text-left">
-              <p className="text-[0.65rem] font-bold uppercase tracking-[0.14em] text-[var(--mp-teal-dark)]">Witaj</p>
-              <p className="truncate text-base font-black text-zinc-950 dark:text-white">
+              <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-white/80 sm:text-xs">Witaj</p>
+              <p className="truncate text-base font-black text-white drop-shadow-sm sm:text-lg">
                 {`${firstName} ${lastName}`.trim() || zawodnik}
               </p>
               {zawodnik && `${firstName} ${lastName}`.trim() ? (
-                <p className="truncate text-sm text-zinc-500">{zawodnik}</p>
+                <p className="truncate text-sm text-white/80">{zawodnik}</p>
               ) : null}
             </div>
-          </div>
-          <div className="hidden md:block">
-            <HomePhotoTile
-              contentClassName="flex flex-wrap items-center gap-4"
-              src={homeTilePhoto(photoPool, 5)}
-            >
-              <PlayerAvatar
-                photoPath={profilePhotoPath}
-                firstName={firstName}
-                lastName={lastName}
-                size="lg"
-                className="shadow-md ring-2 ring-white/50"
-              />
-              <div className="min-w-0 text-left">
-                <p className="text-xs font-semibold uppercase tracking-wide text-white/80">Witaj</p>
-                <p className="text-lg font-black text-white drop-shadow-sm">
-                  {`${firstName} ${lastName}`.trim() || zawodnik}
-                </p>
-                {zawodnik && `${firstName} ${lastName}`.trim() ? (
-                  <p className="text-sm text-white/80">{zawodnik}</p>
-                ) : null}
-              </div>
-            </HomePhotoTile>
-          </div>
+          </HomePhotoTile>
         </section>
       ) : null}
 
@@ -821,8 +809,7 @@ function AcademyHomeView({
       ) : (
         <section
           className={cn(
-            "mp-hero mp-hero--photo relative z-0 flex-col justify-end overflow-hidden pb-8 pt-8 sm:pb-20 sm:pt-24",
-            isLoggedIn || nextMatch ? "hidden md:flex" : "flex"
+            "mp-hero mp-hero--photo relative z-0 flex flex-col justify-end overflow-hidden pb-8 pt-10 sm:pb-20 sm:pt-24"
           )}
         >
           <MarketplacePitchPhoto src={heroPhoto} priority={!nextMatch} className="z-0" />
@@ -839,16 +826,17 @@ function AcademyHomeView({
         </section>
       )}
 
-      {isAcademyHome ? <MarketplacePhotoStrip isAdmin={isAdmin} className="hidden md:flex" /> : null}
+      {isAcademyHome ? <MarketplacePhotoStrip isAdmin={isAdmin} /> : null}
 
       <div className="relative z-10 mx-auto w-full min-w-0 max-w-6xl px-3 py-6 xs:px-4 sm:px-4 sm:py-12">
         <nav className="grid grid-cols-2 gap-2 md:hidden" aria-label="Sekcje akademii">
-          {academyLinks.map((item) => (
+          {academyLinks.map((item, i) => (
             <HomeShortcutTile
               key={item.href}
               href={item.href}
               icon={item.icon}
               title={item.title.replace(" akademii", "")}
+              src={homeTilePhoto(photoPool, i + 2)}
             />
           ))}
           <GymBratCrossLink variant="row" className="col-span-2" />
@@ -914,22 +902,26 @@ function AcademyHomeView({
         ) : null}
 
         {!nextMatch ? (
-        <div className="mt-8 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm md:hidden dark:border-zinc-800 dark:bg-zinc-950">
-          <p className="text-[0.65rem] font-bold uppercase tracking-[0.16em] text-[var(--mp-teal-dark)]">Akademia</p>
-          <h2 className="mt-1 text-lg font-black tracking-tight text-zinc-950 dark:text-white">
+        <HomePhotoTile
+          src={homeTilePhoto(photoPool, 9)}
+          className="mt-8 min-h-0 md:hidden"
+          contentClassName="flex min-h-0 flex-col gap-3 p-0"
+        >
+          <p className="text-[0.65rem] font-bold uppercase tracking-[0.16em] text-white/80">Akademia</p>
+          <h2 className="text-lg font-black tracking-tight text-white drop-shadow-sm">
             {isLoggedIn ? "Kolejny mecz w terminarzu" : "Chcesz grać z nami?"}
           </h2>
-          <p className="mt-1 text-sm text-zinc-500">
+          <p className="text-sm text-white/85">
             {isLoggedIn
               ? "Zapisy, składy i statystyki są w jednym miejscu."
               : "Dołącz: terminarz, składy, portfel i rankingi po zalogowaniu."}
           </p>
-          <Button asChild className="mt-3 w-full">
+          <Button asChild variant="secondary" className="mt-1 h-11 w-full rounded-full bg-white font-black text-zinc-950 hover:bg-zinc-100">
             <Link href={isLoggedIn ? "/terminarz" : "/register"}>
               {isLoggedIn ? "Otwórz terminarz" : "Dołącz do akademii"}
             </Link>
           </Button>
-        </div>
+        </HomePhotoTile>
         ) : null}
         <section className="relative mt-14 hidden overflow-hidden rounded-3xl px-10 py-10 text-white shadow-lg md:block">
           <MarketplacePitchPhoto
@@ -958,7 +950,21 @@ function AcademyHomeView({
           </div>
         </section>
 
-        <section className="mt-8 hidden sm:mt-14 md:block">
+        <section className="mt-8 sm:mt-14">
+          <div className="mp-h-scroll -mx-3 px-3 pb-1 md:hidden">
+            {ACADEMY_STEPS.map((step, i) => (
+              <HomePhotoTile
+                key={step.n}
+                src={homeTilePhoto(photoPool, i + 10)}
+                className="min-h-[11rem] w-[min(78vw,17rem)]"
+                contentClassName="flex min-h-[11rem] flex-col justify-end p-0"
+              >
+                <p className="text-2xl font-black text-white drop-shadow-sm">{step.n}</p>
+                <p className="mt-2 font-black text-white drop-shadow-sm">{step.t}</p>
+                <p className="mt-1 text-sm text-white/85">{step.d}</p>
+              </HomePhotoTile>
+            ))}
+          </div>
           <div className="hidden gap-4 md:grid md:grid-cols-3">
             {ACADEMY_STEPS.map((step, i) => (
               <HomePhotoTile
@@ -1021,11 +1027,28 @@ function HomeShortcutTile({
   href,
   icon: Icon,
   title,
+  src,
 }: {
   href: string;
   icon: ComponentType<{ className?: string }>;
   title: string;
+  src?: string;
 }) {
+  if (src) {
+    return (
+      <HomePhotoTile
+        href={href}
+        src={src}
+        className="min-h-[6.5rem] p-3"
+        contentClassName="flex min-h-[6.5rem] flex-col justify-between p-0"
+      >
+        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/20 text-white ring-1 ring-white/30">
+          <Icon className="h-4 w-4" aria-hidden />
+        </span>
+        <span className="mt-2 text-sm font-bold leading-tight text-white drop-shadow-sm">{title}</span>
+      </HomePhotoTile>
+    );
+  }
   return (
     <Link
       href={href}
@@ -1064,7 +1087,7 @@ function HomePhotoTile({
       <div className={cn("relative z-10", contentClassName)}>{children}</div>
     </>
   );
-  const cls = cn("relative isolate overflow-hidden rounded-2xl p-5 text-white shadow-lg", className);
+  const cls = cn("relative isolate overflow-hidden rounded-2xl p-3 text-white shadow-lg sm:p-5", className);
   if (href) {
     return (
       <Link href={href} className={cn(cls, "block transition hover:-translate-y-0.5 hover:shadow-xl")}>

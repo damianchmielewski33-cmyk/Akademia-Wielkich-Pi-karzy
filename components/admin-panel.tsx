@@ -319,7 +319,10 @@ const navGroupDefs = [
   {
     id: "finance",
     label: "Finanse",
-    items: [{ id: "wallets", label: "Portfele", desc: "Salda, doładowania i korekty", icon: Wallet }],
+    items: [
+      { id: "wallets", label: "Portfele", desc: "Salda, doładowania i korekty", icon: Wallet },
+      { id: "operator-payments", label: "Płatności operatora", desc: "Bramka HotPay i prowizje", icon: CreditCard },
+    ],
   },
   {
     id: "site",
@@ -333,13 +336,7 @@ const navGroupDefs = [
   },
 ] as const;
 
-/** Zakładki dostępne ze stałego skrótu w stopce sidebara (obok trybu testowego). */
-const sidebarPinnedTabs = [{ id: "operator-payments", label: "Płatności operatora", icon: CreditCard }] as const;
-
-const allTabIds = [
-  ...navGroupDefs.flatMap((g) => g.items.map((t) => t.id)),
-  ...sidebarPinnedTabs.map((t) => t.id),
-] as const;
+const allTabIds = navGroupDefs.flatMap((g) => g.items.map((t) => t.id));
 
 type TabId = (typeof allTabIds)[number];
 
@@ -1942,7 +1939,7 @@ function AnalyticsView({
               aria-label="Filtruj dziennik akcji"
             />
           </div>
-          <div className="max-h-[min(28rem,70vh)] overflow-y-auto overflow-x-auto">
+          <div className="max-h-[min(28rem,70vh)] overflow-y-auto [touch-action:pan-y] [-webkit-overflow-scrolling:touch]">
             <AdminTableShell tone="data">
               <Table>
                 <TableHeader>

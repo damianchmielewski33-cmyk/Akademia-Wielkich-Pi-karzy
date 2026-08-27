@@ -43,6 +43,8 @@ function createTestDb(): { db: AppDb; sqlite: Database.Database; dbPath: string 
       related_user_id INTEGER,
       note TEXT,
       created_at TEXT DEFAULT (datetime('now')),
+      wallet_kind TEXT NOT NULL DEFAULT 'admin',
+      is_test INTEGER NOT NULL DEFAULT 0,
       FOREIGN KEY (user_id) REFERENCES users(id)
     );
   `);

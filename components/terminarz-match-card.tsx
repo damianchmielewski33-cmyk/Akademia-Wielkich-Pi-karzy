@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { Calendar, Clock, Link2, MapPin, Settings, ShieldCheck, UserMinus, UserPlus, Users } from "lucide-react";
+import { Calendar, Clock, Link2, MapPin, Settings, ShieldCheck, UserMinus, UserPlus, Users, Wallet } from "lucide-react";
 import type { MatchRow } from "@/lib/db";
 import type { PlayersDataEntry } from "@/lib/terminarz-shared";
 import { MatchSignupCountsBlock } from "@/components/terminarz-match-counts";
@@ -22,6 +22,7 @@ type Props = {
   isAdmin?: boolean;
   onManage?: () => void;
   onCopyInvite?: () => void;
+  onCopyPayments?: () => void;
   onOpenPlayers?: () => void;
   archive?: boolean;
   photoSrc?: string;
@@ -44,6 +45,7 @@ export function TerminarzMatchCard({
   isAdmin,
   onManage,
   onCopyInvite,
+  onCopyPayments,
   onOpenPlayers,
   archive,
   photoSrc,
@@ -159,6 +161,19 @@ export function TerminarzMatchCard({
             >
               <Link2 className="h-4 w-4" aria-hidden />
               Zaproszenie
+            </Button>
+          ) : null}
+          {isAdmin && !cancelled && onCopyPayments ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className={cn("awp-match-btn awp-match-btn--admin awp-match-btn--compact gap-1.5 font-semibold")}
+              onClick={onCopyPayments}
+              title="Link z listą zapisanych — składka, przelew na telefon albo płatność przez operatora"
+            >
+              <Wallet className="h-4 w-4" aria-hidden />
+              Opłaty
             </Button>
           ) : null}
           {isAdmin && onManage && !cancelled ? (

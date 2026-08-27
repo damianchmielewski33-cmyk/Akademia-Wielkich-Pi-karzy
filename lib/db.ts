@@ -154,7 +154,7 @@ function migratePublicShareLinksKind(db: Database.Database) {
     .prepare(`SELECT sql FROM sqlite_master WHERE type='table' AND name='public_share_links'`)
     .get() as { sql: string } | undefined;
   const pslSql = row?.sql ?? "";
-  if (!pslSql.includes("CHECK") || !pslSql.includes("kind") || pslSql.includes("'all_wallets'")) return;
+  if (!pslSql.includes("CHECK") || !pslSql.includes("kind") || pslSql.includes("match_signup_fees")) return;
 
   db.exec(`
     CREATE TABLE public_share_links_migration (
@@ -593,7 +593,7 @@ function initSchemaSync(db: Database.Database) {
     CREATE TABLE IF NOT EXISTS public_share_links (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       token TEXT NOT NULL UNIQUE,
-      kind TEXT NOT NULL CHECK (kind IN ('last_match_wallets', 'all_wallets', 'match_wallets', 'player_wallets')),
+      kind TEXT NOT NULL,
       created_by_admin_id INTEGER NOT NULL,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       expires_at TEXT,
@@ -678,6 +678,18 @@ function initSchemaSync(db: Database.Database) {
   }
   if (!userCols.some((c) => c.name === "test_mode_enabled")) {
     db.exec("ALTER TABLE users ADD COLUMN test_mode_enabled INTEGER NOT NULL DEFAULT 0");
+  }
+  if (!userCols.some((c) => c.name === "password_hash")) {
+    db.exec("ALTER TABLE users ADD COLUMN password_hash TEXT");
+  }
+  if (!userCols.some((c) => c.name === "email_verified")) {
+    db.exec("ALTER TABLE users ADD COLUMN email_verified INTEGER NOT NULL DEFAULT 0");
+  }
+  if (!userCols.some((c) => c.name === "email_auth_code_hash")) {
+    db.exec("ALTER TABLE users ADD COLUMN email_auth_code_hash TEXT");
+  }
+  if (!userCols.some((c) => c.name === "email_auth_code_expires")) {
+    db.exec("ALTER TABLE users ADD COLUMN email_auth_code_expires INTEGER");
   }
 
   // ranking_seasons przed season_id / migrateRealm (świeża baza TEST).

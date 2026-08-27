@@ -24,6 +24,8 @@ export type AdminSearchJump =
 type Props = {
   onJump: (jump: AdminSearchJump) => void;
   className?: string;
+  /** Wąska wersja na pasek telefonu. */
+  compact?: boolean;
 };
 
 const TAB_HITS: { tab: string; label: string; keywords: string }[] = [
@@ -57,7 +59,7 @@ type SearchResult = {
   jump: AdminSearchJump;
 };
 
-export function AdminCommandSearch({ onJump, className }: Props) {
+export function AdminCommandSearch({ onJump, className, compact = false }: Props) {
   const { marketplaceEnabled } = useSiteMode();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -199,7 +201,18 @@ export function AdminCommandSearch({ onJump, className }: Props) {
         aria-label="Szukaj w panelu"
         aria-expanded={open}
       >
-        {marketplaceEnabled ? (
+        {compact ? (
+          <span
+            className={cn(
+              "inline-flex h-10 w-10 items-center justify-center rounded-xl border text-sm font-bold",
+              marketplaceEnabled
+                ? "border-zinc-200 bg-white text-zinc-800 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+                : "border-zinc-200 bg-white text-zinc-800"
+            )}
+          >
+            <Search className="h-4 w-4" aria-hidden />
+          </span>
+        ) : marketplaceEnabled ? (
           <span
             className={cn(
               "flex min-h-[3.25rem] items-center gap-2.5 rounded-2xl border border-zinc-200/90 bg-white px-3 py-2.5 shadow-sm transition-colors dark:border-zinc-700 dark:bg-zinc-900",
@@ -238,7 +251,10 @@ export function AdminCommandSearch({ onJump, className }: Props) {
       {open ? (
         <div
           className={cn(
-            "absolute left-0 right-0 top-full z-50 mt-1.5 overflow-hidden rounded-2xl border-2 shadow-2xl backdrop-blur-md",
+            "z-50 mt-1.5 overflow-hidden rounded-2xl border-2 shadow-2xl backdrop-blur-md",
+            compact
+              ? "fixed left-3 right-3 top-[3.75rem] sm:absolute sm:left-auto sm:right-0 sm:top-full sm:w-[min(calc(100vw-1.5rem),22rem)]"
+              : "absolute left-0 right-0 top-full",
             marketplaceEnabled
               ? "border-[var(--mp-teal)]/35 bg-white dark:bg-zinc-950"
               : "border-white/25 bg-emerald-950/95"

@@ -44,7 +44,7 @@ export const ADMIN_SETTINGS_SEARCH_INDEX: AdminSettingsSearchHit[] = [
   {
     id: "settings-registration",
     label: "Rejestracja i powiadomienia",
-    keywords: "rejestracja mail powiadomienia",
+    keywords: "rejestracja mail hasło kod uwierzytelniający powiadomienia",
     group: "Reklamy i rejestracja",
   },
   {

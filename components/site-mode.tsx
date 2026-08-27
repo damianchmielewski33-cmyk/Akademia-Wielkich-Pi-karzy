@@ -12,6 +12,7 @@ type Ctx = {
   mode: SiteMode | null;
   ready: boolean;
   marketplaceEnabled: boolean;
+  emailPasswordAuthEnabled: boolean;
   setMode: (mode: SiteMode, options?: { navigateHome?: boolean }) => void;
 };
 
@@ -19,6 +20,7 @@ const SiteModeContext = createContext<Ctx>({
   mode: null,
   ready: false,
   marketplaceEnabled: false,
+  emailPasswordAuthEnabled: false,
   setMode: () => {},
 });
 
@@ -30,10 +32,12 @@ export function SiteModeProvider({
   children,
   initialMode = null,
   marketplaceEnabled = false,
+  emailPasswordAuthEnabled = false,
 }: {
   children: ReactNode;
   initialMode?: SiteMode | null;
   marketplaceEnabled?: boolean;
+  emailPasswordAuthEnabled?: boolean;
 }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -77,8 +81,8 @@ export function SiteModeProvider({
   );
 
   const value = useMemo(
-    () => ({ mode, ready, marketplaceEnabled, setMode }),
-    [mode, ready, marketplaceEnabled, setMode]
+    () => ({ mode, ready, marketplaceEnabled, emailPasswordAuthEnabled, setMode }),
+    [mode, ready, marketplaceEnabled, emailPasswordAuthEnabled, setMode]
   );
 
   return (

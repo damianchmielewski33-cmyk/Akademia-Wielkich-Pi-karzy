@@ -13,6 +13,7 @@ import { StadiumSoundsUnlock } from "@/components/stadium-sounds";
 import { AndroidColdStartPreloaderUnlock } from "@/components/android-cold-start-preloader-unlock";
 import { WebPushEnabler } from "@/components/web-push-enabler";
 import { MatchNotificationPrompt } from "@/components/match-notification-prompt";
+import { EmailAuthSetupPrompt } from "@/components/email-auth-setup-prompt";
 import { PinChangePendingBanner } from "@/components/pin-change-pending-banner";
 import { TestModeBanner } from "@/components/test-mode-banner";
 import { PinSetupGate } from "@/components/pin-setup-gate";
@@ -352,7 +353,11 @@ export default async function RootLayout({
         <ShareLinkClientCleanup />
         <PinSetupGate>
           <Suspense fallback={null}>
-            <SiteModeProvider initialMode={initialSiteMode} marketplaceEnabled={marketplaceEnabled}>
+            <SiteModeProvider
+              initialMode={initialSiteMode}
+              marketplaceEnabled={marketplaceEnabled}
+              emailPasswordAuthEnabled={appSettings.email_password_auth_enabled === true}
+            >
               <AdsenseProvider
                 clientId={adsenseClientId}
                 enabled={appSettings.adsense_enabled}
@@ -387,7 +392,9 @@ export default async function RootLayout({
                   </MarketplacePhotosProvider>
                 </SiteAssetsProvider>
               </AdsenseProvider>
-              {loggedInFull && !isPzuCupSection ? <WalletBalanceFloat enabled /> : null}
+              {loggedInFull && !isPzuCupSection && !pathname.startsWith("/panel-admina") ? (
+                <WalletBalanceFloat enabled />
+              ) : null}
               {!isPzuCupSection ? (
                 <WriteToAdminFloat
                   defaults={writeToAdminDefaults}
@@ -396,6 +403,7 @@ export default async function RootLayout({
                 />
               ) : null}
               {!isPzuCupSection && matchNotificationPromptEnabled ? <MatchNotificationPrompt /> : null}
+              {!isPzuCupSection ? <EmailAuthSetupPrompt /> : null}
             </SiteModeProvider>
           </Suspense>
         </PinSetupGate>

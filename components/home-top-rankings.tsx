@@ -3,11 +3,12 @@
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
-import { PhotoPanel } from "@/components/photo-panel";
+import { MarketplacePitchPhoto } from "@/components/marketplace-pitch-photo";
 import { useSiteMode } from "@/components/site-mode";
 import { Button } from "@/components/ui/button";
 import { PitchCard } from "@/components/ui/pitch-card";
 import type { HomeTopPlayer } from "@/lib/rankings-data";
+import { formatMatchCountPl } from "@/lib/rankings";
 import { pitchPhotoAt } from "@/lib/marketplace-photos";
 import { cn } from "@/lib/utils";
 
@@ -69,9 +70,13 @@ function PodiumCard({
         )}
       >
         {player.punkty.toFixed(2)}
-        <span className={cn("ml-1 text-sm font-semibold", onPitch ? "text-white/75" : "text-zinc-500")}>pkt</span>
+        <span className={cn("ml-1 text-sm font-semibold", onPitch ? "text-white/75" : "text-zinc-500")}>
+          pkt/mecz
+        </span>
       </p>
       <p className={cn("mt-1 text-xs", onPitch ? "text-white/80" : "text-zinc-500")}>
+        {formatMatchCountPl(player.mecze)}
+        {" · "}
         {player.goals} goli · {player.assists} asyst
       </p>
     </>
@@ -144,7 +149,7 @@ export function HomeTopRankings({ players, isLoggedIn, photoPool }: Props) {
             Top 3
           </h2>
           <p className={cn("mt-1 hidden text-sm sm:block", stadium ? "text-white/80" : "text-zinc-500")}>
-            Najlepsi zawodnicy według punktów ze wszystkich meczów.
+            Najlepsi według średniej punktów na mecz — liczba spotkań nie podnosi pozycji.
           </p>
         </div>
         <Button asChild variant={stadium ? "pitch" : "outline"} className="hidden md:inline-flex">
@@ -154,7 +159,18 @@ export function HomeTopRankings({ players, isLoggedIn, photoPool }: Props) {
           </Link>
         </Button>
       </div>
-      <ul className="divide-y divide-zinc-100 overflow-hidden rounded-2xl border border-zinc-200 bg-white md:hidden dark:divide-zinc-800 dark:border-zinc-800 dark:bg-zinc-950">
+      <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white md:hidden dark:border-zinc-800 dark:bg-zinc-950">
+        {withPhotos ? (
+          <div className="relative h-28 overflow-hidden">
+            <MarketplacePitchPhoto src={photoAt(photoPool, 12)} className="z-0" sizes="100vw" />
+            <div className="absolute inset-0 z-[1] bg-gradient-to-t from-black/80 via-black/40 to-black/15" aria-hidden />
+            <div className="relative z-10 flex h-full flex-col justify-end px-4 pb-3">
+              <p className="text-[0.65rem] font-bold uppercase tracking-[0.16em] text-white/80">Rankingi</p>
+              <p className="text-lg font-black text-white">Top 3 · średnia na mecz</p>
+            </div>
+          </div>
+        ) : null}
+        <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
         {[...players]
           .sort((a, b) => a.rank - b.rank)
           .map((player) => (
@@ -185,7 +201,7 @@ export function HomeTopRankings({ players, isLoggedIn, photoPool }: Props) {
               </div>
               <p className="shrink-0 text-sm font-extrabold tabular-nums text-zinc-950 dark:text-white">
                 {player.punkty.toFixed(2)}
-                <span className="ml-1 text-xs font-semibold text-zinc-400">pkt</span>
+                <span className="ml-1 text-xs font-semibold text-zinc-400">/mecz</span>
               </p>
             </li>
           ))}
@@ -199,6 +215,7 @@ export function HomeTopRankings({ players, isLoggedIn, photoPool }: Props) {
           </Link>
         </li>
       </ul>
+      </div>
       <div
         className={cn(
           "hidden gap-3 md:grid",

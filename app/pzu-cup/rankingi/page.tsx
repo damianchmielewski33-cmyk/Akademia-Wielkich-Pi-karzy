@@ -6,7 +6,7 @@ import { getAppSettings } from "@/lib/app-settings";
 import { getDb } from "@/lib/db";
 import { getRankingsPageData } from "@/lib/rankings-data";
 import { REALMS } from "@/lib/realm";
-import { rankPlayers } from "@/lib/rankings";
+import { formatMatchCountPl, rankPlayers, rankingRate } from "@/lib/rankings";
 import { RankingiSeasonPicker } from "@/components/rankingi-season-picker";
 import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -61,7 +61,9 @@ export default async function PzuCupRankingiPage({ searchParams }: Props) {
       <div className="mb-8 rounded-2xl border border-sky-400/25 bg-sky-950/40 px-6 py-8 text-center">
         <p className="text-xs font-bold uppercase tracking-[0.2em] text-amber-400">PZU Cup</p>
         <h1 className="mt-2 text-3xl font-bold text-white">Rankingi</h1>
-        <p className="mt-2 text-sm text-sky-200/80">Sezon: {season.name}</p>
+        <p className="mt-2 text-sm text-sky-200/80">
+          Sezon: {season.name}. Klasyfikacja według średniej na mecz — liczba spotkań nie zmienia pozycji.
+        </p>
       </div>
 
       <RankingiSeasonPicker
@@ -77,11 +79,11 @@ export default async function PzuCupRankingiPage({ searchParams }: Props) {
             <TableRow className="border-sky-400/20 hover:bg-transparent">
               <TableHead className="text-sky-200">#</TableHead>
               <TableHead className="text-sky-200">Zawodnik</TableHead>
-              <TableHead className="text-right text-sky-200">Gole</TableHead>
-              <TableHead className="text-right text-sky-200">Asysty</TableHead>
-              <TableHead className="text-right text-sky-200">Km</TableHead>
-              <TableHead className="text-right text-sky-200">Obrony</TableHead>
-              <TableHead className="text-right text-sky-200">Pkt</TableHead>
+              <TableHead className="text-right text-sky-200">Gole/mecz</TableHead>
+              <TableHead className="text-right text-sky-200">Asysty/mecz</TableHead>
+              <TableHead className="text-right text-sky-200">Km/mecz</TableHead>
+              <TableHead className="text-right text-sky-200">Obrony/mecz</TableHead>
+              <TableHead className="text-right text-sky-200">Pkt/mecz</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -96,14 +98,17 @@ export default async function PzuCupRankingiPage({ searchParams }: Props) {
                       lastName={p.last_name}
                       size="sm"
                     />
-                    <PlayerNameStack firstName={p.first_name} lastName={p.last_name} nick={p.zawodnik} />
+                    <div className="min-w-0">
+                      <PlayerNameStack firstName={p.first_name} lastName={p.last_name} nick={p.zawodnik} />
+                      <p className="mt-0.5 text-xs text-sky-200/70">{formatMatchCountPl(p.mecze)}</p>
+                    </div>
                   </div>
                 </TableCell>
-                <TableCell className="text-right text-white">{p.goals}</TableCell>
-                <TableCell className="text-right text-white">{p.assists}</TableCell>
-                <TableCell className="text-right text-white">{p.distance}</TableCell>
-                <TableCell className="text-right text-white">{p.saves}</TableCell>
-                <TableCell className="text-right font-bold text-amber-300">{p.punkty}</TableCell>
+                <TableCell className="text-right text-white">{rankingRate(p, "goals").toFixed(2)}</TableCell>
+                <TableCell className="text-right text-white">{rankingRate(p, "assists").toFixed(2)}</TableCell>
+                <TableCell className="text-right text-white">{rankingRate(p, "distance").toFixed(2)}</TableCell>
+                <TableCell className="text-right text-white">{rankingRate(p, "saves").toFixed(2)}</TableCell>
+                <TableCell className="text-right font-bold text-amber-300">{rankingRate(p, "punkty").toFixed(2)}</TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -111,7 +116,7 @@ export default async function PzuCupRankingiPage({ searchParams }: Props) {
       </div>
 
       <p className="mt-6 text-center text-xs text-sky-200/60">
-        Punkty: gol {PT_GOAL}, asysta {PT_ASSIST}, km {PT_KM}, obrona {PT_SAVE}
+        Punkty / mecz: gol {PT_GOAL}, asysta {PT_ASSIST}, km {PT_KM}, obrona {PT_SAVE}. Suma dzielona przez liczbę meczów.
       </p>
     </div>
   );

@@ -26,6 +26,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
@@ -68,6 +69,7 @@ fun MatchSignupCard(
     onAddStats: (() -> Unit)? = null,
     onOpenRoster: (() -> Unit)? = null,
     onCopyInvite: (() -> Unit)? = null,
+    onCopyPayments: (() -> Unit)? = null,
     onManage: (() -> Unit)? = null,
     isAdmin: Boolean = false,
     lineup: LineupSelected? = null
@@ -263,9 +265,11 @@ fun MatchSignupCard(
 
         MatchAdminActionsRow(
             onCopyInvite = onCopyInvite,
+            onCopyPayments = onCopyPayments,
             onManage = onManage,
             isArchive = isArchive,
-            isAdmin = isAdmin
+            isAdmin = isAdmin,
+            isCancelled = isCancelled
         )
 
         if (isArchive) {
@@ -729,13 +733,18 @@ fun MatchRosterDialog(
 @Composable
 private fun MatchAdminActionsRow(
     onCopyInvite: (() -> Unit)?,
+    onCopyPayments: (() -> Unit)?,
     onManage: (() -> Unit)?,
     isArchive: Boolean,
-    isAdmin: Boolean
+    isAdmin: Boolean,
+    isCancelled: Boolean = false
 ) {
     val actions = buildList {
         if (!isArchive && onCopyInvite != null) {
             add(MatchAdminAction("Zaproszenie", onCopyInvite, icon = Icons.Filled.Link))
+        }
+        if (isAdmin && !isArchive && !isCancelled && onCopyPayments != null) {
+            add(MatchAdminAction("Opłaty", onCopyPayments, gold = true, icon = Icons.Filled.AccountBalanceWallet))
         }
         if (isAdmin && onManage != null) {
             add(MatchAdminAction("Zarządzaj", onManage, gold = true, icon = Icons.Filled.Settings))

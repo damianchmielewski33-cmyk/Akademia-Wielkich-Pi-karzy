@@ -23,6 +23,11 @@ const loginSchema = z.object({
   pin: formSchemas.pin,
 });
 
+const emailLoginSchema = z.object({
+  email: formSchemas.email,
+  password: z.string().min(1, "Hasło jest wymagane"),
+});
+
 const forgotSchema = z
   .object({
     firstName: formSchemas.requiredName("Imię"),
@@ -47,13 +52,14 @@ export function LoginForm({
   onAuthenticated?: () => void;
   realm?: Realm;
 }) {
-  const { marketplaceEnabled } = useSiteMode();
+  const { marketplaceEnabled, emailPasswordAuthEnabled } = useSiteMode();
   const submitVariant = marketplaceEnabled ? "gold" : "pitch";
   const router = useRouter();
   const next = sanitizeAppBridgeNext(nextPath) ?? "/";
   const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showGoalPreloader, setShowGoalPreloader] = useState(false);
+  const [legacyPin, setLegacyPin] = useState(false);
 
   const [forgotOpen, setForgotOpen] = useState(false);
   const [forgotDoneOpen, setForgotDoneOpen] = useState(false);
@@ -64,6 +70,11 @@ export function LoginForm({
     schema: loginSchema,
   });
 
+  const emailLoginForm = useValidatedForm({
+    initialValues: { email: "", password: "" },
+    schema: emailLoginSchema,
+  });
+
   const forgotForm = useValidatedForm({
     initialValues: { firstName: "", lastName: "", zawodnik: "", pin: "", pinConfirm: "" },
     schema: forgotSchema,
@@ -71,20 +82,33 @@ export function LoginForm({
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!loginForm.validate()) return;
-    const { firstName, lastName, pin } = loginForm.values;
+    const useEmail = emailPasswordAuthEnabled && !legacyPin;
+    if (useEmail) {
+      if (!emailLoginForm.validate()) return;
+    } else if (!loginForm.validate()) {
+      return;
+    }
     setLoading(true);
     try {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          first_name: firstName,
-          last_name: lastName,
-          pin,
-          remember_me: rememberMe,
-          realm,
-        }),
+        body: JSON.stringify(
+          useEmail
+            ? {
+                email: emailLoginForm.values.email,
+                password: emailLoginForm.values.password,
+                remember_me: rememberMe,
+                realm,
+              }
+            : {
+                first_name: loginForm.values.firstName,
+                last_name: loginForm.values.lastName,
+                pin: loginForm.values.pin,
+                remember_me: rememberMe,
+                realm,
+              }
+        ),
       });
       const data = (await res.json().catch(() => ({}))) as {
         error?: string;
@@ -94,8 +118,8 @@ export function LoginForm({
       if (res.status === 403 && data.code === "NEEDS_INITIAL_PIN") {
         toast.info("Konto wymaga pierwszego ustawienia PIN-u — przekierowujemy na stronę ustawiania PIN-u.");
         const q = new URLSearchParams();
-        if (firstName.trim()) q.set("fn", firstName.trim());
-        if (lastName.trim()) q.set("ln", lastName.trim());
+        if (loginForm.values.firstName.trim()) q.set("fn", loginForm.values.firstName.trim());
+        if (loginForm.values.lastName.trim()) q.set("ln", loginForm.values.lastName.trim());
         q.set("next", next);
         router.push(`/ustaw-pin?${q.toString()}`);
         return;
@@ -161,6 +185,35 @@ export function LoginForm({
     <>
       {showGoalPreloader && <AuthGoalPreloader label="Czas coś pokopać" />}
       <form onSubmit={onSubmit} className="space-y-4">
+        {emailPasswordAuthEnabled && !legacyPin ? (
+          <>
+            <FormInput
+              id="login_email"
+              label="Adres e-mail"
+              required
+              showValidState
+              type="email"
+              autoComplete="email"
+              value={emailLoginForm.values.email}
+              onChange={(e) => emailLoginForm.setValue("email", e.target.value)}
+              onBlur={() => emailLoginForm.setFieldTouched("email")}
+              error={emailLoginForm.errors.email}
+              placeholder="np. jan@example.com"
+            />
+            <FormInput
+              id="login_password"
+              label="Hasło"
+              required
+              type="password"
+              autoComplete="current-password"
+              value={emailLoginForm.values.password}
+              onChange={(e) => emailLoginForm.setValue("password", e.target.value)}
+              onBlur={() => emailLoginForm.setFieldTouched("password")}
+              error={emailLoginForm.errors.password}
+            />
+          </>
+        ) : (
+          <>
         <FormInput
           id="first_name"
           label="Imię"
@@ -202,6 +255,8 @@ export function LoginForm({
           error={loginForm.errors.pin}
           placeholder="4–6 cyfr"
         />
+          </>
+        )}
         <div className="flex items-center justify-between gap-3 pt-0.5">
           <Label htmlFor="login_remember" className="cursor-pointer font-normal leading-snug text-zinc-600 dark:text-zinc-400">
             Nie wylogowuj mnie
@@ -217,9 +272,18 @@ export function LoginForm({
         <Button type="submit" className="w-full" variant={submitVariant} disabled={loading}>
           {loading ? "Logowanie…" : "Zaloguj się"}
         </Button>
+        {emailPasswordAuthEnabled ? (
+          <button
+            type="button"
+            className="w-full text-center text-sm font-medium text-emerald-700 hover:underline dark:text-emerald-300"
+            onClick={() => setLegacyPin((v) => !v)}
+          >
+            {legacyPin ? "Logowanie e-mailem i hasłem" : "Mam stare konto z PIN-em"}
+          </button>
+        ) : null}
       </form>
 
-      {!embedMode && (
+      {!embedMode && (!emailPasswordAuthEnabled || legacyPin) && (
         <div className="mt-4 flex flex-col gap-2 border-t border-zinc-100 pt-4 dark:border-zinc-800">
           <button
             type="button"

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type ComponentType, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, cloneElement, isValidElement, type ComponentType, type ReactElement, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Calendar, ChevronDown, Loader2, LogOut, Menu, Moon, Sun, X } from "lucide-react";
 import { PitchCard } from "@/components/ui/pitch-card";
@@ -231,6 +231,7 @@ export function AdminShell({
 
   /** Mobile: menu = lista sekcji; content = ekran wybranej zakładki. */
   const [mobilePhase, setMobilePhase] = useState<"menu" | "content">("content");
+  const skipAutoOpenContent = useRef(true);
 
   useEffect(() => {
     setOpenGroups((prev) => {
@@ -244,7 +245,19 @@ export function AdminShell({
   }, [activeTab, navGroups]);
 
   useEffect(() => {
-    mainRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+    if (typeof window === "undefined") return;
+    const hasTab = new URLSearchParams(window.location.search).has("tab");
+    if (!hasTab && window.matchMedia("(max-width: 1023px)").matches) {
+      setMobilePhase("menu");
+    }
+  }, []);
+
+  useEffect(() => {
+    mainRef.current?.scrollTo({ top: 0, behavior: "auto" });
+    if (skipAutoOpenContent.current) {
+      skipAutoOpenContent.current = false;
+      return;
+    }
     if (typeof window !== "undefined" && window.matchMedia("(max-width: 1023px)").matches) {
       setMobilePhase("content");
     }
@@ -289,7 +302,7 @@ export function AdminShell({
   return (
     <div
       className={cn(
-        "flex min-h-screen flex-col lg:flex-row",
+        "admin-shell flex min-h-dvh min-w-0 flex-col lg:flex-row",
         marketplaceEnabled
           ? "admin-shell--v2 bg-zinc-100 text-zinc-950 dark:bg-zinc-950 dark:text-zinc-50"
           : "murawa-bg text-white"
@@ -301,12 +314,12 @@ export function AdminShell({
           marketplaceEnabled
             ? "border-b border-zinc-200 bg-[#f4f5f7] text-zinc-950 shadow-sm dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-50 lg:border-zinc-200 dark:lg:border-zinc-800"
             : "border-b border-white/20 shadow-lg lg:border-white/15",
-          showMobileMenu ? "flex min-h-screen flex-col lg:min-h-0" : undefined,
+          showMobileMenu ? "flex min-h-dvh flex-col lg:min-h-0" : undefined,
           !showMobileMenu && "lg:block",
           !showMobileMenu && "hidden lg:block"
         )}
       >
-        <div className="relative flex flex-col gap-3 p-3 xs:p-4 lg:sticky lg:top-0 lg:h-screen lg:max-h-screen lg:gap-3 lg:overflow-hidden lg:pt-[max(1rem,env(safe-area-inset-top))] lg:pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+        <div className="relative flex flex-col gap-3 p-3 xs:p-4 lg:sticky lg:top-0 lg:h-dvh lg:max-h-dvh lg:gap-3 lg:overflow-hidden lg:pt-[max(1rem,env(safe-area-inset-top))] lg:pb-[max(0.75rem,env(safe-area-inset-bottom))]">
           <div
             className={cn(
               "flex shrink-0 items-center gap-3 rounded-2xl border px-3 py-3 lg:hidden",
@@ -346,6 +359,14 @@ export function AdminShell({
                 )}
               >
                 Wybierz sekcję
+              </p>
+              <p
+                className={cn(
+                  "mt-0.5 text-xs",
+                  marketplaceEnabled ? "text-zinc-500 dark:text-zinc-400" : "text-white/70"
+                )}
+              >
+                Wybierz, czym chcesz zarządzać.
               </p>
             </div>
             <button
@@ -410,7 +431,7 @@ export function AdminShell({
           {searchSlot ? <div className="relative z-40 shrink-0">{searchSlot}</div> : null}
 
           <nav
-            className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-contain lg:hidden"
+            className="flex min-h-0 flex-1 flex-col gap-3 lg:hidden"
             aria-label="Sekcje panelu admina"
           >
             {navGroups.map((g) => (
@@ -566,7 +587,7 @@ export function AdminShell({
       <main
         ref={mainRef}
         className={cn(
-          "relative flex-1 overflow-x-hidden",
+          "relative min-w-0 flex-1",
           showMobileMenu && "hidden lg:block",
           marketplaceEnabled && "bg-zinc-100 dark:bg-zinc-950"
         )}
@@ -594,20 +615,20 @@ export function AdminShell({
           />
         </div>
 
-        <div className="relative z-20 border-b border-zinc-200/80 bg-white/90 px-3 py-2 backdrop-blur-md dark:border-zinc-800 dark:bg-zinc-950/90 lg:hidden">
-          <div className="mx-auto flex max-w-6xl items-center gap-2">
+        <div className="sticky top-0 z-30 border-b border-zinc-200/80 bg-white/95 backdrop-blur-md dark:border-zinc-800 dark:bg-zinc-950/95 lg:hidden">
+          <div className="mx-auto flex max-w-6xl items-center gap-2 px-3 py-2">
             <button
               type="button"
               onClick={openMobileMenu}
               className={cn(
-                "awp-focus-ring inline-flex items-center gap-2 rounded-xl px-2.5 py-2 text-sm font-bold",
+                "awp-focus-ring inline-flex shrink-0 items-center gap-2 rounded-xl px-2.5 py-2 text-sm font-bold",
                 marketplaceEnabled
                   ? "bg-[var(--mp-teal)] text-white"
                   : "bg-[var(--mundial-gold,#f5c518)] text-[var(--mundial-navy,#0a1628)]"
               )}
             >
               <Menu className="h-4 w-4" aria-hidden />
-              Sekcje
+              Menu
             </button>
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-bold text-zinc-950 dark:text-white">
@@ -617,7 +638,41 @@ export function AdminShell({
                 <p className="truncate text-xs text-zinc-500">{activeTabMeta.group.label}</p>
               ) : null}
             </div>
+            {searchSlot ? (
+              <div className="shrink-0">
+                {isValidElement(searchSlot)
+                  ? cloneElement(searchSlot as ReactElement<{ compact?: boolean }>, { compact: true })
+                  : searchSlot}
+              </div>
+            ) : null}
           </div>
+          {activeTabMeta && activeTabMeta.group.items.length > 1 ? (
+            <div className="mx-auto flex max-w-6xl gap-1.5 overflow-x-auto px-3 pb-2 [touch-action:pan-x_pan-y] [scrollbar-width:none]">
+              {activeTabMeta.group.items.map((t) => {
+                const on = t.id === activeTab;
+                return (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => onTabChange(t.id)}
+                    className={cn(
+                      "awp-focus-ring shrink-0 rounded-full px-3 py-1.5 text-xs font-bold",
+                      on
+                        ? marketplaceEnabled
+                          ? "bg-[var(--mp-teal)] text-white"
+                          : "bg-[var(--mundial-gold,#f5c518)] text-[var(--mundial-navy,#0a1628)]"
+                        : marketplaceEnabled
+                          ? "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+                          : "bg-white/15 text-white"
+                    )}
+                  >
+                    {t.label}
+                    {t.badgeCount != null && t.badgeCount > 0 ? ` (${t.badgeCount > 99 ? "99+" : t.badgeCount})` : null}
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
         </div>
 
         {loading ? (

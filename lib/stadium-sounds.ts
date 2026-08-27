@@ -1,47 +1,53 @@
 "use client";
 
 /**
- * Dźwięki stadionowe (Mixkit Free SFX License) — aplauz, okrzyki, gwizdek.
- * Wymaga interakcji użytkownika (autoplay policy); odblokowywane przy pierwszym kliknięciu.
+ * Krótkie, ciche sygnały UI (Web Audio) zamiast nagrań stadionu.
+ * Żadnego gwizdka przy wejściu na stronę — dźwięk tylko przy konkretnej akcji.
  */
 
 export type StadiumSoundId = "applause" | "cheer" | "goal" | "whistle" | "crowd";
 
 const MUTE_KEY = "awp-sounds-muted";
-const ENTRY_SOUND_KEY = "awp-entry-sound-played";
 
-const FILES: Record<StadiumSoundId, string> = {
-  applause: "/sounds/applause.mp3",
-  cheer: "/sounds/cheer.mp3",
-  goal: "/sounds/goal.mp3",
-  whistle: "/sounds/whistle.mp3",
-  crowd: "/sounds/crowd.mp3",
+type CueNote = {
+  freq: number;
+  at: number;
+  dur: number;
+  gain: number;
+  type?: OscillatorType;
 };
 
-const DEFAULT_VOLUME: Record<StadiumSoundId, number> = {
-  applause: 0.45,
-  cheer: 0.5,
-  goal: 0.55,
-  whistle: 0.4,
-  crowd: 0.22,
-};
-
-/** Max. długość odtwarzania (ms) — dłuższe klipy nie ciągną się w nieskończoność. */
-const DEFAULT_MAX_MS: Partial<Record<StadiumSoundId, number>> = {
-  applause: 4500,
-  cheer: 4500,
-  goal: 5500,
-  whistle: 2000,
-  crowd: 6000,
+const CUES: Record<StadiumSoundId, CueNote[]> = {
+  applause: [
+    { freq: 392, at: 0, dur: 0.16, gain: 0.07 },
+    { freq: 523.25, at: 0.09, dur: 0.2, gain: 0.055 },
+  ],
+  cheer: [
+    { freq: 349.23, at: 0, dur: 0.12, gain: 0.06 },
+    { freq: 440, at: 0.08, dur: 0.14, gain: 0.055 },
+    { freq: 523.25, at: 0.16, dur: 0.18, gain: 0.05 },
+  ],
+  goal: [
+    { freq: 261.63, at: 0, dur: 0.22, gain: 0.06, type: "triangle" },
+    { freq: 329.63, at: 0.05, dur: 0.22, gain: 0.05, type: "triangle" },
+    { freq: 392, at: 0.12, dur: 0.28, gain: 0.045 },
+  ],
+  whistle: [{ freq: 587.33, at: 0, dur: 0.14, gain: 0.045 }],
+  crowd: [{ freq: 196, at: 0, dur: 0.22, gain: 0.035, type: "triangle" }],
 };
 
 let unlocked = false;
-let current: HTMLAudioElement | null = null;
+let ctx: AudioContext | null = null;
+let master: GainNode | null = null;
 let stopTimer: number | undefined;
-const cache = new Map<StadiumSoundId, HTMLAudioElement>();
 
 function canUseAudio(): boolean {
-  return typeof window !== "undefined" && typeof Audio !== "undefined";
+  return typeof window !== "undefined";
+}
+
+function prefersQuiet(): boolean {
+  if (typeof window === "undefined" || !window.matchMedia) return false;
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
 export function isStadiumSoundsMuted(): boolean {
@@ -68,30 +74,28 @@ export function areStadiumSoundsUnlocked(): boolean {
   return unlocked;
 }
 
-/** Wywołaj po pierwszej interakcji użytkownika (klik / touch / key). */
-export function unlockStadiumSounds(): void {
-  if (!canUseAudio() || unlocked) return;
-  unlocked = true;
-  try {
-    const a = new Audio();
-    a.volume = 0;
-    void a.play().then(() => a.pause()).catch(() => {
-      /* iOS może wymagać kolejnej interakcji */
-    });
-  } catch {
-    /* ignore */
+function ensureContext(): AudioContext | null {
+  if (!canUseAudio()) return null;
+  const AC = window.AudioContext || (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+  if (!AC) return null;
+  if (!ctx) {
+    ctx = new AC();
+    master = ctx.createGain();
+    master.gain.value = 0.85;
+    master.connect(ctx.destination);
   }
+  if (ctx.state === "suspended") void ctx.resume();
+  return ctx;
 }
 
-function getAudio(id: StadiumSoundId): HTMLAudioElement | null {
-  if (!canUseAudio()) return null;
-  let a = cache.get(id);
-  if (!a) {
-    a = new Audio(FILES[id]);
-    a.preload = "auto";
-    cache.set(id, a);
+/** Wywołaj po pierwszej interakcji użytkownika (klik / touch / key). */
+export function unlockStadiumSounds(): void {
+  if (!canUseAudio() || unlocked) {
+    if (unlocked) ensureContext();
+    return;
   }
-  return a;
+  unlocked = true;
+  ensureContext();
 }
 
 export function stopStadiumSound(): void {
@@ -99,150 +103,87 @@ export function stopStadiumSound(): void {
     window.clearTimeout(stopTimer);
     stopTimer = undefined;
   }
-  if (current) {
-    try {
-      current.pause();
-      current.currentTime = 0;
-    } catch {
-      /* ignore */
-    }
-    current = null;
-  }
-}
-
-export function playStadiumSound(
-  id: StadiumSoundId,
-  opts?: { volume?: number; maxMs?: number }
-): void {
-  // Wibracja niezależnie od wyciszenia dźwięku (ten sam moment UX).
-  void import("@/lib/haptics").then((m) => m.hapticForStadiumSound(id));
-
-  if (!canUseAudio() || isStadiumSoundsMuted()) return;
-  unlockStadiumSounds();
-
-  const audio = getAudio(id);
-  if (!audio) return;
-
-  stopStadiumSound();
-  current = audio;
+  if (!ctx || !master) return;
+  const now = ctx.currentTime;
   try {
-    audio.currentTime = 0;
+    master.gain.cancelScheduledValues(now);
+    master.gain.setValueAtTime(0.0001, now);
   } catch {
     /* ignore */
   }
-  audio.volume = Math.min(1, Math.max(0, opts?.volume ?? DEFAULT_VOLUME[id]));
-
-  const playPromise = audio.play();
-  if (playPromise) {
-    void playPromise.catch(() => {
-      /* autoplay zablokowany — czekamy na gest */
-    });
-  }
-
-  const maxMs = opts?.maxMs ?? DEFAULT_MAX_MS[id];
-  if (maxMs != null && maxMs > 0) {
-    stopTimer = window.setTimeout(() => {
-      if (current === audio) {
-        try {
-          audio.pause();
-          audio.currentTime = 0;
-        } catch {
-          /* ignore */
-        }
-        current = null;
-      }
-    }, maxMs);
-  }
+  const next = ctx.createGain();
+  next.gain.value = 0.85;
+  next.connect(ctx.destination);
+  master.disconnect();
+  master = next;
 }
 
-/** Sukces ogólny (zapis na mecz, potwierdzenie). */
+function playCue(id: StadiumSoundId): void {
+  const audio = ensureContext();
+  if (!audio || !master) return;
+
+  const filter = audio.createBiquadFilter();
+  filter.type = "lowpass";
+  filter.frequency.value = 1600;
+  filter.Q.value = 0.7;
+  filter.connect(master);
+
+  let endAt = 0;
+  for (const note of CUES[id]) {
+    const osc = audio.createOscillator();
+    const gain = audio.createGain();
+    osc.type = note.type ?? "sine";
+    osc.frequency.value = note.freq;
+    const start = audio.currentTime + note.at;
+    gain.gain.setValueAtTime(0, start);
+    gain.gain.linearRampToValueAtTime(note.gain, start + 0.016);
+    gain.gain.exponentialRampToValueAtTime(0.0008, start + note.dur);
+    osc.connect(gain);
+    gain.connect(filter);
+    osc.start(start);
+    osc.stop(start + note.dur + 0.03);
+    endAt = Math.max(endAt, note.at + note.dur);
+  }
+
+  stopTimer = window.setTimeout(() => {
+    try {
+      filter.disconnect();
+    } catch {
+      /* ignore */
+    }
+  }, Math.ceil((endAt + 0.08) * 1000));
+}
+
+export function playStadiumSound(id: StadiumSoundId, _opts?: { volume?: number; maxMs?: number }): void {
+  void import("@/lib/haptics").then((m) => m.hapticForStadiumSound(id));
+
+  if (!canUseAudio() || isStadiumSoundsMuted() || prefersQuiet()) return;
+  unlockStadiumSounds();
+  stopStadiumSound();
+  playCue(id);
+}
+
 export function playStadiumApplause(): void {
   playStadiumSound("applause");
 }
 
-/** Gol / mocny wynik. */
 export function playStadiumGoal(): void {
   playStadiumSound("goal");
 }
 
-/** Losowanie kapitana / wygrana. */
 export function playStadiumCheer(): void {
   playStadiumSound("cheer");
 }
 
-/** Start meczu / „rozegrano”. */
 export function playStadiumWhistle(): void {
   playStadiumSound("whistle");
 }
 
-/** Lekki ambient tłumu (np. po odblokowaniu). */
 export function playStadiumCrowd(): void {
-  playStadiumSound("crowd", { volume: 0.18, maxMs: 5000 });
+  playStadiumSound("crowd");
 }
 
-function hasPlayedEntrySound(): boolean {
-  if (!canUseAudio()) return true;
-  try {
-    return sessionStorage.getItem(ENTRY_SOUND_KEY) === "1";
-  } catch {
-    return false;
-  }
-}
-
-function markEntrySoundPlayed(): void {
-  try {
-    sessionStorage.setItem(ENTRY_SOUND_KEY, "1");
-  } catch {
-    /* private mode */
-  }
-}
-
-/**
- * Dźwięk przy wejściu na stronę (raz na kartę/sesję).
- * W przeglądarce zwykle odpali się dopiero po pierwszym geście (autoplay policy).
- */
+/** Zostawione dla kompatybilności — przy wejściu na stronę nic nie gra. */
 export function playStadiumEntranceIfNeeded(): void {
-  if (!canUseAudio() || isStadiumSoundsMuted() || hasPlayedEntrySound()) return;
-
   unlockStadiumSounds();
-
-  const audio = getAudio("whistle");
-  if (!audio) return;
-
-  stopStadiumSound();
-  current = audio;
-  try {
-    audio.currentTime = 0;
-  } catch {
-    /* ignore */
-  }
-  audio.volume = 0.38;
-
-  void import("@/lib/haptics").then((m) => m.hapticForStadiumSound("whistle"));
-
-  const playPromise = audio.play();
-  if (!playPromise) {
-    markEntrySoundPlayed();
-    return;
-  }
-
-  void playPromise
-    .then(() => {
-      markEntrySoundPlayed();
-      stopTimer = window.setTimeout(() => {
-        if (current === audio) {
-          try {
-            audio.pause();
-            audio.currentTime = 0;
-          } catch {
-            /* ignore */
-          }
-          current = null;
-        }
-      }, 1600);
-    })
-    .catch(() => {
-      /* autoplay zablokowany — StadiumSoundsUnlock zagra po geście */
-      current = null;
-    });
 }

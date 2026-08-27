@@ -209,7 +209,7 @@ export function MarketplacePhotoStrip({
     <>
       <div
         className={cn(
-          "-mx-4 mt-0 flex gap-4 overflow-x-auto bg-zinc-100 px-4 py-4 [scrollbar-width:thin] dark:bg-zinc-900",
+          "-mx-4 mt-0 flex gap-2.5 overflow-x-auto bg-zinc-100 px-4 py-3 [scrollbar-width:thin] dark:bg-zinc-900 sm:gap-3 sm:py-3.5 md:gap-4 md:py-4",
           className
         )}
       >
@@ -219,11 +219,11 @@ export function MarketplacePhotoStrip({
               key={`${i}-${src}`}
               type="button"
               onClick={() => setEditIndex(i)}
-              className="group relative h-48 w-72 shrink-0 overflow-hidden rounded-3xl bg-zinc-200 text-left ring-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mp-teal)]"
+              className="group relative h-28 w-44 shrink-0 overflow-hidden rounded-2xl bg-zinc-200 text-left ring-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mp-teal)] sm:h-36 sm:w-56 sm:rounded-[1.35rem] md:h-48 md:w-72 md:rounded-3xl"
               title="Edytuj zdjęcie"
               aria-label={`Edytuj zdjęcie ${i + 1}`}
             >
-              <MarketplacePitchPhoto src={src} sizes="288px" />
+              <MarketplacePitchPhoto src={src} sizes="(max-width: 640px) 176px, (max-width: 768px) 224px, 288px" />
               <span className="absolute inset-0 bg-black/0 transition-colors group-hover:bg-black/35" />
               <span className="absolute bottom-3 left-3 inline-flex items-center gap-1.5 rounded-full bg-white/95 px-3 py-1.5 text-xs font-bold text-zinc-950 opacity-0 shadow-sm transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
                 <Pencil className="h-3.5 w-3.5" aria-hidden />
@@ -231,8 +231,8 @@ export function MarketplacePhotoStrip({
               </span>
             </button>
           ) : (
-            <div key={`${i}-${src}`} className="relative h-48 w-72 shrink-0 overflow-hidden rounded-3xl bg-zinc-200">
-              <MarketplacePitchPhoto src={src} sizes="288px" />
+            <div key={`${i}-${src}`} className="relative h-28 w-44 shrink-0 overflow-hidden rounded-2xl bg-zinc-200 sm:h-36 sm:w-56 sm:rounded-[1.35rem] md:h-48 md:w-72 md:rounded-3xl">
+              <MarketplacePitchPhoto src={src} sizes="(max-width: 640px) 176px, (max-width: 768px) 224px, 288px" />
             </div>
           )
         )}

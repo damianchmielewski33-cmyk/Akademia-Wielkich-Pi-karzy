@@ -36,6 +36,9 @@ object SessionInvalidator {
         return when (path) {
             "api/auth/login",
             "api/auth/register",
+            "api/auth/register/verify",
+            "api/auth/email-auth/send-code",
+            "api/auth/email-auth/complete",
             "api/auth/forgot-pin-request",
             "api/auth/set-initial-pin" -> false
             else -> true

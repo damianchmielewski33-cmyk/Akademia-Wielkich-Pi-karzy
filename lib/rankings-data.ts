@@ -3,7 +3,7 @@ import type { AppDb } from "@/lib/db";
 import { getDb } from "@/lib/db";
 import { REALMS, type Realm } from "@/lib/realm";
 import { getActiveRankingSeason, resolveRankingSeasonForView } from "@/lib/ranking-seasons";
-import { rankPlayers, type RankablePlayer, type RankedPlayer } from "@/lib/rankings";
+import { rankPlayers, rankingRate, type RankablePlayer, type RankedPlayer } from "@/lib/rankings";
 
 function playersAllTimeStatsSql() {
   return `
@@ -155,9 +155,7 @@ export async function getTopOverallRankedPlayersForSeason(
 ): Promise<RankedPlayer[]> {
   const db = await getDb();
   const players = await getRankablePlayers(db, seasonId, realm);
-  return rankPlayers(players, "punkty")
-    .filter((p) => p.punkty > 0 || p.mecze > 0)
-    .slice(0, limit);
+  return rankPlayers(players, "punkty").slice(0, limit);
 }
 
 export async function getTopOverallRankedPlayers(limit = 3): Promise<RankedPlayer[]> {
@@ -175,6 +173,7 @@ export type HomeTopPlayer = {
   zawodnik: string;
   profilePhotoPath: string | null;
   punkty: number;
+  mecze: number;
   goals: number;
   assists: number;
 };
@@ -182,9 +181,7 @@ export type HomeTopPlayer = {
 export async function getHomeTopPlayers(limit = 3): Promise<HomeTopPlayer[]> {
   const db = await getDb();
   const players = await getAllTimeRankablePlayers(db, REALMS.ACADEMY);
-  const top = rankPlayers(players, "punkty")
-    .filter((p) => p.punkty > 0 || p.mecze > 0)
-    .slice(0, limit);
+  const top = rankPlayers(players, "punkty").slice(0, limit);
   return top.map((p) => ({
     rank: p.rank,
     userId: p.userId,
@@ -192,7 +189,8 @@ export async function getHomeTopPlayers(limit = 3): Promise<HomeTopPlayer[]> {
     lastName: p.last_name,
     zawodnik: p.zawodnik,
     profilePhotoPath: p.profile_photo_path,
-    punkty: p.punkty,
+    punkty: rankingRate(p, "punkty"),
+    mecze: p.mecze,
     goals: p.goals,
     assists: p.assists,
   }));

@@ -78,7 +78,7 @@ const WEB_SETTINGS_TOC: SettingsTocGroup[] = [
     hint: "AdSense i konta graczy",
     items: [
       { id: "settings-adsense", label: "Google AdSense", keywords: "reklamy adsense" },
-      { id: "settings-registration", label: "Rejestracja i powiadomienia", keywords: "rejestracja mail powiadomienia" },
+      { id: "settings-registration", label: "Rejestracja i powiadomienia", keywords: "rejestracja mail hasło kod uwierzytelniający powiadomienia" },
     ],
   },
   {
@@ -463,12 +463,14 @@ export function AdminSettingsTab({
         setCancelReasonsDraft(
           channel === "mobile" ? j.mobile_settings.match_cancel_reasons : j.match_cancel_reasons
         );
-        if (typeof patch.booking_marketplace_enabled === "boolean") {
-          window.dispatchEvent(
-            new CustomEvent("awp-marketplace-settings-changed", {
-              detail: { enabled: j.booking_marketplace_enabled === true },
-            })
-          );
+        if (typeof patch.booking_marketplace_enabled === "boolean" || typeof patch.email_password_auth_enabled === "boolean") {
+          if (typeof patch.booking_marketplace_enabled === "boolean") {
+            window.dispatchEvent(
+              new CustomEvent("awp-marketplace-settings-changed", {
+                detail: { enabled: j.booking_marketplace_enabled === true },
+              })
+            );
+          }
           toast.success("Zapisano — odświeżanie…", { id: toastId });
           setSaveFlash("saved");
           window.location.reload();
@@ -1119,8 +1121,22 @@ export function AdminSettingsTab({
         id="settings-registration"
         hidden={!sectionVisible("settings-registration")}
         title="Rejestracja i powiadomienia"
-        description="Rejestracja nowych graczy jest zawsze otwarta. Tutaj ustawiasz powiadomienia e-mail o meczach."
+        description="Rejestracja nowych graczy jest zawsze otwarta. Tutaj włączasz logowanie e-mailem i hasłem oraz powiadomienia o meczach."
       >
+        <YesNoSwitchRow
+          className={adminToggleRowClass}
+          label="Logowanie e-mailem i hasłem"
+          hint="Wyłączone (domyślnie) = imię, nazwisko i PIN jak dotychczas. Włączone = nowi gracze zakładają konto e-mailem i hasłem, a kod z wiadomości wpisują w aplikacji. Istniejące konta PIN przy następnym logowaniu muszą uzupełnić e-mail, kod i hasło — okna nie da się zamknąć wcześniej. Wymaga działającej wysyłki SMTP."
+          checked={Boolean(settings.email_password_auth_enabled)}
+          disabled={busy}
+          onCheckedChange={(v) => void save({ email_password_auth_enabled: v })}
+        />
+        {!settings.system.smtp_configured ? (
+          <p className="mb-3 text-sm text-amber-200/90">
+            Wysyłka e-mail (SMTP) nie jest skonfigurowana — kody uwierzytelniające nie dojdą, dopóki nie ustawisz SMTP na
+            serwerze.
+          </p>
+        ) : null}
         <div className={cn(adminStatusChipClass, "mb-2")}>
           <span className="text-emerald-100/70">Rejestracja nowych graczy:</span>{" "}
           <strong className="text-emerald-300">Zawsze włączona</strong>
@@ -1205,7 +1221,7 @@ export function AdminSettingsTab({
         id="settings-ranking-points"
         hidden={!sectionVisible("settings-ranking-points")}
         title="Rankingi — punkty za statystyki"
-        description="Ile punktów do rankingu dostaje zawodnik za gol, asystę, kilometr biegu lub obroniony strzał."
+        description="Wagi akcji do średniej na mecz. Pozycja w rankingu zależy od średniej punktów na mecz, nie od liczby rozegranych spotkań."
       >
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {(

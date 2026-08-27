@@ -60,6 +60,7 @@ import pl.akademiawielkichpilkarzy.app.data.api.ApiClient
 import pl.akademiawielkichpilkarzy.app.data.api.ForgotPinRequest
 import pl.akademiawielkichpilkarzy.app.data.api.LoginRequest
 import pl.akademiawielkichpilkarzy.app.data.api.RegisterRequest
+import pl.akademiawielkichpilkarzy.app.data.api.RegisterVerifyRequest
 import pl.akademiawielkichpilkarzy.app.data.api.VenueCardDto
 import pl.akademiawielkichpilkarzy.app.data.auth.BiometricCredentialsStore
 import pl.akademiawielkichpilkarzy.app.push.PushRegistrar
@@ -90,6 +91,10 @@ fun LoginScreen(
     var siteName by remember { mutableStateOf("Akademia Wielkich Piłkarzy") }
     var siteDescription by remember { mutableStateOf("Terminarz, składy i społeczność akademii") }
     var marketplaceEnabled by remember { mutableStateOf(false) }
+    var emailAuthEnabled by remember { mutableStateOf(false) }
+    var email by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var legacyPin by remember { mutableStateOf(false) }
     var biometricsAvailable by remember { mutableStateOf(false) }
     var biometricEnabled by remember { mutableStateOf(false) }
     var authMode by remember { mutableStateOf("login") }
@@ -110,6 +115,7 @@ fun LoginScreen(
                 ?: cfg.appSettings?.siteDescription?.takeIf { it.isNotBlank() }
                 ?: siteDescription
             marketplaceEnabled = cfg.appSettings?.bookingMarketplaceEnabled == true
+            emailAuthEnabled = cfg.appSettings?.emailPasswordAuthEnabled == true
             try {
                 AwpApp.instance.appConfigStore.setMarketplaceEnabled(marketplaceEnabled)
             } catch (_: Exception) {
@@ -123,7 +129,7 @@ fun LoginScreen(
             }
         }
         // Auto-prompt biometrii przy starcie, jeśli włączona.
-        if (biometricsAvailable && biometricEnabled && activity != null) {
+        if (biometricsAvailable && biometricEnabled && activity != null && !emailAuthEnabled) {
             BiometricHelper.authenticate(
                 activity = activity,
                 onSuccess = {
@@ -191,6 +197,51 @@ fun LoginScreen(
         }
     }
 
+    fun performEmailLogin() {
+        scope.launch {
+            loading = true
+            error = null
+            try {
+                val res = ApiClient.api.login(
+                    LoginRequest(
+                        email = email.trim(),
+                        password = password,
+                        rememberMe = rememberMe
+                    )
+                )
+                val token = res.token
+                val user = res.user
+                if (token.isNullOrBlank() || user == null) {
+                    error = res.error ?: "Logowanie nie powiodło się"
+                } else {
+                    AwpApp.instance.sessionStore.saveSession(
+                        token = token,
+                        userId = user.id,
+                        firstName = user.firstName,
+                        lastName = user.lastName,
+                        zawodnik = user.zawodnik,
+                        isAdmin = user.isAdmin == 1
+                    )
+                    PushRegistrar.enablePush()
+                    context.awpVibrate(AwpHaptic.Success)
+                    onLoggedIn()
+                }
+            } catch (e: HttpException) {
+                error = try {
+                    e.response()?.errorBody()?.string()?.let { raw ->
+                        Regex("\"error\"\\s*:\\s*\"([^\"]+)\"").find(raw)?.groupValues?.getOrNull(1)
+                    } ?: "Błąd logowania (${e.code()})"
+                } catch (_: Exception) {
+                    "Błąd logowania (${e.code()})"
+                }
+            } catch (e: Exception) {
+                error = e.message ?: "Brak połączenia z serwerem"
+            } finally {
+                loading = false
+            }
+        }
+    }
+
     AwpTheme(darkTheme = false) {
         Box(
             modifier = Modifier
@@ -236,8 +287,10 @@ fun LoginScreen(
                 }
                 when (authMode) {
                     "register" -> RegisterPanel(
+                        emailAuthEnabled = emailAuthEnabled,
                         onBack = { authMode = "login" },
-                        onSuccess = { authMode = "login" }
+                        onSuccess = { authMode = "login" },
+                        onLoggedIn = onLoggedIn
                     )
                     "forgot" -> ForgotPinPanel(
                         onBack = { authMode = "login" },
@@ -245,7 +298,9 @@ fun LoginScreen(
                     )
                     else -> MarketplaceAuthCard(
                         title = "Logowanie",
-                        subtitle = if (marketplaceEnabled) {
+                        subtitle = if (emailAuthEnabled && !legacyPin) {
+                            "Wejście akademii — e-mail i hasło."
+                        } else if (marketplaceEnabled) {
                             "Rezerwacja boiska bez PIN-u albo wejście akademii."
                         } else {
                             "Wejście akademii — imię, nazwisko i PIN."
@@ -258,13 +313,13 @@ fun LoginScreen(
                                 enabled = true
                             ) { onBrowsePitches() }
                             Text(
-                                "albo akademia — imię, nazwisko i PIN",
+                                if (emailAuthEnabled && !legacyPin) "albo akademia — e-mail i hasło" else "albo akademia — imię, nazwisko i PIN",
                                 color = AwpColors.Zinc500,
                                 style = MaterialTheme.typography.bodySmall,
                                 modifier = Modifier.align(Alignment.CenterHorizontally)
                             )
                         }
-                        if (biometricsAvailable && biometricEnabled && activity != null) {
+                        if (biometricsAvailable && biometricEnabled && activity != null && (!emailAuthEnabled || legacyPin)) {
                             MarketplacePrimaryButton("Zaloguj odciskiem / twarzą") {
                                 error = null
                                 BiometricHelper.authenticate(
@@ -291,6 +346,16 @@ fun LoginScreen(
                             )
                         }
 
+                        if (emailAuthEnabled && !legacyPin) {
+                            AwpTextField("E-mail", email, { email = it }, keyboardType = KeyboardType.Email, light = true)
+                            AwpTextField(
+                                "Hasło",
+                                password,
+                                { password = it },
+                                visualTransformation = PasswordVisualTransformation(),
+                                light = true
+                            )
+                        } else {
                         AwpTextField("Imię", firstName, { firstName = it }, light = true)
                         AwpTextField("Nazwisko", lastName, { lastName = it }, light = true)
                         AwpTextField(
@@ -301,6 +366,7 @@ fun LoginScreen(
                             visualTransformation = PasswordVisualTransformation(),
                             light = true
                         )
+                        }
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Checkbox(
                                 checked = rememberMe,
@@ -323,12 +389,25 @@ fun LoginScreen(
                         }
 
                         MarketplacePrimaryButton(
-                            text = "Zaloguj PIN-em",
+                            text = if (emailAuthEnabled && !legacyPin) "Zaloguj się" else "Zaloguj PIN-em",
                             loading = loading,
-                            enabled = firstName.isNotBlank() && lastName.isNotBlank() && pin.length in 4..6
-                        ) { performPinLogin() }
+                            enabled = if (emailAuthEnabled && !legacyPin) {
+                                email.isNotBlank() && password.isNotBlank()
+                            } else {
+                                firstName.isNotBlank() && lastName.isNotBlank() && pin.length in 4..6
+                            }
+                        ) {
+                            if (emailAuthEnabled && !legacyPin) performEmailLogin() else performPinLogin()
+                        }
+                        if (emailAuthEnabled) {
+                            MarketplaceLink(if (legacyPin) "Logowanie e-mailem i hasłem" else "Mam stare konto z PIN-em") {
+                                legacyPin = !legacyPin
+                            }
+                        }
                         MarketplaceLink("Załóż konto akademii") { authMode = "register" }
-                        MarketplaceLink("Zapomniałem PIN-u") { authMode = "forgot" }
+                        if (!emailAuthEnabled || legacyPin) {
+                            MarketplaceLink("Zapomniałem PIN-u") { authMode = "forgot" }
+                        }
                     }
                 }
             }
@@ -342,31 +421,128 @@ fun LoginScreen(
 }
 
 @Composable
-private fun RegisterPanel(onBack: () -> Unit, onSuccess: () -> Unit) {
+private fun RegisterPanel(
+    emailAuthEnabled: Boolean,
+    onBack: () -> Unit,
+    onSuccess: () -> Unit,
+    onLoggedIn: () -> Unit
+) {
     var first by remember { mutableStateOf("") }
     var last by remember { mutableStateOf("") }
     var alias by remember { mutableStateOf("") }
     var pin by remember { mutableStateOf("") }
     var pinConfirm by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var passwordConfirm by remember { mutableStateOf("") }
+    var pendingEmail by remember { mutableStateOf<String?>(null) }
+    var code by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
 
-    MarketplaceAuthCard(title = "Rejestracja", subtitle = "Utwórz konto zawodnika bez otwierania strony WWW.") {
+    if (pendingEmail != null) {
+        MarketplaceAuthCard(title = "Kod z e-maila", subtitle = "Wpisz kod wysłany na $pendingEmail.") {
+            AwpTextField(
+                "Kod uwierzytelniający",
+                code,
+                { if (it.length <= 8 && it.all(Char::isDigit)) code = it },
+                keyboardType = KeyboardType.Number,
+                light = true
+            )
+            message?.let { Text(it, color = AwpColors.MundialRed) }
+            MarketplacePrimaryButton("Potwierdź kod", loading = busy, enabled = !busy && code.length >= 4) {
+                scope.launch {
+                    busy = true
+                    message = null
+                    try {
+                        val res = ApiClient.api.registerVerify(
+                            RegisterVerifyRequest(email = pendingEmail!!, code = code.trim())
+                        )
+                        if (res.error != null) {
+                            message = res.error
+                        } else {
+                            val token = res.token
+                            val user = res.user
+                            if (!token.isNullOrBlank() && user != null) {
+                                AwpApp.instance.sessionStore.saveSession(
+                                    token = token,
+                                    userId = user.id,
+                                    firstName = user.firstName,
+                                    lastName = user.lastName,
+                                    zawodnik = user.zawodnik,
+                                    isAdmin = user.isAdmin == 1
+                                )
+                                PushRegistrar.enablePush()
+                                context.awpVibrate(AwpHaptic.Success)
+                                onLoggedIn()
+                            } else {
+                                message = "Konto potwierdzone — zaloguj się"
+                                onSuccess()
+                            }
+                        }
+                    } catch (e: Exception) {
+                        message = e.message ?: "Nie udało się potwierdzić kodu"
+                    } finally {
+                        busy = false
+                    }
+                }
+            }
+            MarketplaceLink("Wróć do logowania", onBack)
+        }
+        return
+    }
+
+    MarketplaceAuthCard(
+        title = "Rejestracja",
+        subtitle = if (emailAuthEnabled) {
+            "Utwórz konto e-mailem i hasłem. Kod z wiadomości wpiszesz w następnym kroku."
+        } else {
+            "Utwórz konto zawodnika bez otwierania strony WWW."
+        }
+    ) {
         AwpTextField("Imię", first, { first = it }, light = true)
         AwpTextField("Nazwisko", last, { last = it }, light = true)
         AwpTextField("Pseudonim piłkarza", alias, { alias = it }, light = true)
-        AwpTextField("PIN", pin, { if (it.length <= 6 && it.all(Char::isDigit)) pin = it }, keyboardType = KeyboardType.NumberPassword, visualTransformation = PasswordVisualTransformation(), light = true)
-        AwpTextField("Powtórz PIN", pinConfirm, { if (it.length <= 6 && it.all(Char::isDigit)) pinConfirm = it }, keyboardType = KeyboardType.NumberPassword, visualTransformation = PasswordVisualTransformation(), light = true)
-        message?.let { Text(it, color = if (it.startsWith("Konto")) AwpColors.MpTealDark else AwpColors.MundialRed) }
-        MarketplacePrimaryButton("Utwórz konto", loading = busy, enabled = !busy && first.isNotBlank() && last.isNotBlank() && alias.isNotBlank() && pin.length in 4..6 && pin == pinConfirm) {
+        if (emailAuthEnabled) {
+            AwpTextField("E-mail", email, { email = it }, keyboardType = KeyboardType.Email, light = true)
+            AwpTextField("Hasło", password, { password = it }, visualTransformation = PasswordVisualTransformation(), light = true)
+            AwpTextField("Powtórz hasło", passwordConfirm, { passwordConfirm = it }, visualTransformation = PasswordVisualTransformation(), light = true)
+        } else {
+            AwpTextField("PIN", pin, { if (it.length <= 6 && it.all(Char::isDigit)) pin = it }, keyboardType = KeyboardType.NumberPassword, visualTransformation = PasswordVisualTransformation(), light = true)
+            AwpTextField("Powtórz PIN", pinConfirm, { if (it.length <= 6 && it.all(Char::isDigit)) pinConfirm = it }, keyboardType = KeyboardType.NumberPassword, visualTransformation = PasswordVisualTransformation(), light = true)
+        }
+        message?.let { Text(it, color = if (it.startsWith("Konto") || it.startsWith("Kod")) AwpColors.MpTealDark else AwpColors.MundialRed) }
+        val canSubmit = if (emailAuthEnabled) {
+            first.isNotBlank() && last.isNotBlank() && alias.isNotBlank() && email.isNotBlank() && password.length >= 8 && password == passwordConfirm
+        } else {
+            first.isNotBlank() && last.isNotBlank() && alias.isNotBlank() && pin.length in 4..6 && pin == pinConfirm
+        }
+        MarketplacePrimaryButton("Utwórz konto", loading = busy, enabled = !busy && canSubmit) {
             scope.launch {
                 busy = true
                 message = null
                 try {
-                    val res = ApiClient.api.register(RegisterRequest(first, last, alias, pin, pinConfirm))
+                    val res = if (emailAuthEnabled) {
+                        ApiClient.api.register(
+                            RegisterRequest(
+                                firstName = first,
+                                lastName = last,
+                                zawodnik = alias,
+                                email = email.trim(),
+                                password = password,
+                                passwordConfirm = passwordConfirm
+                            )
+                        )
+                    } else {
+                        ApiClient.api.register(RegisterRequest(first, last, alias, pin, pinConfirm))
+                    }
                     if (res.error != null) {
                         message = res.error
+                    } else if (res.needsVerification == true) {
+                        pendingEmail = res.email ?: email.trim()
+                        message = "Kod został wysłany na e-mail."
                     } else {
                         message = "Konto utworzone — zaloguj się PIN-em"
                         onSuccess()

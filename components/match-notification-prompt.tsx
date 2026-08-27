@@ -18,6 +18,7 @@ type MeUser = {
   notification_prompt_completed: number;
   email: string | null;
   pin_change_pending?: number;
+  needs_email_auth_setup?: number;
 };
 
 export function MatchNotificationPrompt() {
@@ -55,7 +56,12 @@ export function MatchNotificationPrompt() {
     return () => window.removeEventListener("post-login-prompts-updated", onUp);
   }, [load]);
 
-  const open = Boolean(user && user.notification_prompt_completed === 0 && !user.pin_change_pending);
+  const open = Boolean(
+    user &&
+      user.notification_prompt_completed === 0 &&
+      !user.pin_change_pending &&
+      user.needs_email_auth_setup !== 1
+  );
 
   const dismiss = async () => {
     setBusy(true);

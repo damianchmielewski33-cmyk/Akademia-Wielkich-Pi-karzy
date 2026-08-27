@@ -37,7 +37,7 @@ function testModeExtraHeaders(request: NextRequest): Record<string, string> | un
  * żeby odbiorca (inna przeglądarka / urządzenie) nie dziedziczył sesji z oryginału.
  * Dodatkowo ustawiamy krótkotrwałe ciasteczko sygnalizujące czyszczenie sessionStorage/localStorage po stronie klienta.
  */
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname, searchParams } = request.nextUrl;
 
   if (pathname.startsWith("/api")) {

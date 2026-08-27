@@ -306,7 +306,7 @@ private fun HomeTileGrid(nav: HomeNavActions) {
             add(
                 HomeTile(
                     title = "Rankingi",
-                    desc = "Gole, asysty, punkty",
+                    desc = "Średnia na mecz",
                     gold = true,
                     icon = Icons.Filled.EmojiEvents,
                     onClick = { nav.onNative("rankings") }

@@ -24,6 +24,15 @@ interface AwpApi {
     @POST("api/auth/register")
     suspend fun register(@Body body: RegisterRequest): RegisterResponse
 
+    @POST("api/auth/register/verify")
+    suspend fun registerVerify(@Body body: RegisterVerifyRequest): RegisterResponse
+
+    @POST("api/auth/email-auth/send-code")
+    suspend fun sendEmailAuthCode(@Body body: EmailAuthSendCodeRequest): ApiOkResponse
+
+    @POST("api/auth/email-auth/complete")
+    suspend fun completeEmailAuth(@Body body: EmailAuthCompleteRequest): ApiOkResponse
+
     @POST("api/auth/forgot-pin-request")
     suspend fun forgotPin(@Body body: ForgotPinRequest): ApiOkResponse
 
@@ -68,6 +77,9 @@ interface AwpApi {
         @Path("id") matchId: Int,
         @Body body: CancelMatchRequest
     ): ApiOkResponse
+
+    @POST("api/admin/match/{id}/payment-link")
+    suspend fun createMatchPaymentLink(@Path("id") matchId: Int): MatchPaymentLinkResponse
 
     @GET("api/admin/match/{id}/signups")
     suspend fun adminMatchSignups(@Path("id") matchId: Int): AdminMatchSignupsResponse

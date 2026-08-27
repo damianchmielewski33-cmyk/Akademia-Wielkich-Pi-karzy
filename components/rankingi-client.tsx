@@ -14,7 +14,8 @@ import { useSiteMode } from "@/components/site-mode";
 import { PitchCard, PitchPageHero, pitchLabelClass } from "@/components/ui/pitch-card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { MARKETPLACE_PITCH_PHOTOS } from "@/lib/marketplace-photos";
-import type { RankablePlayer } from "@/lib/rankings";
+import type { RankingStatKey } from "@/lib/rankings";
+import { formatMatchCountPl, rankingRate } from "@/lib/rankings";
 
 export type RankingiSeasonOption = {
   id: number;
@@ -34,6 +35,7 @@ export type RankingiRow = {
   distance: number;
   saves: number;
   punkty: number;
+  mecze: number;
 };
 
 export type RankingiScoring = {
@@ -110,7 +112,7 @@ export function RankingiClient({
     <MarketplaceSection
       icon={Trophy}
       title="Punktacja ogólna"
-      description="Punkty liczone ze statystyk przypisanych do wybranego sezonu: gole, asysty, dystans (km) i obrony."
+      description="Ranking porównuje średnią na mecz, nie sumę ze wszystkich spotkań. 2 mecze i 8 meczów liczą się tak samo — wyżej stoi lepsza średnia."
       className="mx-auto max-w-2xl lg:max-w-none"
     >
       <div className="grid gap-4 sm:grid-cols-2">
@@ -136,7 +138,7 @@ export function RankingiClient({
         <div className={mpInnerPanelClass}>
           <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--mp-teal-dark)]">Wzór</p>
           <p className="mt-2 font-mono text-xs leading-relaxed text-zinc-700 dark:text-zinc-300 sm:text-sm">
-            {scoring.ptGoal}×gole + {scoring.ptAssist}×asysty + {scoring.ptKm}×km + {scoring.ptSave}×obrony
+            ({scoring.ptGoal}×gole + {scoring.ptAssist}×asysty + {scoring.ptKm}×km + {scoring.ptSave}×obrony) / mecze
           </p>
         </div>
       </div>
@@ -149,8 +151,8 @@ export function RankingiClient({
         <h2 className="text-lg font-bold tracking-tight text-white drop-shadow-sm sm:text-xl">Punktacja ogólna</h2>
       </div>
       <p className="mt-3 text-sm leading-relaxed text-emerald-50/95 sm:text-base">
-        Punkty w tym widoku liczone są tylko ze statystyk przypisanych do wybranego sezonu: gole, asysty, dystans (km) i
-        obrony bramkarza.
+        Ranking jest według średniej na mecz (gole, asysty, km, obrony i punkty dzielone przez liczbę spotkań). Liczba
+        meczów nie podnosi pozycji — zawodnik po dwóch meczach konkuruje na równych zasadach z kimś po ośmiu.
       </p>
       <p className="mt-2 text-sm font-semibold text-white drop-shadow-sm sm:text-base">Wartość punktów za akcję</p>
       <ul className="mt-1.5 space-y-1.5 text-sm text-emerald-50/95 sm:text-base">
@@ -167,9 +169,9 @@ export function RankingiClient({
           Obrona: <strong className="text-white">{scoring.ptSave}</strong> pkt
         </li>
       </ul>
-      <p className="mt-3 text-sm font-semibold text-white drop-shadow-sm sm:text-base">Wzór na punkty łącznie</p>
+      <p className="mt-3 text-sm font-semibold text-white drop-shadow-sm sm:text-base">Wzór na punkty / mecz</p>
       <p className="mt-1 font-mono text-xs leading-relaxed text-emerald-50/95 sm:text-sm">
-        {scoring.ptGoal}×gole + {scoring.ptAssist}×asysty + {scoring.ptKm}×km + {scoring.ptSave}×obrony
+        ({scoring.ptGoal}×gole + {scoring.ptAssist}×asysty + {scoring.ptKm}×km + {scoring.ptSave}×obrony) / mecze
       </p>
     </PitchCard>
   );
@@ -183,7 +185,7 @@ export function RankingiClient({
       <div className="lg:col-span-2">
         <RankBlock
           light={light}
-          title="Punkty łącznie"
+          title="Punkty / mecz"
           icon={Trophy}
           rows={rankingOgolny}
           col="punkty"
@@ -248,7 +250,7 @@ function RankBlock({
   title: string;
   icon: ComponentType<{ className?: string; strokeWidth?: number }>;
   rows: RankingiRow[];
-  col: keyof Pick<RankablePlayer, "goals" | "assists" | "distance" | "saves" | "punkty">;
+  col: RankingStatKey;
   format?: "1f" | "2f";
   accent?: "emerald" | "gold" | "teal";
   light?: boolean;
@@ -277,7 +279,7 @@ function RankBlock({
                   <TableRow className="border-0 hover:bg-transparent dark:hover:bg-transparent">
                     <TableHead className="w-12 pl-5">#</TableHead>
                     <TableHead>Zawodnik</TableHead>
-                    <TableHead className="pr-5 text-right">Wartość</TableHead>
+                    <TableHead className="pr-5 text-right">Śr. / mecz</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -306,7 +308,10 @@ function RankBlock({
                         </div>
                       </TableCell>
                       <TableCell className="pr-5 text-right font-semibold tabular-nums text-zinc-950 dark:text-zinc-100">
-                        {formatValue(r[col], format)}
+                        <span>{formatValue(rankingRate(r, col), format ?? "2f")}</span>
+                        <span className="mt-0.5 block text-[11px] font-medium text-zinc-500 dark:text-zinc-400">
+                          łącznie {formatValue(r[col], format)} · {formatMatchCountPl(r.mecze)}
+                        </span>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -342,7 +347,7 @@ function RankBlock({
                 <TableRow className="border-0 hover:bg-transparent dark:hover:bg-transparent">
                   <TableHead className="w-12">#</TableHead>
                   <TableHead>Zawodnik</TableHead>
-                  <TableHead className="text-right">Wartość</TableHead>
+                  <TableHead className="text-right">Śr. / mecz</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -369,7 +374,10 @@ function RankBlock({
                       </div>
                     </TableCell>
                     <TableCell className="text-right font-semibold tabular-nums text-emerald-900 dark:text-emerald-200">
-                      {formatValue(r[col], format)}
+                      <span>{formatValue(rankingRate(r, col), format ?? "2f")}</span>
+                      <span className="mt-0.5 block text-[11px] font-medium text-emerald-800/70 dark:text-emerald-200/70">
+                        łącznie {formatValue(r[col], format)} · {formatMatchCountPl(r.mecze)}
+                      </span>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -385,5 +393,5 @@ function RankBlock({
 function formatValue(value: number, format?: "1f" | "2f") {
   if (format === "1f") return Number(value).toFixed(1);
   if (format === "2f") return Number(value).toFixed(2);
-  return value;
+  return Number.isInteger(value) ? String(value) : String(value);
 }

@@ -33,6 +33,7 @@ export async function GET() {
       remember_me: s.rememberMe ? 1 : 0,
       needs_pin_setup: s.needsPinSetup ? 1 : 0,
       pin_change_pending: s.pinChangePending ? 1 : 0,
+      needs_email_auth_setup: s.needsEmailAuthSetup ? 1 : 0,
       profile_photo_path: row?.profile_photo_path ?? null,
       email: row?.email ?? null,
       match_notifications_consent: row?.match_notifications_consent ?? 0,

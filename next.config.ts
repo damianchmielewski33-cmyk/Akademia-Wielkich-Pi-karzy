@@ -54,11 +54,11 @@ const nextConfig: NextConfig = {
   experimental: {
     optimizePackageImports: ["lucide-react"],
     /**
-     * Upload grafik (tło stadionu itd.) idzie przez middleware (`/api/:path*`).
+     * Upload grafik (tło stadionu itd.) idzie przez proxy (`/api/:path*`).
      * Bez podniesienia limitu Next ucina body → FormData/plik psuje się
      * i admin widzi ogólny błąd „nie udało się wgrać grafiki”.
      */
-    middlewareClientMaxBodySize: "5mb",
+    proxyClientMaxBodySize: "5mb",
   },
   async headers() {
     const headers = [...securityHeaders] as { key: string; value: string }[];

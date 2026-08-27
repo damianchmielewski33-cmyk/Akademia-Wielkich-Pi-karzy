@@ -1,9 +1,0 @@
-﻿Mixkit Sound Effects Free License
-https://mixkit.co/license/#sfxFree
-
-Bundled previews (active_storage):
-- applause.mp3 — Stadium crowd light applause (#442)
-- cheer.mp3 — Huge crowd cheering victory (#480)
-- goal.mp3 — Crowd yelling at stadium (#478)
-- whistle.mp3 — Police short whistle (#614)
-- crowd.mp3 — Crowd at the stadium (#479)

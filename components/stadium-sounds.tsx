@@ -4,27 +4,19 @@ import { useEffect, useState } from "react";
 import { Volume2, VolumeX } from "lucide-react";
 import {
   isStadiumSoundsMuted,
-  playStadiumEntranceIfNeeded,
   setStadiumSoundsMuted,
   unlockStadiumSounds,
 } from "@/lib/stadium-sounds";
 import { isHapticsMuted, setHapticsMuted, triggerHaptic } from "@/lib/haptics";
 import { cn } from "@/lib/utils";
 
-/** Odblokowuje audio i gra dźwięk wejścia (wymagany gest w większości przeglądarek). */
+/** Odblokowuje AudioContext po geście — bez dźwięku przy wejściu. */
 export function StadiumSoundsUnlock() {
   useEffect(() => {
-    // WebView / wcześniejsze odblokowanie — spróbuj od razu (cicho pada przy autoplay block).
-    const boot = window.setTimeout(() => playStadiumEntranceIfNeeded(), 500);
-
-    const unlock = () => {
-      unlockStadiumSounds();
-      playStadiumEntranceIfNeeded();
-    };
+    const unlock = () => unlockStadiumSounds();
     window.addEventListener("pointerdown", unlock, { once: true, passive: true });
     window.addEventListener("keydown", unlock, { once: true });
     return () => {
-      window.clearTimeout(boot);
       window.removeEventListener("pointerdown", unlock);
       window.removeEventListener("keydown", unlock);
     };
@@ -60,7 +52,6 @@ export function StadiumSoundsToggle({
     setMuted(next);
     if (!next) {
       unlockStadiumSounds();
-      playStadiumEntranceIfNeeded();
       triggerHaptic("light");
     }
   }

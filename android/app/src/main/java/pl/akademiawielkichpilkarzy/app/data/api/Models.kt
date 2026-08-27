@@ -3,9 +3,11 @@ package pl.akademiawielkichpilkarzy.app.data.api
 import com.squareup.moshi.Json
 
 data class LoginRequest(
-    @Json(name = "first_name") val firstName: String,
-    @Json(name = "last_name") val lastName: String,
-    val pin: String,
+    @Json(name = "first_name") val firstName: String = "",
+    @Json(name = "last_name") val lastName: String = "",
+    val pin: String = "",
+    val email: String? = null,
+    val password: String? = null,
     @Json(name = "remember_me") val rememberMe: Boolean = true
 )
 
@@ -13,7 +15,8 @@ data class LoginResponse(
     val ok: Boolean? = null,
     val token: String? = null,
     val error: String? = null,
-    val user: LoginUser? = null
+    val user: LoginUser? = null,
+    @Json(name = "needs_email_auth_setup") val needsEmailAuthSetup: Int = 0
 )
 
 data class LoginUser(
@@ -28,8 +31,11 @@ data class RegisterRequest(
     @Json(name = "first_name") val firstName: String,
     @Json(name = "last_name") val lastName: String,
     val zawodnik: String,
-    val pin: String,
-    @Json(name = "pin_confirm") val pinConfirm: String,
+    val pin: String = "",
+    @Json(name = "pin_confirm") val pinConfirm: String = "",
+    val email: String? = null,
+    val password: String? = null,
+    @Json(name = "password_confirm") val passwordConfirm: String? = null,
     @Json(name = "auto_login") val autoLogin: Boolean = false,
     val realm: String = "academy"
 )
@@ -37,8 +43,30 @@ data class RegisterRequest(
 data class RegisterResponse(
     val ok: Boolean? = null,
     @Json(name = "logged_in") val loggedIn: Boolean? = null,
+    @Json(name = "needs_verification") val needsVerification: Boolean? = null,
+    val email: String? = null,
+    val token: String? = null,
     val error: String? = null,
     val user: LoginUser? = null
+)
+
+data class RegisterVerifyRequest(
+    val email: String,
+    val code: String,
+    @Json(name = "remember_me") val rememberMe: Boolean = true,
+    val realm: String = "academy"
+)
+
+data class EmailAuthSendCodeRequest(
+    val email: String,
+    val realm: String = "academy"
+)
+
+data class EmailAuthCompleteRequest(
+    val email: String,
+    val password: String,
+    @Json(name = "password_confirm") val passwordConfirm: String,
+    val code: String
 )
 
 data class ForgotPinRequest(
@@ -58,7 +86,9 @@ data class MeUser(
     val zawodnik: String,
     @Json(name = "is_admin") val isAdmin: Int = 0,
     @Json(name = "push_notifications_consent") val pushNotificationsConsent: Int = 0,
-    val email: String? = null
+    val email: String? = null,
+    @Json(name = "needs_email_auth_setup") val needsEmailAuthSetup: Int = 0,
+    @Json(name = "needs_pin_setup") val needsPinSetup: Int = 0
 )
 
 data class MatchDto(
@@ -167,6 +197,13 @@ data class AdminEditMatchRequest(
 )
 
 data class CancelMatchRequest(val reason: String)
+
+data class MatchPaymentLinkResponse(
+    val ok: Boolean? = null,
+    val path: String? = null,
+    val token: String? = null,
+    val error: String? = null
+)
 
 data class UserIdRequest(@Json(name = "user_id") val userId: Int)
 
@@ -459,6 +496,7 @@ data class RankingRow(
     val lastName: String,
     val zawodnik: String,
     val value: Double,
+    val mecze: Int = 0,
     val goals: Int = 0,
     val assists: Int = 0,
     val distance: Double = 0.0,
@@ -560,7 +598,8 @@ data class AppSettingsSnapshotDto(
     @Json(name = "lineup_pitch_slots_min") val lineupPitchSlotsMin: Int? = null,
     @Json(name = "lineup_pitch_slots_max") val lineupPitchSlotsMax: Int? = null,
     @Json(name = "match_cancel_reasons") val matchCancelReasons: List<MatchCancelReasonDto> = emptyList(),
-    @Json(name = "booking_marketplace_enabled") val bookingMarketplaceEnabled: Boolean = false
+    @Json(name = "booking_marketplace_enabled") val bookingMarketplaceEnabled: Boolean = false,
+    @Json(name = "email_password_auth_enabled") val emailPasswordAuthEnabled: Boolean = false
 )
 
 data class SiteAssetsDto(

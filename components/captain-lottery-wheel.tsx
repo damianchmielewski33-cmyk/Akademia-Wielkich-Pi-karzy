@@ -1,27 +1,25 @@
 "use client";
 
-import { Loader2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Crown } from "lucide-react";
 import type { PlayerEntry } from "@/lib/terminarz-shared";
 import { useSiteMode } from "@/components/site-mode";
 import { modalPanelClass } from "@/components/ui/modal-shared";
 import { cn } from "@/lib/utils";
 
-/** Paleta segmentów V1 — navy / emerald / gold. */
 const SEGMENT_FILLS_V1 = [
   "#1a2d5a",
   "#00a651",
-  "#3d2a6e",
-  "#008c44",
+  "#24386e",
+  "#0b8a4a",
   "#047857",
-  "#1a2d5a",
+  "#15264f",
   "#0f766e",
   "#b45309",
-  "#2563eb",
+  "#1d4ed8",
   "#ca8a04",
 ] as const;
 
-/** Paleta segmentów V2 — teal marketplace. */
 const SEGMENT_FILLS_V2 = [
   "#0f766e",
   "#00C9B1",
@@ -35,11 +33,14 @@ const SEGMENT_FILLS_V2 = [
   "#99f6e4",
 ] as const;
 
-const SPIN_DURATION_MS = 4800;
+const SPIN_DURATION_MS = 4200;
+const EXTRA_SPINS = 5;
+const SPIN_EASE = "cubic-bezier(0.12, 0.78, 0.08, 1)";
 
 type Props = {
   players: PlayerEntry[];
   spinning: boolean;
+  awaitingDraw?: boolean;
   onSpinComplete?: (winners: PlayerEntry[]) => void;
   spinToken: number;
   predeterminedWinners?: PlayerEntry[] | null;
@@ -52,6 +53,11 @@ type WheelLabel = {
   primary: string;
   secondary?: string;
 };
+
+function prefersReducedMotion(): boolean {
+  if (typeof window === "undefined" || !window.matchMedia) return false;
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
 
 function truncateLabel(text: string, maxLen: number): string {
   const t = text.trim();
@@ -94,17 +100,22 @@ function labelRadius(count: number): number {
   return 71;
 }
 
-function rotationForWinnerIndex(index: number, total: number, extraSpins = 6): number {
+function rotationForWinnerIndex(index: number, total: number, extraSpins: number): number {
   if (total <= 0) return 0;
   const segment = 360 / total;
   const segmentCenter = index * segment + segment / 2;
-  const base = 360 - segmentCenter;
-  return extraSpins * 360 + base;
+  return extraSpins * 360 + (360 - segmentCenter);
+}
+
+function playerCaption(p: PlayerEntry): string {
+  const name = [p.firstName, p.lastName].filter(Boolean).join(" ").trim();
+  return name || p.zawodnik || "Kapitan";
 }
 
 export function CaptainLotteryWheel({
   players,
   spinning,
+  awaitingDraw = false,
   onSpinComplete,
   spinToken,
   predeterminedWinners,
@@ -114,11 +125,13 @@ export function CaptainLotteryWheel({
 }: Props) {
   const n = players.length;
   const segmentAngle = n > 0 ? 360 / n : 0;
-  const spinLayerRef = useRef<HTMLDivElement>(null);
   const rotationRef = useRef(0);
+  const timeoutRef = useRef<number | undefined>(undefined);
+  const lastSpinTokenRef = useRef(0);
   const [rotation, setRotation] = useState(0);
   const [animating, setAnimating] = useState(false);
-  const lastSpinTokenRef = useRef(0);
+  const [spinMs, setSpinMs] = useState(SPIN_DURATION_MS);
+  const [landedWinners, setLandedWinners] = useState<PlayerEntry[] | null>(null);
 
   const fontSize = labelFontSize(n);
   const labelR = labelRadius(n);
@@ -127,33 +140,46 @@ export function CaptainLotteryWheel({
   const segmentFills = marketplaceEnabled ? SEGMENT_FILLS_V2 : SEGMENT_FILLS_V1;
   const pointerColor = marketplaceEnabled ? "var(--mp-teal)" : "var(--mundial-gold,#f5c518)";
   const hubFill = marketplaceEnabled ? "#0f766e" : "#1a2d5a";
-  const hubStroke = marketplaceEnabled ? "rgba(0,201,177,0.45)" : "rgba(245,197,24,0.35)";
+  const accent = marketplaceEnabled ? "#00C9B1" : "#00a651";
 
   const labels = useMemo(
     () => players.map((p) => wheelLabel(p, segmentAngle)),
     [players, segmentAngle]
   );
 
+  const winnerIds = useMemo(
+    () => new Set((landedWinners ?? []).map((p) => p.userId)),
+    [landedWinners]
+  );
+
   const runSpin = useCallback(() => {
     const winners = predeterminedWinners ?? [];
     if (n === 0 || winners.length === 0) return;
+    if (timeoutRef.current != null) window.clearTimeout(timeoutRef.current);
+
+    const reduced = prefersReducedMotion();
+    const extra = reduced ? 0 : EXTRA_SPINS;
+    const duration = reduced ? 280 : SPIN_DURATION_MS;
     const firstWinner = winners[0];
     const winnerIndex = players.findIndex((p) => p.userId === firstWinner.userId);
-    const targetRotation = rotationForWinnerIndex(winnerIndex >= 0 ? winnerIndex : 0, n);
-    const from = rotationRef.current % 360;
-    const normalizedTarget = targetRotation % 360;
+    const targetRotation = rotationForWinnerIndex(winnerIndex >= 0 ? winnerIndex : 0, n, extra);
+    const from = ((rotationRef.current % 360) + 360) % 360;
+    const normalizedTarget = ((targetRotation % 360) + 360) % 360;
     let delta = normalizedTarget - from;
     if (delta <= 0) delta += 360;
-    const finalRotation = rotationRef.current + delta + 6 * 360;
+    const finalRotation = rotationRef.current + delta + extra * 360;
 
     rotationRef.current = finalRotation;
+    setLandedWinners(null);
+    setSpinMs(duration);
     setAnimating(true);
     setRotation(finalRotation);
 
-    window.setTimeout(() => {
+    timeoutRef.current = window.setTimeout(() => {
       setAnimating(false);
+      setLandedWinners(winners);
       onSpinComplete?.(winners);
-    }, SPIN_DURATION_MS);
+    }, duration);
   }, [n, players, onSpinComplete, predeterminedWinners]);
 
   useEffect(() => {
@@ -169,17 +195,25 @@ export function CaptainLotteryWheel({
       rotationRef.current = 0;
       setRotation(0);
       setAnimating(false);
+      setLandedWinners(null);
     }
   }, [spinToken]);
 
-  const isActive = animating || spinning;
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current != null) window.clearTimeout(timeoutRef.current);
+    };
+  }, []);
+
+  const isSpinningWheel = animating;
+  const isBusy = awaitingDraw || spinning || animating;
 
   if (n === 0) {
     return (
       <div
         className={cn(
           modalPanelClass,
-          "flex aspect-square w-full max-w-[min(100%,clamp(18rem,80vw,32rem))] items-center justify-center px-6 text-center text-sm text-zinc-600 dark:text-zinc-400",
+          "flex aspect-square w-full max-w-[min(100%,clamp(18rem,82vw,34rem))] items-center justify-center px-6 text-center text-sm text-zinc-600 dark:text-zinc-400",
           className
         )}
       >
@@ -193,7 +227,7 @@ export function CaptainLotteryWheel({
   return (
     <div
       className={cn(
-        "relative mx-auto w-full max-w-[min(100%,clamp(18rem,80vw,32rem))] shrink-0",
+        "relative mx-auto w-full max-w-[min(100%,clamp(18rem,82vw,34rem))] shrink-0",
         className
       )}
     >
@@ -201,23 +235,13 @@ export function CaptainLotteryWheel({
         className={cn(
           modalPanelClass,
           "relative overflow-hidden px-3 pb-4 pt-5 sm:px-5 sm:pb-5 sm:pt-6",
-          isActive &&
+          isSpinningWheel &&
             (marketplaceEnabled
-              ? "ring-2 ring-[var(--mp-teal)]/40 ring-offset-2 ring-offset-white dark:ring-offset-zinc-900"
-              : "ring-2 ring-emerald-500/35 ring-offset-2 ring-offset-white dark:ring-offset-zinc-900")
+              ? "ring-2 ring-[var(--mp-teal)]/35 ring-offset-2 ring-offset-white dark:ring-offset-zinc-900"
+              : "ring-2 ring-amber-400/40 ring-offset-2 ring-offset-white dark:ring-offset-zinc-900")
         )}
+        style={{ ["--awp-lottery-accent" as string]: accent }}
       >
-        <div className="home-pitch-tile pointer-events-none absolute inset-0 opacity-[0.06] dark:opacity-[0.1]" aria-hidden />
-        <div
-          className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent to-transparent"
-          style={{
-            backgroundImage: marketplaceEnabled
-              ? "linear-gradient(90deg, transparent, rgba(0,201,177,0.55), transparent)"
-              : "linear-gradient(90deg, transparent, rgba(245,197,24,0.5), transparent)",
-          }}
-          aria-hidden
-        />
-
         <p
           className={cn(
             "relative z-10 mb-3 text-center text-xs font-bold uppercase tracking-[0.18em] sm:mb-4",
@@ -226,55 +250,43 @@ export function CaptainLotteryWheel({
               : "text-[var(--mundial-navy)] dark:text-emerald-100/90"
           )}
         >
-          Koło fortuny
+          {awaitingDraw ? "Losujemy…" : isSpinningWheel ? "Koło się kręci" : landedWinners ? "Wylosowano" : "Koło fortuny"}
         </p>
 
         <div className="relative z-10 mx-auto w-full">
           <div
-            className="pointer-events-none absolute left-1/2 top-0 z-30 -translate-x-1/2 -translate-y-0.5 sm:-translate-y-1"
+            className={cn(
+              "pointer-events-none absolute left-1/2 top-0 z-30 -translate-x-1/2 -translate-y-0.5 sm:-translate-y-1",
+              landedWinners && !isSpinningWheel && "awp-lottery-pointer--land"
+            )}
             aria-hidden
           >
             <div className="flex flex-col items-center">
               <div
-                className="h-0 w-0 border-x-[12px] border-b-[20px] border-x-transparent drop-shadow-[0_2px_4px_rgba(0,0,0,0.2)] sm:border-x-[15px] sm:border-b-[24px]"
+                className="h-0 w-0 border-x-[13px] border-b-[22px] border-x-transparent drop-shadow-[0_2px_4px_rgba(0,0,0,0.25)] sm:border-x-[16px] sm:border-b-[26px]"
                 style={{ borderBottomColor: pointerColor }}
               />
               <div
                 className="h-2 w-2 rounded-full sm:h-2.5 sm:w-2.5"
-                style={{ backgroundColor: pointerColor, boxShadow: `0 0 6px ${pointerColor}` }}
+                style={{ backgroundColor: pointerColor, boxShadow: `0 0 8px ${pointerColor}` }}
               />
             </div>
           </div>
 
           <div
-            className="relative mx-auto aspect-square w-full overflow-hidden rounded-full border border-zinc-200/90 bg-white p-[4px] shadow-md shadow-zinc-950/10 dark:border-zinc-600 dark:bg-zinc-900 sm:p-[5px]"
-            style={{ contain: "layout paint size" }}
+            className="relative mx-auto aspect-square w-full overflow-hidden rounded-full border border-zinc-200/90 bg-white p-[5px] shadow-[0_12px_40px_-18px_rgba(15,23,42,0.45)] dark:border-zinc-600 dark:bg-zinc-900 sm:p-[6px]"
           >
-            <div className="absolute inset-[4px] rounded-full bg-zinc-100 dark:bg-zinc-800 sm:inset-[5px]" aria-hidden />
-
             <div
-              ref={spinLayerRef}
-              className="relative h-full w-full origin-center rounded-full will-change-transform"
+              className="relative h-full w-full origin-center rounded-full"
               style={{
-                transform: `rotate3d(0, 0, 1, ${rotation}deg)`,
-                transition: animating
-                  ? `transform ${SPIN_DURATION_MS}ms cubic-bezier(0.12, 0.85, 0.18, 1)`
-                  : "none",
-                backfaceVisibility: "hidden",
+                transform: `rotate(${rotation}deg)`,
+                transition: animating ? `transform ${spinMs}ms ${SPIN_EASE}` : "none",
+                willChange: animating ? "transform" : "auto",
               }}
             >
               <svg viewBox="0 0 200 200" className="h-full w-full" aria-hidden>
                 <circle cx="100" cy="100" r="99" fill={hubFill} />
-                <circle
-                  cx="100"
-                  cy="100"
-                  r="98"
-                  fill="none"
-                  stroke={hubStroke}
-                  strokeWidth="1.5"
-                />
-
-                {players.map((_, i) => {
+                {players.map((player, i) => {
                   const start = i * segmentAngle - 90;
                   const end = (i + 1) * segmentAngle - 90;
                   const startRad = (start * Math.PI) / 180;
@@ -284,14 +296,16 @@ export function CaptainLotteryWheel({
                   const x2 = 100 + 98 * Math.cos(endRad);
                   const y2 = 100 + 98 * Math.sin(endRad);
                   const largeArc = segmentAngle > 180 ? 1 : 0;
-                  const color = segmentFills[i % segmentFills.length];
+                  const isWinner = winnerIds.has(player.userId);
+                  const dimOthers = Boolean(landedWinners && !isSpinningWheel);
                   return (
                     <path
-                      key={players[i].userId}
+                      key={player.userId}
                       d={`M 100 100 L ${x1} ${y1} A 98 98 0 ${largeArc} 1 ${x2} ${y2} Z`}
-                      fill={color}
-                      stroke="rgba(255,255,255,0.45)"
-                      strokeWidth="1"
+                      fill={segmentFills[i % segmentFills.length]}
+                      fillOpacity={dimOthers && !isWinner ? 0.38 : 1}
+                      stroke={isWinner && dimOthers ? pointerColor : "rgba(255,255,255,0.5)"}
+                      strokeWidth={isWinner && dimOthers ? 2.2 : 1}
                     />
                   );
                 })}
@@ -300,7 +314,8 @@ export function CaptainLotteryWheel({
                   const midAngle = i * segmentAngle + segmentAngle / 2 - 90;
                   const textRotation = midAngle + 90;
                   const dyPrimary = label.secondary ? -twoLineOffset : 0;
-
+                  const isWinner = winnerIds.has(players[i].userId);
+                  const dimOthers = Boolean(landedWinners && !isSpinningWheel);
                   return (
                     <text
                       key={players[i].userId}
@@ -310,17 +325,21 @@ export function CaptainLotteryWheel({
                       textAnchor="middle"
                       dominantBaseline="middle"
                       fill="#ffffff"
-                      stroke="#1a2d5a"
-                      strokeWidth="0.7"
-                      strokeLinejoin="round"
-                      paintOrder="stroke fill"
+                      fillOpacity={dimOthers && !isWinner ? 0.45 : 1}
                       fontSize={fontSize}
                       fontWeight={800}
-                      style={{ fontFamily: "system-ui, -apple-system, Segoe UI, sans-serif" }}
+                      style={{
+                        fontFamily: "system-ui, -apple-system, Segoe UI, sans-serif",
+                        filter: "drop-shadow(0 1px 1px rgba(0,0,0,0.55))",
+                      }}
                     >
-                      <tspan x="0" dy={dyPrimary}>{label.primary}</tspan>
+                      <tspan x="0" dy={dyPrimary}>
+                        {label.primary}
+                      </tspan>
                       {label.secondary ? (
-                        <tspan x="0" dy={lineGap}>{label.secondary}</tspan>
+                        <tspan x="0" dy={lineGap}>
+                          {label.secondary}
+                        </tspan>
                       ) : null}
                     </text>
                   );
@@ -328,37 +347,43 @@ export function CaptainLotteryWheel({
               </svg>
             </div>
 
-            <div
-              className="absolute left-1/2 top-1/2 z-20 flex h-[26%] w-[26%] -translate-x-1/2 -translate-y-1/2 items-center justify-center"
-            >
-              {canSpin || spinning ? (
+            <div className="absolute left-1/2 top-1/2 z-20 flex h-[28%] w-[28%] -translate-x-1/2 -translate-y-1/2 items-center justify-center">
+              {canSpin || isBusy ? (
                 <button
                   type="button"
-                  disabled={!canSpin || spinning}
+                  disabled={!canSpin || isBusy}
                   onClick={() => onSpin?.()}
                   className={cn(
-                    "flex h-full w-full flex-col items-center justify-center rounded-full border-2 text-white shadow-md transition-transform",
+                    "flex h-full w-full flex-col items-center justify-center rounded-full border-2 text-white shadow-md transition-[transform,background-color] duration-200",
                     marketplaceEnabled
                       ? "border-teal-700/20 bg-[var(--mp-teal)] shadow-teal-950/25 dark:border-teal-400/25"
                       : "border-emerald-700/20 bg-emerald-600 shadow-emerald-950/25 dark:border-emerald-400/25 dark:bg-emerald-500",
-                    canSpin &&
-                      !spinning &&
-                      (marketplaceEnabled
-                        ? "hover:scale-[1.04] hover:bg-[var(--mp-teal-dark)] active:scale-[0.97]"
-                        : "hover:scale-[1.04] hover:bg-emerald-700 active:scale-[0.97] dark:hover:bg-emerald-400"),
-                    spinning && "cursor-wait opacity-95"
+                    canSpin && !isBusy && "awp-lottery-hub--ready hover:scale-[1.03] active:scale-[0.97]",
+                    isBusy && "cursor-wait"
                   )}
-                  aria-label={spinning ? "Kręcimy koło fortuny" : "Zakręć koło fortuny — losuj kapitana"}
+                  aria-label={
+                    awaitingDraw
+                      ? "Losujemy kapitana"
+                      : isSpinningWheel
+                        ? "Koło fortuny się kręci"
+                        : "Zakręć koło fortuny — losuj kapitana"
+                  }
                 >
-                  {spinning ? (
-                    <Loader2 className="h-7 w-7 animate-spin sm:h-8 sm:w-8" aria-hidden />
+                  {awaitingDraw ? (
+                    <span className="px-1 text-center text-[10px] font-extrabold uppercase leading-tight tracking-[0.1em] sm:text-xs">
+                      Losujemy
+                    </span>
+                  ) : isSpinningWheel ? (
+                    <span className="px-1 text-center text-[10px] font-extrabold uppercase leading-tight tracking-[0.1em] sm:text-xs">
+                      Kręci się
+                    </span>
                   ) : (
                     <>
                       <span className="text-xs font-extrabold uppercase leading-none tracking-[0.12em] sm:text-sm">
-                        Losuj
+                        Zakręć
                       </span>
                       <span className="mt-0.5 text-[9px] font-bold uppercase leading-none tracking-[0.08em] opacity-90 sm:text-[10px]">
-                        kapitana
+                        kołem
                       </span>
                     </>
                   )}
@@ -368,18 +393,44 @@ export function CaptainLotteryWheel({
                   className="flex h-full w-full items-center justify-center rounded-full border-2 border-zinc-200/90 bg-white shadow-inner dark:border-zinc-600 dark:bg-zinc-900"
                   aria-hidden
                 >
-                  <span className="text-xs font-extrabold uppercase tracking-[0.18em] text-[var(--mundial-navy)] dark:text-[var(--mundial-gold,#f5c518)] sm:text-sm">
-                    AWP
-                  </span>
+                  <Crown
+                    className={cn(
+                      "h-6 w-6 sm:h-7 sm:w-7",
+                      marketplaceEnabled ? "text-[var(--mp-teal)]" : "text-[var(--mundial-gold,#f5c518)]"
+                    )}
+                  />
                 </div>
               )}
             </div>
           </div>
         </div>
 
-        <p className="relative z-10 mt-3 text-center text-xs text-zinc-600 dark:text-zinc-400 sm:mt-4 sm:text-sm">
-          {n} graczów w puli losowania
-        </p>
+        {landedWinners && landedWinners.length > 0 ? (
+          <div
+            className="awp-lottery-reveal relative z-10 mt-4 rounded-2xl border border-zinc-200/90 bg-white/95 px-3 py-3 text-center shadow-sm dark:border-zinc-600 dark:bg-zinc-900/80"
+            role="status"
+          >
+            <p
+              className={cn(
+                "flex items-center justify-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.16em]",
+                marketplaceEnabled
+                  ? "text-[var(--mp-teal-dark)] dark:text-teal-300"
+                  : "text-amber-800 dark:text-amber-200"
+              )}
+            >
+              <Crown className="h-3.5 w-3.5" aria-hidden />
+              {landedWinners.length === 1 ? "Kapitan" : `Kapitanowie (${landedWinners.length})`}
+            </p>
+            <p className="mt-1.5 text-sm font-extrabold leading-snug text-zinc-950 dark:text-white sm:text-base">
+              {landedWinners.map(playerCaption).join(" · ")}
+            </p>
+          </div>
+        ) : (
+          <p className="relative z-10 mt-3 text-center text-xs text-zinc-600 dark:text-zinc-400 sm:mt-4 sm:text-sm">
+            {n} {n === 1 ? "gracz" : "graczy"} w puli
+            {awaitingDraw ? " — chwila, losujemy wynik" : ""}
+          </p>
+        )}
       </div>
     </div>
   );

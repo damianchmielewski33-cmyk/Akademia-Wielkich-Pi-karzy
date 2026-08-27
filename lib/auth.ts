@@ -36,13 +36,21 @@ export type AppSession = {
   /** Zgłoszona zmiana PIN-u czeka na akceptację admina — bez pełnego dostępu do konta. */
   pinChangePending: boolean;
   /**
+   * Włączone logowanie e-mail/hasło — gracz bez zweryfikowanego maila i hasła
+   * musi uzupełnić dane w blokującym oknie (admin jest zwolniony).
+   */
+  needsEmailAuthSetup: boolean;
+  /**
    * Sekcje panelu admina. `null` = pełny dostęp (domyślnie dla adminów bez ograniczeń).
    * Puste / brak tylko przy nie-adminie.
    */
   adminSections: import("@/lib/admin-permissions").AdminSectionId[] | null;
 };
 
-type JwtSessionFields = Omit<AppSession, "needsPinSetup" | "pinChangePending" | "adminSections">;
+type JwtSessionFields = Omit<
+  AppSession,
+  "needsPinSetup" | "pinChangePending" | "needsEmailAuthSetup" | "adminSections"
+>;
 
 function sessionMaxAgeSec(rememberMe: boolean): number {
   // Jeśli użytkownik nie zaznaczył „Nie wylogowuj mnie”, token powinien wygasać szybciej niż 30 dni.
@@ -91,7 +99,9 @@ export const getServerSession = cache(async (): Promise<AppSession | null> => {
     const db = await getProdDb();
     const row = (await db
       .prepare(
-        "SELECT auth_version, pin_hash, pin_hash_pending, is_admin, admin_permissions FROM users WHERE id = ?"
+        `SELECT auth_version, pin_hash, pin_hash_pending, is_admin, admin_permissions,
+                password_hash, email_verified, email, realm
+         FROM users WHERE id = ?`
       )
       .get(session.userId)) as
       | {
@@ -100,18 +110,43 @@ export const getServerSession = cache(async (): Promise<AppSession | null> => {
           pin_hash_pending: string | null;
           is_admin: number;
           admin_permissions: string | null;
+          password_hash: string | null;
+          email_verified: number | null;
+          email: string | null;
+          realm: string | null;
         }
       | undefined;
     if (!row || row.auth_version !== session.authVersion) return null;
     const needsPinSetup = !row.pin_hash;
     const pinChangePending = Boolean(row.pin_hash_pending);
     const { parseAdminPermissions } = await import("@/lib/admin-permissions");
+    const isAdmin = row.is_admin === 1;
+    let needsEmailAuthSetup = false;
+    if (!isAdmin) {
+      const completed =
+        Boolean(row.password_hash) && row.email_verified === 1 && Boolean(row.email?.trim());
+      if (!completed) {
+        const { isEmailPasswordAuthEnabled, userNeedsEmailAuthSetup } = await import("@/lib/email-auth");
+        const { parseRealm, REALMS } = await import("@/lib/realm");
+        const featureOn = await isEmailPasswordAuthEnabled(db, parseRealm(row.realm, REALMS.ACADEMY));
+        needsEmailAuthSetup = userNeedsEmailAuthSetup(
+          {
+            password_hash: row.password_hash,
+            email_verified: row.email_verified,
+            email: row.email,
+            is_admin: row.is_admin,
+          },
+          featureOn
+        );
+      }
+    }
     return {
       ...session,
-      isAdmin: row.is_admin === 1,
+      isAdmin,
       needsPinSetup,
       pinChangePending,
-      adminSections: row.is_admin === 1 ? parseAdminPermissions(row.admin_permissions) : null,
+      needsEmailAuthSetup,
+      adminSections: isAdmin ? parseAdminPermissions(row.admin_permissions) : null,
     };
   } catch {
     return null;

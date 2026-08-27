@@ -1,8 +1,10 @@
 import { getDb } from "@/lib/db";
+import { getAppSettings } from "@/lib/app-settings";
+import { MATCH_PREPAYMENT_PLN, perPersonMatchFeePln } from "@/lib/match-fee";
 
 export type PublicShareLinkRow = {
   token: string;
-  kind: "last_match_wallets" | "all_wallets" | "match_wallets" | "player_wallets";
+  kind: "last_match_wallets" | "all_wallets" | "match_wallets" | "player_wallets" | "match_signup_fees";
   created_at: string;
   expires_at: string | null;
   revoked_at: string | null;
@@ -48,6 +50,10 @@ export async function loadPublicShareLink(token: string): Promise<PublicShareLin
 export type PublicWalletView = {
   title: string;
   subtitle: string;
+  /** Link opłat składki za aktualne zapisy (BLIK na telefon / operator). */
+  mode?: "wallets" | "signup_fees";
+  contribution_pln?: number | null;
+  blik_phone?: string | null;
   match: { id: number; match_date: string; match_time: string; location: string; fee_pln?: number | null } | null;
   rows: PublicWalletPlayerRow[];
   playerMatches?: Array<{
@@ -107,6 +113,10 @@ export async function loadPublicWalletRows(link: PublicShareLinkRow): Promise<Pu
       match: null,
       rows,
     };
+  }
+
+  if (link.kind === "match_signup_fees" && link.match_id) {
+    return loadMatchSignupFeesView(link.match_id);
   }
 
   if (link.kind === "match_wallets" && link.match_id) {
@@ -191,6 +201,70 @@ export async function loadPublicWalletRows(link: PublicShareLinkRow): Promise<Pu
     match: lastMatch,
     rows,
   };
+}
+
+export function matchSignupContributionPln(feePln: number | null | undefined, signedUp: number): number {
+  return perPersonMatchFeePln(feePln, signedUp) ?? MATCH_PREPAYMENT_PLN;
+}
+
+async function loadMatchSignupFeesView(matchId: number): Promise<PublicWalletView> {
+  const db = await getDb();
+  const match = (await db.prepare("SELECT * FROM matches WHERE id = ?").get(matchId)) as
+    | { id: number; match_date: string; match_time: string; location: string; fee_pln?: number | null; signed_up: number }
+    | undefined;
+  if (!match) return { title: "Mecz nie znaleziony", subtitle: "", match: null, rows: [], mode: "signup_fees" };
+
+  const settings = await getAppSettings(db);
+  const contribution = matchSignupContributionPln(match.fee_pln, Number(match.signed_up) || 0);
+  const rows = (await db
+    .prepare(
+      `SELECT u.id, u.first_name, u.last_name, u.player_alias AS zawodnik, u.profile_photo_path,
+              0 AS balance_pln,
+              COALESCE(ms.paid, 0) AS match_paid
+       FROM match_signups ms
+       JOIN users u ON u.id = ms.user_id
+       WHERE ms.match_id = ? AND COALESCE(ms.commitment, 1) = 1
+       ORDER BY COALESCE(u.is_temporary, 0) DESC, u.first_name, u.last_name`
+    )
+    .all(matchId)) as PublicWalletPlayerRow[];
+
+  return {
+    title: "Opłata składki za mecz",
+    subtitle: `${match.match_date} · ${match.match_time} · ${match.location}`,
+    mode: "signup_fees",
+    contribution_pln: contribution,
+    blik_phone: settings.blik_phone,
+    match,
+    rows,
+  };
+}
+
+export async function createOrGetMatchSignupFeesLink(args: {
+  matchId: number;
+  adminId: number;
+}): Promise<{ token: string; created: boolean }> {
+  const db = await getDb();
+  const existing = (await db
+    .prepare(
+      `SELECT token FROM public_share_links
+       WHERE kind = 'match_signup_fees' AND match_id = ?
+         AND revoked_at IS NULL
+         AND (expires_at IS NULL OR datetime('now') <= datetime(expires_at))
+       ORDER BY created_at DESC
+       LIMIT 1`
+    )
+    .get(args.matchId)) as { token: string } | undefined;
+  if (existing?.token) return { token: existing.token, created: false };
+
+  const crypto = await import("crypto");
+  const token = crypto.randomBytes(16).toString("hex");
+  await db
+    .prepare(
+      `INSERT INTO public_share_links (token, kind, created_by_admin_id, expires_at, match_id, user_id)
+       VALUES (?, 'match_signup_fees', ?, datetime('now', '+30 days'), ?, NULL)`
+    )
+    .run(token, args.adminId, args.matchId);
+  return { token, created: true };
 }
 
 /**

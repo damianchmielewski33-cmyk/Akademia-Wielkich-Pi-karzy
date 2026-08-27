@@ -18,6 +18,10 @@ type Props = {
   balancePln: number | null;
   playerLabel: string;
   className?: string;
+  /** Gdy podane, ta kwota idzie do schowka zamiast sugerowanej z salda. */
+  amountPln?: number | null;
+  compact?: boolean;
+  onAfterPay?: () => void | Promise<void>;
 };
 
 function formatPln(n: number) {
@@ -56,25 +60,32 @@ export function PayMatchButton({
   balancePln,
   playerLabel,
   className,
+  amountPln,
+  compact,
+  onAfterPay,
 }: Props) {
   const [busy, setBusy] = useState(false);
 
-  const details = useMemo(
-    () => buildPaymentDetails(blikPhoneDisplay, balancePln, defaultMatchFeePln, playerLabel),
-    [blikPhoneDisplay, balancePln, defaultMatchFeePln, playerLabel]
-  );
+  const details = useMemo(() => {
+    const base = buildPaymentDetails(blikPhoneDisplay, balancePln, defaultMatchFeePln, playerLabel);
+    if (amountPln != null && Number.isFinite(amountPln) && amountPln > 0) {
+      return { ...base, amountPln };
+    }
+    return base;
+  }, [blikPhoneDisplay, balancePln, defaultMatchFeePln, playerLabel, amountPln]);
 
   async function handlePay() {
     if (busy) return;
     setBusy(true);
     try {
-      const clipboardText = buildPaymentClipboardText(details);
+      const clipboardText = compact ? details.blikPhoneCopy : buildPaymentClipboardText(details);
       const copied = await copyText(clipboardText);
       const ua = typeof navigator !== "undefined" ? navigator.userAgent : "";
       const bankHref = buildMobileBankAppHref(ua);
       const mobile = isMobileUserAgent(ua);
 
       if (mobile && bankHref) {
+        await onAfterPay?.();
         window.location.assign(bankHref);
         toast.success("Otwieranie aplikacji banku…", {
           description: copied
@@ -100,9 +111,40 @@ export function PayMatchButton({
           duration: 8000,
         });
       }
+      await onAfterPay?.();
     } finally {
       setBusy(false);
     }
+  }
+
+  const payButton = (
+    <Button
+      type="button"
+      variant="gold"
+      disabled={busy}
+      onClick={() => void handlePay()}
+      className={cn(
+        compact
+          ? "h-auto min-h-12 w-full flex-1 font-bold"
+          : cn(
+              "h-auto min-h-14 w-full shrink-0 px-6 py-3.5 text-base font-bold shadow-lg shadow-amber-950/25 ring-2 ring-amber-500/40 hover:ring-amber-400/60 sm:w-auto sm:min-w-[15rem]",
+              "bg-[var(--mundial-gold,#f5c518)] text-[var(--mundial-navy,#1a2d5a)] hover:bg-amber-200"
+            )
+      )}
+    >
+      {busy ? (
+        <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+      ) : compact ? (
+        <Smartphone className="h-4 w-4" aria-hidden />
+      ) : (
+        <Banknote className="h-5 w-5" aria-hidden />
+      )}
+      {compact ? "Zapłać przelewem na telefon" : "Zapłać za mecz"}
+    </Button>
+  );
+
+  if (compact) {
+    return <div className={cn("flex-1", className)}>{payButton}</div>;
   }
 
   return (
@@ -132,23 +174,7 @@ export function PayMatchButton({
           )}
         </div>
 
-        <Button
-          type="button"
-          variant="gold"
-          disabled={busy}
-          onClick={() => void handlePay()}
-          className={cn(
-            "h-auto min-h-14 w-full shrink-0 px-6 py-3.5 text-base font-bold shadow-lg shadow-amber-950/25 ring-2 ring-amber-500/40 hover:ring-amber-400/60 sm:w-auto sm:min-w-[15rem]",
-            "bg-[var(--mundial-gold,#f5c518)] text-[var(--mundial-navy,#1a2d5a)] hover:bg-amber-200"
-          )}
-        >
-          {busy ? (
-            <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
-          ) : (
-            <Banknote className="h-5 w-5" aria-hidden />
-          )}
-          Zapłać za mecz
-        </Button>
+        {payButton}
       </div>
 
       <p className="mt-3 flex items-start gap-2 text-left text-xs leading-relaxed text-amber-950/75 dark:text-amber-100/80">

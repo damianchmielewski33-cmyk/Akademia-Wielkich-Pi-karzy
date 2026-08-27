@@ -31,6 +31,20 @@ const registerSchema = z
     path: ["pinConfirm"],
   });
 
+const emailRegisterSchema = z
+  .object({
+    firstName: formSchemas.requiredName("Imię"),
+    lastName: formSchemas.requiredName("Nazwisko"),
+    zawodnik: formSchemas.requiredText("Piłkarz"),
+    email: formSchemas.email,
+    password: formSchemas.password,
+    passwordConfirm: z.string().min(1, "Powtórz hasło"),
+  })
+  .refine((d) => d.password === d.passwordConfirm, {
+    message: "Hasła muszą być takie same",
+    path: ["passwordConfirm"],
+  });
+
 export function RegisterForm({
   nextPath,
   realm = "academy",
@@ -38,7 +52,7 @@ export function RegisterForm({
   nextPath?: string;
   realm?: "academy" | "pzu_cup";
 }) {
-  const { marketplaceEnabled } = useSiteMode();
+  const { marketplaceEnabled, emailPasswordAuthEnabled } = useSiteMode();
   const submitVariant = marketplaceEnabled ? "gold" : "pitch";
   const router = useRouter();
   const next = sanitizeAppBridgeNext(nextPath) ?? undefined;
@@ -46,14 +60,73 @@ export function RegisterForm({
   const [loading, setLoading] = useState(false);
   const [showGoalPreloader, setShowGoalPreloader] = useState(false);
   const [goalPreloaderLabel, setGoalPreloaderLabel] = useState<string | undefined>(undefined);
+  const [pendingEmail, setPendingEmail] = useState<string | null>(null);
+  const [verifyCode, setVerifyCode] = useState("");
 
   const form = useValidatedForm({
     initialValues: { firstName: "", lastName: "", zawodnik: "", pin: "", pinConfirm: "" },
     schema: registerSchema,
   });
 
+  const emailForm = useValidatedForm({
+    initialValues: {
+      firstName: "",
+      lastName: "",
+      zawodnik: "",
+      email: "",
+      password: "",
+      passwordConfirm: "",
+    },
+    schema: emailRegisterSchema,
+  });
+
+  async function finishLoggedIn() {
+    setGoalPreloaderLabel(realm === "pzu_cup" ? "Gol! Witamy w turnieju…" : "Gol! Witamy w akademii…");
+    setShowGoalPreloader(true);
+    toast.success("Konto utworzone — jesteś zalogowany");
+    await new Promise((r) => setTimeout(r, AUTH_SUCCESS_PRELOADER_DELAY_MS));
+    await router.push(next ?? (realm === "pzu_cup" ? "/pzu-cup" : "/"));
+    router.refresh();
+    notifyPostLoginPromptsUpdated();
+  }
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (emailPasswordAuthEnabled) {
+      if (!emailForm.validate()) return;
+      const { firstName, lastName, zawodnik, email, password, passwordConfirm } = emailForm.values;
+      setLoading(true);
+      try {
+        const res = await fetch("/api/auth/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            first_name: firstName,
+            last_name: lastName,
+            zawodnik,
+            email,
+            password,
+            password_confirm: passwordConfirm,
+            realm,
+          }),
+        });
+        const data = (await res.json().catch(() => ({}))) as {
+          error?: string;
+          needs_verification?: boolean;
+          email?: string;
+        };
+        if (!res.ok) {
+          toast.error(typeof data.error === "string" ? data.error : "Błąd rejestracji");
+          return;
+        }
+        setPendingEmail(data.email ?? email);
+        toast.success("Kod uwierzytelniający został wysłany na e-mail.");
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
     if (!form.validate()) return;
     const { firstName, lastName, zawodnik, pin, pinConfirm } = form.values;
     setLoading(true);
@@ -77,13 +150,7 @@ export function RegisterForm({
         return;
       }
       if (data.logged_in) {
-        setGoalPreloaderLabel(realm === "pzu_cup" ? "Gol! Witamy w turnieju…" : "Gol! Witamy w akademii…");
-        setShowGoalPreloader(true);
-        toast.success("Konto utworzone — jesteś zalogowany");
-        await new Promise((r) => setTimeout(r, AUTH_SUCCESS_PRELOADER_DELAY_MS));
-        await router.push(next ?? (realm === "pzu_cup" ? "/pzu-cup" : "/"));
-        router.refresh();
-        notifyPostLoginPromptsUpdated();
+        await finishLoggedIn();
       } else {
         setGoalPreloaderLabel("Konto gotowe! Idziemy do logowania…");
         setShowGoalPreloader(true);
@@ -104,19 +171,97 @@ export function RegisterForm({
     }
   }
 
+  async function verifyEmailCode(e: React.FormEvent) {
+    e.preventDefault();
+    if (!pendingEmail || verifyCode.trim().length < 4) {
+      toast.error("Wpisz kod z wiadomości e-mail.");
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch("/api/auth/register/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: pendingEmail, code: verifyCode.trim(), realm, remember_me: true }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { error?: string; logged_in?: boolean };
+      if (!res.ok) {
+        toast.error(typeof data.error === "string" ? data.error : "Nieprawidłowy kod");
+        return;
+      }
+      await finishLoggedIn();
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function resendCode() {
+    if (!pendingEmail) return;
+    setLoading(true);
+    try {
+      const res = await fetch("/api/auth/email-auth/send-code", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: pendingEmail, realm }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) {
+        toast.error(typeof data.error === "string" ? data.error : "Nie udało się wysłać kodu");
+        return;
+      }
+      toast.success("Wysłano nowy kod.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <>
       {showGoalPreloader && <AuthGoalPreloader label={goalPreloaderLabel} />}
+      {pendingEmail ? (
+        <form onSubmit={(e) => void verifyEmailCode(e)} className="space-y-4">
+          <p className="text-sm text-zinc-600 dark:text-zinc-300">
+            Wysłaliśmy kod uwierzytelniający na <strong>{pendingEmail}</strong>. Wpisz go poniżej, żeby dokończyć
+            rejestrację.
+          </p>
+          <FormInput
+            id="reg_code"
+            label="Kod z e-maila"
+            required
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            value={verifyCode}
+            onChange={(e) => setVerifyCode(e.target.value.replace(/\D/g, "").slice(0, 8))}
+          />
+          <Button type="submit" className="w-full" variant={submitVariant} disabled={loading}>
+            {loading ? "Sprawdzanie…" : "Potwierdź kod"}
+          </Button>
+          <button
+            type="button"
+            className="w-full text-center text-sm font-medium text-emerald-700 hover:underline dark:text-emerald-300"
+            onClick={() => void resendCode()}
+            disabled={loading}
+          >
+            Wyślij kod ponownie
+          </button>
+        </form>
+      ) : (
       <form onSubmit={onSubmit} className="space-y-4">
         <FormInput
           id="reg_fn"
           label="Imię"
           required
           showValidState
-          value={form.values.firstName}
-          onChange={(e) => form.setValue("firstName", e.target.value)}
-          onBlur={() => form.setFieldTouched("firstName")}
-          error={form.errors.firstName}
+          value={emailPasswordAuthEnabled ? emailForm.values.firstName : form.values.firstName}
+          onChange={(e) =>
+            emailPasswordAuthEnabled
+              ? emailForm.setValue("firstName", e.target.value)
+              : form.setValue("firstName", e.target.value)
+          }
+          onBlur={() =>
+            emailPasswordAuthEnabled ? emailForm.setFieldTouched("firstName") : form.setFieldTouched("firstName")
+          }
+          error={emailPasswordAuthEnabled ? emailForm.errors.firstName : form.errors.firstName}
           placeholder="Imię"
           autoComplete="given-name"
         />
@@ -125,21 +270,70 @@ export function RegisterForm({
           label="Nazwisko"
           required
           showValidState
-          value={form.values.lastName}
-          onChange={(e) => form.setValue("lastName", e.target.value)}
-          onBlur={() => form.setFieldTouched("lastName")}
-          error={form.errors.lastName}
+          value={emailPasswordAuthEnabled ? emailForm.values.lastName : form.values.lastName}
+          onChange={(e) =>
+            emailPasswordAuthEnabled
+              ? emailForm.setValue("lastName", e.target.value)
+              : form.setValue("lastName", e.target.value)
+          }
+          onBlur={() =>
+            emailPasswordAuthEnabled ? emailForm.setFieldTouched("lastName") : form.setFieldTouched("lastName")
+          }
+          error={emailPasswordAuthEnabled ? emailForm.errors.lastName : form.errors.lastName}
           placeholder="Nazwisko"
           autoComplete="family-name"
         />
         <PlayerAliasPicker
           label="Piłkarz (awatar)"
           required
-          value={form.values.zawodnik}
-          onChange={(v) => form.setValue("zawodnik", v)}
-          onBlur={() => form.setFieldTouched("zawodnik")}
-          error={form.errors.zawodnik}
+          value={emailPasswordAuthEnabled ? emailForm.values.zawodnik : form.values.zawodnik}
+          onChange={(v) =>
+            emailPasswordAuthEnabled ? emailForm.setValue("zawodnik", v) : form.setValue("zawodnik", v)
+          }
+          onBlur={() =>
+            emailPasswordAuthEnabled ? emailForm.setFieldTouched("zawodnik") : form.setFieldTouched("zawodnik")
+          }
+          error={emailPasswordAuthEnabled ? emailForm.errors.zawodnik : form.errors.zawodnik}
         />
+        {emailPasswordAuthEnabled ? (
+          <>
+            <FormInput
+              id="reg_email"
+              label="Adres e-mail"
+              required
+              type="email"
+              autoComplete="email"
+              value={emailForm.values.email}
+              onChange={(e) => emailForm.setValue("email", e.target.value)}
+              onBlur={() => emailForm.setFieldTouched("email")}
+              error={emailForm.errors.email}
+              hint="Na ten adres wyślemy kod uwierzytelniający."
+            />
+            <FormInput
+              id="reg_password"
+              label="Hasło (min. 8 znaków)"
+              required
+              type="password"
+              autoComplete="new-password"
+              value={emailForm.values.password}
+              onChange={(e) => emailForm.setValue("password", e.target.value)}
+              onBlur={() => emailForm.setFieldTouched("password")}
+              error={emailForm.errors.password}
+            />
+            <FormInput
+              id="reg_password2"
+              label="Powtórz hasło"
+              required
+              type="password"
+              autoComplete="new-password"
+              value={emailForm.values.passwordConfirm}
+              onChange={(e) => emailForm.setValue("passwordConfirm", e.target.value)}
+              onBlur={() => emailForm.setFieldTouched("passwordConfirm")}
+              error={emailForm.errors.passwordConfirm}
+            />
+          </>
+        ) : (
+          <>
         <FormInput
           id="reg_pin"
           label="PIN (4–6 cyfr)"
@@ -186,10 +380,13 @@ export function RegisterForm({
             aria-label="Zaloguj mnie automatycznie po rejestracji"
           />
         </div>
+          </>
+        )}
         <Button type="submit" className="w-full" variant={submitVariant} disabled={loading}>
-          {loading ? "Tworzenie…" : "Załóż konto"}
+          {loading ? "Tworzenie…" : emailPasswordAuthEnabled ? "Wyślij kod i załóż konto" : "Załóż konto"}
         </Button>
       </form>
+      )}
     </>
   );
 }

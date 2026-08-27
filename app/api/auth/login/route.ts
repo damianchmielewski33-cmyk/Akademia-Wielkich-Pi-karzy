@@ -6,14 +6,21 @@ import { checkRateLimitDistributed } from "@/lib/rate-limit-db";
 import { rateLimitKey, rateLimitedResponse, RATE } from "@/lib/rate-limit";
 import { hashPin, isValidPinFormat, verifyPin } from "@/lib/pin";
 import { parseRealm, REALMS } from "@/lib/realm";
+import {
+  isEmailPasswordAuthEnabled,
+  normalizeEmail,
+  userNeedsEmailAuthSetup,
+  verifyPassword,
+} from "@/lib/email-auth";
 
 export const runtime = "nodejs";
 
 const bodySchema = z.object({
-  first_name: z.string().min(1).trim(),
-  last_name: z.string().min(1).trim(),
-  pin: z.string().min(1).trim(),
-  /** Zaznaczone „Nie wylogowuj mnie” — brak wymuszonego wylogowania po bezczynności. */
+  first_name: z.string().trim().optional(),
+  last_name: z.string().trim().optional(),
+  pin: z.string().trim().optional(),
+  email: z.string().trim().optional(),
+  password: z.string().optional(),
   remember_me: z.boolean().optional(),
   realm: z.enum([REALMS.ACADEMY, REALMS.PZU_CUP]).optional(),
 });
@@ -27,7 +34,26 @@ type LoginUserRow = {
   pin_hash: string | null;
   pin_hash_pending: string | null;
   auth_version: number;
+  email: string | null;
+  password_hash: string | null;
+  email_verified: number | null;
 };
+
+function loginPayload(matched: LoginUserRow, token: string, needsEmailAuthSetup: boolean) {
+  return {
+    ok: true,
+    token,
+    pin_change_pending: matched.pin_hash_pending ? 1 : 0,
+    needs_email_auth_setup: needsEmailAuthSetup ? 1 : 0,
+    user: {
+      id: matched.id,
+      first_name: matched.first_name,
+      last_name: matched.last_name,
+      zawodnik: matched.player_alias,
+      is_admin: matched.is_admin,
+    },
+  };
+}
 
 export async function POST(req: Request) {
   await connection();
@@ -44,18 +70,77 @@ export async function POST(req: Request) {
   if (!parsed.success) {
     return NextResponse.json({ error: "Walidacja nie powiodła się", details: parsed.error.flatten() }, { status: 400 });
   }
-  const { first_name, last_name, pin, remember_me, realm: realmRaw } = parsed.data;
+  const {
+    first_name,
+    last_name,
+    pin,
+    email: emailRaw,
+    password,
+    remember_me,
+    realm: realmRaw,
+  } = parsed.data;
   const rememberMe = remember_me === true;
   const realm = parseRealm(realmRaw, REALMS.ACADEMY);
+  const db = await getDb();
+  const emailAuthOn = await isEmailPasswordAuthEnabled(db, realm);
+
+  const finish = async (matched: LoginUserRow) => {
+    const token = await createSessionToken({
+      userId: matched.id,
+      isAdmin: matched.is_admin === 1,
+      firstName: matched.first_name,
+      lastName: matched.last_name,
+      zawodnik: matched.player_alias,
+      authVersion: matched.auth_version,
+      rememberMe,
+    });
+    await setSessionCookie(token, { rememberMe });
+    await logActivity(matched.id, "Zalogował się");
+    const needsEmailAuthSetup = userNeedsEmailAuthSetup(matched, emailAuthOn);
+    return NextResponse.json(loginPayload(matched, token, needsEmailAuthSetup));
+  };
+
+  if (emailAuthOn && emailRaw && password) {
+    const email = normalizeEmail(emailRaw);
+    const matched = (await db
+      .prepare(
+        `SELECT id, first_name, last_name, player_alias, is_admin, pin_hash, pin_hash_pending, auth_version,
+                email, password_hash, email_verified
+         FROM users
+         WHERE lower(trim(COALESCE(email, ''))) = ?
+           AND COALESCE(realm, ?) = ?`
+      )
+      .get(email, REALMS.ACADEMY, realm)) as LoginUserRow | undefined;
+
+    if (!matched?.password_hash || matched.email_verified !== 1) {
+      return NextResponse.json({ error: "Nieprawidłowe dane logowania." }, { status: 401 });
+    }
+    const ok = await verifyPassword(password, matched.password_hash);
+    if (!ok) {
+      return NextResponse.json({ error: "Nieprawidłowe dane logowania." }, { status: 401 });
+    }
+    return finish(matched);
+  }
+
+  if (!first_name || !last_name || !pin) {
+    return NextResponse.json(
+      {
+        error: emailAuthOn
+          ? "Podaj e-mail i hasło albo — dla starego konta — imię, nazwisko i PIN."
+          : "Wszystkie pola są wymagane.",
+      },
+      { status: 400 }
+    );
+  }
 
   if (!isValidPinFormat(pin)) {
     return NextResponse.json({ error: "PIN musi mieć 4–6 cyfr." }, { status: 400 });
   }
 
-  const db = await getDb();
   const users = (await db
     .prepare(
-      `SELECT id, first_name, last_name, player_alias, is_admin, pin_hash, pin_hash_pending, auth_version
+      `SELECT id, first_name, last_name, player_alias, is_admin, pin_hash, pin_hash_pending, auth_version,
+              email, password_hash, email_verified
        FROM users
        WHERE lower(first_name) = lower(?) AND lower(last_name) = lower(?)
          AND COALESCE(realm, ?) = ?`
@@ -93,8 +178,18 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Nieprawidłowe dane logowania." }, { status: 401 });
   }
 
-  // Migracja transparentna: jeśli pepper jest już skonfigurowany, a dopasował się legacy hash (bez peppera),
-  // podmień zapis w DB na nowy format przy udanym logowaniu.
+  if (
+    emailAuthOn &&
+    matched.email_verified === 1 &&
+    matched.password_hash &&
+    matched.is_admin !== 1
+  ) {
+    return NextResponse.json(
+      { error: "To konto loguje się adresem e-mail i hasłem — nie PIN-em." },
+      { status: 401 }
+    );
+  }
+
   if (matchedLegacy) {
     try {
       const newHash = await hashPin(pin);
@@ -104,29 +199,5 @@ export async function POST(req: Request) {
     }
   }
 
-  const token = await createSessionToken({
-    userId: matched.id,
-    isAdmin: matched.is_admin === 1,
-    firstName: matched.first_name,
-    lastName: matched.last_name,
-    zawodnik: matched.player_alias,
-    authVersion: matched.auth_version,
-    rememberMe,
-  });
-  await setSessionCookie(token, { rememberMe });
-  await logActivity(matched.id, "Zalogował się");
-
-  return NextResponse.json({
-    ok: true,
-    /** JWT do Authorization: Bearer — używane przez aplikację Android (cookie zostaje dla web). */
-    token,
-    pin_change_pending: matched.pin_hash_pending ? 1 : 0,
-    user: {
-      id: matched.id,
-      first_name: matched.first_name,
-      last_name: matched.last_name,
-      zawodnik: matched.player_alias,
-      is_admin: matched.is_admin,
-    },
-  });
+  return finish(matched);
 }

@@ -281,7 +281,7 @@ export async function initLibsqlSchema(client: Client) {
     CREATE TABLE IF NOT EXISTS public_share_links (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       token TEXT NOT NULL UNIQUE,
-      kind TEXT NOT NULL CHECK (kind IN ('last_match_wallets', 'all_wallets', 'match_wallets', 'player_wallets')),
+      kind TEXT NOT NULL,
       created_by_admin_id INTEGER NOT NULL,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       expires_at TEXT,
@@ -368,6 +368,18 @@ export async function initLibsqlSchema(client: Client) {
   }
   if (!names.includes("test_mode_enabled")) {
     await client.execute("ALTER TABLE users ADD COLUMN test_mode_enabled INTEGER NOT NULL DEFAULT 0");
+  }
+  if (!names.includes("password_hash")) {
+    await client.execute("ALTER TABLE users ADD COLUMN password_hash TEXT");
+  }
+  if (!names.includes("email_verified")) {
+    await client.execute("ALTER TABLE users ADD COLUMN email_verified INTEGER NOT NULL DEFAULT 0");
+  }
+  if (!names.includes("email_auth_code_hash")) {
+    await client.execute("ALTER TABLE users ADD COLUMN email_auth_code_hash TEXT");
+  }
+  if (!names.includes("email_auth_code_expires")) {
+    await client.execute("ALTER TABLE users ADD COLUMN email_auth_code_expires INTEGER");
   }
 
   // ranking_seasons PRZED migrateRealm / season_id — inaczej świeża baza TEST pada na
@@ -538,7 +550,7 @@ export async function initLibsqlSchema(client: Client) {
   );
   if (pslSqlRs.rows.length > 0) {
     const pslSql = String((pslSqlRs.rows[0] as Record<string, unknown>).sql ?? "");
-    if (pslSql.includes("CHECK") && pslSql.includes("kind") && !pslSql.includes("'all_wallets'")) {
+    if (pslSql.includes("CHECK") && pslSql.includes("kind") && !pslSql.includes("match_signup_fees")) {
       await client.executeMultiple(`
         CREATE TABLE public_share_links_migration (
           id INTEGER PRIMARY KEY AUTOINCREMENT,

@@ -49,6 +49,11 @@ export const formSchemas = {
     .refine((v) => !v || /^https?:\/\/.+/i.test(v), "Podaj poprawny adres URL (http/https)"),
 
   email: z.string().trim().min(1, "Adres e-mail jest wymagany").email("Podaj poprawny adres e-mail"),
+
+  password: z
+    .string()
+    .min(8, "Hasło musi mieć co najmniej 8 znaków")
+    .max(200, "Hasło jest zbyt długie"),
 };
 
 export function zodFieldErrors<T extends z.ZodType>(

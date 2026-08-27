@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "@/lib/auth";
 import { getRankingsPageData } from "@/lib/rankings-data";
-import { rankPlayers } from "@/lib/rankings";
+import { rankPlayers, rankingRate } from "@/lib/rankings";
 import { getAppSettings } from "@/lib/app-settings";
 import { getDb } from "@/lib/db";
 import { getApiRealm } from "@/lib/request-realm";
@@ -50,7 +50,8 @@ export async function GET(req: Request) {
     firstName: p.first_name,
     lastName: p.last_name,
     zawodnik: p.zawodnik,
-    value: p[key],
+    value: rankingRate(p, key),
+    mecze: p.mecze,
     goals: p.goals,
     assists: p.assists,
     distance: p.distance,

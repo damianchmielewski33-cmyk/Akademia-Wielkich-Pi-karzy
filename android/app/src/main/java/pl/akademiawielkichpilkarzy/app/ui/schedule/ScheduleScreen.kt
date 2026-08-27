@@ -31,7 +31,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import android.content.Intent
+import android.net.Uri
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -39,7 +43,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import pl.akademiawielkichpilkarzy.app.BuildConfig
+import kotlinx.coroutines.launch
+import pl.akademiawielkichpilkarzy.app.data.api.ApiClient
 import pl.akademiawielkichpilkarzy.app.data.api.AddMatchRequest
 import pl.akademiawielkichpilkarzy.app.data.api.AdminMatchSignupRow
 import pl.akademiawielkichpilkarzy.app.data.api.AdminUserDto
@@ -70,6 +75,8 @@ fun ScheduleScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val clipboard = LocalClipboardManager.current
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val inviteBaseUrl = remember { BuildConfig.API_BASE_URL.trim().trimEnd('/') }
     var rosterMatch by remember { mutableStateOf<MatchDto?>(null) }
     var statsMatch by remember { mutableStateOf<MatchDto?>(null) }
@@ -147,6 +154,26 @@ fun ScheduleScreen(
                             clipboard.setText(AnnotatedString("$inviteBaseUrl/zaproszenie/${match.id}?awp_share=1"))
                             viewModel.showMessage("Skopiowano link zaproszenia")
                         },
+                        onCopyPayments = if (state.isAdmin) {{
+                            scope.launch {
+                                try {
+                                    val res = ApiClient.api.createMatchPaymentLink(match.id)
+                                    val path = res.path
+                                    if (path.isNullOrBlank()) {
+                                        viewModel.showMessage(res.error ?: "Nie udało się wygenerować linku opłat")
+                                    } else {
+                                        val url = inviteBaseUrl + path
+                                        clipboard.setText(AnnotatedString(url))
+                                        viewModel.showMessage("Link opłat skopiowany")
+                                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                        context.startActivity(intent)
+                                    }
+                                } catch (e: Exception) {
+                                    viewModel.showMessage(e.message ?: "Nie udało się wygenerować linku opłat")
+                                }
+                            }
+                        }} else null,
                         onManage = { viewModel.openAdmin(match) }
                     )
                 }
@@ -290,6 +317,7 @@ private fun ScheduleMatchCard(
     onStats: () -> Unit,
     onRoster: () -> Unit,
     onInvite: () -> Unit,
+    onCopyPayments: (() -> Unit)? = null,
     onManage: () -> Unit
 ) {
     MatchSignupCard(
@@ -307,6 +335,7 @@ private fun ScheduleMatchCard(
         onAddStats = onStats,
         onOpenRoster = onRoster,
         onCopyInvite = onInvite,
+        onCopyPayments = onCopyPayments,
         onManage = onManage
     )
 }

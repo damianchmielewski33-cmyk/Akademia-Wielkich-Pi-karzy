@@ -79,7 +79,7 @@ fun RankingsScreen() {
                     title = "Rankingi",
                     subtitle = data?.season?.let {
                         it.name + if (it.isActive) " (aktywny)" else ""
-                    } ?: "Klasyfikacje zawodników i sezonu.",
+                    } ?: "Średnia na mecz — liczba spotkań nie zmienia pozycji.",
                     kicker = "Tabela"
                 )
             }
@@ -122,13 +122,20 @@ fun RankingsScreen() {
                     } else {
                         items(rows) { r ->
                             val valueText = when (tab) {
-                                RankTab.DYSTANS -> "%.1f km".format(r.value)
-                                RankTab.PUNKTY -> "%.1f pkt".format(r.value)
-                                else -> "%.0f".format(r.value)
+                                RankTab.DYSTANS -> "%.2f km/mecz".format(r.value)
+                                RankTab.PUNKTY -> "%.2f pkt/mecz".format(r.value)
+                                RankTab.GOLE -> "%.2f goli/mecz".format(r.value)
+                                RankTab.ASYSTY -> "%.2f asyst/mecz".format(r.value)
+                                RankTab.OBRONY -> "%.2f obron/mecz".format(r.value)
+                            }
+                            val matchesLabel = when (r.mecze) {
+                                1 -> "1 mecz"
+                                2, 3, 4 -> "${r.mecze} mecze"
+                                else -> "${r.mecze} meczów"
                             }
                             AwpListRow(
                                 title = "${r.firstName} ${r.lastName}",
-                                label = "#${r.rank} · ${r.zawodnik}",
+                                label = "#${r.rank} · ${r.zawodnik} · $matchesLabel",
                                 trailing = valueText,
                                 gold = r.rank <= 3
                             )

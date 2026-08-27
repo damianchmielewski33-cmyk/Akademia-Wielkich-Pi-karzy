@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Crown, Link2, Users } from "lucide-react";
 import { toast } from "@/lib/app-toast";
 import type { MatchRow } from "@/lib/db";
@@ -96,7 +96,7 @@ function CaptainLotterySummary({ lottery }: { lottery: CaptainLotteryEntry }) {
       : drawerLabel;
 
   return (
-    <div className={cn(modalPanelClass, "space-y-3")} role="status">
+    <div className={cn(modalPanelClass, "awp-lottery-reveal space-y-3")} role="status">
       <p
         className={cn(
           "text-xs font-bold uppercase tracking-[0.14em]",
@@ -310,12 +310,15 @@ export function CaptainLotteryDialog({
   const [captainCount, setCaptainCount] = useState(1);
   const [spinToken, setSpinToken] = useState(0);
   const [spinning, setSpinning] = useState(false);
+  const [awaitingDraw, setAwaitingDraw] = useState(false);
   const [predeterminedWinners, setPredeterminedWinners] = useState<PlayerEntry[] | null>(null);
   const [pendingLottery, setPendingLottery] = useState<CaptainLotteryEntry | null>(null);
   const [loginInline, setLoginInline] = useState(false);
+  const wheelWrapRef = useRef<HTMLDivElement>(null);
 
   const effectiveCount = Math.min(captainCount, maxCaptains || 1);
-  const canSpin = pool.length > 0 && !spinning && (lottery == null || !lottery.locked);
+  const drawBusy = spinning || awaitingDraw;
+  const canSpin = pool.length > 0 && !drawBusy && (lottery == null || !lottery.locked);
   const showLotteryLayout = pool.length > 0 || lottery != null || history.some((r) => r.hasResults);
 
   useEffect(() => {
@@ -327,9 +330,15 @@ export function CaptainLotteryDialog({
     }
   }, [open, initialLottery, lotteryHistory]);
 
+  useEffect(() => {
+    if (!drawBusy) return;
+    wheelWrapRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [drawBusy]);
+
   const resetSpinUi = useCallback(() => {
     setSpinToken(0);
     setSpinning(false);
+    setAwaitingDraw(false);
     setPredeterminedWinners(null);
   }, []);
 
@@ -353,7 +362,7 @@ export function CaptainLotteryDialog({
       setLoginInline(true);
       return;
     }
-    setSpinning(true);
+    setAwaitingDraw(true);
     try {
       const res = await fetch(`/api/terminarz/match/${match.id}/captain-lottery/spin`, {
         method: "POST",
@@ -362,7 +371,7 @@ export function CaptainLotteryDialog({
       });
       const text = await res.text();
       if (res.status === 401) {
-        setSpinning(false);
+        setAwaitingDraw(false);
         setLoginInline(true);
         return;
       }
@@ -373,17 +382,19 @@ export function CaptainLotteryDialog({
         } catch {
           toast.error("Nie udało się losować kapitanów.");
         }
-        setSpinning(false);
+        setAwaitingDraw(false);
         return;
       }
       const data = JSON.parse(text) as { lottery: ApiLottery };
       const entry = apiToEntry(data.lottery);
       setPendingLottery(entry);
       setPredeterminedWinners(entry.captains);
+      setAwaitingDraw(false);
+      setSpinning(true);
       setSpinToken((t) => t + 1);
     } catch {
       toast.error("Nie udało się losować kapitanów.");
-      setSpinning(false);
+      setAwaitingDraw(false);
     }
   };
 
@@ -423,21 +434,22 @@ export function CaptainLotteryDialog({
     <AppModal
       open={open}
       onOpenChange={handleOpenChange}
-      size="xl"
+      size="full"
       title={title}
-      description="Koło fortuny wybiera kapitanów spośród graczy z potwierdzonym udziałem w meczu."
+      description="Zakręć kołem — kapitanowie są losowani spośród graczy z potwierdzonym udziałem."
       icon={<Crown className="h-5 w-5" aria-hidden />}
       headerKicker={light ? "Terminarz" : "Koło fortuny"}
       headerPhotoSeed={match?.id ?? 7}
-      preventDismiss={spinning || loginInline}
+      preventDismiss={drawBusy || loginInline}
       scrollable
+      className="sm:max-w-[min(96vw,68rem)]"
       contentClassName="space-y-4"
       footer={
         <div className="flex w-full flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
           <Button
             type="button"
             variant="outline"
-            disabled={spinning || !match}
+            disabled={drawBusy || !match}
             className="w-full sm:w-auto"
             onClick={() => void copyLotteryLink()}
           >
@@ -445,7 +457,7 @@ export function CaptainLotteryDialog({
             Skopiuj link
           </Button>
 
-          <Button type="button" variant="outline" disabled={spinning} onClick={() => handleOpenChange(false)}>
+          <Button type="button" variant="outline" disabled={drawBusy} onClick={() => handleOpenChange(false)}>
             Zamknij
           </Button>
         </div>
@@ -474,47 +486,60 @@ export function CaptainLotteryDialog({
       ) : null}
 
       {showLotteryLayout ? (
-        <div className="space-y-4 lg:grid lg:grid-cols-[minmax(0,17.5rem)_minmax(0,1fr)] lg:items-start lg:gap-6 lg:space-y-0 xl:grid-cols-[minmax(0,19rem)_minmax(0,1fr)]">
-          <div className="min-w-0 space-y-4">
-            {loginInline ? (
-              <ModalFormSection
-                title="Logowanie"
-                description="Wpisz imię, nazwisko i PIN (4–6 cyfr), aby zakręcić koło fortuny. Po zalogowaniu wrócisz do tego ekranu losowania."
+        <div className="space-y-5">
+          {loginInline ? (
+            <ModalFormSection
+              title="Logowanie"
+              description="Wpisz imię, nazwisko i PIN (4–6 cyfr), aby zakręcić koło. Po zalogowaniu wrócisz do losowania."
+            >
+              <button
+                type="button"
+                className="text-left text-sm font-medium text-[var(--mundial-navy)] underline-offset-2 hover:underline dark:text-amber-200/90"
+                onClick={() => setLoginInline(false)}
               >
-                <button
-                  type="button"
-                  className="text-left text-sm font-medium text-[var(--mundial-navy)] underline-offset-2 hover:underline dark:text-amber-200/90"
-                  onClick={() => setLoginInline(false)}
-                >
-                  ← Wróć do losowania
-                </button>
-                <LoginForm
-                  nextPath={match ? captainLotteryRelativePath(match.id) : "/"}
-                  embedMode
-                  realm={realm}
-                  onAuthenticated={handleAuthenticated}
+                ← Wróć do losowania
+              </button>
+              <LoginForm
+                nextPath={match ? captainLotteryRelativePath(match.id) : "/"}
+                embedMode
+                realm={realm}
+                onAuthenticated={handleAuthenticated}
+              />
+            </ModalFormSection>
+          ) : (
+            <div className="grid gap-5 lg:grid-cols-[minmax(0,1.2fr)_minmax(16.5rem,22rem)] lg:items-start">
+              <div ref={wheelWrapRef} className="min-w-0">
+                <CaptainLotteryWheel
+                  players={pool}
+                  spinning={spinning}
+                  awaitingDraw={awaitingDraw}
+                  spinToken={spinToken}
+                  predeterminedWinners={predeterminedWinners}
+                  onSpinComplete={handleSpinComplete}
+                  canSpin={canSpin}
+                  onSpin={() => void handleSpin()}
+                  className="lg:max-w-none"
                 />
-              </ModalFormSection>
-            ) : (
-              <>
-                {lottery && !lottery.hasResults && !lottery.locked && (
+              </div>
+
+              <div className={cn("min-w-0 space-y-4", drawBusy && "max-lg:hidden")}>
+                {lottery && !lottery.hasResults && !lottery.locked && !drawBusy && (
                   <ModalAlert tone="warning">
                     <strong className="font-semibold">Runda {lottery.roundNumber}</strong> jest otwarta
                     {pool.length > 0
-                      ? " — ustaw liczbę kapitanów i naciśnij Losuj na kole fortuny."
+                      ? " — ustaw liczbę kapitanów i naciśnij Zakręć na kole."
                       : " — czeka na graczy z potwierdzonym «wpadam», zanim ktoś zakręci koło."}
                   </ModalAlert>
                 )}
 
-                {!isLoggedIn && (
+                {!isLoggedIn && !drawBusy && (
                   <ModalAlert tone="info">
                     Ekran losowania i historia są widoczne bez logowania. Zalogowanie jest potrzebne dopiero przy
-                    kliknięciu <strong className="font-semibold">Losuj</strong> — formularz pojawi się tutaj, bez
-                    przekierowania.
+                    kliknięciu <strong className="font-semibold">Zakręć</strong>.
                   </ModalAlert>
                 )}
 
-                {!lottery && (
+                {!lottery && !drawBusy && (
                   <ModalAlert tone="info">
                     {isAdmin
                       ? "Brak aktywnego losowania — użyj «Dodaj losowanie» na terminarzu albo zakręć koło (pierwsza runda)."
@@ -526,32 +551,21 @@ export function CaptainLotteryDialog({
                   <CaptainCountSlider
                     effectiveCount={effectiveCount}
                     maxCaptains={maxCaptains}
-                    spinning={spinning}
+                    spinning={drawBusy}
                     onChange={setCaptainCount}
                   />
                 )}
 
-                {lottery?.hasResults ? <CaptainLotterySummary lottery={lottery} /> : null}
+                {lottery?.hasResults && !drawBusy ? <CaptainLotterySummary lottery={lottery} /> : null}
 
-                <CaptainLotteryHistoryList
-                  rounds={history.filter((r) => r.hasResults && r.id !== lottery?.id)}
-                />
-              </>
-            )}
-          </div>
-
-          <div className="min-w-0 lg:sticky lg:top-0">
-            <CaptainLotteryWheel
-              players={pool}
-              spinning={spinning}
-              spinToken={spinToken}
-              predeterminedWinners={predeterminedWinners}
-              onSpinComplete={handleSpinComplete}
-              canSpin={canSpin}
-              onSpin={() => void handleSpin()}
-              className="lg:max-w-none"
-            />
-          </div>
+                {!drawBusy ? (
+                  <CaptainLotteryHistoryList
+                    rounds={history.filter((r) => r.hasResults && r.id !== lottery?.id)}
+                  />
+                ) : null}
+              </div>
+            </div>
+          )}
         </div>
       ) : (
         <div className={modalEmptyStateClass}>

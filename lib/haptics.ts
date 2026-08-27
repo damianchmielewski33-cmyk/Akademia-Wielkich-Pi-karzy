@@ -13,9 +13,9 @@ const PATTERNS: Record<HapticKind, number[]> = {
   light: [18],
   medium: [32],
   success: [28, 40, 28],
-  cheer: [35, 45, 35, 45, 50],
-  goal: [55, 70, 55, 70, 90],
-  whistle: [40],
+  cheer: [18, 28, 22],
+  goal: [24, 32, 28],
+  whistle: [18],
   error: [50, 60, 80],
 };
 

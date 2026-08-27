@@ -171,7 +171,7 @@ html.site-chrome-academy {
 
   /* ========== Panel admina — tabele i powierzchnie na murawie ========== */
   .admin-table-shell {
-    @apply overflow-x-auto overflow-y-hidden rounded-xl border border-white/25 bg-black/10 backdrop-blur-sm [scrollbar-width:thin];
+    @apply overflow-x-auto rounded-xl border border-white/25 bg-black/10 backdrop-blur-sm [scrollbar-width:thin] [touch-action:pan-x_pan-y] [-webkit-overflow-scrolling:touch];
   }
 
   .admin-table-shell :where(thead tr) {
@@ -227,7 +227,7 @@ html.site-chrome-academy {
   }
 
   .admin-data-table-shell {
-    @apply overflow-x-auto overflow-y-hidden rounded-xl border border-zinc-200 bg-zinc-50/90 [scrollbar-width:thin] dark:border-zinc-700 dark:bg-zinc-900/70;
+    @apply overflow-x-auto rounded-xl border border-zinc-200 bg-zinc-50/90 [scrollbar-width:thin] [touch-action:pan-x_pan-y] [-webkit-overflow-scrolling:touch] dark:border-zinc-700 dark:bg-zinc-900/70;
   }
 
   .admin-data-table-shell :where(thead tr) {
@@ -2056,6 +2056,58 @@ html {
     width: 45%;
     transform: none;
   }
+
+  .awp-lottery-pointer--land,
+  .awp-lottery-reveal,
+  .awp-lottery-hub--ready {
+    animation: none;
+  }
+}
+
+@keyframes awp-lottery-pointer-land {
+  0% {
+    transform: translateY(-2px) scale(1);
+  }
+  35% {
+    transform: translateY(3px) scale(1.06);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes awp-lottery-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes awp-lottery-hub-ready {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--awp-lottery-accent, #00a651) 0%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 7px color-mix(in srgb, var(--awp-lottery-accent, #00a651) 22%, transparent);
+  }
+}
+
+.awp-lottery-pointer--land {
+  animation: awp-lottery-pointer-land 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+  transform-origin: 50% 0%;
+}
+
+.awp-lottery-reveal {
+  animation: awp-lottery-reveal 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.awp-lottery-hub--ready {
+  animation: awp-lottery-hub-ready 2.4s ease-in-out infinite;
 }
 
 

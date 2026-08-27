@@ -285,7 +285,15 @@ async function applyMatchCartFromWalletTx(
   if (!match) return { ok: false, error: "MATCH_NOT_FOUND" };
   if (match.played === 1 || match.cancelled === 1) return { ok: false, error: "MATCH_CLOSED" };
 
-  const fee = await resolveMatchCartFeePerPerson();
+  let fee = await resolveMatchCartFeePerPerson();
+  if (args.existingCartId != null) {
+    const cartFee = (await db
+      .prepare(`SELECT fee_per_person_pln FROM wallet_match_carts WHERE id = ?`)
+      .get(args.existingCartId)) as { fee_per_person_pln: number } | undefined;
+    if (cartFee != null && Number(cartFee.fee_per_person_pln) > 0) {
+      fee = roundPln(Number(cartFee.fee_per_person_pln));
+    }
+  }
   if (fee == null || fee <= 0) return { ok: false, error: "NO_FEE" };
 
   const uniqueIds = [...new Set(args.beneficiaryUserIds.map((id) => Number(id)).filter((id) => id > 0))];
@@ -438,6 +446,8 @@ export async function createPendingMatchCart(args: {
   payerUserId: number;
   matchId: number;
   beneficiaryUserIds: number[];
+  /** Nadpisuje stałą zaliczkę 25 zł — np. aktualna składka z linku opłat. */
+  feePerPersonPln?: number;
 }): Promise<
   | { ok: true; cart_id: number; amount_pln: number; fee_per_person_pln: number; beneficiaries: number[] }
   | {
@@ -455,7 +465,10 @@ export async function createPendingMatchCart(args: {
   if (!match) return { ok: false, error: "MATCH_NOT_FOUND" };
   if (match.played === 1 || match.cancelled === 1) return { ok: false, error: "MATCH_CLOSED" };
 
-  const fee = await resolveMatchCartFeePerPerson();
+  const fee =
+    args.feePerPersonPln != null && Number.isFinite(args.feePerPersonPln) && args.feePerPersonPln > 0
+      ? Math.round(args.feePerPersonPln * 100) / 100
+      : await resolveMatchCartFeePerPerson();
   if (fee == null || fee <= 0) return { ok: false, error: "NO_FEE" };
 
   const uniqueIds = [...new Set(args.beneficiaryUserIds.map((id) => Number(id)).filter((id) => id > 0))];

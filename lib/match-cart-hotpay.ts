@@ -37,6 +37,7 @@ export async function startHotpayMatchCartPayment(args: {
   payerLabel: string;
   /** Gdy true — logActivity pod payerUserId (gość). */
   logAsPayer?: boolean;
+  feePerPersonPln?: number;
 }): Promise<StartHotpayMatchCartResult> {
   const config = getHotpayConfig();
   if (!config) {
@@ -61,6 +62,7 @@ export async function startHotpayMatchCartPayment(args: {
     payerUserId: args.payerUserId,
     matchId: args.matchId,
     beneficiaryUserIds: args.beneficiaryUserIds,
+    feePerPersonPln: args.feePerPersonPln,
   });
   if (!pending.ok) {
     const messages: Record<typeof pending.error, string> = {

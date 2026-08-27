@@ -963,6 +963,27 @@ export function TerminarzClient({
     }
   }
 
+  async function copyPaymentLink(matchId: number) {
+    try {
+      const res = await fetch(`/api/admin/match/${matchId}/payment-link`, { method: "POST" });
+      const data = (await res.json().catch(() => ({}))) as { path?: string; error?: string };
+      if (!res.ok || !data.path) {
+        toast.error(typeof data.error === "string" ? data.error : "Nie udało się wygenerować linku opłat");
+        return;
+      }
+      const url = `${window.location.origin}${data.path}`;
+      try {
+        await navigator.clipboard.writeText(url);
+      } catch {
+        /* nadal otwieramy */
+      }
+      toast.success("Link opłat skopiowany — lista zapisanych ze składką i przyciskami zapłaty");
+      window.open(url, "_blank", "noopener,noreferrer");
+    } catch {
+      toast.error("Nie udało się wygenerować linku opłat");
+    }
+  }
+
   function activeActions(m: MatchRow) {
     const past = m.match_date < todayISO();
     const free = m.max_slots - m.signed_up;
@@ -1828,6 +1849,7 @@ export function TerminarzClient({
                         isAdmin={isAdmin}
                         onManage={() => openManageMatch(m)}
                         onCopyInvite={() => void copyInviteLink(m.id)}
+                        onCopyPayments={isAdmin ? () => void copyPaymentLink(m.id) : undefined}
                         onOpenPlayers={() => openPlayers(m.id)}
                         actions={activeActions(m)}
                       />

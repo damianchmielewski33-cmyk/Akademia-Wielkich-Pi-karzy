@@ -15,6 +15,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { PayButton } from "@/components/pay-button";
 import type { PublicWalletView } from "@/lib/public-payment-share";
 import { cn } from "@/lib/utils";
+import { MatchSignupFeesList } from "@/components/match-signup-fees-list";
+import { formatMatchFeePln } from "@/lib/match-fee";
 
 function formatPln(n: number) {
   const v = Math.round(n * 100) / 100;
@@ -37,6 +39,53 @@ export function PlatnosciPublicClient({ token, hotpayEnabled, view }: Props) {
   const { marketplaceEnabled } = useSiteMode();
   const light = marketplaceEnabled;
   const heroPhoto = useMarketplacePitchPhotoAt(4);
+
+  if (view.mode === "signup_fees") {
+    const contribution = Number(view.contribution_pln ?? 0);
+    const blik = view.blik_phone?.trim() || "";
+    return (
+      <div className={light ? "relative flex flex-1 flex-col text-zinc-900 dark:text-zinc-50" : "container mx-auto max-w-2xl flex-1 space-y-6 px-4 py-10"}>
+        {light ? (
+          <section className="mp-hero mp-hero--photo relative z-10 flex flex-col justify-end overflow-hidden pb-10 pt-12 sm:pb-16 sm:pt-20">
+            <MarketplacePitchPhoto src={heroPhoto} priority className="z-0" />
+            <div className="absolute inset-0 z-[1] bg-gradient-to-t from-black/75 via-black/40 to-black/20" />
+            <div className="relative z-10 mx-auto w-full max-w-6xl px-3 xs:px-4">
+              <p className="text-[0.65rem] font-black uppercase tracking-[0.22em] text-white/80 sm:text-xs">Opłaty</p>
+              <h1 className="mt-2 text-[1.85rem] font-black leading-tight tracking-tight text-white xs:text-4xl sm:text-5xl">
+                {view.title}
+              </h1>
+              <p className="mt-3 max-w-xl text-sm text-white/85 sm:text-base">{view.subtitle}</p>
+            </div>
+          </section>
+        ) : (
+          <>
+            <h1 className="text-2xl font-bold">{view.title}</h1>
+            <p className="text-sm text-zinc-500">{view.subtitle}</p>
+          </>
+        )}
+        <div className={light ? "relative z-10 mx-auto w-full min-w-0 max-w-2xl space-y-5 px-3 py-8 xs:px-4 sm:py-10" : "space-y-4"}>
+          {view.match && contribution > 0 ? (
+            <p className={light ? "text-sm text-zinc-600 dark:text-zinc-300" : "text-sm text-zinc-600"}>
+              Składka na osobę: <strong>{formatMatchFeePln(contribution)}</strong>
+              {typeof view.match.fee_pln === "number" && view.match.fee_pln > 0
+                ? ` (wynajem ${formatMatchFeePln(view.match.fee_pln)} podzielony na zapisanych)`
+                : ""}
+              . Przelew na telefon kopiuje numer BLIK i otwiera bank — wtedy status zmienia się na opłacony. Płatność przez
+              stronę (operator) oznacza opłacone po potwierdzeniu wpłaty.
+            </p>
+          ) : null}
+          <MatchSignupFeesList
+            token={token}
+            rows={view.rows}
+            contributionPln={contribution > 0 ? contribution : 25}
+            blikPhone={blik}
+            hotpayEnabled={hotpayEnabled}
+            light={light}
+          />
+        </div>
+      </div>
+    );
+  }
 
   const footerLinks = (
     <div className="flex flex-wrap gap-2">

@@ -9,7 +9,7 @@ import { RankingiClient } from "@/components/rankingi-client";
 
 export const metadata: Metadata = {
   title: "Rankingi",
-  description: "Porównanie zawodników według goli, asyst i punktów.",
+  description: "Porównanie zawodników według średniej na mecz — gole, asysty, dystans, obrony i punkty.",
 };
 
 type Props = {

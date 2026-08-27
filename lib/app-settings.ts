@@ -104,6 +104,11 @@ export type AppSettings = {
   /** Publiczny tryb V2 (rezerwacje boisk). Wyłączony = Wersja V1, sama akademia. */
   booking_marketplace_enabled: boolean;
   /**
+   * Logowanie e-mail + hasło + kod z wiadomości. Wyłączone = dotychczasowy PIN.
+   * Domyślnie wyłączone — administrator włącza w panelu.
+   */
+  email_password_auth_enabled: boolean;
+  /**
    * Pasek zdjęć pod „Gramy razem” / hero V2 — null w slocie = domyślne Unsplash.
    * Długość zawsze = MARKETPLACE_PITCH_PHOTOS.
    */
@@ -178,6 +183,7 @@ export const APP_SETTINGS_DEFAULTS: AppSettings = {
   mobile_settings: { ...MOBILE_CHANNEL_SETTINGS_DEFAULTS },
   hotpay_enabled: true,
   booking_marketplace_enabled: false,
+  email_password_auth_enabled: false,
   marketplace_pitch_photos_custom: Array.from({ length: MARKETPLACE_PITCH_PHOTOS.length }, () => null),
   marketplace_pitch_photos: [...MARKETPLACE_PITCH_PHOTOS],
   hotpay_commission_pct: 2.45,
@@ -241,6 +247,7 @@ type AppSettingsRow = {
   mobile_settings_json?: string | null;
   hotpay_enabled?: number | null;
   booking_marketplace_enabled?: number | null;
+  email_password_auth_enabled?: number | null;
   marketplace_pitch_photos_json?: string | null;
   hotpay_commission_pct?: number | null;
   hotpay_commission_fixed?: number | null;
@@ -293,6 +300,7 @@ function appSettingsSelectSql(): string {
     mobile_settings_json,
     hotpay_enabled,
     booking_marketplace_enabled,
+    email_password_auth_enabled,
     marketplace_pitch_photos_json,
     hotpay_commission_pct,
     hotpay_commission_fixed
@@ -439,6 +447,7 @@ export function resolveAppSettings(
     screen_blocks_mobile: parseMobileScreenBlocksJson(row?.screen_blocks_mobile_json),
     hotpay_enabled: sqlFlagOn(row?.hotpay_enabled, true),
     booking_marketplace_enabled: sqlFlagOn(row?.booking_marketplace_enabled, false),
+    email_password_auth_enabled: sqlFlagOn(row?.email_password_auth_enabled, false),
     marketplace_pitch_photos_custom: (() => {
       const custom = parseMarketplacePitchPhotosJson(row?.marketplace_pitch_photos_json);
       return custom;
@@ -574,6 +583,7 @@ export async function saveAppSettings(db: DbWriteLike, realm: Realm, settings: A
         mobile_settings_json = ?,
         hotpay_enabled = ?,
         booking_marketplace_enabled = ?,
+        email_password_auth_enabled = ?,
         hotpay_commission_pct = ?,
         hotpay_commission_fixed = ?
       WHERE realm = ?`
@@ -623,6 +633,7 @@ export async function saveAppSettings(db: DbWriteLike, realm: Realm, settings: A
       serializeMobileSettings(settings.mobile_settings),
       settings.hotpay_enabled ? 1 : 0,
       settings.booking_marketplace_enabled ? 1 : 0,
+      settings.email_password_auth_enabled ? 1 : 0,
       settings.hotpay_commission_pct,
       settings.hotpay_commission_fixed,
       realm
@@ -716,6 +727,10 @@ const APP_SETTINGS_MIGRATION_COLUMNS: { name: string; ddl: string }[] = [
   { name: "hotpay_commission_pct", ddl: "ALTER TABLE app_settings ADD COLUMN hotpay_commission_pct REAL NOT NULL DEFAULT 2.45" },
   { name: "hotpay_commission_pct", ddl: "ALTER TABLE app_settings ADD COLUMN hotpay_commission_pct REAL NOT NULL DEFAULT 2.45" },
   { name: "hotpay_commission_fixed", ddl: "ALTER TABLE app_settings ADD COLUMN hotpay_commission_fixed REAL NOT NULL DEFAULT 0.30" },
+  {
+    name: "email_password_auth_enabled",
+    ddl: "ALTER TABLE app_settings ADD COLUMN email_password_auth_enabled INTEGER NOT NULL DEFAULT 0",
+  },
 ];
 
 /** True gdy SQLite/libSQL zgłasza „duplicate column” (także lokalizowane komunikaty). */

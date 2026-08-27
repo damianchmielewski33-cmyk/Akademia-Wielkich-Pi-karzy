@@ -44,6 +44,19 @@ export async function requireUser() {
       ),
     };
   }
+  if (session.needsEmailAuthSetup) {
+    return {
+      ok: false as const,
+      response: NextResponse.json(
+        {
+          error:
+            "Uzupełnij adres e-mail, hasło i kod z wiadomości — bez tego nie wejdziesz dalej.",
+          code: "NEEDS_EMAIL_AUTH" as const,
+        },
+        { status: 403 }
+      ),
+    };
+  }
   return { ok: true as const, session };
 }
 
