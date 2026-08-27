@@ -40,6 +40,8 @@ object SessionInvalidator {
             "api/auth/email-auth/send-code",
             "api/auth/email-auth/complete",
             "api/auth/forgot-pin-request",
+            "api/auth/forgot-password/send-code",
+            "api/auth/forgot-password/reset",
             "api/auth/set-initial-pin" -> false
             else -> true
         }

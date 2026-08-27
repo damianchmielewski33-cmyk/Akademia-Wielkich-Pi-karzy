@@ -9,6 +9,7 @@ import { parseRealm, REALMS } from "@/lib/realm";
 import {
   isEmailPasswordAuthEnabled,
   normalizeEmail,
+  userCanLoginWithPin,
   userNeedsEmailAuthSetup,
   verifyPassword,
 } from "@/lib/email-auth";
@@ -163,9 +164,13 @@ export async function POST(req: Request) {
     );
   }
 
+  // Tylko konta uprawnione do PIN-u — bez osobnych komunikatów dla zmigrowanych
+  // (unikamy wyroczni stanu konta / potwierdzenia starego PIN-u).
+  const pinEligible = withPin.filter((u) => userCanLoginWithPin(u, emailAuthOn));
+
   let matched: LoginUserRow | undefined;
   let matchedLegacy = false;
-  for (const u of withPin) {
+  for (const u of pinEligible) {
     const r = await verifyPin(pin, u.pin_hash);
     if (r.ok) {
       matched = u;
@@ -176,18 +181,6 @@ export async function POST(req: Request) {
 
   if (!matched) {
     return NextResponse.json({ error: "Nieprawidłowe dane logowania." }, { status: 401 });
-  }
-
-  if (
-    emailAuthOn &&
-    matched.email_verified === 1 &&
-    matched.password_hash &&
-    matched.is_admin !== 1
-  ) {
-    return NextResponse.json(
-      { error: "To konto loguje się adresem e-mail i hasłem — nie PIN-em." },
-      { status: 401 }
-    );
   }
 
   if (matchedLegacy) {

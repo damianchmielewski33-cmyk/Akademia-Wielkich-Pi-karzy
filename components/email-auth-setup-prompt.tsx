@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "@/lib/app-toast";
 import { AppModal } from "@/components/ui/app-modal";
 import { Button } from "@/components/ui/button";
@@ -16,9 +17,12 @@ type MeUser = {
   needs_pin_setup?: number;
 };
 
-export function EmailAuthSetupPrompt() {
+export function EmailAuthSetupPrompt({ initialNeedsSetup = false }: { initialNeedsSetup?: boolean }) {
   const { emailPasswordAuthEnabled } = useSiteMode();
-  const [user, setUser] = useState<MeUser | null | undefined>(undefined);
+  const router = useRouter();
+  const [user, setUser] = useState<MeUser | null | undefined>(
+    initialNeedsSetup ? { id: 0, email: null, needs_email_auth_setup: 1 } : undefined
+  );
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
@@ -27,7 +31,7 @@ export function EmailAuthSetupPrompt() {
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
-    if (!emailPasswordAuthEnabled) {
+    if (!emailPasswordAuthEnabled && !initialNeedsSetup) {
       setUser(null);
       return;
     }
@@ -43,7 +47,7 @@ export function EmailAuthSetupPrompt() {
     } catch {
       setUser(null);
     }
-  }, [emailPasswordAuthEnabled]);
+  }, [emailPasswordAuthEnabled, initialNeedsSetup]);
 
   useEffect(() => {
     void load();
@@ -56,7 +60,7 @@ export function EmailAuthSetupPrompt() {
   }, [load]);
 
   const open = Boolean(
-    emailPasswordAuthEnabled &&
+    (emailPasswordAuthEnabled || initialNeedsSetup) &&
       user &&
       user.needs_email_auth_setup === 1 &&
       !user.pin_change_pending &&
@@ -116,9 +120,10 @@ export function EmailAuthSetupPrompt() {
         toast.error(typeof j.error === "string" ? j.error : "Nie udało się zapisać danych");
         return;
       }
-      toast.success("Konto uzupełnione — możesz korzystać z aplikacji.");
+      toast.success("Konto uzupełnione — od teraz logujesz się e-mailem i hasłem, bez PIN-u.");
       setUser((u) => (u ? { ...u, needs_email_auth_setup: 0, email: email.trim() } : u));
       notifyPostLoginPromptsUpdated();
+      router.refresh();
     } finally {
       setBusy(false);
     }
@@ -133,8 +138,8 @@ export function EmailAuthSetupPrompt() {
       preventDismiss
       hideCloseButton
       size="sm"
-      title="Uzupełnij dane konta"
-      description="Przy kolejnym logowaniu obowiązuje e-mail, hasło i kod z wiadomości. Okno zniknie dopiero po uzupełnieniu wszystkich pól."
+      title="Uzupełnij e-mail i hasło"
+      description="Konto z PIN-em trzeba teraz powiązać z e-mailem. Po wpisaniu kodu z wiadomości logowanie PIN-em zostanie wyłączone — zostaje e-mail i hasło. Tego okna nie da się pominąć."
     >
       <div className="space-y-3">
         <FormInput
@@ -180,6 +185,16 @@ export function EmailAuthSetupPrompt() {
           <Button type="button" variant="pitch" disabled={busy} onClick={() => void complete()}>
             {busy ? "Zapisywanie…" : "Zapisz i wejdź"}
           </Button>
+          <button
+            type="button"
+            className="pt-1 text-center text-sm text-zinc-500 underline-offset-2 hover:underline dark:text-zinc-400"
+            disabled={busy}
+            onClick={() => {
+              window.location.href = "/api/auth/logout?next=/login";
+            }}
+          >
+            Wyloguj się
+          </button>
         </div>
       </div>
     </AppModal>

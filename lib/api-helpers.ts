@@ -13,7 +13,7 @@ export async function requireUser() {
     return {
       ok: false as const,
       response: NextResponse.json(
-        { error: "Wejdź na boisko — zaloguj się imieniem, nazwiskiem i PIN-em." },
+        { error: "Zaloguj się, aby kontynuować." },
         { status: 401 }
       ),
     };

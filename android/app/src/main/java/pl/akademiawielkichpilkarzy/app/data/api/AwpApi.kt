@@ -36,6 +36,12 @@ interface AwpApi {
     @POST("api/auth/forgot-pin-request")
     suspend fun forgotPin(@Body body: ForgotPinRequest): ApiOkResponse
 
+    @POST("api/auth/forgot-password/send-code")
+    suspend fun forgotPasswordSendCode(@Body body: ForgotPasswordSendCodeRequest): ApiOkResponse
+
+    @POST("api/auth/forgot-password/reset")
+    suspend fun forgotPasswordReset(@Body body: ForgotPasswordResetRequest): ApiOkResponse
+
     @GET("api/terminarz")
     suspend fun terminarz(): TerminarzResponse
 

@@ -18,6 +18,11 @@ const bodySchema = z.object({
   realm: z.enum([REALMS.ACADEMY, REALMS.PZU_CUP]).optional(),
 });
 
+/**
+ * Wysyłka kodu:
+ * - z sesją i needsEmailAuthSetup → uzupełnienie maila/hasła po PIN-ie
+ * - bez sesji → tylko konta z niezweryfikowanym mailem (dokonczenie rejestracji)
+ */
 export async function POST(req: Request) {
   await connection();
   const rl = await checkRateLimitDistributed(
@@ -47,36 +52,50 @@ export async function POST(req: Request) {
 
   const session = await getServerSession();
   let userId: number | undefined;
+  let isAdmin = false;
 
   if (session) {
+    if (!session.needsEmailAuthSetup) {
+      return NextResponse.json(
+        { error: "To konto ma już uzupełniony e-mail. Do resetu hasła użyj „Zapomniałem hasła”." },
+        { status: 400 }
+      );
+    }
     const mine = (await db
-      .prepare("SELECT id, email, realm FROM users WHERE id = ?")
-      .get(session.userId)) as { id: number; email: string | null; realm: string | null } | undefined;
+      .prepare("SELECT id, email, realm, is_admin FROM users WHERE id = ?")
+      .get(session.userId)) as
+      | { id: number; email: string | null; realm: string | null; is_admin: number | null }
+      | undefined;
     if (!mine) return NextResponse.json({ error: "Nie znaleziono konta." }, { status: 404 });
+    const userRealm = parseRealm(mine.realm, REALMS.ACADEMY);
     const taken = (await db
       .prepare(
         `SELECT id FROM users WHERE lower(trim(COALESCE(email, ''))) = ? AND id != ? AND COALESCE(realm, ?) = ?`
       )
-      .get(email, mine.id, REALMS.ACADEMY, realm)) as { id: number } | undefined;
+      .get(email, mine.id, REALMS.ACADEMY, userRealm)) as { id: number } | undefined;
     if (taken) {
       return NextResponse.json({ error: "Ten adres e-mail jest już zajęty." }, { status: 409 });
     }
     await db.prepare("UPDATE users SET email = ?, email_verified = 0 WHERE id = ?").run(email, mine.id);
     userId = mine.id;
+    isAdmin = mine.is_admin === 1 || session.isAdmin;
   } else {
     const row = (await db
       .prepare(
-        `SELECT id, email_verified FROM users
+        `SELECT id, email_verified, is_admin FROM users
          WHERE lower(trim(COALESCE(email, ''))) = ? AND COALESCE(realm, ?) = ?`
       )
-      .get(email, REALMS.ACADEMY, realm)) as { id: number; email_verified: number } | undefined;
+      .get(email, REALMS.ACADEMY, realm)) as
+      | { id: number; email_verified: number; is_admin: number | null }
+      | undefined;
     if (!row || row.email_verified === 1) {
       return NextResponse.json({ ok: true });
     }
     userId = row.id;
+    isAdmin = row.is_admin === 1;
   }
 
-  const sent = await issueEmailAuthCode(db, userId, email);
+  const sent = await issueEmailAuthCode(db, userId, email, "verify", { isAdmin });
   if (!sent.ok) return NextResponse.json({ error: sent.error }, { status: 503 });
   return NextResponse.json({ ok: true });
 }

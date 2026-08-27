@@ -1,15 +1,17 @@
 import { connection, NextResponse } from "next/server";
 import { z } from "zod";
 import { getDb, logActivity } from "@/lib/db";
-import { createSessionToken, setSessionCookie } from "@/lib/auth";
 import { checkRateLimitDistributed } from "@/lib/rate-limit-db";
 import { rateLimitKey, rateLimitedResponse, RATE } from "@/lib/rate-limit";
 import { parseRealm, REALMS } from "@/lib/realm";
 import {
   clearEmailAuthCode,
+  hashPassword,
   isEmailAuthCodeValid,
   isEmailPasswordAuthEnabled,
+  isValidPassword,
   normalizeEmail,
+  WEAK_PASSWORD_MESSAGE,
 } from "@/lib/email-auth";
 
 export const runtime = "nodejs";
@@ -17,7 +19,8 @@ export const runtime = "nodejs";
 const bodySchema = z.object({
   email: z.string().email().trim(),
   code: z.string().trim().min(4).max(8),
-  remember_me: z.boolean().optional(),
+  password: z.string().min(1),
+  password_confirm: z.string().min(1),
   realm: z.enum([REALMS.ACADEMY, REALMS.PZU_CUP]).optional(),
 });
 
@@ -38,12 +41,17 @@ export async function POST(req: Request) {
   }
   const parsed = bodySchema.safeParse(json);
   if (!parsed.success) {
-    return NextResponse.json({ error: "Podaj e-mail i kod z wiadomości." }, { status: 400 });
+    return NextResponse.json({ error: "Podaj e-mail, kod i nowe hasło." }, { status: 400 });
+  }
+  if (parsed.data.password !== parsed.data.password_confirm) {
+    return NextResponse.json({ error: "Hasła muszą być takie same." }, { status: 400 });
+  }
+  if (!isValidPassword(parsed.data.password)) {
+    return NextResponse.json({ error: WEAK_PASSWORD_MESSAGE }, { status: 400 });
   }
 
   const email = normalizeEmail(parsed.data.email);
   const realm = parseRealm(parsed.data.realm, REALMS.ACADEMY);
-  const rememberMe = parsed.data.remember_me === true;
   const db = await getDb();
   if (!(await isEmailPasswordAuthEnabled(db, realm))) {
     return NextResponse.json({ error: "Logowanie e-mailem jest wyłączone." }, { status: 400 });
@@ -51,65 +59,38 @@ export async function POST(req: Request) {
 
   const row = (await db
     .prepare(
-      `SELECT id, first_name, last_name, player_alias, is_admin, auth_version,
-              email_verified, email_auth_code_hash, email_auth_code_expires, password_hash
+      `SELECT id, password_hash, email_verified, email_auth_code_hash, email_auth_code_expires, is_admin
        FROM users
        WHERE lower(trim(COALESCE(email, ''))) = ? AND COALESCE(realm, ?) = ?`
     )
     .get(email, REALMS.ACADEMY, realm)) as
     | {
         id: number;
-        first_name: string;
-        last_name: string;
-        player_alias: string;
-        is_admin: number;
-        auth_version: number;
-        email_verified: number;
+        password_hash: string | null;
+        email_verified: number | null;
         email_auth_code_hash: string | null;
         email_auth_code_expires: number | null;
-        password_hash: string | null;
+        is_admin: number | null;
       }
     | undefined;
 
-  if (!row?.password_hash) {
-    return NextResponse.json({ error: "Nieprawidłowy kod lub e-mail." }, { status: 401 });
-  }
-  if (row.email_verified === 1) {
-    return NextResponse.json({ error: "To konto jest już potwierdzone — zaloguj się hasłem." }, { status: 400 });
+  if (!row?.password_hash || row.email_verified !== 1) {
+    return NextResponse.json({ error: "Nieprawidłowy lub wygasły kod." }, { status: 400 });
   }
   if (
     !isEmailAuthCodeValid(parsed.data.code, email, row.email_auth_code_hash, row.email_auth_code_expires, {
       isAdmin: row.is_admin === 1,
     })
   ) {
-    return NextResponse.json({ error: "Nieprawidłowy lub wygasły kod." }, { status: 401 });
+    return NextResponse.json({ error: "Nieprawidłowy lub wygasły kod." }, { status: 400 });
   }
 
-  await db.prepare("UPDATE users SET email_verified = 1 WHERE id = ?").run(row.id);
+  const passwordHash = await hashPassword(parsed.data.password);
+  await db
+    .prepare("UPDATE users SET password_hash = ?, auth_version = auth_version + 1 WHERE id = ?")
+    .run(passwordHash, row.id);
   await clearEmailAuthCode(db, row.id);
-  await logActivity(row.id, "Potwierdził adres e-mail i dokończył rejestrację");
+  await logActivity(row.id, "Zresetował hasło kodem z e-maila");
 
-  const token = await createSessionToken({
-    userId: row.id,
-    isAdmin: row.is_admin === 1,
-    firstName: row.first_name,
-    lastName: row.last_name,
-    zawodnik: row.player_alias,
-    authVersion: row.auth_version,
-    rememberMe,
-  });
-  await setSessionCookie(token, { rememberMe });
-
-  return NextResponse.json({
-    ok: true,
-    logged_in: true,
-    token,
-    user: {
-      id: row.id,
-      first_name: row.first_name,
-      last_name: row.last_name,
-      zawodnik: row.player_alias,
-      is_admin: row.is_admin,
-    },
-  });
+  return NextResponse.json({ ok: true });
 }

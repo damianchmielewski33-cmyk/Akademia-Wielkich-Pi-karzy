@@ -11,9 +11,16 @@ type Props = {
   nextPath: string;
   idleLogout?: boolean;
   marketplaceEnabled?: boolean;
+  emailPasswordAuthEnabled?: boolean;
 };
 
-export function LoginPageScreen({ siteName, nextPath, idleLogout, marketplaceEnabled = false }: Props) {
+export function LoginPageScreen({
+  siteName,
+  nextPath,
+  idleLogout,
+  marketplaceEnabled = false,
+  emailPasswordAuthEnabled = false,
+}: Props) {
   const registerHref =
     nextPath && nextPath !== "/" ? `/register?next=${encodeURIComponent(nextPath)}` : "/register";
 
@@ -70,18 +77,35 @@ export function LoginPageScreen({ siteName, nextPath, idleLogout, marketplaceEna
                 {siteName}
               </h1>
               <p className="mt-3 max-w-[18rem] text-sm leading-relaxed text-white/80">
-                Zaloguj się imieniem, nazwiskiem i PIN-em, żeby korzystać z terminarza akademii.
+                {emailPasswordAuthEnabled
+                  ? "Zaloguj się e-mailem i hasłem. Jeśli konto ma jeszcze tylko PIN, użyj opcji logowania PIN-em, a potem uzupełnisz e-mail."
+                  : "Zaloguj się imieniem, nazwiskiem i PIN-em, żeby korzystać z terminarza akademii."}
               </p>
 
               <div className="mt-8 flex flex-wrap items-center justify-center gap-3 text-xs font-medium text-emerald-100/75">
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 ring-1 ring-white/10">
-                  <ShieldCheck className="h-3.5 w-3.5 text-emerald-200" aria-hidden />
-                  Bezpieczny PIN
-                </span>
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 ring-1 ring-white/10">
-                  <KeyRound className="h-3.5 w-3.5 text-emerald-200" aria-hidden />
-                  4–6 cyfr
-                </span>
+                {emailPasswordAuthEnabled ? (
+                  <>
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 ring-1 ring-white/10">
+                      <ShieldCheck className="h-3.5 w-3.5 text-emerald-200" aria-hidden />
+                      E-mail i hasło
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 ring-1 ring-white/10">
+                      <KeyRound className="h-3.5 w-3.5 text-emerald-200" aria-hidden />
+                      PIN tylko dla starych kont
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 ring-1 ring-white/10">
+                      <ShieldCheck className="h-3.5 w-3.5 text-emerald-200" aria-hidden />
+                      Bezpieczny PIN
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 ring-1 ring-white/10">
+                      <KeyRound className="h-3.5 w-3.5 text-emerald-200" aria-hidden />
+                      4–6 cyfr
+                    </span>
+                  </>
+                )}
               </div>
             </div>
           </section>
@@ -90,7 +114,9 @@ export function LoginPageScreen({ siteName, nextPath, idleLogout, marketplaceEna
             <div className="mx-auto w-full max-w-md">
               <h2 className="text-2xl font-bold tracking-tight text-zinc-950 dark:text-zinc-50">Logowanie</h2>
               <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-                Wpisz imię, nazwisko i PIN przypisany do Twojego konta zawodnika.
+                {emailPasswordAuthEnabled
+                  ? "Podaj e-mail i hasło. Nie masz ich jeszcze na koncie? Przełącz na logowanie PIN-em (imię, nazwisko i PIN)."
+                  : "Wpisz imię, nazwisko i PIN przypisany do Twojego konta zawodnika."}
               </p>
 
               {idleLogout ? (
@@ -100,6 +126,7 @@ export function LoginPageScreen({ siteName, nextPath, idleLogout, marketplaceEna
                 </p>
               ) : null}
 
+              {!emailPasswordAuthEnabled ? (
               <details className="group mt-4 rounded-xl border border-zinc-200/80 bg-zinc-50/80 open:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900/50">
                 <summary className="cursor-pointer list-none px-4 py-3 text-sm font-medium text-zinc-700 marker:content-none dark:text-zinc-300 [&::-webkit-details-marker]:hidden">
                   <span className="text-emerald-700 group-open:text-emerald-800 dark:text-emerald-300">Zasady PIN-u</span>
@@ -113,6 +140,7 @@ export function LoginPageScreen({ siteName, nextPath, idleLogout, marketplaceEna
                   ))}
                 </ul>
               </details>
+              ) : null}
 
               <LoginForm nextPath={nextPath} />
 
@@ -143,7 +171,12 @@ export function LoginPageScreen({ siteName, nextPath, idleLogout, marketplaceEna
       formTitle="Logowanie"
       formSubtitle={
         <>
-          <p>Wpisz imię, nazwisko i PIN (4–6 cyfr) — tak jak na stronie startowej.</p>
+          <p>
+            {emailPasswordAuthEnabled
+              ? "Zaloguj się e-mailem i hasłem. Stare konto bez e-maila? Użyj opcji logowania PIN-em."
+              : "Wpisz imię, nazwisko i PIN (4–6 cyfr) — tak jak na stronie startowej."}
+          </p>
+          {!emailPasswordAuthEnabled ? (
           <details className="group mt-3 rounded-xl border border-white/20 bg-black/20 open:bg-black/30">
             <summary className="cursor-pointer list-none px-3 py-2 text-sm font-semibold text-white marker:content-none [&::-webkit-details-marker]:hidden">
               Zasady PIN-u
@@ -157,6 +190,7 @@ export function LoginPageScreen({ siteName, nextPath, idleLogout, marketplaceEna
               ))}
             </ul>
           </details>
+          ) : null}
         </>
       }
       tiles={[
@@ -174,7 +208,7 @@ export function LoginPageScreen({ siteName, nextPath, idleLogout, marketplaceEna
         },
       ]}
       steps={[
-        { n: "1", t: "Zaloguj się", d: "Imię, nazwisko i PIN akademii." },
+        { n: "1", t: "Zaloguj się", d: emailPasswordAuthEnabled ? "E-mail i hasło (albo PIN na starym koncie)." : "Imię, nazwisko i PIN akademii." },
         { n: "2", t: "Zapisz się", d: "Potwierdź udział albo zaznacz, że jeszcze nie wiesz." },
         { n: "3", t: "Graj i licz punkty", d: "Statystyki i rankingi po każdym spotkaniu." },
       ]}

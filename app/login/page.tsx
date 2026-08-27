@@ -7,6 +7,12 @@ import { getRequestAppSettings } from "@/lib/request-app-settings";
 
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await getRequestAppSettings();
+  if (settings.email_password_auth_enabled) {
+    return {
+      title: "Logowanie",
+      description: "Wejście akademii — e-mail i hasło. Stare konto? Zaloguj się PIN-em i uzupełnij dane.",
+    };
+  }
   if (!settings.booking_marketplace_enabled) {
     return {
       title: "Logowanie",
@@ -46,6 +52,7 @@ export default async function LoginPage({ searchParams }: Props) {
       nextPath={safeNext}
       idleLogout={wylogowano === "bezczynnosc"}
       marketplaceEnabled={settings.booking_marketplace_enabled === true}
+      emailPasswordAuthEnabled={settings.email_password_auth_enabled === true}
     />
   );
 }

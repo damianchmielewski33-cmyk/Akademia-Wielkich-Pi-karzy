@@ -57,6 +57,8 @@ import pl.akademiawielkichpilkarzy.app.BuildConfig
 import pl.akademiawielkichpilkarzy.app.R
 import pl.akademiawielkichpilkarzy.app.biometrics.BiometricHelper
 import pl.akademiawielkichpilkarzy.app.data.api.ApiClient
+import pl.akademiawielkichpilkarzy.app.data.api.ForgotPasswordResetRequest
+import pl.akademiawielkichpilkarzy.app.data.api.ForgotPasswordSendCodeRequest
 import pl.akademiawielkichpilkarzy.app.data.api.ForgotPinRequest
 import pl.akademiawielkichpilkarzy.app.data.api.LoginRequest
 import pl.akademiawielkichpilkarzy.app.data.api.RegisterRequest
@@ -174,7 +176,7 @@ fun LoginScreen(
                         pin = pin.trim(),
                         rememberMe = rememberMe
                     )
-                    if (biometricStore.isEnabled()) {
+                    if (biometricStore.isEnabled() && !emailAuthEnabled) {
                         // Odśwież zapisane dane (np. nowy PIN), bez pokazywania biometrii po zalogowaniu.
                         biometricStore.enable(creds)
                     }
@@ -296,6 +298,11 @@ fun LoginScreen(
                         onBack = { authMode = "login" },
                         onSuccess = { authMode = "login" }
                     )
+                    "forgot-password" -> ForgotPasswordPanel(
+                        initialEmail = email,
+                        onBack = { authMode = "login" },
+                        onSuccess = { authMode = "login" }
+                    )
                     else -> MarketplaceAuthCard(
                         title = "Logowanie",
                         subtitle = if (emailAuthEnabled && !legacyPin) {
@@ -400,11 +407,14 @@ fun LoginScreen(
                             if (emailAuthEnabled && !legacyPin) performEmailLogin() else performPinLogin()
                         }
                         if (emailAuthEnabled) {
-                            MarketplaceLink(if (legacyPin) "Logowanie e-mailem i hasłem" else "Mam stare konto z PIN-em") {
+                            MarketplaceLink(if (legacyPin) "Logowanie e-mailem i hasłem" else "Nie mam e-maila i hasła — logowanie PIN-em") {
                                 legacyPin = !legacyPin
                             }
                         }
                         MarketplaceLink("Załóż konto akademii") { authMode = "register" }
+                        if (emailAuthEnabled && !legacyPin) {
+                            MarketplaceLink("Zapomniałem hasła") { authMode = "forgot-password" }
+                        }
                         if (!emailAuthEnabled || legacyPin) {
                             MarketplaceLink("Zapomniałem PIN-u") { authMode = "forgot" }
                         }
@@ -549,6 +559,110 @@ private fun RegisterPanel(
                     }
                 } catch (e: Exception) {
                     message = e.message ?: "Nie udało się utworzyć konta"
+                } finally {
+                    busy = false
+                }
+            }
+        }
+        MarketplaceLink("Wróć do logowania", onBack)
+    }
+}
+
+@Composable
+private fun ForgotPasswordPanel(
+    initialEmail: String,
+    onBack: () -> Unit,
+    onSuccess: () -> Unit
+) {
+    var email by remember { mutableStateOf(initialEmail) }
+    var code by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var passwordConfirm by remember { mutableStateOf("") }
+    var codeSent by remember { mutableStateOf(false) }
+    var busy by remember { mutableStateOf(false) }
+    var message by remember { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
+
+    MarketplaceAuthCard(
+        title = "Reset hasła",
+        subtitle = "Wyślij kod na e-mail, potem ustaw nowe hasło."
+    ) {
+        AwpTextField("E-mail", email, { email = it }, keyboardType = KeyboardType.Email, light = true)
+        AwpTextField(
+            "Kod z e-maila",
+            code,
+            { if (it.length <= 8 && it.all(Char::isDigit)) code = it },
+            keyboardType = KeyboardType.Number,
+            light = true
+        )
+        AwpTextField(
+            "Nowe hasło (min. 8 znaków)",
+            password,
+            { password = it },
+            visualTransformation = PasswordVisualTransformation(),
+            light = true
+        )
+        AwpTextField(
+            "Powtórz hasło",
+            passwordConfirm,
+            { passwordConfirm = it },
+            visualTransformation = PasswordVisualTransformation(),
+            light = true
+        )
+        message?.let {
+            Text(
+                it,
+                color = if (it.startsWith("Jeśli") || it.startsWith("Hasło")) AwpColors.MpTealDark else AwpColors.MundialRed
+            )
+        }
+        MarketplacePrimaryButton(
+            text = if (codeSent) "Wyślij kod ponownie" else "Wyślij kod",
+            loading = busy,
+            enabled = !busy && email.isNotBlank()
+        ) {
+            scope.launch {
+                busy = true
+                message = null
+                try {
+                    ApiClient.api.forgotPasswordSendCode(ForgotPasswordSendCodeRequest(email.trim()))
+                    codeSent = true
+                    message = "Jeśli konto istnieje, wysłaliśmy kod na e-mail."
+                } catch (e: HttpException) {
+                    message = e.response()?.errorBody()?.string()?.let { raw ->
+                        Regex("\"error\"\\s*:\\s*\"([^\"]+)\"").find(raw)?.groupValues?.getOrNull(1)
+                    } ?: "Nie udało się wysłać kodu"
+                } catch (e: Exception) {
+                    message = e.message ?: "Nie udało się wysłać kodu"
+                } finally {
+                    busy = false
+                }
+            }
+        }
+        MarketplacePrimaryButton(
+            text = "Ustaw nowe hasło",
+            loading = busy,
+            enabled = !busy && email.isNotBlank() && code.length >= 4 && password.length >= 8 && password == passwordConfirm
+        ) {
+            scope.launch {
+                busy = true
+                message = null
+                try {
+                    ApiClient.api.forgotPasswordReset(
+                        ForgotPasswordResetRequest(
+                            email = email.trim(),
+                            code = code.trim(),
+                            password = password,
+                            passwordConfirm = passwordConfirm
+                        )
+                    )
+                    message = "Hasło zmienione — zaloguj się nowym hasłem"
+                    onSuccess()
+                } catch (e: HttpException) {
+                    message = e.response()?.errorBody()?.string()?.let { raw ->
+                        Regex("\"error\"\\s*:\\s*\"([^\"]+)\"").find(raw)?.groupValues?.getOrNull(1)
+                    } ?: "Nie udało się zmienić hasła"
+                } catch (e: Exception) {
+                    message = e.message ?: "Nie udało się zmienić hasła"
                 } finally {
                     busy = false
                 }

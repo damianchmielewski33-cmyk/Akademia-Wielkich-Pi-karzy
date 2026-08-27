@@ -161,7 +161,21 @@ data class ApiOkResponse(
     val status: String? = null,
     val id: Int? = null,
     val duplicate: Boolean? = null,
-    val error: String? = null
+    val error: String? = null,
+    val token: String? = null
+)
+
+data class ForgotPasswordSendCodeRequest(
+    val email: String,
+    val realm: String = "academy"
+)
+
+data class ForgotPasswordResetRequest(
+    val email: String,
+    val code: String,
+    val password: String,
+    @Json(name = "password_confirm") val passwordConfirm: String,
+    val realm: String = "academy"
 )
 
 data class MatchDefaultsDto(

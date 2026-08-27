@@ -20,7 +20,9 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import pl.akademiawielkichpilkarzy.app.AwpApp
 import pl.akademiawielkichpilkarzy.app.data.api.ApiClient
 import pl.akademiawielkichpilkarzy.app.data.api.EmailAuthCompleteRequest
 import pl.akademiawielkichpilkarzy.app.data.api.EmailAuthSendCodeRequest
@@ -55,11 +57,11 @@ fun EmailAuthSetupHost() {
     AlertDialog(
         onDismissRequest = {},
         properties = DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false),
-        title = { Text("Uzupełnij dane konta") },
+        title = { Text("Uzupełnij e-mail i hasło") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
                 Text(
-                    "Przy kolejnym logowaniu obowiązuje e-mail, hasło i kod z wiadomości. Okno zniknie dopiero po uzupełnieniu wszystkich pól.",
+                    "Konto z PIN-em trzeba powiązać z e-mailem. Po wpisaniu kodu z wiadomości logowanie PIN-em zostanie wyłączone — zostaje e-mail i hasło. Tego okna nie da się pominąć.",
                     color = AwpColors.Zinc500
                 )
                 AwpTextField("Adres e-mail", email, { email = it }, keyboardType = KeyboardType.Email, light = true)
@@ -119,7 +121,7 @@ fun EmailAuthSetupHost() {
                             busy = true
                             message = null
                             try {
-                                ApiClient.api.completeEmailAuth(
+                                val res = ApiClient.api.completeEmailAuth(
                                     EmailAuthCompleteRequest(
                                         email = email.trim(),
                                         password = password,
@@ -127,6 +129,26 @@ fun EmailAuthSetupHost() {
                                         code = code.trim()
                                     )
                                 )
+                                val newToken = res.token
+                                if (!newToken.isNullOrBlank()) {
+                                    val store = AwpApp.instance.sessionStore
+                                    val snap = store.userFlow.first()
+                                    val uid = store.getUserId()
+                                    if (snap != null && uid != null) {
+                                        store.saveSession(
+                                            token = newToken,
+                                            userId = uid,
+                                            firstName = snap.firstName,
+                                            lastName = snap.lastName,
+                                            zawodnik = snap.zawodnik,
+                                            isAdmin = snap.isAdmin
+                                        )
+                                    }
+                                }
+                                try {
+                                    AwpApp.instance.biometricStore.disable()
+                                } catch (_: Exception) {
+                                }
                                 visible = false
                             } catch (e: HttpException) {
                                 message = e.response()?.errorBody()?.string()?.let { raw ->

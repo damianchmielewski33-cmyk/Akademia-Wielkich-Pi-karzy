@@ -65,6 +65,15 @@ export function LoginForm({
   const [forgotDoneOpen, setForgotDoneOpen] = useState(false);
   const [forgotSaving, setForgotSaving] = useState(false);
 
+  const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false);
+  const [forgotPasswordDoneOpen, setForgotPasswordDoneOpen] = useState(false);
+  const [forgotPasswordBusy, setForgotPasswordBusy] = useState(false);
+  const [forgotPasswordCodeSent, setForgotPasswordCodeSent] = useState(false);
+  const [fpEmail, setFpEmail] = useState("");
+  const [fpCode, setFpCode] = useState("");
+  const [fpPassword, setFpPassword] = useState("");
+  const [fpPasswordConfirm, setFpPasswordConfirm] = useState("");
+
   const loginForm = useValidatedForm({
     initialValues: { firstName: "", lastName: "", pin: "" },
     schema: loginSchema,
@@ -149,6 +158,69 @@ export function LoginForm({
       notifyPostLoginPromptsUpdated();
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function sendForgotPasswordCode() {
+    const trimmed = fpEmail.trim();
+    if (!trimmed) {
+      toast.error("Podaj adres e-mail.");
+      return;
+    }
+    setForgotPasswordBusy(true);
+    try {
+      const res = await fetch("/api/auth/forgot-password/send-code", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: trimmed, realm }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) {
+        toast.error(typeof data.error === "string" ? data.error : "Nie udało się wysłać kodu");
+        return;
+      }
+      setForgotPasswordCodeSent(true);
+      toast.success("Jeśli konto istnieje, wysłaliśmy kod na e-mail.");
+    } finally {
+      setForgotPasswordBusy(false);
+    }
+  }
+
+  async function submitForgotPassword() {
+    if (!fpEmail.trim() || !fpCode.trim() || !fpPassword || !fpPasswordConfirm) {
+      toast.error("Uzupełnij e-mail, kod i nowe hasło.");
+      return;
+    }
+    if (fpPassword !== fpPasswordConfirm) {
+      toast.error("Hasła muszą być takie same.");
+      return;
+    }
+    setForgotPasswordBusy(true);
+    try {
+      const res = await fetch("/api/auth/forgot-password/reset", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: fpEmail.trim(),
+          code: fpCode.trim(),
+          password: fpPassword,
+          password_confirm: fpPasswordConfirm,
+          realm,
+        }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) {
+        toast.error(typeof data.error === "string" ? data.error : "Nie udało się zmienić hasła");
+        return;
+      }
+      setForgotPasswordOpen(false);
+      setFpCode("");
+      setFpPassword("");
+      setFpPasswordConfirm("");
+      setForgotPasswordCodeSent(false);
+      setForgotPasswordDoneOpen(true);
+    } finally {
+      setForgotPasswordBusy(false);
     }
   }
 
@@ -278,10 +350,29 @@ export function LoginForm({
             className="w-full text-center text-sm font-medium text-emerald-700 hover:underline dark:text-emerald-300"
             onClick={() => setLegacyPin((v) => !v)}
           >
-            {legacyPin ? "Logowanie e-mailem i hasłem" : "Mam stare konto z PIN-em"}
+            {legacyPin ? "Logowanie e-mailem i hasłem" : "Nie mam e-maila i hasła — logowanie PIN-em"}
           </button>
         ) : null}
       </form>
+
+      {!embedMode && emailPasswordAuthEnabled && !legacyPin ? (
+        <div className="mt-4 flex flex-col gap-2 border-t border-zinc-100 pt-4 dark:border-zinc-800">
+          <button
+            type="button"
+            className="text-center text-sm font-medium text-emerald-700 hover:underline dark:text-emerald-300"
+            onClick={() => {
+              setFpEmail(emailLoginForm.values.email.trim());
+              setFpCode("");
+              setFpPassword("");
+              setFpPasswordConfirm("");
+              setForgotPasswordCodeSent(false);
+              setForgotPasswordOpen(true);
+            }}
+          >
+            Zapomniałem hasła
+          </button>
+        </div>
+      ) : null}
 
       {!embedMode && (!emailPasswordAuthEnabled || legacyPin) && (
         <div className="mt-4 flex flex-col gap-2 border-t border-zinc-100 pt-4 dark:border-zinc-800">
@@ -379,6 +470,87 @@ export function LoginForm({
           placeholder="Powtórz PIN"
         />
       </AppModal>
+
+      <AppModal
+        open={forgotPasswordOpen}
+        onOpenChange={setForgotPasswordOpen}
+        size="sm"
+        title="Reset hasła"
+        description="Wyślij kod na e-mail konta, potem ustaw nowe hasło. Po zmianie zaloguj się e-mailem i nowym hasłem."
+        footer={
+          <>
+            <Button type="button" variant="outline" onClick={() => setForgotPasswordOpen(false)}>
+              Anuluj
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={forgotPasswordBusy}
+              onClick={() => void sendForgotPasswordCode()}
+            >
+              {forgotPasswordCodeSent ? "Wyślij kod ponownie" : "Wyślij kod"}
+            </Button>
+            <Button
+              type="button"
+              variant="pitch"
+              disabled={forgotPasswordBusy}
+              onClick={() => void submitForgotPassword()}
+            >
+              {forgotPasswordBusy ? "Zapisywanie…" : "Ustaw nowe hasło"}
+            </Button>
+          </>
+        }
+      >
+        <FormInput
+          id="fp-email"
+          label="Adres e-mail"
+          required
+          type="email"
+          autoComplete="email"
+          value={fpEmail}
+          onChange={(e) => setFpEmail(e.target.value)}
+        />
+        <FormInput
+          id="fp-code"
+          label="Kod z e-maila"
+          required
+          inputMode="numeric"
+          autoComplete="one-time-code"
+          value={fpCode}
+          onChange={(e) => setFpCode(e.target.value.replace(/\D/g, "").slice(0, 8))}
+        />
+        <FormInput
+          id="fp-password"
+          label="Nowe hasło (min. 8 znaków)"
+          required
+          type="password"
+          autoComplete="new-password"
+          value={fpPassword}
+          onChange={(e) => setFpPassword(e.target.value)}
+        />
+        <FormInput
+          id="fp-password2"
+          label="Powtórz nowe hasło"
+          required
+          type="password"
+          autoComplete="new-password"
+          value={fpPasswordConfirm}
+          onChange={(e) => setFpPasswordConfirm(e.target.value)}
+        />
+      </AppModal>
+
+      <AppModal
+        open={forgotPasswordDoneOpen}
+        onOpenChange={setForgotPasswordDoneOpen}
+        size="sm"
+        title="Hasło zmienione"
+        description="Możesz zalogować się adresem e-mail i nowym hasłem."
+        footer={
+          <Button type="button" variant="pitch" onClick={() => setForgotPasswordDoneOpen(false)}>
+            Rozumiem
+          </Button>
+        }
+      />
 
       <AppModal
         open={forgotDoneOpen}

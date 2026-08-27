@@ -1126,7 +1126,7 @@ export function AdminSettingsTab({
         <YesNoSwitchRow
           className={adminToggleRowClass}
           label="Logowanie e-mailem i hasłem"
-          hint="Wyłączone (domyślnie) = imię, nazwisko i PIN jak dotychczas. Włączone = nowi gracze zakładają konto e-mailem i hasłem, a kod z wiadomości wpisują w aplikacji. Istniejące konta PIN przy następnym logowaniu muszą uzupełnić e-mail, kod i hasło — okna nie da się zamknąć wcześniej. Wymaga działającej wysyłki SMTP."
+          hint="Włączone = na logowaniu główne są e-mail i hasło. Gracze ze starym kontem (bez e-maila) logują się PIN-em, a potem muszą uzupełnić e-mail, hasło i kod z wiadomości — dopiero wtedy PIN przestaje działać. Wymaga działającej wysyłki SMTP."
           checked={Boolean(settings.email_password_auth_enabled)}
           disabled={busy}
           onCheckedChange={(v) => void save({ email_password_auth_enabled: v })}

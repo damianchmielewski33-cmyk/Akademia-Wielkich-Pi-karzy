@@ -7,6 +7,8 @@ import { normalizePlayerAlias } from "@/lib/player-alias";
 import { notifyAdminsByEmail } from "@/lib/admin-notify";
 import { checkRateLimitDistributed } from "@/lib/rate-limit-db";
 import { rateLimitKey, rateLimitedResponse, RATE } from "@/lib/rate-limit";
+import { parseRealm, REALMS } from "@/lib/realm";
+import { isEmailPasswordAuthEnabled, userCanLoginWithPin } from "@/lib/email-auth";
 
 export const runtime = "nodejs";
 
@@ -57,21 +59,48 @@ export async function POST(req: Request) {
   const db = await getDb();
   const user = (await db
     .prepare(
-      "SELECT id, pin_hash FROM users WHERE lower(first_name) = lower(?) AND lower(last_name) = lower(?) AND player_alias = ?"
+      `SELECT id, pin_hash, email, password_hash, email_verified, is_admin, realm
+       FROM users WHERE lower(first_name) = lower(?) AND lower(last_name) = lower(?) AND player_alias = ?`
     )
-    .get(first_name, last_name, canonical)) as { id: number; pin_hash: string | null } | undefined;
+    .get(first_name, last_name, canonical)) as
+    | {
+        id: number;
+        pin_hash: string | null;
+        email: string | null;
+        password_hash: string | null;
+        email_verified: number | null;
+        is_admin: number | null;
+        realm: string | null;
+      }
+    | undefined;
+
+  const genericIdentityError = () =>
+    NextResponse.json(
+      { error: "Nieprawidłowe dane. Sprawdź imię, nazwisko i pseudonim piłkarza." },
+      { status: 401 }
+    );
 
   if (!user) {
-    return NextResponse.json({ error: "Nieprawidłowe dane. Sprawdź imię, nazwisko i pseudonim piłkarza." }, { status: 401 });
+    return genericIdentityError();
+  }
+  const realm = parseRealm(user.realm, REALMS.ACADEMY);
+  const emailAuthOn = await isEmailPasswordAuthEnabled(db, realm);
+  if (
+    !userCanLoginWithPin(
+      {
+        email: user.email,
+        password_hash: user.password_hash,
+        email_verified: user.email_verified,
+        is_admin: user.is_admin,
+      },
+      emailAuthOn
+    )
+  ) {
+    // Ten sam komunikat co przy złej tożsamości — bez wycieku stanu migracji.
+    return genericIdentityError();
   }
   if (!user.pin_hash) {
-    return NextResponse.json(
-      {
-        error:
-          "To konto nie ma jeszcze ustawionego PIN-u — zaloguj się imieniem i nazwiskiem na stronie logowania (zostaniesz przekierowany na ustawienie PIN-u) albo wejdź na stronę /ustaw-pin.",
-      },
-      { status: 400 }
-    );
+    return genericIdentityError();
   }
 
   const pinHashPending = await hashPin(pin);

@@ -165,7 +165,7 @@ export async function POST(req: Request) {
       }
     }
 
-    const sent = await issueEmailAuthCode(db, userId, email);
+    const sent = await issueEmailAuthCode(db, userId, email, "verify", { isAdmin: isAdmin === 1 });
     if (!sent.ok) {
       return NextResponse.json({ error: sent.error }, { status: 503 });
     }

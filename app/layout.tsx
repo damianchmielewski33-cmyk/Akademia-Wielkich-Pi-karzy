@@ -141,6 +141,9 @@ export default async function RootLayout({
     headerStore.get("x-preview-blocked") === "1" ||
     isPreviewBlockedCookieValue(cookieStore.get(PREVIEW_BLOCKED_COOKIE)?.value);
   const isPzuCupSection = pathname.startsWith("/pzu-cup");
+  const forceEmailAuthSetup = Boolean(
+    session?.needsEmailAuthSetup && !session.needsPinSetup && !session.pinChangePending && !isPzuCupSection
+  );
   const loggedInFull = Boolean(
     session && !session.needsPinSetup && !session.pinChangePending
   );
@@ -243,6 +246,17 @@ export default async function RootLayout({
         <AdminScreenBlockPreviewBanner screenTitle={screenLabel(screenKey)} />
         {children}
       </>
+    );
+  }
+
+  if (forceEmailAuthSetup) {
+    mainContent = (
+      <div className="mx-auto flex min-h-[40vh] max-w-md flex-col justify-center px-4 py-16 text-center">
+        <p className="text-lg font-semibold text-zinc-950 dark:text-zinc-50">Uzupełnij e-mail i hasło</p>
+        <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
+          Konto z PIN-em trzeba powiązać z e-mailem. Bez tego nie wejdziesz do terminarza ani na konto.
+        </p>
+      </div>
     );
   }
 
@@ -392,18 +406,20 @@ export default async function RootLayout({
                   </MarketplacePhotosProvider>
                 </SiteAssetsProvider>
               </AdsenseProvider>
-              {loggedInFull && !isPzuCupSection && !pathname.startsWith("/panel-admina") ? (
+              {loggedInFull && !forceEmailAuthSetup && !isPzuCupSection && !pathname.startsWith("/panel-admina") ? (
                 <WalletBalanceFloat enabled />
               ) : null}
-              {!isPzuCupSection ? (
+              {!isPzuCupSection && !forceEmailAuthSetup ? (
                 <WriteToAdminFloat
                   defaults={writeToAdminDefaults}
                   recipients={contactAdminRecipients}
                   hideFloat={shellIsAdmin}
                 />
               ) : null}
-              {!isPzuCupSection && matchNotificationPromptEnabled ? <MatchNotificationPrompt /> : null}
-              {!isPzuCupSection ? <EmailAuthSetupPrompt /> : null}
+              {!isPzuCupSection && matchNotificationPromptEnabled && !forceEmailAuthSetup ? (
+                <MatchNotificationPrompt />
+              ) : null}
+              {!isPzuCupSection ? <EmailAuthSetupPrompt initialNeedsSetup={forceEmailAuthSetup} /> : null}
             </SiteModeProvider>
           </Suspense>
         </PinSetupGate>
