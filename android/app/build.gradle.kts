@@ -39,7 +39,7 @@ if (keystorePropertiesFile.exists()) {
 
 android {
     namespace = "pl.akademiawielkichpilkarzy.app"
-    compileSdk = 36
+    compileSdk = 35
 
     defaultConfig {
         // Nowe ID — czysta instalacja obok starych prób
@@ -47,7 +47,7 @@ android {
         minSdk = 26
         // targetSdk musi być aktualny — inaczej Android 14+ pokazuje ostrzeżenie
         // „aplikacja jest na starszą wersję Androida…” przy instalacji APK.
-        targetSdk = 36
+        targetSdk = 35
         versionCode = 36
         versionName = "1.11.0"
 
@@ -118,34 +118,34 @@ android {
 }
 
 dependencies {
-    val composeBom = platform("androidx.compose:compose-bom:2025.12.01")
+    val composeBom = platform("androidx.compose:compose-bom:2024.10.01")
     implementation(composeBom)
     androidTestImplementation(composeBom)
 
-    implementation("androidx.core:core-ktx:1.17.0")
+    implementation("androidx.core:core-ktx:1.15.0")
     implementation("androidx.core:core-splashscreen:1.0.1")
-    implementation("androidx.activity:activity-compose:1.11.0")
-    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.9.4")
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.9.4")
-    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.9.4")
-    implementation("androidx.navigation:navigation-compose:2.9.3")
+    implementation("androidx.activity:activity-compose:1.9.3")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
+    implementation("androidx.navigation:navigation-compose:2.8.4")
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")
-    implementation("androidx.datastore:datastore-preferences:1.1.7")
+    implementation("androidx.datastore:datastore-preferences:1.1.1")
     implementation("androidx.biometric:biometric:1.1.0")
     implementation("androidx.security:security-crypto:1.0.0")
-    implementation("androidx.fragment:fragment-ktx:1.8.8")
-    implementation("androidx.browser:browser:1.9.0")
+    implementation("androidx.fragment:fragment-ktx:1.8.5")
+    implementation("androidx.browser:browser:1.8.0")
 
     implementation("com.squareup.retrofit2:retrofit:2.11.0")
     implementation("com.squareup.retrofit2:converter-moshi:2.11.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
-    implementation("com.squareup.moshi:moshi-kotlin:1.15.2")
+    implementation("com.squareup.moshi:moshi-kotlin:1.15.1")
     implementation("io.coil-kt:coil-compose:2.7.0")
 
-    implementation(platform("com.google.firebase:firebase-bom:33.16.0"))
+    implementation(platform("com.google.firebase:firebase-bom:33.6.0"))
     implementation("com.google.firebase:firebase-messaging-ktx")
     implementation("me.leolin:ShortcutBadger:1.1.22@aar")
 
