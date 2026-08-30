@@ -75,7 +75,17 @@ jobs:
 
       - name: Build release APK
         working-directory: android
-        run: gradle :app:assembleRelease --stacktrace
+        shell: bash
+        run: |
+          set -o pipefail
+          if ! gradle :app:assembleRelease --stacktrace 2>&1 | tee ../build.log; then
+            echo "=== Gradle failure (last 80 lines) ==="
+            tail -n 80 ../build.log || true
+            while IFS= read -r line; do
+              echo "::error title=Android build::$line"
+            done < <(grep -E '^(e: |FAILURE: |> Task :app:compileReleaseKotlin FAILED|Execution failed for task)' ../build.log | head -n 20 || true)
+            exit 1
+          fi
 
       - name: Verify signed APK
         working-directory: android
