@@ -1,0 +1,328 @@
+import { auth } from "@/auth";
+import { HomeWorkoutTrendDynamic } from "@/components/home/home-workout-trend-dynamic";
+import { LastWorkoutStats } from "@/components/home/last-workout-stats";
+import { NutritionProgressBars } from "@/components/home/nutrition-progress-bars";
+import { AddMealSheet } from "@/components/home/add-meal-sheet";
+import { MealLogsBrowser } from "@/components/home/meal-logs-browser";
+import { TodaysMacrosSection } from "@/components/home/todays-macros";
+import { HomeStartPanels } from "@/components/home/home-start-panels";
+import { DailyCheckinPanel } from "@/components/home/daily-checkin-panel";
+import { StreakStrip } from "@/components/home/streak-strip";
+import { DailyBriefingCard } from "@/components/home/daily-briefing-card";
+import { QuickMealStrip } from "@/components/home/quick-meal-strip";
+import { FitnessGoalsWidget } from "@/components/home/fitness-goals-widget";
+import { OnboardingBanner } from "@/components/home/onboarding-banner";
+import { EmptyAppGuide } from "@/components/home/empty-app-guide";
+import { WeeklyDeficitPanel } from "@/components/home/weekly-deficit-panel";
+import { parseMealTemplatesJson } from "@/lib/meal-templates";
+import { getDb } from "@/db";
+import { userSettings, users, workoutPlans } from "@/db/schema";
+import { getHomeStats } from "@/lib/home-stats";
+import { listMealLogsForDates } from "@/lib/meal-logs";
+import {
+  loadNutritionDashboard,
+  loadPreviousWeeksForSheet,
+} from "@/lib/nutrition-dashboard";
+import { resolveProfileDayGoals } from "@/lib/nutrition-goals";
+import { buildWeekNutritionRows } from "@/lib/week-nutrition-rows";
+import { getLatestBodyReportMetrics } from "@/lib/body-reports";
+import {
+  coachRecentContextFromDashboardParts,
+  coachUserProfileFromParts,
+} from "@/lib/coach-context";
+import { getDailyCheckin } from "@/lib/daily-checkin";
+import { getStreaks } from "@/lib/streaks";
+import { getUserAiFeaturesDisabled } from "@/lib/user-ai-preference";
+import { eq } from "drizzle-orm";
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { Suspense } from "react";
+import { Activity, Zap } from "lucide-react";
+import { DailyBriefingSkeleton } from "@/components/home/daily-briefing-skeleton";
+
+function kcalProgress(consumed: number, goal: number) {
+  if (!goal || goal <= 0) return { pct: 0, over: false };
+  const pct = (consumed / goal) * 100;
+  return { pct, over: consumed > goal };
+}
+
+export default async function HomePage() {
+  const session = await auth().catch((err) => {
+    console.error("[home] auth()", err);
+    return null;
+  });
+  const userId = session?.user?.id;
+  if (!userId) {
+    redirect("/login?callbackUrl=/");
+  }
+
+  const db = getDb();
+  const [[settingsRow], [userRow]] = await Promise.all([
+    db
+    .select({
+      trainingNutritionGoalsJson: userSettings.trainingNutritionGoalsJson,
+      restNutritionGoalsJson: userSettings.restNutritionGoalsJson,
+      nutritionDayTypesJson: userSettings.nutritionDayTypesJson,
+      onboardingCompletedAt: userSettings.onboardingCompletedAt,
+      mealTemplatesJson: userSettings.mealTemplatesJson,
+      fitnessGoalsJson: userSettings.fitnessGoalsJson,
+    })
+    .from(userSettings)
+    .where(eq(userSettings.userId, userId))
+      .limit(1),
+    db
+      .select({
+        age: users.age,
+        weightKg: users.weightKg,
+        heightCm: users.heightCm,
+        activityLevel: users.activityLevel,
+      })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1),
+  ]);
+
+  const [dash, stats, planPeek] = await Promise.all([
+    loadNutritionDashboard(userId, settingsRow),
+    getHomeStats(userId),
+    db
+      .select({ id: workoutPlans.id })
+      .from(workoutPlans)
+      .where(eq(workoutPlans.userId, userId))
+      .limit(1),
+  ]);
+
+  const weekDateKeys = dash.week.days.map((d) => d.date);
+  const [previousWeeks, mealEntriesByDate, checkin, streaks, userAiOff, latestBodyReport] =
+    await Promise.all([
+      loadPreviousWeeksForSheet(userId, dash.settings, dash.todayKey),
+      listMealLogsForDates(userId, weekDateKeys),
+      getDailyCheckin(userId, dash.todayKey),
+      getStreaks(userId, dash.todayKey),
+      getUserAiFeaturesDisabled(userId),
+      getLatestBodyReportMetrics(userId),
+    ]);
+
+  const profileGoalsToday = resolveProfileDayGoals(
+    dash.settings,
+    dash.todayKey,
+  );
+  const consumptionHint = profileGoalsToday
+    ? "Cele kaloryczne i makroskładniki z profilu (kalendarz treningowy). Spożycie na dziś to suma Twoich ręcznych wpisów posiłków."
+    : "Spożycie na dziś liczymy wyłącznie z wpisów posiłków na tej stronie. Cele mogą pochodzić z integracji Fitatu, jeśli ją skonfigurujesz w profilu.";
+
+  const dayG = dash.today.caloriesGoal ?? 0;
+  const dayC = dash.today.caloriesConsumed;
+  const dayProg = kcalProgress(dayC, dayG);
+
+  const weekG = dash.week.sumCaloriesGoal;
+  const weekC = dash.week.sumCaloriesConsumed;
+  const weekProg = kcalProgress(weekC, weekG);
+  const weekDeficitKcal = weekG > 0 ? weekG - weekC : null;
+
+  const mealEntriesToday = mealEntriesByDate[dash.todayKey] ?? [];
+  const weekDayRows = buildWeekNutritionRows(dash.week.days);
+
+  const subtitleMacros =
+    dash.today.source === "error"
+      ? "Sprawdź integrację lub cele w profilu"
+      : dayG > 0
+        ? `${Math.round(dayC)} / ${Math.round(dayG)} kcal · makroskładniki`
+        : `${Math.round(dayC)} kcal spożyte`;
+
+  const subtitleMeals =
+    mealEntriesToday.length === 0
+      ? `Brak wpisów · ${dash.todayKey}`
+      : `${mealEntriesToday.length} wpisów · ${dash.todayKey}`;
+
+  const subtitleCheckIn = checkin
+    ? checkin.dayClosedAtMs
+      ? "Zapisany · dzień zamknięty"
+      : "Zapisany · możesz zamknąć dzień"
+    : "Szybki check-in 30–60 s";
+
+  const subtitleTargets =
+    weekG > 0
+      ? `${dayProg.pct.toFixed(0)}% dziś · ${weekProg.pct.toFixed(0)}% tydzień`
+      : `${dayProg.pct.toFixed(0)}% dziś`;
+
+  const subtitleWeeklyDeficit =
+    weekDeficitKcal == null
+      ? "Brak sumy celów kcal — ustaw cele w profilu"
+      : weekDeficitKcal > 0
+        ? `${Math.round(weekDeficitKcal)} kcal poniżej celu`
+        : weekDeficitKcal < 0
+          ? `${Math.round(Math.abs(weekDeficitKcal))} kcal nadwyżki`
+          : "Zgodnie z celem tygodnia";
+
+  const subtitleLastWorkout = stats.lastWorkout
+    ? `${stats.lastWorkout.title.slice(0, 42)}${stats.lastWorkout.title.length > 42 ? "…" : ""}`
+    : "Brak zapisanego treningu";
+
+  const showTrend = stats.trend.length > 0;
+  const subtitleTrend = `${stats.trend.length} treningów na wykresie`;
+
+  const profileFilled = Boolean(
+    userRow?.weightKg != null && userRow?.heightCm != null && userRow?.age != null,
+  );
+  const planExists = planPeek.length > 0;
+  const hasWorkoutHistory = stats.lastWorkout != null;
+  const showEmptyGuide = !hasWorkoutHistory && stats.trend.length === 0;
+
+  return (
+    <div className="space-y-8">
+      {/* Hero */}
+      <section className="glass-panel neon-glow relative overflow-hidden px-4 py-7 sm:px-6 sm:py-8 md:p-10">
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-[var(--neon)]/10 via-transparent to-transparent" />
+        <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-[var(--neon)]/18 blur-3xl" />
+
+        <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <p className="text-xs font-medium uppercase tracking-[0.2em] text-white/55">
+              Start
+            </p>
+            <h1 className="font-heading metallic-text mt-2 text-2xl font-semibold sm:text-4xl">
+              Gotowy na trening?
+            </h1>
+          </div>
+
+          <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
+            <AddMealSheet dateKey={dash.todayKey} />
+            <Link
+              href="/start-workout"
+              className="inline-flex h-11 w-full items-center justify-center rounded-xl bg-[var(--neon)] px-5 text-sm font-medium text-white transition hover:bg-[#ff4d6d] sm:w-auto"
+            >
+              <Zap className="mr-2 h-4 w-4" />
+              Rozpocznij trening
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {!settingsRow?.onboardingCompletedAt ? <OnboardingBanner /> : null}
+
+      {showEmptyGuide ? (
+        <EmptyAppGuide
+          profileFilled={profileFilled}
+          planExists={planExists}
+          hasWorkoutHistory={hasWorkoutHistory}
+        />
+      ) : null}
+
+      <Suspense fallback={<DailyBriefingSkeleton />}>
+        <DailyBriefingCard
+          userId={userId}
+          briefingPrefetch={{
+            recentContext: coachRecentContextFromDashboardParts(dash.today, stats, streaks),
+            userProfile: coachUserProfileFromParts(userRow, latestBodyReport),
+            userAiOff,
+          }}
+        />
+      </Suspense>
+
+      <QuickMealStrip
+        dateKey={dash.todayKey}
+        templates={parseMealTemplatesJson(settingsRow?.mealTemplatesJson ?? null)}
+      />
+
+      <FitnessGoalsWidget
+        userId={userId}
+        todayKey={dash.todayKey}
+        fitnessGoalsJson={settingsRow?.fitnessGoalsJson ?? null}
+      />
+
+      <HomeStartPanels
+        subtitleMacros={subtitleMacros}
+        subtitleMeals={subtitleMeals}
+        subtitleTargets={subtitleTargets}
+          subtitleWeeklyDeficit={subtitleWeeklyDeficit}
+        subtitleCheckIn={subtitleCheckIn}
+        subtitleLastWorkout={subtitleLastWorkout}
+        subtitleTrend={subtitleTrend}
+        showTrend={showTrend}
+        macrosPanel={
+          <TodaysMacrosSection
+            data={dash.today}
+            consumptionHint={consumptionHint}
+            embedded
+          />
+        }
+        mealsPanel={
+          <MealLogsBrowser
+            todayKey={dash.todayKey}
+            availableDateKeys={weekDateKeys}
+            entriesByDate={mealEntriesByDate}
+          />
+        }
+        targetsPanel={
+          <div className="space-y-4">
+            <StreakStrip data={streaks} />
+            <NutritionProgressBars
+              dayLabel="Dziś"
+              dayPercent={dayProg.pct}
+              dayDetail={
+                dayG > 0
+                  ? `${Math.round(dayC)} / ${Math.round(dayG)} kcal`
+                  : "Brak dziennego celu kcal — uzupełnij cele w profilu lub korzystaj z celu z Fitatu."
+              }
+              dayOver={dayProg.over}
+              weekLabel="Ten tydzień (pon.–niedz.)"
+              weekPercent={weekProg.pct}
+              weekDetail={
+                weekG > 0
+                  ? `${Math.round(weekC)} / ${Math.round(weekG)} kcal (wpisy posiłków vs suma celów)`
+                  : "Brak sumy celów tygodnia — ustaw makroskładniki w profilu dla treningu i odpoczynku."
+              }
+              weekOver={weekProg.over}
+              weekDayRows={weekDayRows}
+              sheetTodayKey={dash.todayKey}
+              weekNutritionRollup={{
+                sumProteinGoal: dash.week.sumProteinGoal,
+                sumProteinConsumed: dash.week.sumProteinConsumed,
+                sumFatGoal: dash.week.sumFatGoal,
+                sumFatConsumed: dash.week.sumFatConsumed,
+                sumCarbsGoal: dash.week.sumCarbsGoal,
+                sumCarbsConsumed: dash.week.sumCarbsConsumed,
+                sumCaloriesGoal: dash.week.sumCaloriesGoal,
+                sumCaloriesConsumed: dash.week.sumCaloriesConsumed,
+              }}
+              previousWeeks={previousWeeks}
+            />
+          </div>
+        }
+        weeklyDeficitPanel={
+          <WeeklyDeficitPanel
+            weekLabel="Ten tydzień (pon.–niedz.)"
+            deficitKcal={weekDeficitKcal}
+            weightKg={userRow?.weightKg ?? null}
+          />
+        }
+        checkInPanel={<DailyCheckinPanel dateKey={dash.todayKey} existing={checkin} />}
+        lastWorkoutPanel={<LastWorkoutStats stats={stats} embedded />}
+        trendPanel={
+          <div className="glass-panel neon-glow relative overflow-hidden p-5 sm:p-6">
+            <div className="pointer-events-none absolute inset-0 opacity-40 [background-image:radial-gradient(900px_420px_at_15%_0%,rgba(255,45,85,0.10),transparent_60%)]" />
+            <div className="relative">
+              <div className="flex items-center gap-2 text-white/50">
+                <Activity className="h-4 w-4" />
+                <p className="text-[11px] font-medium uppercase tracking-[0.22em]">
+                  Trend
+                </p>
+              </div>
+              <h2 className="font-heading mt-1 text-lg font-semibold text-white">
+                Ostatnie treningi
+              </h2>
+              <p className="mt-1 text-xs text-white/50">
+                Tonaż (kg) i liczba powtórzeń z ostatnich {stats.trend.length}{" "}
+                treningów.
+              </p>
+              <div className="mt-5">
+                <HomeWorkoutTrendDynamic data={stats.trend} />
+              </div>
+            </div>
+          </div>
+        }
+      />
+    </div>
+  );
+}

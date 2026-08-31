@@ -32,8 +32,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import android.content.Intent
 import android.net.Uri
+import pl.akademiawielkichpilkarzy.app.ui.web.openExternalUri
 import kotlinx.coroutines.launch
 import pl.akademiawielkichpilkarzy.app.data.api.ApiClient
 import pl.akademiawielkichpilkarzy.app.data.api.LineupSelected
@@ -331,11 +331,10 @@ private fun HomeTileGrid(nav: HomeNavActions) {
                 gold = false,
                 icon = Icons.Filled.FitnessCenter,
                 onClick = {
-                    val intent = Intent(
-                        Intent.ACTION_VIEW,
+                    openExternalUri(
+                        context,
                         Uri.parse("https://gym-brat.vercel.app/?from=awp")
                     )
-                    context.startActivity(intent)
                 }
             )
         )

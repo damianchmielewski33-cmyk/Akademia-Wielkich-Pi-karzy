@@ -49,6 +49,8 @@ export type AppModalProps = {
   hideHeader?: boolean;
   /** Seed zdjęcia boiska w nagłówku V2. */
   headerPhotoSeed?: number;
+  /** Nad innymi nakładkami (splash, preloader). */
+  elevated?: boolean;
 };
 
 /**
@@ -73,6 +75,7 @@ export function AppModal({
   hideCloseButton = false,
   hideHeader = false,
   headerPhotoSeed = 2,
+  elevated = false,
 }: AppModalProps) {
   const formHeader = Boolean(icon) && !hideHeader;
 
@@ -85,6 +88,7 @@ export function AppModal({
       }}
     >
       <DialogContent
+        elevated={elevated}
         className={cn(
           sizeClasses[size],
           formHeader && "awp-modal-content--form gap-0 p-0 pt-0",

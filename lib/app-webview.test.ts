@@ -4,6 +4,7 @@ import {
   compareAndroidAppVersion,
   compareVersionName,
   isAppWebViewUserAgent,
+  openExternalAppUrl,
   parseAndroidAppIdentity,
   shouldShowAndroidUpdatePrompt,
 } from "@/lib/app-webview";
@@ -68,5 +69,22 @@ describe("app-webview", () => {
       })
     ).toBe(false);
     expect(androidUpdateLaterStorageKey(27)).toBe("awp-android-update-later:27");
+  });
+
+  it("openExternalAppUrl woła most AwpAndroid.openExternalUrl", () => {
+    const calls: string[] = [];
+    (globalThis as { window?: Window }).window = {
+      AwpAndroid: {
+        getVersionName: () => "1.0.0",
+        getVersionCode: () => 1,
+        checkUpdate: () => {},
+        openExternalUrl: (url: string) => {
+          calls.push(url);
+        },
+      },
+    } as Window;
+
+    expect(openExternalAppUrl("https://gym-brat.vercel.app/?from=awp")).toBe(true);
+    expect(calls).toEqual(["https://gym-brat.vercel.app/?from=awp"]);
   });
 });

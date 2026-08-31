@@ -1,0 +1,403 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import { Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { signOut, useSession } from "next-auth/react";
+import {
+  BarChart3,
+  ChefHat,
+  Dumbbell,
+  Home,
+  LineChart,
+  LogOut,
+  Menu,
+  Shield,
+  ScrollText,
+  Sparkles,
+  User,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { releaseDocumentScrollLock } from "@/lib/document-scroll";
+import { cn } from "@/lib/utils";
+import { CoachChatFab } from "@/components/layout/coach-chat-fab";
+import { StartWorkoutFab } from "@/components/layout/start-workout-fab";
+import { useI18n } from "@/components/i18n/i18n-provider";
+import { AwpCrossLink, AwpHeaderChip } from "@/components/awp-cross-link";
+import { SisterSiteArrivalBanner } from "@/components/sister-site-arrival-banner";
+
+export function AppShell({ children }: { children: React.ReactNode }) {
+  const { t } = useI18n();
+  const nav = useMemo(
+    () => [
+      { href: "/", label: t("nav.start"), icon: Home },
+      { href: "/meal-suggestions", label: t("nav.meals"), icon: ChefHat },
+      { href: "/workout-plan", label: t("nav.plan"), icon: Dumbbell },
+      { href: "/reports", label: t("nav.reports"), icon: BarChart3 },
+      { href: "/progress-analysis", label: t("nav.analysis"), icon: LineChart },
+      { href: "/workout-history", label: t("nav.history"), icon: ScrollText },
+      { href: "/changelog", label: t("nav.news"), icon: Sparkles },
+      { href: "/profile", label: t("nav.profile"), icon: User },
+    ],
+    [t],
+  );
+
+  const pathname = usePathname();
+  const router   = useRouter();
+  const { data } = useSession();
+  const reduceFixedBugs = pathname.startsWith("/active-workout");
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const mobileMenuTriggerRef = useRef<HTMLButtonElement | null>(null);
+
+  useLayoutEffect(() => {
+    releaseDocumentScrollLock();
+  }, [pathname]);
+
+  useEffect(() => {
+    // Close mobile menu on navigation (RWD).
+    setMobileMenuOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    // Scroll lock only while menu open.
+    if (typeof document === "undefined") return;
+    const body = document.body;
+    const root = document.documentElement;
+    if (mobileMenuOpen) {
+      body.style.overflow = "hidden";
+      root.style.overflow = "hidden";
+      return;
+    }
+    body.style.overflow = "";
+    root.style.overflow = "";
+    // Restore focus for keyboard users.
+    queueMicrotask(() => mobileMenuTriggerRef.current?.focus());
+  }, [mobileMenuOpen]);
+
+  return (
+    <div className="relative min-h-screen">
+      <Suspense fallback={null}>
+        <SisterSiteArrivalBanner />
+      </Suspense>
+      {/* ── Header ── */}
+      <header
+        className="sticky top-0 z-40 pt-[env(safe-area-inset-top)] backdrop-blur-xl"
+        style={{
+          background:
+            "linear-gradient(180deg,rgba(10,10,12,0.88) 0%,rgba(8,8,9,0.80) 100%)",
+          borderBottom: "1px solid rgba(255,255,255,0.08)",
+          boxShadow:
+            "0 1px 0 rgba(230,0,35,0.22), 0 4px 24px rgba(0,0,0,0.55)",
+        }}
+      >
+        {/* Red accent stripe at very top */}
+        <div
+          className="absolute top-0 left-0 right-0 h-[2px]"
+          style={{
+            background:
+              "linear-gradient(90deg,transparent 0%,rgba(230,0,35,0.7) 30%,rgba(230,0,35,0.9) 50%,rgba(230,0,35,0.7) 70%,transparent 100%)",
+          }}
+        />
+
+        <div className="mx-auto flex max-w-6xl items-center gap-2 px-3 py-3 sm:gap-3 sm:px-4">
+          {/* Logo */}
+          <Link href="/" className="group flex shrink-0 items-center gap-2.5">
+            <span
+              className="flex h-9 w-9 items-center justify-center rounded-xl"
+              style={{
+                background:
+                  "linear-gradient(145deg,rgba(230,0,35,0.18),rgba(230,0,35,0.08))",
+                border: "1px solid rgba(230,0,35,0.50)",
+                borderTopColor: "rgba(230,0,35,0.70)",
+                boxShadow:
+                  "0 0 18px rgba(230,0,35,0.30), inset 0 1px 0 rgba(255,255,255,0.10)",
+              }}
+            >
+              <Dumbbell className="h-5 w-5 text-[var(--neon)]" />
+            </span>
+            <span className="font-heading text-[15px] font-bold tracking-tight text-white/90 sm:text-[17px]">
+              GYM<span className="text-[var(--neon)]">BRAT</span>
+            </span>
+          </Link>
+
+          {/* Desktop nav — środek belki */}
+          <nav className="hidden min-w-0 flex-1 items-center justify-center gap-0.5 md:flex">
+            {nav.map((item) => {
+              const active =
+                item.href === "/"
+                  ? pathname === "/"
+                  : pathname.startsWith(item.href);
+              return (
+                <Link key={item.href} href={item.href}>
+                  <span
+                    className={cn(
+                      "inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150",
+                      active ? "text-white" : "text-white/55 hover:text-white/85 hover:bg-white/[0.06]",
+                    )}
+                    style={
+                      active
+                        ? {
+                            background:
+                              "linear-gradient(145deg,rgba(230,0,35,0.20),rgba(230,0,35,0.08))",
+                            border: "1px solid rgba(230,0,35,0.35)",
+                            borderTopColor: "rgba(230,0,35,0.55)",
+                            boxShadow:
+                              "0 0 12px rgba(230,0,35,0.20), inset 0 1px 0 rgba(255,255,255,0.07)",
+                          }
+                        : undefined
+                    }
+                  >
+                    <item.icon
+                      className={cn(
+                        "h-4 w-4",
+                        active ? "text-[var(--neon)]" : "text-white/55",
+                      )}
+                    />
+                    {item.label}
+                  </span>
+                </Link>
+              );
+            })}
+          </nav>
+
+          {/* Prawa strona belki: AWP + admin + menu użytkownika */}
+          <div className="ml-auto flex shrink-0 items-center gap-2">
+            <AwpHeaderChip />
+            {data?.user?.role === "admin" ? (
+              <Link
+                href="/admin"
+                className={cn(
+                  "inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition-colors",
+                  pathname.startsWith("/admin")
+                    ? "text-amber-100"
+                    : "text-amber-200/95 hover:bg-amber-500/15 hover:text-amber-50",
+                )}
+                style={{
+                  background:
+                    pathname.startsWith("/admin")
+                      ? "linear-gradient(145deg,rgba(245,158,11,0.22),rgba(245,158,11,0.08))"
+                      : "rgba(245,158,11,0.06)",
+                  border: pathname.startsWith("/admin")
+                    ? "1px solid rgba(245,158,11,0.45)"
+                    : "1px solid rgba(245,158,11,0.22)",
+                  borderTopColor:
+                    pathname.startsWith("/admin")
+                      ? "rgba(251,191,36,0.55)"
+                      : "rgba(245,158,11,0.35)",
+                  boxShadow: pathname.startsWith("/admin")
+                    ? "0 0 14px rgba(245,158,11,0.18), inset 0 1px 0 rgba(255,255,255,0.06)"
+                    : undefined,
+                }}
+              >
+                <Shield className="h-4 w-4 shrink-0 text-amber-400" aria-hidden />
+                <span className="max-[380px]:sr-only">Panel admina</span>
+              </Link>
+            ) : null}
+
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                className="hidden h-9 items-center rounded-lg px-3 text-sm font-medium text-white/75 outline-none transition-colors hover:text-white md:inline-flex"
+                style={{
+                  background: "rgba(255,255,255,0.05)",
+                  border: "1px solid rgba(255,255,255,0.10)",
+                  borderTopColor: "rgba(255,255,255,0.18)",
+                }}
+              >
+                {data?.user?.name
+                  ? `Cześć, ${data.user.name.split(" ")[0]}`
+                  : "Cześć"}
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="end"
+                className="border-white/10 bg-zinc-950/95 text-white backdrop-blur-xl"
+              >
+                <DropdownMenuItem onClick={() => router.push("/profile")}>
+                  Profil
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => signOut({ callbackUrl: "/login" })}
+                >
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Wyloguj się
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+              <SheetTrigger
+                ref={mobileMenuTriggerRef}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-white/70 outline-none transition-colors hover:text-white md:hidden"
+                style={{
+                  background: "rgba(255,255,255,0.05)",
+                  border: "1px solid rgba(255,255,255,0.10)",
+                }}
+                aria-label="Otwórz menu"
+              >
+                <Menu className="h-5 w-5" />
+              </SheetTrigger>
+              <SheetContent
+                side="right"
+                className="border-white/10 text-white backdrop-blur-xl"
+                style={{ background: "rgba(8,8,9,0.96)" }}
+              >
+                {/* Mobile sheet header stripe */}
+                <div
+                  className="absolute top-0 left-0 right-0 h-[2px]"
+                  style={{
+                    background:
+                      "linear-gradient(90deg,transparent,rgba(230,0,35,0.8) 40%,rgba(230,0,35,0.8) 60%,transparent)",
+                  }}
+                />
+                <div className="mt-8 flex flex-col gap-1.5">
+                  {nav.map((item) => {
+                    const active =
+                      item.href === "/"
+                        ? pathname === "/"
+                        : pathname.startsWith(item.href);
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        <span
+                          className={cn(
+                            "flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors",
+                            active ? "text-white" : "text-white/60 hover:bg-white/[0.06] hover:text-white/85",
+                          )}
+                          style={
+                            active
+                              ? {
+                                  background:
+                                    "linear-gradient(145deg,rgba(230,0,35,0.18),rgba(230,0,35,0.07))",
+                                  border: "1px solid rgba(230,0,35,0.30)",
+                                }
+                              : undefined
+                          }
+                        >
+                          <item.icon
+                            className={cn(
+                              "h-4 w-4",
+                              active ? "text-[var(--neon)]" : "text-white/40",
+                            )}
+                          />
+                          {item.label}
+                        </span>
+                      </Link>
+                    );
+                  })}
+                  <div className="mt-4 border-t border-white/10 pt-4">
+                    <p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-wider text-white/35">
+                      Siostrzana aplikacja
+                    </p>
+                    <AwpCrossLink variant="sheet" onClick={() => setMobileMenuOpen(false)} />
+                  </div>
+                  <Button
+                    variant="secondary"
+                    className="mt-4"
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      signOut({ callbackUrl: "/login" });
+                    }}
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Wyloguj się
+                  </Button>
+                </div>
+              </SheetContent>
+            </Sheet>
+          </div>
+        </div>
+      </header>
+
+      {/* ── Main content ── */}
+      <main
+        key={pathname}
+        className={cn(
+          "mx-auto min-w-0 max-w-6xl flex-1 overflow-x-clip px-3 py-6 pb-[calc(7rem+env(safe-area-inset-bottom))] sm:px-4 sm:py-8 md:pb-8",
+          reduceFixedBugs ? "animate-page-enter-opacity" : "animate-page-enter",
+        )}
+      >
+        {children}
+        {!reduceFixedBugs ? (
+          <div className="mt-10 border-t border-white/10 pt-6 md:mt-12">
+            <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-white/35">
+              Siostrzana aplikacja
+            </p>
+            <AwpCrossLink variant="footer" />
+          </div>
+        ) : null}
+      </main>
+
+      {/* ── Mobile bottom nav ── */}
+      <nav
+        className="fixed inset-x-0 bottom-0 z-50 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl md:hidden"
+        style={{
+          background:
+            "linear-gradient(0deg,rgba(8,8,9,0.95) 0%,rgba(12,12,14,0.85) 100%)",
+          borderTop: "1px solid rgba(255,255,255,0.08)",
+          boxShadow: "0 -1px 0 rgba(230,0,35,0.18), 0 -8px 32px rgba(0,0,0,0.50)",
+        }}
+      >
+        {/* Red accent stripe at very bottom-top edge */}
+        <div
+          className="absolute top-0 left-0 right-0 h-[1.5px]"
+          style={{
+            background:
+              "linear-gradient(90deg,transparent 0%,rgba(230,0,35,0.55) 30%,rgba(230,0,35,0.75) 50%,rgba(230,0,35,0.55) 70%,transparent 100%)",
+          }}
+        />
+
+        <div className="mx-auto grid min-w-0 max-w-6xl grid-cols-5 gap-0 px-0.5 py-1.5 sm:gap-0.5 sm:px-2 sm:py-2">
+          {nav.filter((i) => i.href !== "/profile").slice(0, 5).map((item) => {
+            const active =
+              item.href === "/"
+                ? pathname === "/"
+                : pathname.startsWith(item.href);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={cn(
+                  "flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-lg px-1 py-2 text-center text-[9px] font-medium leading-tight transition-all duration-150 sm:gap-1 sm:rounded-xl sm:px-2 sm:py-2.5 sm:text-[11px]",
+                  active ? "text-white" : "text-white/50",
+                )}
+                style={
+                  active
+                    ? {
+                        background:
+                          "linear-gradient(145deg,rgba(230,0,35,0.18),rgba(230,0,35,0.06))",
+                        border: "1px solid rgba(230,0,35,0.28)",
+                      }
+                    : undefined
+                }
+              >
+                <item.icon
+                  className={cn(
+                    "h-4 w-4 shrink-0 sm:h-5 sm:w-5",
+                    active ? "text-[var(--neon)]" : "text-white/55",
+                  )}
+                />
+                <span className="line-clamp-2 max-w-full break-words leading-[1.15] sm:line-clamp-none sm:leading-none">
+                  {item.label}
+                </span>
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
+
+      <CoachChatFab />
+      <StartWorkoutFab />
+    </div>
+  );
+}

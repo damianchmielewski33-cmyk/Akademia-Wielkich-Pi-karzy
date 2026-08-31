@@ -1,0 +1,134 @@
+import type { Client } from "@libsql/client";
+import type { LibSQLDatabase } from "drizzle-orm/libsql";
+import { getDb } from "./index";
+import * as schema from "./schema";
+
+type DbWithClient = LibSQLDatabase<typeof schema> & { $client: Client };
+
+/**
+ * Uzupełnia braki w schemacie bez polegania na plikach `db/migrations` w paczce serwera (Vercel).
+ * Idempotentne — bezpieczne przy każdym starcie / pierwszym zapytaniu.
+ */
+export async function ensureCriticalSchema(): Promise<void> {
+  const db = getDb() as DbWithClient;
+  const client = db.$client;
+  const tryAddColumn = async (sql: string) => {
+    try {
+      await client.execute(sql);
+    } catch (e) {
+      const msg = String(e);
+      if (!/duplicate column|already exists/i.test(msg)) throw e;
+    }
+  };
+  await tryAddColumn(
+    `ALTER TABLE "page_views" ADD COLUMN "deployment_env" text`,
+  );
+  await tryAddColumn(
+    `ALTER TABLE "site_activity_log" ADD COLUMN "deployment_env" text`,
+  );
+
+  await client.execute(`
+CREATE TABLE IF NOT EXISTS "meal_logs" (
+  "id" text PRIMARY KEY NOT NULL,
+  "user_id" text NOT NULL,
+  "date" text NOT NULL,
+  "name" text,
+  "calories" real NOT NULL,
+  "protein_g" real NOT NULL,
+  "fat_g" real NOT NULL,
+  "carbs_g" real NOT NULL,
+  "created_at" integer NOT NULL,
+  FOREIGN KEY ("user_id") REFERENCES "users"("id") ON UPDATE NO ACTION ON DELETE CASCADE
+);
+`);
+  await db.$client.execute(
+    `CREATE INDEX IF NOT EXISTS "idx_meal_logs_user_date" ON "meal_logs" ("user_id","date")`,
+  );
+
+  await client.execute(`
+CREATE TABLE IF NOT EXISTS "email_verification_codes" (
+  "id" text PRIMARY KEY NOT NULL,
+  "email" text NOT NULL,
+  "purpose" text DEFAULT 'register' NOT NULL,
+  "code_hash" text NOT NULL,
+  "expires_at" integer NOT NULL,
+  "created_at" integer NOT NULL,
+  "consumed_at" integer,
+  "send_count" integer DEFAULT 1 NOT NULL,
+  "attempt_count" integer DEFAULT 0 NOT NULL,
+  "last_sent_at" integer NOT NULL
+);
+`);
+  await db.$client.execute(
+    `CREATE INDEX IF NOT EXISTS "idx_email_verification_codes_email_purpose" ON "email_verification_codes" ("email","purpose")`,
+  );
+  await db.$client.execute(
+    `CREATE INDEX IF NOT EXISTS "idx_email_verification_codes_expires" ON "email_verification_codes" ("expires_at")`,
+  );
+
+  await client.execute(`
+CREATE TABLE IF NOT EXISTS "daily_checkins" (
+  "id" text PRIMARY KEY NOT NULL,
+  "user_id" text NOT NULL,
+  "date" text NOT NULL,
+  "sleep_quality" integer,
+  "day_energy" integer,
+  "stress" integer,
+  "weight_kg" real,
+  "notes" text,
+  "day_closed_at" integer,
+  "summary_json" text,
+  "created_at" integer NOT NULL,
+  "updated_at" integer NOT NULL,
+  FOREIGN KEY ("user_id") REFERENCES "users"("id") ON UPDATE NO ACTION ON DELETE CASCADE
+);
+`);
+  await db.$client.execute(
+    `CREATE INDEX IF NOT EXISTS "idx_daily_checkins_user_date" ON "daily_checkins" ("user_id","date")`,
+  );
+
+  await tryAddColumn(`ALTER TABLE "user_settings" ADD COLUMN "reminders_json" text`);
+  await tryAddColumn(`ALTER TABLE "user_settings" ADD COLUMN "meal_templates_json" text`);
+  await tryAddColumn(`ALTER TABLE "user_settings" ADD COLUMN "fitness_goals_json" text`);
+  await tryAddColumn(
+    `ALTER TABLE "user_settings" ADD COLUMN "onboarding_completed_at" integer`,
+  );
+  await tryAddColumn(
+    `ALTER TABLE "user_settings" ADD COLUMN "ai_features_disabled" integer NOT NULL DEFAULT 0`,
+  );
+  await tryAddColumn(
+    `ALTER TABLE "user_settings" ADD COLUMN "ai_entitled" integer NOT NULL DEFAULT 1`,
+  );
+
+  await client.execute(`
+CREATE TABLE IF NOT EXISTS "app_settings" (
+  "id" text PRIMARY KEY NOT NULL,
+  "ai_globally_disabled" integer NOT NULL DEFAULT 0,
+  "updated_at" integer NOT NULL
+);
+`);
+
+  await client.execute(`
+CREATE TABLE IF NOT EXISTS "admin_audit_log" (
+  "id" text PRIMARY KEY NOT NULL,
+  "actor_user_id" text NOT NULL,
+  "action" text NOT NULL,
+  "target_user_id" text,
+  "meta_json" text,
+  "deployment_env" text,
+  "created_at" integer NOT NULL
+);
+`);
+  await db.$client.execute(
+    `CREATE INDEX IF NOT EXISTS "idx_admin_audit_created" ON "admin_audit_log" ("created_at")`,
+  );
+}
+
+let mealLogsEnsured = false;
+
+/** Jednorazowo na proces — przed SELECT na meal_logs (np. gdy migracje plikowe nie dołączyły się do deployu). */
+export async function ensureMealLogsTableOncePerProcess(): Promise<void> {
+  if (mealLogsEnsured) return;
+  await ensureCriticalSchema();
+  mealLogsEnsured = true;
+}

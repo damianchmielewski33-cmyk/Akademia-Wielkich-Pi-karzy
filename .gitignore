@@ -2,6 +2,7 @@
 
 # dependencies
 /node_modules
+/gymbrat/node_modules
 /.pnp
 .pnp.*
 .yarn/*
@@ -15,7 +16,9 @@
 
 # next.js
 /.next/
+/gymbrat/.next/
 /out/
+/gymbrat/out/
 
 # production
 /build
@@ -44,6 +47,7 @@ yarn-error.log*
 
 # vercel
 .vercel
+/gymbrat/.vercel
 
 # typescript
 *.tsbuildinfo
@@ -60,6 +64,10 @@ next-env.d.ts
 /android/.cxx/
 /tmp-apk/
 
+# GymBrat (osobny npm install w gymbrat/)
+/gymbrat/.idea/
+
 # zdjęcia profilowe (lokalnie)
 /public/uploads/profiles/*
 !/public/uploads/profiles/.gitkeep
+.env*

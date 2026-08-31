@@ -7,7 +7,11 @@ import { AppModal } from "@/components/ui/app-modal";
 import { Button } from "@/components/ui/button";
 import { FormInput } from "@/components/ui/form-field";
 import { useSiteMode } from "@/components/site-mode";
-import { notifyPostLoginPromptsUpdated } from "@/lib/post-login-prompts";
+import {
+  clearPendingEmailAuthSetupFromLogin,
+  notifyPostLoginPromptsUpdated,
+  peekPendingEmailAuthSetupFromLogin,
+} from "@/lib/post-login-prompts";
 
 type MeUser = {
   id: number;
@@ -17,11 +21,19 @@ type MeUser = {
   needs_pin_setup?: number;
 };
 
+const EMAIL_AUTH_PLACEHOLDER: MeUser = { id: 0, email: null, needs_email_auth_setup: 1 };
+
+function shouldForceEmailAuthSetup(initialNeedsSetup: boolean, pendingFromLogin: boolean): boolean {
+  return initialNeedsSetup || pendingFromLogin;
+}
+
 export function EmailAuthSetupPrompt({ initialNeedsSetup = false }: { initialNeedsSetup?: boolean }) {
   const { emailPasswordAuthEnabled } = useSiteMode();
   const router = useRouter();
-  const [user, setUser] = useState<MeUser | null | undefined>(
-    initialNeedsSetup ? { id: 0, email: null, needs_email_auth_setup: 1 } : undefined
+  const [pendingFromLogin, setPendingFromLogin] = useState(() => peekPendingEmailAuthSetupFromLogin());
+  const setupRequired = shouldForceEmailAuthSetup(initialNeedsSetup, pendingFromLogin);
+  const [user, setUser] = useState<MeUser | null | undefined>(() =>
+    setupRequired ? EMAIL_AUTH_PLACEHOLDER : undefined
   );
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -30,8 +42,13 @@ export function EmailAuthSetupPrompt({ initialNeedsSetup = false }: { initialNee
   const [codeSent, setCodeSent] = useState(false);
   const [busy, setBusy] = useState(false);
 
+  useEffect(() => {
+    if (!setupRequired) return;
+    setUser((prev) => (prev?.needs_email_auth_setup === 1 ? prev : EMAIL_AUTH_PLACEHOLDER));
+  }, [setupRequired]);
+
   const load = useCallback(async () => {
-    if (!emailPasswordAuthEnabled && !initialNeedsSetup) {
+    if (!emailPasswordAuthEnabled && !setupRequired) {
       setUser(null);
       return;
     }
@@ -39,28 +56,38 @@ export function EmailAuthSetupPrompt({ initialNeedsSetup = false }: { initialNee
       const meRes = await fetch("/api/auth/me", { credentials: "include" });
       const data = (await meRes.json()) as { user: MeUser | null };
       if (!data.user) {
-        setUser(null);
+        if (!setupRequired) setUser(null);
         return;
       }
       setUser(data.user);
+      if (data.user.needs_email_auth_setup !== 1) {
+        setPendingFromLogin(false);
+        clearPendingEmailAuthSetupFromLogin();
+      }
       if (data.user.email) setEmail(data.user.email);
     } catch {
-      setUser(null);
+      if (!setupRequired) setUser(null);
     }
-  }, [emailPasswordAuthEnabled, initialNeedsSetup]);
+  }, [emailPasswordAuthEnabled, setupRequired]);
 
   useEffect(() => {
     void load();
   }, [load]);
 
   useEffect(() => {
-    const onUp = () => void load();
+    const onUp = () => {
+      if (peekPendingEmailAuthSetupFromLogin()) {
+        setPendingFromLogin(true);
+        setUser(EMAIL_AUTH_PLACEHOLDER);
+      }
+      void load();
+    };
     window.addEventListener("post-login-prompts-updated", onUp);
     return () => window.removeEventListener("post-login-prompts-updated", onUp);
   }, [load]);
 
   const open = Boolean(
-    (emailPasswordAuthEnabled || initialNeedsSetup) &&
+    (emailPasswordAuthEnabled || setupRequired) &&
       user &&
       user.needs_email_auth_setup === 1 &&
       !user.pin_change_pending &&
@@ -121,6 +148,8 @@ export function EmailAuthSetupPrompt({ initialNeedsSetup = false }: { initialNee
         return;
       }
       toast.success("Konto uzupełnione — od teraz logujesz się e-mailem i hasłem, bez PIN-u.");
+      setPendingFromLogin(false);
+      clearPendingEmailAuthSetupFromLogin();
       setUser((u) => (u ? { ...u, needs_email_auth_setup: 0, email: email.trim() } : u));
       notifyPostLoginPromptsUpdated();
       router.refresh();
@@ -137,6 +166,7 @@ export function EmailAuthSetupPrompt({ initialNeedsSetup = false }: { initialNee
       }}
       preventDismiss
       hideCloseButton
+      elevated
       size="sm"
       title="Uzupełnij e-mail i hasło"
       description="Konto z PIN-em trzeba teraz powiązać z e-mailem. Po wpisaniu kodu z wiadomości logowanie PIN-em zostanie wyłączone — zostaje e-mail i hasło. Tego okna nie da się pominąć."

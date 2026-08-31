@@ -123,6 +123,7 @@ export function LoginForm({
         error?: string;
         code?: string;
         pin_change_pending?: number;
+        needs_email_auth_setup?: number;
       };
       if (res.status === 403 && data.code === "NEEDS_INITIAL_PIN") {
         toast.info("Konto wymaga pierwszego ustawienia PIN-u — przekierowujemy na stronę ustawiania PIN-u.");
@@ -148,14 +149,18 @@ export function LoginForm({
       if (onAuthenticated) {
         await router.refresh();
         onAuthenticated();
-        notifyPostLoginPromptsUpdated();
+        notifyPostLoginPromptsUpdated({
+          needsEmailAuthSetup: data.needs_email_auth_setup === 1,
+        });
         return;
       }
       setShowGoalPreloader(true);
       await new Promise((r) => setTimeout(r, AUTH_SUCCESS_PRELOADER_DELAY_MS));
       await router.push(next);
       router.refresh();
-      notifyPostLoginPromptsUpdated();
+      notifyPostLoginPromptsUpdated({
+        needsEmailAuthSetup: data.needs_email_auth_setup === 1,
+      });
     } finally {
       setLoading(false);
     }

@@ -25,6 +25,9 @@
     "paths": {
       "@/*": [
         "./*"
+      ],
+      "@awp/sister-sites": [
+        "./packages/sister-sites/index.ts"
       ]
     }
   },
@@ -37,6 +40,7 @@
   ],
   "exclude": [
     "node_modules",
+    "gymbrat",
     "**/*.test.ts",
     "**/*.test.tsx"
   ]

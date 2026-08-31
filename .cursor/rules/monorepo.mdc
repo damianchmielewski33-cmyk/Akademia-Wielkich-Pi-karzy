@@ -1,0 +1,18 @@
+---
+description: Monorepo Akademia + GymBrat — gdzie edytować kod
+globs:
+  - "**/*"
+alwaysApply: true
+---
+
+# Monorepo
+
+- **Akademia (AWP):** kod w root repozytorium (`app/`, `components/`, `lib/`, `android/`).
+- **GymBrat:** kod w **`gymbrat/`** — ta sama sesja Cursor, ten sam git.
+- **Wspólne linki siostrzane:** `packages/sister-sites` (`@awp/sister-sites`).
+
+Przy zmianach cross-linków edytuj `packages/sister-sites/index.ts`, nie duplikuj w obu aplikacjach.
+
+Uruchomienie dev: `npm run dev` (AWP, port 3000), `npm run dev:gymbrat` (port 3001).
+
+Szczegóły: `MONOREPO.md`.

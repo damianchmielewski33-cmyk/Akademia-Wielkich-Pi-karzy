@@ -35,6 +35,7 @@ const securityHeaders = [
 ] as const;
 
 const nextConfig: NextConfig = {
+  transpilePackages: ["@awp/sister-sites"],
   outputFileTracingRoot: projectRoot,
   images: {
     remotePatterns: [

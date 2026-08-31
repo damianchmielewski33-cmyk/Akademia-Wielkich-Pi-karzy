@@ -1,5 +1,5 @@
-import { RoutePreloaderScreen } from "@/components/preloaders";
+import { HomePageSkeleton } from "@/components/home-page-skeleton";
 
 export default function Loading() {
-  return <RoutePreloaderScreen path="/" />;
+  return <HomePageSkeleton />;
 }

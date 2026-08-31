@@ -1,7 +1,6 @@
 package pl.akademiawielkichpilkarzy.app.ui.web
 
 import android.annotation.SuppressLint
-import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
@@ -11,6 +10,8 @@ import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
+import android.os.Handler
+import android.os.Looper
 import android.view.ViewGroup
 import android.webkit.CookieManager
 import android.webkit.JavascriptInterface
@@ -23,7 +24,6 @@ import android.webkit.WebViewClient
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -81,6 +81,18 @@ private class AwpAndroidJsBridge(private val appContext: Context) {
         AppUpdateRequests.requestInstall()
     }
 
+    @JavascriptInterface
+    fun openExternalUrl(url: String) {
+        val raw = url.trim()
+        if (raw.isEmpty()) return
+        val uri = runCatching { Uri.parse(raw) }.getOrNull() ?: return
+        val scheme = uri.scheme?.lowercase().orEmpty()
+        if (scheme != "http" && scheme != "https") return
+        Handler(Looper.getMainLooper()).post {
+            openExternalUri(appContext, uri)
+        }
+    }
+
     /**
      * Wzorzec wibracji CSV jak Vibration API: "40" albo "28,40,28" (vibrate/pause/vibrate…).
      * Na Androidzie pierwszy timing w Waveform to opóźnienie — doklejamy 0 na początku.
@@ -130,28 +142,6 @@ private class AwpAndroidJsBridge(private val appContext: Context) {
             @Suppress("DEPRECATION")
             context.getSystemService(Vibrator::class.java)
                 ?: context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
-        }
-    }
-}
-
-/** tel/mailto/intent itd. — Custom Tabs lub systemowy handler. */
-private fun openExternalUri(ctx: android.content.Context, uri: Uri): Boolean {
-    return try {
-        if (uri.scheme.equals("http", true) || uri.scheme.equals("https", true)) {
-            CustomTabsIntent.Builder()
-                .setShowTitle(true)
-                .build()
-                .launchUrl(ctx, uri)
-        } else {
-            ctx.startActivity(Intent(Intent.ACTION_VIEW, uri))
-        }
-        true
-    } catch (_: ActivityNotFoundException) {
-        try {
-            ctx.startActivity(Intent(Intent.ACTION_VIEW, uri))
-            true
-        } catch (_: ActivityNotFoundException) {
-            false
         }
     }
 }
@@ -361,9 +351,10 @@ fun WebPortalScreen(
                                 ): Boolean {
                                     val uri = request.url
                                     val scheme = uri.scheme?.lowercase().orEmpty()
-                                    // HotPay + 3DS banków muszą zostać w WebView — inaczej
-                                    // łańcuch redirectów (Custom Tabs / Chrome) nie wraca z session_id.
                                     if (scheme == "http" || scheme == "https") {
+                                        if (isSisterSiteUrl(uri)) {
+                                            return openExternalUri(ctx, uri)
+                                        }
                                         return false
                                     }
                                     return openExternalUri(ctx, uri)
@@ -383,7 +374,9 @@ fun WebPortalScreen(
                                     markInitialReady()
                                     val u = url.orEmpty()
                                     val loginCb = onLoginLatest.value
+                                    val onAwpSite = runCatching { isAwpSiteUrl(Uri.parse(u), siteBase) }.getOrDefault(false)
                                     if (loginCb != null &&
+                                        onAwpSite &&
                                         (u.contains("/login") || u.endsWith("/login")) &&
                                         !u.contains("register")
                                     ) {

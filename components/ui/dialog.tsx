@@ -27,10 +27,10 @@ DialogOverlay.displayName = DialogPrimitive.Overlay.displayName;
 
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
->(({ className, children, ...props }, ref) => (
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & { elevated?: boolean }
+>(({ className, children, elevated = false, ...props }, ref) => (
   <DialogPortal>
-    <DialogOverlay />
+    <DialogOverlay className={cn(elevated && "z-[350]")} />
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
@@ -41,6 +41,7 @@ const DialogContent = React.forwardRef<
         "sm:top-[50%] sm:max-h-[min(92dvh,calc(100dvh-1.5rem-env(safe-area-inset-top)-env(safe-area-inset-bottom)))] sm:translate-y-[-50%] sm:data-[state=closed]:slide-out-to-top-[48%] sm:data-[state=open]:slide-in-from-top-[48%]",
         "before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-[3px] before:bg-gradient-to-r before:from-[var(--mundial-gold)] before:via-emerald-400 before:to-[var(--mundial-teal)]",
         "awp-modal-content [&>button]:absolute [&>button]:right-3 [&>button]:top-3 [&>button]:z-[100]",
+        elevated && "z-[350]",
         // Style X na granatowym / foto nagłówku formularza — tylko gdy AppModal doda --form
         "[&.awp-modal-content--form>button]:top-4 [&.awp-modal-content--form>button]:border-white/25 [&.awp-modal-content--form>button]:bg-black/45 [&.awp-modal-content--form>button]:text-white [&.awp-modal-content--form>button]:shadow-md [&.awp-modal-content--form>button]:backdrop-blur-sm [&.awp-modal-content--form>button]:hover:border-white/40 [&.awp-modal-content--form>button]:hover:bg-black/60 [&.awp-modal-content--form>button]:hover:text-white",
         className

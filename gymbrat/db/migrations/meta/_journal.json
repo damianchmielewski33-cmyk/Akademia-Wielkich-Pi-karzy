@@ -1,0 +1,34 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1776633712389,
+      "tag": "0000_workable_harrier",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1745184000000,
+      "tag": "0001_meal_logs",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1745185000000,
+      "tag": "0002_analytics_deployment_env",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1776633712390,
+      "tag": "0003_email_verification_codes",
+      "breakpoints": true
+    }
+  ]
+}

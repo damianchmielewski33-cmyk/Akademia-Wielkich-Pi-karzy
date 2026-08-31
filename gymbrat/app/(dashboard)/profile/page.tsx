@@ -1,0 +1,254 @@
+import { auth } from "@/auth";
+import { eq } from "drizzle-orm";
+import { getDb } from "@/db";
+import { userSettings, users } from "@/db/schema";
+import { ProfileGoalForm } from "@/components/profile/profile-goal-form";
+import { BodyParamsForm } from "@/components/profile/body-params-form";
+import { ChangePasswordForm } from "@/components/profile/change-password-form";
+import { LogoutButton } from "@/components/profile/logout-button";
+import { CalendarRange, ScrollText, Shield, User as UserIcon } from "lucide-react";
+import { NutritionPlanSection } from "@/components/profile/nutrition-plan-section";
+import { DataRightsCard } from "@/components/profile/data-rights-card";
+import { ReminderSettingsCard } from "@/components/profile/reminder-settings-card";
+import { FitnessGoalsForm } from "@/components/profile/fitness-goals-form";
+import { nutritionSettingsFromDbRow } from "@/lib/nutrition-goals";
+import { parseRemindersJson } from "@/lib/reminders-types";
+import { parseFitnessGoalsJson } from "@/lib/fitness-goals";
+import { parseMealTemplatesJson } from "@/lib/meal-templates";
+import { LocaleSwitchCard } from "@/components/profile/locale-switch-card";
+import { MealTemplatesCard } from "@/components/profile/meal-templates-card";
+import { AiFeaturesSettingsCard } from "@/components/profile/ai-features-settings-card";
+import { getUserAiEntitled } from "@/lib/user-ai-preference";
+import Link from "next/link";
+import { redirect } from "next/navigation";
+
+export default async function ProfilePage() {
+  const session = await auth();
+  const userId = session?.user?.id;
+  if (!userId) redirect("/login");
+  const db = getDb();
+
+  const [u] = await db
+    .select({
+      email: users.email,
+      name: users.name,
+      firstName: users.firstName,
+      lastName: users.lastName,
+      weightKg: users.weightKg,
+      heightCm: users.heightCm,
+      age: users.age,
+      activityLevel: users.activityLevel,
+    })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+
+  const [s] = await db
+    .select({
+      goal: userSettings.weeklyCardioGoalMinutes,
+      trainingNutritionGoalsJson: userSettings.trainingNutritionGoalsJson,
+      restNutritionGoalsJson: userSettings.restNutritionGoalsJson,
+      nutritionDayTypesJson: userSettings.nutritionDayTypesJson,
+      remindersJson: userSettings.remindersJson,
+      fitnessGoalsJson: userSettings.fitnessGoalsJson,
+      mealTemplatesJson: userSettings.mealTemplatesJson,
+      aiFeaturesDisabled: userSettings.aiFeaturesDisabled,
+      aiEntitled: userSettings.aiEntitled,
+    })
+    .from(userSettings)
+    .where(eq(userSettings.userId, userId))
+    .limit(1);
+
+  const entitled = s ? Boolean(s.aiEntitled) : await getUserAiEntitled(userId);
+
+  const nutritionInitial = nutritionSettingsFromDbRow(
+    s ?? {
+      trainingNutritionGoalsJson: null,
+      restNutritionGoalsJson: null,
+      nutritionDayTypesJson: null,
+    },
+  );
+
+  return (
+    <div className="space-y-8">
+      <header>
+        <p className="text-xs font-medium uppercase tracking-[0.2em] text-white/55">
+          Zawodnik
+        </p>
+        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+          <div>
+            <h1 className="font-heading metallic-text mt-2 text-3xl font-semibold">
+              Profil
+            </h1>
+            <p className="mt-2 max-w-2xl text-sm text-white/65">
+              Twoje dane i ustawienia treningowe są w Turso — możesz w każdej chwili
+              zaktualizować parametry ciała, cel i hasło.
+            </p>
+            <p className="mt-2 text-sm">
+              <Link
+                href="/changelog"
+                className="inline-flex items-center gap-1.5 text-[var(--neon)] underline-offset-4 hover:underline"
+              >
+                <ScrollText className="h-4 w-4" aria-hidden />
+                Nowości w aplikacji
+              </Link>
+            </p>
+          </div>
+          <LogoutButton className="h-11" />
+        </div>
+      </header>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <section className="glass-panel relative overflow-hidden p-8">
+          <div className="pointer-events-none absolute inset-0 opacity-60 [background-image:linear-gradient(120deg,rgba(255,255,255,0.10),transparent_55%),radial-gradient(700px_320px_at_10%_10%,rgba(255,45,85,0.16),transparent_60%)]" />
+          <div className="relative space-y-6">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-medium uppercase tracking-[0.2em] text-white/55">
+                  Dane
+                </p>
+                <h2 className="font-heading mt-2 text-xl font-semibold">
+                  Konto
+                </h2>
+              </div>
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--neon)]/35 bg-[var(--neon)]/10">
+                <UserIcon className="h-5 w-5 text-[var(--neon)]" />
+              </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                <p className="text-xs text-white/45">Email</p>
+                <p className="mt-1 text-sm font-medium text-white/85">
+                  {u?.email}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                <p className="text-xs text-white/45">Nazwa wyświetlana</p>
+                <p className="mt-1 text-sm font-medium text-white/85">
+                  {u?.name ?? "—"}
+                </p>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-white/10 bg-black/20 p-5">
+              <p className="text-xs font-medium uppercase tracking-[0.2em] text-white/55">
+                Cel tygodniowy
+              </p>
+              <h3 className="font-heading mt-2 text-lg font-semibold">
+                Minuty cardio
+              </h3>
+              <p className="mt-1 text-sm text-white/60">
+                Zapisane w Turso. Postęp na stronie Start korzysta z kroczącej sumy 7 dni.
+              </p>
+              <div className="mt-4">
+                <ProfileGoalForm initialGoal={s?.goal ?? 150} />
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <div className="lg:col-span-2">
+          <LocaleSwitchCard />
+        </div>
+
+        <div className="grid gap-6 lg:col-span-2 lg:grid-cols-2">
+          <ReminderSettingsCard initial={parseRemindersJson(s?.remindersJson ?? null)} />
+          <FitnessGoalsForm initial={parseFitnessGoalsJson(s?.fitnessGoalsJson ?? null)} />
+        </div>
+
+        <div className="lg:col-span-2">
+          {entitled ? <AiFeaturesSettingsCard initialDisabled={Boolean(s?.aiFeaturesDisabled)} /> : null}
+        </div>
+
+        <div className="lg:col-span-2">
+          <MealTemplatesCard initial={parseMealTemplatesJson(s?.mealTemplatesJson ?? null)} />
+        </div>
+
+        <section className="glass-panel relative overflow-hidden p-8 lg:col-span-2">
+          <div className="pointer-events-none absolute inset-0 opacity-60 [background-image:linear-gradient(160deg,rgba(255,255,255,0.07),transparent_52%),radial-gradient(680px_300px_at_20%_90%,rgba(255,45,85,0.10),transparent_58%)]" />
+          <div className="relative space-y-6">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-medium uppercase tracking-[0.2em] text-white/55">
+                  Wartości odżywcze i kalendarz
+                </p>
+                <h2 className="font-heading mt-2 text-xl font-semibold">
+                  Cele dzienne trening / odpoczynek
+                </h2>
+                <p className="mt-2 text-sm text-white/60">
+                  Ustal kalorie i makroskładniki dla obu typów dni oraz klikaj dni w kalendarzu,
+                  aby oznaczyć trening lub odpoczynek (domyślnie: odpoczynek). Spożycie
+                  na stronie Start wynika z Twoich wpisów posiłków; tutaj definiujesz cele.
+                </p>
+              </div>
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--neon)]/35 bg-[var(--neon)]/10">
+                <CalendarRange className="h-5 w-5 text-[var(--neon)]" />
+              </div>
+            </div>
+            <NutritionPlanSection
+              initialTraining={nutritionInitial.training}
+              initialRest={nutritionInitial.rest}
+              initialDayTypes={nutritionInitial.dayTypes}
+            />
+          </div>
+        </section>
+
+        <section className="glass-panel relative overflow-hidden p-8 lg:col-span-2">
+          <div className="pointer-events-none absolute inset-0 opacity-60 [background-image:linear-gradient(300deg,rgba(255,255,255,0.08),transparent_55%),radial-gradient(700px_320px_at_90%_0%,rgba(120,120,140,0.16),transparent_60%)]" />
+          <div className="relative space-y-6">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-medium uppercase tracking-[0.2em] text-white/55">
+                  Parametry ciała
+                </p>
+                <h2 className="font-heading mt-2 text-xl font-semibold">
+                  Pomiary
+                </h2>
+                <p className="mt-2 text-sm text-white/60">
+                  Wykorzystywane do przyszłych prognoz energii, regeneracji i postępów.
+                </p>
+              </div>
+            </div>
+
+            <BodyParamsForm
+              initial={{
+                firstName: u?.firstName ?? "",
+                lastName: u?.lastName ?? "",
+                weightKg: u?.weightKg ?? null,
+                heightCm: u?.heightCm ?? null,
+                age: u?.age ?? null,
+                activityLevel: u?.activityLevel ?? "medium",
+              }}
+            />
+          </div>
+        </section>
+
+        <section className="glass-panel relative overflow-hidden p-8 lg:col-span-2">
+          <div className="pointer-events-none absolute inset-0 opacity-60 [background-image:radial-gradient(900px_420px_at_15%_0%,rgba(255,45,85,0.16),transparent_60%)]" />
+          <div className="relative space-y-6">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-medium uppercase tracking-[0.2em] text-white/55">
+                  Bezpieczeństwo
+                </p>
+                <h2 className="font-heading mt-2 text-xl font-semibold">
+                  Zmień hasło
+                </h2>
+                <p className="mt-2 text-sm text-white/60">
+                  Twoje hasło jest zapisane w Turso jako hash bcrypt.
+                </p>
+              </div>
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--neon)]/35 bg-[var(--neon)]/10">
+                <Shield className="h-5 w-5 text-[var(--neon)]" />
+              </div>
+            </div>
+            <ChangePasswordForm />
+          </div>
+        </section>
+
+        <DataRightsCard />
+      </div>
+    </div>
+  );
+}

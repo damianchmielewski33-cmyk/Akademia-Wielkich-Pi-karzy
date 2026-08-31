@@ -44,7 +44,17 @@ export function SiteModeProvider({
   const router = useRouter();
   const [mode, setModeState] = useState<SiteMode | null>(() => {
     if (!marketplaceEnabled) return "academy";
-    return parseSiteMode(searchParams.get("mode")) ?? siteModeFromPathname(pathname) ?? initialMode;
+    const fromQuery = parseSiteMode(searchParams.get("mode"));
+    const fromPath = siteModeFromPathname(pathname);
+    let stored: SiteMode | null = null;
+    if (typeof window !== "undefined") {
+      try {
+        stored = parseSiteMode(localStorage.getItem(SITE_MODE_STORAGE_KEY));
+      } catch {
+        stored = null;
+      }
+    }
+    return fromQuery ?? fromPath ?? initialMode ?? stored;
   });
   const [ready, setReady] = useState(false);
 

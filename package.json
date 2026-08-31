@@ -2,14 +2,21 @@
   "name": "akademia-wielkich-pilkarzy",
   "version": "0.1.0",
   "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
   "engines": {
     "node": ">=20.9.0"
   },
   "scripts": {
     "dev": "next dev",
+    "dev:awp": "next dev",
+    "dev:gymbrat": "npm run dev --prefix gymbrat",
     "build": "next build",
+    "build:gymbrat": "npm run build --prefix gymbrat",
     "start": "next start",
     "lint": "eslint .",
+    "lint:gymbrat": "npm run lint --prefix gymbrat",
     "test": "vitest run",
     "db:clear": "node scripts/clear-database.cjs",
     "db:backup": "node scripts/backup-db.cjs",

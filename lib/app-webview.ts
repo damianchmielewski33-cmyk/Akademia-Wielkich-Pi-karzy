@@ -16,6 +16,8 @@ declare global {
       getVersionName: () => string;
       getVersionCode: () => number;
       checkUpdate: () => void;
+      /** Otwiera URL poza WebView (Custom Tabs) — np. GymBrat. */
+      openExternalUrl?: (url: string) => void;
       /** CSV ms: "40" albo "0,40,60,40" (vibrate/pause). */
       vibrate?: (patternCsv: string) => void;
     };
@@ -38,6 +40,23 @@ export function isInstalledAndroidAppClient(): boolean {
   if (typeof window === "undefined") return false;
   if (window.AwpAndroid) return true;
   return isRunningInAppWebView();
+}
+
+/** W APK otwiera link w Custom Tabs — bez nawigacji WebView i utraty sesji AWP. */
+export function openExternalAppUrl(url: string): boolean {
+  if (typeof window === "undefined") return false;
+  const trimmed = url.trim();
+  if (!trimmed) return false;
+  try {
+    const bridge = window.AwpAndroid;
+    if (bridge?.openExternalUrl) {
+      bridge.openExternalUrl(trimmed);
+      return true;
+    }
+  } catch {
+    /* most niedostępny */
+  }
+  return false;
 }
 
 export type AndroidAppIdentity = {

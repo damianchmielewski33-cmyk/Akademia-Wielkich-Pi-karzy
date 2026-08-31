@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Dumbbell, X } from "lucide-react";
 import { GYMBRAT_SITE_NAME, getGymBratCrossLink } from "@/lib/sister-sites";
+import { isInstalledAndroidAppClient, openExternalAppUrl } from "@/lib/app-webview";
 import { cn } from "@/lib/utils";
 
 const DISMISS_KEY = "awp-sister-from-gymbrat-dismissed";
@@ -64,6 +65,14 @@ export function SisterSiteArrivalBanner({ className }: { className?: string }) {
           <a
             href={getGymBratCrossLink("/")}
             className="mt-1.5 inline-flex text-xs font-semibold text-rose-200 underline-offset-2 hover:underline"
+            {...(isInstalledAndroidAppClient()
+              ? {
+                  onClick: (e: React.MouseEvent) => {
+                    e.preventDefault();
+                    openExternalAppUrl(getGymBratCrossLink("/"));
+                  },
+                }
+              : { target: "_blank", rel: "noopener noreferrer" })}
           >
             Otwórz {GYMBRAT_SITE_NAME} →
           </a>

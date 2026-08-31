@@ -69,16 +69,19 @@ type Props = {
   pageVariant?: "home" | "pzu-cup";
   topRankedPlayers?: HomeTopPlayer[];
   featuredVenues?: VenueCard[];
+  /** Tryb z ciasteczka SSR — zapas gdy kontekst klienta jeszcze nie zsynchronizował trybu. */
+  serverSiteMode?: import("@/lib/site-mode").SiteMode | null;
 };
 
 export function HomeClient(props: Props) {
   const { mode, marketplaceEnabled } = useSiteMode();
   const pageVariant = props.pageVariant ?? "home";
+  const effectiveMode = mode ?? props.serverSiteMode ?? "academy";
 
-  if (pageVariant === "home" && marketplaceEnabled && mode === "booking") {
+  if (pageVariant === "home" && marketplaceEnabled && effectiveMode === "booking") {
     return <BookingHomeView featuredVenues={props.featuredVenues ?? []} />;
   }
-  if (pageVariant === "pzu-cup" || mode === "academy") {
+  if (pageVariant === "pzu-cup" || effectiveMode === "academy") {
     return <AcademyHomeView {...props} />;
   }
 
@@ -759,7 +762,7 @@ function AcademyHomeView({
 
       {nextMatch ? (
         <section className="relative z-10 mx-auto w-full min-w-0 max-w-6xl px-3 pb-2 pt-4 xs:px-4 sm:pt-6">
-          <div className="hidden flex-col gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-4 md:flex">
+          <div className="mb-4 flex flex-col gap-3 sm:mb-0 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--mp-teal-dark)]">
                 Terminarz

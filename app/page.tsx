@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { cookies } from "next/headers";
 import { getServerSession } from "@/lib/auth";
-import { HomeClient } from "@/components/home-client";
+import { HomePageContent } from "@/components/home-page-content";
+import { HomePageSkeleton } from "@/components/home-page-skeleton";
 import { isBookingMarketplaceEnabled } from "@/lib/booking-marketplace";
-import { getHomePageClientProps } from "@/lib/home-page-data";
 import { getPzuCupAccessForUser } from "@/lib/pzu-cup-access";
 import { getSiteUrl } from "@/lib/site";
 import { parseSiteMode, SITE_MODE_COOKIE } from "@/lib/site-mode";
@@ -36,15 +36,15 @@ export default async function HomePage() {
   const canPzuCup = siteMode === "academy" && session
     ? await getPzuCupAccessForUser(session.userId, session.isAdmin)
     : false;
-  const props = await getHomePageClientProps(session, {
-    showPzuCupTile: canPzuCup,
-    pageVariant: "home",
-    siteMode,
-  });
 
   return (
-    <Suspense fallback={<p className="p-8 text-center text-sm text-zinc-500">Ładowanie…</p>}>
-      <HomeClient {...props} />
+    <Suspense fallback={<HomePageSkeleton />}>
+      <HomePageContent
+        session={session}
+        siteMode={siteMode}
+        showPzuCupTile={canPzuCup}
+        pageVariant="home"
+      />
     </Suspense>
   );
 }

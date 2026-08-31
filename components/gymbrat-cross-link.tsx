@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { Dumbbell, ExternalLink } from "lucide-react";
 import { useSiteMode } from "@/components/site-mode";
+import { isInstalledAndroidAppClient, openExternalAppUrl } from "@/lib/app-webview";
 import {
   GYMBRAT_GYM_PHOTO,
   GYMBRAT_SITE_NAME,
@@ -10,6 +11,21 @@ import {
   getGymBratCrossLink,
 } from "@/lib/sister-sites";
 import { cn } from "@/lib/utils";
+
+function gymBratLinkProps(href: string) {
+  const inApp = isInstalledAndroidAppClient();
+  return {
+    href,
+    target: inApp ? undefined : "_blank",
+    rel: inApp ? undefined : "noopener noreferrer",
+    onClick: inApp
+      ? (e: React.MouseEvent) => {
+          e.preventDefault();
+          openExternalAppUrl(href);
+        }
+      : undefined,
+  } as const;
+}
 
 /** Kafelek / pasek do przejścia na GymBrat (nowa karta — sesja AWP zostaje). */
 export function GymBratCrossLink({
@@ -23,14 +39,13 @@ export function GymBratCrossLink({
   photoSrc?: string | null;
 }) {
   const href = getGymBratCrossLink("/");
+  const link = gymBratLinkProps(href);
   const { marketplaceEnabled } = useSiteMode();
 
   if (variant === "row") {
     return (
       <a
-        href={href}
-        target="_blank"
-        rel="noopener noreferrer"
+        {...link}
         className={cn(
           "flex min-h-14 items-center gap-3 rounded-2xl border border-zinc-200 bg-white px-3 py-3 shadow-sm dark:border-zinc-800 dark:bg-zinc-950",
           className
@@ -51,9 +66,7 @@ export function GymBratCrossLink({
   if (variant === "footer" || variant === "inline") {
     return (
       <a
-        href={href}
-        target="_blank"
-        rel="noopener noreferrer"
+        {...link}
         className={cn(
           "inline-flex items-center gap-1.5 font-medium underline-offset-2 hover:underline",
           variant === "footer" ? "text-xs text-zinc-400 hover:text-white" : "text-sm text-zinc-600",
@@ -73,9 +86,7 @@ export function GymBratCrossLink({
 
   return (
     <a
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
+      {...link}
       className={cn(
         "flex h-full min-h-[7rem] items-start justify-between gap-3 rounded-2xl p-5 text-left transition hover:-translate-y-0.5",
         photoTile

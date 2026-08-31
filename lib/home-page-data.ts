@@ -44,7 +44,7 @@ export async function getHomePageClientProps(
 ): Promise<HomePageClientProps> {
   const db = await getDb();
   const pageVariant = options?.pageVariant ?? "home";
-  const loadAcademy = pageVariant === "pzu-cup" || options?.siteMode === "academy";
+  const loadAcademy = pageVariant === "pzu-cup" || options?.siteMode !== "booking";
 
   const [nextMatch, appSettings, topRankedPlayers, featuredVenues, nav] = await Promise.all([
     loadAcademy
@@ -59,44 +59,45 @@ export async function getHomePageClientProps(
       : Promise.resolve(undefined),
     getRequestAppSettings(),
     loadAcademy && pageVariant !== "pzu-cup" ? getHomeTopPlayers(3) : Promise.resolve([] as HomeTopPlayer[]),
-    pageVariant === "home" ? listVenueCards(db, { limit: 8 }) : Promise.resolve([] as VenueCard[]),
+    pageVariant === "home" && options?.siteMode === "booking"
+      ? listVenueCards(db, { limit: 8 })
+      : Promise.resolve([] as VenueCard[]),
     session ? getAccountNavFields(session.userId) : Promise.resolve(null),
   ]);
 
   let nextMatchSignup: "none" | "tentative" | "confirmed" | "declined" = "none";
-  if (nextMatch && session) {
-    const signup = (await db
-      .prepare(
-        `SELECT COALESCE(commitment, 1) AS commitment FROM match_signups WHERE user_id = ? AND match_id = ?`
-      )
-      .get(session.userId, nextMatch.id)) as { commitment: number } | undefined;
+  let nextMatchTentativeLine = "";
+  let nextMatchPlayersData: PlayersDataEntry | null = null;
+
+  if (nextMatch) {
+    const [signup, tentativeRow, signups] = await Promise.all([
+      session
+        ? (db
+            .prepare(
+              `SELECT COALESCE(commitment, 1) AS commitment FROM match_signups WHERE user_id = ? AND match_id = ?`
+            )
+            .get(session.userId, nextMatch.id) as Promise<{ commitment: number } | undefined>)
+        : Promise.resolve(undefined),
+      db
+        .prepare(
+          `SELECT COUNT(*) AS c FROM match_signups WHERE match_id = ? AND COALESCE(commitment, 1) = 0`
+        )
+        .get(nextMatch.id) as Promise<{ c: number } | undefined>,
+      db
+        .prepare(`${MATCH_SIGNUPS_PLAYER_SQL} WHERE ms.match_id = ? ORDER BY u.first_name ASC, u.last_name ASC`)
+        .all(nextMatch.id) as Promise<SignupRow[]>,
+    ]);
+
     if (signup) {
       nextMatchSignup =
         signup.commitment === 0 ? "tentative" : signup.commitment === 2 ? "declined" : "confirmed";
     }
+    nextMatchTentativeLine = formatPonderingPlayersPolish(Number(tentativeRow?.c ?? 0));
+    nextMatchPlayersData = buildPlayersData([nextMatch], signups)[nextMatch.id] ?? null;
   }
 
   const transportHomeActive = Boolean(nextMatch && isLocalMatchDay(nextMatch));
-
-  let nextMatchTentativeLine = "";
-  if (nextMatch) {
-    const row = (await db
-      .prepare(
-        `SELECT COUNT(*) AS c FROM match_signups WHERE match_id = ? AND COALESCE(commitment, 1) = 0`
-      )
-      .get(nextMatch.id)) as { c: number } | undefined;
-    nextMatchTentativeLine = formatPonderingPlayersPolish(Number(row?.c ?? 0));
-  }
-
   const lineupPublicNextMatch = Boolean(nextMatch && nextMatch.lineup_public === 1);
-
-  let nextMatchPlayersData: PlayersDataEntry | null = null;
-  if (nextMatch) {
-    const signups = (await db
-      .prepare(`${MATCH_SIGNUPS_PLAYER_SQL} WHERE ms.match_id = ? ORDER BY u.first_name ASC, u.last_name ASC`)
-      .all(nextMatch.id)) as SignupRow[];
-    nextMatchPlayersData = buildPlayersData([nextMatch], signups)[nextMatch.id] ?? null;
-  }
 
   let profilePhotoPath: string | null = null;
   let zawodnik = "";

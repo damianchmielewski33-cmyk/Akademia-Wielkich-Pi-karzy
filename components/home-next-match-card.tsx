@@ -69,6 +69,7 @@ function pickPhoto(pool: string[] | undefined, fallback: string, index: number):
 }
 
 function MatchPhotoPanel({
+  src,
   className,
   children,
 }: {
@@ -79,11 +80,19 @@ function MatchPhotoPanel({
   return (
     <div
       className={cn(
-        "relative mx-auto mt-3 max-w-md overflow-hidden rounded-xl bg-black/35 px-3.5 py-3.5 text-white ring-1 ring-white/15",
+        "relative mx-auto mt-3 max-w-md overflow-hidden rounded-xl px-3.5 py-3.5 text-white ring-1 ring-white/15",
         className
       )}
     >
-      {children}
+      {src ? (
+        <>
+          <MarketplacePitchPhoto src={src} className="z-0" sizes="(max-width: 768px) 100vw, 480px" />
+          <div className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-b from-black/45 via-black/55 to-black/70" aria-hidden />
+        </>
+      ) : (
+        <div className="absolute inset-0 z-0 bg-black/35" aria-hidden />
+      )}
+      <div className="relative z-10">{children}</div>
     </div>
   );
 }
@@ -148,194 +157,26 @@ export function HomeNextMatchCard({
   const photoChrome = Boolean(photoPool && photoPool.length > 0);
   const srcAt = (index: number) => pickPhoto(photoPool, backgroundSrc, index);
 
-  const lightSecondary =
-    "inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-sm font-semibold text-zinc-800 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100";
-
   return (
     <>
-    {photoChrome ? (
-      <article
-        className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm md:hidden dark:border-zinc-800 dark:bg-zinc-950"
-        aria-labelledby="home-next-match-heading-mobile"
-      >
-        <div className="relative h-36 overflow-hidden">
-          <MarketplacePitchPhoto src={backgroundSrc} className="z-0" sizes="100vw" />
-          <div className="absolute inset-0 z-[1] bg-gradient-to-t from-black/80 via-black/35 to-black/15" aria-hidden />
-          <div className="relative z-10 flex h-full flex-col justify-end px-4 pb-3.5">
-            <p className="text-[0.65rem] font-bold uppercase tracking-[0.16em] text-white/80">Najbliższy mecz</p>
-            <h2 id="home-next-match-heading-mobile" className="text-xl font-black tracking-tight text-white">
-              {when.weekday ? when.weekday.charAt(0).toUpperCase() + when.weekday.slice(1) : "Kolejny termin"}
-            </h2>
-            <p className="mt-0.5 text-sm font-semibold text-white/90">
-              {when.label} · {match.match_time}
-            </p>
-          </div>
-        </div>
-
-        <div className="space-y-3 p-4 text-zinc-950 dark:text-zinc-50">
-          <div className="flex items-start gap-2 text-sm">
-            <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[var(--mp-teal-dark)]" aria-hidden />
-            <div className="min-w-0">
-              <p className="leading-snug">{match.location}</p>
-              <Link
-                href={mapsUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-1 inline-block text-xs font-semibold text-[var(--mp-teal-dark)] underline underline-offset-2"
-              >
-                Mapa
-              </Link>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-2">
-            <div className="rounded-xl bg-zinc-50 px-3 py-2.5 dark:bg-zinc-900">
-              <p className="text-[0.65rem] font-bold uppercase tracking-wide text-zinc-500">Skład</p>
-              <p className="mt-0.5 text-base font-black tabular-nums">
-                {match.signed_up}/{match.max_slots}
-              </p>
-              <p className="text-xs text-zinc-500">
-                {slots.tone === "full" ? "Pełny" : `${slots.free} wolnych`}
-              </p>
-            </div>
-            {rentalTotal != null ? (
-              <div className="rounded-xl bg-zinc-50 px-3 py-2.5 dark:bg-zinc-900">
-                <p className="text-[0.65rem] font-bold uppercase tracking-wide text-zinc-500">
-                  {perPersonFee != null ? "Na osobę" : "Wynajem"}
-                </p>
-                <p className="mt-0.5 text-base font-black tabular-nums">
-                  {formatMatchFeePln(perPersonFee ?? rentalTotal)}
-                </p>
-              </div>
-            ) : (
-              <div className="rounded-xl bg-zinc-50 px-3 py-2.5 dark:bg-zinc-900">
-                <p className="text-[0.65rem] font-bold uppercase tracking-wide text-zinc-500">Status</p>
-                <p className="mt-0.5 text-sm font-bold">
-                  {signup === "confirmed"
-                    ? "Zapisany"
-                    : signup === "tentative"
-                      ? "Nie wiem"
-                      : signup === "declined"
-                        ? "Nie gram"
-                        : "Brak zapisu"}
-                </p>
-              </div>
-            )}
-          </div>
-
-          {tentativeLine ? <p className="text-xs font-medium text-amber-700 dark:text-amber-300">{tentativeLine}</p> : null}
-
-          {gatePin && signup === "confirmed" ? (
-            <div className="flex items-center gap-3 rounded-xl border border-zinc-200 px-3 py-2.5 dark:border-zinc-700">
-              <KeyRound className="h-5 w-5 shrink-0 text-[var(--mp-teal-dark)]" aria-hidden />
-              <div>
-                <p className="text-[0.65rem] font-bold uppercase tracking-wide text-zinc-500">PIN do bramy</p>
-                <p className="text-xl font-black tabular-nums tracking-[0.16em]">{gatePin}</p>
-              </div>
-            </div>
-          ) : null}
-
-          <div className="space-y-2">
-            {isLoggedIn ? (
-              signup === "confirmed" ? (
-                <p className="rounded-xl bg-teal-50 px-3 py-2.5 text-center text-sm font-semibold text-[var(--mp-teal-dark)] dark:bg-teal-950/40 dark:text-teal-200">
-                  Jesteś zapisany
-                </p>
-              ) : signup === "tentative" ? (
-                <>
-                  <p className="text-center text-sm text-zinc-600 dark:text-zinc-300">Jeszcze nie wiem — bez miejsca w składzie</p>
-                  {slots.free > 0 ? (
-                    <Button className="w-full" onClick={onConfirmFromTentative}>
-                      Potwierdzam udział
-                    </Button>
-                  ) : (
-                    <p className="text-center text-xs text-zinc-500">Skład pełny — nie możesz teraz potwierdzić.</p>
-                  )}
-                </>
-              ) : signup === "declined" ? (
-                <>
-                  <p className="text-center text-sm text-zinc-600 dark:text-zinc-300">Nie bierzesz udziału</p>
-                  {slots.free > 0 ? (
-                    <Button className="w-full" onClick={onConfirmFromTentative}>
-                      Zmieniam zdanie — gram
-                    </Button>
-                  ) : (
-                    <p className="text-center text-xs text-zinc-500">Skład pełny — nie możesz dołączyć.</p>
-                  )}
-                </>
-              ) : (
-                <>
-                  {slots.free > 0 ? (
-                    <Button className="w-full" onClick={onSignup}>
-                      Zapisz się
-                    </Button>
-                  ) : (
-                    <p className="text-center text-xs text-zinc-500">Skład pełny — możesz oznaczyć zainteresowanie.</p>
-                  )}
-                  <div className="grid grid-cols-2 gap-2">
-                    <button type="button" className={lightSecondary} disabled={tentativeBusy} onClick={onTentative}>
-                      Nie wiem
-                    </button>
-                    <button type="button" className={lightSecondary} disabled={tentativeBusy} onClick={onDeclined}>
-                      Nie gram
-                    </button>
-                  </div>
-                </>
-              )
-            ) : (
-              <Button className="w-full" asChild>
-                <Link href="/login">Zaloguj się, aby się zapisać</Link>
-              </Button>
-            )}
-          </div>
-
-          {isLoggedIn && hotpayEnabled && walletBalancePln !== null && walletBalancePln < 0 && onPayDebt ? (
-            <PayButton
-              variant="hero"
-              amountPln={walletBalancePln}
-              busy={debtBusy}
-              fullWidth
-              onClick={() => onPayDebt(Math.abs(walletBalancePln))}
-            />
-          ) : null}
-
-          <div className="flex flex-wrap gap-x-4 gap-y-1 border-t border-zinc-100 pt-2 text-sm font-semibold text-[var(--mp-teal-dark)] dark:border-zinc-800">
-            {playersData ? (
-              <button type="button" className="underline-offset-2 hover:underline" onClick={() => setRosterOpen(true)}>
-                Kto gra
-              </button>
-            ) : null}
-            <Link href="/terminarz" className="underline-offset-2 hover:underline">
-              Terminarz
-            </Link>
-            {isLoggedIn && signup === "confirmed" && transportActive ? (
-              <Link href={`/transport/${match.id}`} className="underline-offset-2 hover:underline">
-                Transport
-              </Link>
-            ) : null}
-            {lineupPublic ? (
-              <Link href="/sklady" className="underline-offset-2 hover:underline">
-                Składy
-              </Link>
-            ) : null}
-          </div>
-        </div>
-      </article>
-    ) : null}
-
     <PitchCard
       as="section"
       variant={photoChrome ? "marketplace" : "pitch"}
       className={cn(
-        "mt-0 text-white shadow-lg",
-        photoChrome && "home-next-match-card hidden border-0 md:block"
+        "mt-0 bg-zinc-900 text-white shadow-lg",
+        photoChrome && "home-next-match-card min-h-[12rem] border-0"
       )}
       contentClassName="px-5 py-5 sm:px-6 sm:py-6"
       aria-labelledby="home-next-match-heading"
     >
         {photoChrome ? (
           <>
-            <MarketplacePitchPhoto src={backgroundSrc} className="z-0" sizes="(max-width: 768px) 100vw, 720px" />
+            <MarketplacePitchPhoto
+              src={backgroundSrc}
+              className="z-0"
+              sizes="(max-width: 768px) 100vw, 720px"
+              priority
+            />
             <div
               className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-b from-black/50 via-black/55 to-black/75"
               aria-hidden
@@ -642,6 +483,28 @@ export function HomeNextMatchCard({
               </p>
             </>
           )}
+        </SectionPanel>
+
+        <SectionPanel photoChrome={photoChrome} src={srcAt(10)} className="space-y-2">
+          <span className={cn(pitchLabelClass, "block text-center text-white/85")}>Szybkie linki</span>
+          <div className={cn("grid gap-2", playersData ? "grid-cols-1 xs:grid-cols-2" : "grid-cols-1")}>
+            {playersData ? (
+              <button
+                type="button"
+                className={pitchSecondaryBtnClass}
+                onClick={() => setRosterOpen(true)}
+              >
+                <Users className="h-4 w-4 shrink-0" aria-hidden />
+                Kto gra
+              </button>
+            ) : null}
+            <Button variant="gold" className="w-full" asChild>
+              <Link href="/terminarz" className="inline-flex items-center justify-center gap-2">
+                <Calendar className="h-4 w-4 shrink-0" aria-hidden />
+                Terminarz
+              </Link>
+            </Button>
+          </div>
         </SectionPanel>
         </div>
     </PitchCard>
