@@ -324,8 +324,8 @@ export function MatchLineupAdmin() {
         <Button
           type="button"
           size="sm"
-          variant="gold"
-          className="w-full sm:w-auto"
+          variant="default"
+          className="w-full rounded-full font-bold sm:w-auto"
           onClick={() => void save()}
           disabled={saving || selectedId == null || loading}
         >
@@ -369,14 +369,14 @@ export function MatchLineupAdmin() {
           <div className={cn(adminInnerPanelClass, "flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between")}>
             <div className="min-w-0">
               <p className="text-sm font-semibold text-white">Widoczność na stronie głównej</p>
-              <p className="mt-0.5 text-xs leading-snug pitch-muted">
+              <p className="mt-0.5 text-xs leading-snug text-zinc-500 dark:text-zinc-400">
                 Przycisk „Zobacz składy na mecz” jest aktywny dopiero po udostępnieniu.
               </p>
             </div>
             <Button
               type="button"
-              variant="gold"
-              className="h-auto min-h-11 w-full shrink-0 whitespace-normal px-3 py-2.5 text-center text-sm leading-snug sm:w-auto sm:min-h-10 sm:max-w-[280px]"
+              variant="default"
+              className="h-auto min-h-11 w-full shrink-0 whitespace-normal rounded-full px-3 py-2.5 text-center text-sm font-bold leading-snug sm:w-auto sm:min-h-10 sm:max-w-[280px]"
               disabled={publishSaving || selectedId == null}
               onClick={() => void togglePublish(!lineupPublic)}
             >
@@ -405,7 +405,7 @@ export function MatchLineupAdmin() {
               </Select>
             </div>
             {matchInfo ? (
-              <p className="text-xs leading-relaxed pitch-muted sm:text-sm">
+              <p className="text-xs leading-relaxed text-zinc-500 dark:text-zinc-400 sm:text-sm">
                 Domyślnie: <strong className="text-white">najbliższy termin</strong> z terminarza.
               </p>
             ) : null}
@@ -419,9 +419,9 @@ export function MatchLineupAdmin() {
             >
               <BenchDropZone disabled={selectedId == null} className="min-h-[100px] sm:min-h-[120px]">
                 {players.length === 0 ? (
-                  <p className="text-sm pitch-muted">Brak zapisów na wybrany mecz.</p>
+                  <p className="text-sm text-zinc-500 dark:text-zinc-400">Brak zapisów na wybrany mecz.</p>
                 ) : bench.length === 0 ? (
-                  <p className="text-sm pitch-muted">Wszyscy zawodnicy są na boisku.</p>
+                  <p className="text-sm text-zinc-500 dark:text-zinc-400">Wszyscy zawodnicy są na boisku.</p>
                 ) : (
                   <ul className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
                     {bench.map((p) => (

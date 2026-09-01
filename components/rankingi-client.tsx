@@ -10,8 +10,6 @@ import {
 } from "@/components/payments-card";
 import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
 import { RankingiSeasonPicker } from "@/components/rankingi-season-picker";
-import { useSiteMode } from "@/components/site-mode";
-import { PitchCard, PitchPageHero, pitchLabelClass } from "@/components/ui/pitch-card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { MARKETPLACE_PITCH_PHOTOS } from "@/lib/marketplace-photos";
 import type { RankingStatKey } from "@/lib/rankings";
@@ -70,23 +68,15 @@ export function RankingiClient({
   basePath = "/rankingi",
   title = "Rankingi",
 }: Props) {
-  const { marketplaceEnabled } = useSiteMode();
-  const light = marketplaceEnabled;
+  const light = true;
 
   if (!season) {
-    if (light) {
-      return (
-        <div className="relative flex flex-1 flex-col text-zinc-900 dark:text-zinc-50">
-          <Hero light title={title} subtitle="Brak sezonów rankingu do wyświetlenia." />
-          <div className="relative z-10 mx-auto w-full max-w-6xl px-3 py-8 xs:px-4 sm:py-10">
-            <p className={mpEmptyClass}>Administrator nie utworzył jeszcze sezonu rankingu.</p>
-          </div>
-        </div>
-      );
-    }
     return (
-      <div className="awp-page awp-page--wide text-center">
-        <PitchPageHero title={title} subtitle="Brak sezonów rankingu do wyświetlenia." />
+      <div className="relative flex flex-1 flex-col text-zinc-900 dark:text-zinc-50">
+        <Hero title={title} subtitle="Brak sezonów rankingu do wyświetlenia." />
+        <div className="relative z-10 mx-auto w-full max-w-6xl px-3 py-8 xs:px-4 sm:py-10">
+          <p className={mpEmptyClass}>Administrator nie utworzył jeszcze sezonu rankingu.</p>
+        </div>
       </div>
     );
   }
@@ -102,13 +92,11 @@ export function RankingiClient({
         selectedSeasonId={season.id}
         basePath={basePath}
       />
-    ) : light ? (
-      <p className="mx-auto mt-4 max-w-md text-center text-sm text-zinc-500 dark:text-zinc-400">{season.name}</p>
     ) : (
-      <p className="mx-auto mt-4 max-w-md text-sm text-zinc-500">{season.name}</p>
+      <p className="mx-auto mt-4 max-w-md text-center text-sm text-zinc-500 dark:text-zinc-400">{season.name}</p>
     );
 
-  const scoringCard = light ? (
+  const scoringCard = (
     <MarketplaceSection
       icon={Trophy}
       title="Punktacja ogólna"
@@ -143,37 +131,6 @@ export function RankingiClient({
         </div>
       </div>
     </MarketplaceSection>
-  ) : (
-    <PitchCard className="mx-auto max-w-2xl lg:max-w-none" contentClassName="px-5 py-4 sm:px-6 sm:py-5">
-      <span className={pitchLabelClass}>Punktacja</span>
-      <div className="mt-2 flex items-center gap-2">
-        <Trophy className="h-6 w-6 shrink-0 text-white drop-shadow-sm" strokeWidth={2.25} aria-hidden />
-        <h2 className="text-lg font-bold tracking-tight text-white drop-shadow-sm sm:text-xl">Punktacja ogólna</h2>
-      </div>
-      <p className="mt-3 text-sm leading-relaxed text-emerald-50/95 sm:text-base">
-        Ranking jest według średniej na mecz (gole, asysty, km, obrony i punkty dzielone przez liczbę spotkań). Liczba
-        meczów nie podnosi pozycji — zawodnik po dwóch meczach konkuruje na równych zasadach z kimś po ośmiu.
-      </p>
-      <p className="mt-2 text-sm font-semibold text-white drop-shadow-sm sm:text-base">Wartość punktów za akcję</p>
-      <ul className="mt-1.5 space-y-1.5 text-sm text-emerald-50/95 sm:text-base">
-        <li>
-          Gol: <strong className="text-white">{scoring.ptGoal}</strong> pkt
-        </li>
-        <li>
-          Asysta: <strong className="text-white">{scoring.ptAssist}</strong> pkt
-        </li>
-        <li>
-          Kilometr: <strong className="text-white">{scoring.ptKm}</strong> pkt
-        </li>
-        <li>
-          Obrona: <strong className="text-white">{scoring.ptSave}</strong> pkt
-        </li>
-      </ul>
-      <p className="mt-3 text-sm font-semibold text-white drop-shadow-sm sm:text-base">Wzór na punkty / mecz</p>
-      <p className="mt-1 font-mono text-xs leading-relaxed text-emerald-50/95 sm:text-sm">
-        ({scoring.ptGoal}×gole + {scoring.ptAssist}×asysty + {scoring.ptKm}×km + {scoring.ptSave}×obrony) / mecze
-      </p>
-    </PitchCard>
   );
 
   const boards = (
@@ -190,39 +147,25 @@ export function RankingiClient({
           rows={rankingOgolny}
           col="punkty"
           format="2f"
-          accent={light ? "teal" : "gold"}
+          accent="teal"
         />
       </div>
     </div>
   );
 
-  if (light) {
-    return (
-      <div className="relative flex flex-1 flex-col text-zinc-900 dark:text-zinc-50">
-        <Hero light title={title} subtitle={seasonSubtitle} />
-        <div className="relative z-10 mx-auto w-full min-w-0 max-w-6xl px-3 py-8 text-left xs:px-4 sm:py-10">
-          {picker}
-          <div className="mt-8">{scoringCard}</div>
-          {boards}
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="awp-page awp-page--wide text-center">
-      <PitchPageHero title={title} subtitle={seasonSubtitle} />
-      {picker}
-      <div className="mt-10 text-left">
-        {scoringCard}
+    <div className="relative flex flex-1 flex-col text-zinc-900 dark:text-zinc-50">
+      <Hero title={title} subtitle={seasonSubtitle} />
+      <div className="relative z-10 mx-auto w-full min-w-0 max-w-6xl px-3 py-8 text-left xs:px-4 sm:py-10">
+        {picker}
+        <div className="mt-8">{scoringCard}</div>
         {boards}
       </div>
     </div>
   );
 }
 
-function Hero({ light, title, subtitle }: { light: boolean; title: string; subtitle: string }) {
-  if (!light) return null;
+function Hero({ title, subtitle }: { title: string; subtitle: string }) {
   return (
     <section className="mp-hero mp-hero--photo relative z-10 flex flex-col justify-end overflow-hidden pb-10 pt-12 sm:pb-16 sm:pt-20">
       <MarketplacePitchPhoto src={MARKETPLACE_PITCH_PHOTOS[7]} priority className="z-0" />

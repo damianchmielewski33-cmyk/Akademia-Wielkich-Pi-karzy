@@ -101,15 +101,13 @@ export type AppSettings = {
   mobile_settings: MobileChannelSettings;
   /** Czy platnosci HotPay sa wlaczone przez admina (niezaleznie od konfiguracji env). */
   hotpay_enabled: boolean;
-  /** Publiczny tryb V2 (rezerwacje boisk). Wyłączony = Wersja V1, sama akademia. */
-  booking_marketplace_enabled: boolean;
   /**
    * Logowanie e-mail + hasło + kod z wiadomości. Wyłączone = dotychczasowy PIN.
    * Domyślnie wyłączone — administrator włącza w panelu.
    */
   email_password_auth_enabled: boolean;
   /**
-   * Pasek zdjęć pod „Gramy razem” / hero V2 — null w slocie = domyślne Unsplash.
+   * Pasek zdjęć pod „Gramy razem” / hero — null w slocie = domyślne Unsplash.
    * Długość zawsze = MARKETPLACE_PITCH_PHOTOS.
    */
   marketplace_pitch_photos_custom: (string | null)[];
@@ -182,7 +180,6 @@ export const APP_SETTINGS_DEFAULTS: AppSettings = {
   screen_blocks_mobile: emptyMobileScreenBlocksMap(),
   mobile_settings: { ...MOBILE_CHANNEL_SETTINGS_DEFAULTS },
   hotpay_enabled: true,
-  booking_marketplace_enabled: false,
   email_password_auth_enabled: false,
   marketplace_pitch_photos_custom: Array.from({ length: MARKETPLACE_PITCH_PHOTOS.length }, () => null),
   marketplace_pitch_photos: [...MARKETPLACE_PITCH_PHOTOS],
@@ -246,7 +243,6 @@ type AppSettingsRow = {
   screen_blocks_mobile_json?: string | null;
   mobile_settings_json?: string | null;
   hotpay_enabled?: number | null;
-  booking_marketplace_enabled?: number | null;
   email_password_auth_enabled?: number | null;
   marketplace_pitch_photos_json?: string | null;
   hotpay_commission_pct?: number | null;
@@ -299,7 +295,6 @@ function appSettingsSelectSql(): string {
     screen_blocks_mobile_json,
     mobile_settings_json,
     hotpay_enabled,
-    booking_marketplace_enabled,
     email_password_auth_enabled,
     marketplace_pitch_photos_json,
     hotpay_commission_pct,
@@ -446,7 +441,6 @@ export function resolveAppSettings(
     screen_blocks: parseScreenBlocksJson(row?.screen_blocks_json),
     screen_blocks_mobile: parseMobileScreenBlocksJson(row?.screen_blocks_mobile_json),
     hotpay_enabled: sqlFlagOn(row?.hotpay_enabled, true),
-    booking_marketplace_enabled: sqlFlagOn(row?.booking_marketplace_enabled, false),
     email_password_auth_enabled: sqlFlagOn(row?.email_password_auth_enabled, false),
     marketplace_pitch_photos_custom: (() => {
       const custom = parseMarketplacePitchPhotosJson(row?.marketplace_pitch_photos_json);
@@ -582,7 +576,6 @@ export async function saveAppSettings(db: DbWriteLike, realm: Realm, settings: A
         screen_blocks_mobile_json = ?,
         mobile_settings_json = ?,
         hotpay_enabled = ?,
-        booking_marketplace_enabled = ?,
         email_password_auth_enabled = ?,
         hotpay_commission_pct = ?,
         hotpay_commission_fixed = ?
@@ -632,7 +625,6 @@ export async function saveAppSettings(db: DbWriteLike, realm: Realm, settings: A
       serializeMobileScreenBlocksMap(settings.screen_blocks_mobile),
       serializeMobileSettings(settings.mobile_settings),
       settings.hotpay_enabled ? 1 : 0,
-      settings.booking_marketplace_enabled ? 1 : 0,
       settings.email_password_auth_enabled ? 1 : 0,
       settings.hotpay_commission_pct,
       settings.hotpay_commission_fixed,

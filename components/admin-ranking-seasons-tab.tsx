@@ -113,27 +113,27 @@ export function AdminRankingSeasonsTab() {
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
         <AdminCard>
           <div className="mb-4 flex items-center gap-2">
-            <Trophy className="h-5 w-5 text-[var(--mundial-gold)]" aria-hidden />
-            <h3 className="text-base font-bold text-white">Bieżący sezon</h3>
+            <Trophy className="h-5 w-5 text-[var(--mp-teal-dark)]" aria-hidden />
+            <h3 className="text-base font-bold text-zinc-950 dark:text-white">Bieżący sezon</h3>
           </div>
 
           {loading ? (
-            <div className="flex justify-center py-10 text-emerald-100/70">
+            <div className="flex justify-center py-10 text-zinc-500">
               <Loader2 className="h-6 w-6 animate-spin" aria-hidden />
             </div>
           ) : activeSeason ? (
             <div className={adminInnerPanelClass}>
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <p className="text-lg font-bold text-white">{activeSeason.name}</p>
-                  <p className="mt-1 text-sm text-emerald-100/75">Start: {activeSeason.started_at_display}</p>
+                  <p className="text-lg font-bold text-zinc-950 dark:text-white">{activeSeason.name}</p>
+                  <p className="mt-1 text-sm text-zinc-500">Start: {activeSeason.started_at_display}</p>
                 </div>
-                <Badge className="bg-emerald-500 text-white hover:bg-emerald-500">Aktywny</Badge>
+                <Badge className="bg-[var(--mp-teal)] text-white hover:bg-[var(--mp-teal)]">Aktywny</Badge>
               </div>
               <Button
                 type="button"
-                variant="gold"
-                className="mt-4"
+                variant="default"
+                className="mt-4 rounded-full font-bold"
                 disabled={busy}
                 onClick={() => setEndConfirmId(activeSeason.id)}
               >
@@ -148,7 +148,7 @@ export function AdminRankingSeasonsTab() {
           )}
 
           <div className="mt-5 space-y-3">
-            <Label htmlFor="new-season-name" className="text-sm font-semibold text-white">
+            <Label htmlFor="new-season-name" className="text-sm font-semibold text-zinc-950 dark:text-white">
               Nazwa nowego sezonu (opcjonalnie)
             </Label>
             <Input
@@ -159,11 +159,11 @@ export function AdminRankingSeasonsTab() {
               disabled={busy}
               onChange={(e) => setNewSeasonName(e.target.value)}
             />
-            <Button type="button" variant="gold" disabled={busy} onClick={() => setStartConfirmOpen(true)}>
+            <Button type="button" variant="default" className="rounded-full font-bold" disabled={busy} onClick={() => setStartConfirmOpen(true)}>
               <Play className="mr-2 h-4 w-4" aria-hidden />
               Rozpocznij nowy sezon (restart rankingu)
             </Button>
-            <p className="text-xs leading-relaxed text-emerald-100/65">
+            <p className="text-xs leading-relaxed text-zinc-500">
               Jeśli trwa aktywny sezon, zostanie automatycznie zakończony. Nowe statystyki będą liczone od zera w nowym
               sezonie.
             </p>
@@ -171,9 +171,9 @@ export function AdminRankingSeasonsTab() {
         </AdminCard>
 
         <AdminCard>
-          <h3 className="mb-4 text-base font-bold text-white">Historia sezonów</h3>
+          <h3 className="mb-4 text-base font-bold text-zinc-950 dark:text-white">Historia sezonów</h3>
           {loading ? (
-            <div className="flex justify-center py-10 text-emerald-100/70">
+            <div className="flex justify-center py-10 text-zinc-500">
               <Loader2 className="h-6 w-6 animate-spin" aria-hidden />
             </div>
           ) : seasons.length === 0 ? (
@@ -183,20 +183,20 @@ export function AdminRankingSeasonsTab() {
               {seasons.map((s) => (
                 <li
                   key={s.id}
-                  className="rounded-xl border border-white/20 bg-black/10 px-4 py-3"
+                  className="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 dark:border-zinc-700 dark:bg-zinc-900/80"
                 >
                   <div className="flex flex-wrap items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <p className="font-semibold text-white">{s.name}</p>
-                      <p className="mt-1 text-xs text-emerald-100/70">Start: {s.started_at_display}</p>
+                      <p className="font-semibold text-zinc-950 dark:text-white">{s.name}</p>
+                      <p className="mt-1 text-xs text-zinc-500">Start: {s.started_at_display}</p>
                       {s.ended_at_display ? (
-                        <p className="text-xs text-emerald-100/55">Koniec: {s.ended_at_display}</p>
+                        <p className="text-xs text-zinc-400">Koniec: {s.ended_at_display}</p>
                       ) : null}
                     </div>
                     {s.is_active ? (
-                      <Badge className="bg-emerald-500 text-white hover:bg-emerald-500">Aktywny</Badge>
+                      <Badge className="bg-[var(--mp-teal)] text-white hover:bg-[var(--mp-teal)]">Aktywny</Badge>
                     ) : (
-                      <Badge variant="outline" className="border-white/25 text-emerald-100/80">
+                      <Badge variant="outline" className="border-zinc-300 text-zinc-600 dark:border-zinc-600 dark:text-zinc-300">
                         Zakończony
                       </Badge>
                     )}
@@ -219,7 +219,7 @@ export function AdminRankingSeasonsTab() {
             <Button type="button" variant="outline" disabled={busy} onClick={() => setStartConfirmOpen(false)}>
               Anuluj
             </Button>
-            <Button type="button" variant="gold" disabled={busy} onClick={() => void startSeason()}>
+            <Button type="button" variant="default" className="rounded-full font-bold" disabled={busy} onClick={() => void startSeason()}>
               {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
               Rozpocznij sezon
             </Button>
@@ -242,7 +242,8 @@ export function AdminRankingSeasonsTab() {
             </Button>
             <Button
               type="button"
-              variant="gold"
+              variant="default"
+              className="rounded-full font-bold"
               disabled={busy || endConfirmId == null}
               onClick={() => endConfirmId != null && void endSeason(endConfirmId)}
             >

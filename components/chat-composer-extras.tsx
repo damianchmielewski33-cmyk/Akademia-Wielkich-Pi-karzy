@@ -308,7 +308,7 @@ export function ChatBubble({
           <p
             className={cn(
               "mb-1 px-1 text-[11px] font-semibold tracking-wide",
-              light ? "text-[var(--mp-teal-dark)]" : "text-[var(--mundial-gold)]"
+              light ? "text-[var(--mp-teal-dark)]" : "text-[var(--mp-teal-dark)]"
             )}
           >
             {senderLabel}

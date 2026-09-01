@@ -45,7 +45,7 @@ function iconUrls(iconBaseUri: string): { light: string; dark: string } {
 
 function WmoWeatherIcon({ code, compact }: { code: number; compact?: boolean }) {
   const cls = cn(
-    "mx-auto my-0.5 shrink-0 text-[var(--mundial-gold,#f5c518)] drop-shadow-sm",
+    "mx-auto my-0.5 shrink-0 text-[var(--mp-teal-dark)] drop-shadow-sm",
     compact ? "h-7 w-7" : "h-8 w-8"
   );
   if (code === 0) return <Sun className={cls} aria-hidden />;
@@ -89,7 +89,7 @@ function SingleMatchDayWeather({
       className={cn("mt-3 border-t border-white/15 pt-3", className)}
       title={day.description || undefined}
     >
-      <p className="mb-2 text-center text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--mundial-gold,#f5c518)]">
+      <p className="mb-2 text-center text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--mp-teal-dark)]">
         Pogoda na dzień meczu
       </p>
       <div className="flex items-center justify-center gap-3 rounded-xl border border-white/25 bg-black/10 px-3 py-2.5 shadow-sm shadow-emerald-950/15 backdrop-blur-sm">
@@ -193,7 +193,7 @@ export function MatchLocationWeather({
   if (state === "idle" || state === "loading") {
     return (
       <div className={cn(rootPad, "flex items-center gap-2 text-[11px] text-emerald-100/80", className)}>
-        <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-[var(--mundial-gold,#f5c518)]" aria-hidden />
+        <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-[var(--mp-teal-dark)]" aria-hidden />
         <span>{loadingLabel}</span>
       </div>
     );
@@ -248,7 +248,7 @@ export function MatchLocationWeather({
         className
       )}
     >
-      <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--mundial-gold,#f5c518)]">
+      <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--mp-teal-dark)]">
         {forecastTitle(ok.source)}
       </p>
       <div

@@ -67,7 +67,7 @@ export function GalleryVideoFormModal({
           <Button type="button" variant="outline" disabled={busy} onClick={() => onOpenChange(false)}>
             Anuluj
           </Button>
-          <Button type="button" variant="pitch" disabled={busy} onClick={onSave}>
+          <Button type="button" variant="default" className="rounded-full font-bold" disabled={busy} onClick={onSave}>
             {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
             {editingId != null ? "Zapisz zmiany" : "Dodaj link"}
           </Button>

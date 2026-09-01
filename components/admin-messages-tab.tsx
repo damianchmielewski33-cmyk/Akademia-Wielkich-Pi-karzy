@@ -301,7 +301,7 @@ export function AdminMessagesTab({
           firstName={peer.first_name}
           lastName={peer.last_name}
           size="md"
-          ringClassName={isPopup ? ring : "ring-2 ring-[var(--mundial-gold)]/45"}
+          ringClassName={isPopup ? ring : "ring-2 ring-[var(--mp-teal)]/45"}
         />
       );
     }
@@ -313,7 +313,7 @@ export function AdminMessagesTab({
             "inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full",
             isPopup
               ? "bg-amber-100 text-amber-800 ring-2 ring-amber-200 dark:bg-amber-950/50 dark:text-amber-200 dark:ring-amber-800"
-              : "bg-gradient-to-br from-amber-600/90 to-amber-800 ring-2 ring-[var(--mundial-gold)]/40"
+              : "bg-gradient-to-br from-teal-600/90 to-teal-800 ring-2 ring-[var(--mp-teal)]/40"
           )}
           aria-hidden
         >
@@ -711,7 +711,7 @@ export function AdminMessagesTab({
                   className={cn(
                     "flex items-stretch gap-1 rounded-xl border",
                     activeThread
-                      ? "border-[var(--mundial-gold)]/60 bg-white/15"
+                      ? "border-[var(--mp-teal)]/60 bg-teal-50/80 dark:bg-teal-950/30"
                       : "border-white/20 bg-black/10 hover:bg-white/10",
                     unread && !activeThread && "border-emerald-300/35 bg-emerald-950/25"
                   )}
@@ -784,7 +784,7 @@ export function AdminMessagesTab({
         <div className="min-w-0 flex-1">
           <h3 className="truncate text-base font-bold text-white sm:text-lg">{selectedTitle}</h3>
           {selected?.recipient_label ? (
-            <p className="truncate text-xs font-medium text-[var(--mundial-gold)]">
+            <p className="truncate text-xs font-medium text-[var(--mp-teal-dark)]">
               Do: {selected.recipient_label}
             </p>
           ) : draftPeer && !selected ? (
@@ -904,8 +904,8 @@ export function AdminMessagesTab({
           <Button
             type="submit"
             size="icon"
-            variant="gold"
-            className="h-10 w-10 shrink-0 rounded-full"
+            variant="default"
+            className="h-10 w-10 shrink-0 rounded-full font-bold"
             disabled={sending || uploadingAttachment || !canSend}
             aria-label="Odpisz"
           >

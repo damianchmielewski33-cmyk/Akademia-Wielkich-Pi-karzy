@@ -73,13 +73,11 @@ const displayFont = localFont({
 
 /** iPhone / PWA: dopasowanie do ekranu + kolor startowy zamiast czerni. */
 export async function generateViewport(): Promise<Viewport> {
-  const settings = await getRequestAppSettings();
-  const marketplace = settings.booking_marketplace_enabled === true;
   return {
     width: "device-width",
     initialScale: 1,
     viewportFit: "cover",
-    themeColor: marketplace ? "#00C9B1" : "#1A2D5A",
+    themeColor: "#00C9B1",
   };
 }
 
@@ -141,8 +139,10 @@ export default async function RootLayout({
     headerStore.get("x-preview-blocked") === "1" ||
     isPreviewBlockedCookieValue(cookieStore.get(PREVIEW_BLOCKED_COOKIE)?.value);
   const isPzuCupSection = pathname.startsWith("/pzu-cup");
+  const isGymBratEmbed = pathname.startsWith("/gymbrat");
+  const isMinimalChromeSection = isPzuCupSection || isGymBratEmbed;
   const forceEmailAuthSetup = Boolean(
-    session?.needsEmailAuthSetup && !session.needsPinSetup && !session.pinChangePending && !isPzuCupSection
+    session?.needsEmailAuthSetup && !session.needsPinSetup && !session.pinChangePending && !isMinimalChromeSection
   );
   const loggedInFull = Boolean(
     session && !session.needsPinSetup && !session.pinChangePending
@@ -168,17 +168,12 @@ export default async function RootLayout({
   const sessionIdleLogout = Boolean(session && !session.rememberMe);
 
   const [db, appSettings] = await Promise.all([getDb(), getRequestAppSettings()]);
-  const marketplaceEnabled = appSettings.booking_marketplace_enabled === true;
   const htmlThemeClass = accountRow
     ? normalizeUiTheme(accountRow.uiTheme) === "dark"
       ? "dark"
       : ""
-    : marketplaceEnabled
-      ? ""
-      : "dark";
-  const initialSiteMode = marketplaceEnabled
-    ? parseSiteMode(cookieStore.get(SITE_MODE_COOKIE)?.value)
-    : "academy";
+    : "";
+  const initialSiteMode = parseSiteMode(cookieStore.get(SITE_MODE_COOKIE)?.value);
   const matchNotificationPromptEnabled = appSettings.match_notification_prompt_enabled === true;
 
   let writeToAdminDefaults: { senderName: string } | null = null;
@@ -203,7 +198,7 @@ export default async function RootLayout({
   const screenBlocksAsPlayer = previewBlocked;
   const shellIsAdmin = isAdmin && !screenBlocksAsPlayer;
 
-  const screenKey = !isPzuCupSection ? getScreenKeyFromPathname(pathname) : null;
+  const screenKey = !isMinimalChromeSection ? getScreenKeyFromPathname(pathname) : null;
   const screenBlocksAdminBypass = shellIsAdmin;
   const screenBlockedForPlayers =
     screenKey != null && isScreenDisabledForUser(appSettings.screen_blocks, screenKey, false);
@@ -270,21 +265,19 @@ export default async function RootLayout({
   return (
     <html
       lang="pl"
-      className={`${htmlThemeClass} ${marketplaceEnabled ? "site-chrome-marketplace" : "site-chrome-academy"}`.trim()}
+      className={`${htmlThemeClass} site-chrome-marketplace`.trim()}
       style={assetCssVars}
     >
       <head>
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta
           name="apple-mobile-web-app-status-bar-style"
-          content={marketplaceEnabled ? "default" : "black-translucent"}
+          content="default"
         />
         <meta name="mobile-web-app-capable" content="yes" />
         <style
           dangerouslySetInnerHTML={{
-            __html: marketplaceEnabled
-              ? "html,body{background-color:#f4f5f7;}"
-              : "html,body{background-color:#1A2D5A;}",
+            __html: "html,body{background-color:#f4f5f7;}",
           }}
         />
         {/* iOS PWA splash — solid brand color (Safari ignores manifest background_color). */}
@@ -332,22 +325,16 @@ export default async function RootLayout({
         {/* Skrypt AdSense ładujemy dopiero po zgodzie marketingowej (AdsenseProvider). */}
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${displayFont.variable} min-h-screen antialiased font-sans ${marketplaceEnabled ? "marketplace-bg" : "murawa-bg"}`}
+        className={`${geistSans.variable} ${geistMono.variable} ${displayFont.variable} min-h-screen antialiased font-sans marketplace-bg`}
       >
         <script
-          // Marketplace: domyślnie jasny. Akademia (rezerwacje wyłączone): domyślnie stadion / ciemny.
           dangerouslySetInnerHTML={{
-            __html: marketplaceEnabled
-              ? "(function(){try{var t=localStorage.getItem('awp-ui-theme');if(t==='dark'){document.documentElement.classList.add('dark');}else{document.documentElement.classList.remove('dark');}}catch(e){}})();"
-              : "(function(){try{var t=localStorage.getItem('awp-ui-theme');if(t==='light'){document.documentElement.classList.remove('dark');}else{document.documentElement.classList.add('dark');}}catch(e){}})();",
+            __html: "(function(){try{var t=localStorage.getItem('awp-ui-theme');if(t==='dark'){document.documentElement.classList.add('dark');}else{document.documentElement.classList.remove('dark');}}catch(e){}})();",
           }}
         />
         <script
-          // iOS PWA: zakryj treść zanim React zamontuje splash — kolor zależny od V1/V2.
           dangerouslySetInnerHTML={{
-            __html: marketplaceEnabled
-              ? `(function(){try{var ua=navigator.userAgent;if(/AWP-Android/i.test(ua))return;var ios=/iPad|iPhone|iPod/.test(ua)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);if(!ios)return;var st=window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;if(!st)return;if(sessionStorage.getItem('awp-startup-splash-shown')==='1')return;document.documentElement.classList.add('awp-boot-splash-pending');var d=document.createElement('div');d.id='awp-boot-splash';d.setAttribute('aria-hidden','true');d.style.cssText='position:fixed;inset:0;z-index:9999;background:#0a1c1f';document.documentElement.appendChild(d);}catch(e){}})();`
-              : `(function(){try{var ua=navigator.userAgent;if(/AWP-Android/i.test(ua))return;var ios=/iPad|iPhone|iPod/.test(ua)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);if(!ios)return;var st=window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;if(!st)return;if(sessionStorage.getItem('awp-startup-splash-shown')==='1')return;document.documentElement.classList.add('awp-boot-splash-pending');var d=document.createElement('div');d.id='awp-boot-splash';d.setAttribute('aria-hidden','true');d.style.cssText='position:fixed;inset:0;z-index:9999;background:#061410';document.documentElement.appendChild(d);}catch(e){}})();`,
+            __html: `(function(){try{var ua=navigator.userAgent;if(/AWP-Android/i.test(ua))return;var ios=/iPad|iPhone|iPod/.test(ua)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);if(!ios)return;var st=window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;if(!st)return;if(sessionStorage.getItem('awp-startup-splash-shown')==='1')return;document.documentElement.classList.add('awp-boot-splash-pending');var d=document.createElement('div');d.id='awp-boot-splash';d.setAttribute('aria-hidden','true');d.style.cssText='position:fixed;inset:0;z-index:9999;background:#0a1c1f';document.documentElement.appendChild(d);}catch(e){}})();`,
           }}
         />
         <SiteJsonLd
@@ -358,7 +345,7 @@ export default async function RootLayout({
           logoUrl={siteAssets.logo_favicon}
         />
         <PwaRegister />
-        <StartupSplash marketplaceEnabled={marketplaceEnabled} />
+        <StartupSplash />
         <AndroidColdStartPreloaderUnlock />
         <AndroidAppUpdatePrompt />
         <StadiumSoundsUnlock />
@@ -369,7 +356,6 @@ export default async function RootLayout({
           <Suspense fallback={null}>
             <SiteModeProvider
               initialMode={initialSiteMode}
-              marketplaceEnabled={marketplaceEnabled}
               emailPasswordAuthEnabled={appSettings.email_password_auth_enabled === true}
             >
               <AdsenseProvider
@@ -406,20 +392,20 @@ export default async function RootLayout({
                   </MarketplacePhotosProvider>
                 </SiteAssetsProvider>
               </AdsenseProvider>
-              {loggedInFull && !forceEmailAuthSetup && !isPzuCupSection && !pathname.startsWith("/panel-admina") ? (
+              {loggedInFull && !forceEmailAuthSetup && !isMinimalChromeSection && !pathname.startsWith("/panel-admina") ? (
                 <WalletBalanceFloat enabled />
               ) : null}
-              {!isPzuCupSection && !forceEmailAuthSetup ? (
+              {!isMinimalChromeSection && !forceEmailAuthSetup ? (
                 <WriteToAdminFloat
                   defaults={writeToAdminDefaults}
                   recipients={contactAdminRecipients}
                   hideFloat={shellIsAdmin}
                 />
               ) : null}
-              {!isPzuCupSection && matchNotificationPromptEnabled && !forceEmailAuthSetup ? (
+              {!isMinimalChromeSection && matchNotificationPromptEnabled && !forceEmailAuthSetup ? (
                 <MatchNotificationPrompt />
               ) : null}
-              {!isPzuCupSection ? <EmailAuthSetupPrompt initialNeedsSetup={forceEmailAuthSetup} /> : null}
+              {!isMinimalChromeSection ? <EmailAuthSetupPrompt initialNeedsSetup={forceEmailAuthSetup} /> : null}
             </SiteModeProvider>
           </Suspense>
         </PinSetupGate>

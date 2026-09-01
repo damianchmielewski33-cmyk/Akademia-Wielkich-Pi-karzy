@@ -10,12 +10,6 @@ export type AdminSettingsSearchHit = {
 export const ADMIN_SETTINGS_SEARCH_INDEX: AdminSettingsSearchHit[] = [
   { id: "settings-test-mode", label: "Tryb testowy", keywords: "sandbox test", group: "System" },
   {
-    id: "settings-marketplace",
-    label: "Wersja aplikacji",
-    keywords: "v1 v2 wersja marketplace hale rezerwacje wyłącznik",
-    group: "System",
-  },
-  {
     id: "settings-system",
     label: "Co działa na serwerze",
     keywords: "smtp produkcja rejestracja status serwer",

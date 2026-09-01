@@ -2,7 +2,6 @@
 
 import type { ComponentPropsWithoutRef, ElementType, ReactNode } from "react";
 import { SiteSectionHero, PAGE_HERO_KICKER } from "@/components/site-section-hero";
-import { useSiteMode } from "@/components/site-mode";
 import { cn } from "@/lib/utils";
 
 export const pitchLabelClass =
@@ -32,9 +31,8 @@ export function PitchCard<T extends ElementType = "section">({
   children,
   ...props
 }: PitchCardProps<T>) {
-  const { marketplaceEnabled } = useSiteMode();
   const Comp = as ?? "section";
-  const resolvedVariant = variant ?? (marketplaceEnabled ? "marketplace" : "pitch");
+  const resolvedVariant = variant ?? "marketplace";
   const stadium = resolvedVariant === "pitch" || resolvedVariant === "gold";
   const bgClass = resolvedVariant === "gold" ? "home-pitch-tile-gold" : resolvedVariant === "pitch" ? "home-pitch-tile" : "";
   const decorations = showDecorations ?? stadium;
@@ -86,7 +84,6 @@ export function PitchPageHero({
   titleId,
   children,
 }: PitchPageHeroProps) {
-  const { marketplaceEnabled } = useSiteMode();
   return (
     <SiteSectionHero
       kicker={kicker}
@@ -95,7 +92,7 @@ export function PitchPageHero({
       align={align}
       showCrest={showCrest}
       titleId={titleId}
-      variant={marketplaceEnabled ? "marketplace" : "stadium"}
+      variant="marketplace"
       className={cn("mx-auto w-full max-w-3xl", className)}
     >
       {children}

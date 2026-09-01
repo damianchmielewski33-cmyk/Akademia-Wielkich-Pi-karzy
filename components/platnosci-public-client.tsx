@@ -8,7 +8,6 @@ import { MarketplaceSection, mpEmptyClass, mpSectionCardClass } from "@/componen
 import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
 import { PlatnosciPublicPayButton } from "@/components/platnosci-public-pay-button";
 import { SiteSectionHero } from "@/components/site-section-hero";
-import { useSiteMode } from "@/components/site-mode";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -36,8 +35,7 @@ type Props = {
 };
 
 export function PlatnosciPublicClient({ token, hotpayEnabled, view }: Props) {
-  const { marketplaceEnabled } = useSiteMode();
-  const light = marketplaceEnabled;
+  const light = true;
   const heroPhoto = useMarketplacePitchPhotoAt(4);
 
   if (view.mode === "signup_fees") {
@@ -373,8 +371,7 @@ export function PlatnosciPublicClient({ token, hotpayEnabled, view }: Props) {
 }
 
 export function PlatnosciPublicInactive({ light }: { light?: boolean }) {
-  const { marketplaceEnabled } = useSiteMode();
-  const isLight = light ?? marketplaceEnabled;
+  const isLight = light ?? true;
   const heroPhoto = useMarketplacePitchPhotoAt(4);
 
   if (isLight) {

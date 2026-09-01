@@ -52,8 +52,8 @@ export function RegisterForm({
   nextPath?: string;
   realm?: "academy" | "pzu_cup";
 }) {
-  const { marketplaceEnabled, emailPasswordAuthEnabled } = useSiteMode();
-  const submitVariant = marketplaceEnabled ? "gold" : "pitch";
+  const { emailPasswordAuthEnabled } = useSiteMode();
+  const submitVariant = "default";
   const router = useRouter();
   const next = sanitizeAppBridgeNext(nextPath) ?? undefined;
   const [autoLogin, setAutoLogin] = useState(true);
@@ -233,12 +233,12 @@ export function RegisterForm({
             value={verifyCode}
             onChange={(e) => setVerifyCode(e.target.value.replace(/\D/g, "").slice(0, 8))}
           />
-          <Button type="submit" className="w-full" variant={submitVariant} disabled={loading}>
+          <Button type="submit" className="w-full rounded-full font-bold" variant={submitVariant} disabled={loading}>
             {loading ? "Sprawdzanie…" : "Potwierdź kod"}
           </Button>
           <button
             type="button"
-            className="w-full text-center text-sm font-medium text-emerald-700 hover:underline dark:text-emerald-300"
+            className="w-full text-center text-sm font-medium text-[var(--mp-teal-dark)] hover:underline dark:text-teal-300"
             onClick={() => void resendCode()}
             disabled={loading}
           >
@@ -376,13 +376,13 @@ export function RegisterForm({
             id="reg_auto_login"
             checked={autoLogin}
             onCheckedChange={setAutoLogin}
-            tone="pitch"
+            tone="light"
             aria-label="Zaloguj mnie automatycznie po rejestracji"
           />
         </div>
           </>
         )}
-        <Button type="submit" className="w-full" variant={submitVariant} disabled={loading}>
+        <Button type="submit" className="w-full rounded-full font-bold" variant={submitVariant} disabled={loading}>
           {loading ? "Tworzenie…" : emailPasswordAuthEnabled ? "Wyślij kod i załóż konto" : "Załóż konto"}
         </Button>
       </form>

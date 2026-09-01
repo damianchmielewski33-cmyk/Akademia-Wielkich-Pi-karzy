@@ -10,7 +10,6 @@ import { FormInput } from "@/components/ui/form-field";
 import { Button } from "@/components/ui/button";
 import { ModalMatchSummary } from "@/components/ui/modal-shared";
 import { formSchemas, useValidatedForm } from "@/lib/form-validation";
-import { useSiteMode } from "@/components/site-mode";
 import { modalPanelClass } from "@/components/ui/modal-shared";
 import { cn } from "@/lib/utils";
 
@@ -53,8 +52,6 @@ export function MatchAddGuestDialog({
   onDone,
   apiPath = (id) => `/api/terminarz/match/${id}/add-guest`,
 }: Props) {
-  const { marketplaceEnabled } = useSiteMode();
-  const light = marketplaceEnabled;
   const guestForm = useValidatedForm({
     initialValues: { guestFirst: "", guestLast: "", guestAlias: "" },
     schema: guestSchema,
@@ -100,21 +97,19 @@ export function MatchAddGuestDialog({
       size="md"
       scrollable
       title="Dodaj gościa na mecz"
-      headerKicker={light ? "Terminarz" : undefined}
+      headerKicker="Terminarz"
       description="Zapisz osobę grającą jednorazowo. Gość zostanie automatycznie usunięty dopiero, gdy saldo jego portfela wyniesie 0."
       icon={
-        light ? (
-          <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[var(--mp-teal)] text-white shadow-sm">
-            <UserPlus className="h-5 w-5" strokeWidth={2.25} aria-hidden />
-          </span>
-        ) : undefined
+        <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[var(--mp-teal)] text-white shadow-sm">
+          <UserPlus className="h-5 w-5" strokeWidth={2.25} aria-hidden />
+        </span>
       }
       footer={
         <>
           <Button type="button" variant="outline" onClick={() => handleOpenChange(false)} disabled={busy}>
             Anuluj
           </Button>
-          <Button type="button" variant={light ? "default" : "pitch"} disabled={busy} onClick={() => void addGuest()}>
+          <Button type="button" variant="default" disabled={busy} onClick={() => void addGuest()}>
             {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
             <UserPlus className="mr-2 h-4 w-4" aria-hidden />
             Dodaj gościa

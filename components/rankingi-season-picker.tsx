@@ -1,7 +1,6 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useSiteMode } from "@/components/site-mode";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -10,7 +9,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { cn } from "@/lib/utils";
 
 type SeasonOption = {
   id: number;
@@ -22,29 +20,18 @@ type Props = {
   seasons: SeasonOption[];
   selectedSeasonId: number;
   basePath?: string;
-  /** Nadpisanie stylu (np. PZU Cup). Domyślnie z trybu V1/V2. */
-  light?: boolean;
 };
 
 export function RankingiSeasonPicker({
   seasons,
   selectedSeasonId,
   basePath = "/rankingi",
-  light: lightProp,
 }: Props) {
   const router = useRouter();
-  const { marketplaceEnabled } = useSiteMode();
-  const light = lightProp ?? marketplaceEnabled;
 
   return (
-    <div className={cn("mx-auto max-w-md text-left", light ? "mt-0" : "mt-6")}>
-      <Label
-        htmlFor="ranking-season"
-        className={cn(
-          "text-sm font-semibold",
-          light ? "text-zinc-700 dark:text-zinc-200" : "text-emerald-100/90"
-        )}
-      >
+    <div className="mx-auto mt-0 max-w-md text-left">
+      <Label htmlFor="ranking-season" className="text-sm font-semibold text-zinc-700 dark:text-zinc-200">
         Sezon rankingu
       </Label>
       <Select
@@ -55,12 +42,7 @@ export function RankingiSeasonPicker({
       >
         <SelectTrigger
           id="ranking-season"
-          className={cn(
-            "mt-2",
-            light
-              ? "rounded-xl border-zinc-200 bg-white text-zinc-950 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
-              : "border-white/25 bg-black/15 text-white"
-          )}
+          className="mt-2 rounded-xl border-zinc-200 bg-white text-zinc-950 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
         >
           <SelectValue placeholder="Wybierz sezon" />
         </SelectTrigger>

@@ -92,7 +92,6 @@ fun LoginScreen(
     var loginBanner by remember { mutableStateOf<String?>(null) }
     var siteName by remember { mutableStateOf("Akademia Wielkich Piłkarzy") }
     var siteDescription by remember { mutableStateOf("Terminarz, składy i społeczność akademii") }
-    var marketplaceEnabled by remember { mutableStateOf(false) }
     var emailAuthEnabled by remember { mutableStateOf(false) }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -116,19 +115,12 @@ fun LoginScreen(
             siteDescription = cfg.settings?.siteDescription?.takeIf { it.isNotBlank() }
                 ?: cfg.appSettings?.siteDescription?.takeIf { it.isNotBlank() }
                 ?: siteDescription
-            marketplaceEnabled = cfg.appSettings?.bookingMarketplaceEnabled == true
             emailAuthEnabled = cfg.appSettings?.emailPasswordAuthEnabled == true
-            try {
-                AwpApp.instance.appConfigStore.setMarketplaceEnabled(marketplaceEnabled)
-            } catch (_: Exception) {
-            }
         } catch (_: Exception) {
         }
-        if (marketplaceEnabled) {
-            try {
-                venues = ApiClient.api.venues().venues.take(8)
-            } catch (_: Exception) {
-            }
+        try {
+            venues = ApiClient.api.venues().venues.take(8)
+        } catch (_: Exception) {
         }
         // Auto-prompt biometrii przy starcie, jeśli włączona.
         if (biometricsAvailable && biometricEnabled && activity != null && !emailAuthEnabled) {
@@ -258,8 +250,7 @@ fun LoginScreen(
             ) {
             MarketplaceLoginHero(
                 siteName = siteName,
-                subtitle = siteDescription,
-                marketplaceEnabled = marketplaceEnabled
+                subtitle = siteDescription
             )
             Column(
                 modifier = Modifier
@@ -307,13 +298,11 @@ fun LoginScreen(
                         title = "Logowanie",
                         subtitle = if (emailAuthEnabled && !legacyPin) {
                             "Wejście akademii — e-mail i hasło."
-                        } else if (marketplaceEnabled) {
-                            "Rezerwacja boiska bez PIN-u albo wejście akademii."
                         } else {
-                            "Wejście akademii — imię, nazwisko i PIN."
+                            "Rezerwacja boiska bez PIN-u albo wejście akademii."
                         }
                     ) {
-                        if (marketplaceEnabled && onBrowsePitches != null) {
+                        if (onBrowsePitches != null) {
                             MarketplacePrimaryButton(
                                 text = "Rezerwuj boisko bez PIN-u",
                                 loading = false,
@@ -421,9 +410,7 @@ fun LoginScreen(
                     }
                 }
             }
-            if (marketplaceEnabled) {
-                MarketplaceVenueStrip(venues = venues)
-            }
+            MarketplaceVenueStrip(venues = venues)
             Spacer(Modifier.height(24.dp))
         }
         }
@@ -714,7 +701,7 @@ private fun ForgotPinPanel(onBack: () -> Unit, onSuccess: () -> Unit) {
 }
 
 @Composable
-private fun MarketplaceLoginHero(siteName: String, subtitle: String, marketplaceEnabled: Boolean) {
+private fun MarketplaceLoginHero(siteName: String, subtitle: String) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -746,14 +733,14 @@ private fun MarketplaceLoginHero(siteName: String, subtitle: String, marketplace
                 .padding(bottom = 44.dp)
         ) {
             Text(
-                if (marketplaceEnabled) "REZERWACJA BOISK" else "AKADEMIA",
+                "REZERWACJA BOISK",
                 style = MaterialTheme.typography.labelSmall,
                 color = Color.White.copy(alpha = 0.8f),
                 fontWeight = FontWeight.Black
             )
             Spacer(Modifier.height(8.dp))
             Text(
-                if (marketplaceEnabled) "Zarezerwuj boisko" else siteName,
+                "Zarezerwuj boisko",
                 style = MaterialTheme.typography.displayLarge,
                 color = Color.White
             )

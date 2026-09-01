@@ -2,8 +2,6 @@
 
 import type { ReactNode } from "react";
 import { MarketplacePitchPhoto } from "@/components/marketplace-pitch-photo";
-import { PitchCardDecorations } from "@/components/ui/pitch-card";
-import { useSiteMode } from "@/components/site-mode";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -16,7 +14,7 @@ type Props = {
   children: ReactNode;
 };
 
-/** Zdjęcie boiska (marketplace) albo kafelek murawy (produkcja akademii). */
+/** Zdjęcie boiska z gradientem overlay. */
 export function PhotoPanel({
   src,
   className,
@@ -26,17 +24,6 @@ export function PhotoPanel({
   priority,
   children,
 }: Props) {
-  const { marketplaceEnabled } = useSiteMode();
-
-  if (!marketplaceEnabled) {
-    return (
-      <div className={cn("relative isolate overflow-hidden rounded-2xl text-white shadow-lg home-pitch-tile", className)}>
-        <PitchCardDecorations />
-        <div className={cn("relative z-10", contentClassName)}>{children}</div>
-      </div>
-    );
-  }
-
   return (
     <div className={cn("relative isolate overflow-hidden rounded-2xl text-white shadow-lg", className)}>
       <div className="absolute inset-0 z-0 bg-zinc-800">

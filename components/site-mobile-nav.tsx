@@ -27,12 +27,10 @@ function navItemActive(pathname: string | null, href: string) {
 function MobileNavLink({
   item,
   active,
-  light,
   onNavigate,
 }: {
   item: ShellNavItem;
   active: boolean;
-  light?: boolean;
   onNavigate: () => void;
 }) {
   const Icon = item.icon;
@@ -41,27 +39,18 @@ function MobileNavLink({
       href={item.href}
       onClick={onNavigate}
       className={cn(
-        "awp-focus-ring flex min-h-12 touch-manipulation items-center gap-3 px-3 py-2.5 text-sm font-semibold transition-colors",
-        light
-          ? cn(
-              "rounded-2xl border",
-              active
-                ? "border-transparent bg-[var(--mp-teal)] text-white shadow-md shadow-teal-950/15"
-                : "border-zinc-200/90 bg-white text-zinc-800 shadow-sm hover:border-teal-200 hover:bg-teal-50/80 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-900"
-            )
-          : cn("rounded-xl", active ? "bg-white/15 text-[var(--mundial-gold)]" : "text-white/90 hover:bg-white/10")
+        "awp-focus-ring flex min-h-12 touch-manipulation items-center gap-3 rounded-2xl border px-3 py-2.5 text-sm font-semibold transition-colors",
+        active
+          ? "border-transparent bg-[var(--mp-teal)] text-white shadow-md shadow-teal-950/15"
+          : "border-zinc-200/90 bg-white text-zinc-800 shadow-sm hover:border-teal-200 hover:bg-teal-50/80 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-900"
       )}
     >
       <span
         className={cn(
           "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl",
-          light
-            ? active
-              ? "bg-white/20 text-white"
-              : "bg-teal-50 text-[var(--mp-teal-dark)] dark:bg-teal-950/50 dark:text-teal-300"
-            : active
-              ? "bg-[var(--mundial-gold)]/20 text-[var(--mundial-gold)]"
-              : "bg-white/10 text-white/85"
+          active
+            ? "bg-white/20 text-white"
+            : "bg-teal-50 text-[var(--mp-teal-dark)] dark:bg-teal-950/50 dark:text-teal-300"
         )}
       >
         <Icon className="h-4 w-4" aria-hidden />
@@ -76,8 +65,6 @@ type Props = {
   onClose: () => void;
   titleId: string;
   siteName: string;
-  stadium: boolean;
-  marketplaceEnabled: boolean;
   mode: SiteMode | null;
   pathname: string | null;
   isLoggedIn: boolean;
@@ -85,7 +72,6 @@ type Props = {
   visiblePrimary: ShellNavItem[];
   visibleAcademyMore: ShellNavItem[];
   visibleAuth: ShellNavItem[];
-  visibleMobile: ShellNavItem[];
   isDarkNow: boolean;
   themeBusy: boolean;
   onToggleTheme: () => void;
@@ -98,8 +84,6 @@ export function SiteMobileNav({
   onClose,
   titleId,
   siteName,
-  stadium,
-  marketplaceEnabled,
   mode,
   pathname,
   isLoggedIn,
@@ -107,7 +91,6 @@ export function SiteMobileNav({
   visiblePrimary,
   visibleAcademyMore,
   visibleAuth,
-  visibleMobile,
   isDarkNow,
   themeBusy,
   onToggleTheme,
@@ -120,7 +103,7 @@ export function SiteMobileNav({
     <div className="fixed inset-0 z-[80] lg:hidden" role="presentation">
       <button
         type="button"
-        className={cn("absolute inset-0 backdrop-blur-sm", stadium ? "bg-black/50" : "bg-zinc-950/45")}
+        className="absolute inset-0 bg-zinc-950/45 backdrop-blur-sm"
         aria-label="Zamknij menu"
         onClick={onClose}
       />
@@ -129,53 +112,29 @@ export function SiteMobileNav({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className={cn(
-          "absolute inset-y-0 right-0 flex w-[min(100%,21.5rem)] flex-col shadow-2xl pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]",
-          stadium
-            ? "border-l border-white/15 bg-[var(--mundial-navy)] text-white"
-            : "border-l border-zinc-200/90 bg-[#f4f5f7] text-zinc-950 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-50"
-        )}
+        className="absolute inset-y-0 right-0 flex w-[min(100%,21.5rem)] flex-col border-l border-zinc-200/90 bg-[#f4f5f7] pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)] text-zinc-950 shadow-2xl dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-50"
       >
-        {stadium ? (
-          <div className="flex items-center justify-between gap-3 border-b border-white/15 px-4 py-3.5">
-            <div className="min-w-0">
-              <p id={titleId} className="text-sm font-semibold text-white">
-                Menu
-              </p>
-              <p className="truncate text-xs text-white/70">{siteName}</p>
-            </div>
-            <button
-              type="button"
-              onClick={onClose}
-              className="awp-focus-ring inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/25 bg-white/10 text-white"
-              aria-label="Zamknij menu"
-            >
-              <X className="h-5 w-5" aria-hidden />
-            </button>
+        <div className="flex items-center justify-between gap-3 border-b border-zinc-200 px-4 py-3.5 dark:border-zinc-800">
+          <div className="min-w-0">
+            <p className="text-[0.65rem] font-black uppercase tracking-[0.16em] text-[var(--mp-teal-dark)]">
+              {mode === "booking" ? "Rezerwacja" : mode === "academy" ? "Akademia" : "Menu"}
+            </p>
+            <p id={titleId} className="truncate text-base font-black text-zinc-950 dark:text-white">
+              {siteName}
+            </p>
           </div>
-        ) : (
-          <div className="flex items-center justify-between gap-3 border-b border-zinc-200 px-4 py-3.5 dark:border-zinc-800">
-            <div className="min-w-0">
-              <p className="text-[0.65rem] font-black uppercase tracking-[0.16em] text-[var(--mp-teal-dark)]">
-                {mode === "booking" ? "Rezerwacja" : mode === "academy" ? "Akademia" : "Menu"}
-              </p>
-              <p id={titleId} className="truncate text-base font-black text-zinc-950 dark:text-white">
-                {siteName}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={onClose}
-              className="awp-focus-ring inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-800 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-              aria-label="Zamknij menu"
-            >
-              <X className="h-5 w-5" aria-hidden />
-            </button>
-          </div>
-        )}
+          <button
+            type="button"
+            onClick={onClose}
+            className="awp-focus-ring inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-800 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+            aria-label="Zamknij menu"
+          >
+            <X className="h-5 w-5" aria-hidden />
+          </button>
+        </div>
 
         <nav className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-3 py-3" aria-label="Nawigacja mobilna">
-          {!stadium && isLoggedIn && account ? (
+          {isLoggedIn && account ? (
             <Link
               href={mode === "academy" ? "/profil" : "/"}
               onClick={onClose}
@@ -203,12 +162,12 @@ export function SiteMobileNav({
             </Link>
           ) : null}
 
-          {!stadium && marketplaceEnabled && mode ? (
+          {mode ? (
             <div className="mb-3 grid grid-cols-2 gap-2">
               <button
                 type="button"
                 className={cn(
-                  "min-h-11 rounded-2xl border px-3 py-2.5 text-left text-sm font-bold shadow-sm touch-manipulation",
+                  "min-h-11 touch-manipulation rounded-2xl border px-3 py-2.5 text-left text-sm font-bold shadow-sm",
                   mode === "booking"
                     ? "border-[var(--mp-teal)] bg-[var(--mp-teal)] text-white"
                     : "border-zinc-200 bg-white text-zinc-800 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
@@ -224,7 +183,7 @@ export function SiteMobileNav({
               <button
                 type="button"
                 className={cn(
-                  "min-h-11 rounded-2xl border px-3 py-2.5 text-left text-sm font-bold shadow-sm touch-manipulation",
+                  "min-h-11 touch-manipulation rounded-2xl border px-3 py-2.5 text-left text-sm font-bold shadow-sm",
                   mode === "academy"
                     ? "border-[var(--mp-teal)] bg-[var(--mp-teal)] text-white"
                     : "border-zinc-200 bg-white text-zinc-800 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
@@ -240,23 +199,7 @@ export function SiteMobileNav({
             </div>
           ) : null}
 
-          {stadium && marketplaceEnabled && mode ? (
-            <button
-              type="button"
-              className="mb-3 w-full rounded-2xl border border-white/20 bg-white/10 px-3 py-3 text-left text-sm font-semibold text-white"
-              onClick={() => {
-                onClose();
-                onSetMode(mode === "booking" ? "academy" : "booking", { navigateHome: true });
-              }}
-            >
-              {mode === "booking" ? "Przełącz: Gram z wami" : "Przełącz: Szukam boiska"}
-              <span className="mt-0.5 block text-xs font-normal text-white/70">
-                {mode === "booking" ? "Terminarz akademii i składy" : "Rezerwacja boisk online"}
-              </span>
-            </button>
-          ) : null}
-
-          {!stadium && mode === "academy" ? (
+          {mode === "academy" ? (
             <>
               <p className="mb-1.5 px-1 text-[0.65rem] font-black uppercase tracking-[0.16em] text-[var(--mp-teal-dark)]">
                 Główne
@@ -267,7 +210,6 @@ export function SiteMobileNav({
                     <MobileNavLink
                       item={x}
                       active={navItemActive(pathname, x.href)}
-                      light
                       onNavigate={onClose}
                     />
                   </li>
@@ -282,7 +224,6 @@ export function SiteMobileNav({
                     <MobileNavLink
                       item={x}
                       active={navItemActive(pathname, x.href)}
-                      light
                       onNavigate={onClose}
                     />
                   </li>
@@ -291,12 +232,11 @@ export function SiteMobileNav({
             </>
           ) : (
             <ul className="space-y-1">
-              {(stadium ? visibleMobile : visiblePrimary).map((x) => (
+              {visiblePrimary.map((x) => (
                 <li key={x.href}>
                   <MobileNavLink
                     item={x}
                     active={navItemActive(pathname, x.href)}
-                    light={!stadium}
                     onNavigate={onClose}
                   />
                 </li>
@@ -304,7 +244,7 @@ export function SiteMobileNav({
             </ul>
           )}
 
-          {!stadium && !isLoggedIn && visibleAuth.length > 0 ? (
+          {!isLoggedIn && visibleAuth.length > 0 ? (
             <div className="mt-4 grid gap-2">
               {visibleAuth.map((x) => (
                 <Link
@@ -325,45 +265,28 @@ export function SiteMobileNav({
             </div>
           ) : null}
 
-          <div
-            className={cn(
-              "mt-auto space-y-1 border-t pt-3",
-              stadium ? "border-white/15" : "border-zinc-200 dark:border-zinc-800"
-            )}
-          >
-            {!stadium ? (
-              <button
-                type="button"
-                className="awp-focus-ring flex min-h-12 w-full touch-manipulation items-center gap-3 rounded-2xl bg-white px-3 py-2.5 text-sm font-semibold text-zinc-800 shadow-sm dark:bg-zinc-900 dark:text-zinc-100"
-                onClick={onToggleTheme}
-                disabled={themeBusy}
-              >
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-zinc-100 dark:bg-zinc-800">
-                  {isDarkNow ? <Sun className="h-4 w-4" aria-hidden /> : <Moon className="h-4 w-4" aria-hidden />}
-                </span>
-                {isDarkNow ? "Jasny motyw" : "Ciemny motyw"}
-              </button>
-            ) : null}
+          <div className="mt-auto space-y-1 border-t border-zinc-200 pt-3 dark:border-zinc-800">
+            <button
+              type="button"
+              className="awp-focus-ring flex min-h-12 w-full touch-manipulation items-center gap-3 rounded-2xl bg-white px-3 py-2.5 text-sm font-semibold text-zinc-800 shadow-sm dark:bg-zinc-900 dark:text-zinc-100"
+              onClick={onToggleTheme}
+              disabled={themeBusy}
+            >
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-zinc-100 dark:bg-zinc-800">
+                {isDarkNow ? <Sun className="h-4 w-4" aria-hidden /> : <Moon className="h-4 w-4" aria-hidden />}
+              </span>
+              {isDarkNow ? "Jasny motyw" : "Ciemny motyw"}
+            </button>
             {isLoggedIn ? (
               <button
                 type="button"
-                className={cn(
-                  "awp-focus-ring flex min-h-12 w-full touch-manipulation items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-semibold",
-                  stadium
-                    ? "text-white/90 hover:bg-white/10"
-                    : "bg-white text-zinc-800 shadow-sm dark:bg-zinc-900 dark:text-zinc-100"
-                )}
+                className="awp-focus-ring flex min-h-12 w-full touch-manipulation items-center gap-3 rounded-2xl bg-white px-3 py-2.5 text-sm font-semibold text-zinc-800 shadow-sm dark:bg-zinc-900 dark:text-zinc-100"
                 onClick={() => {
                   onClose();
                   onLogout();
                 }}
               >
-                <span
-                  className={cn(
-                    "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl",
-                    stadium ? "bg-white/10" : "bg-zinc-100 dark:bg-zinc-800"
-                  )}
-                >
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-zinc-100 dark:bg-zinc-800">
                   <LogOut className="h-4 w-4" aria-hidden />
                 </span>
                 Wyloguj

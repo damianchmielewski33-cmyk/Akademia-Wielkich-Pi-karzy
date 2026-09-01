@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { YesNoSwitch } from "@/components/ui/yes-no-switch";
 import { PlayerAliasPicker } from "@/components/player-alias-picker";
 import { useSiteMode } from "@/components/site-mode";
-import { formSchemas, useValidatedForm } from "@/lib/form-validation";
+import { formSchemas, useValidatedForm, zodFieldErrors, emailWithConfirmSchema, refineMatchingPasswords } from "@/lib/form-validation";
 import { notifyPostLoginPromptsUpdated } from "@/lib/post-login-prompts";
 import { REALMS, type Realm } from "@/lib/realm";
 import { sanitizeAppBridgeNext } from "@/lib/app-bridge";
@@ -27,6 +27,17 @@ const emailLoginSchema = z.object({
   email: formSchemas.email,
   password: z.string().min(1, "Hasło jest wymagane"),
 });
+
+const forgotPasswordEmailSchema = emailWithConfirmSchema();
+
+const forgotPasswordSchema = refineMatchingPasswords(
+  emailWithConfirmSchema()
+    .extend({
+      code: z.string().trim().min(4, "Kod musi mieć co najmniej 4 cyfry").max(8, "Kod jest zbyt długi"),
+      password: formSchemas.password,
+      passwordConfirm: z.string().min(1, "Powtórz hasło"),
+    })
+);
 
 const forgotSchema = z
   .object({
@@ -52,8 +63,8 @@ export function LoginForm({
   onAuthenticated?: () => void;
   realm?: Realm;
 }) {
-  const { marketplaceEnabled, emailPasswordAuthEnabled } = useSiteMode();
-  const submitVariant = marketplaceEnabled ? "gold" : "pitch";
+  const { emailPasswordAuthEnabled } = useSiteMode();
+  const submitVariant = "default";
   const router = useRouter();
   const next = sanitizeAppBridgeNext(nextPath) ?? "/";
   const [rememberMe, setRememberMe] = useState(false);
@@ -69,10 +80,20 @@ export function LoginForm({
   const [forgotPasswordDoneOpen, setForgotPasswordDoneOpen] = useState(false);
   const [forgotPasswordBusy, setForgotPasswordBusy] = useState(false);
   const [forgotPasswordCodeSent, setForgotPasswordCodeSent] = useState(false);
-  const [fpEmail, setFpEmail] = useState("");
-  const [fpCode, setFpCode] = useState("");
-  const [fpPassword, setFpPassword] = useState("");
-  const [fpPasswordConfirm, setFpPasswordConfirm] = useState("");
+  const [forgotPasswordInlineErrors, setForgotPasswordInlineErrors] = useState<
+    Partial<Record<string, string>>
+  >({});
+
+  const forgotPasswordForm = useValidatedForm({
+    initialValues: {
+      email: "",
+      emailConfirm: "",
+      code: "",
+      password: "",
+      passwordConfirm: "",
+    },
+    schema: forgotPasswordSchema,
+  });
 
   const loginForm = useValidatedForm({
     initialValues: { firstName: "", lastName: "", pin: "" },
@@ -167,11 +188,18 @@ export function LoginForm({
   }
 
   async function sendForgotPasswordCode() {
-    const trimmed = fpEmail.trim();
-    if (!trimmed) {
-      toast.error("Podaj adres e-mail.");
+    forgotPasswordForm.setFieldTouched("email");
+    forgotPasswordForm.setFieldTouched("emailConfirm");
+    const emailErrors = zodFieldErrors(forgotPasswordEmailSchema, {
+      email: forgotPasswordForm.values.email,
+      emailConfirm: forgotPasswordForm.values.emailConfirm,
+    });
+    if (Object.keys(emailErrors).length > 0) {
+      setForgotPasswordInlineErrors(emailErrors);
       return;
     }
+    setForgotPasswordInlineErrors({});
+    const trimmed = forgotPasswordForm.values.email.trim();
     setForgotPasswordBusy(true);
     try {
       const res = await fetch("/api/auth/forgot-password/send-code", {
@@ -192,24 +220,19 @@ export function LoginForm({
   }
 
   async function submitForgotPassword() {
-    if (!fpEmail.trim() || !fpCode.trim() || !fpPassword || !fpPasswordConfirm) {
-      toast.error("Uzupełnij e-mail, kod i nowe hasło.");
-      return;
-    }
-    if (fpPassword !== fpPasswordConfirm) {
-      toast.error("Hasła muszą być takie same.");
-      return;
-    }
+    if (!forgotPasswordForm.validate()) return;
+    setForgotPasswordInlineErrors({});
+    const { email, code, password, passwordConfirm } = forgotPasswordForm.values;
     setForgotPasswordBusy(true);
     try {
       const res = await fetch("/api/auth/forgot-password/reset", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          email: fpEmail.trim(),
-          code: fpCode.trim(),
-          password: fpPassword,
-          password_confirm: fpPasswordConfirm,
+          email: email.trim(),
+          code: code.trim(),
+          password,
+          password_confirm: passwordConfirm,
           realm,
         }),
       });
@@ -219,14 +242,30 @@ export function LoginForm({
         return;
       }
       setForgotPasswordOpen(false);
-      setFpCode("");
-      setFpPassword("");
-      setFpPasswordConfirm("");
+      forgotPasswordForm.reset();
       setForgotPasswordCodeSent(false);
       setForgotPasswordDoneOpen(true);
     } finally {
       setForgotPasswordBusy(false);
     }
+  }
+
+  function openForgotPasswordModal() {
+    const prefilled = emailLoginForm.values.email.trim();
+    forgotPasswordForm.reset({
+      email: prefilled,
+      emailConfirm: prefilled,
+      code: "",
+      password: "",
+      passwordConfirm: "",
+    });
+    setForgotPasswordInlineErrors({});
+    setForgotPasswordCodeSent(false);
+    setForgotPasswordOpen(true);
+  }
+
+  function forgotPasswordFieldError(field: keyof typeof forgotPasswordForm.values): string | undefined {
+    return forgotPasswordInlineErrors[field] ?? forgotPasswordForm.errors[field];
   }
 
   async function submitForgotPin() {
@@ -281,6 +320,7 @@ export function LoginForm({
               id="login_password"
               label="Hasło"
               required
+              showValidState
               type="password"
               autoComplete="current-password"
               value={emailLoginForm.values.password}
@@ -342,17 +382,17 @@ export function LoginForm({
             id="login_remember"
             checked={rememberMe}
             onCheckedChange={setRememberMe}
-            tone="pitch"
+            tone="light"
             aria-label="Nie wylogowuj mnie"
           />
         </div>
-        <Button type="submit" className="w-full" variant={submitVariant} disabled={loading}>
+        <Button type="submit" className="w-full rounded-full font-bold" variant={submitVariant} disabled={loading}>
           {loading ? "Logowanie…" : "Zaloguj się"}
         </Button>
         {emailPasswordAuthEnabled ? (
           <button
             type="button"
-            className="w-full text-center text-sm font-medium text-emerald-700 hover:underline dark:text-emerald-300"
+            className="w-full text-center text-sm font-medium text-[var(--mp-teal-dark)] hover:underline dark:text-teal-300"
             onClick={() => setLegacyPin((v) => !v)}
           >
             {legacyPin ? "Logowanie e-mailem i hasłem" : "Nie mam e-maila i hasła — logowanie PIN-em"}
@@ -364,15 +404,8 @@ export function LoginForm({
         <div className="mt-4 flex flex-col gap-2 border-t border-zinc-100 pt-4 dark:border-zinc-800">
           <button
             type="button"
-            className="text-center text-sm font-medium text-emerald-700 hover:underline dark:text-emerald-300"
-            onClick={() => {
-              setFpEmail(emailLoginForm.values.email.trim());
-              setFpCode("");
-              setFpPassword("");
-              setFpPasswordConfirm("");
-              setForgotPasswordCodeSent(false);
-              setForgotPasswordOpen(true);
-            }}
+            className="text-center text-sm font-medium text-[var(--mp-teal-dark)] hover:underline dark:text-teal-300"
+            onClick={() => openForgotPasswordModal()}
           >
             Zapomniałem hasła
           </button>
@@ -383,7 +416,7 @@ export function LoginForm({
         <div className="mt-4 flex flex-col gap-2 border-t border-zinc-100 pt-4 dark:border-zinc-800">
           <button
             type="button"
-            className="text-center text-sm font-medium text-emerald-700 hover:underline dark:text-emerald-300"
+            className="text-center text-sm font-medium text-[var(--mp-teal-dark)] hover:underline dark:text-teal-300"
             onClick={() => {
               forgotForm.reset({
                 firstName: loginForm.values.firstName.trim(),
@@ -411,7 +444,7 @@ export function LoginForm({
             <Button type="button" variant="outline" onClick={() => setForgotOpen(false)}>
               Anuluj
             </Button>
-            <Button type="button" variant="pitch" disabled={forgotSaving} onClick={() => void submitForgotPin()}>
+            <Button type="button" variant="default" className="rounded-full font-bold" disabled={forgotSaving} onClick={() => void submitForgotPin()}>
               {forgotSaving ? "Zapisywanie…" : "Nadaj PIN i wyślij"}
             </Button>
           </>
@@ -497,7 +530,8 @@ export function LoginForm({
             </Button>
             <Button
               type="button"
-              variant="pitch"
+              variant="default"
+              className="rounded-full font-bold"
               disabled={forgotPasswordBusy}
               onClick={() => void submitForgotPassword()}
             >
@@ -510,10 +544,25 @@ export function LoginForm({
           id="fp-email"
           label="Adres e-mail"
           required
+          showValidState
           type="email"
           autoComplete="email"
-          value={fpEmail}
-          onChange={(e) => setFpEmail(e.target.value)}
+          value={forgotPasswordForm.values.email}
+          onChange={(e) => forgotPasswordForm.setValue("email", e.target.value)}
+          onBlur={() => forgotPasswordForm.setFieldTouched("email")}
+          error={forgotPasswordFieldError("email")}
+        />
+        <FormInput
+          id="fp-email2"
+          label="Powtórz adres e-mail"
+          required
+          showValidState
+          type="email"
+          autoComplete="email"
+          value={forgotPasswordForm.values.emailConfirm}
+          onChange={(e) => forgotPasswordForm.setValue("emailConfirm", e.target.value)}
+          onBlur={() => forgotPasswordForm.setFieldTouched("emailConfirm")}
+          error={forgotPasswordFieldError("emailConfirm")}
         />
         <FormInput
           id="fp-code"
@@ -521,26 +570,34 @@ export function LoginForm({
           required
           inputMode="numeric"
           autoComplete="one-time-code"
-          value={fpCode}
-          onChange={(e) => setFpCode(e.target.value.replace(/\D/g, "").slice(0, 8))}
+          value={forgotPasswordForm.values.code}
+          onChange={(e) => forgotPasswordForm.setValue("code", e.target.value.replace(/\D/g, "").slice(0, 8))}
+          onBlur={() => forgotPasswordForm.setFieldTouched("code")}
+          error={forgotPasswordFieldError("code")}
         />
         <FormInput
           id="fp-password"
           label="Nowe hasło (min. 8 znaków)"
           required
+          showValidState
           type="password"
           autoComplete="new-password"
-          value={fpPassword}
-          onChange={(e) => setFpPassword(e.target.value)}
+          value={forgotPasswordForm.values.password}
+          onChange={(e) => forgotPasswordForm.setValue("password", e.target.value)}
+          onBlur={() => forgotPasswordForm.setFieldTouched("password")}
+          error={forgotPasswordFieldError("password")}
         />
         <FormInput
           id="fp-password2"
           label="Powtórz nowe hasło"
           required
+          showValidState
           type="password"
           autoComplete="new-password"
-          value={fpPasswordConfirm}
-          onChange={(e) => setFpPasswordConfirm(e.target.value)}
+          value={forgotPasswordForm.values.passwordConfirm}
+          onChange={(e) => forgotPasswordForm.setValue("passwordConfirm", e.target.value)}
+          onBlur={() => forgotPasswordForm.setFieldTouched("passwordConfirm")}
+          error={forgotPasswordFieldError("passwordConfirm")}
         />
       </AppModal>
 
@@ -551,7 +608,7 @@ export function LoginForm({
         title="Hasło zmienione"
         description="Możesz zalogować się adresem e-mail i nowym hasłem."
         footer={
-          <Button type="button" variant="pitch" onClick={() => setForgotPasswordDoneOpen(false)}>
+          <Button type="button" variant="default" className="rounded-full font-bold" onClick={() => setForgotPasswordDoneOpen(false)}>
             Rozumiem
           </Button>
         }
@@ -569,7 +626,7 @@ export function LoginForm({
           </>
         }
         footer={
-          <Button type="button" variant="pitch" onClick={() => setForgotDoneOpen(false)}>
+          <Button type="button" variant="default" className="rounded-full font-bold" onClick={() => setForgotDoneOpen(false)}>
             Rozumiem
           </Button>
         }

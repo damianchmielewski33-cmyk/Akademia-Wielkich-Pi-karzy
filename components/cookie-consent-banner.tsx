@@ -9,11 +9,10 @@ import { shouldAskSiteMode } from "@/lib/site-mode";
 export function CookieConsentBanner() {
   const { consent, acceptAll, rejectOptional } = useCookieConsent();
   const pathname = usePathname();
-  const { mode, ready, marketplaceEnabled } = useSiteMode();
+  const { mode, ready } = useSiteMode();
 
   // Modal „Co chcesz zrobić?” jest obowiązkowy — cookies nie mogą na niego nachodzić.
-  const modeGateOpen =
-    ready && marketplaceEnabled && shouldAskSiteMode(pathname, mode, marketplaceEnabled);
+  const modeGateOpen = ready && shouldAskSiteMode(pathname, mode);
 
   if (consent !== null || modeGateOpen) return null;
 

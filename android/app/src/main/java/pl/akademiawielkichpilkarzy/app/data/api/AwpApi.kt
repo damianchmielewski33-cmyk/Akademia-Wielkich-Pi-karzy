@@ -129,21 +129,6 @@ interface AwpApi {
         @Body body: MatchChargesRequest
     ): MatchChargesResponse
 
-    @PATCH("api/terminarz/signup/{id}/transport")
-    suspend fun updateTransport(
-        @Path("id") matchId: Int,
-        @Body body: TransportPrefsRequest
-    ): ApiOkResponse
-
-    @GET("api/terminarz/transport/{matchId}/messages")
-    suspend fun transportMessages(@Path("matchId") matchId: Int): TransportMessagesResponse
-
-    @POST("api/terminarz/transport/{matchId}/messages")
-    suspend fun sendTransportMessage(
-        @Path("matchId") matchId: Int,
-        @Body body: TransportMessageRequest
-    ): ApiOkResponse
-
     @POST("api/stats/save")
     suspend fun saveStats(@Body body: SaveStatsRequest): ResponseBody
 

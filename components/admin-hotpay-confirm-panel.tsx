@@ -202,8 +202,8 @@ export function AdminHotpayConfirmPanel() {
             className={cn(
               "rounded-lg px-3 py-1.5 text-xs font-semibold uppercase tracking-wide transition",
               status === f.id && !sessionQuery.trim()
-                ? "bg-white/20 text-white ring-1 ring-white/40"
-                : "bg-white/5 text-emerald-100/80 hover:bg-white/10"
+                ? "bg-[var(--mp-teal)] text-white ring-1 ring-[var(--mp-teal)]/40"
+                : "border border-zinc-200 bg-zinc-50 text-zinc-700 hover:border-[var(--mp-teal)]/40 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
             )}
             onClick={() => {
               setSessionQuery("");
@@ -229,7 +229,7 @@ export function AdminHotpayConfirmPanel() {
             }}
           />
         </div>
-        <Button type="button" variant="gold" disabled={loading} onClick={() => void load()}>
+        <Button type="button" variant="default" className="rounded-full font-bold" disabled={loading} onClick={() => void load()}>
           {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
           Szukaj
         </Button>
@@ -247,9 +247,9 @@ export function AdminHotpayConfirmPanel() {
               <li key={r.session_id} className={cn(adminInnerPanelClass, "space-y-2 p-3 text-sm")}>
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="font-semibold text-white">{playerLabel(r)}</p>
-                    <p className="mt-0.5 break-all font-mono text-[11px] text-emerald-100/70">{r.session_id}</p>
-                    <p className="mt-1 text-xs text-emerald-100/85">
+                    <p className="font-semibold text-zinc-950 dark:text-white">{playerLabel(r)}</p>
+                    <p className="mt-0.5 break-all font-mono text-[11px] text-zinc-500">{r.session_id}</p>
+                    <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-300">
                       {r.kind ?? "—"} · {formatAmountLine(r)} · {r.status ?? "—"}
                       {r.created_at ? ` · ${r.created_at}` : ""}
                     </p>
@@ -258,8 +258,9 @@ export function AdminHotpayConfirmPanel() {
                     {canCredit(r) ? (
                       <Button
                         type="button"
-                        variant="gold"
+                        variant="default"
                         size="sm"
+                        className="rounded-full font-bold"
                         disabled={busy}
                         onClick={() => setConfirm({ sessionId: r.session_id, action: "credit", row: r })}
                       >
@@ -284,12 +285,12 @@ export function AdminHotpayConfirmPanel() {
                     className={cn(
                       "rounded-md px-2 py-1.5 text-xs",
                       r.diagnosis.startsWith("OK")
-                        ? "bg-emerald-500/15 text-emerald-100"
+                        ? "bg-teal-50 text-[var(--mp-teal-dark)] dark:bg-teal-950/40 dark:text-teal-200"
                         : r.diagnosis.startsWith("BŁĄD") ||
                             r.diagnosis.startsWith("PENDING") ||
                             r.diagnosis.includes('action:"credit"')
-                          ? "bg-amber-500/20 text-amber-100"
-                          : "bg-white/10 text-emerald-100/90"
+                          ? "bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-200"
+                          : "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
                     )}
                   >
                     {r.diagnosis}
@@ -333,7 +334,8 @@ export function AdminHotpayConfirmPanel() {
           </Button>
           <Button
             type="button"
-            variant="gold"
+            variant="default"
+            className="rounded-full font-bold"
             disabled={!confirm || confirmBusy}
             onClick={() => {
               if (!confirm) return;

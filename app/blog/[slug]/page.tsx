@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Calendar, Clock, ChevronLeft, ChevronRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { PitchCard, pitchLabelClass } from "@/components/ui/pitch-card";
 import { blogPosts, getBlogPost, getRecentPosts } from "@/lib/blog-posts";
 
@@ -220,18 +221,12 @@ export default async function BlogPostPage({ params }: Props) {
           Graj regularnie, śledź swoje statystyki i bądź częścią piłkarskiej społeczności.
         </p>
         <div className="mt-4 flex flex-col items-center gap-2 sm:flex-row sm:justify-center">
-          <Link
-            href="/register"
-            className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-6 py-2.5 text-sm font-semibold text-white shadow-lg transition hover:bg-emerald-400"
-          >
-            Zarejestruj się →
-          </Link>
-          <Link
-            href="/blog"
-            className="inline-flex items-center gap-2 rounded-xl border border-emerald-500/40 px-6 py-2.5 text-sm font-semibold text-emerald-300 transition hover:border-emerald-400 hover:text-emerald-200"
-          >
-            ← Wszystkie artykuły
-          </Link>
+          <Button asChild className="rounded-full font-bold">
+            <Link href="/register">Zarejestruj się →</Link>
+          </Button>
+          <Button asChild variant="outline" className="rounded-full font-bold">
+            <Link href="/blog">← Wszystkie artykuły</Link>
+          </Button>
         </div>
       </PitchCard>
     </div>

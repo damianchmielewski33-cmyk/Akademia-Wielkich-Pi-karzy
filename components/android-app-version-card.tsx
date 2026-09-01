@@ -4,7 +4,6 @@ import { useCallback, useEffect, useState } from "react";
 import { Download, RefreshCw, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MarketplaceSection } from "@/components/payments-card";
-import { useSiteMode } from "@/components/site-mode";
 import {
   compareAndroidAppVersion,
   readInstalledAndroidAppIdentity,
@@ -19,7 +18,6 @@ type LatestInfo = {
 };
 
 export function AndroidAppVersionCard() {
-  const { marketplaceEnabled } = useSiteMode();
   const [installed, setInstalled] = useState<AndroidAppIdentity | null>(null);
   const [latest, setLatest] = useState<LatestInfo | null>(null);
   const [checking, setChecking] = useState(true);
@@ -65,15 +63,16 @@ export function AndroidAppVersionCard() {
     }
   }
 
-  const body = (
-    <>
+  return (
+    <MarketplaceSection
+      icon={Smartphone}
+      title="Aplikacja Android"
+      description="Wersja zainstalowana na tym telefonie i informacja, czy jest nowsza aktualizacja."
+    >
       <dl className="mt-5 grid gap-3 sm:grid-cols-2">
         <div
           className={cn(
-            "rounded-2xl border p-4",
-            marketplaceEnabled
-              ? "border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900/80"
-              : "border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900/80"
+            "rounded-2xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900/80"
           )}
         >
           <dt className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Zainstalowana</dt>
@@ -86,10 +85,7 @@ export function AndroidAppVersionCard() {
         </div>
         <div
           className={cn(
-            "rounded-2xl border p-4",
-            marketplaceEnabled
-              ? "border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900/80"
-              : "border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900/80"
+            "rounded-2xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900/80"
           )}
         >
           <dt className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Aktualizacja</dt>
@@ -109,11 +105,7 @@ export function AndroidAppVersionCard() {
       </dl>
       <div className="mt-4 flex flex-wrap gap-2">
         {updateAvailable ? (
-          <Button
-            type="button"
-            className={marketplaceEnabled ? "rounded-full" : undefined}
-            onClick={requestNativeUpdate}
-          >
+          <Button type="button" className="rounded-full" onClick={requestNativeUpdate}>
             <Download className="h-4 w-4" />
             Zainstaluj {latest?.versionName}
           </Button>
@@ -122,40 +114,13 @@ export function AndroidAppVersionCard() {
           type="button"
           variant="outline"
           disabled={checking}
-          className={marketplaceEnabled ? "rounded-full" : undefined}
+          className="rounded-full"
           onClick={() => void load()}
         >
           <RefreshCw className="h-4 w-4" />
           {checking ? "Sprawdzanie…" : "Sprawdź ponownie"}
         </Button>
       </div>
-    </>
-  );
-
-  if (marketplaceEnabled) {
-    return (
-      <MarketplaceSection
-        icon={Smartphone}
-        title="Aplikacja Android"
-        description="Wersja zainstalowana na tym telefonie i informacja, czy jest nowsza aktualizacja."
-      >
-        {body}
-      </MarketplaceSection>
-    );
-  }
-
-  return (
-    <div className="awp-card-surface">
-      <div>
-        <h2 className="flex items-center gap-2 text-lg font-bold text-white">
-          <Smartphone className="h-5 w-5 text-[var(--mundial-gold,#f5c518)]" />
-          Aplikacja Android
-        </h2>
-        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-          Wersja zainstalowana na tym telefonie i informacja, czy jest nowsza aktualizacja.
-        </p>
-        {body}
-      </div>
-    </div>
+    </MarketplaceSection>
   );
 }

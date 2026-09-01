@@ -9,12 +9,10 @@ import {
   SlidersHorizontal,
   Wallet,
 } from "lucide-react";
-import { SiteAssetImage } from "@/components/site-asset-image";
 import { AppModal } from "@/components/ui/app-modal";
 import { extractApiErrorMessage, useAppMessage } from "@/components/ui/app-message-modal";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { PitchCard, pitchLabelClass, pitchPanelClass } from "@/components/ui/pitch-card";
 import {
   adminEmptyStateClass,
   adminFieldClass,
@@ -27,7 +25,6 @@ import {
   paymentsInnerPanelClass,
 } from "@/components/payments-card";
 import { PhotoPanel } from "@/components/photo-panel";
-import { useSiteMode } from "@/components/site-mode";
 import type { WalletTransactionRow } from "@/lib/wallet";
 import { MARKETPLACE_PITCH_PHOTOS } from "@/lib/marketplace-photos";
 import { cn } from "@/lib/utils";
@@ -195,8 +192,7 @@ export function WalletBalanceHistory({
   loadingMore?: boolean;
   onLoadMore?: () => void;
 }) {
-  const { marketplaceEnabled } = useSiteMode();
-  const light = marketplaceEnabled;
+  const light = true;
   const [filter, setFilter] = useState<HistoryFilter>("all");
   const [query, setQuery] = useState("");
 
@@ -257,13 +253,9 @@ export function WalletBalanceHistory({
             onClick={() => setFilter(f.id)}
             className={cn(
               "shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors",
-              light
-                ? filter === f.id
-                  ? "bg-[var(--mp-teal)] text-white"
-                  : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300"
-                : filter === f.id
-                  ? "bg-[var(--mundial-gold,#c9a227)] text-[var(--mundial-navy,#0a1628)]"
-                  : "bg-black/25 text-emerald-100/85 hover:bg-white/10"
+              filter === f.id
+                ? "bg-[var(--mp-teal)] text-white"
+                : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300"
             )}
           >
             {f.label}
@@ -400,9 +392,9 @@ export function WalletBalanceHistory({
         <div className="flex flex-col items-center gap-1.5 pt-1">
           <Button
             type="button"
-            variant={light ? "outline" : "gold"}
+            variant="outline"
             size="sm"
-            className={light ? "rounded-full" : undefined}
+            className="rounded-full"
             disabled={loadingMore}
             onClick={() => onLoadMore()}
           >
@@ -427,7 +419,6 @@ export function PlayerWalletPanel({
   refreshKey = 0,
   className,
 }: Props) {
-  const { marketplaceEnabled } = useSiteMode();
   const [walletBalancePln, setWalletBalancePln] = useState<number | null>(null);
   const [adminBalancePln, setAdminBalancePln] = useState<number | null>(null);
   const [operatorBalancePln, setOperatorBalancePln] = useState<number | null>(null);
@@ -547,34 +538,32 @@ export function PlayerWalletPanel({
     <>
       <div
         className={cn(
-          marketplaceEnabled ? paymentsInnerPanelClass : pitchPanelClass,
-          marketplaceEnabled ? "px-4 py-4" : "px-4 py-4",
+          paymentsInnerPanelClass,
+          "px-4 py-4",
           walletBalancePln != null &&
             walletBalancePln < 0 &&
-            (marketplaceEnabled
-              ? "border-red-300 bg-red-50 dark:border-red-900 dark:bg-red-950/30"
-              : "border-red-300/40 bg-red-950/30"),
+            (walletBalancePln != null &&
+            walletBalancePln < 0 &&
+            "border-red-300 bg-red-50 dark:border-red-900 dark:bg-red-950/30"),
           walletBalancePln != null &&
             walletBalancePln > 0 &&
-            (marketplaceEnabled
-              ? "border-teal-200 bg-teal-50/80 dark:border-teal-900 dark:bg-teal-950/25"
-              : "border-emerald-300/35 bg-emerald-500/15")
+            "border-teal-200 bg-teal-50/80 dark:border-teal-900 dark:bg-teal-950/25"
         )}
       >
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className={marketplaceEnabled ? "text-xs font-bold uppercase tracking-[0.14em] text-[var(--mp-teal-dark)]" : pitchLabelClass}>
+            <p className={"text-xs font-bold uppercase tracking-[0.14em] text-[var(--mp-teal-dark)]"}>
               Saldo łącznie
             </p>
             <p
               className={cn(
                 "mt-1 text-3xl font-bold tabular-nums",
-                marketplaceEnabled ? "text-zinc-950 dark:text-white" : "text-white",
-                walletBalancePln == null && (marketplaceEnabled ? "text-zinc-400" : "text-white/75"),
-                walletBalancePln != null && walletBalancePln < 0 && (marketplaceEnabled ? "text-red-600 dark:text-red-300" : "text-red-200"),
+                "text-zinc-950 dark:text-white",
+                walletBalancePln == null && ("text-zinc-400"),
+                walletBalancePln != null && walletBalancePln < 0 && ("text-red-600 dark:text-red-300"),
                 walletBalancePln != null &&
                   walletBalancePln > 0 &&
-                  (marketplaceEnabled ? "text-[var(--mp-teal-dark)]" : "text-emerald-100")
+                  ("text-[var(--mp-teal-dark)]")
               )}
             >
               {walletBalancePln === null ? "—" : formatWalletPln(walletBalancePln)}
@@ -582,21 +571,21 @@ export function PlayerWalletPanel({
                 <Loader2
                   className={cn(
                     "ml-2 inline h-5 w-5 animate-spin",
-                    marketplaceEnabled ? "text-zinc-400" : "text-white/60"
+                    "text-zinc-400"
                   )}
                   aria-hidden
                 />
               ) : null}
             </p>
             {walletBalancePln != null && walletBalancePln < 0 ? (
-              <p className={cn("mt-1 text-xs font-medium", marketplaceEnabled ? "text-red-600" : "text-red-200")}>
+              <p className="mt-1 text-xs font-medium text-red-600">
                 Niedopłata do uregulowania
               </p>
             ) : walletBalancePln != null && walletBalancePln > 0 ? (
               <p
                 className={cn(
                   "mt-1 text-xs font-medium",
-                  marketplaceEnabled ? "text-[var(--mp-teal-dark)]" : "text-emerald-100"
+                  "text-[var(--mp-teal-dark)]"
                 )}
               >
                 Nadwyżka na koncie
@@ -609,14 +598,14 @@ export function PlayerWalletPanel({
           <div
             className={cn(
               "mt-3 grid grid-cols-2 gap-2 rounded-lg px-3 py-2.5",
-              marketplaceEnabled ? "bg-white dark:bg-zinc-950" : "bg-white/8"
+              "bg-white dark:bg-zinc-950"
             )}
           >
             <div>
               <p
                 className={cn(
                   "text-[11px] uppercase tracking-wide",
-                  marketplaceEnabled ? "text-zinc-500" : "text-white/60"
+                  "text-zinc-500"
                 )}
               >
                 Gotówka / BLIK
@@ -625,16 +614,10 @@ export function PlayerWalletPanel({
                 className={cn(
                   "mt-0.5 text-sm font-bold tabular-nums",
                   adminBalancePln < 0
-                    ? marketplaceEnabled
-                      ? "text-red-600"
-                      : "text-red-200"
+                    ? "text-red-600"
                     : adminBalancePln > 0
-                      ? marketplaceEnabled
-                        ? "text-[var(--mp-teal-dark)]"
-                        : "text-emerald-100"
-                      : marketplaceEnabled
-                        ? "text-zinc-500"
-                        : "text-white/70"
+                      ? "text-[var(--mp-teal-dark)]"
+                      : "text-zinc-500"
                 )}
               >
                 {formatWalletPln(adminBalancePln)}
@@ -643,13 +626,13 @@ export function PlayerWalletPanel({
             <div
               className={cn(
                 "border-l pl-3",
-                marketplaceEnabled ? "border-zinc-200 dark:border-zinc-700" : "border-white/15"
+                "border-zinc-200 dark:border-zinc-700"
               )}
             >
               <p
                 className={cn(
                   "text-[11px] uppercase tracking-wide",
-                  marketplaceEnabled ? "text-zinc-500" : "text-white/60"
+                  "text-zinc-500"
                 )}
               >
                 Płatności online
@@ -658,16 +641,10 @@ export function PlayerWalletPanel({
                 className={cn(
                   "mt-0.5 text-sm font-bold tabular-nums",
                   operatorBalancePln < 0
-                    ? marketplaceEnabled
-                      ? "text-red-600"
-                      : "text-red-200"
+                    ? "text-red-600"
                     : operatorBalancePln > 0
-                      ? marketplaceEnabled
-                        ? "text-[var(--mp-teal-dark)]"
-                        : "text-emerald-100"
-                      : marketplaceEnabled
-                        ? "text-zinc-500"
-                        : "text-white/70"
+                      ? "text-[var(--mp-teal-dark)]"
+                      : "text-zinc-500"
                 )}
               >
                 {formatWalletPln(operatorBalancePln)}
@@ -680,13 +657,13 @@ export function PlayerWalletPanel({
           <div
             className={cn(
               "mt-4 border-t pt-4",
-              marketplaceEnabled ? "border-zinc-200 dark:border-zinc-700" : "border-white/10"
+              "border-zinc-200 dark:border-zinc-700"
             )}
           >
             <p
               className={cn(
                 "mb-3 text-sm font-medium",
-                marketplaceEnabled ? "text-red-600" : "text-red-200"
+                "text-red-600"
               )}
             >
               Zaległość do uregulowania:{" "}
@@ -705,7 +682,7 @@ export function PlayerWalletPanel({
           <div
             className={cn(
               "mt-4 flex flex-col gap-2 border-t pt-4 sm:flex-row sm:items-end",
-              marketplaceEnabled ? "border-zinc-200 dark:border-zinc-700" : "border-white/10"
+              "border-zinc-200 dark:border-zinc-700"
             )}
           >
             <div className="flex-1">
@@ -713,7 +690,7 @@ export function PlayerWalletPanel({
                 htmlFor="player-topup-amount"
                 className={cn(
                   "text-xs font-semibold uppercase tracking-wide",
-                  marketplaceEnabled ? "text-zinc-600 dark:text-zinc-300" : "text-white/70"
+                  "text-zinc-600 dark:text-zinc-300"
                 )}
               >
                 Kwota (PLN)
@@ -723,12 +700,7 @@ export function PlayerWalletPanel({
                 type="number"
                 min={0.01}
                 step={0.01}
-                className={cn(
-                  "mt-1",
-                  marketplaceEnabled
-                    ? paymentsFieldClass
-                    : "w-full rounded-lg border border-white/20 bg-white/10 px-3 py-2.5 text-base font-semibold text-white placeholder-white/40 outline-none focus:border-white/50 focus:bg-white/15"
-                )}
+                className={cn("mt-1", paymentsFieldClass)}
                 placeholder="np. 50"
                 value={topupAmount}
                 onChange={(e) => setTopupAmount(e.target.value)}
@@ -759,7 +731,6 @@ export function PlayerWalletPanel({
   return (
     <div className={cn("space-y-4", className)}>
       {!compact ? (
-        marketplaceEnabled ? (
           <div className="overflow-hidden rounded-3xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
             <PhotoPanel
               src={MARKETPLACE_PITCH_PHOTOS[1]}
@@ -772,39 +743,20 @@ export function PlayerWalletPanel({
             </PhotoPanel>
             <div className="p-5 sm:p-6">{balancePanel}</div>
           </div>
-        ) : (
-          <PitchCard contentClassName="px-5 py-5 sm:px-6 sm:py-6">
-            <div className="mb-4 flex flex-col items-center gap-2 text-center">
-              <span className={pitchLabelClass}>Twój portfel</span>
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/15 ring-2 ring-white/30 backdrop-blur-[2px]">
-                <SiteAssetImage
-                  asset="logo_crest"
-                  alt=""
-                  width={128}
-                  height={128}
-                  className="h-10 w-10 drop-shadow"
-                  sizes="40px"
-                />
-              </div>
-              <h2 className="text-xl font-bold tracking-tight text-white drop-shadow-sm sm:text-2xl">Saldo konta</h2>
-            </div>
-            {balancePanel}
-          </PitchCard>
-        )
       ) : (
         <div
           className={cn(
-            marketplaceEnabled ? paymentsInnerPanelClass : "rounded-xl border border-white/25 bg-black/10 p-4 backdrop-blur-sm",
+            paymentsInnerPanelClass,
             "flex flex-wrap items-center justify-between gap-3",
             walletBalancePln != null && walletBalancePln < 0 && "border-red-300/40",
-            walletBalancePln != null && walletBalancePln > 0 && (marketplaceEnabled ? "border-teal-200" : "border-emerald-300/35")
+            walletBalancePln != null && walletBalancePln > 0 && "border-teal-200"
           )}
         >
           <div>
             <p
               className={cn(
                 "text-xs font-semibold uppercase tracking-wide",
-                marketplaceEnabled ? "text-[var(--mp-teal-dark)]" : "text-emerald-100/70"
+                "text-[var(--mp-teal-dark)]"
               )}
             >
               Saldo
@@ -812,11 +764,11 @@ export function PlayerWalletPanel({
             <p
               className={cn(
                 "mt-1 text-3xl font-bold tabular-nums",
-                marketplaceEnabled ? "text-zinc-950 dark:text-white" : "text-white",
-                walletBalancePln != null && walletBalancePln < 0 && (marketplaceEnabled ? "text-red-600" : "text-red-200"),
+                "text-zinc-950 dark:text-white",
+                walletBalancePln != null && walletBalancePln < 0 && ("text-red-600"),
                 walletBalancePln != null &&
                   walletBalancePln > 0 &&
-                  (marketplaceEnabled ? "text-[var(--mp-teal-dark)]" : "text-emerald-100")
+                  ("text-[var(--mp-teal-dark)]")
               )}
             >
               {walletBalancePln === null ? "—" : formatWalletPln(walletBalancePln)}
@@ -831,7 +783,7 @@ export function PlayerWalletPanel({
       <PaymentsCard
         title="Historia operacji"
         description="Wpłaty, mecze i przelewy — pogrupowane według dnia. Najnowsze na górze."
-        headerExtra={<ChromeIconBadge icon={Wallet} marketplace={marketplaceEnabled} />}
+        headerExtra={<ChromeIconBadge icon={Wallet} />}
       >
         <WalletBalanceHistory
           loading={walletLoading}

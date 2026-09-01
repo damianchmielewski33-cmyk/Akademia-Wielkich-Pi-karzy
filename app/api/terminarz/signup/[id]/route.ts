@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { getDb, logActivity } from "@/lib/db";
 import { requireUser, requireMatchInApiRealm } from "@/lib/api-helpers";
-import { normalizeTransportFromBody, validateTransportBody, type SignupTransportRow } from "@/lib/transport";
 import {
   assertMatchOpenForSignup,
   tryIncrementMatchSignedUp,
@@ -21,27 +20,6 @@ function parseCommitment(raw: unknown): "tentative" | "confirmed" | "declined" {
   if (o.commitment === "tentative") return "tentative";
   if (o.commitment === "declined") return "declined";
   return "confirmed";
-}
-
-function parseTransportBody(raw: unknown): SignupTransportRow | { error: string } {
-  if (raw === null || typeof raw !== "object") {
-    return { drives_car: 0, can_take_passengers: 0, needs_transport: 0 };
-  }
-  const o = raw as Record<string, unknown>;
-  if (!("drivesCar" in o) || typeof o.drivesCar !== "boolean") {
-    return { drives_car: 0, can_take_passengers: 0, needs_transport: 0 };
-  }
-  const err = validateTransportBody({
-    drivesCar: o.drivesCar,
-    canTakePassengers: typeof o.canTakePassengers === "boolean" ? o.canTakePassengers : undefined,
-    needsTransport: typeof o.needsTransport === "boolean" ? o.needsTransport : undefined,
-  });
-  if (err) return { error: err };
-  return normalizeTransportFromBody({
-    drivesCar: o.drivesCar,
-    canTakePassengers: typeof o.canTakePassengers === "boolean" ? o.canTakePassengers : undefined,
-    needsTransport: typeof o.needsTransport === "boolean" ? o.needsTransport : undefined,
-  });
 }
 
 export async function POST(req: Request, ctx: Ctx) {
@@ -158,12 +136,6 @@ export async function POST(req: Request, ctx: Ctx) {
     return NextResponse.json({ error: "Brak miejsc na ten mecz!" }, { status: 400 });
   }
 
-  const tr = parseTransportBody(rawBody);
-  if ("error" in tr && typeof tr.error === "string") {
-    return NextResponse.json({ error: tr.error }, { status: 400 });
-  }
-  const transport = tr as SignupTransportRow;
-
   const incremented = await tryIncrementMatchSignedUp(db, mid);
   if (!incremented) {
     return NextResponse.json({ error: "Brak miejsc na ten mecz!" }, { status: 400 });
@@ -173,15 +145,9 @@ export async function POST(req: Request, ctx: Ctx) {
     await db
       .prepare(
         `INSERT INTO match_signups (user_id, match_id, paid, commitment, drives_car, can_take_passengers, needs_transport)
-         VALUES (?, ?, 0, 1, ?, ?, ?)`
+         VALUES (?, ?, 0, 1, 0, 0, 0)`
       )
-      .run(
-        gate.session.userId,
-        mid,
-        transport.drives_car,
-        transport.can_take_passengers,
-        transport.needs_transport
-      );
+      .run(gate.session.userId, mid);
   } catch (e) {
     await decrementMatchSignedUp(db, mid);
     throw e;

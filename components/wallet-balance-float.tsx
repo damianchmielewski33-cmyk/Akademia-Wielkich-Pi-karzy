@@ -21,9 +21,8 @@ type Props = {
 };
 
 export function WalletBalanceFloat({ enabled = true }: Props) {
-  const { mode, marketplaceEnabled } = useSiteMode();
+  const { mode } = useSiteMode();
   const active = enabled && mode === "academy";
-  const stadium = !marketplaceEnabled;
   const [mounted, setMounted] = useState(false);
   const [balancePln, setBalancePln] = useState<number | null>(null);
 
@@ -61,17 +60,8 @@ export function WalletBalanceFloat({ enabled = true }: Props) {
       className={cn(
         "group fixed z-[60] flex items-center gap-2 overflow-hidden px-2.5 py-2 shadow-lg transition-[transform,box-shadow] motion-safe:hover:-translate-y-0.5 hover:shadow-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent",
         "bottom-[max(0.75rem,env(safe-area-inset-bottom))] right-3 max-w-[min(calc(100%-1.5rem),11.5rem)] sm:bottom-5 sm:right-5",
-        stadium
-          ? cn(
-              "rounded-2xl border-2 border-white/30 ring-1 focus-visible:ring-emerald-400",
-              negative
-                ? "shadow-red-950/25 ring-red-400/30"
-                : "shadow-emerald-950/20 ring-emerald-950/15"
-            )
-          : cn(
-              "rounded-xl border ring-1 focus-visible:ring-emerald-400/60",
-              negative ? "border-red-300/50 ring-red-400/30" : "border-white/40 ring-emerald-300/35"
-            )
+        "rounded-xl border ring-1 focus-visible:ring-emerald-400/60",
+        negative ? "border-red-300/50 ring-red-400/30" : "border-white/40 ring-emerald-300/35"
       )}
       aria-label={
         known
@@ -79,21 +69,8 @@ export function WalletBalanceFloat({ enabled = true }: Props) {
           : "Płatności — wczytywanie salda"
       }
     >
-      {stadium ? (
-        <>
-          <div className="home-pitch-tile absolute inset-0" aria-hidden />
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 opacity-45" aria-hidden>
-            <SiteAssetImage asset="bg_pitch_lines" decorative fill className="object-cover object-bottom" sizes="200px" />
-          </div>
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-0.5 bg-white/45" aria-hidden />
-          <div className="pointer-events-none absolute left-0 top-0 h-6 w-6 rounded-br-md border-b-2 border-r-2 border-white/40" aria-hidden />
-        </>
-      ) : (
-        <>
-          <MarketplacePitchPhoto src={MARKETPLACE_PITCH_PHOTOS[0]} className="z-0" sizes="200px" />
-          <div className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-t from-black/70 via-black/45 to-black/25" aria-hidden />
-        </>
-      )}
+      <MarketplacePitchPhoto src={MARKETPLACE_PITCH_PHOTOS[0]} className="z-0" sizes="200px" />
+      <div className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-t from-black/70 via-black/45 to-black/25" aria-hidden />
       {negative ? (
         <div className="pointer-events-none absolute inset-0 z-[2] bg-red-600/20 motion-safe:animate-pulse" aria-hidden />
       ) : null}
@@ -107,19 +84,14 @@ export function WalletBalanceFloat({ enabled = true }: Props) {
         />
       </div>
       <div className="relative z-10 min-w-0 flex-1 text-left">
-        <p
-          className={cn(
-            "text-[0.6rem] font-bold uppercase leading-none tracking-[0.12em]",
-            stadium ? "text-[var(--mundial-gold,#f5c518)]" : "text-emerald-100/85"
-          )}
-        >
+        <p className="text-[0.6rem] font-bold uppercase leading-none tracking-[0.12em] text-emerald-100/85">
           Saldo
         </p>
         <p
           className={cn(
             "mt-0.5 truncate text-sm font-extrabold tabular-nums leading-tight text-white drop-shadow-sm",
             negative && "text-red-100",
-            positive && !stadium && "text-emerald-50",
+            positive && "text-emerald-50",
             !known && "text-white/70"
           )}
         >

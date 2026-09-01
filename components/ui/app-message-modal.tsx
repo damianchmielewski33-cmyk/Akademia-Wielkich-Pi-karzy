@@ -68,7 +68,8 @@ export function AppMessageModal({ state, onOpenChange, okLabel = "OK" }: AppMess
       footer={
         <Button
           type="button"
-          variant={state.tone === "error" ? "destructive" : "pitch"}
+          variant={state.tone === "error" ? "destructive" : "default"}
+          className={state.tone !== "error" ? "rounded-full font-bold" : undefined}
           onClick={() => onOpenChange(false)}
         >
           {okLabel}
@@ -81,7 +82,7 @@ export function AppMessageModal({ state, onOpenChange, okLabel = "OK" }: AppMess
             "flex h-10 w-10 shrink-0 items-center justify-center rounded-full",
             state.tone === "error" && "bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-200",
             state.tone === "success" &&
-              "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-200",
+              "bg-teal-100 text-[var(--mp-teal-dark)] dark:bg-teal-950/60 dark:text-teal-200",
             state.tone === "info" && "bg-sky-100 text-sky-800 dark:bg-sky-950/60 dark:text-sky-200"
           )}
         >

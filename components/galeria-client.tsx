@@ -152,7 +152,7 @@ export function GaleriaClient({ videos: initialVideos, isAdmin }: Props) {
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button type="button" variant="pitch" className="gap-2" disabled={busy} onClick={openCreate}>
+              <Button type="button" className="gap-2 rounded-full font-bold" disabled={busy} onClick={openCreate}>
                 <Plus className="h-4 w-4 shrink-0" aria-hidden />
                 Dodaj link
               </Button>

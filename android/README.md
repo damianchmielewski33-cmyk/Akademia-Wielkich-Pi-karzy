@@ -49,7 +49,7 @@ Po zalogowaniu masz te same obszary co na stronie:
 - **Dolny pasek:** Start · Terminarz · Portfel · Profil  
 - **Start:** najbliższy mecz u góry + kafelki jak menu WWW (wszystkie sekcje)  
 - **Natywnie:** Terminarz (zapisy/skład/archiwum), Portfel, Statystyki, Rankingi, Składy, Profil  
-- **WebView (ta sama sesja):** Piłkarze, Galeria, O nas, Kontakt, PZU Cup, Transport, Panel admina, pełny profil/płatności  
+- **WebView (ta sama sesja):** Piłkarze, Galeria, O nas, Kontakt, PZU Cup, Panel admina, pełny profil/płatności  
 
 Wygląd: ciemna murawa, navy/purple Mundial, złote akcenty, font Teko w nagłówkach — jak na stronie.
 

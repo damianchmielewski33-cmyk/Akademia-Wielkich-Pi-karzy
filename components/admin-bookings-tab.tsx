@@ -315,7 +315,7 @@ export function AdminBookingsTab() {
             onChange={(e) => setInviteLabel(e.target.value)}
             className="sm:flex-1"
           />
-          <Button variant="gold" onClick={() => void createInvite()}>
+          <Button variant="default" className="rounded-full font-bold" onClick={() => void createInvite()}>
             Wygeneruj i skopiuj link
           </Button>
         </div>
@@ -382,7 +382,7 @@ export function AdminBookingsTab() {
             <FormInput label="Zdjęcie 2 (URL)" className="sm:col-span-2" value={venueForm.photo_2} onChange={(e) => setVenueForm({ ...venueForm, photo_2: e.target.value })} />
             <FormInput label="Zdjęcie 3 (URL)" className="sm:col-span-2" value={venueForm.photo_3} onChange={(e) => setVenueForm({ ...venueForm, photo_3: e.target.value })} />
           </div>
-          <Button className="mt-4" variant="gold" onClick={createVenue} disabled={busy}>
+          <Button className="mt-4 rounded-full font-bold" variant="default" onClick={createVenue} disabled={busy}>
             Dodaj obiekt
           </Button>
         </AdminCard>
@@ -418,7 +418,7 @@ export function AdminBookingsTab() {
             <FormInput label="Otwarte od" type="time" value={pitchForm.opens_at} onChange={(e) => setPitchForm({ ...pitchForm, opens_at: e.target.value })} />
             <FormInput label="Otwarte do" type="time" value={pitchForm.closes_at} onChange={(e) => setPitchForm({ ...pitchForm, closes_at: e.target.value })} />
           </div>
-          <Button className="mt-4" variant="gold" onClick={createPitch} disabled={busy || !pitchForm.venue_id}>
+          <Button className="mt-4 rounded-full font-bold" variant="default" onClick={createPitch} disabled={busy || !pitchForm.venue_id}>
             Dodaj boisko
           </Button>
         </AdminCard>

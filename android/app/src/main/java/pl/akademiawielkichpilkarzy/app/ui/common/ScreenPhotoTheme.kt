@@ -18,7 +18,6 @@ enum class ScreenPhotoTheme {
     Lineups,
     Players,
     Gallery,
-    Transport,
     About,
     Contact,
     Cup,
@@ -36,7 +35,6 @@ fun ScreenPhotoTheme.photoRes(): Int = when (this) {
     ScreenPhotoTheme.Lineups -> R.drawable.bg_pitch_home
     ScreenPhotoTheme.Players -> R.drawable.bg_pitch_players
     ScreenPhotoTheme.Gallery -> R.drawable.bg_pitch_profile
-    ScreenPhotoTheme.Transport -> R.drawable.bg_pitch_gallery
     ScreenPhotoTheme.About -> R.drawable.stadium_hero
     ScreenPhotoTheme.Contact -> R.drawable.bg_pitch_players
     ScreenPhotoTheme.Cup -> R.drawable.bg_pitch_schedule
@@ -53,7 +51,6 @@ fun ScreenPhotoTheme.photoAlignment(): Alignment = when (this) {
     ScreenPhotoTheme.Lineups -> Alignment.BottomCenter
     ScreenPhotoTheme.Players -> Alignment.TopStart
     ScreenPhotoTheme.Gallery -> Alignment.Center
-    ScreenPhotoTheme.Transport -> Alignment.BottomStart
     ScreenPhotoTheme.About -> Alignment.TopCenter
     ScreenPhotoTheme.Contact -> Alignment.CenterEnd
     ScreenPhotoTheme.Cup -> Alignment.TopEnd
@@ -107,11 +104,6 @@ fun ScreenPhotoTheme.washColors(): List<Color> = when (this) {
         Color(0xA3081018),
         Color(0x77000A08),
         Color(0xE6061410)
-    )
-    ScreenPhotoTheme.Transport -> listOf(
-        Color(0xA31A2D5A),
-        Color(0x770B1C18),
-        Color(0xE6081018)
     )
     ScreenPhotoTheme.Cup -> listOf(
         Color(0xB31A2D5A),

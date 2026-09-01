@@ -1,7 +1,6 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { SiteAssetImage } from "@/components/site-asset-image";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Check, ClipboardCopy, Loader2, Search } from "lucide-react";
 import { toast } from "@/lib/app-toast";
@@ -12,8 +11,6 @@ import { Label } from "@/components/ui/label";
 import { AdminCard, AdminToolbar, adminPanelInnerClass } from "@/components/admin-ui";
 import { AdminFilterChips } from "@/components/admin-row-actions";
 import { PhotoPanel } from "@/components/photo-panel";
-import { useSiteMode } from "@/components/site-mode";
-import { PitchCardDecorations, pitchLabelClass } from "@/components/ui/pitch-card";
 import type { PlatnosciUserLite } from "@/components/platnosci-client";
 import { MARKETPLACE_PITCH_PHOTOS } from "@/lib/marketplace-photos";
 import { cn } from "@/lib/utils";
@@ -142,10 +139,10 @@ function PlatnosciCollapsible({
       )}>
         <span className="flex items-center justify-between gap-3">
           <span>{title}</span>
-          <span className={cn("text-xs font-medium group-open:hidden", embedded ? "text-zinc-600 dark:text-zinc-400" : "text-emerald-100/70")}>Rozwiń</span>
-          <span className={cn("hidden text-xs font-medium group-open:inline", embedded ? "text-zinc-600 dark:text-zinc-400" : "text-emerald-100/70")}>Zwiń</span>
+          <span className={cn("text-xs font-medium group-open:hidden", embedded ? "text-zinc-600 dark:text-zinc-400" : "text-zinc-500")}>Rozwiń</span>
+          <span className={cn("hidden text-xs font-medium group-open:inline", embedded ? "text-zinc-600 dark:text-zinc-400" : "text-zinc-500")}>Zwiń</span>
         </span>
-        <span className={cn("mt-1 block text-xs font-normal", embedded ? "text-zinc-600 dark:text-zinc-400" : "pitch-muted")}>{description}</span>
+        <span className={cn("mt-1 block text-xs font-normal", embedded ? "text-zinc-600 dark:text-zinc-400" : "text-zinc-500")}>{description}</span>
       </summary>
       <div className="px-4 pb-4">{children}</div>
     </details>
@@ -313,7 +310,6 @@ export function AdminWalletsSaldoSection({
   showTopUp,
 }: AdminWalletsSaldoSectionProps) {
   const router = useRouter();
-  const { marketplaceEnabled } = useSiteMode();
   const linksEnabled = showPublicLinks ?? !embedded;
   const topUpEnabled = showTopUp ?? !embedded;
   const [walletTab, setWalletTab] = useState<"balances" | "topup" | "adjust" | "links">("balances");
@@ -895,7 +891,8 @@ export function AdminWalletsSaldoSection({
         <div className="flex flex-wrap gap-2">
           <Button
             type="button"
-            variant="gold"
+            variant="default"
+            className="rounded-full font-bold"
             disabled={publicLinkBusy}
             onClick={() => void generatePublicLink("last_match_wallets")}
           >
@@ -978,7 +975,7 @@ export function AdminWalletsSaldoSection({
                             : "border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
                           : active
                             ? "border-emerald-400/50 bg-emerald-500/25 text-white"
-                            : "border-white/20 bg-black/10 text-emerald-100/80 hover:bg-white/10 hover:text-white"
+                            : "border-zinc-200 bg-zinc-50 text-zinc-700 hover:border-[var(--mp-teal)]/40 hover:bg-teal-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
                       )}
                     >
                       {opt.label}
@@ -1046,7 +1043,8 @@ export function AdminWalletsSaldoSection({
           )}
           <Button
             type="button"
-            variant="gold"
+            variant="default"
+            className="rounded-full font-bold"
             disabled={publicLinkBusy || !playedMatchId}
             onClick={() => void generatePublicLink("match_wallets", playedMatchId ?? undefined)}
           >
@@ -1081,7 +1079,7 @@ export function AdminWalletsSaldoSection({
           onReload={() => void refresh()}
           loading={adminLoading}
         />
-      ) : marketplaceEnabled ? (
+      ) : (
         <div className="mx-auto max-w-4xl overflow-hidden rounded-3xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
           <PhotoPanel
             src={MARKETPLACE_PITCH_PHOTOS[3]}
@@ -1095,33 +1093,6 @@ export function AdminWalletsSaldoSection({
               Salda, doładowania po przelewie, korekty i linki do podsumowań.
             </p>
           </PhotoPanel>
-        </div>
-      ) : (
-        <div className="mx-auto max-w-4xl">
-          <div className="relative overflow-hidden rounded-2xl border-2 border-white/35 text-white shadow-lg shadow-emerald-950/20 ring-1 ring-emerald-950/15">
-            <div className="home-pitch-tile absolute inset-0" aria-hidden />
-            <PitchCardDecorations />
-            <div className="relative p-4 sm:p-5">
-              <div className="flex flex-wrap items-center gap-3 sm:gap-4">
-                <SiteAssetImage
-                  asset="logo_header"
-                  alt=""
-                  width={56}
-                  height={56}
-                  className="h-12 w-12 drop-shadow-md sm:h-14 sm:w-14"
-                />
-                <div className="min-w-0 text-left">
-                  <span className={pitchLabelClass}>Administrator</span>
-                  <h2 className="mt-1 text-xl font-bold tracking-tight text-white drop-shadow-sm sm:text-2xl">
-                    Portfele graczy
-                  </h2>
-                  <p className="mt-1 text-sm text-emerald-100/90">
-                    Salda, doładowania po przelewie, korekty i linki do podsumowań.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
       )}
 

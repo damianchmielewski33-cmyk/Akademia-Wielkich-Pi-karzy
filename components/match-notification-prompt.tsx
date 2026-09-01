@@ -130,14 +130,14 @@ export function MatchNotificationPrompt() {
       title="Powiadomienia o meczach"
       headerKicker="Powiadomienie"
       description="Czy chcesz otrzymywać powiadomienia o nowych terminach w terminarzu?"
-      icon={<Bell className="h-5 w-5 text-[var(--mundial-gold)]" aria-hidden />}
+      icon={<Bell className="h-5 w-5 text-[var(--mp-teal)]" aria-hidden />}
       contentClassName="space-y-5"
       footer={
         <>
           <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => void dismiss()} disabled={busy}>
             Nie, dziękuję
           </Button>
-          <Button type="button" variant="pitch" className="w-full sm:w-auto" onClick={() => void subscribe()} disabled={busy}>
+          <Button type="button" variant="default" className="w-full rounded-full font-bold sm:w-auto" onClick={() => void subscribe()} disabled={busy}>
             Zapisz i włącz powiadomienia
           </Button>
         </>
@@ -178,7 +178,7 @@ export function MatchNotificationPrompt() {
             checked={consent}
             onCheckedChange={setConsent}
             disabled={busy}
-            tone="pitch"
+            tone="light"
             aria-label="Zgoda na powiadomienia e-mail"
           />
         </div>

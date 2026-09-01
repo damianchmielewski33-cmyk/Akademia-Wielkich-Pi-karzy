@@ -68,7 +68,6 @@ export async function GET(req: Request) {
       lineup_pitch_slots_min: settings.lineup_pitch_slots_min,
       lineup_pitch_slots_max: settings.lineup_pitch_slots_max,
       match_cancel_reasons: settings.match_cancel_reasons,
-      booking_marketplace_enabled: settings.booking_marketplace_enabled === true,
       email_password_auth_enabled: settings.email_password_auth_enabled === true,
     },
     site_assets: settings.site_assets,

@@ -1,22 +1,43 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect } from "react";
 import { useSearchParams } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ExternalLink } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   AWP_SITE_NAME,
   GYMBRAT_SITE_NAME,
   getGymBratCrossLink,
 } from "@/lib/sister-sites";
 
-/** Pełnoekranowy iframe GymBrat w shellu AWP (APK + RWD). */
+/** Pełnoekranowy podgląd osadzenia (tylko gdy GymBrat zezwala na iframe: ?embed=1). */
 export function GymBratEmbedView() {
   const searchParams = useSearchParams();
   const path = searchParams.get("path")?.trim() || "/";
-  const src = getGymBratCrossLink(path.startsWith("/") ? path : `/${path}`);
+  const sisterPath = path.startsWith("/") ? path : `/${path}`;
+  const src = getGymBratCrossLink(sisterPath);
+  const forceEmbed = searchParams.get("embed") === "1";
+
+  useEffect(() => {
+    if (!forceEmbed) {
+      window.location.replace(src);
+    }
+  }, [forceEmbed, src]);
+
+  if (!forceEmbed) {
+    return (
+      <div className="flex min-h-dvh flex-col items-center justify-center gap-3 bg-zinc-950 px-6 text-center">
+        <p className="text-sm text-zinc-300">Przekierowanie do {GYMBRAT_SITE_NAME}…</p>
+        <Button asChild className="rounded-full font-bold">
+          <a href={src}>Kontynuuj</a>
+        </Button>
+      </div>
+    );
+  }
 
   return (
-    <div className="flex min-h-[calc(100dvh-3.5rem)] flex-col bg-zinc-950 md:min-h-[calc(100dvh-4rem)]">
+    <div className="flex min-h-dvh flex-col bg-zinc-950">
       <header className="flex shrink-0 items-center gap-3 border-b border-white/10 bg-zinc-950/95 px-3 py-2.5 backdrop-blur-sm sm:px-4">
         <Link
           href="/"
@@ -29,6 +50,17 @@ export function GymBratEmbedView() {
           /
         </span>
         <span className="truncate text-sm font-bold text-white">{GYMBRAT_SITE_NAME}</span>
+        <Button
+          asChild
+          size="sm"
+          variant="outline"
+          className="ml-auto rounded-full border-white/20 bg-transparent text-xs text-white hover:bg-white/10"
+        >
+          <a href={src} target="_blank" rel="noopener noreferrer">
+            <ExternalLink className="mr-1.5 h-3.5 w-3.5" aria-hidden />
+            Otwórz w nowej karcie
+          </a>
+        </Button>
       </header>
       <iframe
         title={GYMBRAT_SITE_NAME}

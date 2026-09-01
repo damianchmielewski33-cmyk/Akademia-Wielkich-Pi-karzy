@@ -61,6 +61,7 @@ import pl.akademiawielkichpilkarzy.app.BuildConfig
 import pl.akademiawielkichpilkarzy.app.data.api.ApiClient
 import pl.akademiawielkichpilkarzy.app.data.api.AppBridgeRequest
 import pl.akademiawielkichpilkarzy.app.ui.theme.AwpColors
+import pl.akademiawielkichpilkarzy.app.SisterSites
 import pl.akademiawielkichpilkarzy.app.update.AppUpdateRequests
 import retrofit2.HttpException
 
@@ -197,7 +198,15 @@ fun WebPortalScreen(
         startUrl = null
         loadedStartUrl = null
         try {
-            if (requireAuth) {
+            if (path.startsWith("/gymbrat")) {
+                val subPath = runCatching {
+                    val uri = Uri.parse("https://local$path")
+                    uri.getQueryParameter("path")?.let { p ->
+                        if (p.startsWith("/")) p else "/$p"
+                    } ?: "/"
+                }.getOrDefault("/")
+                startUrl = SisterSites.gymBratCrossLink(subPath)
+            } else if (requireAuth) {
                 val bridge = ApiClient.api.appBridge(AppBridgeRequest(next = path))
                 val bridgePath = bridge.path
                 if (bridgePath.isNullOrBlank()) {

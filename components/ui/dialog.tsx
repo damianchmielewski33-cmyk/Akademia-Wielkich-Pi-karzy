@@ -17,7 +17,7 @@ const DialogOverlay = React.forwardRef<
   <DialogPrimitive.Overlay
     ref={ref}
     className={cn(
-      "fixed inset-0 z-50 bg-[var(--mundial-navy)]/55 backdrop-blur-md data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+      "fixed inset-0 z-50 bg-zinc-950/50 backdrop-blur-md data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
       className
     )}
     {...props}
@@ -39,7 +39,7 @@ const DialogContent = React.forwardRef<
         "fixed left-[50%] z-50 flex w-[calc(100%-1rem)] max-w-lg translate-x-[-50%] flex-col gap-3 overflow-x-hidden overscroll-contain rounded-2xl border border-zinc-200/90 bg-white p-4 pt-6 shadow-[0_24px_80px_-24px_rgba(26,45,90,0.45),0_8px_24px_-8px_rgba(15,23,42,0.12)] duration-300 [-webkit-overflow-scrolling:touch] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-[0.98] data-[state=open]:zoom-in-[0.98] data-[state=closed]:slide-out-to-left-1/2 data-[state=open]:slide-in-from-left-1/2 xs:w-[calc(100%-1.5rem)] xs:p-5 xs:pt-6 dark:border-zinc-700/70 dark:bg-zinc-900 dark:shadow-[0_24px_80px_-24px_rgba(0,0,0,0.65)]",
         "top-[max(0.75rem,env(safe-area-inset-top))] max-h-[calc(100dvh-1.5rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] translate-y-0 overflow-y-auto data-[state=closed]:slide-out-to-top-2 data-[state=open]:slide-in-from-top-2",
         "sm:top-[50%] sm:max-h-[min(92dvh,calc(100dvh-1.5rem-env(safe-area-inset-top)-env(safe-area-inset-bottom)))] sm:translate-y-[-50%] sm:data-[state=closed]:slide-out-to-top-[48%] sm:data-[state=open]:slide-in-from-top-[48%]",
-        "before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-[3px] before:bg-gradient-to-r before:from-[var(--mundial-gold)] before:via-emerald-400 before:to-[var(--mundial-teal)]",
+        "before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-[3px] before:bg-gradient-to-r before:from-[var(--mp-teal)] before:via-teal-400 before:to-[var(--mp-teal-dark)]",
         "awp-modal-content [&>button]:absolute [&>button]:right-3 [&>button]:top-3 [&>button]:z-[100]",
         elevated && "z-[350]",
         // Style X na granatowym / foto nagłówku formularza — tylko gdy AppModal doda --form

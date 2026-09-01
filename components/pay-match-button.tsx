@@ -120,15 +120,14 @@ export function PayMatchButton({
   const payButton = (
     <Button
       type="button"
-      variant="gold"
       disabled={busy}
       onClick={() => void handlePay()}
       className={cn(
         compact
-          ? "h-auto min-h-12 w-full flex-1 font-bold"
+          ? "h-auto min-h-12 w-full flex-1 rounded-full font-bold"
           : cn(
-              "h-auto min-h-14 w-full shrink-0 px-6 py-3.5 text-base font-bold shadow-lg shadow-amber-950/25 ring-2 ring-amber-500/40 hover:ring-amber-400/60 sm:w-auto sm:min-w-[15rem]",
-              "bg-[var(--mundial-gold,#f5c518)] text-[var(--mundial-navy,#1a2d5a)] hover:bg-amber-200"
+              "h-auto min-h-14 w-full shrink-0 rounded-full px-6 py-3.5 text-base font-bold shadow-lg shadow-teal-950/20 ring-2 ring-[var(--mp-teal)]/30 hover:ring-[var(--mp-teal)]/50 sm:w-auto sm:min-w-[15rem]",
+              "bg-[var(--mp-teal)] text-white hover:bg-[var(--mp-teal-dark)]"
             )
       )}
     >
@@ -150,25 +149,25 @@ export function PayMatchButton({
   return (
     <div
       className={cn(
-        "overflow-hidden rounded-2xl border border-amber-300/50 bg-gradient-to-br from-amber-200/90 via-amber-300/95 to-yellow-400/90 p-4 shadow-lg shadow-amber-950/20 dark:border-amber-500/35 dark:from-amber-900/50 dark:via-amber-800/55 dark:to-yellow-700/45 dark:shadow-black/30 sm:p-5",
+        "overflow-hidden rounded-2xl border border-teal-200/80 bg-gradient-to-br from-teal-50 via-white to-teal-50/80 p-4 shadow-lg shadow-teal-950/10 dark:border-teal-900/50 dark:from-teal-950/40 dark:via-zinc-950 dark:to-teal-950/30 dark:shadow-black/30 sm:p-5",
         className
       )}
     >
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0 text-left">
-          <p className="text-xs font-bold uppercase tracking-[0.16em] text-amber-950/75 dark:text-amber-100/80">
+          <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--mp-teal-dark)] dark:text-teal-200">
             Wpisowe za mecz
           </p>
-          <p className="mt-1 text-sm font-medium text-amber-950/90 dark:text-amber-50">
+          <p className="mt-1 text-sm font-medium text-zinc-700 dark:text-zinc-200">
             Przelew BLIK na telefon{" "}
             <span className="font-bold tabular-nums">{details.blikPhoneDisplay}</span>
           </p>
           {details.amountPln != null ? (
-            <p className="mt-0.5 text-lg font-bold tabular-nums text-amber-950 dark:text-amber-50">
+            <p className="mt-0.5 text-lg font-bold tabular-nums text-[var(--mp-teal-dark)] dark:text-teal-100">
               {formatPln(details.amountPln)}
             </p>
           ) : (
-            <p className="mt-0.5 text-sm text-amber-950/80 dark:text-amber-100/85">
+            <p className="mt-0.5 text-sm text-zinc-600 dark:text-zinc-400">
               Kwotę ustal z saldem portfela lub wpisowym meczu.
             </p>
           )}
@@ -177,7 +176,7 @@ export function PayMatchButton({
         {payButton}
       </div>
 
-      <p className="mt-3 flex items-start gap-2 text-left text-xs leading-relaxed text-amber-950/75 dark:text-amber-100/80">
+      <p className="mt-3 flex items-start gap-2 text-left text-xs leading-relaxed text-zinc-600 dark:text-zinc-400">
         <Smartphone className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
         Na telefonie otworzy się aplikacja banku. Wybierz „Przelew BLIK na telefon”, wklej numer i potwierdź
         przelew.

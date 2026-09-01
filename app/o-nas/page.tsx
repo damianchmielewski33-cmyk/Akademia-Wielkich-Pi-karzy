@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Trophy, Users, BarChart2, Smartphone, Target, Star, Shield } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { PitchCard, PitchPageHero, pitchLabelClass } from "@/components/ui/pitch-card";
 import { getAppSettings } from "@/lib/app-settings";
 import { getDb } from "@/lib/db";
@@ -194,18 +195,12 @@ export default async function ONasPage() {
 
       {/* CTA */}
       <div className="mt-8 flex flex-col items-center gap-3 text-center sm:flex-row sm:justify-center">
-        <Link
-          href="/register"
-          className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-6 py-2.5 text-sm font-semibold text-white shadow-lg transition hover:bg-emerald-400"
-        >
-          Zarejestruj się
-        </Link>
-        <Link
-          href="/blog"
-          className="inline-flex items-center gap-2 rounded-xl border border-emerald-500/40 px-6 py-2.5 text-sm font-semibold text-emerald-300 transition hover:border-emerald-400 hover:text-emerald-200"
-        >
-          Czytaj nasz blog →
-        </Link>
+        <Button asChild className="rounded-full font-bold">
+          <Link href="/register">Zarejestruj się</Link>
+        </Button>
+        <Button asChild variant="outline" className="rounded-full font-bold">
+          <Link href="/blog">Czytaj nasz blog →</Link>
+        </Button>
       </div>
 
       <p className="mt-8 text-center">

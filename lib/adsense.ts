@@ -9,7 +9,6 @@ const ADS_BLOCKED_PREFIXES = [
   "/register",
   "/ustaw-pin",
   "/profil",
-  "/transport",
   "/confirm",
   "/api",
   "/offline",

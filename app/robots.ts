@@ -14,7 +14,6 @@ export default function robots(): MetadataRoute.Robots {
         "/profil",
         "/platnosci",
         "/ustaw-pin",
-        "/transport/",
         "/confirm/",
       ],
     },

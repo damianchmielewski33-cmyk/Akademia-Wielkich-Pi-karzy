@@ -58,7 +58,6 @@ import pl.akademiawielkichpilkarzy.app.ui.common.ScreenHeader
 import pl.akademiawielkichpilkarzy.app.ui.home.HomeNavActions
 import pl.akademiawielkichpilkarzy.app.ui.home.HomeScreen
 import pl.akademiawielkichpilkarzy.app.ui.lineups.LineupsScreen
-import pl.akademiawielkichpilkarzy.app.ui.native.TransportScreen
 import pl.akademiawielkichpilkarzy.app.ui.profile.ProfileScreen
 import pl.akademiawielkichpilkarzy.app.ui.rankings.RankingsScreen
 import pl.akademiawielkichpilkarzy.app.ui.schedule.ScheduleScreen
@@ -95,7 +94,6 @@ fun MainScaffold(
         current == "stats" || current == "rankings" || current == "lineups" -> "home"
         current?.startsWith("web/") == true -> "home"
         current?.startsWith("pay_return/") == true -> "wallet"
-        current?.startsWith("transport/") == true -> "schedule"
         else -> current
     }
     var mobileConfig by remember { mutableStateOf<MobileConfigResponse?>(null) }
@@ -186,6 +184,7 @@ private fun NativeMainScaffold(
     }
 
     fun openPortal(title: String, path: String, requireAuth: Boolean = true) {
+        val auth = if (path.startsWith("/gymbrat")) false else requireAuth
         val route = when {
             path.startsWith("/profil") -> "profile"
             // Query (?payment=&session_id=) nie może iść w route Nav jako zwykły Uri.encode —
@@ -206,7 +205,7 @@ private fun NativeMainScaffold(
             }
             path.startsWith("/platnosci") -> "wallet"
             path.startsWith("/terminarz") -> "schedule"
-            else -> "web/${Uri.encode(title)}/${Uri.encode(path)}/$requireAuth"
+            else -> "web/${Uri.encode(title)}/${Uri.encode(path)}/$auth"
         }
         goTab(route)
     }
@@ -226,11 +225,6 @@ private fun NativeMainScaffold(
                 openPortal("Terminarz", initialPath, requireAuth = true)
             }
         }
-    }
-
-    fun openTransport(matchId: Int) {
-        if (isBlocked("transport") != null) return
-        navController.navigate("transport/$matchId")
     }
 
     fun openStatsForMatch(matchId: Int) {
@@ -284,7 +278,6 @@ private fun NativeMainScaffold(
             if (blockKey != null && isBlocked(blockKey) != null) return@HomeNavActions
             openPortal(title, path)
         },
-        onOpenTransport = { openTransport(it) },
         onOpenStatsForMatch = { openStatsForMatch(it) },
         onLogout = { logout() },
         isAdmin = isAdmin,
@@ -452,13 +445,6 @@ private fun NativeMainScaffold(
                         onBack = { navController.popBackStack() }
                     )
                 }
-            }
-            composable(
-                route = "transport/{matchId}",
-                arguments = listOf(navArgument("matchId") { type = NavType.IntType })
-            ) { entry ->
-                val matchId = entry.arguments?.getInt("matchId") ?: return@composable
-                BlockedOrContent(message = isBlocked("transport")) { TransportScreen(matchId) }
             }
         }
     }

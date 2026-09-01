@@ -160,7 +160,7 @@ export function AdminScreenBlocksTab({ loading, onReload }: Props) {
         <Button type="button" variant="outline" size="sm" disabled={busy} onClick={() => setAllDisabled(false)}>
           Odkryj wszystkie
         </Button>
-        <Button type="button" variant="gold" size="sm" disabled={busy} onClick={() => void save()}>
+        <Button type="button" variant="default" size="sm" className="rounded-full font-bold" disabled={busy} onClick={() => void save()}>
           {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
           Zapisz zmiany
         </Button>
@@ -169,7 +169,7 @@ export function AdminScreenBlocksTab({ loading, onReload }: Props) {
       <AdminChannelToggle channel={channel} onChange={setChannel} className="mb-4" />
 
       <AdminCard className="mb-6" title="Jak to działa">
-        <ul className="list-inside list-disc space-y-1 text-sm pitch-muted">
+        <ul className="list-inside list-disc space-y-1 text-sm text-zinc-500">
           <li>
             <strong>Strona WWW</strong> — menu i strony akademii w przeglądarce.
           </li>
@@ -180,7 +180,7 @@ export function AdminScreenBlocksTab({ loading, onReload }: Props) {
           <li>Pusty komunikat = domyślny tekst: „{DEFAULT_SCREEN_BLOCK_MESSAGE}”</li>
         </ul>
         {disabledCount > 0 ? (
-          <p className="mt-3 text-sm font-medium text-amber-100">
+          <p className="mt-3 text-sm font-medium text-amber-700 dark:text-amber-200">
             Aktywnych zaślepek ({channel === "web" ? "strona" : "aplikacja"}): {disabledCount} /{" "}
             {channel === "web" ? BLOCKABLE_SCREENS.length : BLOCKABLE_MOBILE_SCREENS.length}
           </p>
@@ -231,7 +231,7 @@ export function AdminScreenBlocksTab({ loading, onReload }: Props) {
       )}
 
       <div className="mt-6 flex justify-end">
-        <Button type="button" variant="gold" disabled={busy} onClick={() => void save()}>
+        <Button type="button" variant="default" className="rounded-full font-bold" disabled={busy} onClick={() => void save()}>
           {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
           Zapisz zmiany
         </Button>
@@ -262,11 +262,11 @@ function BlockCard({
       <div className="space-y-4">
         <label className={adminToggleRowClass}>
           <span className="min-w-0">
-            <span className="flex items-center gap-2 text-sm font-semibold text-white">
-              <Construction className="h-4 w-4 shrink-0 text-amber-300/90" aria-hidden />
+            <span className="flex items-center gap-2 text-sm font-semibold text-zinc-950 dark:text-white">
+              <Construction className="h-4 w-4 shrink-0 text-[var(--mp-teal-dark)]" aria-hidden />
               {label}
             </span>
-            <span className="mt-1 block font-mono text-xs text-emerald-100/60">{pathHint}</span>
+            <span className="mt-1 block font-mono text-xs text-zinc-500">{pathHint}</span>
           </span>
           <span className="flex flex-wrap items-center gap-2">
             {showPreview && entry.disabled ? (
@@ -290,7 +290,7 @@ function BlockCard({
           <>
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="grid gap-1.5">
-                <Label className="text-sm font-semibold text-white">Aktywna od (opcjonalnie)</Label>
+                <Label className="text-sm font-semibold text-zinc-950 dark:text-white">Aktywna od (opcjonalnie)</Label>
                 <input
                   type="date"
                   className={adminFieldClass}
@@ -300,7 +300,7 @@ function BlockCard({
                 />
               </div>
               <div className="grid gap-1.5">
-                <Label className="text-sm font-semibold text-white">Aktywna do (opcjonalnie)</Label>
+                <Label className="text-sm font-semibold text-zinc-950 dark:text-white">Aktywna do (opcjonalnie)</Label>
                 <input
                   type="date"
                   className={adminFieldClass}
@@ -311,7 +311,7 @@ function BlockCard({
               </div>
             </div>
             <div className="grid gap-1.5">
-              <Label className="text-sm font-semibold text-white">Komunikat na zaślepce</Label>
+              <Label className="text-sm font-semibold text-zinc-950 dark:text-white">Komunikat na zaślepce</Label>
               <textarea
                 className={adminTextareaClass}
                 rows={3}

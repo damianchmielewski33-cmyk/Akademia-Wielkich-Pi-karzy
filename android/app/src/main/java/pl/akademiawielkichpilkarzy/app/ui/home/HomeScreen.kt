@@ -56,7 +56,6 @@ import pl.akademiawielkichpilkarzy.app.ui.theme.AwpColors
 data class HomeNavActions(
     val onNative: (String) -> Unit,
     val onPortal: (title: String, path: String) -> Unit,
-    val onOpenTransport: (matchId: Int) -> Unit,
     val onOpenStatsForMatch: (matchId: Int) -> Unit,
     val onLogout: () -> Unit,
     val isAdmin: Boolean = false,
@@ -168,7 +167,6 @@ fun HomeScreen(
                                             return@launch
                                         }
                                         reload()
-                                        nav.onOpenTransport(next.id)
                                     } catch (e: Exception) {
                                         actionError = e.message
                                     }
@@ -210,7 +208,6 @@ fun HomeScreen(
                                     }
                                 }
                             },
-                            onTransport = { nav.onOpenTransport(next.id) },
                             onOpenLineups = { nav.onNative("lineups") },
                             onOpenRoster = { rosterMatch = next }
                         )

@@ -1338,9 +1338,9 @@ html {
   background: linear-gradient(
     90deg,
     transparent,
-    var(--mundial-gold) 20%,
-    var(--mundial-teal) 50%,
-    var(--mundial-gold) 80%,
+    var(--mp-teal) 20%,
+    var(--mp-teal-dark) 50%,
+    var(--mp-teal) 80%,
     transparent
   );
 }

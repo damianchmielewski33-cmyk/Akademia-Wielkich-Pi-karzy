@@ -6,18 +6,12 @@ import { AppModal } from "@/components/ui/app-modal";
 import { extractApiErrorMessage, useAppMessage } from "@/components/ui/app-message-modal";
 import { Button } from "@/components/ui/button";
 import {
-  adminEmptyStateClass,
-  adminFieldClass,
-  adminInnerPanelClass,
-} from "@/components/admin-ui";
-import {
   ChromeIconBadge,
   PaymentsCard,
   paymentsEmptyClass,
   paymentsFieldClass,
   paymentsInnerPanelClass,
 } from "@/components/payments-card";
-import { useSiteMode } from "@/components/site-mode";
 import { formatMatchFeePln, MATCH_PREPAYMENT_PLN } from "@/lib/match-fee";
 import { cn } from "@/lib/utils";
 import type { MatchCartMatchOption } from "@/lib/match-cart";
@@ -40,8 +34,6 @@ export function MatchCartPayPanel({
   onPaid,
   className,
 }: Props) {
-  const { marketplaceEnabled } = useSiteMode();
-  const light = marketplaceEnabled;
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [matches, setMatches] = useState<MatchCartMatchOption[]>([]);
@@ -213,7 +205,7 @@ export function MatchCartPayPanel({
     }
   }
 
-  const btnVariant = light ? "default" : "gold";
+  const btnVariant = "default" as const;
 
   return (
     <PaymentsCard
@@ -221,35 +213,29 @@ export function MatchCartPayPanel({
       className={className}
       title="Opłać mecz (koszyk)"
       description={`Zaliczka ${formatMatchFeePln(MATCH_PREPAYMENT_PLN)} na osobę — jeśli ostateczna składka będzie niższa, różnica wraca na portfel płatnika. Możesz opłacić siebie i innych z portfela${hotpayEnabled ? " albo kartą / Blikiem" : ""}.`}
-      headerExtra={<ChromeIconBadge icon={ShoppingCart} marketplace={marketplaceEnabled} />}
+      headerExtra={<ChromeIconBadge icon={ShoppingCart} marketplace />}
     >
       {loading ? (
-        <p className={cn("flex items-center gap-2 text-sm", light ? "text-zinc-500" : "pitch-muted")}>
+        <p className="flex items-center gap-2 text-sm text-zinc-500">
           <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
           Wczytywanie meczów…
         </p>
       ) : matches.length === 0 ? (
-        <p className={light ? paymentsEmptyClass : adminEmptyStateClass}>
+        <p className={paymentsEmptyClass}>
           Brak nadchodzących meczów z nieopłaconymi zapisami.
         </p>
       ) : (
         <div className="space-y-4">
-          <div className={light ? paymentsInnerPanelClass : adminInnerPanelClass}>
+          <div className={paymentsInnerPanelClass}>
             <label
               htmlFor="match-cart-match"
-              className={cn(
-                "text-xs font-semibold uppercase tracking-wide",
-                light ? "text-[var(--mp-teal-dark)]" : "text-emerald-100/70"
-              )}
+              className="text-xs font-semibold uppercase tracking-wide text-[var(--mp-teal-dark)]"
             >
               Mecz
             </label>
             <select
               id="match-cart-match"
-              className={cn(
-                "mt-1 flex h-10 w-full rounded-xl px-3 text-sm",
-                light ? paymentsFieldClass : adminFieldClass
-              )}
+              className={cn("mt-1 flex h-10 w-full rounded-xl px-3 text-sm", paymentsFieldClass)}
               value={matchId ?? ""}
               onChange={(e) => setMatchId(Number(e.target.value))}
             >
@@ -262,69 +248,39 @@ export function MatchCartPayPanel({
           </div>
 
           {selectedMatch ? (
-            <div className={light ? paymentsInnerPanelClass : adminInnerPanelClass}>
+            <div className={paymentsInnerPanelClass}>
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <p
-                  className={cn(
-                    "text-xs font-semibold uppercase tracking-wide",
-                    light ? "text-[var(--mp-teal-dark)]" : "text-emerald-100/70"
-                  )}
-                >
+                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--mp-teal-dark)]">
                   Nieopłaceni ({selectedMatch.unpaid_players.length})
                 </p>
                 <Button type="button" variant={btnVariant} size="sm" onClick={selectAll}>
                   Zaznacz wszystkich
                 </Button>
               </div>
-              <ul
-                className={cn(
-                  "mt-2 max-h-48 space-y-1 overflow-y-auto rounded-xl border p-2",
-                  light
-                    ? "border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-950"
-                    : "border-white/20 bg-black/15"
-                )}
-              >
+              <ul className="mt-2 max-h-48 space-y-1 overflow-y-auto rounded-xl border border-zinc-200 bg-white p-2 dark:border-zinc-700 dark:bg-zinc-950">
                 {selectedMatch.unpaid_players.map((p) => {
                   const label =
                     [p.first_name, p.last_name].filter(Boolean).join(" ").trim() || p.zawodnik;
                   const checked = selectedIds.includes(p.user_id);
                   return (
                     <li key={p.user_id}>
-                      <label
-                        className={cn(
-                          "flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm",
-                          light ? "hover:bg-zinc-100 dark:hover:bg-zinc-800" : "hover:bg-white/10"
-                        )}
-                      >
+                      <label className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">
                         <input
                           type="checkbox"
-                          className={cn(
-                            "h-4 w-4",
-                            light ? "accent-[var(--mp-teal)]" : "accent-[var(--mundial-gold,#c9a227)]"
-                          )}
+                          className="h-4 w-4 accent-[var(--mp-teal)]"
                           checked={checked}
                           onChange={() => togglePlayer(p.user_id)}
                         />
-                        <span
-                          className={cn(
-                            "min-w-0 flex-1 truncate",
-                            light ? "text-zinc-900 dark:text-zinc-50" : "text-white"
-                          )}
-                        >
+                        <span className="min-w-0 flex-1 truncate text-zinc-900 dark:text-zinc-50">
                           {label}
                           {Number(p.is_temporary) === 1 ? (
                             <span className="text-amber-600 dark:text-amber-300"> · gość</span>
                           ) : null}
                           {p.zawodnik ? (
-                            <span className={light ? "text-zinc-500" : "text-emerald-100/70"}> · {p.zawodnik}</span>
+                            <span className="text-zinc-500"> · {p.zawodnik}</span>
                           ) : null}
                         </span>
-                        <span
-                          className={cn(
-                            "tabular-nums text-xs",
-                            light ? "text-zinc-500" : "text-emerald-100/70"
-                          )}
-                        >
+                        <span className="tabular-nums text-xs text-zinc-500">
                           {formatMatchFeePln(selectedMatch.fee_per_person_pln)}
                         </span>
                       </label>
@@ -335,33 +291,16 @@ export function MatchCartPayPanel({
             </div>
           ) : null}
 
-          <div
-            className={cn(
-              "flex flex-wrap items-center justify-between gap-3 rounded-xl border px-3 py-3",
-              light
-                ? "border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900/80"
-                : "border-white/25 bg-black/20 backdrop-blur-sm"
-            )}
-          >
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-3 dark:border-zinc-800 dark:bg-zinc-900/80">
             <div>
-              <p
-                className={cn(
-                  "text-xs font-semibold uppercase tracking-wide",
-                  light ? "text-[var(--mp-teal-dark)]" : "text-emerald-100/70"
-                )}
-              >
+              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--mp-teal-dark)]">
                 Suma koszyka
               </p>
-              <p
-                className={cn(
-                  "mt-0.5 text-xl font-bold tabular-nums",
-                  light ? "text-zinc-950 dark:text-white" : "text-white"
-                )}
-              >
+              <p className="mt-0.5 text-xl font-bold tabular-nums text-zinc-950 dark:text-white">
                 {selectedIds.length === 0 ? "—" : formatMatchFeePln(totalPln)}
               </p>
               {balancePln != null ? (
-                <p className={cn("mt-0.5 text-xs", light ? "text-zinc-500" : "pitch-muted")}>
+                <p className="mt-0.5 text-xs text-zinc-500">
                   Twoje saldo: {formatMatchFeePln(balancePln)}
                   {needsHotpay ? " · brakuje środków" : ""}
                 </p>

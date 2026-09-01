@@ -2,7 +2,6 @@
 
 import type { ReactNode } from "react";
 import { SiteAssetImage } from "@/components/site-asset-image";
-import { useSiteMode } from "@/components/site-mode";
 import { cn } from "@/lib/utils";
 
 export const PAGE_HERO_KICKER = "Akademia Wielkich Piłkarzy";
@@ -32,8 +31,7 @@ export function SiteSectionHero({
   titleId,
   children,
 }: Props) {
-  const { marketplaceEnabled } = useSiteMode();
-  const resolvedVariant = variant ?? (marketplaceEnabled ? "marketplace" : "stadium");
+  const resolvedVariant = variant ?? "marketplace";
   const centered = align === "center";
 
   return (

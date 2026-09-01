@@ -27,8 +27,6 @@ import { MatchSignupCountsBlock } from "@/components/terminarz-match-counts";
 import { PayButton } from "@/components/pay-button";
 import { PhotoPanel } from "@/components/photo-panel";
 import { SiteAssetImage } from "@/components/site-asset-image";
-import { SiteSectionHero } from "@/components/site-section-hero";
-import { useSiteMode } from "@/components/site-mode";
 import { Button } from "@/components/ui/button";
 import { FormInput } from "@/components/ui/form-field";
 import { formSchemas, useValidatedForm } from "@/lib/form-validation";
@@ -172,7 +170,6 @@ export function InviteMatchCard({
   showGatePin?: boolean;
   onViewRoster?: () => void;
 }) {
-  const { marketplaceEnabled } = useSiteMode();
   const when = formatMatchWhen(match.match_date, match.match_time);
   const slots = slotMeta(match.signed_up, match.max_slots);
   const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(match.location)}`;
@@ -183,9 +180,7 @@ export function InviteMatchCard({
       ? "bg-red-400/90"
       : slots.tone === "warn"
         ? "bg-amber-400/90"
-        : marketplaceEnabled
-          ? "bg-[var(--mp-teal)]"
-          : "bg-emerald-100";
+        : "bg-[var(--mp-teal)]";
 
   return (
     <PhotoPanel
@@ -220,44 +215,18 @@ export function InviteMatchCard({
         </div>
 
         <div className="mt-5 flex flex-wrap items-center gap-2">
-          <span
-            className={cn(
-              "inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold tabular-nums shadow-md",
-              marketplaceEnabled
-                ? "bg-white/95 text-zinc-950 shadow-black/20"
-                : "bg-emerald-100 text-emerald-950 shadow-emerald-950/20"
-            )}
-          >
-            <Calendar
-              className={cn("h-3.5 w-3.5", marketplaceEnabled ? "text-[var(--mp-teal-dark)]" : "text-emerald-800")}
-              aria-hidden
-            />
+          <span className="inline-flex items-center gap-1.5 rounded-lg bg-white/95 px-3 py-2 text-sm font-semibold tabular-nums text-zinc-950 shadow-md shadow-black/20">
+            <Calendar className="h-3.5 w-3.5 text-[var(--mp-teal-dark)]" aria-hidden />
             {when.label}
           </span>
-          <span
-            className={cn(
-              "inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold tabular-nums shadow-md",
-              marketplaceEnabled
-                ? "bg-white/95 text-zinc-950 shadow-black/20"
-                : "bg-emerald-100 text-emerald-950 shadow-emerald-950/20"
-            )}
-          >
-            <Clock
-              className={cn("h-3.5 w-3.5", marketplaceEnabled ? "text-[var(--mp-teal-dark)]" : "text-emerald-800")}
-              aria-hidden
-            />
+          <span className="inline-flex items-center gap-1.5 rounded-lg bg-white/95 px-3 py-2 text-sm font-semibold tabular-nums text-zinc-950 shadow-md shadow-black/20">
+            <Clock className="h-3.5 w-3.5 text-[var(--mp-teal-dark)]" aria-hidden />
             {match.match_time}
           </span>
         </div>
 
         <div className="mt-4 flex items-start gap-2 text-sm text-white">
-          <MapPin
-            className={cn(
-              "mt-0.5 h-4 w-4 shrink-0",
-              marketplaceEnabled ? "text-[var(--mp-teal)]" : "text-[var(--mundial-gold,#f5c518)]"
-            )}
-            aria-hidden
-          />
+          <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[var(--mp-teal)]" aria-hidden />
           <div className="min-w-0">
             <p className="font-medium leading-snug drop-shadow-sm">{match.location}</p>
             <a
@@ -307,12 +276,7 @@ export function InviteMatchCard({
             />
           </div>
           {onViewRoster ? (
-            <Button
-              type="button"
-              variant={marketplaceEnabled ? "default" : "gold"}
-              className="mt-3 w-full gap-2"
-              onClick={onViewRoster}
-            >
+            <Button type="button" variant="default" className="mt-3 w-full gap-2" onClick={onViewRoster}>
               <Users className="h-4 w-4 shrink-0" aria-hidden />
               Zobacz kto jest zapisany
             </Button>
@@ -330,14 +294,7 @@ export function InviteMatchCard({
         {gatePin && showGatePin ? (
           <div className="mt-4 flex items-center gap-3 rounded-xl bg-black/25 p-3.5 ring-1 ring-white/15">
             <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/15 ring-2 ring-white/35">
-              <KeyRound
-                className={cn(
-                  "h-5 w-5",
-                  marketplaceEnabled ? "text-[var(--mp-teal)]" : "text-[var(--mundial-gold,#f5c518)]"
-                )}
-                strokeWidth={2.25}
-                aria-hidden
-              />
+              <KeyRound className="h-5 w-5 text-[var(--mp-teal)]" strokeWidth={2.25} aria-hidden />
             </span>
             <div className="min-w-0">
               <p className="text-[11px] font-semibold uppercase tracking-wide text-white/75">Wejście na boisko</p>
@@ -348,7 +305,7 @@ export function InviteMatchCard({
             </div>
           </div>
         ) : (
-          <p className="mt-4 text-sm text-white/85">Zapisz się, żeby potwierdzić udział i ogarnąć transport.</p>
+          <p className="mt-4 text-sm text-white/85">Zapisz się, żeby potwierdzić udział w meczu.</p>
         )}
       </section>
     </PhotoPanel>
@@ -398,7 +355,6 @@ export function InviteShareLanding({
   debtBusy = false,
   onPayDebt,
 }: InviteShareLandingProps) {
-  const { marketplaceEnabled } = useSiteMode();
   const { photos: mpPhotos } = useMarketplacePhotos();
   const signupToastShownRef = useRef(false);
   const [rosterOpen, setRosterOpen] = useState(false);
@@ -490,15 +446,7 @@ export function InviteShareLanding({
       : "/register";
 
   return (
-    <div
-      className={
-        marketplaceEnabled
-          ? "relative flex flex-1 flex-col text-zinc-900 dark:text-zinc-50"
-          : "awp-page awp-page--default"
-      }
-    >
-      {marketplaceEnabled ? (
-        <>
+    <div className="relative flex flex-1 flex-col text-zinc-900 dark:text-zinc-50">
       <section className="mp-hero mp-hero--photo relative flex flex-col justify-end overflow-hidden pb-16 pt-16 sm:pb-20 sm:pt-24">
         <MarketplacePitchPhoto src={heroPhoto} priority className="z-0" />
         <div className="absolute inset-0 z-[1] bg-gradient-to-t from-black/75 via-black/40 to-black/20" />
@@ -510,24 +458,8 @@ export function InviteShareLanding({
           </p>
         </div>
       </section>
-          </>
-        ) : (
-          <SiteSectionHero
-            variant="stadium"
-            kicker="Zaproszenie"
-            title="Zapis na mecz"
-            subtitle="Potwierdź udział, zaloguj się albo zapisz się jednorazowo jako gość."
-            align="center"
-          />
-        )}
 
-      <div
-        className={
-          marketplaceEnabled
-            ? "relative z-10 mx-auto w-full min-w-0 max-w-6xl px-4 py-10 sm:py-12"
-            : "relative z-10 mt-6 space-y-4"
-        }
-      >
+      <div className="relative z-10 mx-auto w-full min-w-0 max-w-6xl px-4 py-10 sm:py-12">
         {!match ? (
           <PhotoPanel
             src={pitchPhotoAt(3)}
@@ -555,15 +487,11 @@ export function InviteShareLanding({
         ) : (
           <>
             <div className="flex items-end justify-between gap-4">
-              {marketplaceEnabled ? (
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--mp-teal-dark)]">Terminarz</p>
-                  <h2 className="mt-1 text-2xl font-black tracking-tight sm:text-3xl">Zapis na mecz</h2>
-                </div>
-              ) : (
-                <div />
-              )}
-              <Button asChild variant={marketplaceEnabled ? "outline" : "pitch"}>
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--mp-teal-dark)]">Terminarz</p>
+                <h2 className="mt-1 text-2xl font-black tracking-tight sm:text-3xl">Zapis na mecz</h2>
+              </div>
+              <Button asChild variant="outline">
                 <Link href="/terminarz">Pełny terminarz</Link>
               </Button>
             </div>
@@ -642,8 +570,7 @@ export function InviteShareLanding({
                       />
                       <Button
                         type="button"
-                        variant="gold"
-                        className="w-full gap-2"
+                        className="w-full gap-2 rounded-full font-bold"
                         disabled={guestBusy || matchFull}
                         onClick={() => openGuestPayPrompt()}
                       >
@@ -664,25 +591,11 @@ export function InviteShareLanding({
                 ) : (
                   <>
                     <div>
-                      {marketplaceEnabled ? (
-                        <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--mp-teal-dark)]">Zapis</p>
-                      ) : null}
-                      <h2
-                        className={
-                          marketplaceEnabled
-                            ? "mt-1 text-2xl font-black tracking-tight sm:text-3xl"
-                            : "mt-1 text-2xl font-black tracking-tight text-white drop-shadow-sm sm:text-3xl"
-                        }
-                      >
+                      <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--mp-teal-dark)]">Zapis</p>
+                      <h2 className="mt-1 text-2xl font-black tracking-tight sm:text-3xl">
                         Czy grasz w tym terminie?
                       </h2>
-                      <p
-                        className={
-                          marketplaceEnabled
-                            ? "mt-2 max-w-2xl text-sm text-zinc-600 dark:text-zinc-400"
-                            : "mt-2 max-w-2xl text-sm text-white/80"
-                        }
-                      >
+                      <p className="mt-2 max-w-2xl text-sm text-zinc-600 dark:text-zinc-400">
                         Zaloguj się albo załóż konto, żeby odpowiedzieć: tak, jeszcze nie wiem albo nie biorę udziału.
                         Możesz też zapisać się jednorazowo jako gość.
                       </p>
@@ -730,13 +643,12 @@ export function InviteShareLanding({
                       <p className="text-xs font-bold uppercase tracking-[0.16em] text-white/80">Zapis na mecz</p>
                       <h2 className="mt-2 text-2xl font-black text-white drop-shadow-sm">Czy bierzesz udział?</h2>
                       <p className="mt-2 text-sm text-white/85">
-                        Wybierz jedną opcję. Przy odpowiedzi tak (gdy są wolne miejsca) wybierzesz też transport.
+                        Wybierz jedną opcję.
                       </p>
                     </div>
                     <Button
                       type="button"
-                      variant="gold"
-                      className="w-full"
+                      className="w-full rounded-full font-bold"
                       disabled={tentativeBusy}
                       onClick={onParticipationTak}
                     >
@@ -773,13 +685,13 @@ export function InviteShareLanding({
                     <h2 className="mt-2 text-2xl font-black text-white drop-shadow-sm">Twój status na ten mecz</h2>
                     <p className="mt-2 text-sm text-white/85">
                       {signupKind === "confirmed"
-                        ? "Jesteś zapisany na ten mecz. Szczegóły i transport znajdziesz w terminarzu."
+                        ? "Jesteś zapisany na ten mecz. Szczegóły znajdziesz w terminarzu."
                         : signupKind === "tentative"
                           ? "Masz status «jeszcze nie wiem». Potwierdź udział w terminarzu, gdy będziesz wiedzieć."
                           : "Zaznaczyłeś «nie biorę udziału». Możesz to zmienić w terminarzu."}
                     </p>
                   </div>
-                  <Button variant="gold" className="w-full sm:w-auto" asChild>
+                  <Button className="w-full rounded-full font-bold sm:w-auto" asChild>
                     <Link href="/terminarz" className="inline-flex items-center justify-center gap-2">
                       <CalendarDays className="h-4 w-4 shrink-0" aria-hidden />
                       Otwórz terminarz
@@ -810,8 +722,6 @@ export function InviteShareLanding({
           </>
         )}
 
-        {marketplaceEnabled ? (
-          <>
         <PhotoPanel
           src={pitchPhotoAt((match?.id ?? highlightMatchId) + 11)}
           className="mt-14 min-h-[18rem] rounded-3xl"
@@ -845,7 +755,7 @@ export function InviteShareLanding({
           {[
             { n: "1", t: "Zobacz zaproszenie", d: "Termin, miejsce i wolne miejsca w składzie." },
             { n: "2", t: "Zapisz się", d: "Potwierdź udział albo zaznacz, że jeszcze nie wiesz." },
-            { n: "3", t: "Przyjdź na boisko", d: "PIN do bramy i transport po potwierdzeniu." },
+            { n: "3", t: "Przyjdź na boisko", d: "PIN do bramy po potwierdzeniu zapisu." },
           ].map((step, i) => (
             <PhotoPanel
               key={step.n}
@@ -861,8 +771,6 @@ export function InviteShareLanding({
             </PhotoPanel>
           ))}
         </section>
-          </>
-        ) : null}
       </div>
     </div>
   );

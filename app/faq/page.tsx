@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ChevronDown } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { PitchCard, PitchPageHero, pitchLabelClass } from "@/components/ui/pitch-card";
 
 export const metadata: Metadata = {
@@ -169,18 +170,12 @@ export default function FaqPage() {
           Skontaktuj się bezpośrednio z organizatorami akademii — chętnie pomożemy!
         </p>
         <div className="mt-4 flex flex-col items-center gap-2 sm:flex-row sm:justify-center">
-          <Link
-            href="/kontakt"
-            className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-6 py-2.5 text-sm font-semibold text-white shadow-lg transition hover:bg-emerald-400"
-          >
-            Przejdź do kontaktu
-          </Link>
-          <Link
-            href="/o-nas"
-            className="inline-flex items-center gap-2 rounded-xl border border-emerald-500/40 px-6 py-2.5 text-sm font-semibold text-emerald-300 transition hover:border-emerald-400 hover:text-emerald-200"
-          >
-            Dowiedz się więcej o akademii
-          </Link>
+          <Button asChild className="rounded-full font-bold">
+            <Link href="/kontakt">Przejdź do kontaktu</Link>
+          </Button>
+          <Button asChild variant="outline" className="rounded-full font-bold">
+            <Link href="/o-nas">Dowiedz się więcej o akademii</Link>
+          </Button>
         </div>
       </PitchCard>
 

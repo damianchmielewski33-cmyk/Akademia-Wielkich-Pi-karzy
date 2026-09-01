@@ -92,7 +92,7 @@ function whenFirstScreenReady(): Promise<void> {
   });
 }
 
-export function StartupSplash({ marketplaceEnabled = false }: { marketplaceEnabled?: boolean }) {
+export function StartupSplash() {
   const [phase, setPhase] = useState<"hidden" | "show" | "leave">("hidden");
 
   useEffect(() => {
@@ -148,7 +148,7 @@ export function StartupSplash({ marketplaceEnabled = false }: { marketplaceEnabl
     <div
       className={cn(
         "awp-boot-loader fixed inset-0 z-[300] flex items-center justify-center px-6",
-        marketplaceEnabled && "awp-boot-loader--marketplace",
+        "awp-boot-loader--marketplace",
         phase === "leave" && "awp-boot-loader--leave"
       )}
       role="status"
@@ -184,7 +184,7 @@ export function StartupSplash({ marketplaceEnabled = false }: { marketplaceEnabl
 
         <h1 className="awp-boot-loader__title">Akademia Wielkich Piłkarzy</h1>
         <p className="awp-boot-loader__status">
-          {marketplaceEnabled ? "Przygotowujemy boiska…" : "Wchodzimy na boisko…"}
+          Przygotowujemy boiska…
         </p>
 
         <div className="awp-boot-loader__dots" aria-hidden>

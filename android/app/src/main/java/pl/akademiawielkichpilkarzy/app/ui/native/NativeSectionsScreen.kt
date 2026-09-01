@@ -1,38 +1,29 @@
 package pl.akademiawielkichpilkarzy.app.ui.native
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.launch
 import pl.akademiawielkichpilkarzy.app.data.api.ApiClient
 import pl.akademiawielkichpilkarzy.app.data.api.AdminUserDto
 import pl.akademiawielkichpilkarzy.app.data.api.GalleryResponse
 import pl.akademiawielkichpilkarzy.app.data.api.PlayersResponse
 import pl.akademiawielkichpilkarzy.app.data.api.RankingsResponse
 import pl.akademiawielkichpilkarzy.app.data.api.TerminarzResponse
-import pl.akademiawielkichpilkarzy.app.data.api.TransportMessageRequest
-import pl.akademiawielkichpilkarzy.app.data.api.TransportMessagesResponse
-import pl.akademiawielkichpilkarzy.app.data.api.TransportPrefsRequest
 import pl.akademiawielkichpilkarzy.app.ui.common.AwpActionTile
 import pl.akademiawielkichpilkarzy.app.ui.common.AwpListRow
 import pl.akademiawielkichpilkarzy.app.ui.common.AwpMetricGrid
-import pl.akademiawielkichpilkarzy.app.ui.common.AwpPrimaryButton
 import pl.akademiawielkichpilkarzy.app.ui.common.AwpSectionCard
-import pl.akademiawielkichpilkarzy.app.ui.common.AwpTextField
 import pl.akademiawielkichpilkarzy.app.ui.common.EmptyHint
 import pl.akademiawielkichpilkarzy.app.ui.common.ErrorBlock
 import pl.akademiawielkichpilkarzy.app.ui.common.LoadingBlock
@@ -135,83 +126,6 @@ fun ContactScreen() {
             Spacer(Modifier.height(8.dp))
             EmptyHint("Pełne dane kontaktowe pochodzą z ustawień strony i mogą zostać rozszerzone w kolejnym kroku o akcje telefon/mail.")
         }
-    }
-}
-
-@Composable
-fun TransportScreen(matchId: Int) {
-    var data by remember { mutableStateOf<TransportMessagesResponse?>(null) }
-    var loading by remember { mutableStateOf(true) }
-    var error by remember { mutableStateOf<String?>(null) }
-    var drives by remember { mutableStateOf(false) }
-    var seats by remember { mutableStateOf(false) }
-    var needs by remember { mutableStateOf(false) }
-    var message by remember { mutableStateOf("") }
-    var busy by remember { mutableStateOf(false) }
-    val scope = rememberCoroutineScope()
-
-    fun reload() {
-        loading = true
-        error = null
-    }
-
-    LaunchedEffect(loading) {
-        if (!loading) return@LaunchedEffect
-        runCatching { ApiClient.api.transportMessages(matchId) }
-            .onSuccess { data = it; loading = false }
-            .onFailure { error = it.message ?: "Nie udało się pobrać transportu"; loading = false }
-    }
-
-    ScreenScaffold(title = "Transport", subtitle = "Mecz #$matchId", kicker = "Przejazd", theme = ScreenPhotoTheme.Transport) {
-        AwpSectionCard(title = "Moje preferencje") {
-            TransportCheck("Jadę autem", drives) { drives = it }
-            TransportCheck("Mogę zabrać pasażerów", seats) { seats = it }
-            TransportCheck("Potrzebuję transportu", needs) { needs = it }
-            AwpPrimaryButton("Zapisz transport", loading = busy, enabled = !busy) {
-                scope.launch {
-                    busy = true
-                    runCatching {
-                        ApiClient.api.updateTransport(matchId, TransportPrefsRequest(drives, seats, needs))
-                    }.onFailure {
-                        error = it.message ?: "Nie udało się zapisać preferencji"
-                    }
-                    busy = false
-                }
-            }
-        }
-        AwpSectionCard(title = "Czat transportowy") {
-            when {
-                loading -> LoadingBlock()
-                error != null -> ErrorBlock(error!!) { reload() }
-                data?.messages.orEmpty().isEmpty() -> EmptyHint("Brak wiadomości transportowych.")
-                else -> data!!.messages.forEach { msg ->
-                    AwpListRow(title = msg.displayName, subtitle = msg.body, label = msg.createdAt)
-                    Spacer(Modifier.height(8.dp))
-                }
-            }
-            AwpTextField("Wiadomość", message, { message = it })
-            AwpPrimaryButton("Wyślij", enabled = message.isNotBlank()) {
-                val body = message.trim()
-                message = ""
-                scope.launch {
-                    runCatching {
-                        ApiClient.api.sendTransportMessage(matchId, TransportMessageRequest(body))
-                    }.onSuccess {
-                        reload()
-                    }.onFailure {
-                        error = it.message ?: "Nie udało się wysłać wiadomości"
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun TransportCheck(text: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
-    Row {
-        Checkbox(checked, onCheckedChange)
-        Text(text, color = AwpColors.OnPitch)
     }
 }
 

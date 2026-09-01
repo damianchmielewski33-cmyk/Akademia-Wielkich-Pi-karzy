@@ -1,12 +1,12 @@
 import { cn } from "@/lib/utils";
 
-/** Styl jak „Tryb testowy” (złoty) — domyślny przycisk admina. */
+/** Styl domyślnego przycisku admina (teal V2). */
 export const adminGoldBtnClass =
-  "border border-[var(--mundial-gold,#f5c518)] bg-[var(--mundial-gold,#f5c518)]/90 text-[var(--mundial-navy,#0a1628)] shadow-md shadow-black/25 hover:bg-[var(--mundial-gold,#f5c518)]";
+  "border border-[var(--mp-teal)]/80 bg-[var(--mp-teal)] text-white shadow-sm hover:bg-[var(--mp-teal-dark)]";
 
-/** Aktywny / włączony — jak tryb testowy ON. */
+/** Aktywny / włączony — teal V2. */
 export const adminGoldBtnActiveClass =
-  "border-amber-300/80 bg-gradient-to-br from-amber-500 via-orange-600 to-red-700 text-white shadow-amber-950/40 hover:brightness-110";
+  "border-[var(--mp-teal-dark)] bg-[var(--mp-teal-dark)] text-white shadow-sm hover:brightness-110";
 
 /**
  * Chrome sidebara: pełna szerokość, ikona w ramce, tytuł + opcjonalny podtytuł.

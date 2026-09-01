@@ -9,10 +9,7 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { PhotoPanel } from "@/components/photo-panel";
-import { useSiteMode } from "@/components/site-mode";
 import { ADMIN_SETTINGS_SEARCH_INDEX } from "@/lib/admin-settings-search";
-import { pitchPhotoAt } from "@/lib/marketplace-photos";
 import { cn } from "@/lib/utils";
 
 export type AdminSearchJump =
@@ -60,7 +57,6 @@ type SearchResult = {
 };
 
 export function AdminCommandSearch({ onJump, className, compact = false }: Props) {
-  const { marketplaceEnabled } = useSiteMode();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
@@ -202,17 +198,10 @@ export function AdminCommandSearch({ onJump, className, compact = false }: Props
         aria-expanded={open}
       >
         {compact ? (
-          <span
-            className={cn(
-              "inline-flex h-10 w-10 items-center justify-center rounded-xl border text-sm font-bold",
-              marketplaceEnabled
-                ? "border-zinc-200 bg-white text-zinc-800 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-                : "border-zinc-200 bg-white text-zinc-800"
-            )}
-          >
+          <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-200 bg-white text-sm font-bold text-zinc-800 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100">
             <Search className="h-4 w-4" aria-hidden />
           </span>
-        ) : marketplaceEnabled ? (
+        ) : (
           <span
             className={cn(
               "flex min-h-[3.25rem] items-center gap-2.5 rounded-2xl border border-zinc-200/90 bg-white px-3 py-2.5 shadow-sm transition-colors dark:border-zinc-700 dark:bg-zinc-900",
@@ -229,83 +218,33 @@ export function AdminCommandSearch({ onJump, className, compact = false }: Props
               Ctrl+K
             </kbd>
           </span>
-        ) : (
-          <PhotoPanel
-            src={pitchPhotoAt(3)}
-            className="min-h-[3.25rem] border-2 border-white/30"
-            contentClassName="flex min-h-[3.25rem] items-center gap-2.5 px-3 py-2.5"
-            overlayClassName="bg-gradient-to-r from-black/75 via-black/50 to-black/20"
-            sizes="320px"
-          >
-            <Search className="h-5 w-5 shrink-0 text-white" aria-hidden />
-            <span className="min-w-0 flex-1 truncate text-sm font-bold text-white drop-shadow-sm sm:text-base">
-              Szukaj w panelu i ustawieniach…
-            </span>
-            <kbd className="hidden rounded-md border border-white/35 bg-black/25 px-1.5 py-0.5 text-[10px] font-semibold text-white/80 sm:inline">
-              Ctrl+K
-            </kbd>
-          </PhotoPanel>
         )}
       </button>
 
       {open ? (
         <div
           className={cn(
-            "z-50 mt-1.5 overflow-hidden rounded-2xl border-2 shadow-2xl backdrop-blur-md",
+            "z-50 mt-1.5 overflow-hidden rounded-2xl border-2 border-[var(--mp-teal)]/35 bg-white shadow-2xl backdrop-blur-md dark:bg-zinc-950",
             compact
               ? "fixed left-3 right-3 top-[3.75rem] sm:absolute sm:left-auto sm:right-0 sm:top-full sm:w-[min(calc(100vw-1.5rem),22rem)]"
-              : "absolute left-0 right-0 top-full",
-            marketplaceEnabled
-              ? "border-[var(--mp-teal)]/35 bg-white dark:bg-zinc-950"
-              : "border-white/25 bg-emerald-950/95"
+              : "absolute left-0 right-0 top-full"
           )}
         >
-          <div
-            className={cn(
-              "flex items-center gap-2 border-b px-3 py-3",
-              marketplaceEnabled
-                ? "border-zinc-200 dark:border-zinc-800"
-                : "border-white/15"
-            )}
-          >
-            <Search
-              className={cn(
-                "h-5 w-5 shrink-0",
-                marketplaceEnabled ? "text-[var(--mp-teal-dark)] dark:text-teal-300" : "text-white/80"
-              )}
-              aria-hidden
-            />
+          <div className="flex items-center gap-2 border-b border-zinc-200 px-3 py-3 dark:border-zinc-800">
+            <Search className="h-5 w-5 shrink-0 text-[var(--mp-teal-dark)] dark:text-teal-300" aria-hidden />
             <input
               ref={inputRef}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Użytkownik, mecz, ustawienie, zakładka…"
-              className={cn(
-                "min-w-0 flex-1 bg-transparent text-base font-medium outline-none",
-                marketplaceEnabled
-                  ? "text-zinc-900 placeholder:text-zinc-400 dark:text-zinc-50 dark:placeholder:text-zinc-500"
-                  : "text-white placeholder:text-white/50"
-              )}
+              className="min-w-0 flex-1 bg-transparent text-base font-medium text-zinc-900 outline-none placeholder:text-zinc-400 dark:text-zinc-50 dark:placeholder:text-zinc-500"
               aria-label="Fraza wyszukiwania"
             />
-            {loading ? (
-              <Loader2
-                className={cn(
-                  "h-4 w-4 animate-spin",
-                  marketplaceEnabled ? "text-zinc-400" : "text-white/70"
-                )}
-                aria-hidden
-              />
-            ) : null}
+            {loading ? <Loader2 className="h-4 w-4 animate-spin text-zinc-400" aria-hidden /> : null}
             <button
               type="button"
               onClick={() => setOpen(false)}
-              className={cn(
-                "awp-focus-ring rounded-lg p-1",
-                marketplaceEnabled
-                  ? "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:hover:bg-zinc-800 dark:hover:text-white"
-                  : "text-white/70 hover:bg-white/10 hover:text-white"
-              )}
+              className="awp-focus-ring rounded-lg p-1 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:hover:bg-zinc-800 dark:hover:text-white"
               aria-label="Zamknij"
             >
               <X className="h-4 w-4" aria-hidden />
@@ -313,14 +252,7 @@ export function AdminCommandSearch({ onJump, className, compact = false }: Props
           </div>
           <ul className="max-h-80 overflow-y-auto py-1" role="listbox">
             {results.length === 0 ? (
-              <li
-                className={cn(
-                  "px-3 py-4 text-center text-base",
-                  marketplaceEnabled ? "text-zinc-500" : "text-white/70"
-                )}
-              >
-                Brak wyników
-              </li>
+              <li className="px-3 py-4 text-center text-base text-zinc-500">Brak wyników</li>
             ) : (
               results.map((r) => {
                 const Icon = r.icon;
@@ -331,39 +263,17 @@ export function AdminCommandSearch({ onJump, className, compact = false }: Props
                       role="option"
                       aria-selected={false}
                       onClick={() => select(r.jump)}
-                      className={cn(
-                        "flex w-full items-center gap-3 px-3 py-3 text-left transition-colors",
-                        marketplaceEnabled
-                          ? "hover:bg-teal-50 dark:hover:bg-teal-950/40"
-                          : "hover:bg-white/10"
-                      )}
+                      className="flex w-full items-center gap-3 px-3 py-3 text-left transition-colors hover:bg-teal-50 dark:hover:bg-teal-950/40"
                     >
                       <Icon
-                        className={cn(
-                          "h-5 w-5 shrink-0",
-                          marketplaceEnabled
-                            ? "text-[var(--mp-teal-dark)] dark:text-teal-300"
-                            : "text-white/85"
-                        )}
+                        className="h-5 w-5 shrink-0 text-[var(--mp-teal-dark)] dark:text-teal-300"
                         aria-hidden
                       />
                       <span className="min-w-0 flex-1">
-                        <span
-                          className={cn(
-                            "block truncate text-base font-bold",
-                            marketplaceEnabled ? "text-zinc-950 dark:text-white" : "text-white"
-                          )}
-                        >
+                        <span className="block truncate text-base font-bold text-zinc-950 dark:text-white">
                           {r.label}
                         </span>
-                        <span
-                          className={cn(
-                            "block truncate text-sm",
-                            marketplaceEnabled ? "text-zinc-500" : "text-white/70"
-                          )}
-                        >
-                          {r.hint}
-                        </span>
+                        <span className="block truncate text-sm text-zinc-500">{r.hint}</span>
                       </span>
                     </button>
                   </li>

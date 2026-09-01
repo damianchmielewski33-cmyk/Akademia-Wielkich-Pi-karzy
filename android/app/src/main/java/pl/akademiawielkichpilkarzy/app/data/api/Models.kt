@@ -290,34 +290,6 @@ data class MatchChargesResponse(
     val error: String? = null
 )
 
-data class TransportPrefsRequest(
-    val drivesCar: Boolean,
-    val canTakePassengers: Boolean? = null,
-    val needsTransport: Boolean? = null
-)
-
-data class TransportMessageDto(
-    val id: Int,
-    val body: String,
-    val createdAt: String = "",
-    val userId: Int = 0,
-    val firstName: String = "",
-    val lastName: String = "",
-    val zawodnik: String = ""
-) {
-    val displayName: String
-        get() = zawodnik.ifBlank {
-            listOf(firstName, lastName).filter { it.isNotBlank() }.joinToString(" ")
-        }.ifBlank { "Zawodnik" }
-}
-
-data class TransportMessagesResponse(
-    val messages: List<TransportMessageDto> = emptyList(),
-    val error: String? = null
-)
-
-data class TransportMessageRequest(val body: String)
-
 data class SaveStatsRequest(
     @Json(name = "match_id") val matchId: Int,
     val goals: Int = 0,
@@ -612,7 +584,6 @@ data class AppSettingsSnapshotDto(
     @Json(name = "lineup_pitch_slots_min") val lineupPitchSlotsMin: Int? = null,
     @Json(name = "lineup_pitch_slots_max") val lineupPitchSlotsMax: Int? = null,
     @Json(name = "match_cancel_reasons") val matchCancelReasons: List<MatchCancelReasonDto> = emptyList(),
-    @Json(name = "booking_marketplace_enabled") val bookingMarketplaceEnabled: Boolean = false,
     @Json(name = "email_password_auth_enabled") val emailPasswordAuthEnabled: Boolean = false
 )
 

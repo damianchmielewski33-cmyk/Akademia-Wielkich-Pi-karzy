@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { getDb, logActivity } from "@/lib/db";
 import { requireUser, requireMatchInApiRealm } from "@/lib/api-helpers";
-import { normalizeTransportFromBody, validateTransportBody, type SignupTransportRow } from "@/lib/transport";
 import {
   assertMatchOpenForSignup,
   tryIncrementMatchSignedUp,
@@ -15,28 +14,7 @@ export const runtime = "nodejs";
 
 type Ctx = { params: Promise<{ id: string }> };
 
-function parseTransportBody(raw: unknown): SignupTransportRow | { error: string } {
-  if (raw === null || typeof raw !== "object") {
-    return { error: "Brak danych transportu" };
-  }
-  const o = raw as Record<string, unknown>;
-  if (!("drivesCar" in o) || typeof o.drivesCar !== "boolean") {
-    return { error: "Pole drivesCar jest wymagane" };
-  }
-  const err = validateTransportBody({
-    drivesCar: o.drivesCar,
-    canTakePassengers: typeof o.canTakePassengers === "boolean" ? o.canTakePassengers : undefined,
-    needsTransport: typeof o.needsTransport === "boolean" ? o.needsTransport : undefined,
-  });
-  if (err) return { error: err };
-  return normalizeTransportFromBody({
-    drivesCar: o.drivesCar,
-    canTakePassengers: typeof o.canTakePassengers === "boolean" ? o.canTakePassengers : undefined,
-    needsTransport: typeof o.needsTransport === "boolean" ? o.needsTransport : undefined,
-  });
-}
-
-/** Promocja zapisu wstępnego («jeszcze nie wiem» / «nie biorę udziału») na pełny zapis z transportem. */
+/** Promocja zapisu wstępnego («jeszcze nie wiem» / «nie biorę udziału») na pełny zapis. */
 export async function POST(req: Request, ctx: Ctx) {
   const blocked = await screenBlockApiResponse(req);
   if (blocked) return blocked;
@@ -51,18 +29,6 @@ export async function POST(req: Request, ctx: Ctx) {
 
   const realmGate = await requireMatchInApiRealm(req, mid);
   if (!realmGate.ok) return realmGate.response;
-
-  let rawBody: unknown = {};
-  try {
-    rawBody = await req.json();
-  } catch {
-    rawBody = {};
-  }
-  const tr = parseTransportBody(rawBody);
-  if ("error" in tr && typeof tr.error === "string") {
-    return NextResponse.json({ error: tr.error }, { status: 400 });
-  }
-  const transport = tr as SignupTransportRow;
 
   const db = await getDb();
   const match = (await db
@@ -101,16 +67,10 @@ export async function POST(req: Request, ctx: Ctx) {
     await db
       .prepare(
         `UPDATE match_signups
-         SET commitment = 1, drives_car = ?, can_take_passengers = ?, needs_transport = ?
+         SET commitment = 1, drives_car = 0, can_take_passengers = 0, needs_transport = 0
          WHERE user_id = ? AND match_id = ?`
       )
-      .run(
-        transport.drives_car,
-        transport.can_take_passengers,
-        transport.needs_transport,
-        gate.session.userId,
-        mid
-      );
+      .run(gate.session.userId, mid);
   } catch (e) {
     await decrementMatchSignedUp(db, mid);
     throw e;

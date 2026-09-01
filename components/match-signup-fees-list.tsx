@@ -134,8 +134,7 @@ export function MatchSignupFeesList({
                 {hotpayEnabled ? (
                   <Button
                     type="button"
-                    variant="pitch"
-                    className="h-auto min-h-12 flex-1 font-bold"
+                    className="h-auto min-h-12 flex-1 rounded-full font-bold"
                     disabled={hotpayBusyId != null}
                     onClick={() => void payHotpay(p.id)}
                   >

@@ -4,7 +4,6 @@ import { useState } from "react";
 import Image from "next/image";
 import { canOptimizeMarketplacePhoto, MARKETPLACE_PITCH_PHOTOS, resolveMarketplacePhoto } from "@/lib/marketplace-photos";
 import { siteAssetNeedsUnoptimized } from "@/lib/site-assets";
-import { useSiteMode } from "@/components/site-mode";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -17,14 +16,9 @@ type Props = {
 const FALLBACK_SRC = MARKETPLACE_PITCH_PHOTOS[0];
 
 export function MarketplacePitchPhoto({ src, className, sizes = "100vw", priority }: Props) {
-  const { marketplaceEnabled } = useSiteMode();
   const resolved = resolveMarketplacePhoto(src);
   const [failed, setFailed] = useState(false);
   const displaySrc = failed && resolved !== FALLBACK_SRC ? FALLBACK_SRC : resolved;
-
-  if (!marketplaceEnabled) {
-    return <div className={cn("pointer-events-none absolute inset-0 home-pitch-tile", className)} aria-hidden />;
-  }
 
   function onError() {
     if (displaySrc !== FALLBACK_SRC) setFailed(true);

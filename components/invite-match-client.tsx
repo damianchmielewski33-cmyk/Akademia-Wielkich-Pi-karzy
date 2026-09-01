@@ -6,7 +6,7 @@ import { toast } from "@/lib/app-toast";
 import type { MatchRow } from "@/lib/db";
 import type { PlayersDataEntry } from "@/lib/terminarz-shared";
 import { InviteShareLanding } from "@/components/invite-share-landing";
-import { MatchTransportSignupDialog } from "@/components/match-transport-signup-dialog";
+import { MatchSignupDialog } from "@/components/match-signup-dialog";
 import { useHotpayPayment } from "@/hooks/use-hotpay-payment";
 import { useHotpayPaymentReturn } from "@/hooks/use-hotpay-payment-return";
 
@@ -35,17 +35,11 @@ export function InviteMatchClient({
   walletBalancePln = null,
 }: Props) {
   const router = useRouter();
-  const [transportSignupOpen, setTransportSignupOpen] = useState(false);
-  const [transportSignupIntent, setTransportSignupIntent] = useState<"signup" | "confirm">("signup");
+  const [signupDialogOpen, setSignupDialogOpen] = useState(false);
   const [tentativeBusy, setTentativeBusy] = useState(false);
   const [inviteLoginInline, setInviteLoginInline] = useState(false);
   const [inviteGuestInline, setInviteGuestInline] = useState(false);
   const { pay: payDebt, busy: debtBusy } = useHotpayPayment();
-
-  const openTransportSignup = useCallback(() => {
-    setTransportSignupIntent("signup");
-    setTransportSignupOpen(true);
-  }, []);
 
   const onPaymentSettled = useCallback(() => {
     router.refresh();
@@ -108,35 +102,7 @@ export function InviteMatchClient({
       );
       return;
     }
-    if (hotpayEnabled) {
-      void signupConfirmedNoPay();
-      return;
-    }
-    openTransportSignup();
-  }
-
-  async function signupConfirmedNoPay() {
-    setTentativeBusy(true);
-    try {
-      const res = await fetch(`/api/terminarz/signup/${matchId}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ drivesCar: false, needsTransport: false }),
-      });
-      const data = (await res.json().catch(() => ({}))) as { error?: string };
-      if (res.status === 401) {
-        window.location.href = "/login";
-        return;
-      }
-      if (!res.ok) {
-        toast.error(typeof data.error === "string" ? data.error : "Nie udało się zapisać");
-        return;
-      }
-      toast.successCrowd("Zapisano na mecz");
-      router.refresh();
-    } finally {
-      setTentativeBusy(false);
-    }
+    setSignupDialogOpen(true);
   }
 
   return (
@@ -169,12 +135,12 @@ export function InviteMatchClient({
             : undefined
         }
       />
-      <MatchTransportSignupDialog
-        open={transportSignupOpen}
-        onOpenChange={setTransportSignupOpen}
+      <MatchSignupDialog
+        open={signupDialogOpen}
+        onOpenChange={setSignupDialogOpen}
         matchId={matchId}
-        intent={transportSignupIntent === "confirm" ? "confirm" : "signup"}
-        hotpayEnabled={false}
+        intent="signup"
+        hotpayEnabled={hotpayEnabled}
         onCompleted={() => {
           router.refresh();
         }}

@@ -18,7 +18,6 @@ import { YesNoSwitchRow } from "@/components/ui/yes-no-switch";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import { useSiteMode } from "@/components/site-mode";
 import type { AppSettingsApiResponse } from "@/app/api/admin/app-settings/route";
 import type { MatchCancelReasonEntry } from "@/lib/app-settings";
 import { AdminSiteAssetField } from "@/components/admin-site-asset-field";
@@ -52,10 +51,9 @@ type SettingsTocGroup = { label: string; items: SettingsTocItem[]; hint?: string
 const WEB_SETTINGS_TOC: SettingsTocGroup[] = [
   {
     label: "System",
-    hint: "Tryb testowy, wersja V1/V2, status serwera",
+    hint: "Tryb testowy, status serwera",
     items: [
       { id: "settings-test-mode", label: "Tryb testowy", keywords: "sandbox test" },
-      { id: "settings-marketplace", label: "Wersja aplikacji", keywords: "v1 v2 wersja marketplace hale rezerwacje" },
       { id: "settings-system", label: "Co działa na serwerze", keywords: "smtp produkcja rejestracja status" },
     ],
   },
@@ -129,38 +127,21 @@ function categoryForSectionId(sectionId: string, groups: SettingsTocGroup[]): st
 function SettingsSearchBar({
   value,
   onChange,
-  marketplace,
 }: {
   value: string;
   onChange: (v: string) => void;
-  marketplace: boolean;
 }) {
   return (
-    <div
-      className={cn(
-        "relative mb-4",
-        marketplace
-          ? "rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-700 dark:bg-zinc-900"
-          : "rounded-2xl border border-white/20 bg-black/20"
-      )}
-    >
+    <div className="relative mb-4 rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
       <Search
-        className={cn(
-          "pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2",
-          marketplace ? "text-[var(--mp-teal-dark)]" : "text-white/70"
-        )}
+        className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-[var(--mp-teal-dark)]"
         aria-hidden
       />
       <input
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        placeholder="Szukaj ustawienia (np. logo, V2, AdSense, ranking…)"
-        className={cn(
-          "w-full rounded-2xl bg-transparent py-3.5 pl-11 pr-4 text-base outline-none",
-          marketplace
-            ? "text-zinc-950 placeholder:text-zinc-400 dark:text-white dark:placeholder:text-zinc-500"
-            : "text-white placeholder:text-white/50"
-        )}
+        placeholder="Szukaj ustawienia (np. logo, AdSense, ranking…)"
+        className="w-full rounded-2xl bg-transparent py-3.5 pl-11 pr-4 text-base text-zinc-950 outline-none placeholder:text-zinc-400 dark:text-white dark:placeholder:text-zinc-500"
         aria-label="Szukaj w ustawieniach"
       />
     </div>
@@ -170,11 +151,9 @@ function SettingsSearchBar({
 function SettingsHub({
   groups,
   onOpenGroup,
-  marketplace,
 }: {
   groups: SettingsTocGroup[];
   onOpenGroup: (label: string) => void;
-  marketplace: boolean;
 }) {
   return (
     <div className="mb-2 grid gap-2 sm:grid-cols-2">
@@ -183,39 +162,15 @@ function SettingsHub({
           key={g.label}
           type="button"
           onClick={() => onOpenGroup(g.label)}
-          className={cn(
-            "awp-focus-ring rounded-2xl border p-4 text-left transition hover:-translate-y-0.5",
-            marketplace
-              ? "border-zinc-200 bg-white shadow-sm hover:border-[var(--mp-teal)] dark:border-zinc-700 dark:bg-zinc-900"
-              : "border-white/20 bg-black/15 hover:bg-white/10"
-          )}
+          className="awp-focus-ring rounded-2xl border border-zinc-200 bg-white p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-[var(--mp-teal)] dark:border-zinc-700 dark:bg-zinc-900"
         >
           <span className="flex items-start gap-3">
-            <span
-              className={cn(
-                "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl",
-                marketplace ? "bg-[var(--mp-teal)] text-white" : "bg-white/15 text-white"
-              )}
-            >
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--mp-teal)] text-white">
               <Settings2 className="h-4 w-4" aria-hidden />
             </span>
             <span className="min-w-0">
-              <span
-                className={cn(
-                  "block text-base font-bold",
-                  marketplace ? "text-zinc-950 dark:text-white" : "text-white"
-                )}
-              >
-                {g.label}
-              </span>
-              <span
-                className={cn(
-                  "mt-0.5 block text-sm",
-                  marketplace ? "text-zinc-500" : "text-emerald-100/80"
-                )}
-              >
-                {g.hint ?? `${g.items.length} sekcje`}
-              </span>
+              <span className="block text-base font-bold text-zinc-950 dark:text-white">{g.label}</span>
+              <span className="mt-0.5 block text-sm text-zinc-500">{g.hint ?? `${g.items.length} sekcje`}</span>
             </span>
           </span>
         </button>
@@ -224,13 +179,7 @@ function SettingsHub({
   );
 }
 
-function SettingsSectionNav({
-  items,
-  marketplace,
-}: {
-  items: SettingsTocItem[];
-  marketplace?: boolean;
-}) {
+function SettingsSectionNav({ items }: { items: SettingsTocItem[] }) {
   if (items.length <= 1) return null;
   return (
     <nav className="mb-4 flex flex-wrap gap-1.5" aria-label="Sekcje w kategorii">
@@ -239,12 +188,7 @@ function SettingsSectionNav({
           key={item.id}
           type="button"
           onClick={() => scrollToSettingsSection(item.id)}
-          className={cn(
-            "awp-focus-ring rounded-lg border px-2.5 py-1 text-xs font-medium transition-colors",
-            marketplace
-              ? "border-zinc-200 bg-zinc-50 text-zinc-700 hover:border-[var(--mp-teal)] hover:text-zinc-950 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200"
-              : "border-white/15 bg-black/10 text-emerald-100/85 hover:bg-white/10 hover:text-white"
-          )}
+          className="awp-focus-ring rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-xs font-medium text-zinc-700 transition-colors hover:border-[var(--mp-teal)] hover:text-zinc-950 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200"
         >
           {item.label}
         </button>
@@ -285,18 +229,10 @@ function FieldRow({
   hint?: string;
   children: React.ReactNode;
 }) {
-  const { marketplaceEnabled } = useSiteMode();
   return (
     <div className="grid gap-1.5">
-      <Label
-        className={cn(
-          "text-sm font-semibold",
-          marketplaceEnabled ? "text-zinc-900 dark:text-zinc-50" : "text-white"
-        )}
-      >
-        {label}
-      </Label>
-      {hint ? <p className="text-sm leading-relaxed pitch-muted">{hint}</p> : null}
+      <Label className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">{label}</Label>
+      {hint ? <p className="text-sm leading-relaxed text-zinc-500">{hint}</p> : null}
       {children}
     </div>
   );
@@ -309,7 +245,6 @@ export function AdminSettingsTab({
   focusSectionId,
   onFocusSectionConsumed,
 }: Props) {
-  const { marketplaceEnabled } = useSiteMode();
   const [channel, setChannel] = useState<ClientChannel>("web");
   const [settingsCategory, setSettingsCategory] = useState(WEB_SETTINGS_TOC[0]?.label ?? "System");
   const [settingsBrowse, setSettingsBrowse] = useState<"hub" | "category">("hub");
@@ -349,16 +284,6 @@ export function AdminSettingsTab({
     }
     onFocusSectionConsumed?.();
   }, [focusSectionId, onFocusSectionConsumed]);
-
-  useEffect(() => {
-    function onMarketplaceChanged(ev: Event) {
-      const enabled = (ev as CustomEvent<{ enabled?: boolean }>).detail?.enabled;
-      if (typeof enabled !== "boolean") return;
-      setSettings((prev) => (prev ? { ...prev, booking_marketplace_enabled: enabled } : prev));
-    }
-    window.addEventListener("awp-marketplace-settings-changed", onMarketplaceChanged);
-    return () => window.removeEventListener("awp-marketplace-settings-changed", onMarketplaceChanged);
-  }, []);
 
   const load = useCallback(async () => {
     setFetching(true);
@@ -463,14 +388,7 @@ export function AdminSettingsTab({
         setCancelReasonsDraft(
           channel === "mobile" ? j.mobile_settings.match_cancel_reasons : j.match_cancel_reasons
         );
-        if (typeof patch.booking_marketplace_enabled === "boolean" || typeof patch.email_password_auth_enabled === "boolean") {
-          if (typeof patch.booking_marketplace_enabled === "boolean") {
-            window.dispatchEvent(
-              new CustomEvent("awp-marketplace-settings-changed", {
-                detail: { enabled: j.booking_marketplace_enabled === true },
-              })
-            );
-          }
+        if (typeof patch.email_password_auth_enabled === "boolean") {
           toast.success("Zapisano — odświeżanie…", { id: toastId });
           setSaveFlash("saved");
           window.location.reload();
@@ -529,7 +447,7 @@ export function AdminSettingsTab({
 
   if (fetching && !settings) {
     return (
-      <div className="flex items-center justify-center gap-2 py-16 text-sm pitch-muted">
+      <div className="flex items-center justify-center gap-2 py-16 text-sm text-zinc-500">
         <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
         Wczytywanie ustawień…
       </div>
@@ -540,7 +458,7 @@ export function AdminSettingsTab({
     return (
       <div className={adminEmptyStateClass}>
         Nie udało się wczytać ustawień.{" "}
-        <button type="button" className="font-semibold text-[var(--mundial-gold)] underline" onClick={() => void load()}>
+        <button type="button" className="font-semibold text-[var(--mp-teal-dark)] underline" onClick={() => void load()}>
           Spróbuj ponownie
         </button>
       </div>
@@ -559,9 +477,9 @@ export function AdminSettingsTab({
           </p>
         </div>
       ) : (
-        <div className="rounded-xl border border-emerald-400/30 bg-emerald-950/40 px-4 py-3 text-sm text-emerald-50">
+        <div className="rounded-xl border border-teal-200 bg-teal-50 px-4 py-3 text-sm text-teal-950 dark:border-teal-800 dark:bg-teal-950/40 dark:text-teal-50">
           <p className="font-semibold">Realm: Akademia</p>
-          <p className="mt-1 text-emerald-100/80">
+          <p className="mt-1 text-teal-800/90 dark:text-teal-100/85">
             Ustawienia strony akademii i aplikacji. Turniej PZU Cup ma osobną zakładkę z własną konfiguracją.
           </p>
         </div>
@@ -589,12 +507,12 @@ export function AdminSettingsTab({
         loading={busy}
       >
         {saveFlash === "saving" ? (
-          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-200">
+          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-600 dark:text-amber-300">
             <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
             Zapisywanie…
           </span>
         ) : saveFlash === "saved" ? (
-          <span className="text-xs font-semibold text-emerald-300">Zapisano</span>
+          <span className="text-xs font-semibold text-[var(--mp-teal-dark)] dark:text-teal-300">Zapisano</span>
         ) : saveFlash === "error" ? (
           <span className="text-xs font-semibold text-red-300">Błąd zapisu</span>
         ) : null}
@@ -613,13 +531,11 @@ export function AdminSettingsTab({
           setSettingsQuery(v);
           if (v.trim()) setSettingsBrowse("category");
         }}
-        marketplace={marketplaceEnabled}
       />
 
       {!searchQ && settingsBrowse === "hub" ? (
         <SettingsHub
           groups={activeTocGroups}
-          marketplace={marketplaceEnabled}
           onOpenGroup={(label) => {
             setSettingsCategory(label);
             setSettingsBrowse("category");
@@ -635,22 +551,12 @@ export function AdminSettingsTab({
               setSettingsBrowse("hub");
               setSettingsQuery("");
             }}
-            className={cn(
-              "awp-focus-ring inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold",
-              marketplaceEnabled
-                ? "border border-zinc-200 bg-white text-zinc-800 hover:border-[var(--mp-teal)] dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-                : "border border-white/20 bg-black/15 text-white hover:bg-white/10"
-            )}
+            className="awp-focus-ring inline-flex items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm font-semibold text-zinc-800 hover:border-[var(--mp-teal)] dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
           >
             <ArrowLeft className="h-4 w-4" aria-hidden />
             Wszystkie kategorie
           </button>
-          <p
-            className={cn(
-              "text-sm font-bold",
-              marketplaceEnabled ? "text-zinc-950 dark:text-white" : "text-white"
-            )}
-          >
+          <p className="text-sm font-bold text-zinc-950 dark:text-white">
             {activeGroup?.label}
           </p>
         </div>
@@ -658,12 +564,7 @@ export function AdminSettingsTab({
 
       {searchQ ? (
         <div className="mb-4 space-y-2">
-          <p
-            className={cn(
-              "text-sm",
-              marketplaceEnabled ? "text-zinc-500" : "text-emerald-100/80"
-            )}
-          >
+          <p className="text-sm text-zinc-500">
             {searchHits.length === 0
               ? "Brak ustawień pasujących do frazy."
               : `Znaleziono ${searchHits.length} ${searchHits.length === 1 ? "ustawienie" : "ustawienia"}:`}
@@ -675,12 +576,7 @@ export function AdminSettingsTab({
                   <button
                     type="button"
                     onClick={() => scrollToSettingsSection(hit.id)}
-                    className={cn(
-                      "awp-focus-ring rounded-lg border px-2.5 py-1.5 text-xs font-semibold",
-                      marketplaceEnabled
-                        ? "border-[var(--mp-teal)]/40 bg-teal-50 text-[var(--mp-teal-dark)] dark:border-teal-700 dark:bg-teal-950/40 dark:text-teal-200"
-                        : "border-white/20 bg-black/15 text-white"
-                    )}
+                    className="awp-focus-ring rounded-lg border border-[var(--mp-teal)]/40 bg-teal-50 px-2.5 py-1.5 text-xs font-semibold text-[var(--mp-teal-dark)] dark:border-teal-700 dark:bg-teal-950/40 dark:text-teal-200"
                   >
                     {hit.label}
                   </button>
@@ -692,7 +588,7 @@ export function AdminSettingsTab({
       ) : null}
 
       {!searchQ && settingsBrowse === "category" ? (
-        <SettingsSectionNav items={activeGroup?.items ?? []} marketplace={marketplaceEnabled} />
+        <SettingsSectionNav items={activeGroup?.items ?? []} />
       ) : null}
 
       {searchQ || settingsBrowse === "category" ? (
@@ -716,22 +612,22 @@ export function AdminSettingsTab({
       >
         <ul className="grid gap-2 text-sm sm:grid-cols-2">
           <li className={adminStatusChipClass}>
-            <span className="text-emerald-100/70">Wysyłka e-maili:</span>{" "}
-            <strong className={settings.system.smtp_configured ? "text-emerald-300" : "text-amber-300"}>
+            <span className="text-zinc-500">Wysyłka e-maili:</span>{" "}
+            <strong className={settings.system.smtp_configured ? "text-[var(--mp-teal-dark)] dark:text-teal-300" : "text-amber-600 dark:text-amber-300"}>
               {settings.system.smtp_configured
                 ? "Gotowa — maile o meczach mogą wychodzić"
                 : "Nieskonfigurowana — maile nie wyjdą"}
             </strong>
           </li>
           <li className={adminStatusChipClass}>
-            <span className="text-emerald-100/70">Serwer:</span>{" "}
-            <strong className="text-white">
+            <span className="text-zinc-500">Serwer:</span>{" "}
+            <strong className="text-zinc-900 dark:text-zinc-50">
               {settings.system.is_production ? "Produkcyjny (prawdziwa strona)" : "Testowy (developerski)"}
             </strong>
           </li>
           <li className={cn(adminStatusChipClass, "sm:col-span-2")}>
-            <span className="text-emerald-100/70">Rejestracja nowych graczy:</span>{" "}
-            <strong className="text-white">{registrationStatusLabel}</strong>
+            <span className="text-zinc-500">Rejestracja nowych graczy:</span>{" "}
+            <strong className="text-zinc-900 dark:text-zinc-50">{registrationStatusLabel}</strong>
           </li>
         </ul>
       </SettingsSection>
@@ -744,8 +640,8 @@ export function AdminSettingsTab({
       >
         <ul className="mb-4 grid gap-2 text-sm sm:grid-cols-2">
           <li className={adminStatusChipClass}>
-            <span className="text-emerald-100/70">Sandbox:</span>{" "}
-            <strong className="text-emerald-300">
+            <span className="text-zinc-500">Sandbox:</span>{" "}
+            <strong className="text-[var(--mp-teal-dark)] dark:text-teal-300">
               {testMode == null ? "…" : testMode.configured ? "Gotowy" : "Niedostępny"}
             </strong>
           </li>
@@ -757,22 +653,6 @@ export function AdminSettingsTab({
           checked={Boolean(testMode?.enabled)}
           disabled={busy || testModeBusy || !testMode?.configured}
           onCheckedChange={(v) => void setTestModeEnabled(v)}
-        />
-      </SettingsSection>
-
-      <SettingsSection
-        id="settings-marketplace"
-        hidden={channel !== "web" || settingsRealm !== "academy" || !sectionVisible("settings-marketplace")}
-        title="Wersja aplikacji"
-        description="V1 = akademia bez rezerwacji boisk. V2 = akademia z rezerwacjami boisk (katalog hal, nowy wygląd). Działanie poza nazwą zostaje takie jak dotychczas."
-      >
-        <YesNoSwitchRow
-          className={adminToggleRowClass}
-          label="Wersja aplikacji V2"
-          hint="Wyłączone = Wersja V1 (sam terminarz akademii, bez marketplace’u i pytania „Szukam boiska”). Włączone = Wersja V2 (katalog hal i rezerwacje online). W panelu admina nadal przygotujesz hale (zakładka Rezerwacje)."
-          checked={Boolean(settings.booking_marketplace_enabled)}
-          disabled={busy}
-          onCheckedChange={(v) => void save({ booking_marketplace_enabled: v })}
         />
       </SettingsSection>
 
@@ -819,9 +699,9 @@ export function AdminSettingsTab({
         description="Wgraj własne grafiki albo zostaw domyślne."
       >
         <div className="space-y-6">
-          <div className="rounded-xl border border-white/20 bg-black/10 p-4">
-            <p className="text-sm font-semibold text-white">Zalecane wymiary</p>
-            <p className="mt-1 text-sm leading-relaxed text-emerald-100/80">
+          <div className={cn(adminInnerPanelClass, "space-y-3")}>
+            <p className="text-sm font-semibold text-zinc-950 dark:text-white">Zalecane wymiary</p>
+            <p className="mt-1 text-sm leading-relaxed text-zinc-500">
               Aby grafika dobrze wypełniła miejsce na stronie, trzymaj się podanych wymiarów. Zbyt mały plik będzie
               rozmyty; zły kadr może zostać przycięty.
             </p>
@@ -830,8 +710,8 @@ export function AdminSettingsTab({
             </div>
           </div>
 
-          <div className="rounded-xl border border-white/20 bg-black/10 p-4">
-            <p className="mb-3 text-sm font-semibold text-white">Grafiki witryny</p>
+          <div className={cn(adminInnerPanelClass, "space-y-3")}>
+            <p className="text-sm font-semibold text-zinc-950 dark:text-white">Grafiki witryny</p>
             <div className="grid gap-4 lg:grid-cols-2">
               {SITE_ASSET_KEYS.map((key) => {
                 const customMap: Record<(typeof SITE_ASSET_KEYS)[number], string | null> = {
@@ -857,16 +737,16 @@ export function AdminSettingsTab({
             </div>
           </div>
 
-          <div className="rounded-xl border border-white/20 bg-black/10 p-4">
-            <p className="mb-3 text-sm font-semibold text-white">Zdjęcia V2 — pasek „Gramy razem”</p>
+          <div className={cn(adminInnerPanelClass, "space-y-3")}>
+            <p className="text-sm font-semibold text-zinc-950 dark:text-white">Zdjęcia — pasek „Gramy razem”</p>
             <AdminMarketplacePitchPhotosSection
               disabled={busy}
               onUpdated={(next) => setSettings((prev) => (prev ? { ...next, system: prev.system } : prev))}
             />
           </div>
 
-          <div className="rounded-xl border border-white/20 bg-black/10 p-4">
-            <p className="mb-2 text-sm font-semibold text-white">Zdjęcia profilowe graczy</p>
+          <div className={cn(adminInnerPanelClass, "space-y-3")}>
+            <p className="text-sm font-semibold text-zinc-950 dark:text-white">Zdjęcia profilowe graczy</p>
             <ImageUploadSpecDetails spec={PROFILE_PHOTO_SPEC} />
           </div>
         </div>
@@ -911,8 +791,8 @@ export function AdminSettingsTab({
         </FieldRow>
         <div className="grid gap-4 sm:grid-cols-2">
           <div className={cn(adminInnerPanelClass, "space-y-3")}>
-            <p className="text-sm font-semibold text-white">Organizator — Damian</p>
-            <p className="text-xs pitch-muted">Dane osoby kontaktowej wyświetlane na stronie Kontakt.</p>
+            <p className="text-sm font-semibold text-zinc-950 dark:text-white">Organizator — Damian</p>
+            <p className="text-xs text-zinc-500">Dane osoby kontaktowej wyświetlane na stronie Kontakt.</p>
             {(["organizer_damian_name", "organizer_damian_phone", "organizer_damian_email"] as const).map((key) => (
               <FieldRow key={key} label={key.includes("name") ? "Imię i nazwisko" : key.includes("phone") ? "Telefon" : "E-mail"}>
                 <Input
@@ -941,8 +821,8 @@ export function AdminSettingsTab({
             </FieldRow>
           </div>
           <div className={cn(adminInnerPanelClass, "space-y-3")}>
-            <p className="text-sm font-semibold text-white">Organizator — Mateusz</p>
-            <p className="text-xs pitch-muted">Druga osoba kontaktowa na stronie Kontakt.</p>
+            <p className="text-sm font-semibold text-zinc-950 dark:text-white">Organizator — Mateusz</p>
+            <p className="text-xs text-zinc-500">Druga osoba kontaktowa na stronie Kontakt.</p>
             {(["organizer_mateusz_name", "organizer_mateusz_phone", "organizer_mateusz_email"] as const).map((key) => (
               <FieldRow key={key} label={key.includes("name") ? "Imię i nazwisko" : key.includes("phone") ? "Telefon" : "E-mail"}>
                 <Input
@@ -1096,7 +976,7 @@ export function AdminSettingsTab({
             }}
           />
         </FieldRow>
-        <p className="text-xs leading-relaxed pitch-muted">
+        <p className="text-xs leading-relaxed text-zinc-500">
           Auto ads włączysz w panelu Google AdSense (Witryny → optymalizacja). Po akceptacji konta sprawdź też plik{" "}
           <a className="underline underline-offset-2" href="/ads.txt" target="_blank" rel="noreferrer">
             /ads.txt
@@ -1138,9 +1018,9 @@ export function AdminSettingsTab({
           </p>
         ) : null}
         <div className={cn(adminStatusChipClass, "mb-2")}>
-          <span className="text-emerald-100/70">Rejestracja nowych graczy:</span>{" "}
-          <strong className="text-emerald-300">Zawsze włączona</strong>
-          <p className="mt-1 text-sm text-emerald-100/75">
+          <span className="text-zinc-500">Rejestracja nowych graczy:</span>{" "}
+          <strong className="text-[var(--mp-teal-dark)] dark:text-teal-300">Zawsze włączona</strong>
+          <p className="mt-1 text-sm text-zinc-500">
             Gracze mogą sami zakładać konta — tej opcji nie da się wyłączyć.
           </p>
         </div>
@@ -1298,11 +1178,11 @@ export function AdminSettingsTab({
         title="Powody anulowania meczu"
         description="Lista wyboru, gdy anulujesz termin w terminarzu."
       >
-        <p className="text-sm leading-relaxed pitch-muted">
+        <p className="text-sm leading-relaxed text-zinc-500">
           W pierwszej kolumnie krótki kod (bez spacji, tylko dla systemu). W drugiej — tekst, który zobaczysz na liście
           przy anulowaniu.
         </p>
-        <div className="hidden grid-cols-[minmax(8rem,1fr)_minmax(12rem,2fr)_auto] gap-2 px-0.5 text-xs font-semibold uppercase tracking-wide text-emerald-100/55 sm:grid">
+        <div className="hidden grid-cols-[minmax(8rem,1fr)_minmax(12rem,2fr)_auto] gap-2 px-0.5 text-xs font-semibold uppercase tracking-wide text-zinc-500 sm:grid">
           <span>Kod</span>
           <span>Opis powodu</span>
           <span className="sr-only">Akcja</span>
@@ -1311,7 +1191,7 @@ export function AdminSettingsTab({
           {cancelReasonsDraft.map((r, i) => (
             <div
               key={i}
-              className="grid grid-cols-1 gap-2 rounded-xl border border-white/15 bg-black/10 p-3 sm:grid-cols-[minmax(8rem,1fr)_minmax(12rem,2fr)_auto] sm:items-center sm:border-0 sm:bg-transparent sm:p-0"
+              className="grid grid-cols-1 gap-2 rounded-xl border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-700 dark:bg-zinc-900/80 sm:grid-cols-[minmax(8rem,1fr)_minmax(12rem,2fr)_auto] sm:items-center sm:border-0 sm:bg-transparent sm:p-0"
             >
               <Input
                 className={cn(adminFieldClass, "font-mono text-xs")}
@@ -1339,9 +1219,9 @@ export function AdminSettingsTab({
               />
               <Button
                 type="button"
-                variant="gold"
+                variant="default"
                 size="sm"
-                className="sm:justify-self-end"
+                className="rounded-full font-bold sm:justify-self-end"
                 disabled={busy || cancelReasonsDraft.length <= 1}
                 onClick={() => setCancelReasonsDraft(cancelReasonsDraft.filter((_, j) => j !== i))}
               >
@@ -1353,8 +1233,9 @@ export function AdminSettingsTab({
         <div className="flex flex-wrap gap-2 pt-2">
           <Button
             type="button"
-            variant="gold"
+            variant="default"
             size="sm"
+            className="rounded-full font-bold"
             disabled={busy || cancelReasonsDraft.length >= 20}
             onClick={() =>
               setCancelReasonsDraft([...cancelReasonsDraft, { value: `reason-${Date.now()}`, label: "Nowy powód" }])
@@ -1362,13 +1243,13 @@ export function AdminSettingsTab({
           >
             Dodaj powód
           </Button>
-          <Button type="button" variant="gold" size="sm" disabled={busy} onClick={() => void save({ match_cancel_reasons: cancelReasonsDraft })}>
+          <Button type="button" variant="default" size="sm" className="rounded-full font-bold" disabled={busy} onClick={() => void save({ match_cancel_reasons: cancelReasonsDraft })}>
             Zapisz powody
           </Button>
         </div>
       </SettingsSection>
 
-      <p className="text-center text-sm leading-relaxed text-emerald-100/75">
+      <p className="text-center text-sm leading-relaxed text-zinc-500">
         Większość pól zapisuje się sama po kliknięciu poza pole. Powody anulowania zapisz przyciskiem „Zapisz powody”.
         Hasła do bazy i serwera e-mail ustawia się u hostingu — nie w tym panelu.
       </p>
@@ -1455,7 +1336,8 @@ function MobileSettingsEditor({
             <Button
               type="button"
               size="sm"
-              variant={mobile.android_ui_mode !== "webview" ? "pitch" : "outline"}
+              variant={mobile.android_ui_mode !== "webview" ? "default" : "outline"}
+              className={mobile.android_ui_mode !== "webview" ? "rounded-full font-bold" : undefined}
               disabled={busy}
               onClick={() => {
                 if (mobile.android_ui_mode !== "native") onSavePatch({ android_ui_mode: "native" });
@@ -1466,7 +1348,8 @@ function MobileSettingsEditor({
             <Button
               type="button"
               size="sm"
-              variant={mobile.android_ui_mode === "webview" ? "pitch" : "outline"}
+              variant={mobile.android_ui_mode === "webview" ? "default" : "outline"}
+              className={mobile.android_ui_mode === "webview" ? "rounded-full font-bold" : undefined}
               disabled={busy}
               onClick={() => {
                 if (mobile.android_ui_mode !== "webview") onSavePatch({ android_ui_mode: "webview" });
@@ -1477,8 +1360,8 @@ function MobileSettingsEditor({
           </div>
         </FieldRow>
         <div className={cn(adminStatusChipClass)}>
-          <span className="text-emerald-100/70">Rejestracja z aplikacji:</span>{" "}
-          <strong className="text-emerald-300">Zawsze włączona</strong>
+          <span className="text-zinc-500">Rejestracja z aplikacji:</span>{" "}
+          <strong className="text-[var(--mp-teal-dark)] dark:text-teal-300">Zawsze włączona</strong>
         </div>
       </SettingsSection>
 
@@ -1596,9 +1479,9 @@ function MobileSettingsEditor({
         </div>
         <Button
           type="button"
-          variant="gold"
+          variant="default"
           size="sm"
-          className="mt-3"
+          className="mt-3 rounded-full font-bold"
           disabled={busy}
           onClick={() => onSavePatch({ match_cancel_reasons: cancelReasonsDraft })}
         >

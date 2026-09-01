@@ -51,7 +51,6 @@ const nextConfig: NextConfig = {
       "default-src 'self'",
       "base-uri 'self'",
       "object-src 'none'",
-      "frame-ancestors 'none'",
       "form-action 'self'",
       // Next/Tailwind często wymagają inline styles; na start zbieramy raporty.
       "style-src 'self' 'unsafe-inline'",

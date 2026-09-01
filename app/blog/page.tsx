@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Calendar, Clock, ChevronRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { PitchCard, PitchPageHero } from "@/components/ui/pitch-card";
 import { blogPosts } from "@/lib/blog-posts";
 
@@ -38,7 +39,7 @@ export default function BlogPage() {
           {categories.map((cat) => (
             <span
               key={cat}
-              className="rounded-full border border-emerald-500/30 bg-emerald-900/30 px-3 py-1 text-xs font-medium text-emerald-300"
+              className="rounded-full border border-zinc-200 bg-zinc-100 px-3 py-1 text-xs font-medium text-zinc-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
             >
               {cat}
             </span>
@@ -55,11 +56,11 @@ export default function BlogPage() {
               contentClassName="p-5 sm:p-6 flex flex-col h-full"
             >
               <div className="flex items-center gap-2">
-                <span className="rounded-full bg-emerald-500/20 px-2.5 py-0.5 text-xs font-medium text-emerald-300">
+                <span className="rounded-full bg-teal-50 px-2.5 py-0.5 text-xs font-medium text-[var(--mp-teal-dark)] dark:bg-teal-950/50 dark:text-teal-200">
                   {post.category}
                 </span>
               </div>
-              <h2 className="pitch-heading mt-3 text-base leading-snug group-hover:text-emerald-200 transition-colors">
+              <h2 className="pitch-heading mt-3 text-base leading-snug transition-colors group-hover:text-[var(--mp-teal-dark)]">
                 {post.title}
               </h2>
               <p className="mt-2 flex-1 text-sm leading-relaxed text-emerald-100/75">{post.excerpt}</p>
@@ -74,7 +75,7 @@ export default function BlogPage() {
                     {post.readingTimeMin} min
                   </span>
                 </div>
-                <span className="flex items-center gap-1 font-medium text-emerald-400 group-hover:text-emerald-300 transition-colors">
+                <span className="flex items-center gap-1 font-medium text-[var(--mp-teal-dark)] transition-colors group-hover:text-[var(--mp-teal)]">
                   Czytaj <ChevronRight className="h-3.5 w-3.5" />
                 </span>
               </div>
@@ -93,18 +94,12 @@ export default function BlogPage() {
             Zarejestruj się i zacznij grać z nami już dziś.
           </p>
           <div className="mt-4 flex flex-col items-center gap-2 sm:flex-row sm:justify-center">
-            <Link
-              href="/register"
-              className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-6 py-2.5 text-sm font-semibold text-white shadow-lg transition hover:bg-emerald-400"
-            >
-              Zarejestruj się →
-            </Link>
-            <Link
-              href="/o-nas"
-              className="inline-flex items-center gap-2 rounded-xl border border-emerald-500/40 px-6 py-2.5 text-sm font-semibold text-emerald-300 transition hover:border-emerald-400 hover:text-emerald-200"
-            >
-              Dowiedz się więcej
-            </Link>
+            <Button asChild className="rounded-full font-bold">
+              <Link href="/register">Zarejestruj się →</Link>
+            </Button>
+            <Button asChild variant="outline" className="rounded-full font-bold">
+              <Link href="/o-nas">Dowiedz się więcej</Link>
+            </Button>
           </div>
         </PitchCard>
       </div>

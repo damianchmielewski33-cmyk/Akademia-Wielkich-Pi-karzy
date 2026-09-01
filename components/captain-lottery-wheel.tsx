@@ -3,24 +3,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Crown } from "lucide-react";
 import type { PlayerEntry } from "@/lib/terminarz-shared";
-import { useSiteMode } from "@/components/site-mode";
 import { modalPanelClass } from "@/components/ui/modal-shared";
 import { cn } from "@/lib/utils";
 
-const SEGMENT_FILLS_V1 = [
-  "#1a2d5a",
-  "#00a651",
-  "#24386e",
-  "#0b8a4a",
-  "#047857",
-  "#15264f",
-  "#0f766e",
-  "#b45309",
-  "#1d4ed8",
-  "#ca8a04",
-] as const;
-
-const SEGMENT_FILLS_V2 = [
+const SEGMENT_FILLS = [
   "#0f766e",
   "#00C9B1",
   "#115e59",
@@ -136,11 +122,10 @@ export function CaptainLotteryWheel({
   const fontSize = labelFontSize(n);
   const labelR = labelRadius(n);
   const lineGap = fontSize * 1.15;
-  const { marketplaceEnabled } = useSiteMode();
-  const segmentFills = marketplaceEnabled ? SEGMENT_FILLS_V2 : SEGMENT_FILLS_V1;
-  const pointerColor = marketplaceEnabled ? "var(--mp-teal)" : "var(--mundial-gold,#f5c518)";
-  const hubFill = marketplaceEnabled ? "#0f766e" : "#1a2d5a";
-  const accent = marketplaceEnabled ? "#00C9B1" : "#00a651";
+  const segmentFills = SEGMENT_FILLS;
+  const pointerColor = "var(--mp-teal)";
+  const hubFill = "#0f766e";
+  const accent = "#00C9B1";
 
   const labels = useMemo(
     () => players.map((p) => wheelLabel(p, segmentAngle)),
@@ -236,19 +221,12 @@ export function CaptainLotteryWheel({
           modalPanelClass,
           "relative overflow-hidden px-3 pb-4 pt-5 sm:px-5 sm:pb-5 sm:pt-6",
           isSpinningWheel &&
-            (marketplaceEnabled
-              ? "ring-2 ring-[var(--mp-teal)]/35 ring-offset-2 ring-offset-white dark:ring-offset-zinc-900"
-              : "ring-2 ring-amber-400/40 ring-offset-2 ring-offset-white dark:ring-offset-zinc-900")
+            "ring-2 ring-[var(--mp-teal)]/35 ring-offset-2 ring-offset-white dark:ring-offset-zinc-900"
         )}
         style={{ ["--awp-lottery-accent" as string]: accent }}
       >
         <p
-          className={cn(
-            "relative z-10 mb-3 text-center text-xs font-bold uppercase tracking-[0.18em] sm:mb-4",
-            marketplaceEnabled
-              ? "text-[var(--mp-teal-dark)] dark:text-teal-300"
-              : "text-[var(--mundial-navy)] dark:text-emerald-100/90"
-          )}
+          className="relative z-10 mb-3 text-center text-xs font-bold uppercase tracking-[0.18em] text-[var(--mp-teal-dark)] dark:text-teal-300 sm:mb-4"
         >
           {awaitingDraw ? "Losujemy…" : isSpinningWheel ? "Koło się kręci" : landedWinners ? "Wylosowano" : "Koło fortuny"}
         </p>
@@ -354,10 +332,7 @@ export function CaptainLotteryWheel({
                   disabled={!canSpin || isBusy}
                   onClick={() => onSpin?.()}
                   className={cn(
-                    "flex h-full w-full flex-col items-center justify-center rounded-full border-2 text-white shadow-md transition-[transform,background-color] duration-200",
-                    marketplaceEnabled
-                      ? "border-teal-700/20 bg-[var(--mp-teal)] shadow-teal-950/25 dark:border-teal-400/25"
-                      : "border-emerald-700/20 bg-emerald-600 shadow-emerald-950/25 dark:border-emerald-400/25 dark:bg-emerald-500",
+                    "flex h-full w-full flex-col items-center justify-center rounded-full border-2 border-teal-700/20 bg-[var(--mp-teal)] text-white shadow-md shadow-teal-950/25 transition-[transform,background-color] duration-200 dark:border-teal-400/25",
                     canSpin && !isBusy && "awp-lottery-hub--ready hover:scale-[1.03] active:scale-[0.97]",
                     isBusy && "cursor-wait"
                   )}
@@ -394,10 +369,7 @@ export function CaptainLotteryWheel({
                   aria-hidden
                 >
                   <Crown
-                    className={cn(
-                      "h-6 w-6 sm:h-7 sm:w-7",
-                      marketplaceEnabled ? "text-[var(--mp-teal)]" : "text-[var(--mundial-gold,#f5c518)]"
-                    )}
+                    className="h-6 w-6 text-[var(--mp-teal)] sm:h-7 sm:w-7"
                   />
                 </div>
               )}
@@ -411,12 +383,7 @@ export function CaptainLotteryWheel({
             role="status"
           >
             <p
-              className={cn(
-                "flex items-center justify-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.16em]",
-                marketplaceEnabled
-                  ? "text-[var(--mp-teal-dark)] dark:text-teal-300"
-                  : "text-amber-800 dark:text-amber-200"
-              )}
+              className="flex items-center justify-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.16em] text-[var(--mp-teal-dark)] dark:text-teal-300"
             >
               <Crown className="h-3.5 w-3.5" aria-hidden />
               {landedWinners.length === 1 ? "Kapitan" : `Kapitanowie (${landedWinners.length})`}

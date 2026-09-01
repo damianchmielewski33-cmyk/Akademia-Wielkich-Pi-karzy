@@ -4,7 +4,7 @@ import { sanitizeAppBridgeNext } from "@/lib/app-bridge";
 describe("sanitizeAppBridgeNext", () => {
   it("accepts relative academy paths", () => {
     expect(sanitizeAppBridgeNext("/panel-admina")).toBe("/panel-admina");
-    expect(sanitizeAppBridgeNext("/transport/12")).toBe("/transport/12");
+    expect(sanitizeAppBridgeNext("/terminarz")).toBe("/terminarz");
     expect(sanitizeAppBridgeNext("/pilkarze")).toBe("/pilkarze");
     expect(sanitizeAppBridgeNext("/platnosci?payment=pending&session_id=hp_1_abc")).toBe(
       "/platnosci?payment=pending&session_id=hp_1_abc"

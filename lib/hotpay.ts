@@ -238,7 +238,6 @@ export function sanitizeHotpayReturnPath(raw: unknown): string {
     pathOnly.startsWith("/terminarz/") ||
     pathOnly.startsWith("/rezerwacje/") ||
     pathOnly.startsWith("/obiekty/") ||
-    pathOnly.startsWith("/transport/") ||
     pathOnly.startsWith("/platnosci-public/") ||
     pathOnly.startsWith("/zaproszenie/");
   if (!allowed) return "/platnosci";

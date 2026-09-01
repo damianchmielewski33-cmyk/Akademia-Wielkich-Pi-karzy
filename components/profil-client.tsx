@@ -39,8 +39,6 @@ import { formatWalletPln } from "@/components/player-wallet-panel";
 import { MarketplaceSection, mpSectionCardClass } from "@/components/payments-card";
 import { MarketplacePitchPhoto } from "@/components/marketplace-pitch-photo";
 import { PhotoPanel } from "@/components/photo-panel";
-import { useSiteMode } from "@/components/site-mode";
-import { PitchPageHero } from "@/components/ui/pitch-card";
 import { AndroidAppVersionCard } from "@/components/android-app-version-card";
 import type { ProfileDashboard } from "@/lib/profile-data";
 import { MARKETPLACE_PITCH_PHOTOS } from "@/lib/marketplace-photos";
@@ -60,7 +58,6 @@ export function ProfilClient({
   walletBalancePln,
   hotpayEnabled,
 }: Props) {
-  const { marketplaceEnabled } = useSiteMode();
   const router = useRouter();
   const [data, setData] = useState<ProfileDashboard>(initial);
   const { pay: payDebt, busy: debtBusy } = useHotpayPayment();
@@ -251,7 +248,7 @@ export function ProfilClient({
   }
 
   const u = data.user;
-  const light = marketplaceEnabled;
+  const light = true;
 
   const photoActions = (
     <div className="mt-4 flex flex-wrap justify-center gap-2">
@@ -457,7 +454,7 @@ export function ProfilClient({
           onClick={() => void payDebt(Math.abs(walletBalancePln))}
         />
       ) : (
-        <Button asChild variant={light ? "default" : "pitch"} className={light ? "rounded-full" : undefined}>
+        <Button asChild variant="default" className="rounded-full font-bold">
           <Link href="/platnosci">Zapłać kartą lub Blikiem</Link>
         </Button>
       )}
@@ -679,7 +676,7 @@ export function ProfilClient({
           <Button type="button" variant="outline" onClick={() => setStatsOpen(false)}>
             Anuluj
           </Button>
-          <Button type="button" variant={light ? "default" : "pitch"} onClick={submitStats}>
+          <Button type="button" variant="default" className="rounded-full font-bold" onClick={submitStats}>
             Zapisz
           </Button>
         </>
@@ -725,9 +722,8 @@ export function ProfilClient({
     </AppModal>
   );
 
-  if (light) {
-    return (
-      <div className="relative flex flex-1 flex-col text-zinc-900 dark:text-zinc-50">
+  return (
+    <div className="relative flex flex-1 flex-col text-zinc-900 dark:text-zinc-50">
         <section className="mp-hero mp-hero--photo relative z-10 flex flex-col justify-end overflow-hidden pb-10 pt-12 sm:pb-16 sm:pt-20">
           <MarketplacePitchPhoto src={MARKETPLACE_PITCH_PHOTOS[5]} priority className="z-0" />
           <div className="absolute inset-0 z-[1] bg-gradient-to-t from-black/80 via-black/45 to-black/25" />
@@ -828,120 +824,6 @@ export function ProfilClient({
         {statsModal}
       </div>
     );
-  }
-
-  return (
-    <div className="awp-page awp-page--default">
-      <PitchPageHero
-        title="Mój profil"
-        subtitle="Dane konta, portfel, zdjęcie, awatar z listy oraz statystyki z ostatnich meczów (edycja i uzupełnianie przez 7 dni od daty meczu)."
-      />
-
-      <div className="mx-auto mt-10 grid gap-6 lg:grid-cols-[minmax(0,280px)_1fr]">
-        <div className="awp-card-surface">
-          <div className="flex flex-col items-center text-center">
-            <div className="relative shrink-0 overflow-hidden rounded-full border-4 border-emerald-200/90 shadow-inner ring-2 ring-emerald-900/10">
-              <PlayerAvatar
-                photoPath={u.profile_photo_path}
-                firstName={firstName}
-                lastName={lastName}
-                size="profile"
-                ringClassName="ring-0"
-              />
-              {uploadingPhoto ? (
-                <InlinePreloader layout="overlay" immediate label="Zapisywanie zdjęcia…" />
-              ) : null}
-            </div>
-            <div className="mt-3 w-full max-w-[240px]">
-              <PlayerNameStack
-                className="text-center"
-                firstName={firstName}
-                lastName={lastName}
-                nick={zawodnik}
-                primaryClassName="text-base font-semibold text-white"
-                secondaryClassName="text-sm text-emerald-100/85"
-              />
-            </div>
-            {photoActions}
-            <p className="mt-3 text-xs text-emerald-100/75">JPG, PNG, WebP lub GIF, do 2 MB.</p>
-          </div>
-        </div>
-
-        <div className="space-y-6">
-          <div className="awp-card-surface">
-            <div>
-              <h2 className="flex items-center gap-2 text-lg font-bold text-white">
-                <Pencil className="h-5 w-5 text-[var(--mundial-gold,#f5c518)]" />
-                Dane i awatar (lista)
-              </h2>
-              <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-                Logowanie odbywa się po imieniu, nazwisku i wybranym piłkarzu — po zmianie tych danych nadal jesteś
-                zalogowany.
-              </p>
-              {profileForm}
-            </div>
-          </div>
-
-          <AndroidAppVersionCard />
-
-          <div className="awp-card-surface">
-            <div>
-              <h2 className="flex items-center gap-2 text-lg font-bold text-white">
-                <Wallet className="h-5 w-5 text-[var(--mundial-gold,#f5c518)]" />
-                Portfel
-              </h2>
-              <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-                Podgląd salda — doładowania i opłaty meczów są na stronie Płatności.
-              </p>
-              {walletBlock}
-            </div>
-          </div>
-
-          <div className="pitch-card home-pitch-tile-gold p-5 sm:p-6">
-            <div>
-              <h2 className="text-lg font-bold text-white">Podsumowanie</h2>
-              <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-                Szybki wgląd — pełna tabela jest w{" "}
-                <Link href="/statystyki" className="font-semibold text-emerald-800 underline-offset-2 hover:underline">
-                  Statystykach
-                </Link>
-                .
-              </p>
-              {summaryGrid}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <section className="awp-card-surface mx-auto mt-10 max-w-5xl">
-        <div>
-          <h2 className="text-lg font-bold text-white">Statystyki z meczów</h2>
-          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-            Możesz dodać lub poprawić wpis do <strong>7 dni po dacie meczu</strong>. Później zmiany wykona wyłącznie
-            admin.
-          </p>
-          {matchStatsSection}
-        </div>
-      </section>
-
-      <section className="awp-card-surface mx-auto mt-10 max-w-5xl">
-        <div>
-          <h2 className="text-lg font-bold text-white">Twoja ostatnia aktywność</h2>
-          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-            Chronologia tego, co robiłeś na stronie (np. logowanie, zapisy, mecze).
-          </p>
-          {activitySection}
-        </div>
-      </section>
-
-      <section className="relative mx-auto mt-10 max-w-5xl rounded-2xl border border-dashed border-emerald-300/80 bg-emerald-50/40 p-6 dark:border-emerald-700/50 dark:bg-emerald-950/25">
-        <h2 className="text-base font-bold text-emerald-950 dark:text-emerald-100">Skrót do strony</h2>
-        {shortcuts}
-      </section>
-
-      {statsModal}
-    </div>
-  );
 }
 
 function MiniStat({

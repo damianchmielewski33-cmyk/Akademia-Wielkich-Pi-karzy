@@ -5,14 +5,12 @@ import { getAppSettings } from "@/lib/app-settings";
 import { REALMS } from "@/lib/realm";
 import { formatPonderingPlayersPolish } from "@/lib/terminarz-shared";
 import { parseYoutubeVideoIdFromUserInput } from "@/lib/site";
-import { isLocalMatchDay } from "@/lib/transport";
 
 export type PzuCupHomeClientProps = {
   nextMatch: MatchRow | null;
   nextMatchTentativeLine: string;
   lineupPublicNextMatch: boolean;
   nextMatchSignup: "none" | "tentative" | "confirmed" | "declined";
-  transportHomeActive: boolean;
   isLoggedIn: boolean;
   isAdmin: boolean;
   firstName: string;
@@ -50,8 +48,6 @@ export async function getPzuCupHomeClientProps(session: AppSession | null): Prom
     }
   }
 
-  const transportHomeActive = Boolean(nextMatch && isLocalMatchDay(nextMatch));
-
   let nextMatchTentativeLine = "";
   if (nextMatch) {
     const row = (await db
@@ -88,7 +84,6 @@ export async function getPzuCupHomeClientProps(session: AppSession | null): Prom
     nextMatchTentativeLine,
     lineupPublicNextMatch,
     nextMatchSignup,
-    transportHomeActive,
     isLoggedIn: Boolean(session),
     isAdmin: session?.isAdmin ?? false,
     firstName: session?.firstName ?? "",

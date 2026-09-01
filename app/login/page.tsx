@@ -13,12 +13,6 @@ export async function generateMetadata(): Promise<Metadata> {
       description: "Wejście akademii — e-mail i hasło. Stare konto? Zaloguj się PIN-em i uzupełnij dane.",
     };
   }
-  if (!settings.booking_marketplace_enabled) {
-    return {
-      title: "Logowanie",
-      description: "Wejście akademii — imię, nazwisko i PIN.",
-    };
-  }
   return {
     title: "Logowanie",
     description: "PIN akademii albo rezerwacja boiska bez konta — to dwa osobne wejścia.",
@@ -51,7 +45,6 @@ export default async function LoginPage({ searchParams }: Props) {
       siteName={settings.site_name}
       nextPath={safeNext}
       idleLogout={wylogowano === "bezczynnosc"}
-      marketplaceEnabled={settings.booking_marketplace_enabled === true}
       emailPasswordAuthEnabled={settings.email_password_auth_enabled === true}
     />
   );

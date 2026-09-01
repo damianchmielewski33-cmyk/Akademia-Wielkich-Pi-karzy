@@ -122,8 +122,8 @@ export function AdminSiteAssetField({ assetKey, currentUrl, customUrl, disabled,
   return (
     <div className={cn(adminInnerPanelClass, "space-y-3")}>
       <div>
-        <p className="text-sm font-semibold text-white">{meta.label}</p>
-        <p className="mt-0.5 text-xs pitch-muted">{meta.hint}</p>
+        <p className="text-sm font-semibold text-zinc-950 dark:text-white">{meta.label}</p>
+        <p className="mt-0.5 text-xs text-zinc-500">{meta.hint}</p>
       </div>
 
       <ImageUploadSpecDetails spec={spec} compact />
@@ -131,7 +131,7 @@ export function AdminSiteAssetField({ assetKey, currentUrl, customUrl, disabled,
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
         <div
           className={cn(
-            "relative flex h-28 w-full shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/20 bg-black/20 sm:h-32 sm:w-44",
+            "relative flex h-28 w-full shrink-0 items-center justify-center overflow-hidden rounded-xl border border-zinc-200 bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900 sm:h-32 sm:w-44",
             assetKey.startsWith("bg_") && "sm:h-24 sm:w-56"
           )}
         >
@@ -149,7 +149,7 @@ export function AdminSiteAssetField({ assetKey, currentUrl, customUrl, disabled,
         </div>
 
         <div className="flex min-w-0 flex-1 flex-col gap-2">
-          <p className="text-sm text-emerald-100/85">
+          <p className="text-sm text-zinc-600 dark:text-zinc-300">
             {isCustom ? "Używasz własnej grafiki" : "Używana jest grafika domyślna"}
           </p>
           <input
@@ -166,8 +166,9 @@ export function AdminSiteAssetField({ assetKey, currentUrl, customUrl, disabled,
           <div className="flex flex-wrap gap-2">
             <Button
               type="button"
-              variant="gold"
+              variant="default"
               size="sm"
+              className="rounded-full font-bold"
               disabled={disabled || busy}
               onClick={() => inputRef.current?.click()}
             >
@@ -180,8 +181,9 @@ export function AdminSiteAssetField({ assetKey, currentUrl, customUrl, disabled,
             </Button>
             <Button
               type="button"
-              variant="gold"
+              variant="default"
               size="sm"
+              className="rounded-full font-bold"
               disabled={disabled || busy || !isCustom}
               onClick={() => void resetToDefault()}
             >
@@ -189,7 +191,7 @@ export function AdminSiteAssetField({ assetKey, currentUrl, customUrl, disabled,
               Przywróć domyślną
             </Button>
           </div>
-          <p className="text-xs text-emerald-100/60">
+          <p className="text-xs text-zinc-500">
             Akceptowane: {spec.formats} · limit serwera 3,5 MB
             {assetKey.startsWith("bg_")
               ? " · zbyt duże zdjęcia strona zmniejszy automatycznie"

@@ -12,7 +12,6 @@ import {
   formatPonderingPlayersPolish,
 } from "@/lib/terminarz-shared";
 import { parseYoutubeVideoIdFromUserInput } from "@/lib/site";
-import { isLocalMatchDay } from "@/lib/transport";
 import { getRequestAppSettings } from "@/lib/request-app-settings";
 import { isHotpayConfigured } from "@/lib/hotpay";
 import type { SiteMode } from "@/lib/site-mode";
@@ -24,7 +23,6 @@ export type HomePageClientProps = {
   nextMatchTentativeLine: string;
   lineupPublicNextMatch: boolean;
   nextMatchSignup: "none" | "tentative" | "confirmed" | "declined";
-  transportHomeActive: boolean;
   hotpayEnabled: boolean;
   isLoggedIn: boolean;
   isAdmin: boolean;
@@ -96,7 +94,6 @@ export async function getHomePageClientProps(
     nextMatchPlayersData = buildPlayersData([nextMatch], signups)[nextMatch.id] ?? null;
   }
 
-  const transportHomeActive = Boolean(nextMatch && isLocalMatchDay(nextMatch));
   const lineupPublicNextMatch = Boolean(nextMatch && nextMatch.lineup_public === 1);
 
   let profilePhotoPath: string | null = null;
@@ -126,7 +123,6 @@ export async function getHomePageClientProps(
     nextMatchTentativeLine,
     lineupPublicNextMatch,
     nextMatchSignup,
-    transportHomeActive,
     hotpayEnabled,
     isLoggedIn: Boolean(session),
     isAdmin: session?.isAdmin ?? false,

@@ -110,13 +110,13 @@ export function AndroidAppUpdatePrompt() {
       title="Wymagana aktualizacja"
       headerKicker="Aplikacja"
       description={`Nowa wersja ${latest?.versionName ?? ""} jest już dostępna.`}
-      icon={<Download className="h-5 w-5 text-[var(--mundial-gold)]" aria-hidden />}
+      icon={<Download className="h-5 w-5 text-[var(--mp-teal)]" aria-hidden />}
       footer={
         <>
           <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={postpone} disabled={starting}>
             Później
           </Button>
-          <Button type="button" className="w-full sm:w-auto" onClick={startUpdate} disabled={starting}>
+          <Button type="button" variant="default" className="w-full rounded-full font-bold sm:w-auto" onClick={startUpdate} disabled={starting}>
             {starting ? <RefreshCw className="h-4 w-4 animate-spin" aria-hidden /> : <Download className="h-4 w-4" aria-hidden />}
             {starting ? "Uruchamianie…" : `Aktualizuj do ${latest?.versionName ?? ""}`}
           </Button>

@@ -298,7 +298,7 @@ export function AdminMarketplacePitchPhotosSection({
 
   return (
     <div className="space-y-3">
-      <p className="text-sm text-emerald-100/85">
+      <p className="text-sm text-zinc-600 dark:text-zinc-300">
         Zdjęcia paska pod „Gramy razem” (V2) oraz puli hero/kafelków. Kliknij też zdjęcie na stronie głównej lub w
         terminarzu, aby je zmienić. Pliki powyżej 3,5 MB są automatycznie zmniejszane przed wgraniem.
       </p>
@@ -307,8 +307,8 @@ export function AdminMarketplacePitchPhotosSection({
           const busy = busyIndex === i;
           const isCustom = Boolean(customSlots[i]?.trim());
           return (
-            <div key={i} className="overflow-hidden rounded-xl border border-white/20 bg-black/20">
-              <div className="relative aspect-[3/2] bg-black/30">
+            <div key={i} className="overflow-hidden rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950">
+              <div className="relative aspect-[3/2] bg-zinc-100 dark:bg-zinc-900">
                 <Image
                   src={src}
                   alt={`Zdjęcie ${i + 1}`}
@@ -319,9 +319,9 @@ export function AdminMarketplacePitchPhotosSection({
                 />
               </div>
               <div className="space-y-2 p-3">
-                <p className="text-sm font-semibold text-white">
+                <p className="text-sm font-semibold text-zinc-950 dark:text-white">
                   Zdjęcie {i + 1}
-                  <span className="ml-2 text-xs font-normal text-emerald-100/70">
+                  <span className="ml-2 text-xs font-normal text-zinc-500">
                     {isCustom ? "własne" : "domyślne"}
                   </span>
                 </p>
@@ -342,8 +342,9 @@ export function AdminMarketplacePitchPhotosSection({
                 <div className="flex flex-wrap gap-1.5">
                   <Button
                     type="button"
-                    variant="gold"
+                    variant="default"
                     size="sm"
+                    className="rounded-full font-bold"
                     disabled={disabled || busy}
                     onClick={() => inputRefs.current[i]?.click()}
                   >
@@ -352,8 +353,9 @@ export function AdminMarketplacePitchPhotosSection({
                   </Button>
                   <Button
                     type="button"
-                    variant="gold"
+                    variant="default"
                     size="sm"
+                    className="rounded-full font-bold"
                     disabled={disabled || busy || !isCustom}
                     onClick={() => void onReset(i)}
                   >

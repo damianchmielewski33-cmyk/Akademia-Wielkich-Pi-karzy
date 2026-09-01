@@ -17,8 +17,6 @@ import pl.akademiawielkichpilkarzy.app.data.api.MatchChargeRequest
 import pl.akademiawielkichpilkarzy.app.data.api.MatchDto
 import pl.akademiawielkichpilkarzy.app.data.api.SaveStatsRequest
 import pl.akademiawielkichpilkarzy.app.data.api.TerminarzResponse
-import pl.akademiawielkichpilkarzy.app.data.api.TransportMessageDto
-import pl.akademiawielkichpilkarzy.app.data.api.TransportPrefsRequest
 import pl.akademiawielkichpilkarzy.app.data.schedule.ScheduleRepository
 
 enum class ScheduleTab { Upcoming, Archive }
@@ -35,12 +33,6 @@ data class AdminPanelState(
     val presentUserIds: Set<Int> = emptySet()
 )
 
-data class TransportPanelState(
-    val match: MatchDto,
-    val loading: Boolean = true,
-    val messages: List<TransportMessageDto> = emptyList()
-)
-
 data class ScheduleUiState(
     val data: TerminarzResponse? = null,
     val loading: Boolean = true,
@@ -55,8 +47,7 @@ data class ScheduleUiState(
     val onlyMine: Boolean = false,
     val search: String = "",
     val calendarMonth: YearMonth = YearMonth.now(),
-    val adminPanel: AdminPanelState? = null,
-    val transportPanel: TransportPanelState? = null
+    val adminPanel: AdminPanelState? = null
 ) {
     val upcoming: List<MatchDto> get() = data?.upcoming.orEmpty()
     val archive: List<MatchDto> get() = data?.playedConfirmed.orEmpty()
@@ -152,10 +143,9 @@ class ScheduleViewModel(
             .let { if (s.sort == ScheduleSort.Desc) it.toList().asReversed() else it.toList() }
     }
 
-    fun signup(matchId: Int, commitment: String, openTransport: (Int) -> Unit = {}) {
+    fun signup(matchId: Int, commitment: String) {
         runAction(reloadAfter = true) {
             repository.signup(matchId, commitment)
-            if (commitment == "confirmed") openTransport(matchId)
             "Zapis zaktualizowany"
         }
     }
@@ -272,29 +262,6 @@ class ScheduleViewModel(
         }
     }
 
-    fun openTransport(match: MatchDto) {
-        _state.update { it.copy(transportPanel = TransportPanelState(match = match)) }
-        refreshTransport(match.id)
-    }
-
-    fun closeTransport() = _state.update { it.copy(transportPanel = null) }
-
-    fun saveTransport(matchId: Int, drivesCar: Boolean, canTakePassengers: Boolean, needsTransport: Boolean) {
-        runAction(reloadAfter = false) {
-            repository.updateTransport(matchId, TransportPrefsRequest(drivesCar, canTakePassengers, needsTransport))
-            refreshTransport(matchId)
-            "Transport zapisany"
-        }
-    }
-
-    fun sendTransportMessage(matchId: Int, body: String) {
-        runAction(reloadAfter = false) {
-            repository.sendTransportMessage(matchId, body)
-            refreshTransport(matchId)
-            "Wiadomość wysłana"
-        }
-    }
-
     fun saveStats(matchId: Int, goals: Int, assists: Int, distance: Double, saves: Int) {
         runAction(reloadAfter = true) {
             repository.saveStats(SaveStatsRequest(matchId, goals, assists, distance, saves))
@@ -309,15 +276,6 @@ class ScheduleViewModel(
             val signups = runCatching { repository.adminSignups(matchId).signups }.getOrElse { panel.signups }
             val present = runCatching { repository.attendance(matchId).presentUserIds.toSet() }.getOrElse { panel.presentUserIds }
             _state.update { it.copy(adminPanel = panel.copy(loading = false, signups = signups, presentUserIds = present)) }
-        }
-    }
-
-    private fun refreshTransport(matchId: Int) {
-        viewModelScope.launch {
-            val panel = _state.value.transportPanel ?: return@launch
-            if (panel.match.id != matchId) return@launch
-            val messages = runCatching { repository.transportMessages(matchId).messages }.getOrElse { panel.messages }
-            _state.update { it.copy(transportPanel = panel.copy(loading = false, messages = messages)) }
         }
     }
 

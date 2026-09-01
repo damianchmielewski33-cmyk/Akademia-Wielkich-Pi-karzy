@@ -7,7 +7,6 @@ import { MarketplacePitchPhoto } from "@/components/marketplace-pitch-photo";
 import { useMarketplacePitchPhotoAt } from "@/components/marketplace-photos-provider";
 import { mpSectionCardClass } from "@/components/payments-card";
 import { SiteSectionHero } from "@/components/site-section-hero";
-import { useSiteMode } from "@/components/site-mode";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -54,8 +53,7 @@ function shortLocation(loc: string, max = 18) {
 }
 
 export function SkladyClient(props: Props) {
-  const { marketplaceEnabled } = useSiteMode();
-  const light = marketplaceEnabled;
+  const light = true;
   const heroPhoto = useMarketplacePitchPhotoAt(3);
 
   if (props.variant === "empty-pending") {
@@ -168,49 +166,24 @@ export function SkladyClient(props: Props) {
       </nav>
     ) : null;
 
-  if (light) {
-    return (
-      <div className="relative flex flex-1 flex-col text-zinc-900 dark:text-zinc-50">
-        <section className="mp-hero mp-hero--photo relative z-10 flex flex-col justify-end overflow-hidden pb-10 pt-12 sm:pb-16 sm:pt-20">
-          <MarketplacePitchPhoto src={heroPhoto} priority className="z-0" />
-          <div className="absolute inset-0 z-[1] bg-gradient-to-t from-black/75 via-black/40 to-black/20" />
-          <div className="relative z-10 mx-auto w-full max-w-6xl px-3 xs:px-4">
-            <p className="text-[0.65rem] font-black uppercase tracking-[0.22em] text-white/80 sm:text-xs">Akademia</p>
-            <h1 className="mt-2 text-[1.85rem] font-black leading-tight tracking-tight text-white xs:text-4xl sm:text-5xl">
-              Składy
-            </h1>
-            <p className="mt-3 max-w-2xl text-sm text-white/85 sm:text-base">{heroSubtitle}</p>
-          </div>
-        </section>
-
-        <div className="relative z-10 mx-auto w-full min-w-0 max-w-6xl space-y-5 px-3 py-8 xs:px-4 sm:py-10">
-          {matchNav}
-          {children}
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="awp-page awp-page--wide space-y-6">
-      <SiteSectionHero
-        kicker="Boisko"
-        title="Składy"
-        subtitle="Publiczne ustawienia drużyn na mecze — wybierz termin poniżej."
-        align="center"
-      />
+    <div className="relative flex flex-1 flex-col text-zinc-900 dark:text-zinc-50">
+      <section className="mp-hero mp-hero--photo relative z-10 flex flex-col justify-end overflow-hidden pb-10 pt-12 sm:pb-16 sm:pt-20">
+        <MarketplacePitchPhoto src={heroPhoto} priority className="z-0" />
+        <div className="absolute inset-0 z-[1] bg-gradient-to-t from-black/75 via-black/40 to-black/20" />
+        <div className="relative z-10 mx-auto w-full max-w-6xl px-3 xs:px-4">
+          <p className="text-[0.65rem] font-black uppercase tracking-[0.22em] text-white/80 sm:text-xs">Akademia</p>
+          <h1 className="mt-2 text-[1.85rem] font-black leading-tight tracking-tight text-white xs:text-4xl sm:text-5xl">
+            Składy
+          </h1>
+          <p className="mt-3 max-w-2xl text-sm text-white/85 sm:text-base">{heroSubtitle}</p>
+        </div>
+      </section>
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <Link href="/" className="text-sm font-medium text-emerald-800 hover:underline">
-          ← Strona główna
-        </Link>
-        {navMatches.length > 1 ? (
-          <p className="text-xs text-zinc-500 sm:text-right">Wybierz mecz, żeby zobaczyć składy z archiwum.</p>
-        ) : null}
+      <div className="relative z-10 mx-auto w-full min-w-0 max-w-6xl space-y-5 px-3 py-8 xs:px-4 sm:py-10">
+        {matchNav}
+        {children}
       </div>
-
-      {matchNav}
-      {children}
     </div>
   );
 }

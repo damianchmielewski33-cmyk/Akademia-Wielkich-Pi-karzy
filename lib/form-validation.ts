@@ -56,6 +56,35 @@ export const formSchemas = {
     .max(200, "Hasło jest zbyt długie"),
 };
 
+/** Normalizacja e-maila po stronie klienta (jak `normalizeEmail` na serwerze). */
+export function normalizeClientEmail(raw: string): string {
+  return raw.trim().toLowerCase();
+}
+
+export const emailConfirmField = z.string().trim().min(1, "Powtórz adres e-mail");
+
+/** Schemat pól e-mail + potwierdzenie z porównaniem (case-insensitive). */
+export function emailWithConfirmSchema() {
+  return z
+    .object({
+      email: formSchemas.email,
+      emailConfirm: emailConfirmField,
+    })
+    .refine((d) => normalizeClientEmail(d.email) === normalizeClientEmail(d.emailConfirm), {
+      message: "Adresy e-mail muszą być takie same",
+      path: ["emailConfirm"],
+    });
+}
+
+export function refineMatchingPasswords<T extends { password: string; passwordConfirm: string }>(
+  schema: z.ZodType<T>
+) {
+  return schema.refine((d) => d.password === d.passwordConfirm, {
+    message: "Hasła muszą być takie same",
+    path: ["passwordConfirm"],
+  });
+}
+
 export function zodFieldErrors<T extends z.ZodType>(
   schema: T,
   values: unknown

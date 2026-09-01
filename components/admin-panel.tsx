@@ -29,7 +29,6 @@ import {
   Wallet,
 } from "lucide-react";
 import { toast } from "@/lib/app-toast";
-import { useSiteMode } from "@/components/site-mode";
 import { PlayerAliasPicker } from "@/components/player-alias-picker";
 import { FormInput } from "@/components/ui/form-field";
 import { formSchemas, useValidatedForm } from "@/lib/form-validation";
@@ -331,7 +330,7 @@ const navGroupDefs = [
       { id: "gallery", label: "Galeria", desc: "Filmy i materiały z boiska", icon: Film },
       { id: "screen-blocks", label: "Zaślepki", desc: "Tymczasowe wyłączenie ekranów", icon: Construction },
       { id: "analytics", label: "Analityka", desc: "Odsłony i aktywność graczy", icon: BarChart3 },
-      { id: "settings", label: "Ustawienia", desc: "Marka, płatności i wersja aplikacji", icon: Settings2 },
+      { id: "settings", label: "Ustawienia", desc: "Marka, płatności i konfiguracja", icon: Settings2 },
     ],
   },
 ] as const;
@@ -428,7 +427,7 @@ function MatchesView({
           <TableBody>
             {matches.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="h-24 text-center text-sm text-emerald-100/70">
+                <TableCell colSpan={7} className="h-24 text-center text-sm text-zinc-500">
                   Brak meczów w bazie.
                 </TableCell>
               </TableRow>
@@ -451,7 +450,7 @@ function MatchesView({
                     ) : (
                       <AdminRowActions
                         primary={
-                          <Button size="sm" variant="gold" onClick={() => handleSignupsClick(m)}>
+                          <Button size="sm" variant="default" className="rounded-full font-bold" onClick={() => handleSignupsClick(m)}>
                             Zapisy
                           </Button>
                         }
@@ -816,7 +815,7 @@ function MatchSignupsDialogContent({
                         <Badge className="bg-amber-100 text-amber-800">Gościnny</Badge>
                       ) : null}
                     </div>
-                    <p className="text-sm pitch-muted">{s.zawodnik}</p>
+                    <p className="text-sm text-zinc-500">{s.zawodnik}</p>
                   </div>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
@@ -876,7 +875,7 @@ function MatchSignupsDialogContent({
             <Button type="button" variant="outline" onClick={() => setAddGuestOpen(false)} disabled={addingGuest}>
               Anuluj
             </Button>
-            <Button type="button" variant="gold" onClick={() => void handleAddGuest()} disabled={addingGuest}>
+            <Button type="button" variant="default" className="rounded-full font-bold" onClick={() => void handleAddGuest()} disabled={addingGuest}>
               {addingGuest ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               Dodaj
             </Button>
@@ -950,7 +949,7 @@ function StatsView({
       >
         <div className="relative w-full min-w-[200px] sm:w-64">
           <Search
-            className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-emerald-100/50"
+            className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400"
             aria-hidden
           />
           <Input
@@ -979,7 +978,7 @@ function StatsView({
           <TableBody>
             {filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="h-24 text-center text-sm text-emerald-100/70">
+                <TableCell colSpan={7} className="h-24 text-center text-sm text-zinc-500">
                   {stats.length === 0 ? "Brak statystyk w bazie." : "Brak wyników dla podanego filtra."}
                 </TableCell>
               </TableRow>
@@ -1007,7 +1006,7 @@ function StatsView({
                   <TableCell className="text-right align-middle tabular-nums">{s.distance}</TableCell>
                   <TableCell className="text-right align-middle tabular-nums">{s.saves}</TableCell>
                   <TableCell className="text-right align-middle tabular-nums">
-                    <Link href={`/panel-admina?tab=matches&match=${s.match_id}`} className="text-[var(--mundial-gold)] hover:underline">
+                    <Link href={`/panel-admina?tab=matches&match=${s.match_id}`} className="text-[var(--mp-teal-dark)] hover:underline">
                       {s.match_id}
                     </Link>
                   </TableCell>
@@ -1542,7 +1541,7 @@ function AnalyticsView({
               <Button
                 key={p.label}
                 type="button"
-                variant="gold"
+                variant="outline"
                 size="sm"
                 className={adminOutlineBtnClass}
                 disabled={loading}
@@ -1557,7 +1556,7 @@ function AnalyticsView({
           </div>
           <div className="flex flex-wrap items-end gap-3">
             <div>
-              <Label htmlFor="adm-an-from" className="text-xs pitch-muted">
+              <Label htmlFor="adm-an-from" className="text-xs text-zinc-500">
                 Od
               </Label>
               <Input
@@ -1570,7 +1569,7 @@ function AnalyticsView({
               />
             </div>
             <div>
-              <Label htmlFor="adm-an-to" className="text-xs pitch-muted">
+              <Label htmlFor="adm-an-to" className="text-xs text-zinc-500">
                 Do
               </Label>
               <Input
@@ -1584,8 +1583,8 @@ function AnalyticsView({
             </div>
           </div>
           {rangeSummary && data ? (
-            <p className="w-full text-sm pitch-muted">
-              Raport: <span className="font-semibold text-white">{rangeSummary}</span>
+            <p className="w-full text-sm text-zinc-500">
+              Raport: <span className="font-semibold text-zinc-950 dark:text-white">{rangeSummary}</span>
               <span className="ml-2 font-mono text-xs opacity-70">
                 ({data.range.from} — {data.range.to})
               </span>
@@ -1607,7 +1606,7 @@ function AnalyticsView({
       />
 
       {!data && !loading ? (
-        <p className="text-sm pitch-muted">Brak danych do wyświetlenia.</p>
+        <p className="text-sm text-zinc-500">Brak danych do wyświetlenia.</p>
       ) : null}
 
       {data && section === "summary" ? (
@@ -1815,7 +1814,7 @@ function AnalyticsView({
           headerExtra={
             <Button
               type="button"
-              variant="gold"
+              variant="outline"
               size="sm"
               className={adminDataOutlineBtnClass}
               disabled={loading || screensPrepared.length === 0}
@@ -2006,25 +2005,13 @@ function DashboardView({
   onReload: () => void;
   onGoToTab: (t: TabId, opts?: { matchId?: number }) => void;
 }) {
-  const { marketplaceEnabled } = useSiteMode();
-  const sectionLabel = marketplaceEnabled
-    ? "text-xs font-bold uppercase tracking-[0.14em] text-[var(--mp-teal-dark)] dark:text-[var(--mp-teal)]"
-    : "text-xs font-bold uppercase tracking-[0.14em] text-[var(--mundial-gold,#f5c518)]";
-  const activityBorder = marketplaceEnabled
-    ? "border-l-2 border-[var(--mp-teal)]/50 pl-4"
-    : "border-l-2 border-[var(--mundial-gold)]/50 pl-4";
-  const bodyMuted = marketplaceEnabled
-    ? "mt-1 mb-3 text-sm text-zinc-600 dark:text-zinc-400 sm:text-base"
-    : "mt-1 mb-3 text-sm text-white/85 sm:text-base";
-  const actorNameClass = marketplaceEnabled
-    ? "text-base font-bold text-zinc-950 dark:text-white"
-    : "text-base font-bold text-white drop-shadow-sm";
-  const activityTextClass = marketplaceEnabled
-    ? "text-sm leading-relaxed text-zinc-600 dark:text-zinc-300 sm:text-base"
-    : "text-sm leading-relaxed text-emerald-50/90 sm:text-base";
-  const timeClass = marketplaceEnabled
-    ? "shrink-0 text-sm tabular-nums text-zinc-500 sm:pt-0.5"
-    : "shrink-0 text-sm tabular-nums text-white/80 sm:pt-0.5";
+  const sectionLabel =
+    "text-xs font-bold uppercase tracking-[0.14em] text-[var(--mp-teal-dark)] dark:text-[var(--mp-teal)]";
+  const activityBorder = "border-l-2 border-[var(--mp-teal)]/50 pl-4";
+  const bodyMuted = "mt-1 mb-3 text-sm text-zinc-600 dark:text-zinc-400 sm:text-base";
+  const actorNameClass = "text-base font-bold text-zinc-950 dark:text-white";
+  const activityTextClass = "text-sm leading-relaxed text-zinc-600 dark:text-zinc-300 sm:text-base";
+  const timeClass = "shrink-0 text-sm tabular-nums text-zinc-500 sm:pt-0.5";
 
   const metrics = [
     {
@@ -2109,7 +2096,7 @@ function DashboardView({
         { tab: "gallery", label: "Galeria", desc: "Filmy i materiały z boiska", icon: Film },
         { tab: "screen-blocks", label: "Zaślepki", desc: "Tymczasowe wyłączenie ekranów", icon: Construction },
         { tab: "analytics", label: "Analityka", desc: "Odsłony i aktywność graczy", icon: BarChart3 },
-        { tab: "settings", label: "Ustawienia", desc: "Marka, płatności i wersja aplikacji", icon: Settings2 },
+        { tab: "settings", label: "Ustawienia", desc: "Marka, płatności i konfiguracja", icon: Settings2 },
       ],
     },
   ];
@@ -2387,7 +2374,7 @@ function UsersView({
         </Button>
         <div className="relative w-full min-w-[200px] sm:w-64">
           <Search
-            className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-emerald-100/50"
+            className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400"
             aria-hidden
           />
           <Input
@@ -2424,7 +2411,7 @@ function UsersView({
           <TableBody>
             {filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center text-sm text-emerald-100/70">
+                <TableCell colSpan={5} className="h-24 text-center text-sm text-zinc-500">
                   {users.length === 0
                     ? "Brak użytkowników w bazie."
                     : "Brak wyników dla podanego filtra."}
@@ -2722,7 +2709,8 @@ function UserCreateForm({
           </Button>
           <Button
             type="button"
-            variant="gold"
+            variant="default"
+            className="rounded-full font-bold"
             disabled={saving}
             onClick={async () => {
               if (!form.validate()) return;
@@ -2864,7 +2852,8 @@ function UserEditForm({
           </Button>
           <Button
             type="button"
-            variant="gold"
+            variant="default"
+            className="rounded-full font-bold"
             disabled={saving}
             onClick={async () => {
               setSaving(true);
@@ -3020,7 +3009,7 @@ function MatchEditDialogContent({
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
             Zamknij
           </Button>
-          <Button type="button" variant="gold" onClick={() => void handleSave()} disabled={saving}>
+          <Button type="button" variant="default" className="rounded-full font-bold" onClick={() => void handleSave()} disabled={saving}>
             {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
             Zapisz zmiany
           </Button>

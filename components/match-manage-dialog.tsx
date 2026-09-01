@@ -34,7 +34,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { formSchemas, useValidatedForm } from "@/lib/form-validation";
-import { useSiteMode } from "@/components/site-mode";
 
 type ManageTab = "edit" | "guest" | "signups" | "cancel";
 
@@ -84,10 +83,8 @@ const tabTriggerClass = modalTabTriggerClass;
 
 const panelClass = modalPanelClass;
 
-function readOnlyInputClass(light: boolean) {
-  return light
-    ? "cursor-default border-zinc-200 bg-zinc-50 text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900/60 dark:text-zinc-100"
-    : "cursor-default border-emerald-100/90 bg-white/70 text-emerald-950 dark:border-emerald-800/50 dark:bg-zinc-900/50 dark:text-emerald-100";
+function readOnlyInputClass() {
+  return "cursor-default border-zinc-200 bg-zinc-50 text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900/60 dark:text-zinc-100";
 }
 
 function matchToFormValues(m: MatchRow) {
@@ -125,9 +122,7 @@ export function MatchManageDialog({
   initialTab = "edit",
   cancelReasons = MATCH_CANCEL_REASONS,
 }: Props) {
-  const { marketplaceEnabled } = useSiteMode();
-  const light = marketplaceEnabled;
-  const primaryVariant = light ? "default" : "pitch";
+  const primaryVariant = "default" as const;
   const [tab, setTab] = useState<ManageTab>("edit");
   const [cancelReason, setCancelReason] = useState("weather");
   const [busy, setBusy] = useState(false);
@@ -497,12 +492,12 @@ export function MatchManageDialog({
       size="lg"
       scrollable
       title="Zarządzaj meczem"
-      headerKicker={light ? "Terminarz" : undefined}
+      headerKicker="Terminarz"
       headerPhotoSeed={match?.id ?? 4}
       description="Edytuj termin, dopisz gościa, zarządzaj składem lub odwołaj mecz — zmiany widzą zapisani zawodnicy."
       footer={renderFooter()}
       contentClassName="space-y-4"
-      icon={light ? <Pencil className="h-4 w-4" strokeWidth={2.25} aria-hidden /> : undefined}
+      icon={<Pencil className="h-4 w-4" strokeWidth={2.25} aria-hidden />}
     >
       <ModalMatchSummary match={match} />
 
@@ -521,19 +516,12 @@ export function MatchManageDialog({
             setFeeError(undefined);
           }}
         >
-          <TabsList
-            className={cn(
-              modalTabListClass,
-              "grid-cols-2 sm:grid-cols-4",
-              light && "bg-zinc-100 dark:bg-zinc-900"
-            )}
-          >
+          <TabsList className={cn(modalTabListClass, "grid-cols-2 bg-zinc-100 sm:grid-cols-4 dark:bg-zinc-900")}>
             <TabsTrigger
               value="edit"
               className={cn(
                 tabTriggerClass,
-                light &&
-                  "data-[state=active]:bg-[var(--mp-teal)] data-[state=active]:text-white dark:data-[state=active]:bg-[var(--mp-teal)] dark:data-[state=active]:text-white"
+                "data-[state=active]:bg-[var(--mp-teal)] data-[state=active]:text-white dark:data-[state=active]:bg-[var(--mp-teal)] dark:data-[state=active]:text-white"
               )}
             >
               <Pencil className="mr-1.5 h-3.5 w-3.5" aria-hidden />
@@ -543,8 +531,7 @@ export function MatchManageDialog({
               value="guest"
               className={cn(
                 tabTriggerClass,
-                light &&
-                  "data-[state=active]:bg-[var(--mp-teal)] data-[state=active]:text-white dark:data-[state=active]:bg-[var(--mp-teal)] dark:data-[state=active]:text-white"
+                "data-[state=active]:bg-[var(--mp-teal)] data-[state=active]:text-white dark:data-[state=active]:bg-[var(--mp-teal)] dark:data-[state=active]:text-white"
               )}
             >
               <UserPlus className="mr-1.5 h-3.5 w-3.5" aria-hidden />
@@ -554,8 +541,7 @@ export function MatchManageDialog({
               value="signups"
               className={cn(
                 tabTriggerClass,
-                light &&
-                  "data-[state=active]:bg-[var(--mp-teal)] data-[state=active]:text-white dark:data-[state=active]:bg-[var(--mp-teal)] dark:data-[state=active]:text-white"
+                "data-[state=active]:bg-[var(--mp-teal)] data-[state=active]:text-white dark:data-[state=active]:bg-[var(--mp-teal)] dark:data-[state=active]:text-white"
               )}
             >
               <Users className="mr-1.5 h-3.5 w-3.5" aria-hidden />
@@ -566,7 +552,7 @@ export function MatchManageDialog({
               className={cn(
                 tabTriggerClass,
                 "data-[state=active]:text-red-800 dark:data-[state=active]:text-red-200",
-                light && "data-[state=active]:bg-red-600 data-[state=active]:text-white dark:data-[state=active]:bg-red-600 dark:data-[state=active]:text-white"
+                "data-[state=active]:bg-red-600 data-[state=active]:text-white dark:data-[state=active]:bg-red-600 dark:data-[state=active]:text-white"
               )}
             >
               <XCircle className="mr-1.5 h-3.5 w-3.5" aria-hidden />
@@ -592,7 +578,7 @@ export function MatchManageDialog({
                 onChange={(e) => editForm.setValue("date", e.target.value)}
                 onBlur={() => editForm.setFieldTouched("date")}
                 error={editForm.errors.date}
-                inputClassName={cn(!isEditing && readOnlyInputClass(light))}
+                inputClassName={cn(!isEditing && readOnlyInputClass())}
               />
               <FormInput
                 id="mm-time"
@@ -605,7 +591,7 @@ export function MatchManageDialog({
                 onChange={(e) => editForm.setValue("time", e.target.value)}
                 onBlur={() => editForm.setFieldTouched("time")}
                 error={editForm.errors.time}
-                inputClassName={cn(!isEditing && readOnlyInputClass(light))}
+                inputClassName={cn(!isEditing && readOnlyInputClass())}
               />
               <FormInput
                 id="mm-location"
@@ -617,7 +603,7 @@ export function MatchManageDialog({
                 onChange={(e) => editForm.setValue("location", e.target.value)}
                 onBlur={() => editForm.setFieldTouched("location")}
                 error={editForm.errors.location}
-                inputClassName={cn(!isEditing && readOnlyInputClass(light))}
+                inputClassName={cn(!isEditing && readOnlyInputClass())}
               />
               <FormInput
                 id="mm-slots"
@@ -632,7 +618,7 @@ export function MatchManageDialog({
                 onBlur={() => editForm.setFieldTouched("maxSlots")}
                 error={editForm.errors.maxSlots}
                 hint={`Obecnie zapisanych: ${match.signed_up}`}
-                inputClassName={cn(!isEditing && readOnlyInputClass(light))}
+                inputClassName={cn(!isEditing && readOnlyInputClass())}
               />
               <FormInput
                 id="mm-fee"
@@ -661,7 +647,7 @@ export function MatchManageDialog({
                     return `Składka na osobę: ${formatMatchFeePln(per)} (${match.signed_up} zapisanych)`;
                   })()
                 }
-                inputClassName={cn(!isEditing && readOnlyInputClass(light))}
+                inputClassName={cn(!isEditing && readOnlyInputClass())}
               />
               <FormInput
                 id="mm-gate-pin"
@@ -680,7 +666,7 @@ export function MatchManageDialog({
                 onBlur={() => editForm.setFieldTouched("gatePin")}
                 error={editForm.errors.gatePin}
                 hint="Kod na bramę boiska — widoczny na stronie głównej przy najbliższym meczu."
-                inputClassName={cn(!isEditing && readOnlyInputClass(light))}
+                inputClassName={cn(!isEditing && readOnlyInputClass())}
               />
             </div>
           </TabsContent>
@@ -698,10 +684,7 @@ export function MatchManageDialog({
                   <div
                     key={g.user_id}
                     className={cn(
-                      "flex items-center justify-between gap-3 border-b px-4 py-3 last:border-b-0",
-                      light
-                        ? "border-zinc-100 dark:border-zinc-800"
-                        : "border-emerald-900/8 dark:border-emerald-800/40"
+                      "flex items-center justify-between gap-3 border-b border-zinc-100 px-4 py-3 last:border-b-0 dark:border-zinc-800"
                     )}
                   >
                     <div className="flex min-w-0 flex-1 items-center gap-3">
@@ -807,8 +790,7 @@ export function MatchManageDialog({
                     <div
                       key={u.id}
                       className={cn(
-                        "flex items-center gap-3 rounded-xl border bg-white px-3 py-2 dark:bg-zinc-900",
-                        light ? "border-zinc-200 dark:border-zinc-800" : "border-emerald-900/10"
+                        "flex items-center gap-3 rounded-xl border border-zinc-200 bg-white px-3 py-2 dark:border-zinc-800 dark:bg-zinc-900"
                       )}
                     >
                       <PlayerAvatar
@@ -817,11 +799,7 @@ export function MatchManageDialog({
                         lastName={u.last_name}
                         size="sm"
                         ringClassName={
-                          isSigned
-                            ? light
-                              ? "ring-2 ring-[var(--mp-teal)]/35"
-                              : "ring-2 ring-emerald-200/90"
-                            : "ring-2 ring-zinc-200/80"
+                          isSigned ? "ring-2 ring-[var(--mp-teal)]/35" : "ring-2 ring-zinc-200/80"
                         }
                       />
                       <div className="min-w-0 flex-1">

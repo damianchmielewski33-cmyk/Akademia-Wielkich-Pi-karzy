@@ -1,7 +1,6 @@
 import type { MetadataRoute } from "next";
 import { getSiteUrl } from "@/lib/site";
 import { blogPosts } from "@/lib/blog-posts";
-import { isBookingMarketplaceEnabled } from "@/lib/booking-marketplace";
 import { getDb } from "@/lib/db";
 import { listVenueCards } from "@/lib/booking";
 
@@ -29,8 +28,7 @@ const MARKETPLACE_PATHS = ["/obiekty", "/dla-obiektow", "/rezerwacje"] as const;
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const origin = getSiteUrl();
   const lastModified = new Date();
-  const marketplaceEnabled = await isBookingMarketplaceEnabled();
-  const publicPaths = marketplaceEnabled ? [...MARKETPLACE_PATHS, ...ACADEMY_PATHS] : [...ACADEMY_PATHS];
+  const publicPaths = [...MARKETPLACE_PATHS, ...ACADEMY_PATHS];
 
   const staticPages: MetadataRoute.Sitemap = publicPaths.map((path) => ({
     url: `${origin}${path === "/" ? "" : path}`,
@@ -54,19 +52,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }));
 
   let venuePages: MetadataRoute.Sitemap = [];
-  if (marketplaceEnabled) {
-    try {
-      const db = await getDb();
-      const venues = await listVenueCards(db);
-      venuePages = venues.map((venue) => ({
-        url: `${origin}/obiekty/${venue.slug}`,
-        lastModified,
-        changeFrequency: "daily" as const,
-        priority: 0.85,
-      }));
-    } catch {
-      venuePages = [];
-    }
+  try {
+    const db = await getDb();
+    const venues = await listVenueCards(db);
+    venuePages = venues.map((venue) => ({
+      url: `${origin}/obiekty/${venue.slug}`,
+      lastModified,
+      changeFrequency: "daily" as const,
+      priority: 0.85,
+    }));
+  } catch {
+    venuePages = [];
   }
 
   return [...staticPages, ...blogPages, ...venuePages];

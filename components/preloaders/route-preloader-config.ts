@@ -124,13 +124,6 @@ export function getRoutePreloaderSpec(rawPath: string): RoutePreloaderSpec {
       subtitle: "Przygotowujemy wizytówkę meczu.",
     };
   }
-  if (path.startsWith("/transport")) {
-    return {
-      kicker: "Akademia",
-      title: "Transport",
-      subtitle: "Ładujemy dojazd.",
-    };
-  }
   if (path.startsWith("/losowanie-kapitana")) {
     return {
       kicker: "Akademia",

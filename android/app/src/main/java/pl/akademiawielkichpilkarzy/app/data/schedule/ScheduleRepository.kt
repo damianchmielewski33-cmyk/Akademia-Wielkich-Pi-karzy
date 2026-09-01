@@ -15,9 +15,6 @@ import pl.akademiawielkichpilkarzy.app.data.api.MatchChargesRequest
 import pl.akademiawielkichpilkarzy.app.data.api.SaveStatsRequest
 import pl.akademiawielkichpilkarzy.app.data.api.SignupRequest
 import pl.akademiawielkichpilkarzy.app.data.api.TerminarzResponse
-import pl.akademiawielkichpilkarzy.app.data.api.TransportMessageRequest
-import pl.akademiawielkichpilkarzy.app.data.api.TransportMessagesResponse
-import pl.akademiawielkichpilkarzy.app.data.api.TransportPrefsRequest
 import pl.akademiawielkichpilkarzy.app.data.api.UserIdRequest
 import pl.akademiawielkichpilkarzy.app.data.api.WeatherResponse
 
@@ -89,16 +86,6 @@ class ScheduleRepository {
         val result = api.settleMatchCharges(matchId, MatchChargesRequest(charges))
         result.error?.let { error(it) }
         return "Rozliczono: ${result.applied.size}, pominięto: ${result.skipped.size}"
-    }
-
-    suspend fun updateTransport(matchId: Int, request: TransportPrefsRequest) {
-        api.updateTransport(matchId, request).throwIfError()
-    }
-
-    suspend fun transportMessages(matchId: Int): TransportMessagesResponse = api.transportMessages(matchId)
-
-    suspend fun sendTransportMessage(matchId: Int, body: String) {
-        api.sendTransportMessage(matchId, TransportMessageRequest(body)).throwIfError()
     }
 
     suspend fun saveStats(request: SaveStatsRequest) {

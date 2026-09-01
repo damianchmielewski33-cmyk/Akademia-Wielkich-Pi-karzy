@@ -7,8 +7,6 @@ import { MarketplacePitchPhoto } from "@/components/marketplace-pitch-photo";
 import { useMarketplacePitchPhotoAt } from "@/components/marketplace-photos-provider";
 import { MarketplaceSection } from "@/components/payments-card";
 import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
-import { useSiteMode } from "@/components/site-mode";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getSlotStylesAway, getSlotStylesHome } from "@/lib/match-lineup-layout";
 import { cn } from "@/lib/utils";
 
@@ -388,8 +386,6 @@ function TeamHalfReadOnly({
 }
 
 export function MatchLineupView({ matchDate, matchTime, location, players, home, away }: Props) {
-  const { marketplaceEnabled } = useSiteMode();
-  const light = marketplaceEnabled;
   const heroPhoto = useMarketplacePitchPhotoAt(matchDate.length + matchTime.length + location.length);
   const playerById = useMemo(() => {
     const map = new Map<number, LineupPlayer>();
@@ -420,13 +416,11 @@ export function MatchLineupView({ matchDate, matchTime, location, players, home,
   const pitch = (
     <div
       className={cn(
-        "relative mx-auto aspect-[9/16] w-full max-w-[min(100%,32rem)] overflow-hidden rounded-xl shadow-inner xs:aspect-[3/5] xs:rounded-2xl sm:aspect-[3/4]",
-        light ? "border-2 border-[var(--mp-teal)]/45 ring-1 ring-[var(--mp-teal)]/20" : "border-2 border-white/40"
+        "relative mx-auto aspect-[9/16] w-full max-w-[min(100%,32rem)] overflow-hidden rounded-xl border-2 border-[var(--mp-teal)]/45 shadow-inner ring-1 ring-[var(--mp-teal)]/20 xs:aspect-[3/5] xs:rounded-2xl sm:aspect-[3/4]"
       )}
       style={{
-        background: light
-          ? "linear-gradient(180deg, #0f766e 0%, #115e59 18%, #0d9488 50%, #115e59 82%, #134e4a 100%)"
-          : "linear-gradient(180deg, #14532d 0%, #166534 18%, #15803d 50%, #166534 82%, #14532d 100%)",
+        background:
+          "linear-gradient(180deg, #0f766e 0%, #115e59 18%, #0d9488 50%, #115e59 82%, #134e4a 100%)",
         boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.12)",
       }}
     >
@@ -466,9 +460,8 @@ export function MatchLineupView({ matchDate, matchTime, location, players, home,
     />
   );
 
-  if (light) {
-    return (
-      <div className="min-w-0 space-y-5 overflow-x-hidden">
+  return (
+    <div className="min-w-0 space-y-5 overflow-x-hidden">
         <div className="overflow-hidden rounded-3xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
           <div className="relative min-h-[8rem]">
             <MarketplacePitchPhoto
@@ -537,67 +530,4 @@ export function MatchLineupView({ matchDate, matchTime, location, players, home,
         {statsDialog}
       </div>
     );
-  }
-
-  return (
-    <div className="min-w-0 space-y-3 overflow-x-hidden sm:space-y-4">
-      <div className="text-center sm:text-left">
-        <h2 className="font-[family-name:var(--font-display)] text-xl font-semibold uppercase tracking-wide text-emerald-950 dark:text-emerald-100 xs:text-2xl sm:text-3xl">
-          Ten mecz
-        </h2>
-        <p className="mt-1 text-xs leading-snug text-zinc-600 xs:text-sm sm:text-base">
-          <span className="whitespace-nowrap">
-            {matchDate} · {matchTime}
-          </span>
-          <span className="mx-1 hidden sm:inline">·</span>
-          <span className="mt-0.5 block break-words sm:mt-0 sm:inline">{location}</span>
-        </p>
-      </div>
-
-      <Card className="overflow-hidden border-zinc-200/80 bg-white shadow-sm">
-        <CardHeader className="space-y-1 px-3 pb-2 pt-4 sm:px-6 sm:pt-6">
-          <CardTitle className="text-sm leading-snug sm:text-base">
-            Boisko ({home.length + away.length} pól: A {home.length} · B {away.length})
-          </CardTitle>
-          <CardDescription className="text-xs leading-relaxed sm:text-sm">
-            <span className="sm:hidden">B — góra, A — dół. Dotknij zawodnika po statystyki.</span>
-            <span className="hidden sm:inline">
-              Drużyna B — góra, drużyna A — dół. Kliknij zawodnika (koszulka lub tabliczka z imieniem), aby zobaczyć
-              statystyki.
-            </span>
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="min-w-0 px-1 pb-3 pt-0 xs:px-2 sm:px-4 sm:pb-4">{pitch}</CardContent>
-      </Card>
-
-      {bench.length > 0 ? (
-        <div className="rounded-2xl border border-zinc-200/80 bg-white p-4 shadow-sm">
-          <h3 className="text-sm font-bold text-emerald-950 dark:text-emerald-100">Poza boiskiem</h3>
-          <p className="mt-1 text-xs text-zinc-500">Zapisani, którzy nie trafili do ustawienia.</p>
-          <ul className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
-            {bench.map((p) => (
-              <li key={p.userId}>
-                <button
-                  type="button"
-                  onClick={() => openPlayerStats(p.userId)}
-                  className="flex w-full items-center gap-3 rounded-xl border border-emerald-100 bg-emerald-50/50 px-3 py-2 text-left hover:bg-emerald-50 dark:border-emerald-900/40 dark:bg-emerald-950/30"
-                >
-                  <PlayerAvatar
-                    photoPath={p.profilePhotoPath}
-                    firstName={p.firstName}
-                    lastName={p.lastName}
-                    size="md"
-                    ringClassName="ring-2 ring-emerald-900/20"
-                  />
-                  <PlayerNameStack firstName={p.firstName} lastName={p.lastName} nick={p.zawodnik} />
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
-
-      {statsDialog}
-    </div>
-  );
 }

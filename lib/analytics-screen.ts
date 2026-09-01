@@ -17,7 +17,6 @@ export const SCREEN_LABELS: Record<string, string> = {
   register: "Rejestracja",
   confirm: "Potwierdzenie",
   players_detail: "Karta piłkarza",
-  transport: "Transport",
   losowanie_kapitana: "Losowanie kapitana",
   ustaw_pin: "Ustawienie PIN",
   cookies: "Polityka cookies",
@@ -77,7 +76,6 @@ export function getScreenFromPathname(pathname: string | null): { key: string; l
   if (path === "/offline") return { key: "offline", label: SCREEN_LABELS.offline };
   if (path.startsWith("/confirm/")) return { key: "confirm", label: SCREEN_LABELS.confirm };
   if (path.startsWith("/players/")) return { key: "players_detail", label: SCREEN_LABELS.players_detail };
-  if (path.startsWith("/transport/")) return { key: "transport", label: SCREEN_LABELS.transport };
   if (path.startsWith("/losowanie-kapitana/")) {
     return { key: "losowanie_kapitana", label: SCREEN_LABELS.losowanie_kapitana };
   }

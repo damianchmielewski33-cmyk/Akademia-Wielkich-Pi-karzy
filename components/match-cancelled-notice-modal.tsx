@@ -19,7 +19,7 @@ export function MatchCancelledNoticeModal({ open, matchLabel, reason, onClose }:
       size="sm"
       title="Mecz został anulowany"
       footer={
-        <Button type="button" variant="stadium" onClick={onClose}>
+        <Button type="button" variant="default" className="rounded-full font-bold" onClick={onClose}>
           Rozumiem
         </Button>
       }

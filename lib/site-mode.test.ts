@@ -41,8 +41,7 @@ describe("site-mode", () => {
     expect(shouldAskSiteMode("/panel-admina", null)).toBe(false);
     expect(shouldAskSiteMode("/login", null)).toBe(false);
     expect(shouldAskSiteMode("/pzu-cup", null)).toBe(false);
-    expect(shouldAskSiteMode("/", null, false)).toBe(false);
-    expect(shouldAskSiteMode("/kontakt", null, false)).toBe(false);
+    expect(shouldAskSiteMode("/gymbrat", null)).toBe(false);
   });
 
   it("parsuje zapisany tryb", () => {

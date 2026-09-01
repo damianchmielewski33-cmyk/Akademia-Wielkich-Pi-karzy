@@ -142,11 +142,10 @@ fun ScheduleScreen(
                         match = match,
                         state = state,
                         showArchiveBadge = state.tab == ScheduleTab.Archive,
-                        onConfirm = { viewModel.signup(match.id, "confirmed") { viewModel.openTransport(match) } },
+                        onConfirm = { viewModel.signup(match.id, "confirmed") },
                         onTentative = { viewModel.signup(match.id, "tentative") },
                         onDeclined = { viewModel.signup(match.id, "declined") },
                         onUnsubscribe = { viewModel.unsubscribe(match.id) },
-                        onTransport = { viewModel.openTransport(match) },
                         onStats = {
                             statsMatch = match
                         },
@@ -215,14 +214,6 @@ fun ScheduleScreen(
             onToggleAttendance = viewModel::toggleAttendance,
             onSaveAttendance = viewModel::saveAttendance,
             onSettle = viewModel::settleMatch
-        )
-    }
-    state.transportPanel?.let { panel ->
-        TransportDialog(
-            panel = panel,
-            onDismiss = viewModel::closeTransport,
-            onSavePrefs = viewModel::saveTransport,
-            onSendMessage = viewModel::sendTransportMessage
         )
     }
     statsMatch?.let { match ->
@@ -314,7 +305,6 @@ private fun ScheduleMatchCard(
     onTentative: () -> Unit,
     onDeclined: () -> Unit,
     onUnsubscribe: () -> Unit,
-    onTransport: () -> Unit,
     onStats: () -> Unit,
     onRoster: () -> Unit,
     onInvite: () -> Unit,
@@ -332,7 +322,6 @@ private fun ScheduleMatchCard(
         onTentative = onTentative,
         onDeclined = onDeclined,
         onUnsubscribe = onUnsubscribe,
-        onTransport = onTransport,
         onAddStats = onStats,
         onOpenRoster = onRoster,
         onCopyInvite = onInvite,
@@ -693,41 +682,6 @@ private fun SignupAdminRow(
             Checkbox(checked = present, onCheckedChange = { onToggleAttendance(signup.userId) })
         }
         LinkTextButton("Wypisz") { onRemoveSignup(matchId, signup.userId) }
-    }
-}
-
-@Composable
-private fun TransportDialog(
-    panel: TransportPanelState,
-    onDismiss: () -> Unit,
-    onSavePrefs: (Int, Boolean, Boolean, Boolean) -> Unit,
-    onSendMessage: (Int, String) -> Unit
-) {
-    var drives by remember { mutableStateOf(false) }
-    var seats by remember { mutableStateOf(false) }
-    var needs by remember { mutableStateOf(false) }
-    var message by remember { mutableStateOf("") }
-    FormDialog(title = "Transport", onDismiss = onDismiss, onSave = {
-        onSavePrefs(panel.match.id, drives, seats, needs)
-    }, saveText = "Zapisz transport") {
-        Row { Checkbox(drives, { drives = it }); Text("Jadę autem", color = AwpColors.OnPitch) }
-        Row { Checkbox(seats, { seats = it }); Text("Mogę zabrać pasażerów", color = AwpColors.OnPitch) }
-        Row { Checkbox(needs, { needs = it }); Text("Potrzebuję transportu", color = AwpColors.OnPitch) }
-        PitchLabel("Czat")
-        if (panel.loading) LoadingBlock()
-        panel.messages.forEach { msg ->
-            PitchPanel {
-                Text(msg.displayName, color = AwpColors.MundialGold, fontWeight = FontWeight.SemiBold)
-                Text(msg.body, color = AwpColors.OnPitch)
-            }
-        }
-        TextFieldLine("Wiadomość", message) { message = it }
-        AwpSecondaryButton("Wyślij") {
-            if (message.isNotBlank()) {
-                onSendMessage(panel.match.id, message)
-                message = ""
-            }
-        }
     }
 }
 

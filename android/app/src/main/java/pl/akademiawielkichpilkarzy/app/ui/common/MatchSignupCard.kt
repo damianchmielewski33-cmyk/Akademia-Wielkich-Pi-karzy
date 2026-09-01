@@ -64,7 +64,6 @@ fun MatchSignupCard(
     onTentative: () -> Unit = {},
     onDeclined: () -> Unit = {},
     onUnsubscribe: () -> Unit = {},
-    onTransport: (() -> Unit)? = null,
     onOpenLineups: (() -> Unit)? = null,
     onAddStats: (() -> Unit)? = null,
     onOpenRoster: (() -> Unit)? = null,
@@ -292,12 +291,6 @@ fun MatchSignupCard(
             onDeclined = onDeclined,
             onUnsubscribe = onUnsubscribe
         )
-
-        if (signupKind == "confirmed" && onTransport != null) {
-            Spacer(Modifier.height(8.dp))
-            PitchLabel("Transport")
-            AwpGoldButton("Transport na mecz", onClick = onTransport)
-        }
 
         if (onOpenLineups != null || lineup != null) {
             Spacer(Modifier.height(8.dp))

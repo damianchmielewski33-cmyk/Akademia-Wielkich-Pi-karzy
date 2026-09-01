@@ -3,16 +3,17 @@
 import { useEffect, useMemo, useRef, useState, cloneElement, isValidElement, type ComponentType, type ReactElement, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Calendar, ChevronDown, Loader2, LogOut, Menu, Moon, Sun, X } from "lucide-react";
-import { PitchCard } from "@/components/ui/pitch-card";
 import { SiteSectionHero } from "@/components/site-section-hero";
 import { SiteAssetImage } from "@/components/site-asset-image";
 import { PhotoPanel } from "@/components/photo-panel";
 import { AdminNavTile, adminPhotoIndex } from "@/components/admin-nav-tile";
 import { AdminTestModeSidebarButton } from "@/components/admin-test-mode-sidebar-button";
 import { AdminOperatorPaymentsSidebarButton } from "@/components/admin-operator-payments-sidebar-button";
-import { AdminMarketplaceSidebarButton } from "@/components/admin-marketplace-sidebar-button";
-import { MarketplaceSection } from "@/components/marketplace-section";
-import { useSiteMode } from "@/components/site-mode";
+import {
+  MarketplaceSection,
+  mpEmptyClass,
+  mpInnerPanelClass,
+} from "@/components/marketplace-section";
 import { pitchPhotoAt } from "@/lib/marketplace-photos";
 import { adminGoldBtnClass } from "@/lib/admin-chrome-button";
 import { cn } from "@/lib/utils";
@@ -23,11 +24,10 @@ export const adminTableShellClass = "admin-table-shell";
 
 export const adminDataTableShellClass = "admin-data-table-shell";
 
-export const adminSearchInputClass =
-  "border-white/25 bg-black/15 text-white placeholder:text-emerald-100/45 pl-9 focus-visible:ring-emerald-400/60";
-
 export const adminDataSearchInputClass =
   "border-zinc-300 bg-white text-zinc-900 placeholder:text-zinc-400 pl-9 focus-visible:ring-emerald-500/50 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-50 dark:placeholder:text-zinc-500";
+
+export const adminSearchInputClass = adminDataSearchInputClass;
 
 export const adminDataOutlineBtnClass =
   "border-zinc-300 bg-white text-zinc-800 hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800";
@@ -42,28 +42,26 @@ export {
 
 export const adminOutlineBtnClass = adminGoldBtnClass;
 
-export const adminPanelInnerClass = "rounded-xl border border-white/25 bg-black/10 p-4 backdrop-blur-sm sm:p-5";
+export const adminPanelInnerClass = cn(mpInnerPanelClass, "sm:p-5");
 
-export const adminEmptyStateClass =
-  "rounded-xl border border-dashed border-white/25 bg-black/10 px-4 py-8 text-center text-sm text-emerald-100/75";
+export const adminEmptyStateClass = mpEmptyClass;
 
 export const adminAlertDangerClass =
-  "rounded-xl border border-red-300/40 bg-red-950/35 px-4 py-3 text-sm text-red-100 shadow-sm backdrop-blur-sm";
+  "rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 shadow-sm dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-200";
 
 export const adminFieldClass =
-  "border-white/25 bg-black/15 text-white placeholder:text-emerald-100/45 focus-visible:ring-emerald-400/60";
+  "rounded-xl border border-zinc-200 bg-white text-zinc-900 placeholder:text-zinc-400 focus-visible:ring-[var(--mp-teal)]/50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50 dark:placeholder:text-zinc-500";
 
 export const adminTextareaClass =
-  "min-h-[80px] w-full rounded-xl border border-white/25 bg-black/15 px-3 py-2 text-base text-white placeholder:text-emerald-100/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60";
+  "min-h-[80px] w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-base text-zinc-900 placeholder:text-zinc-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mp-teal)]/50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50 dark:placeholder:text-zinc-500";
 
-export const adminInnerPanelClass =
-  "rounded-xl border border-white/25 bg-black/10 p-4 backdrop-blur-sm";
+export const adminInnerPanelClass = mpInnerPanelClass;
 
 export const adminToggleRowClass =
-  "flex flex-wrap items-start justify-between gap-4 rounded-xl border border-white/25 bg-black/10 px-4 py-3 backdrop-blur-sm";
+  "flex flex-wrap items-start justify-between gap-4 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900/80";
 
 export const adminStatusChipClass =
-  "rounded-lg border border-white/20 bg-black/10 px-3 py-2 text-sm pitch-muted";
+  "rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300";
 
 /* ========== Shell ========== */
 
@@ -135,63 +133,45 @@ function NavTabButton({
   onSelect: () => void;
   compact?: boolean;
 }) {
-  const { marketplaceEnabled } = useSiteMode();
-
-  if (marketplaceEnabled) {
-    const Icon = tab.icon;
-    return (
-      <button
-        type="button"
-        onClick={onSelect}
-        aria-current={active ? "page" : undefined}
+  const Icon = tab.icon;
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      aria-current={active ? "page" : undefined}
+      className={cn(
+        "awp-focus-ring group flex w-full items-center gap-3 rounded-2xl border px-3 py-2.5 text-left transition-colors",
+        compact && "w-auto min-w-[11rem] shrink-0",
+        active
+          ? "border-transparent bg-[var(--mp-teal)] text-white shadow-md shadow-teal-950/15"
+          : "border-zinc-200/90 bg-white text-zinc-800 shadow-sm hover:border-teal-200 hover:bg-teal-50/70 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:border-teal-800 dark:hover:bg-teal-950/40"
+      )}
+    >
+      <span
         className={cn(
-          "awp-focus-ring group flex w-full items-center gap-3 rounded-2xl border px-3 py-2.5 text-left transition-colors",
-          compact && "w-auto min-w-[11rem] shrink-0",
+          "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl",
           active
-            ? "border-transparent bg-[var(--mp-teal)] text-white shadow-md shadow-teal-950/15"
-            : "border-zinc-200/90 bg-white text-zinc-800 shadow-sm hover:border-teal-200 hover:bg-teal-50/70 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:border-teal-800 dark:hover:bg-teal-950/40"
+            ? "bg-white/20 text-white"
+            : "bg-teal-50 text-[var(--mp-teal-dark)] dark:bg-teal-950/50 dark:text-teal-300"
         )}
       >
-        <span
-          className={cn(
-            "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl",
-            active
-              ? "bg-white/20 text-white"
-              : "bg-teal-50 text-[var(--mp-teal-dark)] dark:bg-teal-950/50 dark:text-teal-300"
-          )}
-        >
-          <Icon className="h-4 w-4" strokeWidth={2.25} aria-hidden />
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="block truncate text-sm font-bold leading-tight tracking-tight">{tab.label}</span>
-          {tab.desc && !compact ? (
-            <span
-              className={cn(
-                "mt-0.5 hidden truncate text-xs leading-snug lg:block",
-                active ? "text-white/85" : "text-zinc-500 dark:text-zinc-400"
-              )}
-            >
-              {tab.desc}
-            </span>
-          ) : null}
-        </span>
-        <TabBadge tab={tab} />
-      </button>
-    );
-  }
-
-  return (
-    <AdminNavTile
-      title={tab.label}
-      desc={tab.desc}
-      icon={tab.icon}
-      photoKey={tab.id}
-      active={active}
-      compact={compact}
-      onClick={onSelect}
-      badge={<TabBadge tab={tab} />}
-      className={compact ? "w-auto min-w-[10.5rem] shrink-0" : undefined}
-    />
+        <Icon className="h-4 w-4" strokeWidth={2.25} aria-hidden />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-sm font-bold leading-tight tracking-tight">{tab.label}</span>
+        {tab.desc && !compact ? (
+          <span
+            className={cn(
+              "mt-0.5 hidden truncate text-xs leading-snug lg:block",
+              active ? "text-white/85" : "text-zinc-500 dark:text-zinc-400"
+            )}
+          >
+            {tab.desc}
+          </span>
+        ) : null}
+      </span>
+      <TabBadge tab={tab} />
+    </button>
   );
 }
 
@@ -205,11 +185,8 @@ export function AdminShell({
   searchSlot,
 }: AdminShellProps) {
   const router = useRouter();
-  const { marketplaceEnabled } = useSiteMode();
   const mainRef = useRef<HTMLElement>(null);
-  const accentText = marketplaceEnabled
-    ? "text-[var(--mp-teal)]"
-    : "text-[var(--mundial-gold,#f5c518)]";
+  const accentText = "text-[var(--mp-teal)]";
   const isDarkNow =
     typeof document !== "undefined" ? document.documentElement.classList.contains("dark") : true;
 
@@ -302,38 +279,20 @@ export function AdminShell({
   return (
     <div
       className={cn(
-        "admin-shell flex min-h-dvh min-w-0 flex-col lg:flex-row",
-        marketplaceEnabled
-          ? "admin-shell--v2 bg-zinc-100 text-zinc-950 dark:bg-zinc-950 dark:text-zinc-50"
-          : "murawa-bg text-white"
+        "admin-shell flex min-h-dvh min-w-0 flex-col lg:flex-row admin-shell--v2 bg-zinc-100 text-zinc-950 dark:bg-zinc-950 dark:text-zinc-50"
       )}
     >
       <aside
         className={cn(
-          "relative z-30 shrink-0 lg:w-80 lg:border-b-0 lg:border-r",
-          marketplaceEnabled
-            ? "border-b border-zinc-200 bg-[#f4f5f7] text-zinc-950 shadow-sm dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-50 lg:border-zinc-200 dark:lg:border-zinc-800"
-            : "border-b border-white/20 shadow-lg lg:border-white/15",
+          "relative z-30 shrink-0 lg:w-80 lg:border-b-0 lg:border-r border-b border-zinc-200 bg-[#f4f5f7] text-zinc-950 shadow-sm dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-50 lg:border-zinc-200 dark:lg:border-zinc-800",
           showMobileMenu ? "flex min-h-dvh flex-col lg:min-h-0" : undefined,
           !showMobileMenu && "lg:block",
           !showMobileMenu && "hidden lg:block"
         )}
       >
         <div className="relative flex flex-col gap-3 p-3 xs:p-4 lg:sticky lg:top-0 lg:h-dvh lg:max-h-dvh lg:gap-3 lg:overflow-hidden lg:pt-[max(1rem,env(safe-area-inset-top))] lg:pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-          <div
-            className={cn(
-              "flex shrink-0 items-center gap-3 rounded-2xl border px-3 py-3 lg:hidden",
-              marketplaceEnabled
-                ? "border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900"
-                : "border-white/20 bg-white/10"
-            )}
-          >
-            <span
-              className={cn(
-                "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl",
-                marketplaceEnabled ? "bg-[var(--mp-teal)] text-white" : "bg-white/15 text-white"
-              )}
-            >
+          <div className="flex shrink-0 items-center gap-3 rounded-2xl border border-zinc-200 bg-white px-3 py-3 lg:hidden dark:border-zinc-800 dark:bg-zinc-900">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--mp-teal)] text-white">
               <SiteAssetImage
                 asset="logo_crest"
                 alt=""
@@ -344,40 +303,20 @@ export function AdminShell({
               />
             </span>
             <div className="min-w-0 flex-1">
-              <p
-                className={cn(
-                  "text-[0.65rem] font-bold uppercase tracking-[0.14em]",
-                  marketplaceEnabled ? "text-[var(--mp-teal-dark)]" : "text-[var(--mundial-gold,#f5c518)]"
-                )}
-              >
+              <p className="text-[0.65rem] font-bold uppercase tracking-[0.14em] text-[var(--mp-teal-dark)]">
                 Panel admina
               </p>
-              <p
-                className={cn(
-                  "truncate text-sm font-black",
-                  marketplaceEnabled ? "text-zinc-950 dark:text-white" : "text-white"
-                )}
-              >
+              <p className="truncate text-sm font-black text-zinc-950 dark:text-white">
                 Wybierz sekcję
               </p>
-              <p
-                className={cn(
-                  "mt-0.5 text-xs",
-                  marketplaceEnabled ? "text-zinc-500 dark:text-zinc-400" : "text-white/70"
-                )}
-              >
+              <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
                 Wybierz, czym chcesz zarządzać.
               </p>
             </div>
             <button
               type="button"
               onClick={closeMobileMenu}
-              className={cn(
-                "awp-focus-ring inline-flex h-10 w-10 items-center justify-center rounded-full",
-                marketplaceEnabled
-                  ? "border border-zinc-200 bg-zinc-50 text-zinc-800 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
-                  : "border border-white/25 bg-white/10 text-white"
-              )}
+              className="awp-focus-ring inline-flex h-10 w-10 items-center justify-center rounded-full border border-zinc-200 bg-zinc-50 text-zinc-800 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
               aria-label="Zamknij menu"
             >
               <X className="h-5 w-5" aria-hidden />
@@ -387,21 +326,13 @@ export function AdminShell({
           <div className="hidden lg:block">
             <PhotoPanel
               src={pitchPhotoAt(0)}
-              className={cn(
-                "shrink-0 overflow-hidden rounded-3xl",
-                marketplaceEnabled && "border border-zinc-200/80 shadow-sm dark:border-zinc-800"
-              )}
+              className="shrink-0 overflow-hidden rounded-3xl border border-zinc-200/80 shadow-sm dark:border-zinc-800"
               contentClassName="flex items-center gap-3 p-4"
               overlayClassName="bg-gradient-to-r from-black/75 via-black/50 to-black/20"
               sizes="320px"
               priority
             >
-              <span
-                className={cn(
-                  "relative flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-white shadow-sm",
-                  marketplaceEnabled ? "bg-[var(--mp-teal)]" : "bg-white/15 ring-2 ring-white/35"
-                )}
-              >
+              <span className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[var(--mp-teal)] text-white shadow-sm">
                 <SiteAssetImage
                   asset="logo_crest"
                   alt=""
@@ -412,13 +343,8 @@ export function AdminShell({
                 />
               </span>
               <div className="min-w-0">
-                <p
-                  className={cn(
-                    "text-[0.65rem] font-bold uppercase tracking-[0.16em]",
-                    marketplaceEnabled ? "text-[var(--mp-teal)]" : "text-[var(--mundial-gold,#f5c518)]"
-                  )}
-                >
-                  Panel admina{marketplaceEnabled ? " · V2" : ""}
+                <p className="text-[0.65rem] font-bold uppercase tracking-[0.16em] text-[var(--mp-teal)]">
+                  Panel admina
                 </p>
                 <p className="mt-1 truncate text-lg font-black leading-tight text-white drop-shadow-sm">
                   Sterowanie akademią
@@ -437,14 +363,7 @@ export function AdminShell({
             {navGroups.map((g) => (
               <div key={g.id} className="flex flex-col gap-1.5">
                 {g.label ? (
-                  <p
-                    className={cn(
-                      "px-1 text-[0.65rem] font-bold uppercase tracking-[0.14em]",
-                      marketplaceEnabled
-                        ? "text-[var(--mp-teal-dark)] dark:text-teal-300"
-                        : "text-white/70"
-                    )}
-                  >
+                  <p className="px-1 text-[0.65rem] font-bold uppercase tracking-[0.14em] text-[var(--mp-teal-dark)] dark:text-teal-300">
                     {g.label}
                   </p>
                 ) : null}
@@ -496,9 +415,7 @@ export function AdminShell({
                       "awp-focus-ring flex w-full items-center gap-2 rounded-xl px-2 py-2.5 text-left text-sm font-bold uppercase tracking-[0.12em] transition-colors",
                       containsActive
                         ? accentText
-                        : marketplaceEnabled
-                          ? "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
-                          : "text-white/70 hover:text-white"
+                        : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
                     )}
                   >
                     <ChevronDown
@@ -531,17 +448,9 @@ export function AdminShell({
           </nav>
 
           {/* Zawsze widoczne: tryb testowy + rezerwacje + płatności operatora + stopka */}
-          <div
-            className={cn(
-              "relative z-10 flex shrink-0 flex-col gap-2 border-t pt-3",
-              marketplaceEnabled
-                ? "border-zinc-200 dark:border-zinc-800"
-                : "border-white/20"
-            )}
-          >
+          <div className="relative z-10 flex shrink-0 flex-col gap-2 border-t border-zinc-200 pt-3 dark:border-zinc-800">
             <div className="flex flex-col gap-1.5">
               <AdminTestModeSidebarButton />
-              <AdminMarketplaceSidebarButton />
               <AdminOperatorPaymentsSidebarButton
                 active={activeTab === "operator-payments"}
                 onOpen={() => {
@@ -587,9 +496,8 @@ export function AdminShell({
       <main
         ref={mainRef}
         className={cn(
-          "relative min-w-0 flex-1",
-          showMobileMenu && "hidden lg:block",
-          marketplaceEnabled && "bg-zinc-100 dark:bg-zinc-950"
+          "relative min-w-0 flex-1 bg-zinc-100 dark:bg-zinc-950",
+          showMobileMenu && "hidden lg:block"
         )}
       >
         <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
@@ -598,20 +506,14 @@ export function AdminShell({
             decorative
             width={220}
             height={220}
-            className={cn(
-              "absolute -right-16 top-8 h-auto w-[220px] max-w-none sm:top-12",
-              marketplaceEnabled ? "opacity-[0.06]" : "opacity-[0.14]"
-            )}
+            className="absolute -right-16 top-8 h-auto w-[220px] max-w-none opacity-[0.06] sm:top-12"
           />
           <SiteAssetImage
             asset="bg_soccer_ball"
             decorative
             width={160}
             height={160}
-            className={cn(
-              "absolute -left-10 bottom-24 h-auto w-[160px] max-w-none sm:bottom-32",
-              marketplaceEnabled ? "opacity-[0.05]" : "opacity-[0.12]"
-            )}
+            className="absolute -left-10 bottom-24 h-auto w-[160px] max-w-none opacity-[0.05] sm:bottom-32"
           />
         </div>
 
@@ -620,12 +522,7 @@ export function AdminShell({
             <button
               type="button"
               onClick={openMobileMenu}
-              className={cn(
-                "awp-focus-ring inline-flex shrink-0 items-center gap-2 rounded-xl px-2.5 py-2 text-sm font-bold",
-                marketplaceEnabled
-                  ? "bg-[var(--mp-teal)] text-white"
-                  : "bg-[var(--mundial-gold,#f5c518)] text-[var(--mundial-navy,#0a1628)]"
-              )}
+              className="awp-focus-ring inline-flex shrink-0 items-center gap-2 rounded-xl bg-[var(--mp-teal)] px-2.5 py-2 text-sm font-bold text-white"
             >
               <Menu className="h-4 w-4" aria-hidden />
               Menu
@@ -658,12 +555,8 @@ export function AdminShell({
                     className={cn(
                       "awp-focus-ring shrink-0 rounded-full px-3 py-1.5 text-xs font-bold",
                       on
-                        ? marketplaceEnabled
-                          ? "bg-[var(--mp-teal)] text-white"
-                          : "bg-[var(--mundial-gold,#f5c518)] text-[var(--mundial-navy,#0a1628)]"
-                        : marketplaceEnabled
-                          ? "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
-                          : "bg-white/15 text-white"
+                        ? "bg-[var(--mp-teal)] text-white"
+                        : "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
                     )}
                   >
                     {t.label}
@@ -676,13 +569,7 @@ export function AdminShell({
         </div>
 
         {loading ? (
-          <div
-            className={cn(
-              "pointer-events-none absolute right-6 top-16 z-20 flex items-center gap-2 text-sm lg:top-6",
-              marketplaceEnabled ? "text-zinc-500" : "text-emerald-100/80"
-            )}
-            aria-live="polite"
-          >
+          <div className="pointer-events-none absolute right-6 top-16 z-20 flex items-center gap-2 text-sm text-zinc-500 lg:top-6" aria-live="polite">
             <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
             Wczytywanie…
           </div>
@@ -716,11 +603,10 @@ export function AdminToolbar({
 }) {
   void onReload;
   void loading;
-  const { marketplaceEnabled } = useSiteMode();
   return (
     <div className="mb-4 flex flex-col gap-3 lg:mb-6 lg:flex-row lg:items-start lg:justify-between lg:gap-4">
       <SiteSectionHero
-        kicker={marketplaceEnabled ? `${kicker} · V2` : kicker}
+        kicker={kicker}
         title={title}
         subtitle={description}
         showCrest
@@ -755,8 +641,6 @@ export function AdminCard({
   tone?: "pitch" | "data";
   id?: string;
 }) {
-  const { marketplaceEnabled } = useSiteMode();
-
   if (tone === "data") {
     const header =
       title || description || headerExtra ? (
@@ -778,38 +662,16 @@ export function AdminCard({
     );
   }
 
-  if (marketplaceEnabled) {
-    return (
-      <MarketplaceSection
-        id={id}
-        title={title}
-        description={description}
-        headerExtra={headerExtra}
-        className={className}
-      >
-        {children}
-      </MarketplaceSection>
-    );
-  }
-
-  const header =
-    title || description || headerExtra ? (
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
-          {title ? <h2 className="pitch-heading text-xl font-black tracking-tight sm:text-2xl">{title}</h2> : null}
-            {description ? (
-              <p className="pitch-muted mt-1.5 hidden text-sm leading-relaxed sm:block sm:text-base">{description}</p>
-            ) : null}
-        </div>
-        {headerExtra}
-      </div>
-    ) : null;
-
   return (
-    <PitchCard id={id} variant="pitch" className={cn(className)} contentClassName="p-5 sm:p-6">
-      {header}
+    <MarketplaceSection
+      id={id}
+      title={title}
+      description={description}
+      headerExtra={headerExtra}
+      className={className}
+    >
       {children}
-    </PitchCard>
+    </MarketplaceSection>
   );
 }
 
@@ -828,39 +690,19 @@ export function AdminMetricTile({
   onClick: () => void;
   photoKey?: string;
 }) {
-  const { marketplaceEnabled } = useSiteMode();
   return (
     <button type="button" onClick={onClick} className="group awp-focus-ring block h-full w-full text-left">
-      <div
-        className={cn(
-          "flex min-h-[5.5rem] flex-col justify-between rounded-2xl border p-4 shadow-sm lg:hidden",
-          marketplaceEnabled
-            ? "border-zinc-200 bg-white text-zinc-950 dark:border-zinc-800 dark:bg-zinc-950 dark:text-white"
-            : "border-white/25 bg-black/20 text-white"
-        )}
-      >
+      <div className="flex min-h-[5.5rem] flex-col justify-between rounded-2xl border border-zinc-200 bg-white p-4 text-zinc-950 shadow-sm lg:hidden dark:border-zinc-800 dark:bg-zinc-950 dark:text-white">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
             <p className="text-sm font-bold">{label}</p>
-            <p className={cn("mt-0.5 text-xs", marketplaceEnabled ? "text-zinc-500" : "text-white/70")}>{hint}</p>
+            <p className="mt-0.5 text-xs text-zinc-500">{hint}</p>
           </div>
-          <span
-            className={cn(
-              "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl",
-              marketplaceEnabled
-                ? "bg-teal-50 text-[var(--mp-teal-dark)] dark:bg-teal-950/50 dark:text-teal-300"
-                : "bg-white/15 text-white"
-            )}
-          >
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-teal-50 text-[var(--mp-teal-dark)] dark:bg-teal-950/50 dark:text-teal-300">
             <Icon className="h-4 w-4" aria-hidden />
           </span>
         </div>
-        <p
-          className={cn(
-            "mt-2 text-2xl font-black tabular-nums tracking-tight",
-            marketplaceEnabled ? "text-[var(--mp-teal-dark)] dark:text-teal-300" : "text-[var(--mundial-gold,#f5c518)]"
-          )}
-        >
+        <p className="mt-2 text-2xl font-black tabular-nums tracking-tight text-[var(--mp-teal-dark)] dark:text-teal-300">
           {value ?? "–"}
         </p>
       </div>
@@ -881,7 +723,7 @@ export function AdminMetricTile({
             <Icon className="h-5 w-5 text-white" aria-hidden />
           </div>
         </div>
-        <p className="mt-3 text-4xl font-black tabular-nums tracking-tight text-[var(--mundial-gold,#f5c518)] drop-shadow-sm">
+        <p className="mt-3 text-4xl font-black tabular-nums tracking-tight text-[var(--mp-teal-dark)] drop-shadow-sm dark:text-teal-300">
           {value ?? "–"}
         </p>
       </PhotoPanel>

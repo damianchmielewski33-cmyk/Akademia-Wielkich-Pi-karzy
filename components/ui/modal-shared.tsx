@@ -4,7 +4,6 @@ import type { ReactNode } from "react";
 import { Calendar, Clock, Info, Loader2, MapPin, TriangleAlert, Users, XCircle } from "lucide-react";
 import { MarketplacePitchPhoto } from "@/components/marketplace-pitch-photo";
 import { useMarketplacePitchPhotoAt } from "@/components/marketplace-photos-provider";
-import { useSiteMode } from "@/components/site-mode";
 import { cn } from "@/lib/utils";
 
 export const modalPanelClass =
@@ -46,90 +45,49 @@ export function ModalLoadingRow({ label = "Wczytywanie…" }: { label?: string }
 }
 
 export function ModalMatchSummary({ match }: { match: MatchLike }) {
-  const { marketplaceEnabled } = useSiteMode();
   const photo = useMarketplacePitchPhotoAt(match.id ?? match.match_date.length + match.location.length);
-  const accent = marketplaceEnabled
-    ? "text-[var(--mp-teal-dark)] dark:text-teal-300"
-    : "text-emerald-600 dark:text-emerald-400";
   const dateLabel = match.match_date.slice(5).replace("-", ".");
   const year = match.match_date.slice(0, 4);
   const time = match.match_time.length >= 5 ? match.match_time.slice(0, 5) : match.match_time;
 
-  if (marketplaceEnabled) {
-    return (
-      <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
-        <div className="relative min-h-[7.5rem] sm:min-h-[8.5rem]">
-          <MarketplacePitchPhoto
-            src={photo}
-            className="pointer-events-none z-0"
-            sizes="(max-width: 640px) 100vw, 560px"
-          />
-          <div
-            className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-t from-black/80 via-black/45 to-black/20"
-            aria-hidden
-          />
-          <div className="relative z-10 flex h-full min-h-[7.5rem] flex-wrap items-end gap-3 p-4 sm:min-h-[8.5rem] sm:gap-4 sm:p-5">
-            <div className="flex flex-col items-center rounded-xl border border-white/25 bg-black/35 px-3 py-1.5 backdrop-blur-sm">
-              <Calendar className="h-4 w-4 text-[var(--mp-teal)]" aria-hidden />
-              <span className="mt-0.5 text-sm font-bold tabular-nums text-white">{dateLabel}</span>
-              <span className="text-[10px] font-semibold uppercase tracking-wide text-white/70">{year}</span>
-            </div>
-            <div className="min-w-0 flex-1 pr-8">
-              <div className="flex items-center gap-1.5 text-white">
-                <Clock className="h-4 w-4 text-[var(--mp-teal)]" aria-hidden />
-                <span className="text-lg font-bold tabular-nums">{time}</span>
-              </div>
-              <p className="mt-1 flex items-start gap-1.5 text-sm text-white/90">
-                <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--mp-teal)]" aria-hidden />
-                <span className="leading-snug">{match.location}</span>
-              </p>
-            </div>
-            {match.signed_up != null && match.max_slots != null ? (
-              <div className="flex items-center gap-1.5 rounded-xl border border-white/25 bg-black/35 px-3 py-1.5 text-sm font-semibold text-white backdrop-blur-sm">
-                <Users className="h-4 w-4 text-[var(--mp-teal)]" aria-hidden />
-                <span className="tabular-nums">
-                  {match.signed_up}/{match.max_slots}
-                </span>
-              </div>
-            ) : null}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className={cn(modalPanelClass, "flex flex-wrap items-center gap-3 sm:gap-4")}>
-      <div className="flex items-center gap-3">
-        <div className="flex flex-col items-center rounded-xl border border-zinc-200/90 bg-white px-3 py-1.5 shadow-sm dark:border-zinc-600 dark:bg-zinc-900/80">
-          <Calendar className={cn("h-4 w-4", accent)} aria-hidden />
-          <span className="mt-0.5 text-sm font-bold tabular-nums text-zinc-950 dark:text-zinc-100">
-            {dateLabel}
-          </span>
-          <span className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-            {year}
-          </span>
-        </div>
-        <div>
-          <div className="flex items-center gap-1.5 text-zinc-950 dark:text-zinc-100">
-            <Clock className={cn("h-4 w-4", accent)} aria-hidden />
-            <span className="text-lg font-bold tabular-nums">{time}</span>
+    <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
+      <div className="relative min-h-[7.5rem] sm:min-h-[8.5rem]">
+        <MarketplacePitchPhoto
+          src={photo}
+          className="pointer-events-none z-0"
+          sizes="(max-width: 640px) 100vw, 560px"
+        />
+        <div
+          className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-t from-black/80 via-black/45 to-black/20"
+          aria-hidden
+        />
+        <div className="relative z-10 flex h-full min-h-[7.5rem] flex-wrap items-end gap-3 p-4 sm:min-h-[8.5rem] sm:gap-4 sm:p-5">
+          <div className="flex flex-col items-center rounded-xl border border-white/25 bg-black/35 px-3 py-1.5 backdrop-blur-sm">
+            <Calendar className="h-4 w-4 text-[var(--mp-teal)]" aria-hidden />
+            <span className="mt-0.5 text-sm font-bold tabular-nums text-white">{dateLabel}</span>
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-white/70">{year}</span>
           </div>
-          <p className="mt-1 flex items-start gap-1.5 text-sm text-zinc-600 dark:text-zinc-400">
-            <MapPin className={cn("mt-0.5 h-3.5 w-3.5 shrink-0", accent)} aria-hidden />
-            <span className="leading-snug">{match.location}</span>
-          </p>
+          <div className="min-w-0 flex-1 pr-8">
+            <div className="flex items-center gap-1.5 text-white">
+              <Clock className="h-4 w-4 text-[var(--mp-teal)]" aria-hidden />
+              <span className="text-lg font-bold tabular-nums">{time}</span>
+            </div>
+            <p className="mt-1 flex items-start gap-1.5 text-sm text-white/90">
+              <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--mp-teal)]" aria-hidden />
+              <span className="leading-snug">{match.location}</span>
+            </p>
+          </div>
+          {match.signed_up != null && match.max_slots != null ? (
+            <div className="flex items-center gap-1.5 rounded-xl border border-white/25 bg-black/35 px-3 py-1.5 text-sm font-semibold text-white backdrop-blur-sm">
+              <Users className="h-4 w-4 text-[var(--mp-teal)]" aria-hidden />
+              <span className="tabular-nums">
+                {match.signed_up}/{match.max_slots}
+              </span>
+            </div>
+          ) : null}
         </div>
       </div>
-      {match.signed_up != null && match.max_slots != null ? (
-        <div className="flex items-center gap-1.5 rounded-xl border border-zinc-200/90 bg-white px-3 py-1.5 text-sm font-semibold text-zinc-950 dark:border-zinc-600 dark:bg-zinc-900/70 dark:text-zinc-100">
-          <Users className={cn("h-4 w-4", accent)} aria-hidden />
-          <span className="tabular-nums">
-            {match.signed_up}/{match.max_slots}
-          </span>
-          <span className="font-normal text-zinc-500 dark:text-zinc-400">zapisanych</span>
-        </div>
-      ) : null}
     </div>
   );
 }
@@ -145,39 +103,23 @@ export function ModalFormHeader({
   title: ReactNode;
   description?: ReactNode;
   kicker?: string;
-  /** Indeks zdjęcia boiska V2 w puli marketplace. */
+  /** Indeks zdjęcia boiska w puli marketplace. */
   photoSeed?: number;
 }) {
-  const { marketplaceEnabled } = useSiteMode();
   const photo = useMarketplacePitchPhotoAt(photoSeed);
 
-  if (marketplaceEnabled) {
-    return (
-      <div className="awp-modal-form-header awp-modal-form-header--v2 shrink-0">
-        <MarketplacePitchPhoto
-          src={photo}
-          className="pointer-events-none absolute inset-0 z-0"
-          sizes="(max-width: 640px) 100vw, 640px"
-        />
-        <div
-          className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-t from-black/85 via-black/55 to-black/30"
-          aria-hidden
-        />
-        <div className="relative z-10 flex items-start gap-3.5 pr-12 text-left">
-          <div className="awp-modal-form-header__icon">{icon}</div>
-          <div className="min-w-0 flex-1">
-            <p className="awp-modal-form-header__kicker">{kicker}</p>
-            <h2 className="awp-modal-form-header__title">{title}</h2>
-            {description ? <p className="awp-modal-form-header__description">{description}</p> : null}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="awp-modal-form-header shrink-0">
-      <div className="relative flex items-start gap-3.5 pr-12 text-left">
+    <div className="awp-modal-form-header awp-modal-form-header--v2 shrink-0">
+      <MarketplacePitchPhoto
+        src={photo}
+        className="pointer-events-none absolute inset-0 z-0"
+        sizes="(max-width: 640px) 100vw, 640px"
+      />
+      <div
+        className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-t from-black/85 via-black/55 to-black/30"
+        aria-hidden
+      />
+      <div className="relative z-10 flex items-start gap-3.5 pr-12 text-left">
         <div className="awp-modal-form-header__icon">{icon}</div>
         <div className="min-w-0 flex-1">
           <p className="awp-modal-form-header__kicker">{kicker}</p>
@@ -200,19 +142,11 @@ export function ModalFormSection({
   children: ReactNode;
   className?: string;
 }) {
-  const { marketplaceEnabled } = useSiteMode();
   return (
     <section className={cn(modalFormSectionClass, className)}>
       {title ? (
         <div className="mb-3.5">
-          <h3
-            className={cn(
-              "awp-form-section__title",
-              marketplaceEnabled && "text-[var(--mp-teal-dark)] dark:text-teal-300"
-            )}
-          >
-            {title}
-          </h3>
+          <h3 className="awp-form-section__title text-[var(--mp-teal-dark)] dark:text-teal-300">{title}</h3>
           {description ? <p className="awp-form-section__description">{description}</p> : null}
         </div>
       ) : null}
@@ -242,24 +176,19 @@ export function ModalAlert({
   children: ReactNode;
   title?: string;
 }) {
-  const { marketplaceEnabled } = useSiteMode();
   const Icon = tone === "danger" ? XCircle : tone === "warning" ? TriangleAlert : Info;
   const styles =
     tone === "danger"
       ? "border-red-200/90 bg-red-50/90 text-red-900 dark:border-red-800/60 dark:bg-red-950/35 dark:text-red-100"
       : tone === "warning"
         ? "border-amber-200/80 bg-amber-50/70 text-amber-950 dark:border-amber-800/50 dark:bg-amber-950/30 dark:text-amber-100"
-        : marketplaceEnabled
-          ? "border-teal-200/80 bg-teal-50/80 text-teal-950 dark:border-teal-800/50 dark:bg-teal-950/30 dark:text-teal-100"
-          : "border-emerald-200/80 bg-emerald-50/70 text-emerald-950 dark:border-emerald-800/50 dark:bg-emerald-950/30 dark:text-emerald-100";
+        : "border-teal-200/80 bg-teal-50/80 text-teal-950 dark:border-teal-800/50 dark:bg-teal-950/30 dark:text-teal-100";
   const iconClass =
     tone === "danger"
       ? "text-red-600 dark:text-red-400"
       : tone === "warning"
         ? "text-amber-600 dark:text-amber-400"
-        : marketplaceEnabled
-          ? "text-[var(--mp-teal-dark)] dark:text-teal-300"
-          : "text-emerald-700 dark:text-emerald-400";
+        : "text-[var(--mp-teal-dark)] dark:text-teal-300";
 
   return (
     <div className={cn("flex gap-3 rounded-2xl border px-4 py-3 text-sm", styles)}>

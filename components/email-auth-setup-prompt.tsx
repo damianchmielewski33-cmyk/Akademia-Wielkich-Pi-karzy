@@ -2,11 +2,19 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { z } from "zod";
 import { toast } from "@/lib/app-toast";
 import { AppModal } from "@/components/ui/app-modal";
 import { Button } from "@/components/ui/button";
 import { FormInput } from "@/components/ui/form-field";
 import { useSiteMode } from "@/components/site-mode";
+import {
+  emailWithConfirmSchema,
+  formSchemas,
+  refineMatchingPasswords,
+  useValidatedForm,
+  zodFieldErrors,
+} from "@/lib/form-validation";
 import {
   clearPendingEmailAuthSetupFromLogin,
   notifyPostLoginPromptsUpdated,
@@ -23,6 +31,16 @@ type MeUser = {
 
 const EMAIL_AUTH_PLACEHOLDER: MeUser = { id: 0, email: null, needs_email_auth_setup: 1 };
 
+const emailAuthSetupEmailSchema = emailWithConfirmSchema();
+
+const emailAuthSetupSchema = refineMatchingPasswords(
+  emailWithConfirmSchema().extend({
+    password: formSchemas.password,
+    passwordConfirm: z.string().min(1, "Powtórz hasło"),
+    code: z.string().trim().min(4, "Kod musi mieć co najmniej 4 cyfry").max(8, "Kod jest zbyt długi"),
+  })
+);
+
 function shouldForceEmailAuthSetup(initialNeedsSetup: boolean, pendingFromLogin: boolean): boolean {
   return initialNeedsSetup || pendingFromLogin;
 }
@@ -35,17 +53,27 @@ export function EmailAuthSetupPrompt({ initialNeedsSetup = false }: { initialNee
   const [user, setUser] = useState<MeUser | null | undefined>(() =>
     setupRequired ? EMAIL_AUTH_PLACEHOLDER : undefined
   );
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [passwordConfirm, setPasswordConfirm] = useState("");
-  const [code, setCode] = useState("");
   const [codeSent, setCodeSent] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [inlineErrors, setInlineErrors] = useState<Partial<Record<string, string>>>({});
+
+  const form = useValidatedForm({
+    initialValues: {
+      email: "",
+      emailConfirm: "",
+      password: "",
+      passwordConfirm: "",
+      code: "",
+    },
+    schema: emailAuthSetupSchema,
+  });
 
   useEffect(() => {
     if (!setupRequired) return;
     setUser((prev) => (prev?.needs_email_auth_setup === 1 ? prev : EMAIL_AUTH_PLACEHOLDER));
   }, [setupRequired]);
+
+  const { values, errors, setValue, setFieldTouched, validate } = form;
 
   const load = useCallback(async () => {
     if (!emailPasswordAuthEnabled && !setupRequired) {
@@ -64,11 +92,15 @@ export function EmailAuthSetupPrompt({ initialNeedsSetup = false }: { initialNee
         setPendingFromLogin(false);
         clearPendingEmailAuthSetupFromLogin();
       }
-      if (data.user.email) setEmail(data.user.email);
+      if (data.user.email) {
+        const trimmed = data.user.email.trim();
+        setValue("email", trimmed);
+        setValue("emailConfirm", trimmed);
+      }
     } catch {
       if (!setupRequired) setUser(null);
     }
-  }, [emailPasswordAuthEnabled, setupRequired]);
+  }, [emailPasswordAuthEnabled, setupRequired, setValue]);
 
   useEffect(() => {
     void load();
@@ -94,19 +126,29 @@ export function EmailAuthSetupPrompt({ initialNeedsSetup = false }: { initialNee
       !user.needs_pin_setup
   );
 
+  function fieldError(field: keyof typeof values): string | undefined {
+    return inlineErrors[field] ?? errors[field];
+  }
+
   async function sendCode() {
-    const trimmed = email.trim();
-    if (!trimmed) {
-      toast.error("Podaj adres e-mail.");
+    setFieldTouched("email");
+    setFieldTouched("emailConfirm");
+    const emailErrors = zodFieldErrors(emailAuthSetupEmailSchema, {
+      email: values.email,
+      emailConfirm: values.emailConfirm,
+    });
+    if (Object.keys(emailErrors).length > 0) {
+      setInlineErrors(emailErrors);
       return;
     }
+    setInlineErrors({});
     setBusy(true);
     try {
       const res = await fetch("/api/auth/email-auth/send-code", {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: trimmed }),
+        body: JSON.stringify({ email: values.email.trim() }),
       });
       const j = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) {
@@ -121,14 +163,9 @@ export function EmailAuthSetupPrompt({ initialNeedsSetup = false }: { initialNee
   }
 
   async function complete() {
-    if (!email.trim() || !password || !passwordConfirm || !code.trim()) {
-      toast.error("Uzupełnij e-mail, hasło, powtórzenie hasła i kod z wiadomości.");
-      return;
-    }
-    if (password !== passwordConfirm) {
-      toast.error("Hasła muszą być takie same.");
-      return;
-    }
+    if (!validate()) return;
+    setInlineErrors({});
+    const { email, password, passwordConfirm, code } = values;
     setBusy(true);
     try {
       const res = await fetch("/api/auth/email-auth/complete", {
@@ -176,28 +213,49 @@ export function EmailAuthSetupPrompt({ initialNeedsSetup = false }: { initialNee
           id="email-auth-email"
           label="Adres e-mail"
           required
+          showValidState
           type="email"
           autoComplete="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          value={values.email}
+          onChange={(e) => setValue("email", e.target.value)}
+          onBlur={() => setFieldTouched("email")}
+          error={fieldError("email")}
+        />
+        <FormInput
+          id="email-auth-email2"
+          label="Powtórz adres e-mail"
+          required
+          showValidState
+          type="email"
+          autoComplete="email"
+          value={values.emailConfirm}
+          onChange={(e) => setValue("emailConfirm", e.target.value)}
+          onBlur={() => setFieldTouched("emailConfirm")}
+          error={fieldError("emailConfirm")}
         />
         <FormInput
           id="email-auth-password"
           label="Hasło (min. 8 znaków)"
           required
+          showValidState
           type="password"
           autoComplete="new-password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          value={values.password}
+          onChange={(e) => setValue("password", e.target.value)}
+          onBlur={() => setFieldTouched("password")}
+          error={fieldError("password")}
         />
         <FormInput
           id="email-auth-password2"
           label="Powtórz hasło"
           required
+          showValidState
           type="password"
           autoComplete="new-password"
-          value={passwordConfirm}
-          onChange={(e) => setPasswordConfirm(e.target.value)}
+          value={values.passwordConfirm}
+          onChange={(e) => setValue("passwordConfirm", e.target.value)}
+          onBlur={() => setFieldTouched("passwordConfirm")}
+          error={fieldError("passwordConfirm")}
         />
         <FormInput
           id="email-auth-code"
@@ -205,14 +263,16 @@ export function EmailAuthSetupPrompt({ initialNeedsSetup = false }: { initialNee
           required
           inputMode="numeric"
           autoComplete="one-time-code"
-          value={code}
-          onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 8))}
+          value={values.code}
+          onChange={(e) => setValue("code", e.target.value.replace(/\D/g, "").slice(0, 8))}
+          onBlur={() => setFieldTouched("code")}
+          error={fieldError("code")}
         />
         <div className="flex flex-col gap-2 pt-1">
           <Button type="button" variant="outline" disabled={busy} onClick={() => void sendCode()}>
             {codeSent ? "Wyślij kod ponownie" : "Wyślij kod na e-mail"}
           </Button>
-          <Button type="button" variant="pitch" disabled={busy} onClick={() => void complete()}>
+          <Button type="button" variant="default" className="rounded-full font-bold" disabled={busy} onClick={() => void complete()}>
             {busy ? "Zapisywanie…" : "Zapisz i wejdź"}
           </Button>
           <button

@@ -7,7 +7,6 @@ import { MarketplacePitchPhoto } from "@/components/marketplace-pitch-photo";
 import { MarketplacePhotoStrip } from "@/components/marketplace-photo-strip";
 import { useMarketplacePhotos } from "@/components/marketplace-photos-provider";
 import { pitchPhotoAt } from "@/lib/marketplace-photos";
-import { useSiteMode } from "@/components/site-mode";
 import { PitchPageHero } from "@/components/ui/pitch-card";
 import { useRouter } from "next/navigation";
 import { toast } from "@/lib/app-toast";
@@ -47,7 +46,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { YesNoSwitch } from "@/components/ui/yes-no-switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MatchTransportSignupDialog } from "@/components/match-transport-signup-dialog";
+import { MatchSignupDialog } from "@/components/match-signup-dialog";
 import { MatchManageDialog } from "@/components/match-manage-dialog";
 import { MatchAddGuestDialog } from "@/components/match-add-guest-dialog";
 import { CaptainLotteryDialog } from "@/components/captain-lottery-dialog";
@@ -80,7 +79,7 @@ import { captainLotteryEntryFromApi } from "@/lib/captain-lottery";
 import { useHotpayPayment } from "@/hooks/use-hotpay-payment";
 import { useHotpayPaymentReturn } from "@/hooks/use-hotpay-payment-return";
 import { payMatchCart } from "@/lib/hotpay-client";
-import { hasMatchTimePassed } from "@/lib/transport";
+import { hasMatchTimePassed } from "@/lib/match-time";
 
 type Props = {
   upcoming: MatchRow[];
@@ -218,7 +217,6 @@ export function TerminarzClient({
   captainLotteryHistory: initialCaptainLotteryHistory = {},
   hotpayEnabled = false,
 }: Props) {
-  const { marketplaceEnabled } = useSiteMode();
   const { photos: mpPhotos } = useMarketplacePhotos();
   const router = useRouter();
   const [walletBalancePln, setWalletBalancePln] = useState<number | null>(null);
@@ -255,9 +253,9 @@ export function TerminarzClient({
   const [statsAssists, setStatsAssists] = useState("");
   const [statsDistance, setStatsDistance] = useState("");
   const [statsSaves, setStatsSaves] = useState("");
-  const [transportSignupOpen, setTransportSignupOpen] = useState(false);
-  const [transportSignupMatchId, setTransportSignupMatchId] = useState<number | null>(null);
-  const [transportSignupIntent, setTransportSignupIntent] = useState<"signup" | "confirm">("signup");
+  const [signupDialogOpen, setSignupDialogOpen] = useState(false);
+  const [signupDialogMatchId, setSignupDialogMatchId] = useState<number | null>(null);
+  const [signupDialogIntent, setSignupDialogIntent] = useState<"signup" | "confirm">("signup");
   const [tentativeBusyId, setTentativeBusyId] = useState<number | null>(null);
   const statsOpenedFromUrlRef = useRef(false);
   const attendanceOpenedFromUrlRef = useRef(false);
@@ -430,16 +428,16 @@ export function TerminarzClient({
     return () => window.clearTimeout(t);
   }, [highlightMatchId, view, listTab, filteredActive, filteredArchive]);
 
-  const openTransportSignup = useCallback((id: number) => {
-    setTransportSignupIntent("signup");
-    setTransportSignupMatchId(id);
-    setTransportSignupOpen(true);
+  const openSignupDialog = useCallback((id: number) => {
+    setSignupDialogIntent("signup");
+    setSignupDialogMatchId(id);
+    setSignupDialogOpen(true);
   }, []);
 
   const openConfirmFromTentative = useCallback((id: number) => {
-    setTransportSignupIntent("confirm");
-    setTransportSignupMatchId(id);
-    setTransportSignupOpen(true);
+    setSignupDialogIntent("confirm");
+    setSignupDialogMatchId(id);
+    setSignupDialogOpen(true);
   }, []);
 
   const statsActive = useMemo(() => {
@@ -1105,7 +1103,7 @@ export function TerminarzClient({
                 <ActionNotice tone="info">
                   <strong className="font-semibold text-[var(--mp-teal-dark)] dark:text-teal-100">Jeszcze nie wiem</strong> — nie
                   zajmujesz miejsca w
-                  składzie. Gdy potwierdzisz{hotpayEnabled ? "" : ", wybierzesz też transport"}.
+                  składzie.
                 </ActionNotice>
                 {free > 0 ? (
                   <Button
@@ -1157,7 +1155,7 @@ export function TerminarzClient({
               <>
                 <ActionNotice tone="muted">
                   <strong className="font-semibold text-zinc-800 dark:text-zinc-100">Nie bierzesz udziału</strong> w tym
-                  terminie — nie zajmujesz miejsca w składzie. Gdy zmienisz zdanie, potwierdź udział{hotpayEnabled ? "" : " i wybierz transport"}.
+                  terminie — nie zajmujesz miejsca w składzie. Gdy zmienisz zdanie, potwierdź udział.
                 </ActionNotice>
                 {free > 0 ? (
                   <Button
@@ -1210,7 +1208,7 @@ export function TerminarzClient({
                   variant="ghost"
                   className={actionBtnPrimary}
                   title={`Zapisuje Cię na listę (${m.signed_up}/${m.max_slots} zapisanych)${ponderAside ? `. ${ponderAside}` : ""}`}
-                  onClick={() => openTransportSignup(m.id)}
+                  onClick={() => openSignupDialog(m.id)}
                 >
                   <UserPlus className="shrink-0" aria-hidden />
                   <span>
@@ -1510,9 +1508,7 @@ export function TerminarzClient({
 
   return (
     <>
-      <div className={cn("relative flex flex-1 flex-col", marketplaceEnabled && "text-zinc-900 dark:text-zinc-50")}>
-        {marketplaceEnabled ? (
-          <>
+      <div className="relative flex flex-1 flex-col text-zinc-900 dark:text-zinc-50">
         <section className="mp-hero mp-hero--photo relative flex flex-col justify-end overflow-hidden pb-16 pt-16 sm:pb-20 sm:pt-24">
           <MarketplacePitchPhoto src={heroPhoto} priority className="z-0" />
           <div className="absolute inset-0 z-[1] bg-gradient-to-t from-black/75 via-black/40 to-black/20" />
@@ -1578,25 +1574,8 @@ export function TerminarzClient({
         </section>
 
         <MarketplacePhotoStrip isAdmin={isAdmin} />
-          </>
-        ) : (
-          <div className="awp-page awp-page--wide pb-0">
-            <PitchPageHero
-              kicker="Terminarz"
-              title="Najbliższe mecze"
-              subtitle="Zapisz się na boisko, sprawdź składy i terminy."
-              titleId="terminarz-page-title"
-            />
-          </div>
-        )}
 
-        <div
-          className={
-            marketplaceEnabled
-              ? "relative z-10 mx-auto w-full min-w-0 max-w-6xl px-4 py-10 sm:py-12"
-              : "awp-page awp-page--wide pt-4"
-          }
-        >
+        <div className="relative z-10 mx-auto w-full min-w-0 max-w-6xl px-4 py-10 sm:py-12">
         <PhotoPanel src={pitchPhotoAt(2, mpPhotos)} className="mb-5" contentClassName="p-4 sm:p-5" sizes="(max-width: 768px) 100vw, 1152px">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex flex-col gap-2.5">
@@ -1634,9 +1613,9 @@ export function TerminarzClient({
                   </span>
                   <Button
                     type="button"
-                    variant={marketplaceEnabled ? "default" : "gold"}
+                    variant="default"
                     size="lg"
-                    className={cn("w-full sm:w-auto", marketplaceEnabled && "rounded-full font-bold")}
+                    className="w-full rounded-full font-bold sm:w-auto"
                     onClick={() => setAddOpen(true)}
                   >
                     <Plus className="h-4 w-4 shrink-0" aria-hidden />
@@ -1652,24 +1631,12 @@ export function TerminarzClient({
             {highlightMatch && (
               <div
                 role="status"
-                className={cn(
-                  "rounded-xl border-2 px-4 py-3 text-sm leading-relaxed text-white shadow-sm",
-                  marketplaceEnabled
-                    ? "border-[var(--mp-teal)] bg-black/70"
-                    : "border-[var(--mundial-gold,#f5c518)] bg-black/70"
-                )}
+                className="rounded-xl border-2 border-[var(--mp-teal)] bg-black/70 px-4 py-3 text-sm leading-relaxed text-white shadow-sm"
               >
                 <span className="font-semibold">Z powiadomienia e-mail: </span>
                 poniżej{" "}
-                <span
-                  className={cn(
-                    "font-medium",
-                    marketplaceEnabled
-                      ? "text-[var(--mp-teal)]"
-                      : "text-[var(--mundial-gold,#f5c518)]"
-                  )}
-                >
-                  {marketplaceEnabled ? "tealową ramką" : "złotą ramką"}
+                <span className="font-medium text-[var(--mp-teal)]">
+                  tealową ramką
                 </span>{" "}
                 wyróżniony jest mecz, którego dotyczyła wiadomość — możesz od razu przejść do zapisu.
               </div>
@@ -1685,12 +1652,7 @@ export function TerminarzClient({
             <PhotoPanel src={pitchPhotoAt(3, mpPhotos)} className="mt-4" contentClassName="p-4 sm:p-5" sizes="(max-width: 768px) 100vw, 1152px">
               <details className="group rounded-xl border border-white/20 bg-black/20">
                 <summary
-                  className={cn(
-                    "awp-focus-ring flex cursor-pointer list-none items-center gap-2 px-3 py-2.5 text-xs font-semibold uppercase tracking-[0.1em] [&::-webkit-details-marker]:hidden",
-                    marketplaceEnabled
-                      ? "text-[var(--mp-teal)]"
-                      : "text-[var(--mundial-gold,#f5c518)]"
-                  )}
+                  className="awp-focus-ring flex cursor-pointer list-none items-center gap-2 px-3 py-2.5 text-xs font-semibold uppercase tracking-[0.1em] text-[var(--mp-teal)] [&::-webkit-details-marker]:hidden"
                 >
                   <Search className="h-4 w-4 shrink-0" aria-hidden />
                   <span className="min-w-0 flex-1">
@@ -1765,9 +1727,9 @@ export function TerminarzClient({
                       </select>
                       <Button
                         type="button"
-                        variant={onlyMine ? "gold" : "secondary"}
+                        variant={onlyMine ? "default" : "secondary"}
+                        className={cn(onlyMine && "rounded-full font-bold", "h-10 shrink-0 px-3")}
                         size="sm"
-                        className="h-10 shrink-0 px-3"
                         onClick={() => setOnlyMine((v) => !v)}
                       >
                         Tylko moje
@@ -1914,8 +1876,6 @@ export function TerminarzClient({
           />
         )}
 
-        {marketplaceEnabled ? (
-        <>
         <section className="mt-14 grid gap-4 sm:grid-cols-3">
           {[
             { n: "1", t: "Wybierz mecz", d: "Lista albo kalendarz — data, godzina i boisko." },
@@ -1962,8 +1922,6 @@ export function TerminarzClient({
             </Button>
           </div>
         </section>
-        </>
-        ) : null}
         </div>
       </div>
 
@@ -1978,7 +1936,7 @@ export function TerminarzClient({
               {isLoggedIn && calPopup.played === 1 && missingStatsSet.has(calPopup.id) && (
                 <Button
                   type="button"
-                  variant={marketplaceEnabled ? "default" : "pitch"}
+                  variant="default"
                   className="h-auto min-h-9 w-full gap-2 whitespace-normal py-2 text-left sm:w-auto"
                   onClick={() => {
                     const m = calPopup;
@@ -2060,12 +2018,7 @@ export function TerminarzClient({
               href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(calPopup.location)}`}
               target="_blank"
               rel="noreferrer"
-              className={cn(
-                "inline-block text-sm font-medium underline underline-offset-2",
-                marketplaceEnabled
-                  ? "text-[var(--mp-teal-dark)] hover:text-[var(--mp-teal)] dark:text-teal-300 dark:hover:text-teal-200"
-                  : "text-emerald-700 hover:text-emerald-900 dark:text-emerald-400 dark:hover:text-emerald-300"
-              )}
+              className="inline-block text-sm font-medium text-[var(--mp-teal-dark)] underline underline-offset-2 hover:text-[var(--mp-teal)] dark:text-teal-300 dark:hover:text-teal-200"
             >
               Otwórz miejsce w Mapach Google
             </a>
@@ -2086,7 +2039,7 @@ export function TerminarzClient({
           <span
             className={cn(
               "flex h-10 w-10 items-center justify-center rounded-2xl text-white shadow-sm",
-              marketplaceEnabled ? "bg-[var(--mp-teal)]" : "bg-emerald-700"
+              "bg-[var(--mp-teal)]"
             )}
           >
             <Users className="h-5 w-5" strokeWidth={2.25} aria-hidden />
@@ -2239,7 +2192,7 @@ export function TerminarzClient({
       size="lg"
       scrollable
       title="Obecność na meczu"
-      headerKicker={marketplaceEnabled ? "Administrator" : undefined}
+      headerKicker="Administrator"
       description="Zaznacz osoby, które faktycznie brały udział w meczu."
       footer={
         <>
@@ -2248,7 +2201,7 @@ export function TerminarzClient({
           </Button>
           <Button
             type="button"
-            variant={marketplaceEnabled ? "default" : "pitch"}
+            variant="default"
             disabled={attendanceBusy || !attendanceMatch}
             onClick={() => void saveAttendance()}
           >
@@ -2296,16 +2249,14 @@ export function TerminarzClient({
                     });
                   }}
                   size="sm"
-                  tone={marketplaceEnabled ? "light" : "pitch"}
+                  tone="light"
                   aria-label={`Obecność: ${p.first_name} ${p.last_name}`}
                 />
                 <Badge
                   variant="outline"
                   className={
                     checked
-                      ? marketplaceEnabled
-                        ? "border-[var(--mp-teal)]/40 bg-[var(--mp-teal)]/10 text-[var(--mp-teal-dark)] dark:border-teal-700 dark:bg-teal-950/50 dark:text-teal-100"
-                        : "border-emerald-300 bg-emerald-50 text-emerald-950 dark:border-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-100"
+                      ? "border-[var(--mp-teal)]/40 bg-[var(--mp-teal)]/10 text-[var(--mp-teal-dark)] dark:border-teal-700 dark:bg-teal-950/50 dark:text-teal-100"
                       : "border-zinc-200 bg-zinc-50 text-zinc-700 dark:border-zinc-600 dark:bg-zinc-800/50 dark:text-zinc-300"
                   }
                 >
@@ -2333,7 +2284,7 @@ export function TerminarzClient({
         size="lg"
         scrollable
         title="Rozlicz mecz"
-        headerKicker={marketplaceEnabled ? "Administrator" : undefined}
+        headerKicker="Administrator"
         description="Domyślnie wpisuje równą składkę na osobę (wynajem boiska ÷ liczba obecnych, zaokrąglenie w górę do 0,50 zł). Nieobecni z zaliczką dostają pełny zwrot do portfela."
         footer={
           <>
@@ -2342,7 +2293,7 @@ export function TerminarzClient({
             </Button>
             <Button
               type="button"
-              variant={marketplaceEnabled ? "default" : "pitch"}
+              variant="default"
               disabled={settleSubmitting || settleLoading}
               onClick={() => void submitSettlement()}
             >
@@ -2541,7 +2492,7 @@ export function TerminarzClient({
             </Button>
             <Button
               type="button"
-              variant={marketplaceEnabled ? "default" : "pitch"}
+              variant="default"
               disabled={statsBusy}
               onClick={() => void saveMatchStats()}
             >
@@ -2630,15 +2581,15 @@ export function TerminarzClient({
         onLotteryChange={handleCaptainLotteryChange}
       />
 
-      {transportSignupMatchId != null && (
-        <MatchTransportSignupDialog
-          open={transportSignupOpen}
+      {signupDialogMatchId != null && (
+        <MatchSignupDialog
+          open={signupDialogOpen}
           onOpenChange={(v) => {
-            setTransportSignupOpen(v);
-            if (!v) setTransportSignupMatchId(null);
+            setSignupDialogOpen(v);
+            if (!v) setSignupDialogMatchId(null);
           }}
-          matchId={transportSignupMatchId}
-          intent={transportSignupIntent === "confirm" ? "confirm" : "signup"}
+          matchId={signupDialogMatchId}
+          intent={signupDialogIntent === "confirm" ? "confirm" : "signup"}
           hotpayEnabled={hotpayEnabled}
           onCompleted={() => {
             router.refresh();
@@ -2677,7 +2628,6 @@ function CalendarView({
   onPick: (m: MatchRow) => void;
 }) {
   const { photos: mpPhotos } = useMarketplacePhotos();
-  const { marketplaceEnabled } = useSiteMode();
   const names = [
     "Styczeń",
     "Luty",
@@ -2726,10 +2676,7 @@ function CalendarView({
         key={d}
         className={cn(
           "relative min-h-[104px] overflow-hidden rounded-xl border border-white/20 bg-white/10 p-2",
-          isToday &&
-            (marketplaceEnabled
-              ? "ring-2 ring-[var(--mp-teal)] ring-offset-2 ring-offset-transparent"
-              : "ring-2 ring-[var(--mundial-gold,#f5c518)] ring-offset-2 ring-offset-transparent")
+          isToday && "ring-2 ring-[var(--mp-teal)] ring-offset-2 ring-offset-transparent"
         )}
       >
         {list.length > 0 ? (
@@ -2795,8 +2742,8 @@ function CalendarView({
             <Button
               type="button"
               size="sm"
-              variant={marketplaceEnabled ? "default" : "gold"}
-              className={marketplaceEnabled ? "rounded-full font-bold" : undefined}
+              variant="default"
+              className="rounded-full font-bold"
               onClick={onToday}
             >
               Przejdź do dziś
@@ -2840,8 +2787,7 @@ function AddMatchDialog({
   onDone: () => void;
   defaults: { maxSlots: number; location: string; feePln?: number | null };
 }) {
-  const { marketplaceEnabled } = useSiteMode();
-  const light = marketplaceEnabled;
+  const light = true;
   const { busy, run } = useAsyncAction();
   const form = useValidatedForm({
     initialValues: {
@@ -2926,7 +2872,7 @@ function AddMatchDialog({
           <Button type="button" variant="outline" disabled={busy} onClick={() => onOpenChange(false)}>
             Anuluj
           </Button>
-          <Button type="submit" form="add-match-form" variant={light ? "default" : "pitch"} disabled={busy}>
+          <Button type="submit" form="add-match-form" variant="default" className="rounded-full font-bold" disabled={busy}>
             {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
             Zapisz mecz
           </Button>

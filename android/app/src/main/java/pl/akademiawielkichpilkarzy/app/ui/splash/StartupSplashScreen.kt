@@ -52,8 +52,7 @@ private val KenBurnsEase = CubicBezierEasing(0.22f, 1f, 0.36f, 1f)
  */
 @Composable
 fun StartupSplashScreen(
-    onFirstFrame: () -> Unit = {},
-    marketplaceEnabled: Boolean = false
+    onFirstFrame: () -> Unit = {}
 ) {
     val bgScale = remember { Animatable(1.06f) }
     val panelAlpha = remember { Animatable(0f) }
@@ -85,26 +84,16 @@ fun StartupSplashScreen(
         }
     }
 
-    val accent = if (marketplaceEnabled) AwpColors.MpTeal else AwpColors.MundialGold
-    val baseColor = if (marketplaceEnabled) Color(0xFF061820) else Color(0xFF061410)
+    val accent = AwpColors.MpTeal
+    val baseColor = Color(0xFF061820)
     val scrimBrush =
-        if (marketplaceEnabled) {
-            Brush.verticalGradient(
-                listOf(
-                    Color(0xCC061820),
-                    Color(0x99081820),
-                    Color(0xE6041018)
-                )
+        Brush.verticalGradient(
+            listOf(
+                Color(0xCC061820),
+                Color(0x99081820),
+                Color(0xE6041018)
             )
-        } else {
-            Brush.verticalGradient(
-                listOf(
-                    Color(0xCC040C0A),
-                    Color(0x99061410),
-                    Color(0xE0040A12)
-                )
-            )
-        }
+        )
 
     Box(
         modifier = Modifier
@@ -179,7 +168,7 @@ fun StartupSplashScreen(
             )
 
             Text(
-                text = if (marketplaceEnabled) "Przygotowujemy boiska…" else "Wchodzimy na boisko…",
+                text = "Przygotowujemy boiska…",
                 color = Color.White.copy(alpha = 0.74f),
                 fontSize = 14.sp,
                 letterSpacing = 0.2.sp,

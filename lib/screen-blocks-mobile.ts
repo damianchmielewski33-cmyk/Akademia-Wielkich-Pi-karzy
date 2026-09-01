@@ -22,7 +22,6 @@ export const BLOCKABLE_MOBILE_SCREENS = [
   { key: "pzu_cup", label: "PZU Cup (WebView)", route: "web:pzu_cup" },
   { key: "platnosci_web", label: "Płatności WWW (WebView)", route: "web:platnosci" },
   { key: "profil_web", label: "Profil WWW (WebView)", route: "web:profil" },
-  { key: "transport", label: "Transport (WebView)", route: "web:transport" },
 ] as const;
 
 export type BlockableMobileScreenKey = (typeof BLOCKABLE_MOBILE_SCREENS)[number]["key"];

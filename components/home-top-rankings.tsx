@@ -5,9 +5,7 @@ import { ChevronRight } from "lucide-react";
 import { PhotoPanel } from "@/components/photo-panel";
 import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
 import { MarketplacePitchPhoto } from "@/components/marketplace-pitch-photo";
-import { useSiteMode } from "@/components/site-mode";
 import { Button } from "@/components/ui/button";
-import { PitchCard } from "@/components/ui/pitch-card";
 import type { HomeTopPlayer } from "@/lib/rankings-data";
 import { formatMatchCountPl } from "@/lib/rankings";
 import { pitchPhotoAt } from "@/lib/marketplace-photos";
@@ -27,21 +25,19 @@ function photoAt(pool: string[] | undefined, index: number) {
 function PodiumCard({
   player,
   photoSrc,
-  stadium,
 }: {
   player: HomeTopPlayer;
   photoSrc?: string;
-  stadium?: boolean;
 }) {
   const isFirst = player.rank === 1;
-  const onPitch = Boolean(photoSrc) || stadium;
+  const onPhoto = Boolean(photoSrc);
 
   const body = (
     <>
       <span
         className={cn(
           "mx-auto mb-3 inline-flex min-h-[1.75rem] min-w-[1.75rem] items-center justify-center rounded-full px-2 text-xs font-extrabold tabular-nums",
-          onPitch ? "bg-[var(--mundial-gold,#f5c518)] text-zinc-950" : "bg-[var(--mp-teal)] text-white"
+          "bg-[var(--mp-teal)] text-white"
         )}
       >
         #{player.rank}
@@ -52,7 +48,7 @@ function PodiumCard({
         lastName={player.lastName}
         size={isFirst ? "lg" : "md"}
         className="mx-auto shadow-md"
-        ringClassName={onPitch ? "ring-2 ring-white/60" : "ring-2 ring-[var(--mp-teal)]/25"}
+        ringClassName={onPhoto ? "ring-2 ring-white/60" : "ring-2 ring-[var(--mp-teal)]/25"}
       />
       <div className="mt-3 w-full min-w-0">
         <PlayerNameStack
@@ -60,22 +56,22 @@ function PodiumCard({
           lastName={player.lastName}
           nick={player.zawodnik}
           className="text-center"
-          primaryClassName={onPitch ? "font-bold text-white drop-shadow-sm" : "font-bold text-zinc-950 dark:text-white"}
-          secondaryClassName={onPitch ? "text-white/75" : "text-zinc-500"}
+          primaryClassName={onPhoto ? "font-bold text-white drop-shadow-sm" : "font-bold text-zinc-950 dark:text-white"}
+          secondaryClassName={onPhoto ? "text-white/75" : "text-zinc-500"}
         />
       </div>
       <p
         className={cn(
           "mt-3 text-2xl font-extrabold tabular-nums",
-          onPitch ? "text-white drop-shadow-sm" : "text-zinc-950 dark:text-white"
+          onPhoto ? "text-white drop-shadow-sm" : "text-zinc-950 dark:text-white"
         )}
       >
         {player.punkty.toFixed(2)}
-        <span className={cn("ml-1 text-sm font-semibold", onPitch ? "text-white/75" : "text-zinc-500")}>
+        <span className={cn("ml-1 text-sm font-semibold", onPhoto ? "text-white/75" : "text-zinc-500")}>
           pkt/mecz
         </span>
       </p>
-      <p className={cn("mt-1 text-xs", onPitch ? "text-white/80" : "text-zinc-500")}>
+      <p className={cn("mt-1 text-xs", onPhoto ? "text-white/80" : "text-zinc-500")}>
         {formatMatchCountPl(player.mecze)}
         {" · "}
         {player.goals} goli · {player.assists} asyst
@@ -97,18 +93,6 @@ function PodiumCard({
     );
   }
 
-  if (stadium) {
-    return (
-      <PitchCard
-        variant="pitch"
-        className={cn("min-h-[16rem]", isFirst && "sm:-translate-y-2")}
-        contentClassName="flex min-h-[16rem] flex-col items-center justify-end p-5 text-center"
-      >
-        {body}
-      </PitchCard>
-    );
-  }
-
   return (
     <article
       className={cn(
@@ -122,38 +106,26 @@ function PodiumCard({
 }
 
 export function HomeTopRankings({ players, isLoggedIn, photoPool }: Props) {
-  const { marketplaceEnabled } = useSiteMode();
   if (players.length === 0) return null;
 
   const ordered = players.length >= 3 ? [players[1], players[0], players[2]] : players;
-  const withPhotos = Boolean(marketplaceEnabled && photoPool && photoPool.length > 0);
-  const stadium = !marketplaceEnabled;
+  const withPhotos = Boolean(photoPool && photoPool.length > 0);
 
   return (
     <section>
       <div className="mb-4 flex items-end justify-between gap-3 md:mb-5">
         <div>
-          <p
-            className={cn(
-              "text-xs font-bold uppercase tracking-[0.16em]",
-              stadium ? "text-[var(--mundial-gold)]" : "text-[var(--mp-teal-dark)]"
-            )}
-          >
+          <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--mp-teal-dark)]">
             Rankingi
           </p>
-          <h2
-            className={cn(
-              "mt-1 text-xl font-black tracking-tight sm:text-3xl",
-              stadium && "text-white drop-shadow-sm"
-            )}
-          >
+          <h2 className="mt-1 text-xl font-black tracking-tight sm:text-3xl">
             Top 3
           </h2>
-          <p className={cn("mt-1 hidden text-sm sm:block", stadium ? "text-white/80" : "text-zinc-500")}>
+          <p className="mt-1 hidden text-sm text-zinc-500 sm:block">
             Najlepsi według średniej punktów na mecz — liczba spotkań nie podnosi pozycji.
           </p>
         </div>
-        <Button asChild variant={stadium ? "pitch" : "outline"} className="hidden md:inline-flex">
+        <Button asChild variant="outline" className="hidden md:inline-flex">
           <Link href={isLoggedIn ? "/rankingi" : "/login?next=/rankingi"}>
             Pełne rankingi
             <ChevronRight className="h-4 w-4" aria-hidden />
@@ -176,12 +148,7 @@ export function HomeTopRankings({ players, isLoggedIn, photoPool }: Props) {
           .sort((a, b) => a.rank - b.rank)
           .map((player) => (
             <li key={player.userId} className="flex items-center gap-3 px-3 py-3">
-              <span
-                className={cn(
-                  "w-8 shrink-0 text-sm font-black tabular-nums",
-                  stadium ? "text-[var(--mundial-gold)]" : "text-[var(--mp-teal-dark)]"
-                )}
-              >
+              <span className="w-8 shrink-0 text-sm font-black tabular-nums text-[var(--mp-teal-dark)]">
                 #{player.rank}
               </span>
               <PlayerAvatar
@@ -231,7 +198,6 @@ export function HomeTopRankings({ players, isLoggedIn, photoPool }: Props) {
           <PodiumCard
             key={player.userId}
             player={player}
-            stadium={stadium}
             photoSrc={withPhotos ? photoAt(photoPool, i + 12) : undefined}
           />
         ))}

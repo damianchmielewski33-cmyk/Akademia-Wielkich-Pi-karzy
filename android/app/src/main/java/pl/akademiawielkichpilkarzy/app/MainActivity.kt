@@ -46,28 +46,17 @@ class MainActivity : FragmentActivity() {
         super.onCreate(savedInstanceState)
         deepLinkPathState.value = intent.deepLinkPathOrNull()
 
-        val cachedMarketplace = AwpApp.instance.appConfigStore.isMarketplaceEnabledBlocking()
-        window.setBackgroundDrawableResource(
-            if (cachedMarketplace) R.color.awp_mp_bg else R.color.awp_green_dark
-        )
+        window.setBackgroundDrawableResource(R.color.awp_mp_bg)
 
         enableEdgeToEdge(
-            statusBarStyle = if (cachedMarketplace) {
-                SystemBarStyle.light(
-                    android.graphics.Color.TRANSPARENT,
-                    android.graphics.Color.TRANSPARENT
-                )
-            } else {
-                SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
-            },
-            navigationBarStyle = if (cachedMarketplace) {
-                SystemBarStyle.light(
-                    ContextCompat.getColor(this, R.color.awp_mp_bg),
-                    ContextCompat.getColor(this, R.color.awp_mp_bg)
-                )
-            } else {
-                SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
-            }
+            statusBarStyle = SystemBarStyle.light(
+                android.graphics.Color.TRANSPARENT,
+                android.graphics.Color.TRANSPARENT
+            ),
+            navigationBarStyle = SystemBarStyle.light(
+                ContextCompat.getColor(this, R.color.awp_mp_bg),
+                ContextCompat.getColor(this, R.color.awp_mp_bg)
+            )
         )
         setContent {
             AwpTheme {
@@ -75,7 +64,6 @@ class MainActivity : FragmentActivity() {
                     var sessionReady by remember { mutableStateOf(false) }
                     var initialContentReady by remember { mutableStateOf(false) }
                     var token by remember { mutableStateOf<String?>(null) }
-                    var marketplaceEnabled by remember { mutableStateOf(cachedMarketplace) }
                     var browsePitches by remember { mutableStateOf(false) }
                     val deepLinkPath = deepLinkPathState.value
 
@@ -84,7 +72,6 @@ class MainActivity : FragmentActivity() {
                         val configStore = AwpApp.instance.appConfigStore
                         var current = store.getToken()
                         token = current
-                        marketplaceEnabled = configStore.isMarketplaceEnabled()
                         sessionReady = true
 
                         if (!current.isNullOrBlank()) {
@@ -107,9 +94,6 @@ class MainActivity : FragmentActivity() {
                         }
                         try {
                             val cfg = ApiClient.api.mobileConfig()
-                            val mp = cfg.appSettings?.bookingMarketplaceEnabled == true
-                            marketplaceEnabled = mp
-                            configStore.setMarketplaceEnabled(mp)
                             configStore.setNativeUi(cfg.settings?.androidUiMode == "native")
                         } catch (_: Exception) {
                             /* zostaw cache */
@@ -188,7 +172,6 @@ class MainActivity : FragmentActivity() {
                             exit = fadeOut(animationSpec = tween(durationMillis = 280, easing = FastOutSlowInEasing))
                         ) {
                             StartupSplashScreen(
-                                marketplaceEnabled = marketplaceEnabled,
                                 onFirstFrame = { composeSplashDrawn.value = true }
                             )
                         }

@@ -5,14 +5,12 @@ import { Wallet } from "lucide-react";
 import { useAppMessage } from "@/components/ui/app-message-modal";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { adminFieldClass, adminInnerPanelClass } from "@/components/admin-ui";
 import {
   ChromeIconBadge,
   PaymentsCard,
   paymentsFieldClass,
   paymentsInnerPanelClass,
 } from "@/components/payments-card";
-import { useSiteMode } from "@/components/site-mode";
 import { cn } from "@/lib/utils";
 import { useHotpayPayment } from "@/hooks/use-hotpay-payment";
 import { PayButton } from "@/components/pay-button";
@@ -28,7 +26,6 @@ export function HotpayPayButtons({
   walletLoading,
   className,
 }: Props) {
-  const { marketplaceEnabled } = useSiteMode();
   const [topupAmount, setTopupAmount] = useState("");
   const { showError, MessageModal } = useAppMessage();
   const { pay, busy } = useHotpayPayment();
@@ -55,15 +52,10 @@ export function HotpayPayButtons({
       className={className}
       title="Zapłać kartą lub Blikiem"
       description="Ureguluj niedopłatę lub wpłać środki online. Opłatę za konkretny mecz znajdziesz w sekcji „Opłać mecz (koszyk)”."
-      headerExtra={<ChromeIconBadge icon={Wallet} marketplace={marketplaceEnabled} />}
+      headerExtra={<ChromeIconBadge icon={Wallet} marketplace />}
     >
-      <div className={cn(marketplaceEnabled ? paymentsInnerPanelClass : adminInnerPanelClass, "space-y-3")}>
-        <p
-          className={cn(
-            "text-xs font-semibold uppercase tracking-wide",
-            marketplaceEnabled ? "text-[var(--mp-teal-dark)]" : "text-emerald-100/70"
-          )}
-        >
+      <div className={cn(paymentsInnerPanelClass, "space-y-3")}>
+        <p className="text-xs font-semibold uppercase tracking-wide text-[var(--mp-teal-dark)]">
           Kwota płatności
         </p>
         <Label htmlFor="hotpay-topup-amount" className="sr-only">
@@ -74,7 +66,7 @@ export function HotpayPayButtons({
           type="number"
           min={0.01}
           step={0.01}
-          className={marketplaceEnabled ? paymentsFieldClass : adminFieldClass}
+          className={paymentsFieldClass}
           value={topupAmount}
           onChange={(e) => setTopupAmount(e.target.value)}
           placeholder="np. 50"
