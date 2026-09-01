@@ -17,7 +17,7 @@ import {
   resolveSiteAssetAbsolute,
   siteAssetPublicUrl,
   siteUploadsDir,
-} from "@/lib/runtime-paths";
+} from "@/lib/runtime-paths-uploads";
 import {
   MARKETPLACE_PITCH_SLOT_COUNT,
   isCustomMarketplacePitchUpload,

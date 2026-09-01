@@ -16,7 +16,7 @@ import {
   profilePhotoPublicUrl,
   profileUploadsDir,
   resolveProfilePhotoAbsolute,
-} from "@/lib/runtime-paths";
+} from "@/lib/runtime-paths-uploads";
 
 export const runtime = "nodejs";
 

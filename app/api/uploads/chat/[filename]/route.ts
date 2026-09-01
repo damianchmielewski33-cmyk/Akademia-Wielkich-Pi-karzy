@@ -3,7 +3,7 @@ import path from "path";
 import { NextResponse } from "next/server";
 import { getServerSession } from "@/lib/auth";
 import { readContactAdminGuestAccess } from "@/lib/contact-admin-guest";
-import { chatUploadsDir } from "@/lib/runtime-paths";
+import { chatUploadsDir } from "@/lib/runtime-paths-uploads";
 
 export const runtime = "nodejs";
 

@@ -17,7 +17,7 @@ import {
   resolveSiteAssetAbsolute,
   siteAssetPublicUrl,
   siteUploadsDir,
-} from "@/lib/runtime-paths";
+} from "@/lib/runtime-paths-uploads";
 import {
   SITE_ASSET_DB_COLUMNS,
   SITE_ASSET_DEFAULTS,

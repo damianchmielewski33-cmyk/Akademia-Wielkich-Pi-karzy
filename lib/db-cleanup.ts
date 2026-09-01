@@ -7,7 +7,7 @@ import {
   profileUploadsDir,
   resolveChatAttachmentAbsolute,
   resolveProfilePhotoAbsolute,
-} from "@/lib/runtime-paths";
+} from "@/lib/runtime-paths-uploads";
 
 function clampInt(n: number, min: number, max: number): number {
   if (!Number.isFinite(n)) return min;

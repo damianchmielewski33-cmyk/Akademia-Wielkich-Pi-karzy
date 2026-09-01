@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { NextResponse } from "next/server";
-import { profileUploadsDir } from "@/lib/runtime-paths";
+import { profileUploadsDir } from "@/lib/runtime-paths-uploads";
 
 export const runtime = "nodejs";
 

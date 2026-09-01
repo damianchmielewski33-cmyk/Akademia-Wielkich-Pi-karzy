@@ -6,7 +6,7 @@ import { getServerSession } from "@/lib/auth";
 import { imageMimeMatchesMagicBytes } from "@/lib/image-magic";
 import { BLOB_REQUIRED_ON_VERCEL_MSG, isEphemeralUploadStorage, isProfileBlobStorageEnabled } from "@/lib/profile-blob";
 import { checkRateLimit, rateLimitKey, rateLimitedResponse, RATE } from "@/lib/rate-limit";
-import { chatAttachmentPublicUrl, chatUploadsDir } from "@/lib/runtime-paths";
+import { chatAttachmentPublicUrl, chatUploadsDir } from "@/lib/runtime-paths-uploads";
 
 export const runtime = "nodejs";
 
