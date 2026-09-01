@@ -117,11 +117,15 @@ class MainActivity : FragmentActivity() {
                         store.tokenFlow.collect { token = it }
                     }
 
+                    fun markInitialReady() {
+                        initialContentReady = true
+                    }
+
                     // Awaryjnie: nie trzymaj splash w nieskończoność, gdy ekran nie zgłosi gotowości.
                     LaunchedEffect(sessionReady) {
                         if (!sessionReady) return@LaunchedEffect
-                        delay(2_400L)
-                        initialContentReady = true
+                        delay(10_000L)
+                        markInitialReady()
                     }
 
                     // Animacja startowa tylko do pierwszego ekranu — bez dodatkowego „min. czasu marki”.
@@ -134,10 +138,6 @@ class MainActivity : FragmentActivity() {
                                 it.startsWith("/zaproszenie") ||
                                 it.startsWith("/platnosci-public")
                         }
-
-                    fun markInitialReady() {
-                        initialContentReady = true
-                    }
 
                     Box(modifier = Modifier.fillMaxSize()) {
                         AppUpdateGate(checkOnStart = true)

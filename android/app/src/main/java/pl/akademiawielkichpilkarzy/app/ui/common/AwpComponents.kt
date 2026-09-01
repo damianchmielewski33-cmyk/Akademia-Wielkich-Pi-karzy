@@ -58,6 +58,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
+import coil.compose.AsyncImage
 import pl.akademiawielkichpilkarzy.app.R
 import pl.akademiawielkichpilkarzy.app.ui.theme.AwpColors
 
@@ -1105,21 +1106,61 @@ fun HomePitchTile(
     onClick: () -> Unit,
     gold: Boolean = false,
     icon: ImageVector? = null,
+    photoUrl: String? = null,
     modifier: Modifier = Modifier
 ) {
     val shape = RoundedCornerShape(16.dp)
-    val titleColor = if (gold) Color.White else AwpColors.OnPitch
-    val descColor = if (gold) Color(0xFFFEF3C7).copy(alpha = 0.95f) else AwpColors.OnPitchMuted
+    val hasPhoto = !photoUrl.isNullOrBlank()
+    val titleColor =
+        when {
+            hasPhoto -> Color.White
+            gold -> Color.White
+            else -> AwpColors.OnPitch
+        }
+    val descColor =
+        when {
+            hasPhoto -> Color.White.copy(alpha = 0.80f)
+            gold -> Color(0xFFFEF3C7).copy(alpha = 0.95f)
+            else -> AwpColors.OnPitchMuted
+        }
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .heightIn(min = 88.dp)
+            .heightIn(min = if (hasPhoto) 112.dp else 88.dp)
             .clip(shape)
-            .background(pitchTileGradient(gold))
-            .pitchMurawaStripes(gold)
+            .then(
+                if (hasPhoto) {
+                    Modifier
+                } else {
+                    Modifier
+                        .background(pitchTileGradient(gold))
+                        .pitchMurawaStripes(gold)
+                }
+            )
             .border(2.dp, Color.White.copy(alpha = 0.30f), shape)
             .clickable(onClick = onClick)
     ) {
+        if (hasPhoto) {
+            AsyncImage(
+                model = photoUrl,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.matchParentSize()
+            )
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(
+                                Color.Black.copy(alpha = 0.45f),
+                                Color.Black.copy(alpha = 0.55f),
+                                Color.Black.copy(alpha = 0.70f)
+                            )
+                        )
+                    )
+            )
+        }
         Box(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
@@ -1127,16 +1168,18 @@ fun HomePitchTile(
                 .height(2.dp)
                 .background(Color.White.copy(alpha = 0.45f))
         )
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .size(28.dp)
-                .border(
-                    width = 2.dp,
-                    color = Color.White.copy(alpha = 0.40f),
-                    shape = RoundedCornerShape(bottomEnd = 8.dp)
-                )
-        )
+        if (!hasPhoto) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .size(28.dp)
+                    .border(
+                        width = 2.dp,
+                        color = Color.White.copy(alpha = 0.40f),
+                        shape = RoundedCornerShape(bottomEnd = 8.dp)
+                    )
+            )
+        }
         Row(
             modifier = Modifier
                 .fillMaxWidth()

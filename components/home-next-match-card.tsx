@@ -485,27 +485,25 @@ export function HomeNextMatchCard({
           )}
         </SectionPanel>
 
-        <SectionPanel photoChrome={photoChrome} src={srcAt(10)} className="space-y-2">
-          <span className={cn(pitchLabelClass, "block text-center text-white/85")}>Szybkie linki</span>
-          <div className={cn("grid gap-2", playersData ? "grid-cols-1 xs:grid-cols-2" : "grid-cols-1")}>
-            {playersData ? (
-              <button
-                type="button"
-                className={pitchSecondaryBtnClass}
-                onClick={() => setRosterOpen(true)}
-              >
-                <Users className="h-4 w-4 shrink-0" aria-hidden />
-                Kto gra
-              </button>
-            ) : null}
-            <Button variant="gold" className="w-full" asChild>
-              <Link href="/terminarz" className="inline-flex items-center justify-center gap-2">
-                <Calendar className="h-4 w-4 shrink-0" aria-hidden />
-                Terminarz
-              </Link>
+        <div
+          className={cn(
+            "mx-auto mt-3 grid max-w-md gap-2",
+            playersData ? "grid-cols-1 xs:grid-cols-2" : "grid-cols-1"
+          )}
+        >
+          {playersData ? (
+            <Button variant="gold" className="w-full" type="button" onClick={() => setRosterOpen(true)}>
+              <Users className="h-4 w-4 shrink-0" aria-hidden />
+              Kto gra
             </Button>
-          </div>
-        </SectionPanel>
+          ) : null}
+          <Button variant="gold" className="w-full" asChild>
+            <Link href="/terminarz" className="inline-flex items-center justify-center gap-2">
+              <Calendar className="h-4 w-4 shrink-0" aria-hidden />
+              Terminarz
+            </Link>
+          </Button>
+        </div>
         </div>
     </PitchCard>
     {playersData ? (

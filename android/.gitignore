@@ -6,4 +6,6 @@
 *.iml
 /captures/
 /.cxx/
+/.android-sdk/
+/.jdk/
 google-services.json.bak

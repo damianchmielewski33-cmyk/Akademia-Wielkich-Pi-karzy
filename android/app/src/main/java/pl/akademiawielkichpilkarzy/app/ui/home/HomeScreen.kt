@@ -28,11 +28,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import java.util.concurrent.atomic.AtomicBoolean
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import android.net.Uri
+import pl.akademiawielkichpilkarzy.app.SisterSites
 import pl.akademiawielkichpilkarzy.app.ui.web.openExternalUri
 import kotlinx.coroutines.launch
 import pl.akademiawielkichpilkarzy.app.data.api.ApiClient
@@ -81,6 +83,7 @@ fun HomeScreen(
     var actionError by remember { mutableStateOf<String?>(null) }
     var rosterMatch by remember { mutableStateOf<MatchDto?>(null) }
     val scope = rememberCoroutineScope()
+    val readyNotified = remember { AtomicBoolean(false) }
 
     fun reload() {
         scope.launch {
@@ -119,12 +122,14 @@ fun HomeScreen(
                 error = e.message ?: "Nie udało się pobrać danych"
             } finally {
                 loading = false
+                if (readyNotified.compareAndSet(false, true)) {
+                    onInitialContentReady?.invoke()
+                }
             }
         }
     }
 
     LaunchedEffect(Unit) {
-        onInitialContentReady?.invoke()
         reload()
     }
 
@@ -251,6 +256,7 @@ private data class HomeTile(
     val desc: String,
     val gold: Boolean,
     val icon: ImageVector,
+    val photoUrl: String? = null,
     val onClick: () -> Unit
 )
 
@@ -330,10 +336,11 @@ private fun HomeTileGrid(nav: HomeNavActions) {
                 desc = "Trening i dieta — siostrzana aplikacja",
                 gold = false,
                 icon = Icons.Filled.FitnessCenter,
+                photoUrl = SisterSites.GYMBRAT_GYM_PHOTO,
                 onClick = {
                     openExternalUri(
                         context,
-                        Uri.parse("https://gym-brat.vercel.app/?from=awp")
+                        Uri.parse(SisterSites.gymBratCrossLink())
                     )
                 }
             )
@@ -368,6 +375,7 @@ private fun HomeTileGrid(nav: HomeNavActions) {
                         desc = tile.desc,
                         gold = tile.gold,
                         icon = tile.icon,
+                        photoUrl = tile.photoUrl,
                         onClick = tile.onClick,
                         modifier = Modifier.weight(1f)
                     )

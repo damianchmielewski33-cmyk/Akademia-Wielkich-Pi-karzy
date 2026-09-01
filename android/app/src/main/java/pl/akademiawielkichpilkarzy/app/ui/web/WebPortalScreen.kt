@@ -166,6 +166,7 @@ fun WebPortalScreen(
     var loadedStartUrl by remember { mutableStateOf<String?>(null) }
     var webView by remember { mutableStateOf<WebView?>(null) }
     var fileCallback by remember { mutableStateOf<ValueCallback<Array<Uri>>?>(null) }
+    var firstPageFinished by remember { mutableStateOf(false) }
     val readyNotified = remember { AtomicBoolean(false) }
     val onReadyLatest = rememberUpdatedState(onInitialContentReady)
     val onLoginLatest = rememberUpdatedState(onNavigatedToLogin)
@@ -305,7 +306,7 @@ fun WebPortalScreen(
             }
 
             else -> {
-                if (progress > 0f && progress < 1f) {
+                if (firstPageFinished && progress > 0f && progress < 1f) {
                     LinearProgressIndicator(
                         progress = { progress },
                         modifier = Modifier.fillMaxWidth(),
@@ -336,7 +337,7 @@ fun WebPortalScreen(
                             overScrollMode = WebView.OVER_SCROLL_NEVER
                             isVerticalScrollBarEnabled = false
                             isHorizontalScrollBarEnabled = false
-                            setBackgroundColor(AndroidColor.TRANSPARENT)
+                            setBackgroundColor(AndroidColor.parseColor("#061410"))
                             // Znacznik w UA - strona rozpoznaje WebView i czyta wersję APK.
                             settings.userAgentString =
                                 "${settings.userAgentString} AWPAndroidApp/${BuildConfig.VERSION_NAME} AWPAndroidCode/${BuildConfig.VERSION_CODE}"
@@ -370,6 +371,7 @@ fun WebPortalScreen(
 
                                 override fun onPageFinished(view: WebView?, url: String?) {
                                     progress = 1f
+                                    firstPageFinished = true
                                     CookieManager.getInstance().flush()
                                     markInitialReady()
                                     val u = url.orEmpty()
@@ -387,7 +389,6 @@ fun WebPortalScreen(
                             webChromeClient = object : WebChromeClient() {
                                 override fun onProgressChanged(view: WebView?, newProgress: Int) {
                                     progress = newProgress / 100f
-                                    if (newProgress >= 35) markInitialReady()
                                 }
 
                                 override fun onShowFileChooser(
