@@ -31,11 +31,8 @@ import androidx.compose.runtime.setValue
 import java.util.concurrent.atomic.AtomicBoolean
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import android.net.Uri
 import pl.akademiawielkichpilkarzy.app.SisterSites
-import pl.akademiawielkichpilkarzy.app.ui.web.openExternalUri
 import kotlinx.coroutines.launch
 import pl.akademiawielkichpilkarzy.app.data.api.ApiClient
 import pl.akademiawielkichpilkarzy.app.data.api.LineupSelected
@@ -262,7 +259,6 @@ private data class HomeTile(
 
 @Composable
 private fun HomeTileGrid(nav: HomeNavActions) {
-    val context = LocalContext.current
     val tiles = buildList {
         if (!nav.isBlocked("schedule")) {
             add(
@@ -337,12 +333,7 @@ private fun HomeTileGrid(nav: HomeNavActions) {
                 gold = false,
                 icon = Icons.Filled.FitnessCenter,
                 photoUrl = SisterSites.GYMBRAT_GYM_PHOTO,
-                onClick = {
-                    openExternalUri(
-                        context,
-                        Uri.parse(SisterSites.gymBratCrossLink())
-                    )
-                }
+                onClick = { nav.onPortal("GymBrat", SisterSites.GYMBRAT_EMBED_PATH) }
             )
         )
         if (nav.isAdmin) {

@@ -1,33 +1,18 @@
 "use client";
 
 import Image from "next/image";
-import { Dumbbell, ExternalLink } from "lucide-react";
+import Link from "next/link";
+import { ArrowRight, Dumbbell } from "lucide-react";
 import { useSiteMode } from "@/components/site-mode";
-import { isInstalledAndroidAppClient, openExternalAppUrl } from "@/lib/app-webview";
 import {
   GYMBRAT_GYM_PHOTO,
   GYMBRAT_SITE_NAME,
   GYMBRAT_SITE_TAGLINE,
-  getGymBratCrossLink,
+  getGymBratEmbedPath,
 } from "@/lib/sister-sites";
 import { cn } from "@/lib/utils";
 
-function gymBratLinkProps(href: string) {
-  const inApp = isInstalledAndroidAppClient();
-  return {
-    href,
-    target: inApp ? undefined : "_blank",
-    rel: inApp ? undefined : "noopener noreferrer",
-    onClick: inApp
-      ? (e: React.MouseEvent) => {
-          e.preventDefault();
-          openExternalAppUrl(href);
-        }
-      : undefined,
-  } as const;
-}
-
-/** Kafelek / pasek do przejścia na GymBrat (nowa karta — sesja AWP zostaje). */
+/** Kafelek / pasek do GymBrat osadzonego w iframe (/gymbrat) — APK i RWD. */
 export function GymBratCrossLink({
   className,
   variant = "tile",
@@ -38,14 +23,13 @@ export function GymBratCrossLink({
   /** Nadpisanie zdjęcia; domyślnie siłownia (nie boisko). */
   photoSrc?: string | null;
 }) {
-  const href = getGymBratCrossLink("/");
-  const link = gymBratLinkProps(href);
+  const href = getGymBratEmbedPath("/");
   const { marketplaceEnabled } = useSiteMode();
 
   if (variant === "row") {
     return (
-      <a
-        {...link}
+      <Link
+        href={href}
         className={cn(
           "flex min-h-14 items-center gap-3 rounded-2xl border border-zinc-200 bg-white px-3 py-3 shadow-sm dark:border-zinc-800 dark:bg-zinc-950",
           className
@@ -58,15 +42,15 @@ export function GymBratCrossLink({
           <span className="block text-sm font-bold text-zinc-950 dark:text-white">{GYMBRAT_SITE_NAME}</span>
           <span className="block text-xs text-zinc-500">{GYMBRAT_SITE_TAGLINE}</span>
         </span>
-        <ExternalLink className="h-4 w-4 shrink-0 text-zinc-400" aria-hidden />
-      </a>
+        <ArrowRight className="h-4 w-4 shrink-0 text-zinc-400" aria-hidden />
+      </Link>
     );
   }
 
   if (variant === "footer" || variant === "inline") {
     return (
-      <a
-        {...link}
+      <Link
+        href={href}
         className={cn(
           "inline-flex items-center gap-1.5 font-medium underline-offset-2 hover:underline",
           variant === "footer" ? "text-xs text-zinc-400 hover:text-white" : "text-sm text-zinc-600",
@@ -75,8 +59,8 @@ export function GymBratCrossLink({
       >
         <Dumbbell className="h-3.5 w-3.5 shrink-0 opacity-80" aria-hidden />
         {GYMBRAT_SITE_NAME}
-        <ExternalLink className="h-3 w-3 opacity-60" aria-hidden />
-      </a>
+        <ArrowRight className="h-3 w-3 opacity-60" aria-hidden />
+      </Link>
     );
   }
 
@@ -85,8 +69,8 @@ export function GymBratCrossLink({
   const stadiumFallback = !marketplaceEnabled && !photoTile;
 
   return (
-    <a
-      {...link}
+    <Link
+      href={href}
       className={cn(
         "flex h-full min-h-[7rem] items-start justify-between gap-3 rounded-2xl p-5 text-left transition hover:-translate-y-0.5",
         photoTile
@@ -133,7 +117,7 @@ export function GymBratCrossLink({
           )}
         >
           Otwórz
-          <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+          <ArrowRight className="h-3.5 w-3.5" aria-hidden />
         </span>
       </div>
       <span
@@ -146,6 +130,6 @@ export function GymBratCrossLink({
       >
         <Dumbbell className="h-5 w-5" aria-hidden />
       </span>
-    </a>
+    </Link>
   );
 }

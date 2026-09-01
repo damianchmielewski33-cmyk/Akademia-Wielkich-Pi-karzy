@@ -4,6 +4,11 @@ import { ExternalLink, Trophy } from "lucide-react";
 import { AWP_SITE_NAME, AWP_SITE_TAGLINE, getAwpCrossLink } from "@/lib/sister-sites";
 import { cn } from "@/lib/utils";
 
+function awpLinkTarget(): "_parent" | "_blank" {
+  if (typeof window !== "undefined" && window.self !== window.top) return "_parent";
+  return "_blank";
+}
+
 export function AwpCrossLink({
   className,
   variant = "nav",
@@ -14,13 +19,14 @@ export function AwpCrossLink({
   onClick?: () => void;
 }) {
   const href = getAwpCrossLink("/");
+  const target = awpLinkTarget();
 
   if (variant === "banner" || variant === "footer") {
     return (
       <a
         href={href}
-        target="_blank"
-        rel="noopener noreferrer"
+        target={target}
+        rel={target === "_blank" ? "noopener noreferrer" : undefined}
         onClick={onClick}
         className={cn(
           "group flex items-center gap-3 rounded-xl border border-emerald-400/30 bg-emerald-950/40 px-3 py-2.5 text-left transition-colors hover:bg-emerald-900/50",
@@ -42,8 +48,8 @@ export function AwpCrossLink({
   return (
     <a
       href={href}
-      target="_blank"
-      rel="noopener noreferrer"
+      target={target}
+      rel={target === "_blank" ? "noopener noreferrer" : undefined}
       onClick={onClick}
       className={cn(
         "inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-emerald-200/90 transition-colors hover:bg-emerald-500/10 hover:text-emerald-100",
@@ -60,11 +66,12 @@ export function AwpCrossLink({
 
 /** Mały skrót w headerze desktop. */
 export function AwpHeaderChip({ className }: { className?: string }) {
+  const target = awpLinkTarget();
   return (
     <a
       href={getAwpCrossLink("/")}
-      target="_blank"
-      rel="noopener noreferrer"
+      target={target}
+      rel={target === "_blank" ? "noopener noreferrer" : undefined}
       title={AWP_SITE_TAGLINE}
       className={cn(
         "hidden items-center gap-1.5 rounded-lg border border-emerald-400/25 bg-emerald-500/10 px-2.5 py-1.5 text-xs font-semibold text-emerald-100 transition-colors hover:bg-emerald-500/20 lg:inline-flex",

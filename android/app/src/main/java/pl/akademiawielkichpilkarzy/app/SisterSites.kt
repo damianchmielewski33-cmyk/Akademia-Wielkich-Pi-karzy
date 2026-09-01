@@ -6,6 +6,9 @@ import android.net.Uri
 object SisterSites {
     const val GYMBRAT_URL = "https://gym-brat.vercel.app"
 
+    /** Pełnoekranowy iframe GymBrat w shellu AWP. */
+    const val GYMBRAT_EMBED_PATH = "/gymbrat"
+
     /** Zdjęcie siłowni na kafelku GymBrat — nie boisko. */
     const val GYMBRAT_GYM_PHOTO =
         "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=1600&q=80"

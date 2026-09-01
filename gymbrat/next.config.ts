@@ -1,9 +1,11 @@
 import path from "path";
 import { fileURLToPath } from "url";
 import type { NextConfig } from "next";
+import { getAwpEmbedOrigins } from "@awp/sister-sites";
 
 const projectRoot = path.dirname(fileURLToPath(import.meta.url));
 const monorepoRoot = path.join(projectRoot, "..");
+const awpFrameAncestors = getAwpEmbedOrigins().join(" ");
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
@@ -19,13 +21,16 @@ const nextConfig: NextConfig = {
     const base = [
       { key: "X-Content-Type-Options", value: "nosniff" },
       { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-      { key: "X-Frame-Options", value: "DENY" },
       { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
       { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
       /** Domyślnie blokuje „hotlinking” zasobów między originami. */
       { key: "Cross-Origin-Resource-Policy", value: "same-site" },
       /** Utrudnia wstrzykiwanie polityk w starych pluginach/Flash. */
       { key: "X-Permitted-Cross-Domain-Policies", value: "none" },
+      {
+        key: "Content-Security-Policy",
+        value: `frame-ancestors 'self' ${awpFrameAncestors}`,
+      },
     ];
 
     /**

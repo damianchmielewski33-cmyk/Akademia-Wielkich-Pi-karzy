@@ -14,6 +14,11 @@ export function SisterSiteArrivalBanner({ className }: { className?: string }) {
   const router = useRouter();
   const pathname = usePathname();
   const [visible, setVisible] = useState(false);
+  const [awpTarget, setAwpTarget] = useState<"_parent" | "_blank">("_blank");
+
+  useEffect(() => {
+    if (window.self !== window.top) setAwpTarget("_parent");
+  }, []);
 
   useEffect(() => {
     const from = searchParams.get("from");
@@ -60,6 +65,8 @@ export function SisterSiteArrivalBanner({ className }: { className?: string }) {
           </p>
           <a
             href={getAwpCrossLink("/")}
+            target={awpTarget}
+            rel={awpTarget === "_blank" ? "noopener noreferrer" : undefined}
             className="mt-1.5 inline-flex text-xs font-semibold text-emerald-200 underline-offset-2 hover:underline"
           >
             Otwórz {AWP_SITE_NAME} →

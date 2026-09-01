@@ -354,7 +354,8 @@ fun WebPortalScreen(
                                     val scheme = uri.scheme?.lowercase().orEmpty()
                                     if (scheme == "http" || scheme == "https") {
                                         if (isSisterSiteUrl(uri)) {
-                                            return openExternalUri(ctx, uri)
+                                            view.loadUrl(gymBratEmbedUrl(siteBase, uri))
+                                            return true
                                         }
                                         return false
                                     }

@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Dumbbell, X } from "lucide-react";
-import { GYMBRAT_SITE_NAME, getGymBratCrossLink } from "@/lib/sister-sites";
-import { isInstalledAndroidAppClient, openExternalAppUrl } from "@/lib/app-webview";
+import { GYMBRAT_SITE_NAME, getGymBratEmbedPath } from "@/lib/sister-sites";
 import { cn } from "@/lib/utils";
 
 const DISMISS_KEY = "awp-sister-from-gymbrat-dismissed";
@@ -62,20 +62,12 @@ export function SisterSiteArrivalBanner({ className }: { className?: string }) {
           <p className="mt-0.5 text-xs text-rose-100/85 sm:text-sm">
             Jesteś w Akademii Wielkich Piłkarzy — terminarzu i statystykach z boiska. Wróć do siłowni kiedy chcesz.
           </p>
-          <a
-            href={getGymBratCrossLink("/")}
+          <Link
+            href={getGymBratEmbedPath("/")}
             className="mt-1.5 inline-flex text-xs font-semibold text-rose-200 underline-offset-2 hover:underline"
-            {...(isInstalledAndroidAppClient()
-              ? {
-                  onClick: (e: React.MouseEvent) => {
-                    e.preventDefault();
-                    openExternalAppUrl(getGymBratCrossLink("/"));
-                  },
-                }
-              : { target: "_blank", rel: "noopener noreferrer" })}
           >
             Otwórz {GYMBRAT_SITE_NAME} →
-          </a>
+          </Link>
         </div>
         <button
           type="button"

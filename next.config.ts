@@ -1,9 +1,11 @@
 import path from "path";
 import type { NextConfig } from "next";
 import { fileURLToPath } from "url";
+import { getGymBratUrl } from "@awp/sister-sites";
 
 /** Katalog projektu (Next nie powinien brać „root” z nadrzędnego package-lock — ważne m.in. na Vercelu). */
 const projectRoot = path.dirname(fileURLToPath(import.meta.url));
+const gymBratOrigin = getGymBratUrl();
 
 const securityHeaders = [
   { key: "X-Frame-Options", value: "DENY" },
@@ -25,7 +27,7 @@ const securityHeaders = [
       "img-src 'self' data: blob: https:",
       "font-src 'self' data: https://fonts.gstatic.com",
       "connect-src 'self' https:",
-      "frame-src https://www.youtube.com https://maps.google.com https://www.google.com https://googleads.g.doubleclick.net https://tpc.g.doubleclick.net https://www.googleadservices.com https://pagead2.googlesyndication.com https://ep2.adtrafficquality.google https://www.youtube-nocookie.com",
+      `frame-src https://www.youtube.com https://maps.google.com https://www.google.com https://googleads.g.doubleclick.net https://tpc.g.doubleclick.net https://www.googleadservices.com https://pagead2.googlesyndication.com https://ep2.adtrafficquality.google https://www.youtube-nocookie.com ${gymBratOrigin}`,
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",
