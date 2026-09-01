@@ -10,9 +10,8 @@ const SESSION_KEY = "awp-startup-splash-shown";
 const ANDROID_COLD_PRELOADER_KEY = "awp-android-route-preloader-ok";
 const BOOT_SPLASH_ID = "awp-boot-splash";
 const ACTIVE_CLASS = "awp-startup-splash-active";
-/** Górny limit, gdy treść długo nie zgłosi gotowości. */
 const MAX_VISIBLE_MS = 3200;
-const FADE_MS = 280;
+const FADE_MS = 320;
 
 function isIosDevice(): boolean {
   if (typeof navigator === "undefined") return false;
@@ -45,7 +44,6 @@ export function shouldShowIosStartupSplash(): boolean {
   return true;
 }
 
-/** Czy trasy mają pominąć full-screen preloader (splash startowy go zastępuje). */
 export function shouldSuppressStartupRoutePreloader(): boolean {
   if (typeof document === "undefined") return false;
   if (document.documentElement.classList.contains(ACTIVE_CLASS)) return true;
@@ -60,7 +58,6 @@ export function shouldSuppressStartupRoutePreloader(): boolean {
   return false;
 }
 
-/** Po cold starcie Android WebView — przywróć zwykłe preloadery tras. */
 export function markAndroidColdStartPreloadersDone(): void {
   if (typeof window === "undefined") return;
   try {
@@ -150,48 +147,50 @@ export function StartupSplash({ marketplaceEnabled = false }: { marketplaceEnabl
   return (
     <div
       className={cn(
-        "awp-startup-splash awp-startup-splash--stadium fixed inset-0 z-[300] flex flex-col items-center justify-center px-6",
-        marketplaceEnabled && "awp-startup-splash--v2",
-        phase === "leave" && "awp-startup-splash--leave"
+        "awp-boot-loader fixed inset-0 z-[300] flex items-center justify-center px-6",
+        marketplaceEnabled && "awp-boot-loader--marketplace",
+        phase === "leave" && "awp-boot-loader--leave"
       )}
       role="status"
       aria-live="polite"
       aria-busy={phase === "show"}
       aria-label="Uruchamianie aplikacji"
     >
-      <div className="awp-startup-splash__stadium" aria-hidden>
+      <div className="awp-boot-loader__backdrop" aria-hidden>
         <Image
           src="/splash/stadium-bg.jpg"
           alt=""
           fill
           priority
           sizes="100vw"
-          className="awp-startup-splash__stadium-img object-cover object-center"
+          className="awp-boot-loader__backdrop-photo object-cover object-[center_35%]"
         />
-        <div className="awp-startup-splash__stadium-scrim" />
+        <div className="awp-boot-loader__backdrop-scrim" />
       </div>
-      <div className="awp-startup-splash__stage">
-        <p className="awp-startup-splash__kicker">
-          {marketplaceEnabled ? "Wersja V2" : "Akademia"}
-        </p>
-        <div className="awp-startup-splash__crest-wrap">
-          <span className="awp-startup-splash__crest-glow" aria-hidden />
+
+      <div className="awp-boot-loader__panel">
+        <div className="awp-boot-loader__logo-frame">
           <SiteAssetImage
-            asset="logo_crest"
+            asset="logo_login"
             alt=""
-            width={160}
-            height={160}
-            className="awp-startup-splash__crest"
-            sizes="88px"
+            width={320}
+            height={320}
+            className="awp-boot-loader__logo"
+            sizes="(max-width: 480px) 120px, 144px"
             priority
+            decorative
           />
         </div>
-        <p className="awp-startup-splash__title">Akademia Wielkich Piłkarzy</p>
-        <p className="awp-startup-splash__subtitle">
-          {marketplaceEnabled ? "Przygotowujemy boiska" : "Rozgrzewka"}
+
+        <h1 className="awp-boot-loader__title">Akademia Wielkich Piłkarzy</h1>
+        <p className="awp-boot-loader__status">
+          {marketplaceEnabled ? "Przygotowujemy boiska…" : "Wchodzimy na boisko…"}
         </p>
-        <div className="awp-startup-splash__progress" aria-hidden>
-          <span className="awp-startup-splash__progress-bar" />
+
+        <div className="awp-boot-loader__dots" aria-hidden>
+          <span className="awp-boot-loader__dot" />
+          <span className="awp-boot-loader__dot" />
+          <span className="awp-boot-loader__dot" />
         </div>
       </div>
     </div>

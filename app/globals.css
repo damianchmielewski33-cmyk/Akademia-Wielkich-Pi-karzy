@@ -1831,173 +1831,184 @@ html {
     display: none;
   }
 
-  .awp-startup-splash .home-fall {
+  .awp-boot-loader .home-fall {
     display: none;
   }
 
-  .awp-startup-splash .home-fall__item {
+  .awp-boot-loader .home-fall__item {
     animation: none;
   }
 }
 
-/* Splash startowy — filmowe wejście marki (stadion, herb, pasek) */
-.awp-startup-splash {
+/* Loader uruchamiania — logo w ramce, bez etykiet wersji */
+.awp-boot-loader {
+  --awp-boot-accent: var(--mundial-gold, #f5c518);
   background: #061410;
   opacity: 1;
   overflow: hidden;
-  transition: opacity 0.52s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: opacity 0.48s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.awp-startup-splash__stadium {
+.awp-boot-loader--marketplace {
+  --awp-boot-accent: var(--mp-teal, #00c9b1);
+  background: #061820;
+}
+
+.awp-boot-loader__backdrop {
   position: absolute;
   inset: 0;
   z-index: 0;
   overflow: hidden;
 }
 
-.awp-startup-splash__stadium-img {
-  animation: awp-splash-kenburns 3.2s cubic-bezier(0.22, 1, 0.36, 1) both;
+.awp-boot-loader__backdrop-photo {
+  animation: awp-boot-kenburns 3.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+  opacity: 0.42;
 }
 
-.awp-startup-splash__stadium-scrim {
+.awp-boot-loader__backdrop-scrim {
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(180deg, rgba(4, 12, 10, 0.62) 0%, rgba(6, 20, 16, 0.38) 45%, rgba(4, 8, 14, 0.88) 100%),
-    radial-gradient(ellipse 80% 50% at 50% 100%, rgba(0, 0, 0, 0.35), transparent 70%);
+    radial-gradient(ellipse 90% 70% at 50% 18%, rgba(255, 255, 255, 0.06), transparent 55%),
+    linear-gradient(180deg, rgba(4, 12, 10, 0.72) 0%, rgba(6, 18, 14, 0.55) 42%, rgba(4, 8, 12, 0.92) 100%);
 }
 
-.awp-startup-splash--v2 {
-  background: #0a1c1f;
-}
-
-.awp-startup-splash--v2 .awp-startup-splash__stadium-scrim {
+.awp-boot-loader--marketplace .awp-boot-loader__backdrop-scrim {
   background:
-    linear-gradient(180deg, rgba(6, 28, 32, 0.58) 0%, rgba(8, 24, 28, 0.36) 44%, rgba(4, 12, 18, 0.9) 100%),
-    radial-gradient(ellipse 70% 45% at 50% 100%, rgba(0, 201, 177, 0.12), transparent 68%);
+    radial-gradient(ellipse 85% 65% at 50% 16%, rgba(0, 201, 177, 0.1), transparent 58%),
+    linear-gradient(180deg, rgba(6, 24, 32, 0.74) 0%, rgba(8, 22, 28, 0.52) 44%, rgba(4, 10, 16, 0.94) 100%);
 }
 
-.awp-startup-splash__stage {
+.awp-boot-loader__panel {
   position: relative;
   z-index: 2;
   display: flex;
+  width: min(100%, 22rem);
   flex-direction: column;
   align-items: center;
   text-align: center;
+  animation: awp-boot-panel-in 0.72s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-.awp-startup-splash__kicker {
-  margin: 0;
-  font-size: 0.65rem;
-  font-weight: 700;
-  letter-spacing: 0.28em;
-  text-transform: uppercase;
-  color: var(--mundial-gold, #f5c518);
-  animation: awp-splash-rise 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.06s both;
+.awp-boot-loader__logo-frame {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 9.5rem;
+  height: 9.5rem;
+  padding: 1.1rem;
+  border-radius: 1.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    0 18px 48px -24px rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(6px);
+  animation: awp-boot-logo-in 0.88s cubic-bezier(0.16, 1, 0.3, 1) 0.08s both;
 }
 
-.awp-startup-splash--v2 .awp-startup-splash__kicker {
-  color: var(--mp-teal, #00c9b1);
+.awp-boot-loader__logo {
+  height: 100%;
+  width: 100%;
+  object-fit: contain;
+  object-position: center;
+  filter: drop-shadow(0 10px 22px rgba(0, 0, 0, 0.35));
 }
 
-.awp-startup-splash__crest-wrap {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 7.5rem;
-  height: 7.5rem;
-  margin-top: 1.15rem;
-  animation: awp-splash-crest 0.95s cubic-bezier(0.16, 1, 0.3, 1) 0.12s both;
-}
-
-.awp-startup-splash__crest-glow {
-  position: absolute;
-  inset: 8%;
-  border-radius: 999px;
-  background: radial-gradient(circle, rgba(245, 197, 24, 0.38) 0%, rgba(245, 197, 24, 0) 70%);
-  animation: awp-splash-glow 1.7s ease-out 0.18s both;
-}
-
-.awp-startup-splash--v2 .awp-startup-splash__crest-glow {
-  background: radial-gradient(circle, rgba(0, 201, 177, 0.4) 0%, rgba(0, 201, 177, 0) 70%);
-}
-
-.awp-startup-splash__crest {
-  position: relative;
-  z-index: 1;
-  height: 5.5rem;
-  width: 5.5rem;
-  filter: drop-shadow(0 10px 24px rgba(0, 0, 0, 0.45));
-}
-
-.awp-startup-splash__title {
-  margin: 1.1rem 0 0;
+.awp-boot-loader__title {
+  margin: 1.35rem 0 0;
   max-width: 18rem;
   font-family: var(--font-display);
-  font-size: 1.55rem;
+  font-size: clamp(1.35rem, 4.8vw, 1.65rem);
   font-weight: 900;
   letter-spacing: -0.03em;
-  line-height: 1.2;
+  line-height: 1.18;
   color: #fff;
   text-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
-  animation: awp-splash-rise 0.75s cubic-bezier(0.16, 1, 0.3, 1) 0.26s both;
+  animation: awp-boot-text-in 0.72s cubic-bezier(0.16, 1, 0.3, 1) 0.2s both;
 }
 
-.awp-startup-splash__subtitle {
-  margin: 0.55rem 0 0;
-  font-size: 0.9rem;
+.awp-boot-loader__status {
+  margin: 0.6rem 0 0;
+  font-size: 0.92rem;
   font-weight: 500;
-  letter-spacing: 0.04em;
-  color: rgba(255, 255, 255, 0.72);
-  animation: awp-splash-rise 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.38s both;
+  letter-spacing: 0.02em;
+  color: rgba(255, 255, 255, 0.74);
+  animation: awp-boot-text-in 0.68s cubic-bezier(0.16, 1, 0.3, 1) 0.28s both;
 }
 
-.awp-startup-splash__progress {
-  width: 8.5rem;
-  height: 2px;
-  margin-top: 1.75rem;
-  overflow: hidden;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.16);
-  animation: awp-splash-rise 0.55s cubic-bezier(0.16, 1, 0.3, 1) 0.48s both;
+.awp-boot-loader__dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.62rem;
+  margin-top: 1.65rem;
+  animation: awp-boot-text-in 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.36s both;
 }
 
-.awp-startup-splash__progress-bar {
+.awp-boot-loader__dot {
   display: block;
-  height: 100%;
-  width: 40%;
-  border-radius: inherit;
-  background: var(--mundial-gold, #f5c518);
-  animation: awp-splash-indeterminate 1.15s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: var(--awp-boot-accent);
+  animation: awp-boot-dot 0.9s ease-in-out infinite;
 }
 
-.awp-startup-splash--v2 .awp-startup-splash__progress-bar {
-  background: var(--mp-teal, #00c9b1);
+.awp-boot-loader__dot:nth-child(2) {
+  animation-delay: 0.14s;
 }
 
-.awp-startup-splash--leave {
+.awp-boot-loader__dot:nth-child(3) {
+  animation-delay: 0.28s;
+}
+
+.awp-boot-loader--leave {
   opacity: 0;
   pointer-events: none;
 }
 
-.awp-startup-splash--leave .awp-startup-splash__stage {
+.awp-boot-loader--leave .awp-boot-loader__panel {
   transform: scale(0.985);
-  transition: transform 0.52s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: transform 0.48s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-@keyframes awp-splash-kenburns {
+@keyframes awp-boot-kenburns {
   from {
-    transform: scale(1.1);
+    transform: scale(1.08);
   }
   to {
     transform: scale(1);
   }
 }
 
-@keyframes awp-splash-rise {
+@keyframes awp-boot-panel-in {
   from {
     opacity: 0;
-    transform: translate3d(0, 14px, 0);
+    transform: scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes awp-boot-logo-in {
+  from {
+    opacity: 0;
+    transform: scale(0.88);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes awp-boot-text-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 12px, 0);
   }
   to {
     opacity: 1;
@@ -2005,58 +2016,36 @@ html {
   }
 }
 
-@keyframes awp-splash-crest {
-  from {
-    opacity: 0;
-    transform: scale(0.84);
+@keyframes awp-boot-dot {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.82);
   }
-  to {
+  50% {
     opacity: 1;
     transform: scale(1);
   }
 }
 
-@keyframes awp-splash-glow {
-  0% {
-    opacity: 0;
-    transform: scale(0.55);
+@media (prefers-reduced-motion: reduce) {
+  .awp-boot-loader__backdrop-photo,
+  .awp-boot-loader__panel,
+  .awp-boot-loader__logo-frame,
+  .awp-boot-loader__title,
+  .awp-boot-loader__status,
+  .awp-boot-loader__dots,
+  .awp-boot-loader__dot {
+    animation: none;
   }
-  45% {
-    opacity: 0.85;
-  }
-  100% {
-    opacity: 0.4;
-    transform: scale(1);
-  }
-}
 
-@keyframes awp-splash-indeterminate {
-  0% {
-    transform: translateX(-120%);
-  }
-  100% {
-    transform: translateX(350%);
+  .awp-boot-loader__dot {
+    opacity: 0.85;
+    transform: none;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .awp-startup-splash__stadium-img,
-  .awp-startup-splash__kicker,
-  .awp-startup-splash__crest-wrap,
-  .awp-startup-splash__crest-glow,
-  .awp-startup-splash__title,
-  .awp-startup-splash__subtitle,
-  .awp-startup-splash__progress,
-  .awp-startup-splash__progress-bar {
-    animation: none;
-  }
-
-  .awp-startup-splash__progress-bar {
-    animation: none;
-    width: 45%;
-    transform: none;
-  }
-
   .awp-lottery-pointer--land,
   .awp-lottery-reveal,
   .awp-lottery-hub--ready {

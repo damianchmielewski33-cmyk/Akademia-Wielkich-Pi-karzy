@@ -14,8 +14,8 @@ export type SiteAssetKey = (typeof SITE_ASSET_KEYS)[number];
 /** Domyślne pliki z katalogu `public/`. */
 export const SITE_ASSET_DEFAULTS: Record<SiteAssetKey, string> = {
   logo_header: "/app-logo.png",
-  logo_crest: "/app-logo.png",
-  logo_login: "/app-logo.png",
+  logo_crest: "/logo-akademia-crest.png",
+  logo_login: "/logo-akademia-crest.png",
   logo_favicon: "/app-logo.png",
   bg_soccer_ball: "/soccer-ball.svg",
   bg_stadium: "/stadium-bg.svg",
