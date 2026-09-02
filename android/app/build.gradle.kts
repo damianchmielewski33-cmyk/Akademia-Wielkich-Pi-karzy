@@ -48,8 +48,8 @@ android {
         // targetSdk musi być aktualny — inaczej Android 14+ pokazuje ostrzeżenie
         // „aplikacja jest na starszą wersję Androida…” przy instalacji APK.
         targetSdk = 35
-        versionCode = 39
-        versionName = "1.11.3"
+        versionCode = 40
+        versionName = "1.11.4"
 
         ndk {
             abiFilters += listOf("armeabi-v7a", "arm64-v8a")

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { ArrowLeft, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -10,25 +10,32 @@ import {
   GYMBRAT_SITE_NAME,
   getGymBratCrossLink,
 } from "@/lib/sister-sites";
+import { isRunningInAppWebView } from "@/lib/app-webview";
 
-/** Pełnoekranowy podgląd osadzenia (tylko gdy GymBrat zezwala na iframe: ?embed=1). */
+/**
+ * GymBrat w shellu AWP.
+ * W APK WebView ładujemy GymBrat top-level (iframe + X-Frame-Options bywa problematyczne).
+ * W zwykłej przeglądarce — pełnoekranowy iframe (wymaga frame-ancestors po stronie GymBrat).
+ */
 export function GymBratEmbedView() {
   const searchParams = useSearchParams();
   const path = searchParams.get("path")?.trim() || "/";
   const sisterPath = path.startsWith("/") ? path : `/${path}`;
   const src = getGymBratCrossLink(sisterPath);
-  const forceEmbed = searchParams.get("embed") === "1";
+  const [inAppWebView, setInAppWebView] = useState(false);
 
   useEffect(() => {
-    if (!forceEmbed) {
+    const appWv = isRunningInAppWebView();
+    setInAppWebView(appWv);
+    if (appWv) {
       window.location.replace(src);
     }
-  }, [forceEmbed, src]);
+  }, [src]);
 
-  if (!forceEmbed) {
+  if (inAppWebView) {
     return (
       <div className="flex min-h-dvh flex-col items-center justify-center gap-3 bg-zinc-950 px-6 text-center">
-        <p className="text-sm text-zinc-300">Przekierowanie do {GYMBRAT_SITE_NAME}…</p>
+        <p className="text-sm text-zinc-300">Otwieranie {GYMBRAT_SITE_NAME}…</p>
         <Button asChild className="rounded-full font-bold">
           <a href={src}>Kontynuuj</a>
         </Button>

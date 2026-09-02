@@ -362,10 +362,8 @@ fun WebPortalScreen(
                                     val uri = request.url
                                     val scheme = uri.scheme?.lowercase().orEmpty()
                                     if (scheme == "http" || scheme == "https") {
-                                        if (isSisterSiteUrl(uri)) {
-                                            view.loadUrl(gymBratEmbedUrl(siteBase, uri))
-                                            return true
-                                        }
+                                        // GymBrat ładujemy w tym samym WebView (bez remapu na AWP /gymbrat).
+                                        // Remap powodował pętlę: /gymbrat → gym-brat → /gymbrat → crash (odwrócony Android).
                                         return false
                                     }
                                     return openExternalUri(ctx, uri)

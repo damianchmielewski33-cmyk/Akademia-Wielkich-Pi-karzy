@@ -15,23 +15,6 @@ fun isAwpSiteUrl(uri: Uri, siteBase: String): Boolean {
     return host == siteHost || host.endsWith(".$siteHost")
 }
 
-/** Siostrzane serwisy — osadzane w iframe (/gymbrat), nie w Custom Tabs. */
-fun isSisterSiteUrl(uri: Uri): Boolean {
-    val host = uri.host?.lowercase() ?: return false
-    return host == "gym-brat.vercel.app" || host.endsWith(".gym-brat.vercel.app")
-}
-
-/** URL osłony iframe GymBrat na domenie AWP. */
-fun gymBratEmbedUrl(siteBase: String, sisterUri: Uri): String {
-    val base = siteBase.trim().trimEnd('/')
-    val path = sisterUri.path?.takeIf { it.isNotBlank() } ?: "/"
-    return if (path == "/") {
-        "$base/gymbrat"
-    } else {
-        "$base/gymbrat?path=${Uri.encode(path)}"
-    }
-}
-
 private fun Context.findActivity(): Activity? {
     var current: Context? = this
     while (current is ContextWrapper) {
