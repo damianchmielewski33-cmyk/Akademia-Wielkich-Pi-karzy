@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- Bezpieczna strefa w okrągłej maskie systemowego splash Android 12+. -->
-<inset xmlns:android="http://schemas.android.com/apk/res/android"
-    android:drawable="@drawable/splash_crest"
-    android:inset="20%" />
