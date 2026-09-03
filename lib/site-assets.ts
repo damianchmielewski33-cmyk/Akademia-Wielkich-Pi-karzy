@@ -102,7 +102,11 @@ export function resolveSiteAssets(urls: SiteAssetUrls): ResolvedSiteAssets {
 /** Czy grafika wymaga `unoptimized` w next/image (SVG, lokalne API uploadów). */
 export function siteAssetNeedsUnoptimized(src: string): boolean {
   const lower = src.toLowerCase();
-  return lower.endsWith(".svg") || src.startsWith("/api/uploads/");
+  return (
+    lower.endsWith(".svg") ||
+    src.startsWith("/api/uploads/") ||
+    src.startsWith("/api/media/blob/")
+  );
 }
 
 export function siteAssetCssUrl(src: string): string {

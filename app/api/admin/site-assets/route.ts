@@ -1,4 +1,3 @@
-import { put } from "@vercel/blob";
 import fs from "fs";
 import path from "path";
 import { NextResponse } from "next/server";
@@ -12,6 +11,7 @@ import {
   isEphemeralUploadStorage,
   isProfileBlobStorageEnabled,
   isVercelBlobUrl,
+  putPublicFacingBlob,
 } from "@/lib/profile-blob";
 import {
   resolveSiteAssetAbsolute,
@@ -173,11 +173,7 @@ export async function POST(req: Request) {
     if (isProfileBlobStorageEnabled()) {
       try {
         const pathname = `site/${assetKey}-${Date.now()}${ext}`;
-        const blob = await put(pathname, buf, {
-          access: "public",
-          contentType: mime,
-        });
-        publicPath = blob.url;
+        publicPath = await putPublicFacingBlob(pathname, buf, { contentType: mime });
       } catch (e) {
         const msg = e instanceof Error ? e.message : "błąd magazynu Blob";
         return NextResponse.json(

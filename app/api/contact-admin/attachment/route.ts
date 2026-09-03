@@ -1,10 +1,14 @@
-import { put } from "@vercel/blob";
 import { connection, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 import { getServerSession } from "@/lib/auth";
 import { imageMimeMatchesMagicBytes } from "@/lib/image-magic";
-import { BLOB_REQUIRED_ON_VERCEL_MSG, isEphemeralUploadStorage, isProfileBlobStorageEnabled } from "@/lib/profile-blob";
+import {
+  BLOB_REQUIRED_ON_VERCEL_MSG,
+  isEphemeralUploadStorage,
+  isProfileBlobStorageEnabled,
+  putPublicFacingBlob,
+} from "@/lib/profile-blob";
 import { checkRateLimit, rateLimitKey, rateLimitedResponse, RATE } from "@/lib/rate-limit";
 import { chatAttachmentPublicUrl, chatUploadsDir } from "@/lib/runtime-paths-uploads";
 
@@ -66,11 +70,7 @@ export async function POST(req: Request) {
 
   let publicPath: string;
   if (isProfileBlobStorageEnabled()) {
-    const blob = await put(`chat/${filename}`, buf, {
-      access: "public",
-      contentType: mime,
-    });
-    publicPath = blob.url;
+    publicPath = await putPublicFacingBlob(`chat/${filename}`, buf, { contentType: mime });
   } else if (isEphemeralUploadStorage()) {
     return NextResponse.json({ error: BLOB_REQUIRED_ON_VERCEL_MSG }, { status: 503 });
   } else {

@@ -88,6 +88,7 @@ export function isCustomMarketplacePitchUpload(url: string | null | undefined): 
   return (
     t.startsWith("/uploads/site/") ||
     t.startsWith("/api/uploads/site/") ||
+    t.startsWith("/api/media/blob/") ||
     t.includes(".public.blob.vercel-storage.com") ||
     t.includes("blob.vercel-storage.com")
   );

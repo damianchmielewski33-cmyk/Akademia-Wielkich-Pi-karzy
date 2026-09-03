@@ -1,5 +1,6 @@
 import type { AppSettings } from "@/lib/app-settings";
 import type { AppDb } from "@/lib/db";
+import { isSafeBlobPathname } from "@/lib/profile-blob";
 import { REALMS } from "@/lib/realm";
 
 export type AdminMessageStatus = "unread" | "read";
@@ -182,9 +183,12 @@ export function isAllowedChatAttachmentUrl(url: string): boolean {
     const name = t.replace(/^\/(api\/)?uploads\/chat\//, "");
     return Boolean(name) && !name.includes("..") && !name.includes("/") && !name.includes("\\");
   }
+  if (t.startsWith("/api/media/blob/chat/")) {
+    return isSafeBlobPathname(t.slice("/api/media/blob/".length));
+  }
   try {
     const u = new URL(t);
-    return u.protocol === "https:" && u.hostname.endsWith(".public.blob.vercel-storage.com");
+    return u.protocol === "https:" && u.hostname.endsWith(".blob.vercel-storage.com");
   } catch {
     return false;
   }

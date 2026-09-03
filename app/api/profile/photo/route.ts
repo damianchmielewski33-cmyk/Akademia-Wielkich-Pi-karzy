@@ -1,4 +1,3 @@
-import { put } from "@vercel/blob";
 import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
@@ -11,6 +10,7 @@ import {
   isEphemeralUploadStorage,
   isProfileBlobStorageEnabled,
   isVercelBlobUrl,
+  putPublicFacingBlob,
 } from "@/lib/profile-blob";
 import {
   profilePhotoPublicUrl,
@@ -97,11 +97,7 @@ export async function POST(req: Request) {
   let publicPath: string;
   if (isProfileBlobStorageEnabled()) {
     const pathname = `profiles/${session.userId}-${Date.now()}${ext}`;
-    const blob = await put(pathname, buf, {
-      access: "public",
-      contentType: mime,
-    });
-    publicPath = blob.url;
+    publicPath = await putPublicFacingBlob(pathname, buf, { contentType: mime });
   } else if (isEphemeralUploadStorage()) {
     return NextResponse.json({ error: BLOB_REQUIRED_ON_VERCEL_MSG }, { status: 503 });
   } else {
