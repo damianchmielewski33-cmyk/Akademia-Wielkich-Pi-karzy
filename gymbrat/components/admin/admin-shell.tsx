@@ -21,23 +21,16 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="space-y-8">
-      <header className="glass-panel neon-glow flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
+      <header className="pitch-card flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <span
-            className="flex h-11 w-11 items-center justify-center rounded-xl"
-            style={{
-              background:
-                "linear-gradient(145deg,rgba(230,0,35,0.22),rgba(230,0,35,0.08))",
-              border: "1px solid rgba(230,0,35,0.45)",
-            }}
-          >
-            <Shield className="h-5 w-5 text-[var(--neon)]" />
+          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--mp-teal)] text-white shadow-sm">
+            <Shield className="h-5 w-5" />
           </span>
           <div>
-            <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-white/45">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--mp-teal-dark)]">
               GymBrat
             </p>
-            <h1 className="font-heading text-lg font-semibold text-white">
+            <h1 className="font-heading text-lg font-semibold text-zinc-950 dark:text-white">
               Administrator
             </h1>
           </div>
@@ -49,10 +42,10 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
               <Link key={href} href={href}>
                 <span
                   className={cn(
-                    "inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors",
+                    "inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-colors",
                     active
-                      ? "bg-[var(--neon)]/20 text-white ring-1 ring-[var(--neon)]/40"
-                      : "text-white/65 hover:bg-white/[0.06] hover:text-white",
+                      ? "bg-[var(--mp-teal)] text-white shadow-sm"
+                      : "bg-zinc-50 text-zinc-700 hover:bg-teal-50 hover:text-[var(--mp-teal-dark)] dark:bg-zinc-900 dark:text-zinc-200",
                   )}
                 >
                   <Icon className="h-4 w-4" />
@@ -65,7 +58,6 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             type="button"
             variant="secondary"
             size="sm"
-            className="border-white/15 bg-white/[0.06]"
             onClick={() => {
               void (async () => {
                 await ensureCsrfCookie();
@@ -87,7 +79,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             Wyjdź z panelu
           </Button>
           <Link href="/">
-            <Button type="button" variant="ghost" size="sm" className="text-white/70">
+            <Button type="button" variant="ghost" size="sm">
               Wróć do aplikacji
             </Button>
           </Link>

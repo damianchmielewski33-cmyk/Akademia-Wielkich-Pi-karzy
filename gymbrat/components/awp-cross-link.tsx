@@ -29,18 +29,18 @@ export function AwpCrossLink({
         rel={target === "_blank" ? "noopener noreferrer" : undefined}
         onClick={onClick}
         className={cn(
-          "group flex items-center gap-3 rounded-xl border border-emerald-400/30 bg-emerald-950/40 px-3 py-2.5 text-left transition-colors hover:bg-emerald-900/50",
-          className
+          "group flex items-center gap-3 rounded-2xl border border-zinc-200 bg-white px-3 py-2.5 text-left shadow-sm transition-colors hover:border-teal-200 hover:bg-teal-50/70 dark:border-zinc-700 dark:bg-zinc-900 dark:hover:bg-zinc-800",
+          className,
         )}
       >
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500/20 ring-1 ring-emerald-400/40">
-          <Trophy className="h-4 w-4 text-emerald-300" aria-hidden />
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--mp-teal)] text-white shadow-sm">
+          <Trophy className="h-4 w-4" aria-hidden />
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block text-sm font-semibold text-white">{AWP_SITE_NAME}</span>
-          <span className="block text-xs text-emerald-100/75">{AWP_SITE_TAGLINE}</span>
+          <span className="block text-sm font-semibold text-zinc-950 dark:text-white">{AWP_SITE_NAME}</span>
+          <span className="block text-xs text-zinc-500 dark:text-zinc-400">{AWP_SITE_TAGLINE}</span>
         </span>
-        <ExternalLink className="h-4 w-4 shrink-0 text-white/40 group-hover:text-white/80" aria-hidden />
+        <ExternalLink className="h-4 w-4 shrink-0 text-zinc-400 group-hover:text-[var(--mp-teal-dark)]" aria-hidden />
       </a>
     );
   }
@@ -52,19 +52,18 @@ export function AwpCrossLink({
       rel={target === "_blank" ? "noopener noreferrer" : undefined}
       onClick={onClick}
       className={cn(
-        "inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-emerald-200/90 transition-colors hover:bg-emerald-500/10 hover:text-emerald-100",
-        variant === "sheet" && "w-full px-3 py-3",
-        className
+        "awp-focus-ring inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold text-[var(--mp-teal-dark)] transition-colors hover:bg-teal-50 dark:text-teal-300 dark:hover:bg-teal-950/40",
+        variant === "sheet" && "w-full border border-zinc-200 bg-white px-3 py-3 shadow-sm dark:border-zinc-700 dark:bg-zinc-900",
+        className,
       )}
     >
-      <Trophy className="h-4 w-4 shrink-0 text-emerald-400" aria-hidden />
+      <Trophy className="h-4 w-4 shrink-0 text-[var(--mp-teal)]" aria-hidden />
       <span className="min-w-0 flex-1 truncate">{AWP_SITE_NAME}</span>
       <ExternalLink className="h-3.5 w-3.5 shrink-0 opacity-60" aria-hidden />
     </a>
   );
 }
 
-/** Mały skrót w headerze desktop. */
 export function AwpHeaderChip({ className }: { className?: string }) {
   const target = awpLinkTarget();
   return (
@@ -74,11 +73,11 @@ export function AwpHeaderChip({ className }: { className?: string }) {
       rel={target === "_blank" ? "noopener noreferrer" : undefined}
       title={AWP_SITE_TAGLINE}
       className={cn(
-        "hidden items-center gap-1.5 rounded-lg border border-emerald-400/25 bg-emerald-500/10 px-2.5 py-1.5 text-xs font-semibold text-emerald-100 transition-colors hover:bg-emerald-500/20 lg:inline-flex",
-        className
+        "awp-focus-ring hidden items-center gap-1.5 rounded-full border border-zinc-200 bg-white px-2.5 py-1.5 text-xs font-bold uppercase tracking-[0.08em] text-zinc-700 transition-colors hover:border-[var(--mp-teal)] hover:text-[var(--mp-teal-dark)] lg:inline-flex dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200",
+        className,
       )}
     >
-      <Trophy className="h-3.5 w-3.5 text-emerald-400" aria-hidden />
+      <Trophy className="h-3.5 w-3.5 text-[var(--mp-teal)]" aria-hidden />
       AWP
       <ExternalLink className="h-3 w-3 opacity-50" aria-hidden />
     </a>

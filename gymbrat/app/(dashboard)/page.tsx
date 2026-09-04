@@ -172,16 +172,13 @@ export default async function HomePage() {
   return (
     <div className="space-y-8">
       {/* Hero */}
-      <section className="glass-panel neon-glow relative overflow-hidden px-4 py-7 sm:px-6 sm:py-8 md:p-10">
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-[var(--neon)]/10 via-transparent to-transparent" />
-        <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-[var(--neon)]/18 blur-3xl" />
+      <section className="pitch-card relative overflow-hidden px-4 py-7 sm:px-6 sm:py-8 md:p-10">
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-[var(--mp-teal)]/10 via-transparent to-transparent" />
 
         <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
-            <p className="text-xs font-medium uppercase tracking-[0.2em] text-white/55">
-              Start
-            </p>
-            <h1 className="font-heading metallic-text mt-2 text-2xl font-semibold sm:text-4xl">
+            <p className="pitch-label">Start</p>
+            <h1 className="font-heading mt-2 text-2xl font-bold tracking-tight text-[var(--mundial-navy)] sm:text-4xl dark:text-white">
               Gotowy na trening?
             </h1>
           </div>
@@ -190,7 +187,7 @@ export default async function HomePage() {
             <AddMealSheet dateKey={dash.todayKey} />
             <Link
               href="/start-workout"
-              className="inline-flex h-11 w-full items-center justify-center rounded-xl bg-[var(--neon)] px-5 text-sm font-medium text-white transition hover:bg-[#ff4d6d] sm:w-auto"
+              className="awp-focus-ring inline-flex h-11 w-full items-center justify-center rounded-xl bg-[var(--mp-teal)] px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-[var(--mp-teal-dark)] sm:w-auto"
             >
               <Zap className="mr-2 h-4 w-4" />
               Rozpocznij trening
@@ -300,19 +297,18 @@ export default async function HomePage() {
         checkInPanel={<DailyCheckinPanel dateKey={dash.todayKey} existing={checkin} />}
         lastWorkoutPanel={<LastWorkoutStats stats={stats} embedded />}
         trendPanel={
-          <div className="glass-panel neon-glow relative overflow-hidden p-5 sm:p-6">
-            <div className="pointer-events-none absolute inset-0 opacity-40 [background-image:radial-gradient(900px_420px_at_15%_0%,rgba(255,45,85,0.10),transparent_60%)]" />
+          <div className="pitch-card relative overflow-hidden p-5 sm:p-6">
             <div className="relative">
-              <div className="flex items-center gap-2 text-white/50">
+              <div className="flex items-center gap-2 text-[var(--mp-teal-dark)]">
                 <Activity className="h-4 w-4" />
-                <p className="text-[11px] font-medium uppercase tracking-[0.22em]">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.22em]">
                   Trend
                 </p>
               </div>
-              <h2 className="font-heading mt-1 text-lg font-semibold text-white">
+              <h2 className="font-heading mt-1 text-lg font-semibold text-zinc-950 dark:text-white">
                 Ostatnie treningi
               </h2>
-              <p className="mt-1 text-xs text-white/50">
+              <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
                 Tonaż (kg) i liczba powtórzeń z ostatnich {stats.trend.length}{" "}
                 treningów.
               </p>

@@ -5,22 +5,24 @@ import { AwpCrossLink } from "@/components/awp-cross-link";
 
 export default function LoginPage() {
   return (
-    <div className="glass-panel p-8">
+    <div className="pitch-card p-8 shadow-md">
       <div className="mb-8 text-center">
         <Link
           href="/"
-          className="inline-block rounded-sm font-heading text-2xl font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[#070708]/80"
+          className="awp-focus-ring inline-block rounded-sm font-heading text-2xl font-bold tracking-tight text-zinc-950 dark:text-white"
           aria-label="GymBrat — strona główna"
         >
-          Gym<span className="text-[var(--neon)]">Brat</span>
+          Gym<span className="text-[var(--mp-teal)]">Brat</span>
         </Link>
-        <p className="mt-2 text-sm text-white/60">Zaloguj się do swojego centrum treningowego</p>
+        <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
+          Zaloguj się do swojego centrum treningowego
+        </p>
       </div>
-      <Suspense fallback={<div className="text-sm text-white/50">Ładowanie…</div>}>
+      <Suspense fallback={<div className="text-sm text-zinc-500">Ładowanie…</div>}>
         <LoginForm />
       </Suspense>
-      <div className="mt-8 border-t border-white/10 pt-6">
-        <p className="mb-2 text-center text-[10px] font-bold uppercase tracking-wider text-white/35">
+      <div className="mt-8 border-t border-zinc-200 pt-6 dark:border-zinc-800">
+        <p className="mb-2 text-center text-[10px] font-bold uppercase tracking-wider text-zinc-400">
           Siostrzana aplikacja
         </p>
         <AwpCrossLink variant="banner" />
