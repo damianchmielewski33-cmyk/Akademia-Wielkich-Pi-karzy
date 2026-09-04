@@ -10,6 +10,7 @@ export type BodyReport = {
   waistCm: number | null;
   chestCm: number | null;
   thighCm: number | null;
+  bicepsCm: number | null;
   trainingEnergy: number | null;
   sleepQuality: number | null;
   dayEnergy: number | null;
@@ -28,6 +29,7 @@ export type LatestBodyReportMetrics = {
   waistCm: number | null;
   chestCm: number | null;
   thighCm: number | null;
+  bicepsCm: number | null;
 };
 
 export async function getLatestBodyReportMetrics(
@@ -41,6 +43,7 @@ export async function getLatestBodyReportMetrics(
       waistCm: bodyReports.waistCm,
       chestCm: bodyReports.chestCm,
       thighCm: bodyReports.thighCm,
+      bicepsCm: bodyReports.bicepsCm,
     })
     .from(bodyReports)
     .where(eq(bodyReports.userId, userId))
@@ -54,6 +57,7 @@ export async function getLatestBodyReportMetrics(
     waistCm: r.waistCm ?? null,
     chestCm: r.chestCm ?? null,
     thighCm: r.thighCm ?? null,
+    bicepsCm: r.bicepsCm ?? null,
   };
 }
 
@@ -95,6 +99,7 @@ export async function getBodyReports(userId: string): Promise<BodyReport[]> {
     waistCm: r.waistCm ?? null,
     chestCm: r.chestCm ?? null,
     thighCm: r.thighCm ?? null,
+    bicepsCm: r.bicepsCm ?? null,
     trainingEnergy: r.trainingEnergy ?? null,
     sleepQuality: r.sleepQuality ?? null,
     dayEnergy: r.dayEnergy ?? null,
@@ -121,6 +126,7 @@ export type CreateBodyReportInput = {
   waistCm?: number | null;
   chestCm?: number | null;
   thighCm?: number | null;
+  bicepsCm?: number | null;
   trainingEnergy?: number | null;
   sleepQuality?: number | null;
   dayEnergy?: number | null;
@@ -172,6 +178,7 @@ export async function createBodyReport(userId: string, input: CreateBodyReportIn
     waistCm: numOrNull(input.waistCm),
     chestCm: numOrNull(input.chestCm),
     thighCm: numOrNull(input.thighCm),
+    bicepsCm: numOrNull(input.bicepsCm),
     trainingEnergy: clampScore(input.trainingEnergy),
     sleepQuality: clampScore(input.sleepQuality),
     dayEnergy: clampScore(input.dayEnergy),
@@ -209,6 +216,7 @@ export type ImportBodyReportRow = {
   waistCm?: number | null;
   chestCm?: number | null;
   thighCm?: number | null;
+  bicepsCm?: number | null;
   trainingEnergy?: number | null;
   sleepQuality?: number | null;
   dayEnergy?: number | null;
@@ -237,6 +245,7 @@ export async function importBodyReports(
       waistCm: numOrNull(r.waistCm),
       chestCm: numOrNull(r.chestCm),
       thighCm: numOrNull(r.thighCm),
+      bicepsCm: numOrNull(r.bicepsCm),
       trainingEnergy: clampScore(r.trainingEnergy),
       sleepQuality: clampScore(r.sleepQuality),
       dayEnergy: clampScore(r.dayEnergy),

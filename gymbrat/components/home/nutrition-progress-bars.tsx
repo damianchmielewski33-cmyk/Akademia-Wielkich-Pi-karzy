@@ -144,7 +144,7 @@ export function NutritionProgressBars({
           {weekBlock}
           <SheetContent
             side="bottom"
-            className="max-h-[90vh] border-white/10 bg-[#0a0a0f] pb-[env(safe-area-inset-bottom)] text-white"
+            className="max-h-[90vh] border-white/10 bg-[var(--background)] pb-[env(safe-area-inset-bottom)] text-white"
           >
             <SheetHeader>
               <SheetTitle className="text-white">Ten tydzień — szczegóły</SheetTitle>

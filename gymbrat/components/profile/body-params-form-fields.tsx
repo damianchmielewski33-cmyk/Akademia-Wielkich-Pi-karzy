@@ -99,7 +99,7 @@ export function BodyParamsFormFields({
         </p>
       </div>
 
-      <SubmitButton className="bg-[var(--neon)] text-white hover:bg-[#ff4d6d]">
+      <SubmitButton className="bg-[var(--neon)] text-white hover:bg-[var(--mp-teal-dark)]">
         Zapisz parametry ciała
       </SubmitButton>
     </>

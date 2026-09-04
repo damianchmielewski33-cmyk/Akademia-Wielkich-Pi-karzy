@@ -163,7 +163,7 @@ export function WorkoutCompletePopup() {
             render={
               <Button
                 type="button"
-                className="bg-[var(--neon)] text-white hover:bg-[#ff4d6d]"
+                className="bg-[var(--neon)] text-white hover:bg-[var(--mp-teal-dark)]"
               />
             }
           >

@@ -18,14 +18,18 @@ const nextConfig: NextConfig = {
 
   async headers() {
     const isProd = process.env.NODE_ENV === "production";
+    /**
+     * Embed z AWP (/gymbrat iframe):
+     * - NIE ustawiaj X-Frame-Options: DENY (blokuje iframe).
+     * - frame-ancestors w CSP = jedyne ograniczenie osadzania.
+     * - CORP cross-origin: dokument ładuje się w iframe z innego hosta Vercel.
+     */
     const base = [
       { key: "X-Content-Type-Options", value: "nosniff" },
       { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
       { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
       { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
-      /** Domyślnie blokuje „hotlinking” zasobów między originami. */
-      { key: "Cross-Origin-Resource-Policy", value: "same-site" },
-      /** Utrudnia wstrzykiwanie polityk w starych pluginach/Flash. */
+      { key: "Cross-Origin-Resource-Policy", value: "cross-origin" },
       { key: "X-Permitted-Cross-Domain-Policies", value: "none" },
       {
         key: "Content-Security-Policy",
@@ -33,10 +37,6 @@ const nextConfig: NextConfig = {
       },
     ];
 
-    /**
-     * CSP (Report-Only): start od zbierania raportów, bez blokowania.
-     * Po zebraniu danych można przełączyć na `Content-Security-Policy` (enforce).
-     */
     const cspReportEndpointPath = "/api/security/csp-report";
     const reportGroup = "csp-endpoint";
     const reportTo = JSON.stringify([
@@ -47,12 +47,12 @@ const nextConfig: NextConfig = {
       },
     ]);
 
+    // Report-Only bez frame-ancestors — enforce jest w CSP powyżej.
     const cspReportOnly = [
       "default-src 'self'",
       "base-uri 'self'",
       "object-src 'none'",
       "form-action 'self'",
-      // Next/Tailwind często wymagają inline styles; na start zbieramy raporty.
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob: https://image.pollinations.ai",
       "font-src 'self' data:",

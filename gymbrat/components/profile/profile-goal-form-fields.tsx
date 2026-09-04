@@ -22,7 +22,7 @@ export function ProfileGoalFormFields({ initialGoal }: { initialGoal: number }) 
           cel × 100%.
         </p>
       </div>
-      <SubmitButton className="bg-[var(--neon)] text-white hover:bg-[#ff4d6d]">
+      <SubmitButton className="bg-[var(--neon)] text-white hover:bg-[var(--mp-teal-dark)]">
         Zaktualizuj cel
       </SubmitButton>
     </>

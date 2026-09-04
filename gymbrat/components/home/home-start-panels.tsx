@@ -146,13 +146,13 @@ export function HomeStartPanels({
           ? targetsPanel
           : open === "weekly-deficit"
             ? weeklyDeficitPanel
-          : open === "check-in"
-            ? checkInPanel
-            : open === "last-workout"
-              ? lastWorkoutPanel
-              : open === "trend" && showTrend
-                ? trendPanel
-                : null;
+            : open === "check-in"
+              ? checkInPanel
+              : open === "last-workout"
+                ? lastWorkoutPanel
+                : open === "trend" && showTrend
+                  ? trendPanel
+                  : null;
 
   useEffect(() => {
     if (!open) return;
@@ -183,34 +183,32 @@ export function HomeStartPanels({
         <button
           type="button"
           aria-label="Zamknij panel"
-          className="absolute inset-0 z-0 bg-black/80 backdrop-blur-[3px]"
+          className="absolute inset-0 z-0 bg-zinc-950/45 backdrop-blur-sm"
           onClick={closePanel}
         />
 
         <div
-          className={cn(
-            "relative z-[1] flex max-h-[min(92dvh,920px)] w-full flex-col overflow-hidden rounded-t-[1.35rem] border border-white/15 bg-[#07070c] shadow-[0_-12px_60px_rgba(0,0,0,0.85)] md:max-h-[min(85vh,820px)] md:w-[min(560px,94vw)] md:rounded-2xl md:shadow-[0_24px_80px_rgba(0,0,0,0.75)]",
-          )}
+          className="relative z-[1] flex max-h-[min(92dvh,920px)] w-full flex-col overflow-hidden rounded-t-[1.35rem] border border-zinc-200 bg-white shadow-2xl md:max-h-[min(85vh,820px)] md:w-[min(560px,94vw)] md:rounded-2xl dark:border-zinc-700 dark:bg-zinc-950"
           role="dialog"
           aria-modal="true"
           aria-labelledby="home-start-panel-title"
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="flex shrink-0 items-start justify-between gap-3 border-b border-white/[0.08] px-4 pb-3 pt-4 sm:px-5">
+          <div className="flex shrink-0 items-start justify-between gap-3 border-b border-zinc-200 px-4 pb-3 pt-4 sm:px-5 dark:border-zinc-800">
             <div className="min-w-0">
-              <p className="text-[11px] font-medium uppercase tracking-[0.22em] text-white/55">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--mp-teal-dark)]">
                 Szczegóły
               </p>
               <p
                 id="home-start-panel-title"
-                className="font-heading mt-1 text-lg font-semibold text-white"
+                className="font-heading mt-1 text-lg font-semibold text-zinc-950 dark:text-white"
               >
                 {tiles.find((t) => t.id === open)?.title ?? "Panel"}
               </p>
             </div>
             <button
               type="button"
-              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/[0.06] text-white/75 transition hover:bg-white/[0.10] focus-visible:ring-2 focus-visible:ring-[var(--neon)]/45"
+              className="awp-focus-ring inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-zinc-200 bg-zinc-50 text-zinc-600 transition hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
               onClick={closePanel}
               aria-label="Zamknij"
             >
@@ -218,12 +216,8 @@ export function HomeStartPanels({
             </button>
           </div>
 
-          {/* Jedno miejsce przewijania — ważne na iOS (touch wewnątrz modala) */}
-          <div
-            className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 [-webkit-overflow-scrolling:touch] touch-pan-y sm:px-5 sm:pb-6"
-          >
-            <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] p-4 sm:p-5">
-              <div className="pointer-events-none absolute inset-0 opacity-50 [background-image:radial-gradient(900px_420px_at_15%_0%,rgba(255,45,85,0.12),transparent_60%)]" />
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 [-webkit-overflow-scrolling:touch] touch-pan-y sm:px-5 sm:pb-6">
+            <div className="relative overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-50 p-4 sm:p-5 dark:border-zinc-800 dark:bg-zinc-900">
               <div className="relative">{panel}</div>
             </div>
           </div>
@@ -246,19 +240,11 @@ export function HomeStartPanels({
               aria-expanded={isOpen}
               aria-haspopup="dialog"
               className={cn(
-                "flex w-full flex-col gap-2 rounded-2xl border p-4 text-left transition-colors duration-150",
+                "awp-focus-ring flex w-full flex-col gap-2 rounded-2xl border p-4 text-left transition-colors duration-150",
                 isOpen
-                  ? "border-[var(--neon)]/45 bg-white/[0.07] shadow-[0_0_24px_rgba(230,0,35,0.12)]"
-                  : "border-white/10 bg-white/[0.03] hover:border-white/18 hover:bg-white/[0.055]",
+                  ? "border-[var(--mp-teal)] bg-teal-50 shadow-md shadow-teal-950/10 dark:border-teal-500 dark:bg-teal-950/30"
+                  : "border-zinc-200 bg-white shadow-sm hover:border-teal-200 hover:bg-teal-50/60 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:bg-zinc-900",
               )}
-              style={
-                isOpen
-                  ? {
-                      boxShadow:
-                        "0 0 0 1px rgba(230,0,35,0.22), 0 8px 28px rgba(0,0,0,0.45)",
-                    }
-                  : undefined
-              }
             >
               <div className="flex items-start justify-between gap-2">
                 <span className="flex min-w-0 items-center gap-2">
@@ -266,25 +252,25 @@ export function HomeStartPanels({
                     className={cn(
                       "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border",
                       isOpen
-                        ? "border-[var(--neon)]/40 bg-[var(--neon)]/15 text-[var(--neon)]"
-                        : "border-white/12 bg-white/[0.05] text-white/55",
+                        ? "border-transparent bg-[var(--mp-teal)] text-white"
+                        : "border-zinc-200 bg-teal-50 text-[var(--mp-teal-dark)] dark:border-zinc-700 dark:bg-teal-950/40 dark:text-teal-300",
                     )}
                   >
                     <Icon className="h-4 w-4" aria-hidden />
                   </span>
                   <span className="min-w-0">
-                    <span className="font-heading block text-[14px] font-semibold leading-snug text-white sm:text-[15px]">
+                    <span className="font-heading block text-[14px] font-semibold leading-snug text-zinc-950 sm:text-[15px] dark:text-white">
                       {tile.title}
                     </span>
-                    <span className="mt-0.5 block line-clamp-2 text-xs leading-snug text-white/45 sm:line-clamp-none">
+                    <span className="mt-0.5 block line-clamp-2 text-xs leading-snug text-zinc-500 sm:line-clamp-none dark:text-zinc-400">
                       {tile.subtitle}
                     </span>
                   </span>
                 </span>
                 <ChevronDown
                   className={cn(
-                    "h-5 w-5 shrink-0 text-white/35 transition-transform duration-200",
-                    isOpen ? "rotate-180 text-[var(--neon)]" : "",
+                    "h-5 w-5 shrink-0 text-zinc-400 transition-transform duration-200",
+                    isOpen ? "rotate-180 text-[var(--mp-teal)]" : "",
                   )}
                   aria-hidden
                 />

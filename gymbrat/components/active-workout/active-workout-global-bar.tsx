@@ -135,7 +135,7 @@ export function ActiveWorkoutGlobalBar() {
   return (
     <div className="fixed inset-x-0 bottom-[calc(72px+env(safe-area-inset-bottom))] z-[60] px-3 md:bottom-[calc(16px+env(safe-area-inset-bottom))]">
       <div
-        className="mx-auto max-w-6xl rounded-2xl border border-white/10 bg-zinc-950/80 backdrop-blur-xl"
+        className="mx-auto max-w-6xl rounded-2xl border border-zinc-200 bg-white/95 dark:border-zinc-700 dark:bg-zinc-950/90 backdrop-blur-xl"
         style={{
           boxShadow: "0 10px 30px rgba(0,0,0,0.55), 0 0 0 1px rgba(230,0,35,0.10) inset",
         }}
@@ -144,7 +144,7 @@ export function ActiveWorkoutGlobalBar() {
           {canShowPopup ? (
             <button
               type="button"
-              className="min-w-0 flex-1 rounded-xl text-left outline-none transition hover:bg-white/[0.05] focus-visible:ring-2 focus-visible:ring-[var(--neon)]/40"
+              className="min-w-0 flex-1 rounded-xl text-left outline-none transition hover:bg-zinc-50 dark:hover:bg-zinc-900 focus-visible:ring-2 focus-visible:ring-[var(--mp-teal)]/50"
               aria-label="Otwórz aktywny trening"
               onClick={() => setSessionPopupOpen(true)}
             >
@@ -157,19 +157,19 @@ export function ActiveWorkoutGlobalBar() {
                     )}
                     aria-hidden
                   />
-                  <p className="truncate text-sm font-semibold text-white/90">
+                  <p className="truncate text-sm font-semibold text-zinc-950 dark:text-white">
                     {title || "Trening"}
                   </p>
-                  <span className="shrink-0 text-xs text-white/50">
+                  <span className="shrink-0 text-xs text-zinc-500">
                     {formatDuration(elapsedSeconds)}
                   </span>
                   {progress.total > 0 ? (
-                    <span className="shrink-0 text-xs text-white/45">
+                    <span className="shrink-0 text-xs text-zinc-500">
                       • {progress.done}/{progress.total}
                     </span>
                   ) : null}
                 </div>
-                <p className="truncate text-[11px] text-white/45">
+                <p className="truncate text-[11px] text-zinc-500">
                   Masz aktywny trening — kliknij, aby otworzyć
                 </p>
               </div>
@@ -184,19 +184,19 @@ export function ActiveWorkoutGlobalBar() {
                   )}
                   aria-hidden
                 />
-                <p className="truncate text-sm font-semibold text-white/90">
+                <p className="truncate text-sm font-semibold text-zinc-950 dark:text-white">
                   {title || "Trening"}
                 </p>
-                <span className="shrink-0 text-xs text-white/50">
+                <span className="shrink-0 text-xs text-zinc-500">
                   {formatDuration(elapsedSeconds)}
                 </span>
                 {progress.total > 0 ? (
-                  <span className="shrink-0 text-xs text-white/45">
+                  <span className="shrink-0 text-xs text-zinc-500">
                     • {progress.done}/{progress.total}
                   </span>
                 ) : null}
               </div>
-              <p className="truncate text-[11px] text-white/45">
+              <p className="truncate text-[11px] text-zinc-500">
                 Jesteś w widoku treningu
               </p>
             </div>
@@ -205,7 +205,7 @@ export function ActiveWorkoutGlobalBar() {
           <div className="flex min-w-0 shrink-0 flex-wrap items-center justify-end gap-1.5 sm:gap-2">
             <Button
               type="button"
-              className="gap-2 bg-[#FF1A4B] text-white hover:bg-[#e61645] disabled:opacity-50"
+              className="gap-2 bg-[var(--mp-teal)] text-white hover:bg-[var(--mp-teal-dark)] disabled:opacity-50"
               disabled={completing}
               onClick={() => setConfirmCompleteOpen(true)}
             >
@@ -232,7 +232,7 @@ export function ActiveWorkoutGlobalBar() {
             <Button
               type="button"
               variant="outline"
-              className="gap-2 border-white/15 bg-white/[0.04] text-white hover:bg-white/[0.07]"
+              className="gap-2 border-zinc-200 bg-zinc-50 text-zinc-800 hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
               onClick={() => (isRunning ? stopTimer() : start())}
             >
               {isRunning ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
@@ -242,7 +242,7 @@ export function ActiveWorkoutGlobalBar() {
             <Button
               type="button"
               variant="outline"
-              className="gap-2 border-white/15 bg-white/[0.04] text-white hover:bg-white/[0.07]"
+              className="gap-2 border-zinc-200 bg-zinc-50 text-zinc-800 hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
               onClick={() => setConfirmDiscardOpen(true)}
             >
               <Trash2 className="h-4 w-4" />
@@ -265,7 +265,7 @@ export function ActiveWorkoutGlobalBar() {
                 <Button
                   type="button"
                   variant="outline"
-                  className="border-white/15 bg-white/[0.04] text-white hover:bg-white/[0.07]"
+                  className="border-zinc-200 bg-zinc-50 text-zinc-800 hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
                   disabled={completing}
                 />
               }
@@ -275,7 +275,7 @@ export function ActiveWorkoutGlobalBar() {
 
             <Button
               type="button"
-              className="bg-[#FF1A4B] text-white hover:bg-[#e61645] disabled:opacity-50"
+              className="bg-[var(--mp-teal)] text-white hover:bg-[var(--mp-teal-dark)] disabled:opacity-50"
               disabled={completing}
               onClick={async () => {
                 setConfirmCompleteOpen(false);
@@ -308,7 +308,7 @@ export function ActiveWorkoutGlobalBar() {
                 <Button
                   type="button"
                   variant="outline"
-                  className="border-white/15 bg-white/[0.04] text-white hover:bg-white/[0.07]"
+                  className="border-zinc-200 bg-zinc-50 text-zinc-800 hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
                 />
               }
             >
@@ -332,17 +332,17 @@ export function ActiveWorkoutGlobalBar() {
       <AlertDialog open={sessionPopupOpen} onOpenChange={setSessionPopupOpen}>
         <AlertDialogContent className="w-[min(96vw,1100px)] p-0">
           <div className="flex max-h-[min(88dvh,860px)] min-h-[min(70dvh,640px)] flex-col overflow-hidden rounded-2xl">
-            <div className="flex items-center justify-between gap-3 border-b border-white/10 bg-zinc-950/80 px-4 py-3">
+            <div className="flex items-center justify-between gap-3 border-b border-zinc-200 bg-white/95 dark:border-zinc-700 dark:bg-zinc-950/90 px-4 py-3">
               <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-white/90">{title || "Trening"}</p>
-                <p className="text-[11px] text-white/45">Aktywny trening</p>
+                <p className="truncate text-sm font-semibold text-zinc-950 dark:text-white">{title || "Trening"}</p>
+                <p className="text-[11px] text-zinc-500">Aktywny trening</p>
               </div>
               <AlertDialogClose
                 render={
                   <Button
                     type="button"
                     variant="outline"
-                    className="border-white/15 bg-white/[0.04] text-white hover:bg-white/[0.07]"
+                    className="border-zinc-200 bg-zinc-50 text-zinc-800 hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
                   />
                 }
               >

@@ -144,7 +144,7 @@ function AddToMealLogSheet({
             >
               Anuluj
             </Button>
-            <Button type="submit" className="h-11 flex-[1.2] bg-[var(--neon)] text-white hover:bg-[#ff4d6d]">
+            <Button type="submit" className="h-11 flex-[1.2] bg-[var(--neon)] text-white hover:bg-[var(--mp-teal-dark)]">
               Dodaj
             </Button>
           </SheetFooter>
@@ -253,7 +253,7 @@ export function MealSuggestionsView({
               type="button"
               disabled={pending}
               onClick={() => generate()}
-              className="bg-[var(--neon)] text-white hover:bg-[#ff4d6d]"
+              className="bg-[var(--neon)] text-white hover:bg-[var(--mp-teal-dark)]"
             >
               {pending ? (
                 <>

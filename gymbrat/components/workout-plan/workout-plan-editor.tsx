@@ -297,7 +297,7 @@ export function WorkoutPlanEditor({
               type="button"
               onClick={onSave}
               disabled={isPending}
-              className="bg-[var(--neon)] text-white hover:bg-[#ff4d6d]"
+              className="bg-[var(--neon)] text-white hover:bg-[var(--mp-teal-dark)]"
             >
               <Save className="mr-2 h-4 w-4" />
               {isPending ? "Zapisywanie…" : "Zapisz plan"}
@@ -718,7 +718,7 @@ export function WorkoutPlanEditor({
                     size="sm"
                     onClick={addCustomExercise}
                     disabled={!customName.trim()}
-                    className="bg-[var(--neon)] text-white hover:bg-[#ff4d6d]"
+                    className="bg-[var(--neon)] text-white hover:bg-[var(--mp-teal-dark)]"
                   >
                     {customMatchPreview
                       ? "Dodaj rozpoznane ćwiczenie"

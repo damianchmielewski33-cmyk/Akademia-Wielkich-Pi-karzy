@@ -75,6 +75,7 @@ export const bodyReports = sqliteTable("body_reports", {
   waistCm: real("waist_cm"),
   chestCm: real("chest_cm"),
   thighCm: real("thigh_cm"),
+  bicepsCm: real("biceps_cm"),
   /** Energia podczas ćwiczeń 1-10 */
   trainingEnergy: integer("training_energy"),
   /** Jakość snu 1-10 */

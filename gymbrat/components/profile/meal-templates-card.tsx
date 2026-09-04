@@ -82,7 +82,7 @@ export function MealTemplatesCard({ initial }: { initial: MealTemplate[] }) {
         <Button
           type="button"
           disabled={pending}
-          className="bg-[var(--neon)] text-white hover:bg-[#ff4d6d]"
+          className="bg-[var(--neon)] text-white hover:bg-[var(--mp-teal-dark)]"
           onClick={() => {
             start(async () => {
               const proteinG = Number(p) || 0;

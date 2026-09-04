@@ -124,7 +124,7 @@ export function CoachChatPanel({
         <Button
           type="button"
           disabled={pending || !input.trim()}
-          className="h-11 shrink-0 self-end bg-[var(--neon)] px-4 text-white hover:bg-[#ff4d6d]"
+          className="h-11 shrink-0 self-end bg-[var(--neon)] px-4 text-white hover:bg-[var(--mp-teal-dark)]"
           onClick={send}
         >
           {pending ? "…" : "Wyślij"}

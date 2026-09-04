@@ -51,6 +51,8 @@ export function getAwpEmbedOrigins(): string[] {
     "http://localhost:3000",
     "http://127.0.0.1:3000",
     "http://10.0.2.2:3000",
+    // Preview / team deployments AWP na Vercel (CSP3 host wildcard).
+    "https://*.vercel.app",
   ]);
   const extra = process.env.NEXT_PUBLIC_AWP_EMBED_ORIGINS?.split(",") ?? [];
   for (const raw of extra) {

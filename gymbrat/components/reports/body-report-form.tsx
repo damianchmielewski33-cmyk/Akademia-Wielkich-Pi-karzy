@@ -54,6 +54,7 @@ export function BodyReportForm({ maxPhotos = 8 }: BodyReportFormProps) {
   const [waistCm, setWaistCm] = useState<string>("");
   const [chestCm, setChestCm] = useState<string>("");
   const [thighCm, setThighCm] = useState<string>("");
+  const [bicepsCm, setBicepsCm] = useState<string>("");
   const [scores, setScores] = useState<Scores>({
     trainingEnergy: 6,
     sleepQuality: 6,
@@ -83,7 +84,7 @@ export function BodyReportForm({ maxPhotos = 8 }: BodyReportFormProps) {
           </div>
           <Button
             type="button"
-            className="h-11 bg-[var(--neon)] text-base font-semibold text-white hover:bg-[#ff4d6d]"
+            className="h-11 bg-[var(--neon)] text-base font-semibold text-white hover:bg-[var(--mp-teal-dark)]"
             onClick={() => setIsOpen(true)}
           >
             Dodaj Raport
@@ -135,6 +136,7 @@ export function BodyReportForm({ maxPhotos = 8 }: BodyReportFormProps) {
                   waistCm: waistCm ? Number(waistCm) : null,
                   chestCm: chestCm ? Number(chestCm) : null,
                   thighCm: thighCm ? Number(thighCm) : null,
+                  bicepsCm: bicepsCm ? Number(bicepsCm) : null,
                   trainingEnergy: scores.trainingEnergy,
                   sleepQuality: scores.sleepQuality,
                   dayEnergy: scores.dayEnergy,
@@ -225,6 +227,17 @@ export function BodyReportForm({ maxPhotos = 8 }: BodyReportFormProps) {
               value={thighCm}
               onChange={(e) => setThighCm(e.target.value)}
               placeholder="np. 58"
+              className="h-10 border-white/15 bg-black/40"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="bicepsCm">Biceps (cm)</Label>
+            <Input
+              id="bicepsCm"
+              inputMode="decimal"
+              value={bicepsCm}
+              onChange={(e) => setBicepsCm(e.target.value)}
+              placeholder="np. 36"
               className="h-10 border-white/15 bg-black/40"
             />
           </div>
@@ -400,7 +413,7 @@ export function BodyReportForm({ maxPhotos = 8 }: BodyReportFormProps) {
           <Button
             type="submit"
             disabled={pending}
-            className="h-11 bg-[var(--neon)] text-base font-semibold text-white hover:bg-[#ff4d6d]"
+            className="h-11 bg-[var(--neon)] text-base font-semibold text-white hover:bg-[var(--mp-teal-dark)]"
           >
             {pending ? "Zapisywanie…" : "Zapisz raport"}
           </Button>

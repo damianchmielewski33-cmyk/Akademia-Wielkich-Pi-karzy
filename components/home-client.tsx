@@ -20,7 +20,6 @@ import { HomeNextMatchCard } from "@/components/home-next-match-card";
 import { HomeTopRankings } from "@/components/home-top-rankings";
 import { MarketplacePitchPhoto } from "@/components/marketplace-pitch-photo";
 import { MarketplacePhotoStrip } from "@/components/marketplace-photo-strip";
-import { useMarketplacePhotos } from "@/components/marketplace-photos-provider";
 import { PhotoPanel } from "@/components/photo-panel";
 import { MarketplaceSearchForm } from "@/components/marketplace-search-form";
 import { MarketplaceVenueCard } from "@/components/marketplace-venue-card";
@@ -107,10 +106,10 @@ const ACADEMY_STEPS = [
 ] as const;
 
 function BookingHomeView({ featuredVenues }: { featuredVenues: VenueCard[] }) {
-  const { photos: mpPhotos } = useMarketplacePhotos();
   const photos = pitchPhotosFromVenues(featuredVenues);
-  const photoPool = [...new Set([...photos, ...mpPhotos])];
-  const heroPhoto = photos[0] ?? mpPhotos[0];
+  /** Pula kafelków / hero — bez zdjęć edytowanych pod „Gramy razem”. */
+  const photoPool = photos.length > 0 ? photos : [...MARKETPLACE_PITCH_PHOTOS];
+  const heroPhoto = photoPool[0] ?? MARKETPLACE_PITCH_PHOTOS[0];
   return (
     <div className="relative flex flex-1 flex-col text-zinc-900 dark:text-zinc-50">
       <HomeFallingDecor className="hidden lg:block" />
@@ -293,11 +292,15 @@ function AcademyHomeView({
 }: Props) {
   const router = useRouter();
   const { isHiddenHref } = useScreenBlocks();
-  const { photos: mpPhotos } = useMarketplacePhotos();
   const isAcademyHome = pageVariant === "home";
   const pitchPhotos = pitchPhotosFromVenues(featuredVenues);
-  const heroPhoto = pitchPhotos[0] ?? mpPhotos[0];
-  const photoPool = [...new Set([...pitchPhotos, ...mpPhotos])];
+  /**
+   * Kafelki / Top 3 / CTA: tylko zdjęcia obiektów lub domyślne Unsplash.
+   * Edytowalny pasek pod „Gramy razem” (`mpPhotos`) jest wyłącznie w MarketplacePhotoStrip.
+   */
+  const photoPool =
+    pitchPhotos.length > 0 ? pitchPhotos : [...MARKETPLACE_PITCH_PHOTOS];
+  const heroPhoto = photoPool[0] ?? MARKETPLACE_PITCH_PHOTOS[0];
   const [signupDialogOpen, setSignupDialogOpen] = useState(false);
   const [signupIntent, setSignupIntent] = useState<"signup" | "confirm">("signup");
   const [tentativeBusy, setTentativeBusy] = useState(false);

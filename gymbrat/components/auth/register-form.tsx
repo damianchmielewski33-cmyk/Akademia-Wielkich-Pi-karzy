@@ -25,7 +25,7 @@ import {
 } from "@/lib/validations/register";
 
 const inputClass =
-  "min-h-11 border-white/18 bg-black/45 text-white placeholder:text-white/38 focus-visible:border-[var(--neon)]/55 focus-visible:ring-[3px] focus-visible:ring-ring/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#070708]";
+  "min-h-11 border-zinc-200 bg-zinc-50 text-zinc-900 placeholder:text-zinc-400 focus-visible:border-[var(--mp-teal)] focus-visible:ring-[3px] focus-visible:ring-[var(--mp-teal)]/30 focus-visible:ring-offset-2 focus-visible:ring-offset-background dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100";
 
 const activityCopy: Record<
   (typeof activityLevels)[number],
@@ -165,27 +165,23 @@ export function RegisterForm() {
     >
       <div
         aria-hidden
-        className="pointer-events-none absolute -inset-px rounded-[1.05rem] bg-gradient-to-br from-[var(--neon)]/25 via-white/[0.07] to-cyan-400/10 opacity-90 blur-[1px]"
+        className="pointer-events-none absolute -inset-px rounded-[1.05rem] bg-gradient-to-br from-[var(--mp-teal)]/20 via-teal-100/40 to-transparent opacity-90 blur-[1px]"
       />
-      <div className="glass-panel relative overflow-hidden rounded-2xl border border-white/[0.12] bg-gradient-to-b from-white/[0.09] to-black/25 p-6 shadow-[0_12px_60px_rgba(0,0,0,0.55)] sm:p-8">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 opacity-[0.12] [background-image:repeating-linear-gradient(-12deg,rgba(255,255,255,0.04)_0px,rgba(255,255,255,0.04)_1px,transparent_1px,transparent_8px)]"
-        />
+      <div className="pitch-card relative overflow-hidden p-6 shadow-md sm:p-8">
         <div className="relative">
           <div className="mb-8 flex flex-col items-center text-center">
-            <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.12] to-black/40 shadow-[inset_0_1px_0_rgba(255,255,255,0.15)]">
-              <Dumbbell className="h-6 w-6 text-[var(--neon)]" strokeWidth={1.75} />
+            <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--mp-teal)] text-white shadow-sm">
+              <Dumbbell className="h-6 w-6 text-[var(--mp-teal)]" strokeWidth={1.75} />
             </div>
             <Link
               href="/"
-              className="inline-block rounded-sm font-heading text-2xl font-semibold tracking-tight focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[#070708]"
+              className="inline-block rounded-sm font-heading text-2xl font-semibold tracking-tight focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               aria-label="GymBrat — strona główna"
             >
-              Gym<span className="text-[var(--neon)]">Brat</span>
+              Gym<span className="text-[var(--mp-teal)]">Brat</span>
             </Link>
-            <p className="mt-2 flex items-center gap-1.5 text-sm text-white/55">
-              <Sparkles className="h-3.5 w-3.5 text-[var(--neon)]/80" />
+            <p className="mt-2 flex items-center gap-1.5 text-sm text-zinc-500">
+              <Sparkles className="h-3.5 w-3.5 text-[var(--mp-teal)]/80" />
               Zbuduj swój profil sportowca
             </p>
           </div>
@@ -208,7 +204,7 @@ export function RegisterForm() {
                 id="register-root-error"
                 role="alert"
                 aria-live="assertive"
-                className="rounded-xl border border-red-500/40 bg-red-500/10 px-3 py-2.5 text-sm text-red-100"
+                className="rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-800 dark:border-red-800 dark:bg-red-950/40 dark:text-red-200"
               >
                 {rootError}
               </p>
@@ -217,18 +213,18 @@ export function RegisterForm() {
             <input type="hidden" {...register("role")} />
 
             <section
-              className="space-y-4 rounded-xl border border-white/[0.08] bg-black/20 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-md"
+              className="space-y-4 rounded-xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900"
               aria-labelledby="register-heading-basic"
             >
               <p
                 id="register-heading-basic"
-                className="metallic-text text-xs font-semibold uppercase tracking-[0.2em]"
+                className="pitch-label"
               >
                 Dane podstawowe
               </p>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="firstName" className="text-white/80">
+                  <Label htmlFor="firstName" className="text-zinc-800 dark:text-zinc-200">
                     Imię
                   </Label>
                   <Input
@@ -240,13 +236,13 @@ export function RegisterForm() {
                     {...register("firstName")}
                   />
                   {errors.firstName ? (
-                    <p id="register-error-firstName" className="text-xs text-red-100">
+                    <p id="register-error-firstName" className="text-xs text-red-700 dark:text-red-300">
                       {errors.firstName.message}
                     </p>
                   ) : null}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="lastName" className="text-white/80">
+                  <Label htmlFor="lastName" className="text-zinc-800 dark:text-zinc-200">
                     Nazwisko
                   </Label>
                   <Input
@@ -258,14 +254,14 @@ export function RegisterForm() {
                     {...register("lastName")}
                   />
                   {errors.lastName ? (
-                    <p id="register-error-lastName" className="text-xs text-red-100">
+                    <p id="register-error-lastName" className="text-xs text-red-700 dark:text-red-300">
                       {errors.lastName.message}
                     </p>
                   ) : null}
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-white/80">
+                <Label htmlFor="email" className="text-zinc-800 dark:text-zinc-200">
                   Email
                 </Label>
                 <Input
@@ -278,7 +274,7 @@ export function RegisterForm() {
                   {...register("email")}
                 />
                 {errors.email ? (
-                  <p id="register-error-email" className="text-xs text-red-100">
+                  <p id="register-error-email" className="text-xs text-red-700 dark:text-red-300">
                     {errors.email.message}
                   </p>
                 ) : null}
@@ -286,7 +282,7 @@ export function RegisterForm() {
               <div className="space-y-2">
                 <div className="flex items-end justify-between gap-3">
                   <div className="min-w-0 flex-1 space-y-2">
-                    <Label htmlFor="emailCode" className="text-white/80">
+                    <Label htmlFor="emailCode" className="text-zinc-800 dark:text-zinc-200">
                       Kod z e-maila
                     </Label>
                     <Input
@@ -308,7 +304,7 @@ export function RegisterForm() {
                     type="button"
                     disabled={sendingCode || !emailValue?.trim() || cooldownSeconds > 0}
                     aria-busy={sendingCode}
-                    className="h-11 min-h-11 shrink-0 bg-white/10 text-white hover:bg-white/15 focus-visible:ring-offset-2 focus-visible:ring-offset-[#070708]"
+                    className="h-11 min-h-11 shrink-0"
                     onClick={async () => {
                       setRootError(null);
                       setCodeInfo(null);
@@ -343,18 +339,18 @@ export function RegisterForm() {
                   </Button>
                 </div>
                 {codeInfo ? (
-                  <p id="register-code-info" role="status" aria-live="polite" className="text-xs text-white/65">
+                  <p id="register-code-info" role="status" aria-live="polite" className="text-xs text-zinc-500">
                     {codeInfo}
                   </p>
                 ) : null}
                 {errors.emailCode ? (
-                  <p id="register-error-emailCode" className="text-xs text-red-100">
+                  <p id="register-error-emailCode" className="text-xs text-red-700 dark:text-red-300">
                     {errors.emailCode.message}
                   </p>
                 ) : null}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-white/80">
+                <Label htmlFor="password" className="text-zinc-800 dark:text-zinc-200">
                   Hasło
                 </Label>
                 <Input
@@ -371,7 +367,7 @@ export function RegisterForm() {
                   {...passwordRegister}
                 />
                 {errors.password ? (
-                  <p id="register-error-password" className="text-xs text-red-100">
+                  <p id="register-error-password" className="text-xs text-red-700 dark:text-red-300">
                     {errors.password.message}
                   </p>
                 ) : null}
@@ -379,18 +375,18 @@ export function RegisterForm() {
             </section>
 
             <section
-              className="space-y-4 rounded-xl border border-white/[0.08] bg-black/20 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-md"
+              className="space-y-4 rounded-xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900"
               aria-labelledby="register-heading-body"
             >
               <p
                 id="register-heading-body"
-                className="metallic-text text-xs font-semibold uppercase tracking-[0.2em]"
+                className="pitch-label"
               >
                 Parametry ciała
               </p>
               <div className="grid gap-4 sm:grid-cols-3">
                 <div className="space-y-2">
-                  <Label htmlFor="weightKg" className="text-white/80">
+                  <Label htmlFor="weightKg" className="text-zinc-800 dark:text-zinc-200">
                     Waga (kg)
                   </Label>
                   <Input
@@ -406,13 +402,13 @@ export function RegisterForm() {
                     {...register("weightKg")}
                   />
                   {errors.weightKg ? (
-                    <p id="register-error-weightKg" className="text-xs text-red-100">
+                    <p id="register-error-weightKg" className="text-xs text-red-700 dark:text-red-300">
                       {errors.weightKg.message}
                     </p>
                   ) : null}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="heightCm" className="text-white/80">
+                  <Label htmlFor="heightCm" className="text-zinc-800 dark:text-zinc-200">
                     Wzrost (cm)
                   </Label>
                   <Input
@@ -428,13 +424,13 @@ export function RegisterForm() {
                     {...register("heightCm")}
                   />
                   {errors.heightCm ? (
-                    <p id="register-error-heightCm" className="text-xs text-red-100">
+                    <p id="register-error-heightCm" className="text-xs text-red-700 dark:text-red-300">
                       {errors.heightCm.message}
                     </p>
                   ) : null}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="age" className="text-white/80">
+                  <Label htmlFor="age" className="text-zinc-800 dark:text-zinc-200">
                     Wiek
                   </Label>
                   <Input
@@ -449,7 +445,7 @@ export function RegisterForm() {
                     {...register("age")}
                   />
                   {errors.age ? (
-                    <p id="register-error-age" className="text-xs text-red-100">
+                    <p id="register-error-age" className="text-xs text-red-700 dark:text-red-300">
                       {errors.age.message}
                     </p>
                   ) : null}
@@ -458,12 +454,12 @@ export function RegisterForm() {
             </section>
 
             <section
-              className="space-y-3 rounded-xl border border-white/[0.08] bg-black/20 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-md"
+              className="space-y-3 rounded-xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900"
               aria-labelledby="register-heading-activity"
             >
               <p
                 id="register-heading-activity"
-                className="metallic-text text-xs font-semibold uppercase tracking-[0.2em]"
+                className="pitch-label"
               >
                 Poziom aktywności
               </p>
@@ -486,28 +482,28 @@ export function RegisterForm() {
                       aria-checked={active}
                       onClick={() => setValue("activityLevel", level, { shouldValidate: true })}
                       className={cn(
-                        "min-h-[3.25rem] rounded-xl border px-3 py-3 text-left outline-none transition-all focus-visible:ring-[3px] focus-visible:ring-[var(--ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[#070708]",
+                        "min-h-[3.25rem] rounded-xl border px-3 py-3 text-left outline-none transition-all focus-visible:ring-[3px] focus-visible:ring-[var(--ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-background",
                         active
-                          ? "border-[var(--neon)]/60 bg-[var(--neon)]/15 shadow-[0_0_24px_rgba(255,45,85,0.22)]"
-                          : "border-white/10 bg-black/30 hover:border-white/20 hover:bg-black/40",
+                          ? "border-[var(--mp-teal)] bg-teal-50 shadow-sm dark:bg-teal-950/40"
+                          : "border-zinc-200 bg-white hover:border-teal-200 hover:bg-teal-50/60 dark:border-zinc-700 dark:bg-zinc-950",
                       )}
                     >
                       <span
                         className={cn(
                           "block text-sm font-semibold",
-                          active ? "text-white" : "text-white/85",
+                          active ? "text-zinc-950 dark:text-white" : "text-zinc-700 dark:text-zinc-300",
                         )}
                       >
                         {label}
                       </span>
-                      <span className="mt-0.5 block text-xs text-white/55">{hint}</span>
+                      <span className="mt-0.5 block text-xs text-zinc-500">{hint}</span>
                     </button>
                   );
                 })}
               </div>
               <input type="hidden" {...register("activityLevel")} />
               {errors.activityLevel ? (
-                <p id="register-error-activityLevel" className="text-xs text-red-100">
+                <p id="register-error-activityLevel" className="text-xs text-red-700 dark:text-red-300">
                   {errors.activityLevel.message}
                 </p>
               ) : null}
@@ -517,15 +513,15 @@ export function RegisterForm() {
               type="submit"
               disabled={isSubmitting}
               aria-busy={isSubmitting}
-              className="h-11 min-h-11 w-full bg-[var(--neon)] text-base font-semibold text-white shadow-[0_0_32px_rgba(255,45,85,0.25)] hover:bg-[#ff4d6d] focus-visible:ring-2 focus-visible:ring-white/95 focus-visible:ring-offset-2 focus-visible:ring-offset-[#070708]"
+              className="h-11 min-h-11 w-full text-base"
             >
               {isSubmitting ? "Tworzenie profilu…" : "Utwórz konto i trenuj"}
             </Button>
-            <p className="text-center text-sm text-white/55">
+            <p className="text-center text-sm text-zinc-500">
               Masz już konto?{" "}
               <Link
                 href="/login?role=zawodnik"
-                className="rounded-sm text-[var(--neon)] underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[#070708]"
+                className="rounded-sm text-[var(--mp-teal)] underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
                 Zaloguj się
               </Link>

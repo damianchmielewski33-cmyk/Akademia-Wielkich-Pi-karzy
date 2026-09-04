@@ -73,7 +73,7 @@ export default async function OnboardingPage() {
         </p>
         <Button
           type="submit"
-          className="h-11 w-full bg-[var(--neon)] text-white hover:bg-[#ff4d6d]"
+          className="h-11 w-full bg-[var(--neon)] text-white hover:bg-[var(--mp-teal-dark)]"
         >
           Zapisz i przejdź do Start
         </Button>

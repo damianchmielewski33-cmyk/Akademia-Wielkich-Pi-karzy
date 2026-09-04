@@ -99,6 +99,7 @@ CREATE TABLE IF NOT EXISTS "daily_checkins" (
   await tryAddColumn(
     `ALTER TABLE "user_settings" ADD COLUMN "ai_entitled" integer NOT NULL DEFAULT 1`,
   );
+  await tryAddColumn(`ALTER TABLE "body_reports" ADD COLUMN "biceps_cm" real`);
 
   await client.execute(`
 CREATE TABLE IF NOT EXISTS "app_settings" (

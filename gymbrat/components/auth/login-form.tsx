@@ -130,7 +130,7 @@ export function LoginForm() {
         </div>
       ) : null}
       <div className="space-y-2">
-        <Label htmlFor="email" className="text-white/85">
+        <Label htmlFor="email" className="text-zinc-800 dark:text-zinc-200">
           Email
         </Label>
         <Input
@@ -141,11 +141,11 @@ export function LoginForm() {
           autoComplete="email"
           aria-invalid={error ? true : undefined}
           aria-describedby={hasBanner ? "login-banner" : undefined}
-          className="min-h-11 border-white/20 bg-black/50 text-white placeholder:text-white/40"
+          className="min-h-11 border-zinc-200 bg-zinc-50 text-zinc-900 placeholder:text-zinc-400 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
         />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="password" className="text-white/85">
+        <Label htmlFor="password" className="text-zinc-800 dark:text-zinc-200">
           Hasło
         </Label>
         <div className="relative">
@@ -158,13 +158,13 @@ export function LoginForm() {
             aria-invalid={error ? true : undefined}
             aria-describedby={hasBanner ? "login-banner" : undefined}
             className={cn(
-              "min-h-11 border-white/20 bg-black/50 pr-12 text-white placeholder:text-white/40",
+              "min-h-11 border-zinc-200 bg-zinc-50 pr-12 text-zinc-900 placeholder:text-zinc-400 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100",
             )}
           />
           <button
             type="button"
             onClick={() => setShowPassword((v) => !v)}
-            className="absolute right-1 top-1/2 flex h-11 min-w-11 -translate-y-1/2 items-center justify-center rounded-md text-white/60 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[var(--ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[#070708]"
+            className="awp-focus-ring absolute right-1 top-1/2 flex h-11 min-w-11 -translate-y-1/2 items-center justify-center rounded-md text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900 dark:hover:bg-zinc-800 dark:hover:text-white"
             aria-label={showPassword ? "Ukryj hasło" : "Pokaż hasło"}
             aria-pressed={showPassword}
           >
@@ -176,23 +176,18 @@ export function LoginForm() {
           </button>
         </div>
       </div>
-      <Button
-        type="submit"
-        disabled={pending}
-        aria-busy={pending}
-        className="h-11 w-full bg-[var(--neon)] text-base font-semibold text-white hover:bg-[#ff4d6d] focus-visible:ring-2 focus-visible:ring-white/95 focus-visible:ring-offset-2 focus-visible:ring-offset-[#070708]"
-      >
+      <Button type="submit" disabled={pending} aria-busy={pending} className="h-11 w-full text-base">
         {pending
           ? "Logowanie…"
           : role === "trener"
             ? "Zaloguj się jako trener"
             : "Zaloguj się jako zawodnik"}
       </Button>
-      <p className="text-center text-sm text-white/55">
+      <p className="text-center text-sm text-zinc-500 dark:text-zinc-400">
         Nie masz konta?{" "}
         <Link
           href={registerHref}
-          className="rounded-sm text-[var(--neon)] underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[#070708]"
+          className="awp-focus-ring rounded-sm font-semibold text-[var(--mp-teal-dark)] underline-offset-4 hover:underline"
         >
           Utwórz konto
         </Link>

@@ -86,7 +86,7 @@ export function FitnessGoalsForm({ initial }: { initial: FitnessGoals }) {
         <Button
           type="button"
           disabled={pending}
-          className="h-11 bg-[var(--neon)] text-white hover:bg-[#ff4d6d]"
+          className="h-11 bg-[var(--neon)] text-white hover:bg-[var(--mp-teal-dark)]"
           onClick={() => {
             start(async () => {
               const wn = Number(weekly);

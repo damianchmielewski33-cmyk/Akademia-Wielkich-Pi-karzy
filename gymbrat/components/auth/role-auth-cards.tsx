@@ -22,7 +22,7 @@ export function RoleAuthCards({
   return (
     <div className="space-y-4">
       <p
-        className="text-center text-xs font-medium uppercase tracking-[0.18em] text-white/55"
+        className="text-center text-xs font-semibold uppercase tracking-[0.18em] text-[var(--mp-teal-dark)]"
         id="role-auth-heading"
       >
         {heading}
@@ -39,42 +39,34 @@ export function RoleAuthCards({
             : {})}
           onClick={() => onSelectRole("zawodnik")}
           className={cn(
-            "group relative min-h-[168px] overflow-hidden rounded-2xl border px-5 py-6 text-left transition-all focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[var(--ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[#070708]",
+            "awp-focus-ring group relative min-h-[168px] overflow-hidden rounded-2xl border px-5 py-6 text-left transition-all",
             role === "zawodnik"
-              ? "border-[var(--neon)]/65 bg-gradient-to-br from-[var(--neon)]/20 via-white/[0.06] to-cyan-500/10 shadow-[0_0_40px_rgba(255,45,85,0.22)]"
-              : "border-white/12 bg-black/35 hover:border-white/22 hover:bg-black/45",
+              ? "border-[var(--mp-teal)] bg-teal-50/90 shadow-md shadow-teal-950/10 dark:border-teal-500 dark:bg-teal-950/40"
+              : "border-zinc-200 bg-white hover:border-teal-200 hover:bg-teal-50/50 dark:border-zinc-700 dark:bg-zinc-900 dark:hover:bg-zinc-800",
           )}
         >
-          <div
-            aria-hidden
-            className="pointer-events-none absolute -right-6 -top-8 h-28 w-28 rounded-full bg-[var(--neon)]/15 blur-2xl transition-opacity group-hover:opacity-100"
-          />
-          <div
-            aria-hidden
-            className="pointer-events-none absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/15 to-transparent"
-          />
           <div className="relative flex flex-col gap-4">
             <div
               className={cn(
-                "flex h-[4.5rem] w-[4.5rem] items-center justify-center rounded-2xl border bg-gradient-to-br shadow-inner",
+                "flex h-[4.5rem] w-[4.5rem] items-center justify-center rounded-2xl border shadow-sm",
                 role === "zawodnik"
-                  ? "border-[var(--neon)]/40 from-[var(--neon)]/35 to-black/50 text-white"
-                  : "border-white/10 from-white/12 to-black/40 text-white/85",
+                  ? "border-transparent bg-[var(--mp-teal)] text-white"
+                  : "border-zinc-200 bg-zinc-50 text-[var(--mp-teal-dark)] dark:border-zinc-700 dark:bg-zinc-800 dark:text-teal-300",
               )}
             >
               <Dumbbell className="h-10 w-10" strokeWidth={1.5} aria-hidden />
             </div>
             <div>
-              <span className="font-heading text-xl font-semibold tracking-tight text-white">
+              <span className="font-heading text-xl font-semibold tracking-tight text-zinc-950 dark:text-white">
                 Zawodnik
               </span>
-              <p className="mt-1.5 text-sm leading-snug text-white/55">
+              <p className="mt-1.5 text-sm leading-snug text-zinc-500 dark:text-zinc-400">
                 Śledź trening, wartości odżywcze i postępy w jednym miejscu.
               </p>
             </div>
           </div>
           {role === "zawodnik" ? (
-            <span className="absolute right-4 top-4 inline-flex items-center gap-1 rounded-full border border-[var(--neon)]/35 bg-black/30 px-2.5 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wider text-[var(--neon)]">
+            <span className="absolute right-4 top-4 inline-flex items-center gap-1 rounded-full bg-[var(--mp-teal)] px-2.5 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wider text-white">
               <Sparkles className="h-3 w-3" aria-hidden />
               Wybrane
             </span>
@@ -83,27 +75,23 @@ export function RoleAuthCards({
 
         {trainerLocked ? (
           <div
-            className="relative min-h-[168px] cursor-not-allowed overflow-hidden rounded-2xl border border-white/10 bg-black/25 px-5 py-6 text-left opacity-75"
+            className="relative min-h-[168px] cursor-not-allowed overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-50 px-5 py-6 text-left opacity-90 dark:border-zinc-800 dark:bg-zinc-900/60"
             role="note"
             aria-label="Konto trenera jest na razie niedostępne. Możliwe jest wyłącznie konto zawodnika."
           >
-            <div
-              aria-hidden
-              className="pointer-events-none absolute -right-6 -top-8 h-28 w-28 rounded-full bg-violet-500/8 blur-2xl"
-            />
             <div className="relative flex flex-col gap-4">
-              <div className="flex h-[4.5rem] w-[4.5rem] items-center justify-center rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.06] to-black/50 text-white/45">
+              <div className="flex h-[4.5rem] w-[4.5rem] items-center justify-center rounded-2xl border border-zinc-200 bg-white text-zinc-400 dark:border-zinc-700 dark:bg-zinc-800">
                 <ClipboardList className="h-10 w-10" strokeWidth={1.5} aria-hidden />
               </div>
               <div>
-                <span className="font-heading text-xl font-semibold tracking-tight text-white/70">
+                <span className="font-heading text-xl font-semibold tracking-tight text-zinc-600 dark:text-zinc-300">
                   Trener
                 </span>
-                <p className="mt-1.5 text-sm leading-snug text-white/45">
+                <p className="mt-1.5 text-sm leading-snug text-zinc-500 dark:text-zinc-400">
                   Planuj, analizuj i prowadź zawodników — interfejs pod Ciebie.
                 </p>
-                <p className="mt-3 flex items-start gap-2 rounded-xl border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-xs leading-snug text-amber-100/95">
-                  <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-200/90" aria-hidden />
+                <p className="mt-3 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-snug text-amber-950 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100">
+                  <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
                   <span>
                     Logika konta trenera powstanie w przyszłości — na razie możliwe jest
                     wyłącznie konto zawodnika.
@@ -111,7 +99,7 @@ export function RoleAuthCards({
                 </p>
               </div>
             </div>
-            <span className="absolute right-4 top-4 rounded-full border border-white/10 bg-black/40 px-2.5 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wider text-white/45">
+            <span className="absolute right-4 top-4 rounded-full border border-zinc-200 bg-white px-2.5 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wider text-zinc-500 dark:border-zinc-700 dark:bg-zinc-800">
               Wkrótce
             </span>
           </div>
@@ -122,42 +110,34 @@ export function RoleAuthCards({
             aria-checked={role === "trener"}
             onClick={() => onSelectRole("trener")}
             className={cn(
-              "group relative min-h-[168px] overflow-hidden rounded-2xl border px-5 py-6 text-left transition-all focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[var(--ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[#070708]",
+              "awp-focus-ring group relative min-h-[168px] overflow-hidden rounded-2xl border px-5 py-6 text-left transition-all",
               role === "trener"
-                ? "border-[var(--neon)]/65 bg-gradient-to-br from-[var(--neon)]/20 via-white/[0.06] to-violet-500/10 shadow-[0_0_40px_rgba(255,45,85,0.22)]"
-                : "border-white/12 bg-black/35 hover:border-white/22 hover:bg-black/45",
+                ? "border-[var(--mp-teal)] bg-teal-50/90 shadow-md shadow-teal-950/10 dark:border-teal-500 dark:bg-teal-950/40"
+                : "border-zinc-200 bg-white hover:border-teal-200 hover:bg-teal-50/50 dark:border-zinc-700 dark:bg-zinc-900 dark:hover:bg-zinc-800",
             )}
           >
-            <div
-              aria-hidden
-              className="pointer-events-none absolute -right-6 -top-8 h-28 w-28 rounded-full bg-violet-500/12 blur-2xl transition-opacity group-hover:opacity-100"
-            />
-            <div
-              aria-hidden
-              className="pointer-events-none absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/15 to-transparent"
-            />
             <div className="relative flex flex-col gap-4">
               <div
                 className={cn(
-                  "flex h-[4.5rem] w-[4.5rem] items-center justify-center rounded-2xl border bg-gradient-to-br shadow-inner",
+                  "flex h-[4.5rem] w-[4.5rem] items-center justify-center rounded-2xl border shadow-sm",
                   role === "trener"
-                    ? "border-[var(--neon)]/40 from-[var(--neon)]/35 to-black/50 text-white"
-                    : "border-white/10 from-white/12 to-black/40 text-white/85",
+                    ? "border-transparent bg-[var(--mp-teal)] text-white"
+                    : "border-zinc-200 bg-zinc-50 text-[var(--mp-teal-dark)] dark:border-zinc-700 dark:bg-zinc-800 dark:text-teal-300",
                 )}
               >
                 <ClipboardList className="h-10 w-10" strokeWidth={1.5} aria-hidden />
               </div>
               <div>
-                <span className="font-heading text-xl font-semibold tracking-tight text-white">
+                <span className="font-heading text-xl font-semibold tracking-tight text-zinc-950 dark:text-white">
                   Trener
                 </span>
-                <p className="mt-1.5 text-sm leading-snug text-white/55">
+                <p className="mt-1.5 text-sm leading-snug text-zinc-500 dark:text-zinc-400">
                   Planuj, analizuj i prowadź zawodników — interfejs pod Ciebie.
                 </p>
               </div>
             </div>
             {role === "trener" ? (
-              <span className="absolute right-4 top-4 inline-flex items-center gap-1 rounded-full border border-[var(--neon)]/35 bg-black/30 px-2.5 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wider text-[var(--neon)]">
+              <span className="absolute right-4 top-4 inline-flex items-center gap-1 rounded-full bg-[var(--mp-teal)] px-2.5 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wider text-white">
                 <Sparkles className="h-3 w-3" aria-hidden />
                 Wybrane
               </span>

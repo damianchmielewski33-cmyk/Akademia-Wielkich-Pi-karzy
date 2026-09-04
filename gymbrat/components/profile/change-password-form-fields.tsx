@@ -27,7 +27,7 @@ export function ChangePasswordFormFields() {
         <p className="text-xs text-white/45">Minimum 8 znaków.</p>
       </div>
 
-      <SubmitButton className="bg-[var(--neon)] text-white hover:bg-[#ff4d6d]">
+      <SubmitButton className="bg-[var(--neon)] text-white hover:bg-[var(--mp-teal-dark)]">
         Zmień hasło
       </SubmitButton>
     </>

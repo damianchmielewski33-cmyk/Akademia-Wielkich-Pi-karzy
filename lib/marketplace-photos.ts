@@ -16,7 +16,7 @@ export const MARKETPLACE_PITCH_PHOTOS = [
   "https://images.unsplash.com/photo-1560272564-c83b66b1ad12?auto=format&fit=crop&w=1600&q=80",
 ] as const;
 
-/** Liczba slotów edytowalnych (pasek pod „Gramy razem” + pula hero/kafelków). */
+/** Liczba slotów edytowalnych — tylko pasek pod „Gramy razem” na stronie głównej. */
 export const MARKETPLACE_PITCH_SLOT_COUNT = MARKETPLACE_PITCH_PHOTOS.length;
 
 /** Ile zdjęć pokazuje poziomy pasek pod hero. */

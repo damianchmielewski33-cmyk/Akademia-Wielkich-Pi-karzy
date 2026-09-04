@@ -20,6 +20,7 @@ const createSchema = z.object({
   waistCm: z.number().finite().min(0).max(500).nullable().optional(),
   chestCm: z.number().finite().min(0).max(500).nullable().optional(),
   thighCm: z.number().finite().min(0).max(500).nullable().optional(),
+  bicepsCm: z.number().finite().min(0).max(500).nullable().optional(),
   trainingEnergy: z.number().finite().min(1).max(10).nullable().optional(),
   sleepQuality: z.number().finite().min(1).max(10).nullable().optional(),
   dayEnergy: z.number().finite().min(1).max(10).nullable().optional(),
