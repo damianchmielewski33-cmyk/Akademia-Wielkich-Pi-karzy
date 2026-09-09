@@ -187,10 +187,25 @@ export async function getActiveRankingSeasonId(
 }
 
 async function nextDefaultSeasonName(db: AppDb, realm: Realm): Promise<string> {
+  const rows = (await db
+    .prepare("SELECT name FROM ranking_seasons WHERE realm = ?")
+    .all(realm)) as { name: string }[];
+  const totalCount = rows.length;
+  const numbered = rows
+    .map((row) => {
+      const m = /^Sezon\s+(\d+)$/i.exec(row.name.trim());
+      return m ? Number(m[1]) : null;
+    })
+    .filter((value): value is number => Number.isFinite(value));
+  const nextNumber = Math.max(totalCount, numbered.length > 0 ? Math.max(...numbered) : 0) + 1;
+  return `Sezon ${nextNumber}`;
+}
+
+async function seasonNameExists(db: AppDb, name: string, realm: Realm): Promise<boolean> {
   const row = (await db
-    .prepare("SELECT COUNT(*) AS c FROM ranking_seasons WHERE realm = ?")
-    .get(realm)) as { c: number };
-  return `Sezon ${Number(row.c) + 1}`;
+    .prepare("SELECT 1 AS ok FROM ranking_seasons WHERE realm = ? AND lower(name) = lower(?) LIMIT 1")
+    .get(realm, name)) as { ok: number } | undefined;
+  return Boolean(row?.ok);
 }
 
 export async function startRankingSeason(
@@ -199,28 +214,37 @@ export async function startRankingSeason(
   name?: string,
   realm: Realm = REALMS.ACADEMY
 ): Promise<RankingSeasonView> {
-  await ensureRankingSeasonsInitialized(db, realm);
+  const run = async (tx: AppDb): Promise<number> => {
+    await ensureRankingSeasonsInitialized(tx, realm);
 
-  const active = await getActiveRankingSeason(db, realm);
-  if (active) {
-    await db
+    const active = await getActiveRankingSeason(tx, realm);
+    if (active) {
+      await tx
+        .prepare(
+          `UPDATE ranking_seasons
+           SET ended_at = datetime('now'), ended_by_admin_id = ?
+           WHERE id = ? AND ended_at IS NULL AND realm = ?`
+        )
+        .run(adminId, active.id, realm);
+    }
+
+    const requestedName = name?.trim();
+    const seasonName = requestedName || (await nextDefaultSeasonName(tx, realm));
+    if (await seasonNameExists(tx, seasonName, realm)) {
+      throw new Error(`Sezon o nazwie "${seasonName}" już istnieje.`);
+    }
+
+    const insert = await tx
       .prepare(
-        `UPDATE ranking_seasons
-         SET ended_at = datetime('now'), ended_by_admin_id = ?
-         WHERE id = ? AND ended_at IS NULL AND realm = ?`
+        `INSERT INTO ranking_seasons (name, started_at, started_by_admin_id, realm)
+         VALUES (?, datetime('now'), ?, ?)`
       )
-      .run(adminId, active.id, realm);
-  }
+      .run(seasonName, adminId, realm);
+    return Number(insert.lastInsertRowid);
+  };
 
-  const seasonName = name?.trim() || (await nextDefaultSeasonName(db, realm));
-  const insert = await db
-    .prepare(
-      `INSERT INTO ranking_seasons (name, started_at, started_by_admin_id, realm)
-       VALUES (?, datetime('now'), ?, ?)`
-    )
-    .run(seasonName, adminId, realm);
-
-  const created = await getRankingSeasonById(db, Number(insert.lastInsertRowid), realm);
+  const createdId = db.transaction ? await db.transaction(run) : await run(db);
+  const created = await getRankingSeasonById(db, createdId, realm);
   if (!created) throw new Error("Nie udało się utworzyć sezonu rankingu.");
   return created;
 }

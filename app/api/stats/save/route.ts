@@ -51,23 +51,13 @@ export async function POST(req: Request) {
   }
   const { match_id, goals, assists, distance, saves } = parsed.data;
   const db = await getDb();
-  const seasonId = await getActiveRankingSeasonId(db);
-  if (seasonId == null) {
-    return NextResponse.json(
-      {
-        error:
-          "Brak aktywnego sezonu rankingu. Administrator musi rozpocząć nowy sezon, zanim będzie można zapisywać statystyki.",
-      },
-      { status: 403 }
-    );
-  }
 
   const realmGate = await requireMatchInApiRealm(req, match_id);
   if (!realmGate.ok) return realmGate.response;
 
   const match = (await db
-    .prepare("SELECT id, played, match_date FROM matches WHERE id = ?")
-    .get(match_id)) as { id: number; played: number; match_date: string } | undefined;
+    .prepare("SELECT id, played, match_date, season_id FROM matches WHERE id = ?")
+    .get(match_id)) as { id: number; played: number; match_date: string; season_id: number | null } | undefined;
   if (!match) {
     return NextResponse.json({ error: "Nie znaleziono meczu." }, { status: 404 });
   }
@@ -90,10 +80,26 @@ export async function POST(req: Request) {
   }
 
   const withinEditWeek = isWithinStatsEditWindow(match.match_date, utcTodayYmd());
-
   const existing = (await db
-    .prepare("SELECT id FROM match_stats WHERE user_id = ? AND match_id = ?")
-    .get(session.userId, match_id)) as { id: number } | undefined;
+    .prepare("SELECT id, season_id FROM match_stats WHERE user_id = ? AND match_id = ?")
+    .get(session.userId, match_id)) as { id: number; season_id: number | null } | undefined;
+
+  let seasonId = match.season_id ?? existing?.season_id ?? null;
+  if (seasonId == null) {
+    seasonId = await getActiveRankingSeasonId(db);
+    if (seasonId == null) {
+      return NextResponse.json(
+        {
+          error:
+            "Brak aktywnego sezonu rankingu. Administrator musi rozpocząć nowy sezon, zanim będzie można zapisywać statystyki.",
+        },
+        { status: 403 }
+      );
+    }
+  }
+  if (match.season_id == null) {
+    await db.prepare("UPDATE matches SET season_id = ? WHERE id = ? AND season_id IS NULL").run(seasonId, match_id);
+  }
 
   if (existing) {
     if (!withinEditWeek) {
@@ -104,9 +110,9 @@ export async function POST(req: Request) {
     }
     await db
       .prepare(
-        "UPDATE match_stats SET goals = ?, assists = ?, distance = ?, saves = ? WHERE id = ? AND user_id = ?"
+        "UPDATE match_stats SET goals = ?, assists = ?, distance = ?, saves = ?, season_id = ? WHERE id = ? AND user_id = ?"
       )
-      .run(goals, assists, distance, saves, existing.id, session.userId);
+      .run(goals, assists, distance, saves, seasonId, existing.id, session.userId);
     logActivity(
       session.userId,
       `Zaktualizował własne statystyki za mecz id ${match_id} (bramki: ${goals}, asysty: ${assists}, km: ${distance}, obrony: ${saves})`

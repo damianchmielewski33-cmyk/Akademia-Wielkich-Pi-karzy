@@ -1,18 +1,17 @@
 ---
-description: Monorepo Akademia + GymBrat — gdzie edytować kod
+description: To repozytorium to tylko Akademia Wielkich Piłkarzy
 globs:
   - "**/*"
 alwaysApply: true
 ---
 
-# Monorepo
+# Akademia Wielkich Piłkarzy (AWP)
 
-- **Akademia (AWP):** kod w root repozytorium (`app/`, `components/`, `lib/`, `android/`).
-- **GymBrat:** kod w **`gymbrat/`** — ta sama sesja Cursor, ten sam git.
-- **Wspólne linki siostrzane:** `packages/sister-sites` (`@awp/sister-sites`).
+- Kod aplikacji: `app/`, `components/`, `lib/`, `android/`.
+- GymBrat jest **osobną aplikacją** poza tym repozytorium (lokalnie zwykle `D:\GymBrat`).
+- Linki siostrzane i embed: `lib/sister-sites.ts` + env `NEXT_PUBLIC_GYMBRAT_URL` / `NEXT_PUBLIC_AWP_URL`.
+- Nie edytuj kodu GymBrat z tej sesji — zmiany tutaj dotyczą wyłącznie AWP.
 
-Przy zmianach cross-linków edytuj `packages/sister-sites/index.ts`, nie duplikuj w obu aplikacjach.
+Uruchomienie: `npm run dev` (port 3000).
 
-Uruchomienie dev: `npm run dev` (AWP, port 3000), `npm run dev:gymbrat` (port 3001).
-
-Szczegóły: `MONOREPO.md`.
+Szczegóły: `SISTER-SITES.md`.

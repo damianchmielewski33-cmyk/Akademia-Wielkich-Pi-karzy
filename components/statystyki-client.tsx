@@ -2,12 +2,15 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import type { ComponentType } from "react";
+import { useRouter } from "next/navigation";
+import { useState, type ComponentType } from "react";
 import {
   Activity,
   CalendarClock,
   CalendarRange,
   CheckCircle2,
+  Loader2,
+  Play,
   Route,
   Share2,
   Shield,
@@ -24,7 +27,11 @@ import {
   mpSectionCardClass,
 } from "@/components/payments-card";
 import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
+import { RankingiSeasonPicker } from "@/components/rankingi-season-picker";
+import { AppModal } from "@/components/ui/app-modal";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { toast } from "@/lib/app-toast";
 import { MARKETPLACE_PITCH_PHOTOS } from "@/lib/marketplace-photos";
 import { cn } from "@/lib/utils";
 
@@ -62,27 +69,78 @@ export type StatystykiLigaSummary = {
   upcomingMatches: number;
 };
 
-type StatystykiClientProps = {
-  me: StatystykiPlayer;
-  matches: StatystykiMatchRow[];
-  liga: StatystykiLigaSummary;
+export type StatystykiSeasonOption = {
+  id: number;
+  name: string;
+  is_active: boolean;
 };
 
-export function StatystykiClient({ me, matches, liga }: StatystykiClientProps) {
-  const hasRows = matches.length > 0;
-  const sumGoals = matches.reduce((a, r) => a + r.goals, 0);
-  const sumAssists = matches.reduce((a, r) => a + r.assists, 0);
-  const sumDist = matches.reduce((a, r) => a + r.distance, 0);
-  const sumSaves = matches.reduce((a, r) => a + (r.saves ?? 0), 0);
+type StatystykiClientProps = {
+  me: StatystykiPlayer;
+  season: StatystykiSeasonOption | null;
+  seasons: StatystykiSeasonOption[];
+  seasonMatches: StatystykiMatchRow[];
+  allMatches: StatystykiMatchRow[];
+  liga: StatystykiLigaSummary;
+  canManageSeasons: boolean;
+};
 
-  const chartData = hasRows
+export function StatystykiClient({
+  me,
+  season,
+  seasons,
+  seasonMatches,
+  allMatches,
+  liga,
+  canManageSeasons,
+}: StatystykiClientProps) {
+  const router = useRouter();
+  const [restartOpen, setRestartOpen] = useState(false);
+  const [restarting, setRestarting] = useState(false);
+
+  const seasonSummary = buildStatsSummary(seasonMatches);
+  const overallSummary = buildStatsSummary(allMatches);
+  const hasSeasonRows = seasonMatches.length > 0;
+  const hasOverallRows = allMatches.length > 0;
+  const seasonLabel = season
+    ? season.is_active
+      ? `${season.name} · sezon aktywny`
+      : `${season.name} · sezon zakończony`
+    : "Brak sezonu";
+
+  const chartData = hasSeasonRows
     ? [
-        { name: "Gole", v: sumGoals },
-        { name: "Asysty", v: sumAssists },
-        { name: "Dystans", v: sumDist },
-        { name: "Obrony", v: sumSaves },
+        { name: "Gole", v: seasonSummary.goals },
+        { name: "Asysty", v: seasonSummary.assists },
+        { name: "Dystans", v: seasonSummary.distance },
+        { name: "Obrony", v: seasonSummary.saves },
       ]
     : [];
+
+  async function startNewSeason() {
+    setRestarting(true);
+    try {
+      const res = await fetch("/api/admin/ranking-seasons", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "start" }),
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        season?: { name?: string };
+      };
+      if (!res.ok) {
+        toast.error(typeof data.error === "string" ? data.error : "Nie udało się rozpocząć nowego sezonu");
+        return;
+      }
+      toast.success(`Rozpoczęto ${data.season?.name ?? "nowy sezon"}`);
+      setRestartOpen(false);
+      router.push("/statystyki");
+      router.refresh();
+    } finally {
+      setRestarting(false);
+    }
+  }
 
   const profileCard = (
     <section className={cn(mpSectionCardClass, "mx-auto max-w-md")}>
@@ -106,6 +164,20 @@ export function StatystykiClient({ me, matches, liga }: StatystykiClientProps) {
           />
         </div>
       </div>
+      {season ? (
+        <div className="mt-4 flex items-center justify-center sm:justify-start">
+          <Badge
+            variant={season.is_active ? "default" : "outline"}
+            className={
+              season.is_active
+                ? "bg-[var(--mp-teal)] text-white hover:bg-[var(--mp-teal)]"
+                : "border-zinc-300 text-zinc-700 dark:border-zinc-600 dark:text-zinc-200"
+            }
+          >
+            {seasonLabel}
+          </Badge>
+        </div>
+      ) : null}
       <div className="mt-4 flex flex-wrap gap-2">
         <Button asChild className="h-11 flex-1 rounded-full font-bold sm:flex-none">
           <Link href="/profil">Edytuj statystyki</Link>
@@ -120,28 +192,92 @@ export function StatystykiClient({ me, matches, liga }: StatystykiClientProps) {
     </section>
   );
 
-  const summarySection = (
+  const seasonPickerSection =
+    season && seasons.length > 1 ? (
+      <div className="mx-auto max-w-md">
+        <RankingiSeasonPicker seasons={seasons} selectedSeasonId={season.id} basePath="/statystyki" />
+      </div>
+    ) : null;
+
+  const adminSeasonSection = canManageSeasons ? (
+    <MarketplaceSection
+      icon={Trophy}
+      title="Zarządzanie sezonem"
+      description="Rozpoczęcie nowego sezonu zeruje bieżące statystyki sezonowe. Statystyki ogólne i archiwalne sezony pozostają bez zmian."
+      className="mx-auto max-w-5xl"
+      headerExtra={
+        season ? (
+          <Badge
+            variant={season.is_active ? "default" : "outline"}
+            className={
+              season.is_active
+                ? "bg-[var(--mp-teal)] text-white hover:bg-[var(--mp-teal)]"
+                : "border-zinc-300 text-zinc-700 dark:border-zinc-600 dark:text-zinc-200"
+            }
+          >
+            {season.is_active ? "Aktywny" : "Zakończony"}
+          </Badge>
+        ) : undefined
+      }
+    >
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-lg font-bold tracking-tight text-zinc-950 dark:text-white">{season?.name ?? "Brak sezonu"}</p>
+          <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+            Nowy sezon dostanie kolejny numer i od razu stanie się aktywny.
+          </p>
+        </div>
+        <Button type="button" className="rounded-full font-bold" onClick={() => setRestartOpen(true)} disabled={restarting}>
+          <Play className="mr-2 h-4 w-4" aria-hidden />
+          Rozpocznij nowy sezon
+        </Button>
+      </div>
+    </MarketplaceSection>
+  ) : null;
+
+  const seasonSummarySection = (
     <MarketplaceSection
       icon={Activity}
-      title="Twoje podsumowanie"
-      description="Suma z wszystkich rozegranych meczów ze zapisanymi statystykami."
+      title={season ? `Twoje podsumowanie sezonu` : "Twoje podsumowanie sezonu"}
+      description={
+        season
+          ? `Liczone od początku ${season.name.toLowerCase()}. Po rozpoczęciu nowego sezonu ten licznik startuje od zera.`
+          : "Statystyki wybranego sezonu."
+      }
       className="mx-auto max-w-5xl"
     >
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        <SummaryTile icon={Activity} label="Mecze" value={hasRows ? matches.length : "—"} />
-        <SummaryTile icon={Target} label="Gole" value={hasRows ? sumGoals : "—"} accent />
-        <SummaryTile icon={Share2} label="Asysty" value={hasRows ? sumAssists : "—"} />
-        <SummaryTile icon={Route} label="Dystans (km)" value={hasRows ? sumDist.toFixed(1) : "—"} />
-        <SummaryTile icon={Shield} label="Obrony" value={hasRows ? sumSaves : "—"} />
+        <SummaryTile icon={Activity} label="Mecze" value={hasSeasonRows ? seasonSummary.matches : "—"} />
+        <SummaryTile icon={Target} label="Gole" value={hasSeasonRows ? seasonSummary.goals : "—"} accent />
+        <SummaryTile icon={Share2} label="Asysty" value={hasSeasonRows ? seasonSummary.assists : "—"} />
+        <SummaryTile icon={Route} label="Dystans (km)" value={hasSeasonRows ? seasonSummary.distance.toFixed(1) : "—"} />
+        <SummaryTile icon={Shield} label="Obrony" value={hasSeasonRows ? seasonSummary.saves : "—"} />
       </div>
     </MarketplaceSection>
   );
 
-  const chartSection = hasRows ? (
+  const overallSummarySection = (
+    <MarketplaceSection
+      icon={Trophy}
+      title="Statystyki ogólne"
+      description="Suma ze wszystkich sezonów. Dodanie statystyk do aktualnego sezonu zwiększa też te liczby."
+      className="mx-auto max-w-5xl"
+    >
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+        <SummaryTile icon={Activity} label="Mecze" value={hasOverallRows ? overallSummary.matches : "—"} />
+        <SummaryTile icon={Target} label="Gole" value={hasOverallRows ? overallSummary.goals : "—"} accent />
+        <SummaryTile icon={Share2} label="Asysty" value={hasOverallRows ? overallSummary.assists : "—"} />
+        <SummaryTile icon={Route} label="Dystans (km)" value={hasOverallRows ? overallSummary.distance.toFixed(1) : "—"} />
+        <SummaryTile icon={Shield} label="Obrony" value={hasOverallRows ? overallSummary.saves : "—"} />
+      </div>
+    </MarketplaceSection>
+  );
+
+  const chartSection = hasSeasonRows ? (
     <MarketplaceSection
       icon={Target}
-      title="Wykres"
-      description="Porównanie kategorii w Twoich statystykach."
+      title="Wykres sezonu"
+      description="Porównanie kategorii w statystykach wybranego sezonu."
       className="mx-auto max-w-5xl"
     >
       <div className={cn(mpInnerPanelClass, "overflow-hidden p-2 sm:p-3")}>
@@ -153,21 +289,53 @@ export function StatystykiClient({ me, matches, liga }: StatystykiClientProps) {
   const historySection = (
     <MarketplaceSection
       icon={Activity}
-      title="Historia meczów"
-      description="Statystyki z poszczególnych spotkań."
+      title="Historia meczów w sezonie"
+      description={season ? `Wpisy przypisane do ${season.name.toLowerCase()}.` : "Statystyki z poszczególnych spotkań."}
       className="mx-auto max-w-5xl"
     >
-      {!hasRows ? (
+      {!hasSeasonRows ? (
         <p className={mpEmptyClass}>
-          Brak zapisanych statystyk z meczów. Uzupełnij je w profilu po rozegranym spotkaniu.
+          Brak zapisanych statystyk w tym sezonie. Po rozpoczęciu nowego sezonu lista startuje od zera.
         </p>
       ) : (
         <div className="-mx-5 -mb-5 overflow-hidden rounded-b-3xl sm:-mx-6 sm:-mb-6">
-          <MatchHistoryList matches={matches} />
+          <MatchHistoryList matches={seasonMatches} />
         </div>
       )}
     </MarketplaceSection>
   );
+
+  const showOverallHistory = hasOverallRows && (allMatches.length > seasonMatches.length || seasons.length > 1);
+
+  const overallHistorySection = showOverallHistory ? (
+    <details className={cn(mpSectionCardClass, "group mx-auto max-w-5xl")}>
+      <summary className="awp-focus-ring cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex min-w-0 items-start gap-3">
+            <span className={mpIconWrapClass}>
+              <Trophy className="h-4 w-4" strokeWidth={2.25} aria-hidden />
+            </span>
+            <div>
+              <p className="text-[0.65rem] font-bold uppercase tracking-[0.16em] text-[var(--mp-teal-dark)]">
+                Archiwum
+              </p>
+              <h2 className="mt-1 text-lg font-black tracking-tight text-zinc-950 dark:text-white">
+                Historia ogólna
+              </h2>
+              <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+                Wszystkie zapisane mecze ze wszystkich sezonów.
+              </p>
+            </div>
+          </div>
+          <span className="shrink-0 text-xs font-medium text-zinc-400 group-open:hidden">Rozwiń</span>
+          <span className="hidden shrink-0 text-xs font-medium text-zinc-400 group-open:inline">Zwiń</span>
+        </div>
+      </summary>
+      <div className="mt-5 -mx-5 -mb-5 overflow-hidden rounded-b-3xl sm:-mx-6 sm:-mb-6">
+        <MatchHistoryList matches={allMatches} />
+      </div>
+    </details>
+  ) : null;
 
   const ligaSection = (
     <details className={cn(mpSectionCardClass, "group mx-auto max-w-5xl")}>
@@ -205,9 +373,13 @@ export function StatystykiClient({ me, matches, liga }: StatystykiClientProps) {
   const body = (
     <div className="space-y-8 text-left">
       {profileCard}
-      {summarySection}
+      {seasonPickerSection}
+      {adminSeasonSection}
+      {seasonSummarySection}
+      {overallSummarySection}
       {chartSection}
       {historySection}
+      {overallHistorySection}
       {ligaSection}
     </div>
   );
@@ -223,14 +395,49 @@ export function StatystykiClient({ me, matches, liga }: StatystykiClientProps) {
             Statystyki
           </h1>
           <p className="mt-3 max-w-xl text-sm text-white/85 sm:text-base">
-            Twoje gole, asysty, dystans i obrony z rozegranych meczów
-            {hasRows ? ` · ${matches.length} wpisów` : ""}
+            {season ? `${seasonLabel}. ` : ""}
+            Twoje bieżące statystyki sezonowe i suma ogólna ze wszystkich rozegranych meczów.
+            {hasSeasonRows ? ` · ${seasonMatches.length} wpisów w widoku` : ""}
           </p>
         </div>
       </section>
       <div className="relative z-10 mx-auto w-full min-w-0 max-w-6xl px-3 py-8 xs:px-4 sm:py-10">{body}</div>
+
+      <AppModal
+        open={restartOpen}
+        onOpenChange={setRestartOpen}
+        size="sm"
+        title="Rozpocząć nowy sezon?"
+        description="Bieżące statystyki sezonowe zostaną zamknięte w archiwum, a nowy sezon wystartuje z pustymi licznikami. Statystyki ogólne pozostaną bez zmian."
+        footer={
+          <>
+            <Button type="button" variant="outline" disabled={restarting} onClick={() => setRestartOpen(false)}>
+              Anuluj
+            </Button>
+            <Button
+              type="button"
+              className="rounded-full font-bold"
+              disabled={restarting}
+              onClick={() => void startNewSeason()}
+            >
+              {restarting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : <Play className="mr-2 h-4 w-4" aria-hidden />}
+              Rozpocznij sezon
+            </Button>
+          </>
+        }
+      />
     </div>
   );
+}
+
+function buildStatsSummary(matches: StatystykiMatchRow[]) {
+  return {
+    matches: matches.length,
+    goals: matches.reduce((sum, row) => sum + row.goals, 0),
+    assists: matches.reduce((sum, row) => sum + row.assists, 0),
+    distance: matches.reduce((sum, row) => sum + row.distance, 0),
+    saves: matches.reduce((sum, row) => sum + (row.saves ?? 0), 0),
+  };
 }
 
 function MatchHistoryList({ matches }: { matches: StatystykiMatchRow[] }) {

@@ -1,0 +1,12 @@
+# Lokalne toolchainy / artefakty — nie wysyłaj na Vercel
+android/.android-sdk
+android/.jdk
+android/.gradle
+android/build
+android/app/build
+tmp-apk
+data
+coverage
+.next
+node_modules
+.vercel

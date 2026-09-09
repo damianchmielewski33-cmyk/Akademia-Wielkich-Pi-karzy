@@ -1,10 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { SkladyClient } from "@/components/sklady-client";
-import { MatchLineupView, type LineupPlayer } from "@/components/match-lineup-view";
-import { getAppSettings } from "@/lib/app-settings";
+import { MatchLineupView } from "@/components/match-lineup-view";
 import { getDb, type MatchRow } from "@/lib/db";
-import { pitchHalfSlotCounts, pitchSlotTotalFromSignupCount } from "@/lib/lineup-pitch-slots";
+import { getMatchLineupViewData } from "@/lib/match-lineup-data";
 
 export const metadata: Metadata = {
   title: "Składy",
@@ -102,25 +101,7 @@ export default async function SkladyPage({ searchParams }: PageProps) {
 
 async function SkladyContent({ matchId }: { matchId: number }) {
   const db = await getDb();
-  const appSettings = await getAppSettings(db);
-  const pitchLimits = {
-    min: appSettings.lineup_pitch_slots_min,
-    max: appSettings.lineup_pitch_slots_max,
-  };
-
-  const row = (await db
-    .prepare(
-      "SELECT id, match_date, match_time, location, lineup_public FROM matches WHERE id = ? AND lineup_public = 1"
-    )
-    .get(matchId)) as
-    | {
-        id: number;
-        match_date: string;
-        match_time: string;
-        location: string;
-        lineup_public: number;
-      }
-    | undefined;
+  const row = await getMatchLineupViewData(db, matchId, { requirePublic: true });
 
   if (!row) {
     return (
@@ -133,66 +114,14 @@ async function SkladyContent({ matchId }: { matchId: number }) {
     );
   }
 
-  const playersRaw = (await db
-    .prepare(
-      `SELECT u.id AS user_id, u.first_name, u.last_name, u.player_alias AS zawodnik,
-              u.profile_photo_path
-       FROM match_signups ms
-       JOIN users u ON u.id = ms.user_id
-       WHERE ms.match_id = ? AND COALESCE(ms.commitment, 1) = 1
-       ORDER BY u.first_name ASC, u.last_name ASC`
-    )
-    .all(matchId)) as {
-    user_id: number;
-    first_name: string;
-    last_name: string;
-    zawodnik: string;
-    profile_photo_path: string | null;
-  }[];
-
-  const players: LineupPlayer[] = playersRaw.map((p) => {
-    const fn = (p.first_name || "").trim();
-    const ln = (p.last_name || "").trim();
-    let initials = "";
-    if (fn) initials += fn[0];
-    if (ln) initials += ln[0];
-    return {
-      userId: p.user_id,
-      displayName: `${fn} ${ln}`.trim() || p.zawodnik || "Zawodnik",
-      firstName: fn,
-      lastName: ln,
-      zawodnik: p.zawodnik || "",
-      initials: initials.toUpperCase(),
-      profilePhotoPath: p.profile_photo_path ?? null,
-    };
-  });
-
-  const lineupRows = (await db
-    .prepare(`SELECT team, slot_index, user_id FROM match_lineup_slots WHERE match_id = ?`)
-    .all(matchId)) as { team: string; slot_index: number; user_id: number }[];
-
-  const signupCount = playersRaw.length;
-  const pitchTotal = pitchSlotTotalFromSignupCount(signupCount, pitchLimits);
-  const { home: homeSlots, away: awaySlots } = pitchHalfSlotCounts(pitchTotal);
-
-  const home: (number | null)[] = Array(homeSlots).fill(null);
-  const away: (number | null)[] = Array(awaySlots).fill(null);
-  for (const r of lineupRows) {
-    if (r.team === "home") {
-      if (r.slot_index >= 0 && r.slot_index < home.length) home[r.slot_index] = r.user_id;
-    } else if (r.team === "away") {
-      if (r.slot_index >= 0 && r.slot_index < away.length) away[r.slot_index] = r.user_id;
-    }
-  }
-
   return (
     <MatchLineupView
-      matchDate={row.match_date}
-      matchTime={row.match_time}
+      matchDate={row.matchDate}
+      matchTime={row.matchTime}
       location={row.location}
-      players={players}
-      home={home}
-      away={away}
+      players={row.players}
+      home={row.home}
+      away={row.away}
     />
   );
 }

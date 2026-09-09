@@ -7,13 +7,10 @@ import {
   AdminCard,
   AdminToolbar,
   adminEmptyStateClass,
-  adminFieldClass,
   adminInnerPanelClass,
 } from "@/components/admin-ui";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { AppModal } from "@/components/ui/app-modal";
 
 type SeasonItem = {
@@ -29,7 +26,6 @@ export function AdminRankingSeasonsTab() {
   const [activeSeasonId, setActiveSeasonId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
-  const [newSeasonName, setNewSeasonName] = useState("");
   const [startConfirmOpen, setStartConfirmOpen] = useState(false);
   const [endConfirmId, setEndConfirmId] = useState<number | null>(null);
 
@@ -63,10 +59,7 @@ export function AdminRankingSeasonsTab() {
       const res = await fetch("/api/admin/ranking-seasons", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "start",
-          name: newSeasonName.trim() || undefined,
-        }),
+        body: JSON.stringify({ action: "start" }),
       });
       const data = (await res.json().catch(() => ({}))) as { error?: string; season?: { name: string } };
       if (!res.ok) {
@@ -74,7 +67,6 @@ export function AdminRankingSeasonsTab() {
         return;
       }
       toast.success(`Rozpoczęto sezon: ${data.season?.name ?? "nowy"}`);
-      setNewSeasonName("");
       setStartConfirmOpen(false);
       await load();
     } finally {
@@ -148,24 +140,13 @@ export function AdminRankingSeasonsTab() {
           )}
 
           <div className="mt-5 space-y-3">
-            <Label htmlFor="new-season-name" className="text-sm font-semibold text-zinc-950 dark:text-white">
-              Nazwa nowego sezonu (opcjonalnie)
-            </Label>
-            <Input
-              id="new-season-name"
-              className={adminFieldClass}
-              placeholder="np. PZU Cup 2026 — jesień"
-              value={newSeasonName}
-              disabled={busy}
-              onChange={(e) => setNewSeasonName(e.target.value)}
-            />
             <Button type="button" variant="default" className="rounded-full font-bold" disabled={busy} onClick={() => setStartConfirmOpen(true)}>
               <Play className="mr-2 h-4 w-4" aria-hidden />
               Rozpocznij nowy sezon (restart rankingu)
             </Button>
             <p className="text-xs leading-relaxed text-zinc-500">
-              Jeśli trwa aktywny sezon, zostanie automatycznie zakończony. Nowe statystyki będą liczone od zera w nowym
-              sezonie.
+              Jeśli trwa aktywny sezon, zostanie automatycznie zakończony. Nowy sezon dostanie kolejny numer
+              (`Sezon 1`, `Sezon 2`, `Sezon 3`...) i zacznie liczyć statystyki od zera.
             </p>
           </div>
         </AdminCard>

@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { hasAdminSection } from "@/lib/admin-permissions";
 import { getAccountNavFields } from "@/lib/account-server";
 import { getServerSession } from "@/lib/auth";
 import { getDb } from "@/lib/db";
+import { resolveRankingSeasonForView } from "@/lib/ranking-seasons";
 import { StatystykiClient } from "@/components/statystyki-client";
 
 export const metadata: Metadata = {
@@ -10,10 +12,16 @@ export const metadata: Metadata = {
   description: "Twoje gole, asysty, dystans i obrony z rozegranych meczów.",
 };
 
-export default async function StatystykiPage() {
+type Props = {
+  searchParams: Promise<{ season?: string }>;
+};
+
+export default async function StatystykiPage({ searchParams }: Props) {
   const session = await getServerSession();
   if (!session) redirect("/login");
 
+  const params = await searchParams;
+  const requestedSeasonId = params.season ? Number(params.season) : null;
   const db = await getDb();
   const totalMatches = (await db.prepare("SELECT COUNT(*) AS c FROM matches").get() as { c: number }).c;
   const playedMatches = (
@@ -34,7 +42,16 @@ export default async function StatystykiPage() {
     profile_photo_path: nav?.profilePhotoPath ?? null,
   };
 
-  const userStats = (await db
+  const { season, seasons } = await resolveRankingSeasonForView(
+    db,
+    requestedSeasonId != null && Number.isFinite(requestedSeasonId) ? requestedSeasonId : null
+  );
+
+  if (params.season && !season) {
+    redirect("/statystyki");
+  }
+
+  const allStats = (await db
     .prepare(
       `SELECT m.match_date, m.match_time, m.location, s.goals, s.assists, s.distance, s.saves
        FROM match_stats s
@@ -52,16 +69,44 @@ export default async function StatystykiPage() {
     saves: number;
   }[];
 
+  const seasonStats = season
+    ? ((await db
+        .prepare(
+          `SELECT m.match_date, m.match_time, m.location, s.goals, s.assists, s.distance, s.saves
+           FROM match_stats s
+           JOIN matches m ON m.id = s.match_id
+           WHERE s.user_id = ? AND s.season_id = ?
+           ORDER BY m.match_date DESC, m.match_time DESC`
+        )
+        .all(session.userId, season.id)) as {
+        match_date: string;
+        match_time: string;
+        location: string;
+        goals: number;
+        assists: number;
+        distance: number;
+        saves: number;
+      }[])
+    : [];
+
   return (
     <StatystykiClient
       me={me}
-      matches={userStats}
+      season={season ? { id: season.id, name: season.name, is_active: season.is_active } : null}
+      seasons={seasons.map((item) => ({
+        id: item.id,
+        name: item.name,
+        is_active: item.is_active,
+      }))}
+      seasonMatches={seasonStats}
+      allMatches={allStats}
       liga={{
         playersCount,
         totalMatches,
         playedMatches,
         upcomingMatches,
       }}
+      canManageSeasons={session.isAdmin && hasAdminSection(session.adminSections, "matches")}
     />
   );
 }

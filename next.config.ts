@@ -1,7 +1,7 @@
 import path from "path";
 import type { NextConfig } from "next";
 import { fileURLToPath } from "url";
-import { getGymBratUrl } from "@awp/sister-sites";
+import { getGymBratUrl } from "./lib/sister-sites";
 
 /** Katalog projektu (Next nie powinien brać „root” z nadrzędnego package-lock — ważne m.in. na Vercelu). */
 const projectRoot = path.dirname(fileURLToPath(import.meta.url));
@@ -37,7 +37,6 @@ const securityHeaders = [
 ] as const;
 
 const nextConfig: NextConfig = {
-  transpilePackages: ["@awp/sister-sites"],
   outputFileTracingRoot: projectRoot,
   images: {
     remotePatterns: [

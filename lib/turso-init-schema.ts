@@ -82,7 +82,9 @@ export async function initLibsqlSchema(client: Client) {
       location TEXT NOT NULL,
       max_slots INTEGER NOT NULL,
       signed_up INTEGER NOT NULL DEFAULT 0,
-      played INTEGER NOT NULL DEFAULT 0
+      played INTEGER NOT NULL DEFAULT 0,
+      season_id INTEGER,
+      FOREIGN KEY(season_id) REFERENCES ranking_seasons(id)
     );
 
     CREATE TABLE IF NOT EXISTS match_signups (
@@ -304,6 +306,9 @@ export async function initLibsqlSchema(client: Client) {
    if (!names.includes("fee_pln")) {
      await client.execute("ALTER TABLE matches ADD COLUMN fee_pln REAL");
    }
+   if (!names.includes("season_id")) {
+     await client.execute("ALTER TABLE matches ADD COLUMN season_id INTEGER");
+   }
    if (!names.includes("cancelled")) {
      await client.execute("ALTER TABLE matches ADD COLUMN cancelled INTEGER NOT NULL DEFAULT 0");
    }
@@ -403,6 +408,25 @@ export async function initLibsqlSchema(client: Client) {
   names = await pragmaColumnNames(client, "match_stats");
   if (names.length > 0 && !names.includes("season_id")) {
     await client.execute("ALTER TABLE match_stats ADD COLUMN season_id INTEGER");
+  }
+  if (names.length > 0) {
+    const matchCols = await pragmaColumnNames(client, "matches");
+    if (matchCols.includes("season_id")) {
+      await client.execute(`
+        UPDATE matches
+        SET season_id = (
+          SELECT MIN(ms.season_id)
+          FROM match_stats ms
+          WHERE ms.match_id = matches.id AND ms.season_id IS NOT NULL
+        )
+        WHERE season_id IS NULL
+          AND EXISTS (
+            SELECT 1
+            FROM match_stats ms
+            WHERE ms.match_id = matches.id AND ms.season_id IS NOT NULL
+          )
+      `);
+    }
   }
   // standalone_match_stats: CREATE jest niżej — ALTER tylko gdy tabela już istnieje.
   names = await pragmaColumnNames(client, "standalone_match_stats");

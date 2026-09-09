@@ -421,7 +421,9 @@ function initSchemaSync(db: Database.Database) {
       location TEXT NOT NULL,
       max_slots INTEGER NOT NULL,
       signed_up INTEGER NOT NULL DEFAULT 0,
-      played INTEGER NOT NULL DEFAULT 0
+      played INTEGER NOT NULL DEFAULT 0,
+      season_id INTEGER,
+      FOREIGN KEY(season_id) REFERENCES ranking_seasons(id)
     );
 
     CREATE TABLE IF NOT EXISTS match_signups (
@@ -616,6 +618,9 @@ function initSchemaSync(db: Database.Database) {
    if (!matchCols.some((c) => c.name === "fee_pln")) {
      db.exec("ALTER TABLE matches ADD COLUMN fee_pln REAL");
    }
+   if (!matchCols.some((c) => c.name === "season_id")) {
+     db.exec("ALTER TABLE matches ADD COLUMN season_id INTEGER");
+   }
    if (!matchCols.some((c) => c.name === "cancelled")) {
      db.exec("ALTER TABLE matches ADD COLUMN cancelled INTEGER NOT NULL DEFAULT 0");
    }
@@ -710,6 +715,22 @@ function initSchemaSync(db: Database.Database) {
   const matchStatsCols = db.prepare("PRAGMA table_info(match_stats)").all() as { name: string }[];
   if (matchStatsCols.length > 0 && !matchStatsCols.some((c) => c.name === "season_id")) {
     db.exec("ALTER TABLE match_stats ADD COLUMN season_id INTEGER");
+  }
+  if (matchCols.some((c) => c.name === "season_id")) {
+    db.exec(`
+      UPDATE matches
+      SET season_id = (
+        SELECT MIN(ms.season_id)
+        FROM match_stats ms
+        WHERE ms.match_id = matches.id AND ms.season_id IS NOT NULL
+      )
+      WHERE season_id IS NULL
+        AND EXISTS (
+          SELECT 1
+          FROM match_stats ms
+          WHERE ms.match_id = matches.id AND ms.season_id IS NOT NULL
+        )
+    `);
   }
   // standalone_match_stats tworzone niżej — ALTER tylko gdy tabela już istnieje.
   const standaloneStatsCols = db.prepare("PRAGMA table_info(standalone_match_stats)").all() as {
@@ -1159,6 +1180,7 @@ export type MatchRow = {
   max_slots: number;
   signed_up: number;
   played: number;
+  season_id?: number | null;
   lineup_public: number;
   /** Całkowita kwota wynajmu boiska (PLN); składka na osobę = fee_pln / signed_up (zaokr. w górę do 0,50). */
   fee_pln?: number | null;

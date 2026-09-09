@@ -18,7 +18,9 @@ import {
   ChevronRight,
   Clock,
   Crown,
+  Dices,
   List,
+  LayoutGrid,
   Loader2,
   LogIn,
   HelpCircle,
@@ -50,6 +52,8 @@ import { MatchSignupDialog } from "@/components/match-signup-dialog";
 import { MatchManageDialog } from "@/components/match-manage-dialog";
 import { MatchAddGuestDialog } from "@/components/match-add-guest-dialog";
 import { CaptainLotteryDialog } from "@/components/captain-lottery-dialog";
+import { LineupDrawDialog } from "@/components/lineup-draw-dialog";
+import { MatchLineupView } from "@/components/match-lineup-view";
 import { MatchCancelledNoticeModal } from "@/components/match-cancelled-notice-modal";
 import {
   isCancelNoticeRelevant,
@@ -80,6 +84,7 @@ import { useHotpayPayment } from "@/hooks/use-hotpay-payment";
 import { useHotpayPaymentReturn } from "@/hooks/use-hotpay-payment-return";
 import { payMatchCart } from "@/lib/hotpay-client";
 import { hasMatchTimePassed } from "@/lib/match-time";
+import type { MatchLineupViewData } from "@/lib/match-lineup-data";
 
 type Props = {
   upcoming: MatchRow[];
@@ -289,6 +294,12 @@ export function TerminarzClient({
   );
   const [addLotteryBusyId, setAddLotteryBusyId] = useState<number | null>(null);
   const [clearLotteryBusyId, setClearLotteryBusyId] = useState<number | null>(null);
+  const [lineupDrawMatch, setLineupDrawMatch] = useState<MatchRow | null>(null);
+  const [lineupDrawOpen, setLineupDrawOpen] = useState(false);
+  const [lineupPreviewOpen, setLineupPreviewOpen] = useState(false);
+  const [lineupPreviewBusy, setLineupPreviewBusy] = useState(false);
+  const [lineupPreviewMatch, setLineupPreviewMatch] = useState<MatchRow | null>(null);
+  const [lineupPreviewData, setLineupPreviewData] = useState<MatchLineupViewData | null>(null);
 
   const [cancelledNotice, setCancelledNotice] = useState<{
     matchId: number;
@@ -683,6 +694,26 @@ export function TerminarzClient({
   function openPlayers(mid: number) {
     setSelectedMatchId(mid);
     setPlayersOpen(true);
+  }
+
+  function openLineupDraw(m: MatchRow) {
+    if (!isAdmin) return;
+    setLineupDrawMatch(m);
+    setLineupDrawOpen(true);
+  }
+
+  async function openLineupPreview(m: MatchRow) {
+    setLineupPreviewBusy(true);
+    setLineupPreviewMatch(m);
+    const result = await fetchJson<MatchLineupViewData>(`/api/terminarz/match/${m.id}/lineup`);
+    if (!result.ok) {
+      toast.error(result.error);
+      setLineupPreviewBusy(false);
+      return;
+    }
+    setLineupPreviewData(result.data);
+    setLineupPreviewBusy(false);
+    setLineupPreviewOpen(true);
   }
 
   function goCalToday() {
@@ -1344,8 +1375,43 @@ export function TerminarzClient({
           </Button>
         )}
 
+        {(m.lineup_public === 1 || isAdmin) && (
+          <Button
+            size="sm"
+            variant="ghost"
+            className={actionBtnSecondary}
+            title="Podgląd składu na wirtualnym boisku"
+            onClick={() => void openLineupPreview(m)}
+          >
+            <LayoutGrid className="shrink-0 text-[var(--mp-teal-dark)] dark:text-teal-300" aria-hidden />
+            <span>
+              <span className="block leading-tight text-zinc-900 dark:text-zinc-100">Zobacz składy</span>
+              <span className="mt-1 block text-[11px] font-normal leading-snug text-zinc-500 dark:text-zinc-400">
+                Podgląd na wirtualnym boisku
+              </span>
+            </span>
+          </Button>
+        )}
+
         {isAdmin && m.cancelled !== 1 && (
         <div className="flex flex-col gap-2 border-t border-zinc-200/80 pt-2.5 dark:border-zinc-600/80 sm:flex-row sm:flex-wrap">
+          {!past && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className={actionBtnAdmin}
+              title="Wylosuj zbalansowane składy na podstawie statystyk zawodników"
+              onClick={() => openLineupDraw(m)}
+            >
+              <Dices className="shrink-0" aria-hidden />
+              <span>
+                <span className="block leading-tight">Losuj składy</span>
+                <span className="mt-1 block text-[11px] font-normal leading-snug text-[var(--mp-teal-dark)]/90 dark:text-teal-200/90">
+                  Algorytm analizuje profile i balans drużyn
+                </span>
+              </span>
+            </Button>
+          )}
           {!past && (
             <Button
               size="sm"
@@ -1441,6 +1507,18 @@ export function TerminarzClient({
     const canAddStats = isLoggedIn && missingStatsSet.has(m.id);
     return (
       <div className={actionBarClass}>
+        {(m.lineup_public === 1 || isAdmin) && (
+          <Button
+            size="sm"
+            variant="ghost"
+            className={actionBtnSecondary}
+            title="Podgląd składu na wirtualnym boisku"
+            onClick={() => void openLineupPreview(m)}
+          >
+            <LayoutGrid className="shrink-0 text-[var(--mp-teal-dark)] dark:text-teal-300" aria-hidden />
+            <span className="block leading-tight text-zinc-900 dark:text-zinc-100">Zobacz składy</span>
+          </Button>
+        )}
         {canAddStats && (
           <Button
             size="sm"
@@ -1949,6 +2027,41 @@ export function TerminarzClient({
                     <span className="block leading-tight">Dodaj statystyki z tego meczu</span>
                     <span className="mt-0.5 block text-[11px] font-normal text-white/90">
                       Gole, asysty, dystans, obrony
+                    </span>
+                  </span>
+                </Button>
+              )}
+              {(calPopup.lineup_public === 1 || isAdmin) && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-auto min-h-9 w-full gap-2 whitespace-normal py-2 text-left sm:w-auto"
+                  onClick={() => void openLineupPreview(calPopup)}
+                >
+                  <LayoutGrid className="shrink-0 text-[var(--mp-teal-dark)] dark:text-teal-300" aria-hidden />
+                  <span className="text-left">
+                    <span className="block leading-tight">Pokaż składy na boisku</span>
+                    <span className="mt-0.5 block text-[11px] font-normal text-zinc-500 dark:text-zinc-400">
+                      Podgląd drużyn i rezerwy
+                    </span>
+                  </span>
+                </Button>
+              )}
+              {isAdmin && calPopup.played !== 1 && calPopup.cancelled !== 1 && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-auto min-h-9 w-full gap-2 whitespace-normal py-2 text-left sm:w-auto"
+                  onClick={() => {
+                    setCalPopup(null);
+                    openLineupDraw(calPopup);
+                  }}
+                >
+                  <Dices className="shrink-0 text-[var(--mp-teal-dark)] dark:text-teal-300" aria-hidden />
+                  <span className="text-left">
+                    <span className="block leading-tight">Losuj składy</span>
+                    <span className="mt-0.5 block text-[11px] font-normal text-zinc-500 dark:text-zinc-400">
+                      Analiza statystyk i balans drużyn
                     </span>
                   </span>
                 </Button>
@@ -2580,6 +2693,59 @@ export function TerminarzClient({
         onAuthenticated={() => router.refresh()}
         onLotteryChange={handleCaptainLotteryChange}
       />
+
+      <LineupDrawDialog
+        open={lineupDrawOpen}
+        onOpenChange={(open) => {
+          setLineupDrawOpen(open);
+          if (!open) setLineupDrawMatch(null);
+        }}
+        match={lineupDrawMatch}
+        onSaved={() => {
+          router.refresh();
+          if (lineupDrawMatch) void openLineupPreview(lineupDrawMatch);
+        }}
+      />
+
+      <AppModal
+        open={lineupPreviewOpen}
+        onOpenChange={(open) => {
+          setLineupPreviewOpen(open);
+          if (!open) {
+            setLineupPreviewMatch(null);
+            setLineupPreviewData(null);
+            setLineupPreviewBusy(false);
+          }
+        }}
+        size="full"
+        scrollable
+        title="Składy na boisku"
+        headerKicker="Terminarz"
+        description="Podgląd zapisanych składów dla wybranego meczu."
+        className="sm:max-w-[min(96vw,72rem)]"
+        contentClassName="space-y-4"
+        footer={
+          <Button type="button" variant="outline" onClick={() => setLineupPreviewOpen(false)}>
+            Zamknij
+          </Button>
+        }
+      >
+        {lineupPreviewMatch ? <ModalMatchSummary match={lineupPreviewMatch} /> : null}
+        {lineupPreviewBusy ? (
+          <ModalLoadingRow label="Wczytywanie składu..." />
+        ) : lineupPreviewData ? (
+          <MatchLineupView
+            matchDate={lineupPreviewData.matchDate}
+            matchTime={lineupPreviewData.matchTime}
+            location={lineupPreviewData.location}
+            players={lineupPreviewData.players}
+            home={lineupPreviewData.home}
+            away={lineupPreviewData.away}
+          />
+        ) : (
+          <p className={modalEmptyStateClass}>Brak zapisanych składów do wyświetlenia.</p>
+        )}
+      </AppModal>
 
       {signupDialogMatchId != null && (
         <MatchSignupDialog
