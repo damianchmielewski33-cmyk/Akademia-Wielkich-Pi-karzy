@@ -140,7 +140,7 @@ function NavTabButton({
       onClick={onSelect}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "awp-focus-ring group flex w-full items-center gap-3 rounded-2xl border px-3 py-2.5 text-left transition-colors",
+        "awp-focus-ring group flex w-full touch-manipulation items-center gap-3 rounded-2xl border px-3 py-2.5 text-left transition-colors min-h-12",
         compact && "w-auto min-w-[11rem] shrink-0",
         active
           ? "border-transparent bg-[var(--mp-teal)] text-white shadow-md shadow-teal-950/15"
@@ -468,12 +468,13 @@ export function AdminShell({
                 }}
               />
             </div>
-            <div className="grid grid-cols-2 gap-1.5 lg:grid-cols-1">
+            <div className="grid grid-cols-2 gap-2 lg:grid-cols-1 lg:gap-1.5">
               <AdminNavTile
                 title={isDarkNow ? "Jasny motyw" : "Ciemny motyw"}
                 desc={isDarkNow ? "Przełącz na jasny interfejs" : "Przełącz na ciemny interfejs"}
                 icon={isDarkNow ? Sun : Moon}
                 photoKey="theme"
+                mobileStack
                 onClick={() => void toggleTheme()}
               />
               <AdminNavTile
@@ -481,6 +482,7 @@ export function AdminShell({
                 desc="Widok gracza — zapisy na mecze"
                 icon={Calendar}
                 photoKey="terminarz"
+                mobileStack
                 href="/terminarz"
               />
               <AdminNavTile
@@ -488,6 +490,7 @@ export function AdminShell({
                 desc="Wróć na start akademii"
                 icon={ArrowLeft}
                 photoKey="home"
+                mobileStack
                 href="/"
               />
               <AdminNavTile
@@ -495,6 +498,7 @@ export function AdminShell({
                 desc="Zakończ sesję administratora"
                 icon={LogOut}
                 photoKey="logout"
+                mobileStack
                 onClick={onLogout}
               />
             </div>

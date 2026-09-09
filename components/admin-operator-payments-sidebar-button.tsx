@@ -64,8 +64,14 @@ export function AdminOperatorPaymentsSidebarButton({
 
   if (state == null) {
     return (
-      <div className={cn("flex min-h-[4.75rem] items-center justify-center", className)} aria-hidden>
-        <Loader2 className="h-5 w-5 animate-spin text-white/70" />
+      <div
+        className={cn(
+          "flex min-h-12 items-center justify-center rounded-2xl border border-zinc-200/90 bg-white lg:min-h-[5rem] dark:border-zinc-700 dark:bg-zinc-900",
+          className
+        )}
+        aria-hidden
+      >
+        <Loader2 className="h-5 w-5 animate-spin text-[var(--mp-teal)]" />
       </div>
     );
   }

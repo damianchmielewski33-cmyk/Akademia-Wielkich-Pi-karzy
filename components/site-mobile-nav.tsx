@@ -167,7 +167,7 @@ export function SiteMobileNav({
               <button
                 type="button"
                 className={cn(
-                  "min-h-11 touch-manipulation rounded-2xl border px-3 py-2.5 text-left text-sm font-bold shadow-sm",
+                  "flex min-h-[4.25rem] touch-manipulation flex-col justify-center rounded-2xl border px-3 py-2.5 text-left shadow-sm transition-colors",
                   mode === "booking"
                     ? "border-[var(--mp-teal)] bg-[var(--mp-teal)] text-white"
                     : "border-zinc-200 bg-white text-zinc-800 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
@@ -178,12 +178,20 @@ export function SiteMobileNav({
                   onSetMode("booking", { navigateHome: true });
                 }}
               >
-                Szukam boiska
+                <span className="text-sm font-bold leading-snug">Szukam boiska</span>
+                <span
+                  className={cn(
+                    "mt-0.5 text-[11px] font-medium leading-snug",
+                    mode === "booking" ? "text-white/80" : "text-zinc-500 dark:text-zinc-400"
+                  )}
+                >
+                  Rezerwacje
+                </span>
               </button>
               <button
                 type="button"
                 className={cn(
-                  "min-h-11 touch-manipulation rounded-2xl border px-3 py-2.5 text-left text-sm font-bold shadow-sm",
+                  "flex min-h-[4.25rem] touch-manipulation flex-col justify-center rounded-2xl border px-3 py-2.5 text-left shadow-sm transition-colors",
                   mode === "academy"
                     ? "border-[var(--mp-teal)] bg-[var(--mp-teal)] text-white"
                     : "border-zinc-200 bg-white text-zinc-800 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
@@ -194,7 +202,15 @@ export function SiteMobileNav({
                   onSetMode("academy", { navigateHome: true });
                 }}
               >
-                Gram z wami
+                <span className="text-sm font-bold leading-snug">Gram z wami</span>
+                <span
+                  className={cn(
+                    "mt-0.5 text-[11px] font-medium leading-snug",
+                    mode === "academy" ? "text-white/80" : "text-zinc-500 dark:text-zinc-400"
+                  )}
+                >
+                  Akademia
+                </span>
               </button>
             </div>
           ) : null}
