@@ -239,26 +239,27 @@ export function AdminAnalyticsHourlyCharts({
         description={`Wiersz = dzień (PL), kolumna = godzina. Intensywność = liczba odsłon (max w komórce: ${heatMax}).`}
       >
         <div className={chartInnerClass}>
-          <div className="overflow-x-auto">
-            <div className="inline-block min-w-[760px]">
+          <p className="mb-2 text-xs text-zinc-500 sm:hidden">Przesuń w poziomie, żeby zobaczyć wszystkie godziny.</p>
+          <div className="overflow-x-auto overscroll-x-contain [scrollbar-width:thin]">
+            <div className="inline-block min-w-[640px] sm:min-w-[760px]">
               <div
                 className="grid gap-px rounded-lg border border-zinc-200 bg-zinc-200 p-px dark:border-zinc-700 dark:bg-zinc-700"
-                style={{ gridTemplateColumns: `96px repeat(24, minmax(0,1fr))` }}
+                style={{ gridTemplateColumns: `4.5rem repeat(24, minmax(1.4rem,1fr))` }}
               >
-                <div className="bg-zinc-100 p-2 text-[11px] font-semibold text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
+                <div className="sticky left-0 z-10 bg-zinc-100 p-2 text-[11px] font-semibold text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
                   Dzień / godz.
                 </div>
                 {Array.from({ length: 24 }, (_, h) => (
                   <div
                     key={h}
-                    className="bg-zinc-100 p-1 text-center text-[11px] font-semibold tabular-nums text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300"
+                    className="bg-zinc-100 p-1 text-center text-[10px] font-semibold tabular-nums text-zinc-600 sm:text-[11px] dark:bg-zinc-800 dark:text-zinc-300"
                   >
                     {String(h).padStart(2, "0")}
                   </div>
                 ))}
                 {data.by_day.map((d) => (
                   <Fragment key={d.ymd}>
-                    <div className="flex flex-col justify-center bg-white px-2 py-2 text-xs font-medium leading-tight text-zinc-800 dark:bg-zinc-950 dark:text-zinc-100">
+                    <div className="sticky left-0 z-10 flex flex-col justify-center bg-white px-1.5 py-2 text-[11px] font-medium leading-tight text-zinc-800 sm:px-2 sm:text-xs dark:bg-zinc-950 dark:text-zinc-100">
                       <span>{d.label}</span>
                       <span className="text-[10px] font-normal tabular-nums text-zinc-500 dark:text-zinc-400">
                         Σ {d.total}

@@ -2,11 +2,9 @@
 
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { LayoutGrid } from "lucide-react";
 import { MarketplacePitchPhoto } from "@/components/marketplace-pitch-photo";
 import { useMarketplacePitchPhotoAt } from "@/components/marketplace-photos-provider";
 import { mpSectionCardClass } from "@/components/payments-card";
-import { SiteSectionHero } from "@/components/site-section-hero";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -50,6 +48,105 @@ function shortLocation(loc: string, max = 18) {
   const t = loc.trim();
   if (!t) return "";
   return t.length > max ? `${t.slice(0, max - 1)}…` : t;
+}
+
+const EMPTY_JERSEY_PATH =
+  "M 22 12 Q 40 6 58 12 L 65 15 L 76 26 L 69 31 L 63 24 L 63 54 Q 40 60 17 54 L 17 24 L 11 31 L 4 26 L 15 15 Z";
+
+const EMPTY_AWAY_SLOTS = [
+  { top: "18%", left: "50%" },
+  { top: "34%", left: "22%" },
+  { top: "34%", left: "78%" },
+  { top: "42%", left: "50%" },
+] as const;
+
+const EMPTY_HOME_SLOTS = [
+  { top: "58%", left: "50%" },
+  { top: "66%", left: "22%" },
+  { top: "66%", left: "78%" },
+  { top: "82%", left: "50%" },
+] as const;
+
+function EmptyJerseyMark({ delayMs }: { delayMs: number }) {
+  return (
+    <span
+      className="absolute -translate-x-1/2 -translate-y-1/2 motion-safe:animate-[sklady-empty-jersey_2.8s_ease-in-out_infinite]"
+      style={{ animationDelay: `${delayMs}ms` }}
+      aria-hidden
+    >
+      <svg className="h-9 w-11 drop-shadow-[0_2px_4px_rgba(0,0,0,0.35)] xs:h-10 xs:w-12" viewBox="0 0 80 64" fill="none">
+        <path
+          d={EMPTY_JERSEY_PATH}
+          fill="rgba(0,0,0,0.28)"
+          stroke="rgba(255,255,255,0.7)"
+          strokeWidth="1.4"
+          strokeDasharray="3.5 2.5"
+          strokeLinejoin="round"
+        />
+      </svg>
+    </span>
+  );
+}
+
+function EmptyPitchPreview() {
+  return (
+    <div
+      className="relative mx-auto aspect-[3/4] w-full max-w-[15.5rem] overflow-hidden rounded-2xl border-2 border-white/25 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.12),0_16px_36px_-18px_rgba(15,118,110,0.55)] motion-safe:animate-[sklady-empty-pitch_700ms_ease-out] xs:max-w-[17rem]"
+      style={{
+        background: "linear-gradient(180deg, #0f766e 0%, #115e59 18%, #0d9488 50%, #115e59 82%, #134e4a 100%)",
+      }}
+      aria-hidden
+    >
+      <svg
+        className="pointer-events-none absolute inset-0 h-full w-full"
+        viewBox="0 0 300 400"
+        preserveAspectRatio="xMidYMid meet"
+      >
+        <rect
+          x="10"
+          y="10"
+          width="280"
+          height="380"
+          fill="none"
+          stroke="rgba(255,255,255,0.55)"
+          strokeWidth="2.25"
+          rx="3"
+        />
+        <line x1="10" y1="200" x2="290" y2="200" stroke="rgba(255,255,255,0.5)" strokeWidth="2" />
+        <circle cx="150" cy="200" r="36" fill="none" stroke="rgba(255,255,255,0.45)" strokeWidth="1.75" />
+        <circle cx="150" cy="200" r="2.2" fill="rgba(255,255,255,0.65)" />
+        <rect x="65" y="10" width="170" height="78" fill="none" stroke="rgba(255,255,255,0.48)" strokeWidth="1.75" />
+        <rect x="110" y="10" width="80" height="28" fill="none" stroke="rgba(255,255,255,0.42)" strokeWidth="1.5" />
+        <rect x="65" y="312" width="170" height="78" fill="none" stroke="rgba(255,255,255,0.48)" strokeWidth="1.75" />
+        <rect x="110" y="362" width="80" height="28" fill="none" stroke="rgba(255,255,255,0.42)" strokeWidth="1.5" />
+      </svg>
+
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/soccer-ball.svg"
+        alt=""
+        className="pointer-events-none absolute left-1/2 top-1/2 h-10 w-10 -translate-x-1/2 -translate-y-1/2 opacity-40 motion-safe:animate-[sklady-empty-ball_4.5s_ease-in-out_infinite]"
+      />
+
+      {EMPTY_AWAY_SLOTS.map((pos, i) => (
+        <span key={`a-${i}`} className="absolute" style={{ top: pos.top, left: pos.left }}>
+          <EmptyJerseyMark delayMs={i * 180} />
+        </span>
+      ))}
+      {EMPTY_HOME_SLOTS.map((pos, i) => (
+        <span key={`h-${i}`} className="absolute" style={{ top: pos.top, left: pos.left }}>
+          <EmptyJerseyMark delayMs={320 + i * 180} />
+        </span>
+      ))}
+
+      <span className="absolute left-2 top-2 rounded bg-black/30 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white/90">
+        Drużyna B
+      </span>
+      <span className="absolute bottom-2 left-2 rounded bg-black/30 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white/90">
+        Drużyna A
+      </span>
+    </div>
+  );
 }
 
 export function SkladyClient(props: Props) {
@@ -215,13 +312,15 @@ function EmptyShell({
             {subtitle ? <p className="mt-3 max-w-xl text-sm text-white/85 sm:text-base">{subtitle}</p> : null}
           </div>
         </section>
-        <div className="relative z-10 mx-auto w-full max-w-lg px-3 py-8 xs:px-4 sm:py-10">
-          <div className={cn(mpSectionCardClass, "text-center")}>
-            <span className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--mp-teal)] text-white shadow-sm">
-              <LayoutGrid className="h-5 w-5" aria-hidden />
-            </span>
-            <h2 className="text-xl font-black tracking-tight text-zinc-950 dark:text-white">{title}</h2>
-            <div className="mt-2">{children}</div>
+        <div className="relative z-10 mx-auto w-full max-w-xl px-3 py-8 xs:px-4 sm:py-10">
+          <div className={cn(mpSectionCardClass, "overflow-hidden p-0 text-center sm:p-0")}>
+            <div className="relative bg-gradient-to-b from-teal-50 via-white to-white px-4 pb-2 pt-6 dark:from-teal-950/40 dark:via-zinc-950 dark:to-zinc-950 sm:px-6 sm:pt-8">
+              <EmptyPitchPreview />
+            </div>
+            <div className="px-4 pb-6 pt-5 sm:px-6 sm:pb-8">
+              <h2 className="text-xl font-black tracking-tight text-zinc-950 dark:text-white">{title}</h2>
+              <div className="mt-2">{children}</div>
+            </div>
           </div>
         </div>
       </div>

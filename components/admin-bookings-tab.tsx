@@ -503,10 +503,10 @@ export function AdminBookingsTab() {
             <TableHeader>
               <TableRow>
                 <TableHead>Termin</TableHead>
-                <TableHead>Obiekt</TableHead>
-                <TableHead>Klient</TableHead>
+                <TableHead className="hidden sm:table-cell">Obiekt</TableHead>
+                <TableHead className="hidden md:table-cell">Klient</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="text-right">Kwota</TableHead>
+                <TableHead className="hidden text-right sm:table-cell">Kwota</TableHead>
                 <TableHead>Akcje</TableHead>
               </TableRow>
             </TableHeader>
@@ -523,21 +523,30 @@ export function AdminBookingsTab() {
                     <TableCell>
                       <p className="font-semibold">{booking.booking_date}</p>
                       <p className="text-sm text-zinc-500">{booking.start_time} - {booking.end_time}</p>
+                      <p className="mt-1 text-xs text-zinc-500 sm:hidden">
+                        {booking.venue_name} · {booking.pitch_name}
+                      </p>
+                      <p className="mt-0.5 text-xs text-zinc-500 md:hidden">
+                        {booking.user_name ?? booking.contact_name}
+                      </p>
+                      <p className="mt-0.5 text-xs tabular-nums text-zinc-500 sm:hidden">
+                        {Number(booking.amount_pln).toFixed(2)} zł
+                      </p>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden sm:table-cell">
                       <p>{booking.venue_name}</p>
                       <p className="text-sm text-zinc-500">{booking.pitch_name}</p>
                     </TableCell>
-                    <TableCell>{booking.user_name ?? booking.contact_name}</TableCell>
+                    <TableCell className="hidden md:table-cell">{booking.user_name ?? booking.contact_name}</TableCell>
                     <TableCell><Badge>{booking.status}</Badge></TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="hidden text-right sm:table-cell">
                       <p>{Number(booking.amount_pln).toFixed(2)} zł</p>
                       {booking.owner_payout_pln != null ? (
                         <p className="text-xs text-zinc-500">hala {Number(booking.owner_payout_pln).toFixed(2)}</p>
                       ) : null}
                     </TableCell>
                     <TableCell>
-                      <div className="flex flex-wrap gap-2">
+                      <div className="flex flex-col gap-2 xs:flex-row xs:flex-wrap">
                         <Button size="sm" variant="outline" onClick={() => void updateBookingStatus(booking.id, "confirmed")}>
                           Potwierdź
                         </Button>

@@ -275,6 +275,15 @@ export function AdminShell({
   }
 
   const showMobileMenu = mobilePhase === "menu";
+  const mobileTabRailRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (showMobileMenu) return;
+    const rail = mobileTabRailRef.current;
+    if (!rail) return;
+    const activeBtn = rail.querySelector<HTMLElement>('[data-active="true"]');
+    activeBtn?.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
+  }, [activeTab, showMobileMenu]);
 
   return (
     <div
@@ -544,26 +553,42 @@ export function AdminShell({
             ) : null}
           </div>
           {activeTabMeta && activeTabMeta.group.items.length > 1 ? (
-            <div className="mx-auto flex max-w-6xl gap-1.5 overflow-x-auto px-3 pb-2 [touch-action:pan-x_pan-y] [scrollbar-width:none]">
-              {activeTabMeta.group.items.map((t) => {
-                const on = t.id === activeTab;
-                return (
-                  <button
-                    key={t.id}
-                    type="button"
-                    onClick={() => onTabChange(t.id)}
-                    className={cn(
-                      "awp-focus-ring shrink-0 rounded-full px-3 py-1.5 text-xs font-bold",
-                      on
-                        ? "bg-[var(--mp-teal)] text-white"
-                        : "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
-                    )}
-                  >
-                    {t.label}
-                    {t.badgeCount != null && t.badgeCount > 0 ? ` (${t.badgeCount > 99 ? "99+" : t.badgeCount})` : null}
-                  </button>
-                );
-              })}
+            <div className="relative border-t border-zinc-100 dark:border-zinc-800/80">
+              <div
+                ref={mobileTabRailRef}
+                className="mp-h-scroll mx-auto flex max-w-6xl snap-x snap-mandatory gap-2 overflow-x-auto overscroll-x-contain px-3 py-2.5 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+                role="tablist"
+                aria-label="Zakładki w sekcji"
+              >
+                {activeTabMeta.group.items.map((t) => {
+                  const on = t.id === activeTab;
+                  return (
+                    <button
+                      key={t.id}
+                      type="button"
+                      role="tab"
+                      aria-selected={on}
+                      data-active={on ? "true" : undefined}
+                      onClick={() => onTabChange(t.id)}
+                      className={cn(
+                        "awp-focus-ring snap-start shrink-0 rounded-full px-3.5 py-2 text-sm font-bold",
+                        on
+                          ? "bg-[var(--mp-teal)] text-white shadow-sm"
+                          : "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+                      )}
+                    >
+                      {t.label}
+                      {t.badgeCount != null && t.badgeCount > 0
+                        ? ` (${t.badgeCount > 99 ? "99+" : t.badgeCount})`
+                        : null}
+                    </button>
+                  );
+                })}
+              </div>
+              <div
+                className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-white via-white/80 to-transparent dark:from-zinc-950 dark:via-zinc-950/80"
+                aria-hidden
+              />
             </div>
           ) : null}
         </div>
@@ -575,8 +600,8 @@ export function AdminShell({
           </div>
         ) : null}
 
-        <div className="relative z-10 p-3 xs:p-4 sm:p-6 lg:p-8">
-          <div className="mx-auto w-full min-w-0 max-w-6xl">{children}</div>
+        <div className="relative z-10 p-3 pb-[max(1rem,env(safe-area-inset-bottom))] xs:p-4 sm:p-6 lg:p-8">
+          <div className="mx-auto w-full min-w-0 max-w-6xl space-y-4 sm:space-y-5">{children}</div>
         </div>
       </main>
     </div>
@@ -605,6 +630,13 @@ export function AdminToolbar({
   void loading;
   return (
     <div className="mb-4 flex flex-col gap-3 lg:mb-6 lg:flex-row lg:items-start lg:justify-between lg:gap-4">
+      <div className="min-w-0 lg:hidden">
+        <p className="text-[0.65rem] font-bold uppercase tracking-[0.16em] text-[var(--mp-teal-dark)]">{kicker}</p>
+        <h1 className="mt-1 text-xl font-black tracking-tight text-zinc-950 xs:text-2xl dark:text-white">{title}</h1>
+        {description ? (
+          <p className="mt-1.5 text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">{description}</p>
+        ) : null}
+      </div>
       <SiteSectionHero
         kicker={kicker}
         title={title}

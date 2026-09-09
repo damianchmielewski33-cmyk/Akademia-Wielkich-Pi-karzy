@@ -5,7 +5,6 @@ import Link from "next/link";
 import { PhotoPanel } from "@/components/photo-panel";
 import { MarketplacePitchPhoto } from "@/components/marketplace-pitch-photo";
 import { MarketplacePhotoStrip } from "@/components/marketplace-photo-strip";
-import { useMarketplacePhotos } from "@/components/marketplace-photos-provider";
 import { pitchPhotoAt } from "@/lib/marketplace-photos";
 import { PitchPageHero } from "@/components/ui/pitch-card";
 import { useRouter } from "next/navigation";
@@ -222,7 +221,7 @@ export function TerminarzClient({
   captainLotteryHistory: initialCaptainLotteryHistory = {},
   hotpayEnabled = false,
 }: Props) {
-  const { photos: mpPhotos } = useMarketplacePhotos();
+  /** Tła paneli: tylko domyślne Unsplash — custom admina wyłącznie w MarketplacePhotoStrip. */
   const router = useRouter();
   const [walletBalancePln, setWalletBalancePln] = useState<number | null>(null);
   const { pay: payDebt, busy: debtBusy } = useHotpayPayment();
@@ -1582,7 +1581,7 @@ export function TerminarzClient({
   }
 
   const heroMatch = upcoming.find((m) => m.cancelled !== 1 && m.match_date >= todayISO()) ?? upcoming[0] ?? null;
-  const heroPhoto = pitchPhotoAt(heroMatch?.id ?? 1, mpPhotos);
+  const heroPhoto = pitchPhotoAt(heroMatch?.id ?? 1);
 
   return (
     <>
@@ -1654,7 +1653,7 @@ export function TerminarzClient({
         <MarketplacePhotoStrip isAdmin={isAdmin} />
 
         <div className="relative z-10 mx-auto w-full min-w-0 max-w-6xl px-4 py-10 sm:py-12">
-        <PhotoPanel src={pitchPhotoAt(2, mpPhotos)} className="mb-5" contentClassName="p-4 sm:p-5" sizes="(max-width: 768px) 100vw, 1152px">
+        <PhotoPanel src={pitchPhotoAt(2)} className="mb-5" contentClassName="p-4 sm:p-5" sizes="(max-width: 768px) 100vw, 1152px">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex flex-col gap-2.5">
                 <span className="text-xs font-bold uppercase tracking-[0.16em] text-white/80">Widok terminarza</span>
@@ -1727,7 +1726,7 @@ export function TerminarzClient({
                 Nie znaleziono meczu o tym numerze — mógł zostać usunięty z terminarza.
               </div>
             )}
-            <PhotoPanel src={pitchPhotoAt(3, mpPhotos)} className="mt-4" contentClassName="p-4 sm:p-5" sizes="(max-width: 768px) 100vw, 1152px">
+            <PhotoPanel src={pitchPhotoAt(3)} className="mt-4" contentClassName="p-4 sm:p-5" sizes="(max-width: 768px) 100vw, 1152px">
               <details className="group rounded-xl border border-white/20 bg-black/20">
                 <summary
                   className="awp-focus-ring flex cursor-pointer list-none items-center gap-2 px-3 py-2.5 text-xs font-semibold uppercase tracking-[0.1em] text-[var(--mp-teal)] [&::-webkit-details-marker]:hidden"
@@ -1818,7 +1817,7 @@ export function TerminarzClient({
               </details>
             </PhotoPanel>
 
-            <PhotoPanel src={pitchPhotoAt(4, mpPhotos)} className="mt-4" contentClassName="px-4 py-3" sizes="(max-width: 768px) 100vw, 1152px">
+            <PhotoPanel src={pitchPhotoAt(4)} className="mt-4" contentClassName="px-4 py-3" sizes="(max-width: 768px) 100vw, 1152px">
               <div className="flex flex-wrap gap-3 text-sm text-white">
               {listTab === "active" ? (
                 <>
@@ -1897,7 +1896,7 @@ export function TerminarzClient({
                   })}
                 </div>
                 {filteredActive.length === 0 && (
-                  <PhotoPanel src={pitchPhotoAt(8, mpPhotos)} className="mt-2 min-h-[12rem]" contentClassName="flex min-h-[12rem] items-center justify-center p-8 text-center">
+                  <PhotoPanel src={pitchPhotoAt(8)} className="mt-2 min-h-[12rem]" contentClassName="flex min-h-[12rem] items-center justify-center p-8 text-center">
                     <p className="text-sm font-semibold text-white/90">
                       Brak meczów spełniających kryteria. Zmień filtry lub zakres dat.
                     </p>
@@ -1922,7 +1921,7 @@ export function TerminarzClient({
                   ))}
                 </div>
                 {filteredArchive.length === 0 && (
-                  <PhotoPanel src={pitchPhotoAt(9, mpPhotos)} className="mt-2 min-h-[12rem]" contentClassName="flex min-h-[12rem] items-center justify-center p-8 text-center">
+                  <PhotoPanel src={pitchPhotoAt(9)} className="mt-2 min-h-[12rem]" contentClassName="flex min-h-[12rem] items-center justify-center p-8 text-center">
                     <p className="text-sm font-semibold text-white/90">Brak rozegranych meczów do wyświetlenia.</p>
                   </PhotoPanel>
                 )}
@@ -1962,7 +1961,7 @@ export function TerminarzClient({
           ].map((step, i) => (
             <PhotoPanel
               key={step.n}
-              src={pitchPhotoAt(10 + i, mpPhotos)}
+              src={pitchPhotoAt(10 + i)}
               className="min-h-[15rem]"
               contentClassName="flex min-h-[15rem] flex-col justify-end p-5"
               sizes="(max-width: 768px) 100vw, 360px"
@@ -1976,7 +1975,7 @@ export function TerminarzClient({
 
         <section className="relative mt-14 overflow-hidden rounded-3xl px-6 py-10 text-white shadow-lg sm:px-10">
           <MarketplacePitchPhoto
-            src={pitchPhotoAt(13, mpPhotos)}
+            src={pitchPhotoAt(13)}
             className="absolute inset-0 z-0 h-full w-full"
             sizes="(max-width: 768px) 100vw, 1152px"
           />
@@ -2793,7 +2792,6 @@ function CalendarView({
   onToday: () => void;
   onPick: (m: MatchRow) => void;
 }) {
-  const { photos: mpPhotos } = useMarketplacePhotos();
   const names = [
     "Styczeń",
     "Luty",
@@ -2847,7 +2845,7 @@ function CalendarView({
       >
         {list.length > 0 ? (
           <div className="absolute inset-0 z-0">
-            <MarketplacePitchPhoto src={pitchPhotoAt(list[0].id, mpPhotos)} sizes="120px" />
+            <MarketplacePitchPhoto src={pitchPhotoAt(list[0].id)} sizes="120px" />
             <div className="absolute inset-0 bg-black/50" aria-hidden />
           </div>
         ) : null}
@@ -2895,7 +2893,7 @@ function CalendarView({
   }
 
   return (
-    <PhotoPanel src={pitchPhotoAt(year * 12 + month, mpPhotos)} className="mt-6" contentClassName="p-4 sm:p-6" sizes="(max-width: 768px) 100vw, 1152px">
+    <PhotoPanel src={pitchPhotoAt(year * 12 + month)} className="mt-6" contentClassName="p-4 sm:p-6" sizes="(max-width: 768px) 100vw, 1152px">
         <div className="mb-5 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
           <Button type="button" size="sm" variant="secondary" className="gap-1" onClick={onPrev}>
             <ChevronLeft className="h-4 w-4" />

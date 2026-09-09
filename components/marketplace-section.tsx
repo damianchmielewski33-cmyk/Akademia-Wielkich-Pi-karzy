@@ -54,7 +54,9 @@ export function MarketplaceSection({
                 </h2>
               ) : null}
               {description ? (
-                <p className="mt-1 hidden text-sm leading-relaxed text-zinc-500 sm:block dark:text-zinc-400">{description}</p>
+                <p className="mt-1 line-clamp-3 text-sm leading-relaxed text-zinc-500 sm:line-clamp-none dark:text-zinc-400">
+                  {description}
+                </p>
               ) : null}
             </div>
           </div>

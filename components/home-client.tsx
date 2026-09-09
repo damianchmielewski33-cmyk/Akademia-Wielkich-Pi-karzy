@@ -112,7 +112,7 @@ function BookingHomeView({ featuredVenues }: { featuredVenues: VenueCard[] }) {
   const heroPhoto = photoPool[0] ?? MARKETPLACE_PITCH_PHOTOS[0];
   return (
     <div className="relative flex flex-1 flex-col text-zinc-900 dark:text-zinc-50">
-      <HomeFallingDecor className="hidden lg:block" />
+      <HomeFallingDecor />
       <section className="mp-hero mp-hero--photo relative z-10 flex flex-col justify-end overflow-hidden pb-5 pt-6 sm:pb-20 sm:pt-24">
         <MarketplacePitchPhoto src={heroPhoto} priority className="z-0" />
         <div className="absolute inset-0 z-[1] bg-gradient-to-t from-black/75 via-black/40 to-black/20" />
@@ -581,7 +581,7 @@ function AcademyHomeView({
 
   return (
     <div className="relative flex flex-1 flex-col text-zinc-900 dark:text-zinc-50">
-      {isAcademyHome ? <HomeFallingDecor className="hidden lg:block" /> : null}
+      {isAcademyHome ? <HomeFallingDecor /> : null}
 
       {isLoggedIn ? (
         <section className="relative z-10 mx-auto w-full min-w-0 max-w-6xl px-3 pt-4 xs:px-4 sm:pt-6">

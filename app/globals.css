@@ -174,6 +174,19 @@ html.site-chrome-academy {
     @apply overflow-x-auto rounded-xl border border-white/25 bg-black/10 backdrop-blur-sm [scrollbar-width:thin] [touch-action:pan-x_pan-y] [-webkit-overflow-scrolling:touch];
   }
 
+  /* Jeden poziom scrollu: Table ma własny overflow — wyłączamy go w shellu admina. */
+  .admin-shell--v2 .admin-table-shell > div,
+  .admin-shell--v2 .admin-data-table-shell > div {
+    overflow-x: visible;
+    border-width: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    --tw-ring-shadow: 0 0 #0000;
+    --tw-ring-offset-shadow: 0 0 #0000;
+    backdrop-filter: none;
+  }
+
   .admin-table-shell :where(thead tr) {
     @apply border-white/15 hover:bg-transparent;
   }
@@ -190,14 +203,28 @@ html.site-chrome-academy {
     @apply align-middle text-emerald-50/95;
   }
 
-  @media (max-width: 1023px) {
+  @media (max-width: 639px) {
     .admin-table-shell :where(th),
     .admin-data-table-shell :where(th) {
-      @apply whitespace-nowrap px-2 py-2 text-[0.7rem];
+      @apply whitespace-nowrap px-2 py-2 text-[0.65rem] leading-tight;
     }
     .admin-table-shell :where(td),
     .admin-data-table-shell :where(td) {
-      @apply px-2 py-2 text-sm;
+      @apply px-2 py-2.5 text-sm;
+    }
+    .admin-data-card {
+      @apply p-3.5;
+    }
+  }
+
+  @media (min-width: 640px) and (max-width: 1023px) {
+    .admin-table-shell :where(th),
+    .admin-data-table-shell :where(th) {
+      @apply whitespace-nowrap px-2.5 py-2 text-[0.7rem];
+    }
+    .admin-table-shell :where(td),
+    .admin-data-table-shell :where(td) {
+      @apply px-2.5 py-2 text-sm;
     }
   }
 
@@ -1159,6 +1186,41 @@ html {
   background-image: none;
 }
 
+@keyframes sklady-empty-pitch {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes sklady-empty-jersey {
+  0%,
+  100% {
+    opacity: 0.72;
+    transform: translate(-50%, -50%) translateY(0);
+  }
+  50% {
+    opacity: 1;
+    transform: translate(-50%, -50%) translateY(-3px);
+  }
+}
+
+@keyframes sklady-empty-ball {
+  0%,
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0.35;
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.08);
+    opacity: 0.55;
+  }
+}
+
 .mp-search-pill {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1763,9 +1825,18 @@ html {
   width: 50%;
 }
 
+/* Mobile / APK WebView — te same pasy przy krawędziach; wyższy z-index, bo treść jest full-bleed */
 @media (max-width: 1023px) {
   .home-fall:not(.home-fall--cover) {
-    display: none;
+    z-index: 15;
+  }
+
+  .home-fall:not(.home-fall--cover) .home-fall__rail {
+    width: min(5.25rem, 22vw);
+  }
+
+  .home-fall:not(.home-fall--cover) .home-fall__ball {
+    filter: drop-shadow(0 3px 5px rgba(15, 23, 42, 0.4));
   }
 }
 

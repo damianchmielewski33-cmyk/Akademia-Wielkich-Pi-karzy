@@ -415,12 +415,12 @@ function MatchesView({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Data</TableHead>
-              <TableHead>Godzina</TableHead>
-              <TableHead>Lokalizacja</TableHead>
+              <TableHead>Mecz</TableHead>
+              <TableHead className="hidden md:table-cell">Godzina</TableHead>
+              <TableHead className="hidden sm:table-cell">Lokalizacja</TableHead>
               <TableHead className="text-right">Miejsca</TableHead>
-              <TableHead className="text-right">Rozegrane</TableHead>
-              <TableHead className="text-right">Wynajem</TableHead>
+              <TableHead className="hidden text-right lg:table-cell">Rozegrane</TableHead>
+              <TableHead className="hidden text-right md:table-cell">Wynajem</TableHead>
               <TableHead className="text-right">Akcje</TableHead>
             </TableRow>
           </TableHeader>
@@ -434,14 +434,26 @@ function MatchesView({
             ) : (
               matches.map((m) => (
                 <TableRow key={m.id}>
-                  <TableCell className="align-middle">{m.date}</TableCell>
-                  <TableCell className="align-middle">{m.time}</TableCell>
-                  <TableCell className="align-middle">{m.location}</TableCell>
+                  <TableCell className="align-middle">
+                    <p className="font-semibold text-zinc-950 dark:text-white">{m.date}</p>
+                    <p className="mt-0.5 text-xs text-zinc-500 md:hidden">
+                      {m.time}
+                      <span className="sm:hidden">
+                        {" "}
+                        · {m.location}
+                      </span>
+                    </p>
+                    {m.fee_pln !== null ? (
+                      <p className="mt-0.5 text-xs tabular-nums text-zinc-500 md:hidden">{m.fee_pln} zł</p>
+                    ) : null}
+                  </TableCell>
+                  <TableCell className="hidden align-middle md:table-cell">{m.time}</TableCell>
+                  <TableCell className="hidden align-middle sm:table-cell">{m.location}</TableCell>
                   <TableCell className="text-right align-middle tabular-nums">
                     {m.players_count}/{m.max_slots || "?"}
                   </TableCell>
-                  <TableCell className="text-right align-middle tabular-nums">{m.played}</TableCell>
-                  <TableCell className="text-right align-middle tabular-nums">
+                  <TableCell className="hidden text-right align-middle tabular-nums lg:table-cell">{m.played}</TableCell>
+                  <TableCell className="hidden text-right align-middle tabular-nums md:table-cell">
                     {m.fee_pln !== null ? `${m.fee_pln} zł` : "–"}
                   </TableCell>
                   <TableCell className="text-right align-middle">
@@ -970,9 +982,9 @@ function StatsView({
               <TableHead>Zawodnik</TableHead>
               <TableHead className="text-right">Gole</TableHead>
               <TableHead className="text-right">Asysty</TableHead>
-              <TableHead className="text-right">Dystans (m)</TableHead>
-              <TableHead className="text-right">Interwencje</TableHead>
-              <TableHead className="text-right">Mecz ID</TableHead>
+              <TableHead className="hidden text-right sm:table-cell">Dystans (m)</TableHead>
+              <TableHead className="hidden text-right md:table-cell">Interwencje</TableHead>
+              <TableHead className="hidden text-right lg:table-cell">Mecz ID</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -1000,12 +1012,19 @@ function StatsView({
                       lastName={s.last_name}
                       nick={s.zawodnik}
                     />
+                    <p className="mt-1 text-xs text-zinc-500 lg:hidden">
+                      <Link href={`/panel-admina?tab=matches&match=${s.match_id}`} className="text-[var(--mp-teal-dark)] hover:underline">
+                        Mecz #{s.match_id}
+                      </Link>
+                      <span className="sm:hidden"> · {s.distance} m · {s.saves} obr.</span>
+                      <span className="hidden sm:inline md:hidden"> · {s.saves} obr.</span>
+                    </p>
                   </TableCell>
                   <TableCell className="text-right align-middle tabular-nums">{s.goals}</TableCell>
                   <TableCell className="text-right align-middle tabular-nums">{s.assists}</TableCell>
-                  <TableCell className="text-right align-middle tabular-nums">{s.distance}</TableCell>
-                  <TableCell className="text-right align-middle tabular-nums">{s.saves}</TableCell>
-                  <TableCell className="text-right align-middle tabular-nums">
+                  <TableCell className="hidden text-right align-middle tabular-nums sm:table-cell">{s.distance}</TableCell>
+                  <TableCell className="hidden text-right align-middle tabular-nums md:table-cell">{s.saves}</TableCell>
+                  <TableCell className="hidden text-right align-middle tabular-nums lg:table-cell">
                     <Link href={`/panel-admina?tab=matches&match=${s.match_id}`} className="text-[var(--mp-teal-dark)] hover:underline">
                       {s.match_id}
                     </Link>
@@ -2403,8 +2422,8 @@ function UsersView({
             <TableRow>
               <TableHead className="w-12" />
               <TableHead>Zawodnik</TableHead>
-              <TableHead>PIN</TableHead>
-              <TableHead>Rola</TableHead>
+              <TableHead className="hidden sm:table-cell">PIN</TableHead>
+              <TableHead className="hidden md:table-cell">Rola</TableHead>
               <TableHead className="text-right">Akcje</TableHead>
             </TableRow>
           </TableHeader>
@@ -2435,8 +2454,30 @@ function UsersView({
                       lastName={u.last_name}
                       nick={u.zawodnik}
                     />
+                    <div className="mt-1.5 flex flex-wrap items-center gap-1 sm:hidden">
+                      {(u.pin_set ?? 0) === 1 ? (
+                        <Badge variant="secondary" className="font-normal">
+                          PIN OK
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="border-amber-300 bg-amber-50 text-amber-950">
+                          Brak PIN
+                        </Badge>
+                      )}
+                      {(u.pin_reset_requested ?? 0) === 1 ? (
+                        <Badge className="bg-red-600 font-normal text-white hover:bg-red-600">
+                          {(u.pin_change_pending ?? 0) === 1 ? "Nowy PIN" : "Reset PIN"}
+                        </Badge>
+                      ) : null}
+                      {u.role === "admin" ? <Badge>Admin</Badge> : null}
+                      {(u.can_pzu_cup ?? 0) === 1 ? (
+                        <Badge className="border-amber-300/50 bg-amber-500/20 font-normal text-amber-950 dark:text-amber-50">
+                          PZU
+                        </Badge>
+                      ) : null}
+                    </div>
                   </TableCell>
-                  <TableCell className="align-middle">
+                  <TableCell className="hidden align-middle sm:table-cell">
                     <div className="flex flex-wrap items-center gap-1.5">
                       {(u.pin_set ?? 0) === 1 ? (
                         <Badge variant="secondary" className="font-normal">
@@ -2456,7 +2497,7 @@ function UsersView({
                       ) : null}
                     </div>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="hidden md:table-cell">
                     <div className="flex flex-wrap items-center gap-1.5">
                       {u.role === "admin" ? (
                         <Badge>Administrator</Badge>

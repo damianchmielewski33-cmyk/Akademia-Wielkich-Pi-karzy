@@ -67,7 +67,7 @@ export function AdminRowActions({
             type="button"
             size="sm"
             variant="outline"
-            className="h-8 w-8 shrink-0 border-white/25 bg-black/10 px-0 text-white hover:bg-white/15"
+            className="h-8 w-8 shrink-0 border-zinc-300 bg-white px-0 text-zinc-800 hover:bg-zinc-50 dark:border-white/25 dark:bg-black/10 dark:text-white dark:hover:bg-white/15"
             aria-expanded={open}
             aria-haspopup="menu"
             aria-controls={menuId}
@@ -159,10 +159,10 @@ export function AdminFilterChips({
             aria-selected={active}
             onClick={() => onChange(opt.id)}
             className={cn(
-              "rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors",
+              "rounded-lg border px-3 py-2 text-xs font-semibold transition-colors sm:py-1.5",
               active
-                ? "border-emerald-400/50 bg-emerald-500/25 text-white"
-                : "border-white/20 bg-black/10 text-emerald-100/80 hover:bg-white/10 hover:text-white"
+                ? "border-[var(--mp-teal)]/45 bg-[var(--mp-teal)]/15 text-[var(--mp-teal-dark)] dark:border-emerald-400/50 dark:bg-emerald-500/25 dark:text-white"
+                : "border-zinc-200 bg-zinc-50 text-zinc-700 hover:bg-zinc-100 dark:border-white/20 dark:bg-black/10 dark:text-emerald-100/80 dark:hover:bg-white/10 dark:hover:text-white"
             )}
           >
             {opt.label}
