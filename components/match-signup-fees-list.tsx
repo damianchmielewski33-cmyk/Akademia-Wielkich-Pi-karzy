@@ -70,6 +70,28 @@ export function MatchSignupFeesList({
   }, [isAdmin]);
 
   useEffect(() => {
+    const paid = new Set(rows.filter((r) => Number(r.match_paid) === 1).map((r) => r.id));
+    setPaidIds(paid);
+    setPendingIds((prev) => {
+      const next = new Set(
+        rows.filter((r) => Number(r.match_paid) !== 1 && Number(r.blik_declared) === 1).map((r) => r.id)
+      );
+      for (const id of prev) {
+        if (!paid.has(id)) next.add(id);
+      }
+      return next;
+    });
+    setReceivedById(() => {
+      const next: Record<number, number> = {};
+      for (const r of rows) {
+        const received = Number(r.blik_received_pln ?? 0);
+        if (received > 0) next[r.id] = received;
+      }
+      return next;
+    });
+  }, [rows]);
+
+  useEffect(() => {
     let cancelled = false;
     void (async () => {
       try {

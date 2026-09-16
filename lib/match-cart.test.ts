@@ -22,7 +22,11 @@ vi.mock("@/lib/guest-cleanup", () => ({
 }));
 
 import { getDb } from "@/lib/db";
-import { applyMatchCartFromWallet } from "@/lib/match-cart";
+import {
+  applyMatchCartFromWallet,
+  applyPendingMatchCartAfterHotpay,
+  healUnappliedHotpayMatchCarts,
+} from "@/lib/match-cart";
 import { getUserWalletBalancePln } from "@/lib/wallet";
 
 function createTestDb(): { db: AppDb; sqlite: Database.Database; dbPath: string } {
@@ -94,6 +98,17 @@ function createTestDb(): { db: AppDb; sqlite: Database.Database; dbPath: string 
       created_by_admin_id INTEGER NOT NULL,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       PRIMARY KEY (match_id, user_id)
+    );
+    CREATE TABLE hotpay_payments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      session_id TEXT,
+      user_id INTEGER NOT NULL,
+      kind TEXT NOT NULL,
+      amount_pln REAL NOT NULL DEFAULT 25,
+      status TEXT NOT NULL,
+      deposit_request_id INTEGER,
+      cart_id INTEGER,
+      created_at TEXT DEFAULT (datetime('now'))
     );
   `);
 
@@ -451,5 +466,70 @@ describe("applyMatchCartFromWallet", () => {
       )
       .get() as { beneficiary_user_id: number } | undefined;
     expect(item?.beneficiary_user_id).toBe(9);
+  });
+
+  it("po SUCCESS HotPay otwiera anulowany koszyk i ustawia paid", async () => {
+    sqlite.prepare(`DELETE FROM wallet_transactions`).run();
+    sqlite
+      .prepare(
+        `INSERT INTO wallet_transactions (user_id, kind, amount_pln, wallet_kind) VALUES (1, 'deposit', 25, 'operator')`
+      )
+      .run();
+    const cartId = Number(
+      sqlite
+        .prepare(
+          `INSERT INTO wallet_match_carts (payer_user_id, match_id, amount_pln, fee_per_person_pln, status)
+           VALUES (1, 10, 25, 25, 'cancelled')`
+        )
+        .run().lastInsertRowid
+    );
+    sqlite
+      .prepare(`INSERT INTO wallet_match_cart_items (cart_id, beneficiary_user_id, amount_pln) VALUES (?, 1, 25)`)
+      .run(cartId);
+
+    const result = await applyPendingMatchCartAfterHotpay(cartId, 1, db);
+    expect(result.ok).toBe(true);
+
+    const paid = sqlite.prepare(`SELECT paid FROM match_signups WHERE user_id = 1 AND match_id = 10`).get() as {
+      paid: number;
+    };
+    expect(paid.paid).toBe(1);
+    const cart = sqlite.prepare(`SELECT status FROM wallet_match_carts WHERE id = ?`).get(cartId) as { status: string };
+    expect(cart.status).toBe("completed");
+    const { getWalletBalances } = await import("@/lib/wallet");
+    expect((await getWalletBalances(1, db)).operator).toBe(0);
+  });
+
+  it("healUnappliedHotpayMatchCarts dociąga SUCCESS gdy cron zdążył anulować koszyk", async () => {
+    sqlite.prepare(`DELETE FROM wallet_transactions`).run();
+    sqlite
+      .prepare(
+        `INSERT INTO wallet_transactions (user_id, kind, amount_pln, wallet_kind) VALUES (2, 'deposit', 25, 'operator')`
+      )
+      .run();
+    const cartId = Number(
+      sqlite
+        .prepare(
+          `INSERT INTO wallet_match_carts (payer_user_id, match_id, amount_pln, fee_per_person_pln, status)
+           VALUES (2, 10, 25, 25, 'cancelled')`
+        )
+        .run().lastInsertRowid
+    );
+    sqlite
+      .prepare(`INSERT INTO wallet_match_cart_items (cart_id, beneficiary_user_id, amount_pln) VALUES (?, 2, 25)`)
+      .run(cartId);
+    sqlite
+      .prepare(
+        `INSERT INTO hotpay_payments (session_id, user_id, kind, amount_pln, status, deposit_request_id, cart_id)
+         VALUES ('hp_heal', 2, 'match_cart', 25, 'success', 1, ?)`
+      )
+      .run(cartId);
+
+    const healed = await healUnappliedHotpayMatchCarts(10, db);
+    expect(healed).toBe(1);
+    const paid = sqlite.prepare(`SELECT paid FROM match_signups WHERE user_id = 2 AND match_id = 10`).get() as {
+      paid: number;
+    };
+    expect(paid.paid).toBe(1);
   });
 });

@@ -49,7 +49,7 @@ export type DatabaseCleanupResult = {
  * - `DATABASE_RETENTION_DAYS` — ile dni trzymać `page_views`, `ad_impressions` i `activity_log` (domyślnie 400).
  * - `TRANSPORT_MESSAGES_MATCH_DAYS` — wiadomości transportu dla meczów starszych niż N dni (domyślnie 180).
  * - `CHAT_MESSAGES_RETENTION_DAYS` — wiadomości `admin_messages` (czat admin/DM) starsze niż N dni (domyślnie 7).
- * - `HOTPAY_ABANDONED_MINUTES` — po ilu minutach anulować pending HotPay/koszyk i sprzątać porzuconych gości (domyślnie 60).
+ * - `HOTPAY_ABANDONED_MINUTES` — po ilu minutach anulować pending HotPay (topup/booking) i koszyki bez oczekującego przelewu (domyślnie 60). Składka `match`/`match_cart` czeka 7 dni na przelew tradycyjny.
  * - `HOTPAY_RETENTION_DAYS` — ile dni trzymać anulowane/odrzucone HotPay i koszyki (domyślnie 90).
  */
 export async function runDatabaseCleanup(): Promise<DatabaseCleanupResult> {

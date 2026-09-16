@@ -213,6 +213,12 @@ export function matchSignupContributionPln(feePln: number | null | undefined, si
 
 async function loadMatchSignupFeesView(matchId: number): Promise<PublicWalletView> {
   const db = await getDb();
+  try {
+    const { healUnappliedHotpayMatchCarts } = await import("@/lib/match-cart");
+    await healUnappliedHotpayMatchCarts(matchId, db);
+  } catch (e) {
+    console.error("[platnosci-public] heal HotPay match_cart failed", e);
+  }
   const match = (await db.prepare("SELECT * FROM matches WHERE id = ?").get(matchId)) as
     | { id: number; match_date: string; match_time: string; location: string; fee_pln?: number | null; signed_up: number }
     | undefined;

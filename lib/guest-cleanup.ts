@@ -277,6 +277,12 @@ export type AbandonedCleanupResult = {
 };
 
 /**
+ * Przelew tradycyjny przez HotPay (match / match_cart) może iść 1–2 dni robocze.
+ * Krótsze okno (60 min) zostawiamy dla BLIK/karty: topup i booking.
+ */
+export const HOTPAY_MATCH_TRANSFER_PENDING_MINUTES = 7 * 24 * 60;
+
+/**
  * Cron: anuluj stare pending HotPay/koszyki i usuń porzuconych gości z zaproszenia
  * (miejsce w składzie + user), gdy płatność nie doszła w oknie `olderThanMinutes`.
  */
@@ -286,8 +292,10 @@ export async function cleanupAbandonedHotpayAndGuests(
 ): Promise<AbandonedCleanupResult> {
   const db = await getDb();
   const minutes = Math.max(15, Math.min(7 * 24 * 60, Math.floor(olderThanMinutes)));
+  const transferMinutes = Math.max(minutes, HOTPAY_MATCH_TRANSFER_PENDING_MINUTES);
   const days = Math.max(14, Math.min(730, Math.floor(retentionDays)));
   const ageMod = `-${minutes} minutes`;
+  const transferAgeMod = `-${transferMinutes} minutes`;
   const retainMod = `-${days} days`;
 
   const stalePending = (await db
@@ -296,10 +304,19 @@ export async function cleanupAbandonedHotpayAndGuests(
       SELECT id, cart_id FROM hotpay_payments
       WHERE status = 'pending'
         AND deposit_request_id IS NULL
-        AND created_at < datetime('now', ?)
+        AND (
+          (
+            kind IN ('match', 'match_cart')
+            AND created_at < datetime('now', ?)
+          )
+          OR (
+            IFNULL(kind, '') NOT IN ('match', 'match_cart')
+            AND created_at < datetime('now', ?)
+          )
+        )
     `
     )
-    .all(ageMod)) as { id: number; cart_id: number | null }[];
+    .all(transferAgeMod, ageMod)) as { id: number; cart_id: number | null }[];
 
   let cancelled_payments = 0;
   for (const p of stalePending) {
@@ -324,7 +341,17 @@ export async function cleanupAbandonedHotpayAndGuests(
     .prepare(
       `UPDATE wallet_match_carts
        SET status = 'cancelled'
-       WHERE status = 'pending' AND created_at < datetime('now', ?)`
+       WHERE status = 'pending'
+         AND created_at < datetime('now', ?)
+         AND NOT EXISTS (
+           SELECT 1 FROM hotpay_payments hp
+           WHERE (hp.cart_id = wallet_match_carts.id
+                  OR hp.session_id = wallet_match_carts.hotpay_session_id)
+             AND (
+               hp.status = 'pending'
+               OR (hp.status = 'success' AND hp.deposit_request_id IS NOT NULL)
+             )
+         )`
     )
     .run(ageMod);
   const cancelled_carts = Number(cartCancel.changes ?? 0);

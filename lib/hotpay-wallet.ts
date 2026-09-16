@@ -263,7 +263,7 @@ export async function settleMatchCartAfterCredit(
   let lastError = "UNKNOWN";
 
   for (let attempt = 1; attempt <= 3; attempt++) {
-    const result = await applyPendingMatchCartAfterHotpay(payment.cart_id, payment.user_id);
+    const result = await applyPendingMatchCartAfterHotpay(payment.cart_id, payment.user_id, db);
     if (result.ok) {
       if (attempt > 1 || (payment.error_message ?? "").startsWith("CART_SETTLE_FAILED")) {
         await db

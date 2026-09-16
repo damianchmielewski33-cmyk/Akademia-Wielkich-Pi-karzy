@@ -263,8 +263,10 @@ export async function applyMatchCartFromWallet(args: {
   existingCartId?: number;
   /** Po HotPay (wpłata na operator) — wymusza debet z tego samego portfela. */
   walletKind?: "admin" | "operator";
+  /** Webhook HotPay musi użyć tej samej bazy co księgowanie (prod vs test). */
+  db?: AppDb;
 }): Promise<ApplyMatchCartResult> {
-  const db = await getDb();
+  const db = args.db ?? (await getDb());
   if (typeof db.transaction === "function") {
     return db.transaction((tx) => applyMatchCartFromWalletTx(tx, args));
   }
@@ -528,10 +530,11 @@ export async function createPendingMatchCart(args: {
 
 export async function applyPendingMatchCartAfterHotpay(
   cartId: number,
-  payerUserId: number
+  payerUserId: number,
+  db?: AppDb
 ): Promise<ApplyMatchCartResult> {
-  const db = await getDb();
-  const cart = (await db
+  const database = db ?? (await getDb());
+  const cart = (await database
     .prepare(
       `SELECT id, payer_user_id, match_id, status FROM wallet_match_carts WHERE id = ?`
     )
@@ -539,25 +542,101 @@ export async function applyPendingMatchCartAfterHotpay(
     | { id: number; payer_user_id: number; match_id: number; status: string }
     | undefined;
   if (!cart) return { ok: false, error: "CART_NOT_FOUND" };
-  if (cart.status === "completed") {
-    const balance_pln = await getUserWalletBalancePln(payerUserId);
-    return { ok: true, cart_id: cartId, amount_pln: 0, balance_pln, paid_user_ids: [] };
-  }
-  if (cart.status !== "pending") return { ok: false, error: "CART_NOT_PENDING" };
   if (cart.payer_user_id !== payerUserId) return { ok: false, error: "CART_NOT_FOUND" };
 
-  const items = (await db
+  const items = (await database
     .prepare(`SELECT beneficiary_user_id FROM wallet_match_cart_items WHERE cart_id = ?`)
     .all(cartId)) as { beneficiary_user_id: number }[];
+  const beneficiaryUserIds = items.map((i) => i.beneficiary_user_id);
+
+  if (cart.status === "completed") {
+    for (const userId of beneficiaryUserIds) {
+      await database
+        .prepare(
+          `UPDATE match_signups SET paid = 1
+           WHERE match_id = ? AND user_id = ? AND COALESCE(paid, 0) = 0`
+        )
+        .run(cart.match_id, userId);
+    }
+    const balance_pln = await getUserWalletBalancePln(payerUserId, database);
+    return { ok: true, cart_id: cartId, amount_pln: 0, balance_pln, paid_user_ids: [] };
+  }
+
+  if (cart.status === "cancelled") {
+    if (beneficiaryUserIds.length === 0) return { ok: false, error: "NO_BENEFICIARIES" };
+    const placeholders = beneficiaryUserIds.map(() => "?").join(",");
+    const unpaid = (await database
+      .prepare(
+        `SELECT user_id FROM match_signups
+         WHERE match_id = ? AND user_id IN (${placeholders}) AND COALESCE(paid, 0) = 0`
+      )
+      .all(cart.match_id, ...beneficiaryUserIds)) as { user_id: number }[];
+    if (unpaid.length === 0) {
+      await database
+        .prepare(
+          `UPDATE wallet_match_carts
+           SET status = 'completed', completed_at = datetime('now')
+           WHERE id = ? AND status = 'cancelled'`
+        )
+        .run(cartId);
+      const balance_pln = await getUserWalletBalancePln(payerUserId, database);
+      return { ok: true, cart_id: cartId, amount_pln: 0, balance_pln, paid_user_ids: [] };
+    }
+    // Cron mógł anulować koszyk, zanim przelew tradycyjny HotPay doszedł — otwórz ponownie.
+    await database
+      .prepare(
+        `UPDATE wallet_match_carts
+         SET status = 'pending', completed_at = NULL
+         WHERE id = ? AND status = 'cancelled'`
+      )
+      .run(cartId);
+  } else if (cart.status !== "pending") {
+    return { ok: false, error: "CART_NOT_PENDING" };
+  }
 
   return applyMatchCartFromWallet({
     payerUserId,
     matchId: cart.match_id,
-    beneficiaryUserIds: items.map((i) => i.beneficiary_user_id),
+    beneficiaryUserIds,
     existingCartId: cartId,
     // Wpłata HotPay zawsze na portfel operatora — debet musi zneutralizować tę samą półkę.
     walletKind: "operator",
+    db: database,
   });
+}
+
+/** Po SUCCESS HotPay: dociągnij koszyki, których cron zdążył anulować zanim webhook oznaczył paid. */
+export async function healUnappliedHotpayMatchCarts(matchId: number, db?: AppDb): Promise<number> {
+  const database = db ?? (await getDb());
+  const rows = (await database
+    .prepare(
+      `
+      SELECT hp.cart_id, hp.user_id
+      FROM hotpay_payments hp
+      JOIN wallet_match_carts c ON c.id = hp.cart_id
+      WHERE hp.kind = 'match_cart'
+        AND hp.status = 'success'
+        AND hp.cart_id IS NOT NULL
+        AND c.match_id = ?
+        AND (
+          c.status != 'completed'
+          OR EXISTS (
+            SELECT 1 FROM wallet_match_cart_items i
+            JOIN match_signups ms
+              ON ms.match_id = c.match_id AND ms.user_id = i.beneficiary_user_id
+            WHERE i.cart_id = c.id AND COALESCE(ms.paid, 0) = 0
+          )
+        )
+      `
+    )
+    .all(matchId)) as { cart_id: number; user_id: number }[];
+
+  let healed = 0;
+  for (const row of rows) {
+    const result = await applyPendingMatchCartAfterHotpay(row.cart_id, row.user_id, database);
+    if (result.ok) healed += 1;
+  }
+  return healed;
 }
 
 export async function linkHotpaySessionToCart(cartId: number, sessionId: string) {
