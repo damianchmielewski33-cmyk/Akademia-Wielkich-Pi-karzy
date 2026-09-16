@@ -15,4 +15,10 @@ describe("signupFeePaymentStatus", () => {
     expect(signupFeePaymentStatus({ match_paid: 0, blik_declared: 0 })).toBe("unpaid");
     expect(signupFeePaymentStatus({})).toBe("unpaid");
   });
+
+  it("częściowa wpłata na portfelu to niedopłata, nie opłacone", () => {
+    expect(signupFeePaymentStatus({ match_paid: 0, blik_declared: 1, blik_received_pln: 20 })).toBe(
+      "underpaid"
+    );
+  });
 });

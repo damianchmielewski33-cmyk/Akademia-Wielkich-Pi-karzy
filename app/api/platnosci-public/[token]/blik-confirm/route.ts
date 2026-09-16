@@ -3,7 +3,7 @@ import { z } from "zod";
 import { requireAdmin } from "@/lib/api-helpers";
 import { getDb } from "@/lib/db";
 import { loadPublicShareLink } from "@/lib/public-payment-share";
-import { confirmBlikPhoneTransfer, loadMatchForSignupFees } from "@/lib/match-signup-blik";
+import { loadMatchForSignupFees, settleBlikPhoneTransfer } from "@/lib/match-signup-blik";
 import { checkRateLimitDistributed } from "@/lib/rate-limit-db";
 import { RATE, rateLimitKey, rateLimitedResponse } from "@/lib/rate-limit";
 
@@ -11,11 +11,13 @@ export const runtime = "nodejs";
 
 const bodySchema = z.object({
   user_id: z.coerce.number().int().positive(),
+  outcome: z.enum(["not_received", "underpaid", "received", "overpaid"]).default("received"),
+  received_pln: z.coerce.number().finite().optional(),
 });
 
 type Ctx = { params: Promise<{ token: string }> };
 
-/** Admin potwierdza na ekranie linku, że przelew BLIK doszedł. */
+/** Admin rozlicza przelew BLIK na ekranie linku (brak / za mało / składka / nadpłata). */
 export async function POST(req: Request, ctx: Ctx) {
   const gate = await requireAdmin();
   if (!gate.ok) return gate.response;
@@ -41,7 +43,7 @@ export async function POST(req: Request, ctx: Ctx) {
   }
   const parsed = bodySchema.safeParse(json);
   if (!parsed.success) {
-    return NextResponse.json({ error: "Wybierz zawodnika" }, { status: 400 });
+    return NextResponse.json({ error: "Wybierz zawodnika i wynik przelewu" }, { status: 400 });
   }
 
   const db = await getDb();
@@ -50,14 +52,22 @@ export async function POST(req: Request, ctx: Ctx) {
     return NextResponse.json({ error: "Mecz jest niedostępny" }, { status: 400 });
   }
 
-  const result = await confirmBlikPhoneTransfer(db, {
+  const result = await settleBlikPhoneTransfer(db, {
     match,
     userId: parsed.data.user_id,
     adminId: gate.session.userId,
+    outcome: parsed.data.outcome,
+    receivedPln: parsed.data.received_pln,
   });
   if (!result.ok) {
     return NextResponse.json({ error: result.error }, { status: result.status });
   }
 
-  return NextResponse.json({ ok: true, already: result.alreadyPaid });
+  return NextResponse.json({
+    ok: true,
+    paid: result.paid,
+    received_pln: result.receivedPln,
+    wallet_delta_pln: result.walletDeltaPln,
+    wallet_balance_pln: result.walletBalancePln,
+  });
 }

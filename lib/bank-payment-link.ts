@@ -1,4 +1,5 @@
 import { blikPhoneToCopy } from "@/lib/app-settings";
+import { MATCH_BLIK_PHONE_DISPLAY } from "@/lib/site";
 
 export type BankPaymentDetails = {
   blikPhoneDisplay: string;
@@ -45,18 +46,30 @@ export function suggestPaymentAmountPln(
   return null;
 }
 
+/** Numer BLIK do wyświetlenia — pusty wpis z ustawień nie zostawia pustego pola. */
+export function resolveBlikPhoneDisplay(display: string | null | undefined): string {
+  const trimmed = display?.trim() ?? "";
+  return trimmed || MATCH_BLIK_PHONE_DISPLAY;
+}
+
+/** Cyfry numeru do schowka (np. 514924030) — to wkleja się w banku. */
+export function resolveBlikPhoneCopy(display: string | null | undefined): string {
+  return blikPhoneToCopy(resolveBlikPhoneDisplay(display));
+}
+
 export function buildPaymentDetails(
   blikPhoneDisplay: string,
   balancePln: number | null,
   defaultMatchFeePln: number | null,
   playerLabel: string
 ): BankPaymentDetails {
-  const blikPhoneCopy = blikPhoneToCopy(blikPhoneDisplay);
+  const display = resolveBlikPhoneDisplay(blikPhoneDisplay);
+  const blikPhoneCopy = resolveBlikPhoneCopy(display);
   const amountPln = suggestPaymentAmountPln(balancePln, defaultMatchFeePln);
   const transferTitle = `Wpisowe AWP — ${playerLabel}`.trim();
 
   return {
-    blikPhoneDisplay,
+    blikPhoneDisplay: display,
     blikPhoneCopy,
     amountPln,
     transferTitle,

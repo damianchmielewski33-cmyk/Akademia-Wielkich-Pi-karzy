@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-helpers";
 import { getDb, logActivity } from "@/lib/db";
 import { createOrGetMatchSignupFeesLink } from "@/lib/public-payment-share";
-import { appendShareSessionQuery } from "@/lib/share-link";
 
 export const runtime = "nodejs";
 
@@ -35,6 +34,6 @@ export async function POST(_req: Request, ctx: Ctx) {
     await logActivity(gate.session.userId, `Wygenerował link opłat składki — mecz #${matchId}`);
   }
 
-  const path = appendShareSessionQuery(`/platnosci-public/${token}`);
+  const path = `/platnosci-public/${token}`;
   return NextResponse.json({ ok: true, token, path, created });
 }

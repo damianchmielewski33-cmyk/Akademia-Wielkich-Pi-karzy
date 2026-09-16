@@ -11,6 +11,7 @@ import {
   TEST_MODE_HEADER,
 } from "@/lib/constants";
 import { getAuthSecretKey } from "@/lib/auth-secret";
+import { shareLinkShouldClearSession } from "@/lib/share-link";
 
 const PATHNAME_HEADER = "x-pathname";
 const PREVIEW_HEADER = "x-preview-blocked";
@@ -34,8 +35,8 @@ function testModeExtraHeaders(request: NextRequest): Record<string, string> | un
 
 /**
  * Udostępnione linki (?awp_share=1): unieważniamy ciasteczko sesji i przekierowujemy na ten sam URL bez parametru,
- * żeby odbiorca (inna przeglądarka / urządzenie) nie dziedziczył sesji z oryginału.
- * Dodatkowo ustawiamy krótkotrwałe ciasteczko sygnalizujące czyszczenie sessionStorage/localStorage po stronie klienta.
+ * żeby odbiorca nie dziedziczył sesji z oryginału.
+ * Wyjątek: /platnosci-public — admin musi zostać zalogowany, żeby potwierdzić przelew na tym ekranie.
  */
 export async function proxy(request: NextRequest) {
   const { pathname, searchParams } = request.nextUrl;
@@ -52,7 +53,8 @@ export async function proxy(request: NextRequest) {
 
   if (
     searchParams.get(SHARE_LINK_QUERY_PARAM) === "1" &&
-    !pathname.startsWith("/_next")
+    !pathname.startsWith("/_next") &&
+    shareLinkShouldClearSession(pathname)
   ) {
     const url = request.nextUrl.clone();
     url.searchParams.delete(SHARE_LINK_QUERY_PARAM);

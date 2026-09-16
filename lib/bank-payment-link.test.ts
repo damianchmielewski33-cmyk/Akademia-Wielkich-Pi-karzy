@@ -5,7 +5,10 @@ import {
   canDeepLinkToBankApps,
   isInAppBrowserUserAgent,
   POLISH_BANK_APPS,
+  resolveBlikPhoneCopy,
+  resolveBlikPhoneDisplay,
 } from "@/lib/bank-payment-link";
+import { MATCH_BLIK_PHONE_COPY, MATCH_BLIK_PHONE_DISPLAY } from "@/lib/site";
 
 const CHROME_ANDROID =
   "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Mobile Safari/537.36";
@@ -64,5 +67,14 @@ describe("bank payment deep links", () => {
     expect(canDeepLinkToBankApps(WHATSAPP_ANDROID)).toBe(false);
     expect(canDeepLinkToBankApps(AWP_APP)).toBe(false);
     expect(canDeepLinkToBankApps(DESKTOP)).toBe(false);
+  });
+});
+
+describe("numer BLIK do schowka", () => {
+  it("kopiuje cyfry 514924030 nawet gdy pole jest puste", () => {
+    expect(resolveBlikPhoneCopy("")).toBe(MATCH_BLIK_PHONE_COPY);
+    expect(resolveBlikPhoneCopy("   ")).toBe(MATCH_BLIK_PHONE_COPY);
+    expect(resolveBlikPhoneDisplay("")).toBe(MATCH_BLIK_PHONE_DISPLAY);
+    expect(resolveBlikPhoneCopy("514 924 030")).toBe("514924030");
   });
 });

@@ -9,7 +9,6 @@ import { ModalAlert } from "@/components/ui/modal-shared";
 import { cn } from "@/lib/utils";
 import {
   buildBankAppHref,
-  buildPaymentClipboardText,
   buildPaymentDetails,
   canDeepLinkToBankApps,
   isIosUserAgent,
@@ -36,29 +35,43 @@ function formatPln(n: number) {
 }
 
 async function copyText(text: string): Promise<boolean> {
+  const value = text.trim();
+  if (!value || typeof document === "undefined") return false;
+
+  let syncOk = false;
   try {
-    if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
-      await navigator.clipboard.writeText(text);
-      return true;
-    }
+    const ta = document.createElement("textarea");
+    ta.value = value;
+    ta.setAttribute("readonly", "");
+    ta.setAttribute("aria-hidden", "true");
+    ta.style.position = "fixed";
+    ta.style.top = "0";
+    ta.style.left = "0";
+    ta.style.width = "1px";
+    ta.style.height = "1px";
+    ta.style.opacity = "0.01";
+    ta.style.border = "0";
+    ta.style.padding = "0";
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    ta.setSelectionRange(0, value.length);
+    syncOk = document.execCommand("copy");
+    document.body.removeChild(ta);
   } catch {
-    /* fallback below */
+    /* clipboard API below */
   }
 
   try {
-    const ta = document.createElement("textarea");
-    ta.value = text;
-    ta.setAttribute("readonly", "");
-    ta.style.position = "fixed";
-    ta.style.left = "-9999px";
-    document.body.appendChild(ta);
-    ta.select();
-    const ok = document.execCommand("copy");
-    document.body.removeChild(ta);
-    return ok;
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(value);
+      return true;
+    }
   } catch {
-    return false;
+    /* keep sync result */
   }
+
+  return syncOk;
 }
 
 function readUserAgent() {
@@ -103,30 +116,24 @@ export function PayMatchButton({
     if (busy) return;
     setBusy(true);
     try {
-      const clipboardText = compact ? details.blikPhoneCopy : buildPaymentClipboardText(details);
+      const clipboardText = details.blikPhoneCopy;
       const didCopy = await copyText(clipboardText);
       setCopied(didCopy);
       await onAfterPay?.();
 
+      toast.success(didCopy ? `Skopiowano numer ${details.blikPhoneDisplay}` : "Przelew BLIK na telefon", {
+        description: didCopy
+          ? `Wklej ten numer w banku (Przelew BLIK na telefon)${
+              details.amountPln != null ? ` · ${formatPln(details.amountPln)}` : ""
+            }.`
+          : `Skopiuj ręcznie: ${details.blikPhoneDisplay}${
+              details.amountPln != null ? ` · ${formatPln(details.amountPln)}` : ""
+            }.`,
+        duration: 8000,
+      });
+
       if (isMobileUserAgent(readUserAgent())) {
         setPickerOpen(true);
-        return;
-      }
-
-      if (didCopy) {
-        toast.success("Dane płatności skopiowano", {
-          description: `Przelej BLIK na telefon ${details.blikPhoneDisplay}${
-            details.amountPln != null ? ` — ${formatPln(details.amountPln)}` : ""
-          }.`,
-          duration: 8000,
-        });
-      } else {
-        toast.message("Przelew BLIK na telefon", {
-          description: `Numer: ${details.blikPhoneDisplay}${
-            details.amountPln != null ? ` · kwota: ${formatPln(details.amountPln)}` : ""
-          }.`,
-          duration: 8000,
-        });
       }
     } finally {
       setBusy(false);
@@ -173,7 +180,7 @@ export function PayMatchButton({
       size="sm"
       scrollable
       title="Przelew BLIK na telefon"
-      description="Numer jest w schowku. Otwórz bank i wklej go w „Przelew BLIK na telefon”."
+      description={`Numer ${details.blikPhoneDisplay} jest w schowku. Wklej go w banku.`}
       footer={
         <Button type="button" className="rounded-full font-bold" onClick={() => setPickerOpen(false)}>
           Otworzę bank sam

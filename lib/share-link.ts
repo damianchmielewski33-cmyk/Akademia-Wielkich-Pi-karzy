@@ -14,6 +14,11 @@ export function appendShareSessionQuery(relativePathWithQuery: string): string {
   return s ? `${path}?${s}` : path;
 }
 
+/** Link publiczny z własnym tokenem — nie wolno kasować sesji admina (potwierdzenie przelewu). */
+export function shareLinkShouldClearSession(pathname: string): boolean {
+  return !pathname.startsWith("/platnosci-public");
+}
+
 /** Ścieżka wizytówki zaproszenia na mecz (przed dodaniem `awp_share`). */
 export function terminarzInviteRelativePath(matchId: number): string {
   return `/zaproszenie/${matchId}`;

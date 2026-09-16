@@ -16,6 +16,7 @@ import type { PublicWalletView } from "@/lib/public-payment-share";
 import { cn } from "@/lib/utils";
 import { MatchSignupFeesList } from "@/components/match-signup-fees-list";
 import { formatMatchFeePln } from "@/lib/match-fee";
+import { MATCH_BLIK_PHONE_DISPLAY } from "@/lib/site";
 
 function formatPln(n: number) {
   const v = Math.round(n * 100) / 100;
@@ -41,7 +42,7 @@ export function PlatnosciPublicClient({ token, hotpayEnabled, isAdmin = false, v
 
   if (view.mode === "signup_fees") {
     const contribution = Number(view.contribution_pln ?? 0);
-    const blik = view.blik_phone?.trim() || "";
+    const blik = view.blik_phone?.trim() || MATCH_BLIK_PHONE_DISPLAY;
     return (
       <div className={light ? "relative flex flex-1 flex-col text-zinc-900 dark:text-zinc-50" : "container mx-auto max-w-2xl flex-1 space-y-6 px-4 py-10"}>
         {light ? (
@@ -69,9 +70,9 @@ export function PlatnosciPublicClient({ token, hotpayEnabled, isAdmin = false, v
               {typeof view.match.fee_pln === "number" && view.match.fee_pln > 0
                 ? ` (wynajem ${formatMatchFeePln(view.match.fee_pln)} podzielony na zapisanych)`
                 : ""}
-              . Przelew na telefon kopiuje numer BLIK — otwórz aplikację banku i wklej numer. Status opłacone pojawia
-              się dopiero, gdy admin potwierdzi, że przelew doszedł (na tym ekranie). Płatność przez stronę (operator)
-              oznacza opłacone po potwierdzeniu wpłaty.
+              . Przelew na telefon kopiuje numer <strong className="tabular-nums">{blik}</strong> do schowka. Status
+              opłacone pojawia się dopiero, gdy admin potwierdzi otrzymanie przelewu na tym ekranie. Płatność przez
+              stronę (operator) oznacza opłacone po potwierdzeniu wpłaty.
             </p>
           ) : null}
           {isAdmin ? (
@@ -82,8 +83,8 @@ export function PlatnosciPublicClient({ token, hotpayEnabled, isAdmin = false, v
                   : "rounded-2xl border border-amber-400/40 bg-amber-950/30 px-4 py-3 text-sm text-amber-50"
               }
             >
-              Jesteś zalogowany jako admin. Przy zawodnikach, którzy zgłosili przelew, potwierdź, że pieniądze doszły —
-              dopiero wtedy status zmieni się na opłacone.
+              Jesteś zalogowany jako admin. Przy zawodniku rozlicz przelew: nie doszedł, za mało, składka albo za dużo.
+              Kwota idzie na główny portfel gracza.
             </p>
           ) : null}
           <MatchSignupFeesList

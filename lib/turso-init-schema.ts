@@ -450,6 +450,9 @@ export async function initLibsqlSchema(client: Client) {
   if (!names.includes("blik_declared")) {
     await client.execute("ALTER TABLE match_signups ADD COLUMN blik_declared INTEGER NOT NULL DEFAULT 0");
   }
+  if (!names.includes("blik_received_pln")) {
+    await client.execute("ALTER TABLE match_signups ADD COLUMN blik_received_pln REAL NOT NULL DEFAULT 0");
+  }
 
   names = await pragmaColumnNames(client, "app_settings");
   await migrateAppSettingsColumnsLibsql(names, (sql) => client.execute(sql));

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { appendShareSessionQuery, captainLotteryRelativePath, terminarzInviteRelativePath } from "@/lib/share-link";
+import { appendShareSessionQuery, captainLotteryRelativePath, shareLinkShouldClearSession, terminarzInviteRelativePath } from "@/lib/share-link";
 import { SHARE_LINK_QUERY_PARAM } from "@/lib/constants";
 
 describe("appendShareSessionQuery", () => {
@@ -20,5 +20,11 @@ describe("appendShareSessionQuery", () => {
 
   it("losowanie kapitanów: krótki link do meczu", () => {
     expect(captainLotteryRelativePath(12)).toBe("/losowanie-kapitana/12");
+  });
+
+  it("link opłat nie kasuje sesji admina", () => {
+    expect(shareLinkShouldClearSession("/platnosci-public/abc")).toBe(false);
+    expect(shareLinkShouldClearSession("/zaproszenie/12")).toBe(true);
+    expect(shareLinkShouldClearSession("/terminarz")).toBe(true);
   });
 });
