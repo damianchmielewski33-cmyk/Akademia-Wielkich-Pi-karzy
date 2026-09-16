@@ -7,6 +7,30 @@ export type BankPaymentDetails = {
   transferTitle: string;
 };
 
+export type PolishBankApp = {
+  id: string;
+  name: string;
+  androidPackage: string;
+  iosScheme: string;
+};
+
+/**
+ * Popularne aplikacje BLIK. Każda ma własny pakiet / schemat —
+ * nie używamy wspólnego `blik://`, bo przy wielu bankach Android pokazuje
+ * konflikt handlerów, a przy braku aplikacji przeglądarka ląduje na
+ * „strona niedostępna”.
+ */
+export const POLISH_BANK_APPS: PolishBankApp[] = [
+  { id: "pko", name: "PKO BP (IKO)", androidPackage: "pl.pkobp.iko", iosScheme: "iko://" },
+  { id: "mbank", name: "mBank", androidPackage: "pl.mbank", iosScheme: "mbank://" },
+  { id: "pekao", name: "Pekao", androidPackage: "eu.eleader.mobilebanking.pekao", iosScheme: "pekao24://" },
+  { id: "ing", name: "ING", androidPackage: "pl.ing.ingmobile", iosScheme: "ingbankmobile://" },
+  { id: "santander", name: "Santander", androidPackage: "pl.santander.mobile", iosScheme: "santander://" },
+  { id: "millennium", name: "Millennium", androidPackage: "com.finanteq.millennium", iosScheme: "millenet://" },
+  { id: "alior", name: "Alior", androidPackage: "pl.aliorbank.aib", iosScheme: "aliorbank://" },
+  { id: "ca", name: "Crédit Agricole", androidPackage: "com.creditagricole.mobileca", iosScheme: "camobile://" },
+];
+
 /** Kwota do wpłaty: niedopłata z portfela lub domyślne wpisowe z ustawień. */
 export function suggestPaymentAmountPln(
   balancePln: number | null,
@@ -64,16 +88,70 @@ export function isIosUserAgent(userAgent: string): boolean {
 }
 
 /**
- * Próba otwarcia aplikacji bankowej (Android intent / iOS URL scheme).
- * Nie ma publicznego API BLIK P2P — otwieramy popularne aplikacje banków w Polsce.
+ * WebView / przeglądarka wbudowana w komunikator nie obsługuje `intent://`
+ * ani schematów banków — `location.assign` kończy się ERR_UNKNOWN_URL_SCHEME
+ * („strona internetowa jest niedostępna”).
  */
-export function buildMobileBankAppHref(userAgent: string): string | null {
-  if (isAndroidUserAgent(userAgent)) {
-    const fallback = encodeURIComponent("https://play.google.com/store/search?q=bank&c=apps");
-    return `intent://blik#Intent;scheme=blik;package=pl.mbank;action=android.intent.action.VIEW;S.browser_fallback_url=${fallback};end`;
+export function isInAppBrowserUserAgent(userAgent: string): boolean {
+  if (/AWPAndroidApp/i.test(userAgent)) return true;
+  if (/; wv\)/i.test(userAgent)) return true;
+  if (/WebView/i.test(userAgent)) return true;
+  return /FBAN|FBAV|FB_IAB|Instagram|Line\/|WhatsApp|Messenger|Snapchat|Twitter|TikTok|Pinterest/i.test(
+    userAgent
+  );
+}
+
+/** Czy wolno pokazać deep-linki do banków (prawdziwa przeglądarka, gest użytkownika). */
+export function canDeepLinkToBankApps(userAgent: string): boolean {
+  if (!isMobileUserAgent(userAgent)) return false;
+  if (isInAppBrowserUserAgent(userAgent)) return false;
+  return true;
+}
+
+/**
+ * Intent otwierający konkretny pakiet. Fallback to bieżąca strona płatności —
+ * nigdy Play Store ani `blik://` (brak aplikacji / wiele handlerów = błąd strony).
+ */
+export function androidSchemeFromIos(iosScheme: string): string {
+  return iosScheme.trim().replace(/:\/\/\s*$/, "").replace(/:\s*$/, "");
+}
+
+export function buildAndroidBankIntentHref(
+  androidPackage: string,
+  iosScheme: string,
+  fallbackUrl: string
+): string {
+  const pkg = androidPackage.trim();
+  const scheme = androidSchemeFromIos(iosScheme);
+  const fallback = encodeURIComponent(fallbackUrl.trim());
+  return `intent://#Intent;scheme=${scheme};package=${pkg};action=android.intent.action.VIEW;S.browser_fallback_url=${fallback};end`;
+}
+
+export function buildBankAppHref(args: {
+  bank: PolishBankApp;
+  userAgent: string;
+  fallbackUrl: string;
+}): string | null {
+  if (isAndroidUserAgent(args.userAgent)) {
+    return buildAndroidBankIntentHref(args.bank.androidPackage, args.bank.iosScheme, args.fallbackUrl);
   }
-  if (isIosUserAgent(userAgent)) {
-    return "mbank://";
+  if (isIosUserAgent(args.userAgent)) {
+    return args.bank.iosScheme;
   }
   return null;
+}
+
+/**
+ * Otwiera schemat iOS bez `location.assign` — gdy aplikacji nie ma, strona płatności zostaje.
+ * Na Androidzie używaj kliknięcia w `<a href="intent:…">` (gest użytkownika).
+ */
+export function tryOpenIosBankScheme(href: string): void {
+  if (typeof document === "undefined" || !href) return;
+  const iframe = document.createElement("iframe");
+  iframe.setAttribute("aria-hidden", "true");
+  iframe.tabIndex = -1;
+  iframe.style.cssText = "display:none;width:0;height:0;border:0;position:absolute;left:0;top:0";
+  iframe.src = href;
+  document.body.appendChild(iframe);
+  window.setTimeout(() => iframe.remove(), 2500);
 }

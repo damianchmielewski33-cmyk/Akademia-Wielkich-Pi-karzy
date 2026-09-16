@@ -31,10 +31,11 @@ function formatMatchWhen(isoDate: string, time: string) {
 type Props = {
   token: string;
   hotpayEnabled: boolean;
+  isAdmin?: boolean;
   view: PublicWalletView;
 };
 
-export function PlatnosciPublicClient({ token, hotpayEnabled, view }: Props) {
+export function PlatnosciPublicClient({ token, hotpayEnabled, isAdmin = false, view }: Props) {
   const light = true;
   const heroPhoto = useMarketplacePitchPhotoAt(4);
 
@@ -68,8 +69,21 @@ export function PlatnosciPublicClient({ token, hotpayEnabled, view }: Props) {
               {typeof view.match.fee_pln === "number" && view.match.fee_pln > 0
                 ? ` (wynajem ${formatMatchFeePln(view.match.fee_pln)} podzielony na zapisanych)`
                 : ""}
-              . Przelew na telefon kopiuje numer BLIK i otwiera bank — wtedy status zmienia się na opłacony. Płatność przez
-              stronę (operator) oznacza opłacone po potwierdzeniu wpłaty.
+              . Przelew na telefon kopiuje numer BLIK — otwórz aplikację banku i wklej numer. Status opłacone pojawia
+              się dopiero, gdy admin potwierdzi, że przelew doszedł (na tym ekranie). Płatność przez stronę (operator)
+              oznacza opłacone po potwierdzeniu wpłaty.
+            </p>
+          ) : null}
+          {isAdmin ? (
+            <p
+              className={
+                light
+                  ? "rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100"
+                  : "rounded-2xl border border-amber-400/40 bg-amber-950/30 px-4 py-3 text-sm text-amber-50"
+              }
+            >
+              Jesteś zalogowany jako admin. Przy zawodnikach, którzy zgłosili przelew, potwierdź, że pieniądze doszły —
+              dopiero wtedy status zmieni się na opłacone.
             </p>
           ) : null}
           <MatchSignupFeesList
@@ -78,6 +92,7 @@ export function PlatnosciPublicClient({ token, hotpayEnabled, view }: Props) {
             contributionPln={contribution > 0 ? contribution : 25}
             blikPhone={blik}
             hotpayEnabled={hotpayEnabled}
+            isAdmin={isAdmin}
             light={light}
           />
         </div>

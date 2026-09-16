@@ -753,6 +753,9 @@ function initSchemaSync(db: Database.Database) {
   if (!signupCols.some((c) => c.name === "commitment")) {
     db.exec("ALTER TABLE match_signups ADD COLUMN commitment INTEGER NOT NULL DEFAULT 1");
   }
+  if (!signupCols.some((c) => c.name === "blik_declared")) {
+    db.exec("ALTER TABLE match_signups ADD COLUMN blik_declared INTEGER NOT NULL DEFAULT 0");
+  }
 
   migratePublicShareLinksKind(db);
   migrateWalletTransactionsTransfer(db);

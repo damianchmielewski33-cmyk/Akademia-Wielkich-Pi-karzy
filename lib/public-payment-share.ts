@@ -22,6 +22,8 @@ export type PublicWalletPlayerRow = {
   match_charge_pln?: number | null;
   /** Status opłacenia wpisowego na meczu (match_signups.paid); 1 = opłacony. */
   match_paid?: number | null;
+  /** Zawodnik zgłosił przelew BLIK na telefon — czeka na potwierdzenie admina. */
+  blik_declared?: number | null;
 };
 
 export async function loadPublicShareLink(token: string): Promise<PublicShareLinkRow | null> {
@@ -220,7 +222,8 @@ async function loadMatchSignupFeesView(matchId: number): Promise<PublicWalletVie
     .prepare(
       `SELECT u.id, u.first_name, u.last_name, u.player_alias AS zawodnik, u.profile_photo_path,
               0 AS balance_pln,
-              COALESCE(ms.paid, 0) AS match_paid
+              COALESCE(ms.paid, 0) AS match_paid,
+              COALESCE(ms.blik_declared, 0) AS blik_declared
        FROM match_signups ms
        JOIN users u ON u.id = ms.user_id
        WHERE ms.match_id = ? AND COALESCE(ms.commitment, 1) = 1

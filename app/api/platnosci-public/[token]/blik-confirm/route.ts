@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { requireAdmin } from "@/lib/api-helpers";
 import { getDb } from "@/lib/db";
 import { loadPublicShareLink } from "@/lib/public-payment-share";
-import { declareBlikPhoneTransfer, loadMatchForSignupFees } from "@/lib/match-signup-blik";
+import { confirmBlikPhoneTransfer, loadMatchForSignupFees } from "@/lib/match-signup-blik";
 import { checkRateLimitDistributed } from "@/lib/rate-limit-db";
 import { RATE, rateLimitKey, rateLimitedResponse } from "@/lib/rate-limit";
 
@@ -14,12 +15,15 @@ const bodySchema = z.object({
 
 type Ctx = { params: Promise<{ token: string }> };
 
-/** Publiczne zgłoszenie przelewu BLIK — nie oznacza składki jako opłaconej. */
+/** Admin potwierdza na ekranie linku, że przelew BLIK doszedł. */
 export async function POST(req: Request, ctx: Ctx) {
+  const gate = await requireAdmin();
+  if (!gate.ok) return gate.response;
+
   const rl = await checkRateLimitDistributed(
-    rateLimitKey("publicBlikPaid", req),
-    RATE.publicBlikPaid.limit,
-    RATE.publicBlikPaid.windowMs
+    rateLimitKey("publicBlikConfirm", req),
+    RATE.publicBlikConfirm.limit,
+    RATE.publicBlikConfirm.windowMs
   );
   if (!rl.ok) return rateLimitedResponse(rl.retryAfterSec);
 
@@ -46,14 +50,14 @@ export async function POST(req: Request, ctx: Ctx) {
     return NextResponse.json({ error: "Mecz jest niedostępny" }, { status: 400 });
   }
 
-  const result = await declareBlikPhoneTransfer(db, { match, userId: parsed.data.user_id });
+  const result = await confirmBlikPhoneTransfer(db, {
+    match,
+    userId: parsed.data.user_id,
+    adminId: gate.session.userId,
+  });
   if (!result.ok) {
     return NextResponse.json({ error: result.error }, { status: result.status });
   }
 
-  return NextResponse.json({
-    ok: true,
-    pending: !result.alreadyPaid,
-    already: result.alreadyPaid || result.alreadyDeclared,
-  });
+  return NextResponse.json({ ok: true, already: result.alreadyPaid });
 }

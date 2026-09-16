@@ -5,6 +5,7 @@ import { OpenDeepLinkInApp } from "@/components/open-deep-link-in-app";
 import { PlatnosciPublicClient, PlatnosciPublicInactive } from "@/components/platnosci-public-client";
 import { PlatnosciPublicPaymentReturn } from "@/components/platnosci-public-payment-return";
 import { getAppSettings } from "@/lib/app-settings";
+import { getServerSession } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { isHotpayConfigured } from "@/lib/hotpay";
 
@@ -34,7 +35,7 @@ export default async function PlatnosciPublicPage(ctx: Ctx) {
   }
 
   const db = await getDb();
-  const appSettings = await getAppSettings(db);
+  const [appSettings, session] = await Promise.all([getAppSettings(db), getServerSession()]);
   const hotpayEnabled = isHotpayConfigured() && appSettings.hotpay_enabled;
   const view = await loadPublicWalletRows(link);
 
@@ -44,7 +45,12 @@ export default async function PlatnosciPublicPage(ctx: Ctx) {
       <Suspense fallback={null}>
         <PlatnosciPublicPaymentReturn />
       </Suspense>
-      <PlatnosciPublicClient token={link.token} hotpayEnabled={hotpayEnabled} view={view} />
+      <PlatnosciPublicClient
+        token={link.token}
+        hotpayEnabled={hotpayEnabled}
+        isAdmin={session?.isAdmin ?? false}
+        view={view}
+      />
     </>
   );
 }

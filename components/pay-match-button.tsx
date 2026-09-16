@@ -1,15 +1,22 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Banknote, Loader2, Smartphone } from "lucide-react";
 import { toast } from "@/lib/app-toast";
 import { Button } from "@/components/ui/button";
+import { AppModal } from "@/components/ui/app-modal";
+import { ModalAlert } from "@/components/ui/modal-shared";
 import { cn } from "@/lib/utils";
 import {
-  buildMobileBankAppHref,
+  buildBankAppHref,
   buildPaymentClipboardText,
   buildPaymentDetails,
+  canDeepLinkToBankApps,
+  isIosUserAgent,
   isMobileUserAgent,
+  POLISH_BANK_APPS,
+  tryOpenIosBankScheme,
+  type PolishBankApp,
 } from "@/lib/bank-payment-link";
 
 type Props = {
@@ -54,6 +61,14 @@ async function copyText(text: string): Promise<boolean> {
   }
 }
 
+function readUserAgent() {
+  return typeof navigator !== "undefined" ? navigator.userAgent : "";
+}
+
+function readFallbackUrl() {
+  return typeof window !== "undefined" ? window.location.href : "";
+}
+
 export function PayMatchButton({
   blikPhoneDisplay,
   defaultMatchFeePln,
@@ -65,6 +80,13 @@ export function PayMatchButton({
   onAfterPay,
 }: Props) {
   const [busy, setBusy] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [ua, setUa] = useState("");
+
+  useEffect(() => {
+    setUa(navigator.userAgent);
+  }, []);
 
   const details = useMemo(() => {
     const base = buildPaymentDetails(blikPhoneDisplay, balancePln, defaultMatchFeePln, playerLabel);
@@ -74,29 +96,24 @@ export function PayMatchButton({
     return base;
   }, [blikPhoneDisplay, balancePln, defaultMatchFeePln, playerLabel, amountPln]);
 
+  const showBankLinks = canDeepLinkToBankApps(ua);
+  const ios = isIosUserAgent(ua);
+
   async function handlePay() {
     if (busy) return;
     setBusy(true);
     try {
       const clipboardText = compact ? details.blikPhoneCopy : buildPaymentClipboardText(details);
-      const copied = await copyText(clipboardText);
-      const ua = typeof navigator !== "undefined" ? navigator.userAgent : "";
-      const bankHref = buildMobileBankAppHref(ua);
-      const mobile = isMobileUserAgent(ua);
+      const didCopy = await copyText(clipboardText);
+      setCopied(didCopy);
+      await onAfterPay?.();
 
-      if (mobile && bankHref) {
-        await onAfterPay?.();
-        window.location.assign(bankHref);
-        toast.success("Otwieranie aplikacji banku…", {
-          description: copied
-            ? "Dane płatności skopiowano do schowka. W banku wybierz: Przelew BLIK na telefon."
-            : `Numer: ${details.blikPhoneDisplay}. W banku wybierz: Przelew BLIK na telefon.`,
-          duration: 8000,
-        });
+      if (isMobileUserAgent(readUserAgent())) {
+        setPickerOpen(true);
         return;
       }
 
-      if (copied) {
+      if (didCopy) {
         toast.success("Dane płatności skopiowano", {
           description: `Przelej BLIK na telefon ${details.blikPhoneDisplay}${
             details.amountPln != null ? ` — ${formatPln(details.amountPln)}` : ""
@@ -111,10 +128,17 @@ export function PayMatchButton({
           duration: 8000,
         });
       }
-      await onAfterPay?.();
     } finally {
       setBusy(false);
     }
+  }
+
+  function bankHref(bank: PolishBankApp) {
+    return buildBankAppHref({ bank, userAgent: readUserAgent(), fallbackUrl: readFallbackUrl() });
+  }
+
+  function onIosBankClick(href: string) {
+    tryOpenIosBankScheme(href);
   }
 
   const payButton = (
@@ -142,8 +166,82 @@ export function PayMatchButton({
     </Button>
   );
 
+  const picker = (
+    <AppModal
+      open={pickerOpen}
+      onOpenChange={setPickerOpen}
+      size="sm"
+      scrollable
+      title="Przelew BLIK na telefon"
+      description="Numer jest w schowku. Otwórz bank i wklej go w „Przelew BLIK na telefon”."
+      footer={
+        <Button type="button" className="rounded-full font-bold" onClick={() => setPickerOpen(false)}>
+          Otworzę bank sam
+        </Button>
+      }
+    >
+      <ModalAlert tone="info" title={copied ? "Numer skopiowany" : "Numer do przelewu"}>
+        <p className="font-bold tabular-nums tracking-wide">{details.blikPhoneDisplay}</p>
+        {details.amountPln != null ? (
+          <p className="mt-1 font-semibold tabular-nums">{formatPln(details.amountPln)}</p>
+        ) : null}
+      </ModalAlert>
+
+      <ol className="list-decimal space-y-1 pl-5 text-sm text-zinc-600 dark:text-zinc-300">
+        <li>Otwórz aplikację swojego banku.</li>
+        <li>Wybierz „Przelew BLIK na telefon”.</li>
+        <li>Wklej numer i potwierdź przelew.</li>
+        <li>Opłacone pojawi się po potwierdzeniu admina, że pieniądze doszły.</li>
+      </ol>
+
+      {showBankLinks ? (
+        <div className="space-y-2">
+          <p className="text-xs font-bold uppercase tracking-wide text-zinc-500">Otwórz aplikację</p>
+          <ul className="grid grid-cols-2 gap-2">
+            {POLISH_BANK_APPS.map((bank) => {
+              const href = bankHref(bank);
+              if (!href) return null;
+              const className =
+                "inline-flex min-h-11 items-center justify-center rounded-full border border-zinc-200 bg-white px-3 text-sm font-semibold text-zinc-800 shadow-sm hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800";
+              if (ios) {
+                return (
+                  <li key={bank.id}>
+                    <button type="button" className={cn(className, "w-full")} onClick={() => onIosBankClick(href)}>
+                      {bank.name}
+                    </button>
+                  </li>
+                );
+              }
+              return (
+                <li key={bank.id}>
+                  <a href={href} className={cn(className, "w-full")} rel="noopener noreferrer">
+                    {bank.name}
+                  </a>
+                </li>
+              );
+            })}
+          </ul>
+          <p className="text-xs text-zinc-500">
+            Jeśli banku nie ma na liście albo aplikacja się nie otworzy — nic się nie stanie ze stroną. Otwórz bank
+            ręcznie i wklej numer.
+          </p>
+        </div>
+      ) : (
+        <p className="text-sm text-zinc-600 dark:text-zinc-300">
+          Nie otwieramy banku automatycznie — na tym telefonie mogłoby to zamknąć stronę płatności. Numer masz
+          skopiowany.
+        </p>
+      )}
+    </AppModal>
+  );
+
   if (compact) {
-    return <div className={cn("flex-1", className)}>{payButton}</div>;
+    return (
+      <div className={cn("flex-1", className)}>
+        {payButton}
+        {picker}
+      </div>
+    );
   }
 
   return (
@@ -178,9 +276,9 @@ export function PayMatchButton({
 
       <p className="mt-3 flex items-start gap-2 text-left text-xs leading-relaxed text-zinc-600 dark:text-zinc-400">
         <Smartphone className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
-        Na telefonie otworzy się aplikacja banku. Wybierz „Przelew BLIK na telefon”, wklej numer i potwierdź
-        przelew.
+        Skopiujemy numer BLIK. Otwórz aplikację banku, wybierz „Przelew BLIK na telefon” i wklej numer.
       </p>
+      {picker}
     </div>
   );
 }

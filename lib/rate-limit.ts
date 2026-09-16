@@ -88,8 +88,10 @@ export const RATE = {
   hotpayPublicStatus: { limit: 60, windowMs: 60 * 1000 },
   /** Publiczne rozpoczęcie płatności z linku — limit na IP. */
   hotpayPublicCreate: { limit: 15, windowMs: 60 * 60 * 1000 },
-  /** Oznaczenie opłaty BLIK z publicznego linku składki. */
+  /** Zgłoszenie przelewu BLIK z publicznego linku składki (bez statusu opłacone). */
   publicBlikPaid: { limit: 30, windowMs: 60 * 60 * 1000 },
+  /** Potwierdzenie przelewu BLIK przez admina na linku opłat. */
+  publicBlikConfirm: { limit: 60, windowMs: 60 * 60 * 1000 },
   /** Publiczne zgłoszenie hali (bez tokenu zaproszenia). */
   venueApply: { limit: 6, windowMs: 60 * 60 * 1000 },
   /** Rezerwacja gościa marketplace (bez PIN-u akademii). */
