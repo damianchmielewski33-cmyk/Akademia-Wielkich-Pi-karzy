@@ -1,6 +1,7 @@
 # Android i lokalne artefakty — nie wysyłaj na Vercel (Next.js jest w root).
-# Cały katalog android/ — inaczej Vercel długo stoi na Initializing przy dużym tree.
-android
+# Tylko rootowy /android (projekt APK). Wzorzec bez slasha wykluczał też
+# app/api/android/* → 404 na /api/android/version i download na Production.
+/android/
 tmp-apk
 data
 coverage
