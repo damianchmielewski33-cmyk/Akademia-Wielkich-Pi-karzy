@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { Banknote, Check, ClipboardCopy, Loader2, PencilLine, Search } from "lucide-react";
+import { Check, ClipboardCopy, Loader2, PencilLine, Search } from "lucide-react";
 import { toast } from "@/lib/app-toast";
 import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
 import { Button } from "@/components/ui/button";
@@ -181,6 +181,12 @@ function playerWalletAmount(p: AdminWalletPlayerRow, kind: "admin" | "operator")
     : Number(p.admin_balance_pln ?? p.balance_pln ?? 0);
 }
 
+function balanceAmountClass(amount: number, zeroClass = "text-zinc-700 dark:text-zinc-300") {
+  if (amount < 0) return "text-red-700 dark:text-red-300";
+  if (amount > 0) return "text-emerald-800 dark:text-emerald-200";
+  return zeroClass;
+}
+
 function formatAmountInput(n: number) {
   const v = Math.round(n * 100) / 100;
   return String(v).replace(".", ",");
@@ -248,24 +254,23 @@ function WalletPlayerPicker({
             secondaryClassName="text-sm text-zinc-600 dark:text-zinc-300"
           />
           {showWalletSplit ? (
-            <p className="mt-1.5 text-xs font-medium tabular-nums text-zinc-700 dark:text-zinc-300">
-              G {formatPln(playerWalletAmount(selected, "admin"))}
-              <span className="mx-1.5 text-zinc-400">·</span>
-              O {formatPln(playerWalletAmount(selected, "operator"))}
-              <span className="mx-1.5 text-zinc-400">·</span>
-              łącznie {formatPln(Number(selected.balance_pln ?? 0))}
-            </p>
+            <>
+              <p
+                className={cn(
+                  "mt-1.5 text-sm font-semibold tabular-nums",
+                  balanceAmountClass(Number(selected.balance_pln ?? 0))
+                )}
+              >
+                Saldo łącznie: {formatPln(Number(selected.balance_pln ?? 0))}
+              </p>
+              <p className="mt-1 text-xs font-medium tabular-nums text-zinc-700 dark:text-zinc-300">
+                G {formatPln(playerWalletAmount(selected, "admin"))}
+                <span className="mx-1.5 text-zinc-400">·</span>
+                O {formatPln(playerWalletAmount(selected, "operator"))}
+              </p>
+            </>
           ) : (
-            <p
-              className={cn(
-                "mt-1.5 text-sm font-semibold tabular-nums",
-                Number(selected.balance_pln ?? 0) < 0
-                  ? "text-red-700 dark:text-red-300"
-                  : Number(selected.balance_pln ?? 0) > 0
-                    ? "text-[var(--mp-teal-dark)] dark:text-teal-200"
-                    : "text-zinc-700 dark:text-zinc-300"
-              )}
-            >
+            <p className={cn("mt-1.5 text-sm font-semibold tabular-nums", balanceAmountClass(Number(selected.balance_pln ?? 0)))}>
               Obecne saldo: {formatPln(Number(selected.balance_pln ?? 0))}
             </p>
           )}
@@ -304,6 +309,7 @@ function WalletPlayerPicker({
           {filtered.length ? (
             filtered.map((p) => {
               const isActive = selectedId === p.id;
+              const totalBalance = Number(p.balance_pln ?? 0);
               return (
                 <li key={p.id}>
                   <button
@@ -334,13 +340,16 @@ function WalletPlayerPicker({
                       ) : null}
                     </span>
                     {showWalletSplit ? (
-                      <span className="flex shrink-0 flex-col items-end gap-0.5 text-[11px] font-semibold tabular-nums text-zinc-600 dark:text-zinc-300">
-                        <span>G {formatPln(playerWalletAmount(p, "admin"))}</span>
-                        <span>O {formatPln(playerWalletAmount(p, "operator"))}</span>
+                      <span className="flex shrink-0 flex-col items-end gap-0.5 text-[11px] font-semibold tabular-nums">
+                        <span className={balanceAmountClass(totalBalance, "text-zinc-700 dark:text-zinc-300")}>
+                          Suma {formatPln(totalBalance)}
+                        </span>
+                        <span className="text-zinc-600 dark:text-zinc-300">G {formatPln(playerWalletAmount(p, "admin"))}</span>
+                        <span className="text-zinc-600 dark:text-zinc-300">O {formatPln(playerWalletAmount(p, "operator"))}</span>
                       </span>
                     ) : (
-                      <span className="shrink-0 text-xs font-semibold tabular-nums text-emerald-800 dark:text-emerald-200">
-                        {formatPln(Number(p.balance_pln ?? 0))}
+                      <span className={cn("shrink-0 text-xs font-semibold tabular-nums", balanceAmountClass(totalBalance))}>
+                        {formatPln(totalBalance)}
                       </span>
                     )}
                     {"is_admin" in p && Number((p as { is_admin?: number }).is_admin ?? 0) ? (
@@ -397,16 +406,11 @@ export function AdminWalletsSaldoSection({
   /** admin = gotówka/BLIK (G), operator = płatności online HotPay (O) */
   const [adminBalanceWalletKind, setAdminBalanceWalletKind] = useState<"admin" | "operator">("admin");
   const [adminBalanceSubmitting, setAdminBalanceSubmitting] = useState(false);
-  const [adjustDepositAmount, setAdjustDepositAmount] = useState("");
-  const [adjustDepositNote, setAdjustDepositNote] = useState("");
-  const [adjustDepositSubmitting, setAdjustDepositSubmitting] = useState(false);
   const [topUpUserId, setTopUpUserId] = useState<number | null>(null);
   const [topUpUserQuery, setTopUpUserQuery] = useState("");
   const [topUpAmount, setTopUpAmount] = useState("");
   const [topUpNote, setTopUpNote] = useState("");
   const [topUpSubmitting, setTopUpSubmitting] = useState(false);
-  const [topUpIsOperatorCorrection, setTopUpIsOperatorCorrection] = useState(false);
-  const [topUpOperatorReason, setTopUpOperatorReason] = useState("");
   const [publicLinkBusy, setPublicLinkBusy] = useState(false);
   const [publicLinkCopied, setPublicLinkCopied] = useState<string | null>(null);
   const [playedMatchId, setPlayedMatchId] = useState<number | null>(null);
@@ -469,12 +473,6 @@ export function AdminWalletsSaldoSection({
     selectedBalancePlayer && parsedAdjustTarget != null
       ? Math.round((parsedAdjustTarget - currentAdjustAmount) * 100) / 100
       : null;
-  const parsedAdjustDeposit = parsePlnInput(adjustDepositAmount);
-  const currentAdminWallet = selectedBalancePlayer ? playerWalletAmount(selectedBalancePlayer, "admin") : 0;
-  const adjustDepositPreview =
-    selectedBalancePlayer && parsedAdjustDeposit != null && parsedAdjustDeposit > 0
-      ? Math.round((currentAdminWallet + parsedAdjustDeposit) * 100) / 100
-      : null;
 
   const playedMatches = adminOverview?.playedMatches ?? EMPTY_PLAYED_MATCHES;
   const selectedPlayedMatch = useMemo(
@@ -534,10 +532,6 @@ export function AdminWalletsSaldoSection({
       toast.error("Podaj prawidłową kwotę");
       return;
     }
-    if (topUpIsOperatorCorrection && !topUpOperatorReason.trim()) {
-      toast.error("Podaj powód korekty portfela operatora");
-      return;
-    }
     setTopUpSubmitting(true);
     try {
       const r = await fetchJson<{ ok: true; id: number }>("/api/admin/wallet/deposits", {
@@ -547,8 +541,7 @@ export function AdminWalletsSaldoSection({
           user_id,
           amount_pln,
           note: topUpNote.trim() ? topUpNote.trim() : undefined,
-          wallet_kind: topUpIsOperatorCorrection ? "operator" : "admin",
-          ...(topUpIsOperatorCorrection ? { operator_correction_reason: topUpOperatorReason.trim() } : {}),
+          wallet_kind: "admin",
         }),
       });
       if (!r.ok) {
@@ -558,54 +551,10 @@ export function AdminWalletsSaldoSection({
       toast.success(`Dodano ${formatPln(amount_pln)} do salda zawodnika`);
       setTopUpAmount("");
       setTopUpNote("");
-      setTopUpIsOperatorCorrection(false);
-      setTopUpOperatorReason("");
       await refresh();
       router.refresh();
     } finally {
       setTopUpSubmitting(false);
-    }
-  }
-
-  async function adminDepositBlikCash() {
-    const user_id = adminBalanceUserId;
-    const amount_pln = parsePlnInput(adjustDepositAmount);
-    if (!user_id) {
-      toast.error("Wybierz zawodnika");
-      return;
-    }
-    if (amount_pln == null || amount_pln <= 0) {
-      toast.error("Podaj kwotę wpłaty większą od zera");
-      return;
-    }
-    setAdjustDepositSubmitting(true);
-    try {
-      const r = await fetchJson<{ ok: true; id: number }>("/api/admin/wallet/deposits", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          user_id,
-          amount_pln,
-          note: adjustDepositNote.trim() ? adjustDepositNote.trim() : "BLIK / gotówka",
-          wallet_kind: "admin",
-        }),
-      });
-      if (!r.ok) {
-        toast.error(r.error);
-        return;
-      }
-      toast.success(`Dodano ${formatPln(amount_pln)} do salda (BLIK / gotówka)`);
-      setAdjustDepositAmount("");
-      setAdjustDepositNote("");
-      const player = balancePlayerList.find((p) => p.id === user_id);
-      if (player && adminBalanceWalletKind === "admin") {
-        const next = Math.round((playerWalletAmount(player, "admin") + amount_pln) * 100) / 100;
-        setAdminBalanceTarget(formatAmountInput(next));
-      }
-      await refresh();
-      router.refresh();
-    } finally {
-      setAdjustDepositSubmitting(false);
     }
   }
 
@@ -670,8 +619,6 @@ export function AdminWalletsSaldoSection({
   function clearTopUpPlayer() {
     setTopUpUserId(null);
     setTopUpUserQuery("");
-    setTopUpIsOperatorCorrection(false);
-    setTopUpOperatorReason("");
   }
 
   function applyAdjustTargetFromPlayer(player: AdminWalletPlayerRow, kind: "admin" | "operator") {
@@ -691,8 +638,6 @@ export function AdminWalletsSaldoSection({
     setAdminBalanceTarget("");
     setAdminBalanceNote("");
     setAdminBalanceWalletKind("admin");
-    setAdjustDepositAmount("");
-    setAdjustDepositNote("");
   }
 
   function startBalanceCorrection(id: number) {
@@ -758,43 +703,13 @@ export function AdminWalletsSaldoSection({
               />
             </div>
           </div>
-          <div className="mt-3 flex items-center gap-2">
-            <input
-              id="admin-topup-operator-correction"
-              type="checkbox"
-              checked={topUpIsOperatorCorrection}
-              onChange={(e) => {
-                setTopUpIsOperatorCorrection(e.target.checked);
-                if (!e.target.checked) setTopUpOperatorReason("");
-              }}
-              className="h-4 w-4 rounded border-zinc-300 text-amber-600 dark:border-zinc-600"
-            />
-            <Label htmlFor="admin-topup-operator-correction" className="cursor-pointer text-sm text-amber-900 dark:text-amber-200">
-              Korekta portfela operatora (na wniosek gracza, w przypadku błędu)
-            </Label>
-          </div>
-          {topUpIsOperatorCorrection && (
-            <div className="mt-2">
-              <Label htmlFor="admin-topup-operator-reason">
-                Powód korekty portfela operatora <span className="text-red-600">*</span>
-              </Label>
-              <Input
-                id="admin-topup-operator-reason"
-                type="text"
-                placeholder="np. anulowana płatność HotPay, ID sesji ..."
-                value={topUpOperatorReason}
-                onChange={(e) => setTopUpOperatorReason(e.target.value)}
-                className="mt-1 border-amber-300 focus-visible:ring-amber-400 dark:border-amber-700"
-              />
-              <p className="mt-1 text-[11px] text-amber-700 dark:text-amber-300">
-                Korekta portfela operatora jest możliwa wyłącznie na wniosek gracza i wymaga uzasadnienia.
-              </p>
-            </div>
-          )}
+          <p className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50/80 px-3 py-2 text-xs text-emerald-900 dark:border-emerald-800/50 dark:bg-emerald-950/35 dark:text-emerald-100">
+            Ta akcja księguje zwykłą wpłatę od zawodnika do portfela G (gotówka / BLIK). Korekty portfela online wykonuj tylko w sekcji korekty.
+          </p>
           <div className="mt-3">
             <Button type="button" disabled={topUpSubmitting} onClick={() => void adminTopUpWallet()}>
               {topUpSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
-              Dodaj do salda
+              Zaksięguj wpłatę
             </Button>
           </div>
         </>
@@ -816,7 +731,7 @@ export function AdminWalletsSaldoSection({
           Zawodnik
         </p>
         <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">
-          Nikt nie jest wybrany z góry — wyszukaj osobę, potem zaksięguj wpłatę albo skoryguj saldo.
+          Nikt nie jest wybrany z góry — wyszukaj osobę i popraw saldo tylko wtedy, gdy zwykła wpłata nie wystarcza.
         </p>
         <div className="mt-2">
           <WalletPlayerPicker
@@ -836,69 +751,6 @@ export function AdminWalletsSaldoSection({
       {selectedBalancePlayer ? (
         <>
         <section
-          aria-labelledby="admin-deposit-blik-heading"
-          className="rounded-xl border border-teal-200/90 bg-teal-50/70 p-4 dark:border-teal-800/50 dark:bg-teal-950/30"
-        >
-          <p
-            id="admin-deposit-blik-heading"
-            className="text-xs font-semibold uppercase tracking-[0.12em] text-teal-900/80 dark:text-teal-200/90"
-          >
-            Wpłata BLIK / gotówka
-          </p>
-          <p className="mt-1 text-xs text-teal-950/75 dark:text-teal-100/75">
-            Wpisz kwotę, którą otrzymałeś od zawodnika. Saldo portfela G zwiększy się o tę kwotę.
-          </p>
-          <div className="mt-3 grid gap-3 sm:grid-cols-2">
-            <div>
-              <Label htmlFor="admin-adjust-deposit-amount">Otrzymana kwota (PLN)</Label>
-              <Input
-                id="admin-adjust-deposit-amount"
-                type="text"
-                inputMode="decimal"
-                placeholder="np. 50"
-                value={adjustDepositAmount}
-                onChange={(e) => setAdjustDepositAmount(e.target.value)}
-                className="mt-1 h-12 border-teal-300/80 bg-white text-lg font-semibold tabular-nums dark:border-teal-700/60 dark:bg-zinc-950"
-              />
-            </div>
-            <div>
-              <Label htmlFor="admin-adjust-deposit-note">Opis (opcjonalnie)</Label>
-              <Input
-                id="admin-adjust-deposit-note"
-                type="text"
-                placeholder="np. BLIK od Jana, gotówka na boisku"
-                value={adjustDepositNote}
-                onChange={(e) => setAdjustDepositNote(e.target.value)}
-                className="mt-1 h-12 bg-white dark:bg-zinc-950"
-              />
-            </div>
-          </div>
-          {adjustDepositPreview != null && parsedAdjustDeposit != null ? (
-            <p className="mt-2 text-sm font-semibold tabular-nums text-emerald-800 dark:text-emerald-200">
-              G {formatPln(currentAdminWallet)} → {formatPln(adjustDepositPreview)} · +{formatPln(parsedAdjustDeposit)}
-            </p>
-          ) : (
-            <p className="mt-2 text-xs text-zinc-500">
-              Obecne G: {formatPln(currentAdminWallet)}. Po wpłacie saldo wzrośnie o podaną kwotę.
-            </p>
-          )}
-          <div className="mt-3">
-            <Button
-              type="button"
-              disabled={
-                adjustDepositSubmitting ||
-                adminBalanceSubmitting ||
-                parsedAdjustDeposit == null ||
-                parsedAdjustDeposit <= 0
-              }
-              onClick={() => void adminDepositBlikCash()}
-            >
-              {adjustDepositSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : <Banknote className="mr-2 h-4 w-4" aria-hidden />}
-              Zaksięguj wpłatę BLIK / gotówka
-            </Button>
-          </div>
-        </section>
-        <section
           aria-labelledby="admin-balance-form-heading"
           className="rounded-xl border border-amber-200/90 bg-amber-50/60 p-4 dark:border-amber-800/50 dark:bg-amber-950/25"
         >
@@ -909,8 +761,11 @@ export function AdminWalletsSaldoSection({
             Korekta portfela
           </p>
           <p className="mt-1 text-xs text-amber-950/75 dark:text-amber-100/75">
-            Wybierz portfel, popraw kwotę i zatwierdź — różnica trafi do historii jako korekta.
+            Tę sekcję traktuj wyjątkowo: zwykłe wpłaty księguj w „Dodaj wpłatę”, a tutaj tylko ręcznie poprawiaj błędne saldo.
           </p>
+          <div className="mt-3 rounded-lg border border-amber-300/80 bg-white/80 px-3 py-2 text-xs text-amber-950 dark:border-amber-700/60 dark:bg-zinc-950/60 dark:text-amber-100">
+            <span className="font-semibold">Biznesowo:</span> portfel <span className="font-semibold">G</span> to gotówka / BLIK od admina, a portfel <span className="font-semibold">O</span> to płatności online. Korekta <span className="font-semibold">O</span> powinna być używana tylko przy błędzie lub na wyraźny wniosek gracza.
+          </div>
           <div className="mt-3 grid gap-2 sm:grid-cols-2" role="group" aria-label="Który portfel korygować">
             <button
               type="button"
@@ -965,7 +820,7 @@ export function AdminWalletsSaldoSection({
               className="mt-1 h-14 border-amber-300/80 bg-white text-xl font-semibold tabular-nums dark:border-amber-700/60 dark:bg-zinc-950"
             />
             <p className="mt-1 text-[11px] text-zinc-500 dark:text-zinc-400">
-              Ujemne saldo: wpisz minus albo użyj przycisku „+/−”.
+              Ujemne saldo oznacza niedopłatę, dodatnie nadwyżkę. Wpisz minus albo użyj przycisku „+/−”.
             </p>
             <div className="mt-2 flex flex-wrap gap-2">
               <Button
@@ -1041,21 +896,20 @@ export function AdminWalletsSaldoSection({
               type="button"
               disabled={
                 adminBalanceSubmitting ||
-                adjustDepositSubmitting ||
                 parsedAdjustTarget == null ||
                 adjustDelta === 0
               }
               onClick={() => void adminSetWalletBalance()}
             >
               {adminBalanceSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
-              Ustaw saldo
+              Zapisz korektę
             </Button>
           </div>
         </section>
         </>
       ) : (
         <p className="rounded-lg border border-dashed border-zinc-200 bg-zinc-50/80 px-3 py-2.5 text-xs text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900/40 dark:text-zinc-400">
-          Wybierz zawodnika z listy powyżej albo przyciskiem „Korekta” na liście sald.
+          Wybierz zawodnika z listy powyżej albo przyciskiem „Koryguj” na liście sald.
         </p>
       )}
     </div>
@@ -1172,7 +1026,7 @@ export function AdminWalletsSaldoSection({
                     onClick={() => startBalanceCorrection(p.id)}
                   >
                     <PencilLine className="mr-1.5 h-3.5 w-3.5" aria-hidden />
-                    Korekta
+                    Koryguj
                   </Button>
                 </li>
               );
@@ -1366,7 +1220,7 @@ export function AdminWalletsSaldoSection({
 
   const walletTabOptions = [
     { id: "balances" as const, label: "Salda" },
-    ...(topUpEnabled ? [{ id: "topup" as const, label: "Doładuj" }] : []),
+    ...(topUpEnabled ? [{ id: "topup" as const, label: "Wpłata" }] : []),
     { id: "adjust" as const, label: "Korekta" },
     ...(linksEnabled ? [{ id: "links" as const, label: "Linki" }] : []),
   ];
@@ -1379,7 +1233,7 @@ export function AdminWalletsSaldoSection({
       {!embedded ? (
         <AdminToolbar
           title="Portfele graczy"
-          description="Salda graczy (G = gotówka/BLIK, O = online). Doładuj wpłatę albo ustaw docelowe saldo osobno dla każdego portfela."
+          description="Salda graczy (G = gotówka/BLIK, O = online). Zwykłe wpłaty księguj osobno, a korekty traktuj jako wyjątkowe poprawki salda."
           onReload={() => void refresh()}
           loading={adminLoading}
         />
@@ -1394,7 +1248,7 @@ export function AdminWalletsSaldoSection({
             <p className="text-[0.65rem] font-black uppercase tracking-[0.18em] text-white/80">Administrator</p>
             <h2 className="mt-1 text-2xl font-black text-white">Portfele graczy</h2>
             <p className="mt-1 text-sm text-white/85">
-              Salda, doładowania po przelewie, korekty i linki do podsumowań.
+              Salda, zwykłe wpłaty, wyjątkowe korekty i linki do podsumowań.
             </p>
           </PhotoPanel>
         </div>
@@ -1407,8 +1261,8 @@ export function AdminWalletsSaldoSection({
               <PlatnosciCollapsible
                 embedded={embedded}
                 className="mb-0"
-                title="Doładuj saldo"
-                description="Wpłata gotówką lub BLIK (portfel G). Zaznacz korektę operatora, jeśli trzeba poprawić saldo online (O)."
+                title="Dodaj wpłatę"
+                description="Najszybsza ścieżka: zaksięguj otrzymaną gotówkę lub BLIK do portfela G."
               >
                 {topUpFormBody}
               </PlatnosciCollapsible>
@@ -1420,8 +1274,8 @@ export function AdminWalletsSaldoSection({
                 className="mb-0"
                 open={adjustSectionOpen}
                 onOpenChange={setAdjustSectionOpen}
-                title="Ustaw saldo zawodnika"
-                description="Wpłata BLIK/gotówka zwiększa saldo G. Korekta ustawia docelową kwotę G lub O — różnica idzie do historii."
+                title="Korekta salda"
+                description="Używaj tylko wtedy, gdy trzeba ręcznie poprawić docelowe saldo G lub O."
               >
                 {adjustFormBody}
               </PlatnosciCollapsible>
@@ -1452,7 +1306,7 @@ export function AdminWalletsSaldoSection({
           <AdminCard
             title={
               activeWalletTab === "topup"
-                ? "Doładuj saldo"
+                ? "Dodaj wpłatę"
                 : activeWalletTab === "adjust"
                   ? "Korekta salda"
                   : activeWalletTab === "links"
@@ -1461,9 +1315,9 @@ export function AdminWalletsSaldoSection({
             }
             description={
               activeWalletTab === "topup"
-                ? "Wpłata gotówką lub BLIK (portfel G). Zaznacz korektę operatora, jeśli trzeba poprawić saldo online (O)."
+                ? "Szybkie księgowanie zwykłej wpłaty do portfela G (gotówka / BLIK)."
                 : activeWalletTab === "adjust"
-                  ? "Wpłata BLIK/gotówka zwiększa saldo G. Korekta ustawia docelową kwotę G lub O — różnica idzie do historii."
+                  ? "Wyjątkowa ręczna poprawka docelowego salda G lub O. Różnica trafia do historii jako korekta."
                   : activeWalletTab === "links"
                     ? "Wyślij zawodnikom link z podglądem sald — ostatni mecz, zbiorczo albo dowolny rozegrany mecz."
                     : "Podgląd sald: łącznie oraz G (gotówka/BLIK) i O (online)."
