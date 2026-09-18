@@ -3,14 +3,27 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { SiteAssetImage } from "@/components/site-asset-image";
+import {
+  markAndroidColdStartPreloadersDone,
+  notifyFirstScreenContentReady,
+  shouldSuppressStartupRoutePreloader,
+  STARTUP_SPLASH_ACTIVE_CLASS,
+  STARTUP_SPLASH_SESSION_KEY,
+  subscribeFirstScreenContentReady,
+} from "@/lib/android-content-ready";
 import { isInstalledAndroidAppClient } from "@/lib/app-webview";
 import { cn } from "@/lib/utils";
 
-const SESSION_KEY = "awp-startup-splash-shown";
-const ANDROID_COLD_PRELOADER_KEY = "awp-android-route-preloader-ok";
+export {
+  markAndroidColdStartPreloadersDone,
+  notifyFirstScreenContentReady,
+  shouldSuppressStartupRoutePreloader,
+} from "@/lib/android-content-ready";
+
 const BOOT_SPLASH_ID = "awp-boot-splash";
-const ACTIVE_CLASS = "awp-startup-splash-active";
-const MAX_VISIBLE_MS = 3200;
+const MAX_VISIBLE_MS_IOS = 3200;
+/** Android WebView: trzymaj splash aż do treści (lub awaryjny limit). */
+const MAX_VISIBLE_MS_ANDROID = 15_000;
 const FADE_MS = 320;
 
 function isIosDevice(): boolean {
@@ -37,34 +50,26 @@ export function shouldShowIosStartupSplash(): boolean {
   if (!isIosDevice()) return false;
   if (!isStandaloneApp()) return false;
   try {
-    if (sessionStorage.getItem(SESSION_KEY) === "1") return false;
+    if (sessionStorage.getItem(STARTUP_SPLASH_SESSION_KEY) === "1") return false;
   } catch {
     /* private mode */
   }
   return true;
 }
 
-export function shouldSuppressStartupRoutePreloader(): boolean {
-  if (typeof document === "undefined") return false;
-  if (document.documentElement.classList.contains(ACTIVE_CLASS)) return true;
-  if (document.documentElement.classList.contains("awp-boot-splash-pending")) return true;
-  if (isInstalledAndroidAppClient()) {
-    try {
-      return sessionStorage.getItem(ANDROID_COLD_PRELOADER_KEY) !== "1";
-    } catch {
-      return true;
-    }
+export function shouldShowAndroidStartupSplash(): boolean {
+  if (typeof window === "undefined") return false;
+  if (!isInstalledAndroidAppClient()) return false;
+  try {
+    if (sessionStorage.getItem(STARTUP_SPLASH_SESSION_KEY) === "1") return false;
+  } catch {
+    /* private mode */
   }
-  return false;
+  return true;
 }
 
-export function markAndroidColdStartPreloadersDone(): void {
-  if (typeof window === "undefined") return;
-  try {
-    sessionStorage.setItem(ANDROID_COLD_PRELOADER_KEY, "1");
-  } catch {
-    /* ignore */
-  }
+export function shouldShowStartupSplash(): boolean {
+  return shouldShowIosStartupSplash() || shouldShowAndroidStartupSplash();
 }
 
 function removeBootSplashDom() {
@@ -75,7 +80,7 @@ function removeBootSplashDom() {
 
 function setSplashActiveClass(active: boolean) {
   if (typeof document === "undefined") return;
-  document.documentElement.classList.toggle(ACTIVE_CLASS, active);
+  document.documentElement.classList.toggle(STARTUP_SPLASH_ACTIVE_CLASS, active);
 }
 
 function whenFirstScreenReady(): Promise<void> {
@@ -92,18 +97,36 @@ function whenFirstScreenReady(): Promise<void> {
   });
 }
 
+function whenAndroidContentReady(maxMs: number): Promise<void> {
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      resolve();
+    };
+    const unsub = subscribeFirstScreenContentReady(finish);
+    window.setTimeout(() => {
+      unsub();
+      finish();
+    }, maxMs);
+  });
+}
+
 export function StartupSplash() {
   const [phase, setPhase] = useState<"hidden" | "show" | "leave">("hidden");
 
   useEffect(() => {
-    if (!shouldShowIosStartupSplash()) {
+    const android = shouldShowAndroidStartupSplash();
+    const ios = shouldShowIosStartupSplash();
+    if (!android && !ios) {
       removeBootSplashDom();
       setSplashActiveClass(false);
       setPhase("hidden");
       return;
     }
     try {
-      sessionStorage.setItem(SESSION_KEY, "1");
+      sessionStorage.setItem(STARTUP_SPLASH_SESSION_KEY, "1");
     } catch {
       /* ignore */
     }
@@ -124,11 +147,15 @@ export function StartupSplash() {
     };
 
     const run = async () => {
-      const ready = whenFirstScreenReady();
-      const maxWait = new Promise<void>((resolve) => {
-        window.setTimeout(resolve, MAX_VISIBLE_MS);
-      });
-      await Promise.race([ready, maxWait]);
+      if (android) {
+        await whenAndroidContentReady(MAX_VISIBLE_MS_ANDROID);
+      } else {
+        const ready = whenFirstScreenReady();
+        const maxWait = new Promise<void>((resolve) => {
+          window.setTimeout(resolve, MAX_VISIBLE_MS_IOS);
+        });
+        await Promise.race([ready, maxWait]);
+      }
       if (cancelled) return;
       beginLeave();
     };
@@ -183,9 +210,7 @@ export function StartupSplash() {
         </div>
 
         <h1 className="awp-boot-loader__title">Akademia Wielkich Piłkarzy</h1>
-        <p className="awp-boot-loader__status">
-          Przygotowujemy boiska…
-        </p>
+        <p className="awp-boot-loader__status">Przygotowujemy boiska…</p>
 
         <div className="awp-boot-loader__dots" aria-hidden>
           <span className="awp-boot-loader__dot" />
