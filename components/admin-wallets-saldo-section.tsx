@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { Check, ClipboardCopy, Loader2, PencilLine, Search } from "lucide-react";
+import { Banknote, Check, ClipboardCopy, Loader2, PencilLine, Search } from "lucide-react";
 import { toast } from "@/lib/app-toast";
 import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
 import { Button } from "@/components/ui/button";
@@ -187,10 +187,18 @@ function formatAmountInput(n: number) {
 }
 
 function parsePlnInput(raw: string) {
-  const trimmed = String(raw).replace(",", ".").trim();
-  if (!trimmed) return null;
+  const trimmed = String(raw).replace(/\u2212/g, "-").replace(",", ".").trim();
+  if (!trimmed || trimmed === "-") return null;
   const n = Number(trimmed);
   return Number.isFinite(n) ? Math.round(n * 100) / 100 : null;
+}
+
+function togglePlnSign(raw: string) {
+  const value = String(raw);
+  if (!value.trim() || value.trim() === "-") return value.startsWith("-") ? "" : "-";
+  const minus = value.match(/^\s*-/);
+  if (minus) return value.slice(minus[0].length);
+  return `-${value.replace(/^\s+/, "")}`;
 }
 
 function WalletPlayerPicker({
@@ -389,6 +397,9 @@ export function AdminWalletsSaldoSection({
   /** admin = gotówka/BLIK (G), operator = płatności online HotPay (O) */
   const [adminBalanceWalletKind, setAdminBalanceWalletKind] = useState<"admin" | "operator">("admin");
   const [adminBalanceSubmitting, setAdminBalanceSubmitting] = useState(false);
+  const [adjustDepositAmount, setAdjustDepositAmount] = useState("");
+  const [adjustDepositNote, setAdjustDepositNote] = useState("");
+  const [adjustDepositSubmitting, setAdjustDepositSubmitting] = useState(false);
   const [topUpUserId, setTopUpUserId] = useState<number | null>(null);
   const [topUpUserQuery, setTopUpUserQuery] = useState("");
   const [topUpAmount, setTopUpAmount] = useState("");
@@ -457,6 +468,12 @@ export function AdminWalletsSaldoSection({
   const adjustDelta =
     selectedBalancePlayer && parsedAdjustTarget != null
       ? Math.round((parsedAdjustTarget - currentAdjustAmount) * 100) / 100
+      : null;
+  const parsedAdjustDeposit = parsePlnInput(adjustDepositAmount);
+  const currentAdminWallet = selectedBalancePlayer ? playerWalletAmount(selectedBalancePlayer, "admin") : 0;
+  const adjustDepositPreview =
+    selectedBalancePlayer && parsedAdjustDeposit != null && parsedAdjustDeposit > 0
+      ? Math.round((currentAdminWallet + parsedAdjustDeposit) * 100) / 100
       : null;
 
   const playedMatches = adminOverview?.playedMatches ?? EMPTY_PLAYED_MATCHES;
@@ -550,6 +567,48 @@ export function AdminWalletsSaldoSection({
     }
   }
 
+  async function adminDepositBlikCash() {
+    const user_id = adminBalanceUserId;
+    const amount_pln = parsePlnInput(adjustDepositAmount);
+    if (!user_id) {
+      toast.error("Wybierz zawodnika");
+      return;
+    }
+    if (amount_pln == null || amount_pln <= 0) {
+      toast.error("Podaj kwotę wpłaty większą od zera");
+      return;
+    }
+    setAdjustDepositSubmitting(true);
+    try {
+      const r = await fetchJson<{ ok: true; id: number }>("/api/admin/wallet/deposits", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          user_id,
+          amount_pln,
+          note: adjustDepositNote.trim() ? adjustDepositNote.trim() : "BLIK / gotówka",
+          wallet_kind: "admin",
+        }),
+      });
+      if (!r.ok) {
+        toast.error(r.error);
+        return;
+      }
+      toast.success(`Dodano ${formatPln(amount_pln)} do salda (BLIK / gotówka)`);
+      setAdjustDepositAmount("");
+      setAdjustDepositNote("");
+      const player = balancePlayerList.find((p) => p.id === user_id);
+      if (player && adminBalanceWalletKind === "admin") {
+        const next = Math.round((playerWalletAmount(player, "admin") + amount_pln) * 100) / 100;
+        setAdminBalanceTarget(formatAmountInput(next));
+      }
+      await refresh();
+      router.refresh();
+    } finally {
+      setAdjustDepositSubmitting(false);
+    }
+  }
+
   async function adminSetWalletBalance() {
     const user_id = adminBalanceUserId;
     const balance_pln = parsePlnInput(adminBalanceTarget);
@@ -632,6 +691,8 @@ export function AdminWalletsSaldoSection({
     setAdminBalanceTarget("");
     setAdminBalanceNote("");
     setAdminBalanceWalletKind("admin");
+    setAdjustDepositAmount("");
+    setAdjustDepositNote("");
   }
 
   function startBalanceCorrection(id: number) {
@@ -755,7 +816,7 @@ export function AdminWalletsSaldoSection({
           Zawodnik
         </p>
         <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">
-          Nikt nie jest wybrany z góry — wyszukaj osobę, potem ustaw docelowe saldo wybranego portfela.
+          Nikt nie jest wybrany z góry — wyszukaj osobę, potem zaksięguj wpłatę albo skoryguj saldo.
         </p>
         <div className="mt-2">
           <WalletPlayerPicker
@@ -773,6 +834,70 @@ export function AdminWalletsSaldoSection({
       </section>
 
       {selectedBalancePlayer ? (
+        <>
+        <section
+          aria-labelledby="admin-deposit-blik-heading"
+          className="rounded-xl border border-teal-200/90 bg-teal-50/70 p-4 dark:border-teal-800/50 dark:bg-teal-950/30"
+        >
+          <p
+            id="admin-deposit-blik-heading"
+            className="text-xs font-semibold uppercase tracking-[0.12em] text-teal-900/80 dark:text-teal-200/90"
+          >
+            Wpłata BLIK / gotówka
+          </p>
+          <p className="mt-1 text-xs text-teal-950/75 dark:text-teal-100/75">
+            Wpisz kwotę, którą otrzymałeś od zawodnika. Saldo portfela G zwiększy się o tę kwotę.
+          </p>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <div>
+              <Label htmlFor="admin-adjust-deposit-amount">Otrzymana kwota (PLN)</Label>
+              <Input
+                id="admin-adjust-deposit-amount"
+                type="text"
+                inputMode="decimal"
+                placeholder="np. 50"
+                value={adjustDepositAmount}
+                onChange={(e) => setAdjustDepositAmount(e.target.value)}
+                className="mt-1 h-12 border-teal-300/80 bg-white text-lg font-semibold tabular-nums dark:border-teal-700/60 dark:bg-zinc-950"
+              />
+            </div>
+            <div>
+              <Label htmlFor="admin-adjust-deposit-note">Opis (opcjonalnie)</Label>
+              <Input
+                id="admin-adjust-deposit-note"
+                type="text"
+                placeholder="np. BLIK od Jana, gotówka na boisku"
+                value={adjustDepositNote}
+                onChange={(e) => setAdjustDepositNote(e.target.value)}
+                className="mt-1 h-12 bg-white dark:bg-zinc-950"
+              />
+            </div>
+          </div>
+          {adjustDepositPreview != null && parsedAdjustDeposit != null ? (
+            <p className="mt-2 text-sm font-semibold tabular-nums text-emerald-800 dark:text-emerald-200">
+              G {formatPln(currentAdminWallet)} → {formatPln(adjustDepositPreview)} · +{formatPln(parsedAdjustDeposit)}
+            </p>
+          ) : (
+            <p className="mt-2 text-xs text-zinc-500">
+              Obecne G: {formatPln(currentAdminWallet)}. Po wpłacie saldo wzrośnie o podaną kwotę.
+            </p>
+          )}
+          <div className="mt-3">
+            <Button
+              type="button"
+              disabled={
+                adjustDepositSubmitting ||
+                adminBalanceSubmitting ||
+                parsedAdjustDeposit == null ||
+                parsedAdjustDeposit <= 0
+              }
+              onClick={() => void adminDepositBlikCash()}
+            >
+              {adjustDepositSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : <Banknote className="mr-2 h-4 w-4" aria-hidden />}
+              Zaksięguj wpłatę BLIK / gotówka
+            </Button>
+          </div>
+        </section>
         <section
           aria-labelledby="admin-balance-form-heading"
           className="rounded-xl border border-amber-200/90 bg-amber-50/60 p-4 dark:border-amber-800/50 dark:bg-amber-950/25"
@@ -830,13 +955,27 @@ export function AdminWalletsSaldoSection({
             <Input
               id="admin-balance-target"
               type="text"
-              inputMode="decimal"
-              placeholder="np. 0 lub 120,00"
+              inputMode="text"
+              autoComplete="off"
+              autoCorrect="off"
+              spellCheck={false}
+              placeholder="np. -20 albo 120,00"
               value={adminBalanceTarget}
-              onChange={(e) => setAdminBalanceTarget(e.target.value)}
+              onChange={(e) => setAdminBalanceTarget(e.target.value.replace(/\u2212/g, "-"))}
               className="mt-1 h-14 border-amber-300/80 bg-white text-xl font-semibold tabular-nums dark:border-amber-700/60 dark:bg-zinc-950"
             />
+            <p className="mt-1 text-[11px] text-zinc-500 dark:text-zinc-400">
+              Ujemne saldo: wpisz minus albo użyj przycisku „+/−”.
+            </p>
             <div className="mt-2 flex flex-wrap gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => setAdminBalanceTarget((prev) => togglePlnSign(prev))}
+              >
+                +/−
+              </Button>
               <Button
                 type="button"
                 size="sm"
@@ -900,7 +1039,12 @@ export function AdminWalletsSaldoSection({
           <div className="mt-4">
             <Button
               type="button"
-              disabled={adminBalanceSubmitting || parsedAdjustTarget == null || adjustDelta === 0}
+              disabled={
+                adminBalanceSubmitting ||
+                adjustDepositSubmitting ||
+                parsedAdjustTarget == null ||
+                adjustDelta === 0
+              }
               onClick={() => void adminSetWalletBalance()}
             >
               {adminBalanceSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
@@ -908,6 +1052,7 @@ export function AdminWalletsSaldoSection({
             </Button>
           </div>
         </section>
+        </>
       ) : (
         <p className="rounded-lg border border-dashed border-zinc-200 bg-zinc-50/80 px-3 py-2.5 text-xs text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900/40 dark:text-zinc-400">
           Wybierz zawodnika z listy powyżej albo przyciskiem „Korekta” na liście sald.
@@ -1276,7 +1421,7 @@ export function AdminWalletsSaldoSection({
                 open={adjustSectionOpen}
                 onOpenChange={setAdjustSectionOpen}
                 title="Ustaw saldo zawodnika"
-                description="Korekta docelowego salda: Gotówka/BLIK (G) albo płatności online (O). Różnica trafia do historii jako „Korekta”."
+                description="Wpłata BLIK/gotówka zwiększa saldo G. Korekta ustawia docelową kwotę G lub O — różnica idzie do historii."
               >
                 {adjustFormBody}
               </PlatnosciCollapsible>
@@ -1318,7 +1463,7 @@ export function AdminWalletsSaldoSection({
               activeWalletTab === "topup"
                 ? "Wpłata gotówką lub BLIK (portfel G). Zaznacz korektę operatora, jeśli trzeba poprawić saldo online (O)."
                 : activeWalletTab === "adjust"
-                  ? "Korekta docelowego salda: Gotówka/BLIK (G) albo płatności online (O). Różnica trafia do historii jako „Korekta”."
+                  ? "Wpłata BLIK/gotówka zwiększa saldo G. Korekta ustawia docelową kwotę G lub O — różnica idzie do historii."
                   : activeWalletTab === "links"
                     ? "Wyślij zawodnikom link z podglądem sald — ostatni mecz, zbiorczo albo dowolny rozegrany mecz."
                     : "Podgląd sald: łącznie oraz G (gotówka/BLIK) i O (online)."
