@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2, UserPlus } from "lucide-react";
+import { UserPlus } from "lucide-react";
 import { toast } from "@/lib/app-toast";
 import { z } from "zod";
 import type { MatchRow } from "@/lib/db";
+import { LoadingIndicator } from "@/components/preloaders";
 import { AppModal } from "@/components/ui/app-modal";
 import { FormInput } from "@/components/ui/form-field";
 import { Button } from "@/components/ui/button";
@@ -110,7 +111,7 @@ export function MatchAddGuestDialog({
             Anuluj
           </Button>
           <Button type="button" variant="default" disabled={busy} onClick={() => void addGuest()}>
-            {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
+            {busy ? <LoadingIndicator variant="button" size="sm" className="mr-2" /> : null}
             <UserPlus className="mr-2 h-4 w-4" aria-hidden />
             Dodaj gościa
           </Button>

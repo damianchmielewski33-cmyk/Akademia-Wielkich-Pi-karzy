@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Loader2, Search, Settings2 } from "lucide-react";
+import { ArrowLeft, Search, Settings2 } from "lucide-react";
 import { toast } from "@/lib/app-toast";
 import {
   AdminCard,
@@ -13,6 +13,7 @@ import {
   adminTextareaClass,
   adminToggleRowClass,
 } from "@/components/admin-ui";
+import { LoadingIndicator } from "@/components/preloaders";
 import { Button } from "@/components/ui/button";
 import { YesNoSwitchRow } from "@/components/ui/yes-no-switch";
 import { Input } from "@/components/ui/input";
@@ -448,7 +449,7 @@ export function AdminSettingsTab({
   if (fetching && !settings) {
     return (
       <div className="flex items-center justify-center gap-2 py-16 text-sm text-zinc-500">
-        <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
+        <LoadingIndicator variant="button" size="md" className="text-[var(--mp-teal)]" />
         Wczytywanie ustawień…
       </div>
     );
@@ -508,7 +509,7 @@ export function AdminSettingsTab({
       >
         {saveFlash === "saving" ? (
           <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-600 dark:text-amber-300">
-            <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+            <LoadingIndicator variant="button" size="sm" />
             Zapisywanie…
           </span>
         ) : saveFlash === "saved" ? (

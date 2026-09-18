@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode, type Ref } from "react";
 import { ImagePlus, Smile, Trash2, X } from "lucide-react";
+import { LoadingIndicator } from "@/components/preloaders";
 import { toast } from "@/lib/app-toast";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -360,7 +361,7 @@ export function ChatBubble({
               title="Usuń wiadomość"
             >
               {deleting ? (
-                <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                <LoadingIndicator variant="button" size="sm" className="text-current" />
               ) : (
                 <Trash2 className="h-3.5 w-3.5" aria-hidden />
               )}

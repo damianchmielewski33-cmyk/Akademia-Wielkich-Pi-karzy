@@ -3,8 +3,9 @@
 import { useRef, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { Loader2, RotateCcw, Upload } from "lucide-react";
+import { RotateCcw, Upload } from "lucide-react";
 import { toast } from "@/lib/app-toast";
+import { LoadingIndicator } from "@/components/preloaders";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
@@ -173,7 +174,7 @@ export function AdminSiteAssetField({ assetKey, currentUrl, customUrl, disabled,
               onClick={() => inputRef.current?.click()}
             >
               {busy ? (
-                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                <LoadingIndicator variant="button" size="sm" />
               ) : (
                 <Upload className="h-4 w-4" aria-hidden />
               )}

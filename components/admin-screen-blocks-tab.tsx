@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Construction, Eye, Loader2 } from "lucide-react";
+import { Construction, Eye } from "lucide-react";
 import { toast } from "@/lib/app-toast";
 import {
   AdminCard,
@@ -12,6 +12,7 @@ import {
   adminToggleRowClass,
 } from "@/components/admin-ui";
 import { AdminChannelToggle } from "@/components/admin-channel-toggle";
+import { LoadingIndicator } from "@/components/preloaders";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { YesNoSwitch } from "@/components/ui/yes-no-switch";
@@ -161,7 +162,7 @@ export function AdminScreenBlocksTab({ loading, onReload }: Props) {
           Odkryj wszystkie
         </Button>
         <Button type="button" variant="default" size="sm" className="rounded-full font-bold" disabled={busy} onClick={() => void save()}>
-          {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
+          {saving ? <LoadingIndicator variant="button" size="sm" className="mr-2" /> : null}
           Zapisz zmiany
         </Button>
       </AdminToolbar>
@@ -189,7 +190,7 @@ export function AdminScreenBlocksTab({ loading, onReload }: Props) {
 
       {fetching && !loading ? (
         <div className={cn(adminEmptyStateClass, "flex items-center justify-center gap-2 py-16")}>
-          <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+          <LoadingIndicator variant="button" size="sm" className="text-[var(--mp-teal)]" />
           Wczytywanie…
         </div>
       ) : channel === "web" ? (
@@ -232,7 +233,7 @@ export function AdminScreenBlocksTab({ loading, onReload }: Props) {
 
       <div className="mt-6 flex justify-end">
         <Button type="button" variant="default" className="rounded-full font-bold" disabled={busy} onClick={() => void save()}>
-          {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
+          {saving ? <LoadingIndicator variant="button" size="sm" className="mr-2" /> : null}
           Zapisz zmiany
         </Button>
       </div>

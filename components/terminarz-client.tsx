@@ -20,7 +20,6 @@ import {
   Dices,
   List,
   LayoutGrid,
-  Loader2,
   LogIn,
   HelpCircle,
   MapPin,
@@ -50,6 +49,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MatchSignupDialog } from "@/components/match-signup-dialog";
 import { MatchManageDialog } from "@/components/match-manage-dialog";
 import { MatchAddGuestDialog } from "@/components/match-add-guest-dialog";
+import { LoadingIndicator } from "@/components/preloaders";
 import { CaptainLotteryDialog } from "@/components/captain-lottery-dialog";
 import { LineupDrawDialog } from "@/components/lineup-draw-dialog";
 import { MatchLineupView } from "@/components/match-lineup-view";
@@ -1045,7 +1045,7 @@ export function TerminarzClient({
                     onClick={() => void payDebt(Math.abs(walletBalancePln))}
                   >
                     {debtBusy ? (
-                      <Loader2 className="shrink-0 animate-spin" aria-hidden />
+                      <LoadingIndicator variant="button" size="sm" className="shrink-0" />
                     ) : (
                       <Wallet className="shrink-0" aria-hidden />
                     )}
@@ -1085,7 +1085,7 @@ export function TerminarzClient({
                       onClick={() => void payDebt(Math.abs(walletBalancePln))}
                     >
                       {debtBusy ? (
-                        <Loader2 className="shrink-0 animate-spin" aria-hidden />
+                        <LoadingIndicator variant="button" size="sm" className="shrink-0" />
                       ) : (
                         <Wallet className="shrink-0" aria-hidden />
                       )}
@@ -1106,7 +1106,7 @@ export function TerminarzClient({
                       onClick={() => void payMatchFee(m.id)}
                     >
                       {matchPayBusyId === m.id ? (
-                        <Loader2 className="shrink-0 animate-spin" aria-hidden />
+                        <LoadingIndicator variant="button" size="sm" className="shrink-0" />
                       ) : (
                         <Wallet className="shrink-0" aria-hidden />
                       )}
@@ -1428,7 +1428,7 @@ export function TerminarzClient({
               onClick={() => void addCaptainLotteryRound(m)}
             >
               {addLotteryBusyId === m.id ? (
-                <Loader2 className="shrink-0 animate-spin" aria-hidden />
+                <LoadingIndicator variant="button" size="sm" className="shrink-0" />
               ) : (
                 <Plus className="shrink-0" aria-hidden />
               )}
@@ -1450,7 +1450,7 @@ export function TerminarzClient({
               onClick={() => void clearCaptainLotteryHistory(m)}
             >
               {clearLotteryBusyId === m.id ? (
-                <Loader2 className="shrink-0 animate-spin" aria-hidden />
+                <LoadingIndicator variant="button" size="sm" className="shrink-0" />
               ) : (
                 <RotateCcw className="shrink-0" aria-hidden />
               )}
@@ -2317,7 +2317,7 @@ export function TerminarzClient({
             disabled={attendanceBusy || !attendanceMatch}
             onClick={() => void saveAttendance()}
           >
-            {attendanceBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
+            {attendanceBusy ? <LoadingIndicator variant="button" size="sm" className="mr-2" /> : null}
             Zapisz obecność
           </Button>
         </>
@@ -2409,7 +2409,7 @@ export function TerminarzClient({
               disabled={settleSubmitting || settleLoading}
               onClick={() => void submitSettlement()}
             >
-              {settleSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
+              {settleSubmitting ? <LoadingIndicator variant="button" size="sm" className="mr-2" /> : null}
               Zapisz rozliczenie
             </Button>
           </>
@@ -2608,7 +2608,7 @@ export function TerminarzClient({
               disabled={statsBusy}
               onClick={() => void saveMatchStats()}
             >
-              {statsBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
+              {statsBusy ? <LoadingIndicator variant="button" size="sm" className="mr-2" /> : null}
               Zapisz statystyki
             </Button>
           </>
@@ -3037,7 +3037,7 @@ function AddMatchDialog({
             Anuluj
           </Button>
           <Button type="submit" form="add-match-form" variant="default" className="rounded-full font-bold" disabled={busy}>
-            {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
+            {busy ? <LoadingIndicator variant="button" size="sm" className="mr-2" /> : null}
             Zapisz mecz
           </Button>
         </>

@@ -27,8 +27,41 @@ const postSchema = z.discriminatedUnion("kind", [
   }),
 ]);
 
+const deleteSchema = z.object({
+  token: z.string().trim().min(8).max(128),
+});
+
+export async function GET() {
+  const gate = await requireAdmin("finance");
+  if (!gate.ok) return gate.response;
+
+  const db = await getDb();
+  const links = await db
+    .prepare(
+      `SELECT id, token, kind, created_by_admin_id, created_at, expires_at, revoked_at, match_id, user_id
+       FROM public_share_links
+       WHERE revoked_at IS NULL
+         AND (expires_at IS NULL OR datetime('now') <= datetime(expires_at))
+       ORDER BY datetime(created_at) DESC
+       LIMIT 100`
+    )
+    .all();
+
+  return NextResponse.json({
+    links: Array.isArray(links)
+      ? links.map((row) => {
+          const link = row as Record<string, unknown> & { token: string };
+          return {
+            ...link,
+            path: `/platnosci-public/${link.token}`,
+          };
+        })
+      : [],
+  });
+}
+
 export async function POST(req: Request) {
-  const gate = await requireAdmin();
+  const gate = await requireAdmin("finance");
   if (!gate.ok) return gate.response;
 
   let json: unknown;
@@ -103,4 +136,36 @@ export async function POST(req: Request) {
     token,
     path: `/platnosci-public/${token}`,
   });
+}
+
+export async function DELETE(req: Request) {
+  const gate = await requireAdmin("finance");
+  if (!gate.ok) return gate.response;
+
+  let json: unknown;
+  try {
+    json = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Nieprawidłowe JSON" }, { status: 400 });
+  }
+
+  const parsed = deleteSchema.safeParse(json ?? {});
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+  }
+
+  const db = await getDb();
+  const updated = await db
+    .prepare(
+      `UPDATE public_share_links
+       SET revoked_at = datetime('now')
+       WHERE token = ? AND revoked_at IS NULL`
+    )
+    .run(parsed.data.token);
+  if (updated.changes === 0) {
+    return NextResponse.json({ error: "Link jest już nieaktywny albo nie istnieje" }, { status: 404 });
+  }
+
+  await logActivity(gate.session.userId, `Unieważnił publiczny link płatności ${parsed.data.token}`);
+  return NextResponse.json({ ok: true });
 }

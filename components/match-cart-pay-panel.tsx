@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Loader2, ShoppingCart } from "lucide-react";
+import { ShoppingCart } from "lucide-react";
+import { LoadingIndicator } from "@/components/preloaders";
 import { AppModal } from "@/components/ui/app-modal";
 import { extractApiErrorMessage, useAppMessage } from "@/components/ui/app-message-modal";
 import { Button } from "@/components/ui/button";
@@ -106,6 +107,14 @@ export function MatchCartPayPanel({
   );
 
   useEffect(() => {
+    setSelectedIds((prev) => {
+      if (!selectedMatch) return [];
+      const allowed = new Set(selectedMatch.unpaid_players.map((p) => p.user_id));
+      return prev.filter((id) => allowed.has(id));
+    });
+  }, [selectedMatch]);
+
+  useEffect(() => {
     if (autoSelectedRef.current) return;
     if (preferUserId == null || matchId == null || initialMatchId == null) return;
     if (matchId !== initialMatchId) return;
@@ -171,6 +180,7 @@ export function MatchCartPayPanel({
         method?: string;
         url?: string;
         amount_pln?: number;
+        gross_amount_pln?: number;
         paid_user_ids?: number[];
       };
       if (!res.ok) {
@@ -180,9 +190,13 @@ export function MatchCartPayPanel({
       }
       if (data.method === "hotpay" && data.url) {
         setConfirmOpen(false);
+        const net = Number(data.amount_pln ?? totalPln);
+        const gross = Number(data.gross_amount_pln ?? data.amount_pln ?? totalPln);
         showInfo(
-          "Zaraz przekierujemy Cię do płatności kartą lub Blikiem — po płatności zawodnicy zostaną oznaczeni jako opłaceni.",
-          "Płatność"
+          gross > net + 0.0001
+            ? `Zaraz przekierujemy Cię do płatności online. Operator pobierze ${formatMatchFeePln(gross)}, a opłata koszyka wynosi ${formatMatchFeePln(net)}.`
+            : `Zaraz przekierujemy Cię do płatności online za ${formatMatchFeePln(net)}.`,
+          "Płatność online"
         );
         window.setTimeout(() => {
           window.location.assign(data.url!);
@@ -217,7 +231,7 @@ export function MatchCartPayPanel({
     >
       {loading ? (
         <p className="flex items-center gap-2 text-sm text-zinc-500">
-          <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+          <LoadingIndicator variant="button" size="sm" className="text-[var(--mp-teal)]" />
           Wczytywanie meczów…
         </p>
       ) : matches.length === 0 ? (
@@ -305,6 +319,11 @@ export function MatchCartPayPanel({
                   {needsHotpay ? " · brakuje środków" : ""}
                 </p>
               ) : null}
+              {needsHotpay ? (
+                <p className="mt-1 text-xs text-zinc-500">
+                  Całość pójdzie przez płatność online, jeśli saldo portfela nie wystarczy.
+                </p>
+              ) : null}
             </div>
             <Button type="button" variant={btnVariant} disabled={submitting || loading} onClick={openConfirm}>
               Opłać wybranych
@@ -320,7 +339,7 @@ export function MatchCartPayPanel({
         description={
           selectedMatch && selectedIds.length > 0
             ? needsHotpay && hotpayEnabled
-              ? `Opłacisz ${selectedIds.length} os. za ${formatMatchFeePln(totalPln)}. Brakuje środków na portfelu — zapłacisz kartą lub Blikiem, a potem opłaty zostaną oznaczone automatycznie.`
+              ? `Opłacisz ${selectedIds.length} os. za ${formatMatchFeePln(totalPln)}. Brakuje środków na portfelu, więc przejdziesz do płatności online. Przed przekierowaniem pokażemy też ewentualną kwotę brutto operatora.`
               : `Opłacisz ${selectedIds.length} os. za ${formatMatchFeePln(totalPln)} z portfela. Zawodnicy zostaną oznaczeni jako opłaceni.`
             : "Sprawdź wybór."
         }
@@ -330,8 +349,8 @@ export function MatchCartPayPanel({
             Anuluj
           </Button>
           <Button type="button" variant={btnVariant} disabled={submitting} onClick={() => void submitCart()}>
-            {submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
-            {needsHotpay && hotpayEnabled ? "Zapłać kartą lub Blikiem" : "Potwierdź opłatę"}
+            {submitting ? <LoadingIndicator variant="button" size="sm" className="mr-2" /> : null}
+            {needsHotpay && hotpayEnabled ? "Przejdź do płatności online" : "Potwierdź opłatę"}
           </Button>
         </div>
       </AppModal>

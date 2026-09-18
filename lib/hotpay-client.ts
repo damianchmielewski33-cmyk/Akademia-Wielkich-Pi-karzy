@@ -17,7 +17,7 @@ export function currentHotpayReturnPath(fallback = "/platnosci"): string {
 export async function createHotpayTopup(
   amountPln: number,
   opts?: { returnPath?: string }
-): Promise<string> {
+): Promise<{ url: string; amount_pln: number; gross_amount_pln: number }> {
   const res = await fetch("/api/wallet/hotpay/create", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -27,7 +27,12 @@ export async function createHotpayTopup(
       return_path: opts?.returnPath ?? currentHotpayReturnPath(),
     }),
   });
-  const data = (await res.json().catch(() => ({}))) as { url?: string; error?: unknown };
+  const data = (await res.json().catch(() => ({}))) as {
+    url?: string;
+    amount_pln?: number;
+    gross_amount_pln?: number;
+    error?: unknown;
+  };
   if (!res.ok || !data.url) {
     const msg =
       typeof data.error === "string" && data.error
@@ -35,7 +40,11 @@ export async function createHotpayTopup(
         : "Nie udało się rozpocząć płatności";
     throw new Error(msg);
   }
-  return data.url;
+  return {
+    url: data.url,
+    amount_pln: Number(data.amount_pln ?? amountPln),
+    gross_amount_pln: Number(data.gross_amount_pln ?? data.amount_pln ?? amountPln),
+  };
 }
 
 /** Oznacza lokalnie sesję HotPay jako cancelled (np. po anulowaniu w bramce). */
@@ -56,7 +65,7 @@ export async function abandonHotpayPayment(sessionId: string): Promise<void> {
 
 export type MatchCartPayResult =
   | { method: "wallet"; amount_pln: number; paid_user_ids: number[] }
-  | { method: "hotpay"; url: string; amount_pln: number };
+  | { method: "hotpay"; url: string; amount_pln: number; gross_amount_pln: number };
 
 /**
  * Opłata wpisowego za wybranych graczy: najpierw portfel, przy braku środków — URL do HotPay.
@@ -82,6 +91,7 @@ export async function payMatchCart(args: {
     method?: string;
     url?: string;
     amount_pln?: number;
+    gross_amount_pln?: number;
     paid_user_ids?: number[];
   };
   if (!res.ok) {
@@ -96,6 +106,7 @@ export async function payMatchCart(args: {
       method: "hotpay",
       url: data.url,
       amount_pln: Number(data.amount_pln ?? 0),
+      gross_amount_pln: Number(data.gross_amount_pln ?? data.amount_pln ?? 0),
     };
   }
   return {

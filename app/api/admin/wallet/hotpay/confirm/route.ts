@@ -130,6 +130,8 @@ const postSchema = z.object({
   /** Opcjonalnie — ID z panelu HotPay; jeśli brak, używa wartości z wiersza lub znacznika admin. */
   hotpay_payment_id: z.string().min(1).optional(),
   secure: z.string().min(1).optional(),
+  reason: z.string().trim().min(8).max(300).optional(),
+  operator_confirmed_success: z.boolean().optional(),
   /**
    * credit — zaksięguj wpłatę (gdy webhook nie doszedł / success bez deposit)
    * retry_cart — tylko ponów settle koszyka (gdy wpłata OK, koszyk nadal pending)
@@ -217,6 +219,23 @@ export async function POST(req: Request) {
     );
   }
 
+  const reason = parsed.data.reason?.trim();
+  if (!reason) {
+    return NextResponse.json(
+      { error: "Podaj powód ręcznego księgowania HotPay." },
+      { status: 400 }
+    );
+  }
+  if (payment.status !== "success" && !parsed.data.operator_confirmed_success) {
+    return NextResponse.json(
+      {
+        error: "Dla statusu pending/failure/cancelled potwierdź najpierw SUCCESS u operatora.",
+        diagnosis: diagnoseHotpayPayment(payment),
+      },
+      { status: 409 }
+    );
+  }
+
   const hotpayPaymentId =
     parsed.data.hotpay_payment_id?.trim() ||
     payment.hotpay_payment_id?.trim() ||
@@ -235,7 +254,7 @@ export async function POST(req: Request) {
   const latest = await getHotpayPaymentBySessionId(db, payment.session_id);
   await logActivity(
     gate.session.userId,
-    `HotPay admin confirm credit session=${payment.session_id} amount=${payment.amount_pln} already=${credit.alreadyApplied ? 1 : 0}`
+    `HotPay admin confirm credit session=${payment.session_id} amount=${payment.amount_pln} already=${credit.alreadyApplied ? 1 : 0} operator_success=${parsed.data.operator_confirmed_success ? 1 : 0} reason=${reason}`
   );
 
   return NextResponse.json({

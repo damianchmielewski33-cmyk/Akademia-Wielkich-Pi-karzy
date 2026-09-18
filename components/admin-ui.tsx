@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState, cloneElement, isValidElement, type ComponentType, type ReactElement, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Calendar, ChevronDown, Loader2, LogOut, Menu, Moon, Sun, X } from "lucide-react";
+import { ArrowLeft, Calendar, ChevronDown, LogOut, Menu, Moon, Sun, X } from "lucide-react";
+import { LoadingIndicator } from "@/components/preloaders";
 import { SiteSectionHero } from "@/components/site-section-hero";
 import { SiteAssetImage } from "@/components/site-asset-image";
 import { PhotoPanel } from "@/components/photo-panel";
@@ -599,7 +600,7 @@ export function AdminShell({
 
         {loading ? (
           <div className="pointer-events-none absolute right-6 top-16 z-20 flex items-center gap-2 text-sm text-zinc-500 lg:top-6" aria-live="polite">
-            <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+            <LoadingIndicator variant="button" size="sm" className="text-[var(--mp-teal)]" />
             Wczytywanie…
           </div>
         ) : null}

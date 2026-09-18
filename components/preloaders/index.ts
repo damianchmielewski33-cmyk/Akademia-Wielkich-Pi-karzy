@@ -1,4 +1,5 @@
 export { AwPreloader } from "./aw-preloader";
+export { LoadingIndicator } from "./loading-indicator";
 export { InlinePreloader } from "./inline-preloader";
 export { PagePreloaderLayout } from "./page-preloader-layout";
 export { getRoutePreloaderSpec, isFullBleedRoute } from "./route-preloader-config";

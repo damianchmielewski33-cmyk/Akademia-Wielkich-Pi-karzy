@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { FlaskConical, Loader2 } from "lucide-react";
+import { FlaskConical } from "lucide-react";
+import { LoadingIndicator } from "@/components/preloaders";
 import { toast } from "@/lib/app-toast";
 import { AdminNavTile } from "@/components/admin-nav-tile";
 import { cn } from "@/lib/utils";
@@ -80,7 +81,7 @@ export function AdminTestModeSidebarButton({ className }: { className?: string }
         )}
         aria-hidden
       >
-        <Loader2 className="h-5 w-5 animate-spin text-[var(--mp-teal)]" />
+        <LoadingIndicator variant="button" size="md" className="text-[var(--mp-teal)]" />
       </div>
     );
   }
@@ -103,7 +104,7 @@ export function AdminTestModeSidebarButton({ className }: { className?: string }
       disabled={busy || !state.configured}
       onClick={() => void toggle()}
       className={className}
-      badge={busy ? <Loader2 className="h-4 w-4 animate-spin text-white" aria-hidden /> : undefined}
+      badge={busy ? <LoadingIndicator variant="button" size="sm" className="text-white" /> : undefined}
     />
   );
 }

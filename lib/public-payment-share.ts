@@ -70,6 +70,14 @@ export type PublicWalletView = {
   }>;
 };
 
+function sanitizePublicRowIdentity<T extends PublicWalletPlayerRow>(row: T): T {
+  return {
+    ...row,
+    last_name: row.last_name ? `${row.last_name.trim().slice(0, 1)}.` : "",
+    profile_photo_path: null,
+  };
+}
+
 async function loadMatchWalletParticipantRows(matchId: number): Promise<PublicWalletPlayerRow[]> {
   const db = await getDb();
   return (await db
@@ -113,9 +121,9 @@ export async function loadPublicWalletRows(link: PublicShareLinkRow): Promise<Pu
 
     return {
       title: "Zbiorcze salda portfeli",
-      subtitle: "Aktualne salda wszystkich zawodników",
+      subtitle: "Aktualne salda wszystkich zawodników (widok ograniczony prywatnościowo)",
       match: null,
-      rows,
+      rows: rows.map(sanitizePublicRowIdentity),
     };
   }
 
@@ -135,7 +143,7 @@ export async function loadPublicWalletRows(link: PublicShareLinkRow): Promise<Pu
       title: "Podsumowanie płatności — mecz",
       subtitle: `${match.match_date} · ${match.match_time} · ${match.location}`,
       match,
-      rows,
+      rows: rows.map(sanitizePublicRowIdentity),
     };
   }
 
@@ -203,7 +211,7 @@ export async function loadPublicWalletRows(link: PublicShareLinkRow): Promise<Pu
     title: "Portfele po ostatnim meczu",
     subtitle: `${lastMatch.match_date} · ${lastMatch.match_time} · ${lastMatch.location}`,
     match: lastMatch,
-    rows,
+    rows: rows.map(sanitizePublicRowIdentity),
   };
 }
 
@@ -273,7 +281,7 @@ export async function createOrGetMatchSignupFeesLink(args: {
   await db
     .prepare(
       `INSERT INTO public_share_links (token, kind, created_by_admin_id, expires_at, match_id, user_id)
-       VALUES (?, 'match_signup_fees', ?, datetime('now', '+30 days'), ?, NULL)`
+       VALUES (?, 'match_signup_fees', ?, datetime('now', '+7 days'), ?, NULL)`
     )
     .run(token, args.adminId, args.matchId);
   return { token, created: true };

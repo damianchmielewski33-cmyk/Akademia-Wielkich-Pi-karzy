@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Loader2 } from "lucide-react";
 import { toast } from "@/lib/app-toast";
 import {
   AdminCard,
@@ -11,6 +10,7 @@ import {
   adminStatusChipClass,
   adminToggleRowClass,
 } from "@/components/admin-ui";
+import { LoadingIndicator } from "@/components/preloaders";
 import { Button } from "@/components/ui/button";
 import { YesNoSwitchRow } from "@/components/ui/yes-no-switch";
 import { Input } from "@/components/ui/input";
@@ -108,7 +108,7 @@ export function AdminOperatorPaymentsTab() {
   if (fetching && !settings) {
     return (
       <div className={cn(adminEmptyStateClass, "flex items-center justify-center gap-2 py-16")}>
-        <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
+        <LoadingIndicator variant="button" size="md" className="text-[var(--mp-teal)]" />
         Wczytywanie płatności operatora…
       </div>
     );

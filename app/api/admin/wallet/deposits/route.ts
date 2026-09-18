@@ -20,7 +20,7 @@ const postSchema = z.object({
  * Admin ręcznie wprowadza: "otrzymałem pieniądze" -> księgowane natychmiast w portfelu zawodnika.
  */
 export async function POST(req: Request) {
-  const gate = await requireAdmin();
+  const gate = await requireAdmin("finance");
   if (!gate.ok) return gate.response;
 
   let json: unknown;
@@ -50,6 +50,24 @@ export async function POST(req: Request) {
   const fullNote = wallet_kind === "operator" && operator_correction_reason
     ? `${note ?? ""} [korekta operatora: ${operator_correction_reason}]`.trim()
     : note ?? null;
+
+  const recentDuplicate = (await db
+    .prepare(
+      `SELECT id, status
+       FROM wallet_deposit_requests
+       WHERE user_id = ?
+         AND amount_pln = ?
+         AND created_by = 'admin'
+         AND wallet_kind = ?
+         AND IFNULL(note, '') = IFNULL(?, '')
+         AND datetime(created_at) >= datetime('now', '-10 minutes')
+       ORDER BY id DESC
+       LIMIT 1`
+    )
+    .get(user_id, amount_pln, wallet_kind, fullNote)) as { id: number; status: string } | undefined;
+  if (recentDuplicate) {
+    return NextResponse.json({ ok: true, id: recentDuplicate.id, duplicate: true });
+  }
 
   const r = await db
     .prepare(

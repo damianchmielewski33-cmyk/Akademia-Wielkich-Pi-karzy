@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Download, RefreshCw } from "lucide-react";
+import { Download } from "lucide-react";
+import { LoadingIndicator } from "@/components/preloaders";
 import { AppModal } from "@/components/ui/app-modal";
 import { Button } from "@/components/ui/button";
 import {
@@ -117,7 +118,7 @@ export function AndroidAppUpdatePrompt() {
             Później
           </Button>
           <Button type="button" variant="default" className="w-full rounded-full font-bold sm:w-auto" onClick={startUpdate} disabled={starting}>
-            {starting ? <RefreshCw className="h-4 w-4 animate-spin" aria-hidden /> : <Download className="h-4 w-4" aria-hidden />}
+            {starting ? <LoadingIndicator variant="button" size="sm" className="text-white" /> : <Download className="h-4 w-4" aria-hidden />}
             {starting ? "Uruchamianie…" : `Aktualizuj do ${latest?.versionName ?? ""}`}
           </Button>
         </>

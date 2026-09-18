@@ -3,8 +3,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { usePathname } from "next/navigation";
-import { ArrowLeft, Loader2, MessageCircle, Plus, Send, X } from "lucide-react";
+import { ArrowLeft, MessageCircle, Plus, Send, X } from "lucide-react";
 import { toast } from "@/lib/app-toast";
+import { LoadingIndicator } from "@/components/preloaders";
 import {
   ChatAttachmentControls,
   ChatBubble,
@@ -506,7 +507,7 @@ export function WriteToAdminFloat({ defaults, recipients, hideFloat = false }: P
       disabled={sending || uploadingAttachment || !canSend}
       aria-label="WyĹ›lij"
     >
-      {sending ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Send className="h-4 w-4" aria-hidden />}
+      {sending ? <LoadingIndicator variant="button" size="sm" /> : <Send className="h-4 w-4" aria-hidden />}
     </Button>
   );
 
@@ -640,7 +641,7 @@ export function WriteToAdminFloat({ defaults, recipients, hideFloat = false }: P
                     className="min-h-[12rem] border-0 bg-transparent"
                     empty={
                       loadingThread && messages.length === 0 ? (
-                        <Loader2 className="h-5 w-5 animate-spin text-[var(--mp-teal)]" aria-hidden />
+                        <LoadingIndicator variant="button" size="md" className="text-[var(--mp-teal)]" />
                       ) : messages.length === 0 ? (
                         <p className="text-center text-sm text-zinc-500">Napisz pierwszÄ… wiadomoĹ›Ä‡.</p>
                       ) : undefined
@@ -731,7 +732,7 @@ export function WriteToAdminFloat({ defaults, recipients, hideFloat = false }: P
                 <Button type="submit" className="mt-4 w-full rounded-full" disabled={loadingThread}>
                   {loadingThread ? (
                     <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
+                      <LoadingIndicator variant="button" size="sm" className="mr-2" />
                       Sprawdzanieâ€¦
                     </>
                   ) : (
@@ -789,7 +790,7 @@ export function WriteToAdminFloat({ defaults, recipients, hideFloat = false }: P
                     className="min-h-[12rem] border-0 bg-transparent"
                     empty={
                       loadingThread && messages.length === 0 ? (
-                        <Loader2 className="h-5 w-5 animate-spin text-[var(--mp-teal)]" aria-hidden />
+                        <LoadingIndicator variant="button" size="md" className="text-[var(--mp-teal)]" />
                       ) : messages.length === 0 ? (
                         <p className="text-center text-sm text-zinc-500">Brak wiadomoĹ›ci â€” napisz pierwszÄ….</p>
                       ) : undefined

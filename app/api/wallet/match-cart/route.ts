@@ -220,5 +220,6 @@ export async function POST(req: Request) {
     session_id: sessionId,
     cart_id: pending.cart_id,
     amount_pln: amountPln,
+    gross_amount_pln: grossAmountPln,
   });
 }

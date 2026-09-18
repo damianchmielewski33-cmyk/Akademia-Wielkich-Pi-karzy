@@ -50,8 +50,8 @@ export function HotpayPayButtons({
   return (
     <PaymentsCard
       className={className}
-      title="Zapłać kartą lub Blikiem"
-      description="Ureguluj niedopłatę lub wpłać środki online. Opłatę za konkretny mecz znajdziesz w sekcji „Opłać mecz (koszyk)”."
+      title="Zapłać online"
+      description="Ureguluj niedopłatę lub wpłać środki przez operatora (karta/BLIK online). Opłatę za konkretny mecz znajdziesz w sekcji „Opłać mecz (koszyk)”."
       headerExtra={<ChromeIconBadge icon={Wallet} marketplace />}
     >
       <div className={cn(paymentsInnerPanelClass, "space-y-3")}>
@@ -74,7 +74,7 @@ export function HotpayPayButtons({
         />
         <PayButton
           variant="hero"
-          label="Zapłać kartą lub Blikiem"
+          label="Zapłać online"
           busy={busy}
           disabled={!enabled || walletLoading}
           fullWidth

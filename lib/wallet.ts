@@ -101,6 +101,11 @@ function roundPln(n: number): number {
   return Math.round(n * 100) / 100;
 }
 
+async function withWriteTransaction<T>(db: AppDb, run: (tx: AppDb) => Promise<T>): Promise<T> {
+  if (db.transaction) return db.transaction(run);
+  return run(db);
+}
+
 function formatPlayerLabel(u: {
   first_name: string;
   last_name: string;
@@ -235,63 +240,82 @@ export async function completeDepositRequest(
   walletKind: "admin" | "operator" = "admin"
 ) {
   const db = await getDb();
-  const dep = (await db
-    .prepare(
-      `SELECT id, user_id, amount_pln, status, created_by,
-              player_declared_at, admin_confirmed_received_at,
-              admin_declared_received_at, player_confirmed_amount_at
-       FROM wallet_deposit_requests
-       WHERE id = ?`
-    )
-    .get(depositId)) as
-    | {
-        id: number;
-        user_id: number;
-        amount_pln: number;
-        status: string;
-        created_by: "player" | "admin";
-        player_declared_at: string | null;
-        admin_confirmed_received_at: string | null;
-        admin_declared_received_at: string | null;
-        player_confirmed_amount_at: string | null;
-      }
-    | undefined;
-  if (!dep) return { ok: false as const, error: "NOT_FOUND" as const };
-  if (dep.status !== "pending") return { ok: false as const, error: "NOT_PENDING" as const };
-  // Safety: never complete without the proper party confirmation.
-  const confirmOk =
-    (dep.created_by === "player" && Boolean(dep.player_declared_at) && Boolean(dep.admin_confirmed_received_at)) ||
-    (dep.created_by === "admin" && Boolean(dep.admin_declared_received_at) && Boolean(dep.player_confirmed_amount_at));
-  if (!confirmOk) return { ok: false as const, error: "NOT_CONFIRMED" as const };
+  const completed = await withWriteTransaction(db, async (tx) => {
+    const dep = (await tx
+      .prepare(
+        `SELECT id, user_id, amount_pln, status, created_by,
+                player_declared_at, admin_confirmed_received_at,
+                admin_declared_received_at, player_confirmed_amount_at
+         FROM wallet_deposit_requests
+         WHERE id = ?`
+      )
+      .get(depositId)) as
+      | {
+          id: number;
+          user_id: number;
+          amount_pln: number;
+          status: string;
+          created_by: "player" | "admin";
+          player_declared_at: string | null;
+          admin_confirmed_received_at: string | null;
+          admin_declared_received_at: string | null;
+          player_confirmed_amount_at: string | null;
+        }
+      | undefined;
+    if (!dep) return { ok: false as const, error: "NOT_FOUND" as const };
+    if (dep.status !== "pending") return { ok: false as const, error: "NOT_PENDING" as const };
 
-  // Atomowe przejęcie wiersza — drugi równoległy confirm dostaje changes=0.
-  const claim = await db
-    .prepare(
-      `UPDATE wallet_deposit_requests
-       SET status = 'completed', completed_at = datetime('now')
-       WHERE id = ? AND status = 'pending'`
-    )
-    .run(depositId);
-  if (claim.changes === 0) {
-    return { ok: false as const, error: "NOT_PENDING" as const };
-  }
+    const confirmOk =
+      (dep.created_by === "player" && Boolean(dep.player_declared_at) && Boolean(dep.admin_confirmed_received_at)) ||
+      (dep.created_by === "admin" && Boolean(dep.admin_declared_received_at) && Boolean(dep.player_confirmed_amount_at));
+    if (!confirmOk) return { ok: false as const, error: "NOT_CONFIRMED" as const };
 
-  await db
-    .prepare(
-      `INSERT INTO wallet_transactions (user_id, kind, amount_pln, deposit_request_id, wallet_kind, note, is_test)
-       VALUES (?, 'deposit', ?, ?, ?, ?, ?)`
-    )
-    .run(
-      dep.user_id,
-      Number(dep.amount_pln),
-      dep.id,
-      walletKind,
-      `Wpłata zaksięgowana (zakończone przez user ${completedByUserId})`,
-      0
-    );
+    const existingTx = (await tx
+      .prepare(`SELECT id FROM wallet_transactions WHERE deposit_request_id = ? LIMIT 1`)
+      .get(dep.id)) as { id: number } | undefined;
+    if (existingTx) {
+      await tx
+        .prepare(
+          `UPDATE wallet_deposit_requests
+           SET status = 'completed', completed_at = COALESCE(completed_at, datetime('now'))
+           WHERE id = ?`
+        )
+        .run(dep.id);
+      return { ok: true as const, userId: dep.user_id };
+    }
+
+    const claim = await tx
+      .prepare(
+        `UPDATE wallet_deposit_requests
+         SET status = 'completed', completed_at = datetime('now')
+         WHERE id = ? AND status = 'pending'`
+      )
+      .run(depositId);
+    if (claim.changes === 0) {
+      return { ok: false as const, error: "NOT_PENDING" as const };
+    }
+
+    await tx
+      .prepare(
+        `INSERT INTO wallet_transactions (user_id, kind, amount_pln, deposit_request_id, wallet_kind, note, is_test)
+         VALUES (?, 'deposit', ?, ?, ?, ?, ?)`
+      )
+      .run(
+        dep.user_id,
+        Number(dep.amount_pln),
+        dep.id,
+        walletKind,
+        `Wpłata zaksięgowana (zakończone przez user ${completedByUserId})`,
+        0
+      );
+
+    return { ok: true as const, userId: dep.user_id };
+  });
+
+  if (!completed.ok) return completed;
 
   await tryRemoveTemporaryGuestIfBalanceZero({
-    userId: dep.user_id,
+    userId: completed.userId,
     actorUserId: completedByUserId,
   });
 
@@ -309,42 +333,49 @@ export async function createMatchCharge(args: {
   const fee = Math.abs(args.amountPln);
   const chargeNote = args.note ?? `Rozliczenie meczu id ${args.matchId}`;
 
-  await db.prepare(
-    `INSERT INTO match_wallet_charges (match_id, user_id, amount_pln, note, created_by_admin_id)
-     VALUES (?, ?, ?, ?, ?)`
-  ).run(args.matchId, args.userId, fee, chargeNote, args.adminId);
+  await withWriteTransaction(db, async (tx) => {
+    const existingCharge = (await tx
+      .prepare(`SELECT id FROM match_wallet_charges WHERE match_id = ? AND user_id = ? LIMIT 1`)
+      .get(args.matchId, args.userId)) as { id: number } | undefined;
+    if (existingCharge) {
+      return;
+    }
 
-  // Opłata pobierana najpierw z portfela admina, reszta z portfela operatora.
-  const balances = await getWalletBalances(args.userId);
-  const adminBalance = balances.admin;
+    await tx.prepare(
+      `INSERT INTO match_wallet_charges (match_id, user_id, amount_pln, note, created_by_admin_id)
+       VALUES (?, ?, ?, ?, ?)`
+    ).run(args.matchId, args.userId, fee, chargeNote, args.adminId);
 
-  if (adminBalance >= fee) {
-    await db.prepare(
-      `INSERT INTO wallet_transactions (user_id, kind, amount_pln, match_id, wallet_kind, note, is_test)
-       VALUES (?, 'match_charge', ?, ?, 'admin', ?, ?)`
-    ).run(args.userId, -fee, args.matchId, chargeNote, 0);
-  } else if (adminBalance > 0) {
-    const adminPart = Math.round(adminBalance * 100) / 100;
-    const operatorPart = Math.round((fee - adminPart) * 100) / 100;
-    await db.prepare(
-      `INSERT INTO wallet_transactions (user_id, kind, amount_pln, match_id, wallet_kind, note, is_test)
-       VALUES (?, 'match_charge', ?, ?, 'admin', ?, ?)`
-    ).run(args.userId, -adminPart, args.matchId, chargeNote, 0);
-    await db.prepare(
-      `INSERT INTO wallet_transactions (user_id, kind, amount_pln, match_id, wallet_kind, note, is_test)
-       VALUES (?, 'match_charge', ?, ?, 'operator', ?, ?)`
-    ).run(args.userId, -operatorPart, args.matchId, chargeNote, 0);
-  } else {
-    await db.prepare(
-      `INSERT INTO wallet_transactions (user_id, kind, amount_pln, match_id, wallet_kind, note, is_test)
-       VALUES (?, 'match_charge', ?, ?, 'operator', ?, ?)`
-    ).run(args.userId, -fee, args.matchId, chargeNote, 0);
-  }
+    const balances = await getWalletBalances(args.userId, tx);
+    const adminBalance = balances.admin;
 
-  // Spójnie z koszykiem: po obciążeniu flaga paid=1 (blokuje ponowne obciążenie koszykiem).
-  await db
-    .prepare(`UPDATE match_signups SET paid = 1 WHERE match_id = ? AND user_id = ?`)
-    .run(args.matchId, args.userId);
+    if (adminBalance >= fee) {
+      await tx.prepare(
+        `INSERT INTO wallet_transactions (user_id, kind, amount_pln, match_id, wallet_kind, note, is_test)
+         VALUES (?, 'match_charge', ?, ?, 'admin', ?, ?)`
+      ).run(args.userId, -fee, args.matchId, chargeNote, 0);
+    } else if (adminBalance > 0) {
+      const adminPart = Math.round(adminBalance * 100) / 100;
+      const operatorPart = Math.round((fee - adminPart) * 100) / 100;
+      await tx.prepare(
+        `INSERT INTO wallet_transactions (user_id, kind, amount_pln, match_id, wallet_kind, note, is_test)
+         VALUES (?, 'match_charge', ?, ?, 'admin', ?, ?)`
+      ).run(args.userId, -adminPart, args.matchId, chargeNote, 0);
+      await tx.prepare(
+        `INSERT INTO wallet_transactions (user_id, kind, amount_pln, match_id, wallet_kind, note, is_test)
+         VALUES (?, 'match_charge', ?, ?, 'operator', ?, ?)`
+      ).run(args.userId, -operatorPart, args.matchId, chargeNote, 0);
+    } else {
+      await tx.prepare(
+        `INSERT INTO wallet_transactions (user_id, kind, amount_pln, match_id, wallet_kind, note, is_test)
+         VALUES (?, 'match_charge', ?, ?, 'operator', ?, ?)`
+      ).run(args.userId, -fee, args.matchId, chargeNote, 0);
+    }
+
+    await tx
+      .prepare(`UPDATE match_signups SET paid = 1 WHERE match_id = ? AND user_id = ?`)
+      .run(args.matchId, args.userId);
+  });
 
   await tryRemoveTemporaryGuestIfBalanceZero({
     userId: args.userId,

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Loader2, Play, Square, Trophy } from "lucide-react";
+import { Play, Square, Trophy } from "lucide-react";
 import { toast } from "@/lib/app-toast";
 import {
   AdminCard,
@@ -9,6 +9,7 @@ import {
   adminEmptyStateClass,
   adminInnerPanelClass,
 } from "@/components/admin-ui";
+import { LoadingIndicator } from "@/components/preloaders";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { AppModal } from "@/components/ui/app-modal";
@@ -111,7 +112,7 @@ export function AdminRankingSeasonsTab() {
 
           {loading ? (
             <div className="flex justify-center py-10 text-zinc-500">
-              <Loader2 className="h-6 w-6 animate-spin" aria-hidden />
+              <LoadingIndicator variant="button" size="md" className="text-[var(--mp-teal)]" />
             </div>
           ) : activeSeason ? (
             <div className={adminInnerPanelClass}>
@@ -155,7 +156,7 @@ export function AdminRankingSeasonsTab() {
           <h3 className="mb-4 text-base font-bold text-zinc-950 dark:text-white">Historia sezonów</h3>
           {loading ? (
             <div className="flex justify-center py-10 text-zinc-500">
-              <Loader2 className="h-6 w-6 animate-spin" aria-hidden />
+              <LoadingIndicator variant="button" size="md" className="text-[var(--mp-teal)]" />
             </div>
           ) : seasons.length === 0 ? (
             <p className={adminEmptyStateClass}>Brak sezonów.</p>
@@ -201,7 +202,7 @@ export function AdminRankingSeasonsTab() {
               Anuluj
             </Button>
             <Button type="button" variant="default" className="rounded-full font-bold" disabled={busy} onClick={() => void startSeason()}>
-              {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
+              {busy ? <LoadingIndicator variant="button" size="sm" className="mr-2" /> : null}
               Rozpocznij sezon
             </Button>
           </>
@@ -228,7 +229,7 @@ export function AdminRankingSeasonsTab() {
               disabled={busy || endConfirmId == null}
               onClick={() => endConfirmId != null && void endSeason(endConfirmId)}
             >
-              {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
+              {busy ? <LoadingIndicator variant="button" size="sm" className="mr-2" /> : null}
               Zakończ sezon
             </Button>
           </>

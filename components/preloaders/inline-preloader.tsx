@@ -1,8 +1,8 @@
 "use client";
 
-import { AwPreloader } from "./aw-preloader";
 import { useDelayedVisible } from "./use-delayed-visible";
 import { cn } from "@/lib/utils";
+import { LoadingIndicator } from "./loading-indicator";
 
 type InlinePreloaderProps = {
   label?: string;
@@ -36,14 +36,20 @@ export function InlinePreloader({
         aria-live="polite"
         aria-label={label}
       >
-        <AwPreloader variant="compact" label={label} />
+        <div className="flex flex-col items-center gap-3">
+          <LoadingIndicator variant="inline" size="md" />
+          <span className="awp-loader__label">{label}</span>
+        </div>
       </div>
     );
   }
 
   return (
     <div className={cn("flex justify-center py-10", className)} role="status" aria-live="polite" aria-label={label}>
-      <AwPreloader variant="compact" label={label} />
+      <div className="flex flex-col items-center gap-3">
+        <LoadingIndicator variant="inline" size="md" />
+        <span className="awp-loader__label">{label}</span>
+      </div>
     </div>
   );
 }

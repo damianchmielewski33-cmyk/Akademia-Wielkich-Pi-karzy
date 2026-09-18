@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Banknote, Loader2, Wallet } from "lucide-react";
+import { Banknote, Wallet } from "lucide-react";
 import { toast } from "@/lib/app-toast";
 import { BlikSettleModal } from "@/components/blik-settle-modal";
 import { PayMatchButton } from "@/components/pay-match-button";
 import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
+import { LoadingIndicator } from "@/components/preloaders";
 import { Button } from "@/components/ui/button";
 import type { BlikSettleOutcome } from "@/lib/blik-settle";
 import type { PublicWalletPlayerRow } from "@/lib/public-payment-share";
@@ -115,12 +116,17 @@ export function MatchSignupFeesList({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ user_id: userId }),
     });
-    const data = (await res.json().catch(() => ({}))) as { error?: string; pending?: boolean };
+    const data = (await res.json().catch(() => ({}))) as { error?: string; pending?: boolean; already?: boolean };
     if (!res.ok) {
       toast.error(typeof data.error === "string" ? data.error : "Nie udało się zgłosić przelewu");
       return;
     }
     setPendingIds((prev) => new Set(prev).add(userId));
+    toast.success(
+      data.already
+        ? "To zgłoszenie już czeka na potwierdzenie admina"
+        : "Zgłoszono przelew do potwierdzenia admina"
+    );
   }
 
   async function settleBlik(args: { outcome: BlikSettleOutcome; receivedPln?: number }) {
@@ -203,7 +209,7 @@ export function MatchSignupFeesList({
         toast.error(typeof data.error === "string" ? data.error : "Nie udało się rozpocząć płatności");
         return;
       }
-      toast.info("Przekierowanie do operatora… Status zmieni się na opłacony po potwierdzeniu wpłaty.");
+      toast.info("Przekierowanie do płatności online… Status zmieni się na opłacony po potwierdzeniu wpłaty.");
       window.setTimeout(() => window.location.assign(data.url!), 400);
     } finally {
       setHotpayBusyId(null);
@@ -323,11 +329,11 @@ export function MatchSignupFeesList({
                       onClick={() => void payHotpay(p.id)}
                     >
                       {hotpayBusyId === p.id ? (
-                        <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                        <LoadingIndicator variant="button" size="sm" />
                       ) : (
                         <Banknote className="h-4 w-4" aria-hidden />
                       )}
-                      Zapłać przez stronę
+                      Zapłać online
                     </Button>
                   ) : null}
                 </div>

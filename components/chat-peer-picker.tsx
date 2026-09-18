@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Loader2, Search } from "lucide-react";
+import { Search } from "lucide-react";
+import { LoadingIndicator } from "@/components/preloaders";
 import { PlayerAvatar } from "@/components/player-avatar";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -81,7 +82,7 @@ export function ChatPeerPicker({ onSelect, tone = "light", className }: Props) {
       >
         {loading ? (
           <div className="flex justify-center py-6">
-            <Loader2 className="h-4 w-4 animate-spin text-emerald-500" aria-hidden />
+            <LoadingIndicator variant="button" size="sm" className="text-emerald-500" />
           </div>
         ) : peers.length === 0 ? (
           <p

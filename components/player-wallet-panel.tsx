@@ -5,10 +5,13 @@ import {
   ArrowDownLeft,
   ArrowLeftRight,
   ArrowUpRight,
-  Loader2,
+  CheckCircle2,
+  Clock3,
+  HandCoins,
   SlidersHorizontal,
   Wallet,
 } from "lucide-react";
+import { LoadingIndicator } from "@/components/preloaders";
 import { AppModal } from "@/components/ui/app-modal";
 import { extractApiErrorMessage, useAppMessage } from "@/components/ui/app-message-modal";
 import { Button } from "@/components/ui/button";
@@ -25,7 +28,7 @@ import {
   paymentsInnerPanelClass,
 } from "@/components/payments-card";
 import { PhotoPanel } from "@/components/photo-panel";
-import type { WalletTransactionRow } from "@/lib/wallet";
+import type { WalletDepositRequestRow, WalletTransactionRow } from "@/lib/wallet";
 import { MARKETPLACE_PITCH_PHOTOS } from "@/lib/marketplace-photos";
 import { cn } from "@/lib/utils";
 import { useHotpayPayment } from "@/hooks/use-hotpay-payment";
@@ -55,10 +58,30 @@ type Props = {
 };
 
 const HISTORY_PAGE_SIZE = 100;
+type OfflineDepositMethod = "blik" | "cash";
 
 export function formatWalletPln(n: number) {
   const v = Math.round(n * 100) / 100;
   return new Intl.NumberFormat("pl-PL", { style: "currency", currency: "PLN" }).format(v);
+}
+
+function buildOfflineDepositNote(method: OfflineDepositMethod, note: string) {
+  const base = method === "blik" ? "Zgłoszona wpłata BLIK do admina" : "Zgłoszona wpłata gotówką do admina";
+  const extra = note.trim();
+  const full = extra ? `${base} · ${extra}` : base;
+  return full.length > 200 ? `${full.slice(0, 197)}...` : full;
+}
+
+function formatPendingCreatedAt(raw: string) {
+  const dt = parseTxDate(raw);
+  if (!dt) return raw;
+  return dt.toLocaleString("pl-PL", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 function parseTxDate(raw: string): Date | null {
@@ -225,7 +248,7 @@ export function WalletBalanceHistory({
   if (loading && transactions.length === 0) {
     return (
       <p className={cn("mt-4 flex items-center gap-2 text-sm", light ? "text-zinc-500" : "pitch-muted")}>
-        <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+        <LoadingIndicator variant="button" size="sm" className="text-[var(--mp-teal)]" />
         Wczytywanie historii…
       </p>
     );
@@ -398,7 +421,7 @@ export function WalletBalanceHistory({
             disabled={loadingMore}
             onClick={() => onLoadMore()}
           >
-            {loadingMore ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
+            {loadingMore ? <LoadingIndicator variant="button" size="sm" className="mr-2" /> : null}
             Pokaż starsze
           </Button>
           {total > transactions.length ? (
@@ -422,6 +445,7 @@ export function PlayerWalletPanel({
   const [walletBalancePln, setWalletBalancePln] = useState<number | null>(null);
   const [adminBalancePln, setAdminBalancePln] = useState<number | null>(null);
   const [operatorBalancePln, setOperatorBalancePln] = useState<number | null>(null);
+  const [pendingDeposits, setPendingDeposits] = useState<WalletDepositRequestRow[]>([]);
   const [walletTransactions, setWalletTransactions] = useState<WalletMeTransaction[]>([]);
   const [transactionsTotal, setTransactionsTotal] = useState(0);
   const [hasMore, setHasMore] = useState(false);
@@ -429,7 +453,12 @@ export function PlayerWalletPanel({
   const [loadingMore, setLoadingMore] = useState(false);
   const [topupAmount, setTopupAmount] = useState("");
   const [topupConfirmOpen, setTopupConfirmOpen] = useState(false);
-  const { showError, MessageModal } = useAppMessage();
+  const [offlineDepositAmount, setOfflineDepositAmount] = useState("");
+  const [offlineDepositMethod, setOfflineDepositMethod] = useState<OfflineDepositMethod>("blik");
+  const [offlineDepositNote, setOfflineDepositNote] = useState("");
+  const [offlineDepositSubmitting, setOfflineDepositSubmitting] = useState(false);
+  const [pendingConfirmId, setPendingConfirmId] = useState<number | null>(null);
+  const { showError, showSuccess, MessageModal } = useAppMessage();
   const { pay: startPayment, busy: topupBusy } = useHotpayPayment();
 
   async function refreshWallet(opts?: { quiet?: boolean }) {
@@ -440,6 +469,7 @@ export function PlayerWalletPanel({
         balance_pln?: unknown;
         admin_balance_pln?: unknown;
         operator_balance_pln?: unknown;
+        pending?: WalletDepositRequestRow[];
         transactions?: WalletMeTransaction[];
         transactions_total?: number;
         transactions_has_more?: boolean;
@@ -454,6 +484,7 @@ export function PlayerWalletPanel({
       setWalletBalancePln(Number(json?.balance_pln ?? 0));
       setAdminBalancePln(Number(json?.admin_balance_pln ?? 0));
       setOperatorBalancePln(Number(json?.operator_balance_pln ?? 0));
+      setPendingDeposits(Array.isArray(json?.pending) ? json.pending : []);
       setWalletTransactions(Array.isArray(json?.transactions) ? json.transactions : []);
       setTransactionsTotal(Number(json?.transactions_total ?? 0));
       setHasMore(Boolean(json?.transactions_has_more));
@@ -507,6 +538,58 @@ export function PlayerWalletPanel({
     await startPayment(amount);
   }
 
+  async function submitOfflineDeposit() {
+    const amount = Number.parseFloat(offlineDepositAmount.replace(",", "."));
+    if (!Number.isFinite(amount) || amount <= 0) {
+      showError("Podaj poprawną kwotę wpłaty", "Wpłata do admina");
+      return;
+    }
+    setOfflineDepositSubmitting(true);
+    try {
+      const res = await fetch("/api/wallet/deposits", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount_pln: amount,
+          note: buildOfflineDepositNote(offlineDepositMethod, offlineDepositNote),
+        }),
+      });
+      const json = (await res.json().catch(() => null)) as { error?: unknown } | null;
+      if (!res.ok) {
+        showError(extractApiErrorMessage(json?.error, "Nie udało się zgłosić wpłaty"), "Wpłata do admina");
+        return;
+      }
+      setOfflineDepositAmount("");
+      setOfflineDepositMethod("blik");
+      setOfflineDepositNote("");
+      await refreshWallet();
+      showSuccess("Zgłoszono wpłatę do potwierdzenia admina.", "Wpłata do admina");
+    } catch {
+      showError("Błąd sieci", "Wpłata do admina");
+    } finally {
+      setOfflineDepositSubmitting(false);
+    }
+  }
+
+  async function confirmPendingDeposit(id: number) {
+    if (pendingConfirmId != null) return;
+    setPendingConfirmId(id);
+    try {
+      const res = await fetch(`/api/wallet/deposits/${id}/confirm`, { method: "POST" });
+      const json = (await res.json().catch(() => null)) as { error?: unknown } | null;
+      if (!res.ok) {
+        showError(extractApiErrorMessage(json?.error, "Nie udało się potwierdzić kwoty"), "Wpłata do admina");
+        return;
+      }
+      await refreshWallet();
+      showSuccess("Potwierdzono kwotę wpłaty. Saldo zostało odświeżone.", "Wpłata do admina");
+    } catch {
+      showError("Błąd sieci", "Wpłata do admina");
+    } finally {
+      setPendingConfirmId(null);
+    }
+  }
+
   useEffect(() => {
     void refreshWallet();
     const onVisible = () => {
@@ -527,6 +610,7 @@ export function PlayerWalletPanel({
 
   const topupAmountParsed = Number.parseFloat(topupAmount.replace(",", "."));
   const allowTopup = showTopup && hotpayEnabled;
+  const hasPendingDeposits = pendingDeposits.length > 0;
 
   function formatPln(n: number) {
     return new Intl.NumberFormat("pl-PL", { style: "currency", currency: "PLN" }).format(
@@ -568,13 +652,7 @@ export function PlayerWalletPanel({
             >
               {walletBalancePln === null ? "—" : formatWalletPln(walletBalancePln)}
               {walletLoading ? (
-                <Loader2
-                  className={cn(
-                    "ml-2 inline h-5 w-5 animate-spin",
-                    "text-zinc-400"
-                  )}
-                  aria-hidden
-                />
+                <LoadingIndicator variant="button" size="md" className="ml-2 text-zinc-400" />
               ) : null}
             </p>
             {walletBalancePln != null && walletBalancePln < 0 ? (
@@ -709,7 +787,7 @@ export function PlayerWalletPanel({
             </div>
             <PayButton
               variant="hero"
-              label="Zapłać kartą lub Blikiem"
+              label="Zapłać online"
               busy={topupBusy}
               disabled={walletLoading}
               className="sm:min-w-[14rem]"
@@ -773,16 +851,156 @@ export function PlayerWalletPanel({
             >
               {walletBalancePln === null ? "—" : formatWalletPln(walletBalancePln)}
               {walletLoading ? (
-                <Loader2 className="ml-2 inline h-5 w-5 animate-spin text-zinc-400" aria-hidden />
+                <LoadingIndicator variant="button" size="md" className="ml-2 text-zinc-400" />
               ) : null}
             </p>
           </div>
         </div>
       )}
 
+      {!compact ? (
+        <PaymentsCard
+          title="Wpłata do admina"
+          description="Gdy płacisz zwykłym BLIK-iem na telefon albo gotówką, zgłoś wpłatę tutaj. Online przez operatora działa osobno."
+          headerExtra={<ChromeIconBadge icon={HandCoins} />}
+        >
+          <div className={paymentsInnerPanelClass}>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {(["blik", "cash"] as const).map((method) => {
+                const active = offlineDepositMethod === method;
+                return (
+                  <button
+                    key={method}
+                    type="button"
+                    onClick={() => setOfflineDepositMethod(method)}
+                    className={cn(
+                      "rounded-xl border px-3 py-3 text-left transition-colors",
+                      active
+                        ? "border-teal-500 bg-white shadow-sm dark:border-teal-400 dark:bg-zinc-950"
+                        : "border-zinc-200 bg-zinc-50/70 hover:bg-white dark:border-zinc-700 dark:bg-zinc-900/60 dark:hover:bg-zinc-950"
+                    )}
+                  >
+                    <span className="block text-sm font-semibold text-zinc-950 dark:text-zinc-50">
+                      {method === "blik" ? "BLIK na telefon" : "Gotówka"}
+                    </span>
+                    <span className="mt-1 block text-[11px] text-zinc-500 dark:text-zinc-400">
+                      {method === "blik" ? "Zgłoś przelew do potwierdzenia admina" : "Zgłoś wpłatę odebraną przez admina"}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <div>
+                <Label htmlFor="offline-deposit-amount">Kwota (PLN)</Label>
+                <input
+                  id="offline-deposit-amount"
+                  type="number"
+                  min={0.01}
+                  step={0.01}
+                  className={cn("mt-1", paymentsFieldClass)}
+                  placeholder="np. 50"
+                  value={offlineDepositAmount}
+                  onChange={(e) => setOfflineDepositAmount(e.target.value)}
+                  disabled={offlineDepositSubmitting}
+                />
+              </div>
+              <div>
+                <Label htmlFor="offline-deposit-note">Opis (opcjonalnie)</Label>
+                <input
+                  id="offline-deposit-note"
+                  type="text"
+                  className={cn("mt-1", paymentsFieldClass)}
+                  placeholder={
+                    offlineDepositMethod === "blik"
+                      ? "np. przelew za ostatni mecz"
+                      : "np. gotówka po treningu"
+                  }
+                  value={offlineDepositNote}
+                  onChange={(e) => setOfflineDepositNote(e.target.value)}
+                  disabled={offlineDepositSubmitting}
+                />
+              </div>
+            </div>
+            <p className="mt-3 text-xs text-zinc-500">
+              Po zgłoszeniu wpłata trafi do kolejki oczekujących. Saldo zmieni się dopiero po potwierdzeniu.
+            </p>
+            <div className="mt-3">
+              <Button
+                type="button"
+                disabled={offlineDepositSubmitting}
+                onClick={() => void submitOfflineDeposit()}
+              >
+                {offlineDepositSubmitting ? <LoadingIndicator variant="button" size="sm" className="mr-2" /> : null}
+                Zgłoś wpłatę {offlineDepositMethod === "blik" ? "BLIK" : "gotówką"}
+              </Button>
+            </div>
+          </div>
+
+          {hasPendingDeposits ? (
+            <div className="mt-4 space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--mp-teal-dark)]">
+                Oczekujące wpłaty
+              </p>
+              <ul className="space-y-2">
+                {pendingDeposits.map((dep) => {
+                  const waitsForPlayer =
+                    dep.created_by === "admin" &&
+                    Boolean(dep.admin_declared_received_at) &&
+                    !dep.player_confirmed_amount_at;
+                  return (
+                    <li
+                      key={dep.id}
+                      className="rounded-xl border border-zinc-200 bg-zinc-50/70 px-3 py-3 text-sm dark:border-zinc-800 dark:bg-zinc-900/60"
+                    >
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        <div>
+                          <p className="font-semibold text-zinc-950 dark:text-zinc-50">
+                            {formatWalletPln(Number(dep.amount_pln ?? 0))}
+                          </p>
+                          <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+                            {dep.created_by === "admin"
+                              ? "Admin wpisał otrzymaną wpłatę"
+                              : "Zgłoszono wpłatę do potwierdzenia admina"}{" "}
+                            · {formatPendingCreatedAt(dep.created_at)}
+                          </p>
+                          {dep.note ? (
+                            <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-300">{dep.note}</p>
+                          ) : null}
+                        </div>
+                        {waitsForPlayer ? (
+                          <Button
+                            type="button"
+                            size="sm"
+                            disabled={pendingConfirmId === dep.id}
+                            onClick={() => void confirmPendingDeposit(dep.id)}
+                          >
+                            {pendingConfirmId === dep.id ? (
+                              <LoadingIndicator variant="button" size="sm" className="mr-2" />
+                            ) : (
+                              <CheckCircle2 className="mr-2 h-4 w-4" aria-hidden />
+                            )}
+                            Potwierdź kwotę
+                          </Button>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-[11px] font-semibold text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100">
+                            <Clock3 className="h-3.5 w-3.5" aria-hidden />
+                            {dep.created_by === "admin" ? "Czeka na Ciebie" : "Czeka na admina"}
+                          </span>
+                        )}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ) : null}
+        </PaymentsCard>
+      ) : null}
+
       <PaymentsCard
         title="Historia operacji"
-        description="Wpłaty, mecze i przelewy — pogrupowane według dnia. Najnowsze na górze."
+        description="Wpłaty, opłaty za mecze, korekty i przelewy między graczami — pogrupowane według dnia. Najnowsze na górze."
         headerExtra={<ChromeIconBadge icon={Wallet} />}
       >
         <WalletBalanceHistory
@@ -801,9 +1019,9 @@ export function PlayerWalletPanel({
         title={walletBalancePln !== null && walletBalancePln < 0 ? "Opłać zaległość" : "Potwierdź płatność"}
         description={
           walletBalancePln !== null && walletBalancePln < 0
-            ? `Zostaniesz przekierowany do płatności kartą lub Blikiem. Kwota zaległości: ${formatPln(Math.abs(walletBalancePln))}.`
+            ? `Zostaniesz przekierowany do płatności online. Kwota zaległości: ${formatPln(Math.abs(walletBalancePln))}.`
             : Number.isFinite(topupAmountParsed)
-              ? `Zostaniesz przekierowany do płatności kartą lub Blikiem. Kwota: ${formatPln(topupAmountParsed)}.`
+              ? `Zostaniesz przekierowany do płatności online. Kwota: ${formatPln(topupAmountParsed)}.`
               : "Sprawdź kwotę płatności."
         }
       >
@@ -820,7 +1038,7 @@ export function PlayerWalletPanel({
                   ? topupAmountParsed
                   : null
             }
-            label={walletBalancePln !== null && walletBalancePln < 0 ? "Opłać zaległość" : "Zapłać kartą lub Blikiem"}
+            label={walletBalancePln !== null && walletBalancePln < 0 ? "Opłać zaległość" : "Zapłać online"}
             busy={topupBusy}
             onClick={() => void handleTopup()}
           />

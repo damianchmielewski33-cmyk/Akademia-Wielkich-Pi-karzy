@@ -92,5 +92,6 @@ export async function POST(req: Request, ctx: Ctx) {
     url: started.url,
     session_id: started.session_id,
     amount_pln: started.amount_pln,
+    gross_amount_pln: started.gross_amount_pln,
   });
 }

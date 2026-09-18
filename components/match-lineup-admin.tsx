@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { Loader2, X } from "lucide-react";
-import { InlinePreloader } from "@/components/preloaders";
+import { X } from "lucide-react";
+import { InlinePreloader, LoadingIndicator } from "@/components/preloaders";
 import { toast } from "@/lib/app-toast";
 import {
   AdminCard,
@@ -329,7 +329,7 @@ export function MatchLineupAdmin() {
           onClick={() => void save()}
           disabled={saving || selectedId == null || loading}
         >
-          {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
+          {saving ? <LoadingIndicator variant="button" size="sm" className="mr-2" /> : null}
           Zapisz składy
         </Button>
       </AdminToolbar>
@@ -380,7 +380,7 @@ export function MatchLineupAdmin() {
               disabled={publishSaving || selectedId == null}
               onClick={() => void togglePublish(!lineupPublic)}
             >
-              {publishSaving ? <Loader2 className="mr-2 inline h-4 w-4 animate-spin align-middle" aria-hidden /> : null}
+              {publishSaving ? <LoadingIndicator variant="button" size="sm" className="mr-2 inline-flex align-middle" /> : null}
               <span className="align-middle">{lineupPublic ? "Ukryj przed zawodnikami" : "Udostępnij na stronie głównej"}</span>
             </Button>
           </div>

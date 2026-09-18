@@ -10,9 +10,9 @@ import {
   CloudRain,
   CloudSnow,
   CloudSun,
-  Loader2,
   Sun,
 } from "lucide-react";
+import { LoadingIndicator } from "@/components/preloaders";
 import { cn } from "@/lib/utils";
 
 type DayEntry = {
@@ -193,7 +193,7 @@ export function MatchLocationWeather({
   if (state === "idle" || state === "loading") {
     return (
       <div className={cn(rootPad, "flex items-center gap-2 text-[11px] text-emerald-100/80", className)}>
-        <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-[var(--mp-teal-dark)]" aria-hidden />
+        <LoadingIndicator variant="button" size="sm" className="shrink-0 text-[var(--mp-teal-dark)]" />
         <span>{loadingLabel}</span>
       </div>
     );

@@ -1,6 +1,6 @@
 "use client";
 
-import { Loader2 } from "lucide-react";
+import { LoadingIndicator } from "@/components/preloaders";
 import { AppModal } from "@/components/ui/app-modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -68,7 +68,7 @@ export function GalleryVideoFormModal({
             Anuluj
           </Button>
           <Button type="button" variant="default" className="rounded-full font-bold" disabled={busy} onClick={onSave}>
-            {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
+            {busy ? <LoadingIndicator variant="button" size="sm" className="mr-2" /> : null}
             {editingId != null ? "Zapisz zmiany" : "Dodaj link"}
           </Button>
         </>

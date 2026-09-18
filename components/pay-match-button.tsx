@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Banknote, Loader2, Smartphone } from "lucide-react";
+import { Banknote, Smartphone } from "lucide-react";
 import { toast } from "@/lib/app-toast";
 import { Button } from "@/components/ui/button";
 import { AppModal } from "@/components/ui/app-modal";
 import { ModalAlert } from "@/components/ui/modal-shared";
+import { LoadingIndicator } from "@/components/preloaders";
 import { cn } from "@/lib/utils";
 import {
   buildBankAppHref,
@@ -95,6 +96,8 @@ export function PayMatchButton({
   const [busy, setBusy] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [reportingSent, setReportingSent] = useState(false);
+  const [reportedSent, setReportedSent] = useState(false);
   const [ua, setUa] = useState("");
 
   useEffect(() => {
@@ -119,7 +122,6 @@ export function PayMatchButton({
       const clipboardText = details.blikPhoneCopy;
       const didCopy = await copyText(clipboardText);
       setCopied(didCopy);
-      await onAfterPay?.();
 
       toast.success(didCopy ? `Skopiowano numer ${details.blikPhoneDisplay}` : "Przelew BLIK na telefon", {
         description: didCopy
@@ -132,11 +134,23 @@ export function PayMatchButton({
         duration: 8000,
       });
 
-      if (isMobileUserAgent(readUserAgent())) {
+      if (onAfterPay || isMobileUserAgent(readUserAgent())) {
         setPickerOpen(true);
       }
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function confirmManualTransfer() {
+    if (!onAfterPay || reportingSent || reportedSent) return;
+    setReportingSent(true);
+    try {
+      await onAfterPay();
+      setReportedSent(true);
+      toast.success("Zgłoszono przelew do potwierdzenia admina");
+    } finally {
+      setReportingSent(false);
     }
   }
 
@@ -163,7 +177,7 @@ export function PayMatchButton({
       )}
     >
       {busy ? (
-        <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+        <LoadingIndicator variant="button" size="sm" />
       ) : compact ? (
         <Smartphone className="h-4 w-4" aria-hidden />
       ) : (
@@ -180,11 +194,28 @@ export function PayMatchButton({
       size="sm"
       scrollable
       title="Przelew BLIK na telefon"
-      description={`Numer ${details.blikPhoneDisplay} jest w schowku. Wklej go w banku.`}
+      description={`Numer ${details.blikPhoneDisplay} jest w schowku. Najpierw wyślij przelew w banku, potem potwierdź to tutaj.`}
       footer={
-        <Button type="button" className="rounded-full font-bold" onClick={() => setPickerOpen(false)}>
-          Otworzę bank sam
-        </Button>
+        <div className="flex w-full flex-wrap justify-end gap-2">
+          <Button type="button" variant="outline" onClick={() => setPickerOpen(false)}>
+            Zamknij
+          </Button>
+          {onAfterPay ? (
+            <Button
+              type="button"
+              className="rounded-full font-bold"
+              disabled={reportingSent || reportedSent}
+              onClick={() => void confirmManualTransfer()}
+            >
+              {reportingSent ? <LoadingIndicator variant="button" size="sm" className="mr-2" /> : null}
+              {reportedSent ? "Zgłoszono" : "Potwierdzam wysłanie przelewu"}
+            </Button>
+          ) : (
+            <Button type="button" className="rounded-full font-bold" onClick={() => setPickerOpen(false)}>
+              Otworzę bank sam
+            </Button>
+          )}
+        </div>
       }
     >
       <ModalAlert tone="info" title={copied ? "Numer skopiowany" : "Numer do przelewu"}>
@@ -198,7 +229,8 @@ export function PayMatchButton({
         <li>Otwórz aplikację swojego banku.</li>
         <li>Wybierz „Przelew BLIK na telefon”.</li>
         <li>Wklej numer i potwierdź przelew.</li>
-        <li>Opłacone pojawi się po potwierdzeniu admina, że pieniądze doszły.</li>
+        <li>Wróć tutaj i kliknij „Potwierdzam wysłanie przelewu”.</li>
+        <li>Opłacone pojawi się dopiero po potwierdzeniu admina, że pieniądze doszły.</li>
       </ol>
 
       {showBankLinks ? (

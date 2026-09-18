@@ -70,9 +70,9 @@ export function PlatnosciPublicClient({ token, hotpayEnabled, isAdmin = false, v
               {typeof view.match.fee_pln === "number" && view.match.fee_pln > 0
                 ? ` (wynajem ${formatMatchFeePln(view.match.fee_pln)} podzielony na zapisanych)`
                 : ""}
-              . Przelew na telefon kopiuje numer <strong className="tabular-nums">{blik}</strong> do schowka. Status
-              opłacone pojawia się dopiero, gdy admin potwierdzi otrzymanie przelewu na tym ekranie. Płatność przez
-              stronę (operator) oznacza opłacone po potwierdzeniu wpłaty.
+              . <strong>BLIK na telefon</strong> kopiuje numer <strong className="tabular-nums">{blik}</strong> do
+              schowka i wymaga późniejszego potwierdzenia przez admina. <strong>Płatność online</strong> oznacza
+              przejście do operatora kartą/BLIK i status opłacone po potwierdzeniu wpłaty.
             </p>
           ) : null}
           {isAdmin ? (

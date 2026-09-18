@@ -5,7 +5,7 @@ import { requireAdmin } from "@/lib/api-helpers";
 export const runtime = "nodejs";
 
 export async function GET() {
-  const gate = await requireAdmin();
+  const gate = await requireAdmin("finance");
   if (!gate.ok) return gate.response;
 
   const db = await getDb();

@@ -1,6 +1,7 @@
 "use client";
 
-import { Loader2, Wallet } from "lucide-react";
+import { Wallet } from "lucide-react";
+import { LoadingIndicator } from "@/components/preloaders";
 import { cn } from "@/lib/utils";
 
 function formatPln(n: number) {
@@ -44,7 +45,7 @@ export function PayButton({
 }: Props) {
   const isDebt = amountPln != null && amountPln < 0;
   const absAmount = amountPln != null ? Math.abs(amountPln) : null;
-  const defaultLabel = label ?? (isDebt ? "Opłać zaległość" : "Zapłać kartą lub Blikiem");
+  const defaultLabel = label ?? (isDebt ? "Opłać zaległość" : "Zapłać online");
   const isDisabled = disabled ?? busy;
 
   if (variant === "hero") {
@@ -66,7 +67,7 @@ export function PayButton({
       >
         <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/20 ring-2 ring-white/30">
           {busy ? (
-            <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
+            <LoadingIndicator variant="button" size="md" className="text-white" />
           ) : (
             <Wallet className="h-5 w-5" strokeWidth={2.25} aria-hidden />
           )}
@@ -103,7 +104,7 @@ export function PayButton({
         )}
       >
         {busy ? (
-          <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
+          <LoadingIndicator variant="button" size="sm" className="text-white" />
         ) : (
           <Wallet className="h-4 w-4 shrink-0" aria-hidden />
         )}
@@ -139,7 +140,7 @@ export function PayButton({
   const defaultContent = (
     <>
       {busy ? (
-        <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
+        <LoadingIndicator variant="button" size="sm" className="text-white" />
       ) : (
         <Wallet className="h-4 w-4 shrink-0" aria-hidden />
       )}

@@ -7,12 +7,12 @@ import { AdminWalletsSaldoSection } from "@/components/admin-wallets-saldo-secti
 import { HotpayPayButtons } from "@/components/hotpay-pay-buttons";
 import { MatchCartPayPanel } from "@/components/match-cart-pay-panel";
 import { MarketplacePitchPhoto } from "@/components/marketplace-pitch-photo";
+import { LoadingIndicator } from "@/components/preloaders";
 import { PlayerWalletPanel } from "@/components/player-wallet-panel";
 import { PhotoPanel } from "@/components/photo-panel";
 import { Button } from "@/components/ui/button";
 import { useHotpayPaymentReturn } from "@/hooks/use-hotpay-payment-return";
 import { MARKETPLACE_PITCH_PHOTOS } from "@/lib/marketplace-photos";
-import { cn } from "@/lib/utils";
 
 export type PlatnosciUserLite = {
   id: number;
@@ -160,7 +160,7 @@ export function PlatnosciClient({
               disabled={adminWalletLoading}
               onClick={reloadPage}
             >
-              <RefreshCw className={cn("mr-2 h-4 w-4", adminWalletLoading && "animate-spin")} aria-hidden />
+              {adminWalletLoading ? <LoadingIndicator variant="button" size="sm" className="mr-2 text-[var(--mp-teal-dark)]" /> : <RefreshCw className="mr-2 h-4 w-4" aria-hidden />}
               Odśwież
             </Button>
           </div>

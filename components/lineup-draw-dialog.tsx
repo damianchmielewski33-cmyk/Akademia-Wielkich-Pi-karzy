@@ -1,11 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Dices, Loader2, Save, Sparkles } from "lucide-react";
+import { Dices, Save, Sparkles } from "lucide-react";
+import { LoadingIndicator } from "@/components/preloaders";
 import { MatchLineupView } from "@/components/match-lineup-view";
 import { Button } from "@/components/ui/button";
 import { AppModal } from "@/components/ui/app-modal";
-import { ModalAlert, ModalMatchSummary, modalListClass, modalPanelClass } from "@/components/ui/modal-shared";
+import { ModalAlert, ModalLoadingRow, ModalMatchSummary, modalListClass, modalPanelClass } from "@/components/ui/modal-shared";
 import { toast } from "@/lib/app-toast";
 import type { MatchRow } from "@/lib/db";
 import type { GeneratedLineupProposal } from "@/lib/lineup-generator";
@@ -112,14 +113,14 @@ export function LineupDrawDialog({ open, onOpenChange, match, onSaved }: Props) 
       footer={
         <div className="flex w-full flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
           <Button type="button" variant="outline" disabled={loading || saving || !match} onClick={() => void fetchProposal(Date.now())}>
-            {loading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Dices className="h-4 w-4" aria-hidden />}
+            {loading ? <LoadingIndicator variant="button" size="sm" /> : <Dices className="h-4 w-4" aria-hidden />}
             Losuj ponownie
           </Button>
           <Button type="button" variant="outline" disabled={saving} onClick={() => onOpenChange(false)}>
             Zamknij
           </Button>
           <Button type="button" disabled={loading || saving || !proposal} onClick={() => void saveProposal()}>
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Save className="h-4 w-4" aria-hidden />}
+            {saving ? <LoadingIndicator variant="button" size="sm" /> : <Save className="h-4 w-4" aria-hidden />}
             Zapisz składy
           </Button>
         </div>
@@ -128,9 +129,8 @@ export function LineupDrawDialog({ open, onOpenChange, match, onSaved }: Props) 
       {match ? <ModalMatchSummary match={match} /> : null}
 
       {loading ? (
-        <div className={cn(modalPanelClass, "flex items-center justify-center py-10 text-sm text-zinc-500")}>
-          <Loader2 className="mr-2 h-5 w-5 animate-spin" aria-hidden />
-          Analiza statystyk i dobieranie składu...
+        <div className={cn(modalPanelClass, "py-7")}>
+          <ModalLoadingRow label="Analiza statystyk i dobieranie składu..." />
         </div>
       ) : loadError ? (
         <ModalAlert tone="warning">{loadError}</ModalAlert>

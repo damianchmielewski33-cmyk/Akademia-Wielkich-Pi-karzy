@@ -2,10 +2,11 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Film, Loader2, Pencil, Plus, Trash2 } from "lucide-react";
+import { Film, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "@/lib/app-toast";
 import type { GalleryVideoPublic, GalleryVideoRow } from "@/lib/gallery-videos";
 import { galleryVideoIdFromStoredUrl } from "@/lib/gallery-videos";
+import { LoadingIndicator } from "@/components/preloaders";
 import {
   deleteGalleryVideo,
   fetchAdminGalleryVideos,
@@ -158,7 +159,7 @@ export function GaleriaClient({ videos: initialVideos, isAdmin }: Props) {
               </Button>
               {loadingAdmin ? (
                 <span className="inline-flex items-center gap-2 text-sm text-emerald-100/80">
-                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                  <LoadingIndicator variant="button" size="sm" className="text-emerald-100/80" />
                   Aktualizacja…
                 </span>
               ) : null}

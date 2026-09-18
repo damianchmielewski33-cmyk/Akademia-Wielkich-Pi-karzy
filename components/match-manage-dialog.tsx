@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Loader2, Pencil, UserMinus, UserPlus, Users, XCircle } from "lucide-react";
+import { Pencil, UserMinus, UserPlus, Users, XCircle } from "lucide-react";
 import { toast } from "@/lib/app-toast";
 import { z } from "zod";
 import type { MatchRow } from "@/lib/db";
 import { MATCH_CANCEL_REASONS } from "@/lib/match-cancel-reasons";
 import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
+import { LoadingIndicator } from "@/components/preloaders";
 import { AppModal } from "@/components/ui/app-modal";
 import {
   ModalAlert,
@@ -430,7 +431,7 @@ export function MatchManageDialog({
               Anuluj edycję
             </Button>
             <Button type="button" variant={primaryVariant} disabled={busy} onClick={() => void saveEdit()}>
-              {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
+              {busy ? <LoadingIndicator variant="button" size="sm" /> : null}
               Zapisz zmiany
             </Button>
           </>
@@ -456,7 +457,7 @@ export function MatchManageDialog({
             Zamknij
           </Button>
           <Button type="button" variant={primaryVariant} disabled={busy} onClick={() => void addGuest()}>
-            {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
+            {busy ? <LoadingIndicator variant="button" size="sm" /> : null}
             <UserPlus className="h-4 w-4" aria-hidden />
             Dodaj gościa
           </Button>
@@ -478,7 +479,7 @@ export function MatchManageDialog({
           Zamknij
         </Button>
         <Button type="button" variant="destructive" disabled={busy} onClick={() => void cancelMatch()}>
-          {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
+          {busy ? <LoadingIndicator variant="button" size="sm" /> : null}
           Anuluj mecz
         </Button>
       </>
@@ -711,7 +712,7 @@ export function MatchManageDialog({
                       onClick={() => void removeGuest(g.user_id)}
                     >
                       {removingGuestId === g.user_id ? (
-                        <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                        <LoadingIndicator variant="button" size="sm" />
                       ) : (
                         "Usuń"
                       )}

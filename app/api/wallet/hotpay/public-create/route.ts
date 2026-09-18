@@ -152,6 +152,7 @@ export async function POST(req: Request) {
     url: init.url,
     session_id: sessionId,
     amount_pln: amountPln,
+    gross_amount_pln: grossAmountPln,
     kind: "topup",
   });
 }

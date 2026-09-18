@@ -3,8 +3,9 @@
 import { useRef, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { Loader2, Pencil, RotateCcw, Upload } from "lucide-react";
+import { Pencil, RotateCcw, Upload } from "lucide-react";
 import { toast } from "@/lib/app-toast";
+import { LoadingIndicator } from "@/components/preloaders";
 import { useMarketplacePhotos } from "@/components/marketplace-photos-provider";
 import { MarketplacePitchPhoto } from "@/components/marketplace-pitch-photo";
 import { AppModal } from "@/components/ui/app-modal";
@@ -172,7 +173,7 @@ export function MarketplacePitchPhotoEditModal({
         />
         <div className="flex flex-wrap gap-2">
           <Button type="button" disabled={busy} className="rounded-full font-bold" onClick={() => inputRef.current?.click()}>
-            {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : <Upload className="mr-2 h-4 w-4" aria-hidden />}
+            {busy ? <LoadingIndicator variant="button" size="sm" className="mr-2" /> : <Upload className="mr-2 h-4 w-4" aria-hidden />}
             Wgraj nowe
           </Button>
           <Button
@@ -348,7 +349,7 @@ export function AdminMarketplacePitchPhotosSection({
                     disabled={disabled || busy}
                     onClick={() => inputRefs.current[i]?.click()}
                   >
-                    {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <Upload className="h-3.5 w-3.5" aria-hidden />}
+                    {busy ? <LoadingIndicator variant="button" size="sm" /> : <Upload className="h-3.5 w-3.5" aria-hidden />}
                     Wgraj
                   </Button>
                   <Button

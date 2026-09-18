@@ -36,6 +36,24 @@ export async function POST(req: Request) {
   const userId = gate.session.userId;
   const { amount_pln, note } = parsed.data;
 
+  const recentDuplicate = (await db
+    .prepare(
+      `SELECT id
+       FROM wallet_deposit_requests
+       WHERE user_id = ?
+         AND amount_pln = ?
+         AND created_by = 'player'
+         AND status = 'pending'
+         AND IFNULL(note, '') = IFNULL(?, '')
+         AND datetime(created_at) >= datetime('now', '-10 minutes')
+       ORDER BY id DESC
+       LIMIT 1`
+    )
+    .get(userId, amount_pln, note ?? null)) as { id: number } | undefined;
+  if (recentDuplicate) {
+    return NextResponse.json({ ok: true, id: recentDuplicate.id, duplicate: true });
+  }
+
   const r = await db
     .prepare(
       `

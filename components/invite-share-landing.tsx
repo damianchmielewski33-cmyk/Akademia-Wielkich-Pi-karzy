@@ -8,7 +8,6 @@ import {
   Clock,
   HelpCircle,
   KeyRound,
-  Loader2,
   LogIn,
   MapPin,
   UserPlus,
@@ -18,6 +17,7 @@ import { toast } from "@/lib/app-toast";
 import { z } from "zod";
 import type { MatchRow } from "@/lib/db";
 import type { PlayersDataEntry } from "@/lib/terminarz-shared";
+import { LoadingIndicator } from "@/components/preloaders";
 import { LoginForm } from "@/components/login-form";
 import { MarketplacePitchPhoto } from "@/components/marketplace-pitch-photo";
 import { useMarketplacePhotos } from "@/components/marketplace-photos-provider";
@@ -96,7 +96,7 @@ function InvitePhotoAction({
         {desc ? <p className="mt-1 text-sm text-white/85">{desc}</p> : null}
       </div>
       <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/15 text-white ring-1 ring-white/30">
-        {busy ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden /> : Icon ? <Icon className="h-5 w-5" /> : null}
+        {busy ? <LoadingIndicator variant="button" size="md" /> : Icon ? <Icon className="h-5 w-5" /> : null}
       </span>
     </PhotoPanel>
   );
@@ -575,7 +575,7 @@ export function InviteShareLanding({
                         onClick={() => openGuestPayPrompt()}
                       >
                         {guestBusy ? (
-                          <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
+                          <LoadingIndicator variant="button" size="sm" className="shrink-0" />
                         ) : (
                           <UserPlus className="h-4 w-4 shrink-0" aria-hidden />
                         )}
@@ -652,7 +652,7 @@ export function InviteShareLanding({
                       disabled={tentativeBusy}
                       onClick={onParticipationTak}
                     >
-                      {tentativeBusy ? <Loader2 className="mr-2 h-4 w-4 shrink-0 animate-spin" aria-hidden /> : null}
+                      {tentativeBusy ? <LoadingIndicator variant="button" size="sm" className="mr-2 shrink-0" /> : null}
                       Tak, biorę udział
                     </Button>
                   </PhotoPanel>

@@ -109,15 +109,10 @@ export function useHotpayPaymentReturn(options: Options = {}) {
         return;
       }
 
-      if (payment === "success") {
-        toast.success("Płatność zakończona pomyślnie");
-        clearQuery();
-        onSettled?.();
-        return;
-      }
-
       if (sessionId) {
-        const toastId = toast.loading("Sprawdzamy status płatności…");
+        const toastId = toast.loading(
+          payment === "success" ? "Potwierdzamy księgowanie płatności…" : "Sprawdzamy status płatności…"
+        );
 
         const pollOnce = async (): Promise<"success" | "failure" | "cancelled" | "pending" | "error"> => {
           try {
@@ -167,7 +162,11 @@ export function useHotpayPaymentReturn(options: Options = {}) {
         return;
       }
 
-      toast.info("Wróciłeś z płatności — sprawdzamy status automatycznie.");
+      if (payment === "success") {
+        toast.info("Płatność wróciła z operatora. Potwierdzimy ją po odświeżeniu statusu.");
+      } else {
+        toast.info("Wróciłeś z płatności — sprawdzamy status automatycznie.");
+      }
       onSettled?.();
       clearQuery();
     }

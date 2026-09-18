@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { CreditCard, Loader2 } from "lucide-react";
+import { CreditCard } from "lucide-react";
 import { AdminNavTile } from "@/components/admin-nav-tile";
+import { LoadingIndicator } from "@/components/preloaders";
 import { cn } from "@/lib/utils";
 
 type State = { enabled: boolean; configured: boolean } | null;
@@ -71,7 +72,7 @@ export function AdminOperatorPaymentsSidebarButton({
         )}
         aria-hidden
       >
-        <Loader2 className="h-5 w-5 animate-spin text-[var(--mp-teal)]" />
+        <LoadingIndicator variant="button" size="md" className="text-[var(--mp-teal)]" />
       </div>
     );
   }

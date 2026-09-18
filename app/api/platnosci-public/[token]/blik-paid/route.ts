@@ -16,18 +16,7 @@ type Ctx = { params: Promise<{ token: string }> };
 
 /** Publiczne zgłoszenie przelewu BLIK — nie oznacza składki jako opłaconej. */
 export async function POST(req: Request, ctx: Ctx) {
-  const rl = await checkRateLimitDistributed(
-    rateLimitKey("publicBlikPaid", req),
-    RATE.publicBlikPaid.limit,
-    RATE.publicBlikPaid.windowMs
-  );
-  if (!rl.ok) return rateLimitedResponse(rl.retryAfterSec);
-
   const { token } = await ctx.params;
-  const link = await loadPublicShareLink(String(token));
-  if (!link || link.kind !== "match_signup_fees" || !link.match_id) {
-    return NextResponse.json({ error: "Link jest nieaktywny" }, { status: 404 });
-  }
 
   let json: unknown;
   try {
@@ -38,6 +27,18 @@ export async function POST(req: Request, ctx: Ctx) {
   const parsed = bodySchema.safeParse(json);
   if (!parsed.success) {
     return NextResponse.json({ error: "Wybierz zawodnika" }, { status: 400 });
+  }
+
+  const rl = await checkRateLimitDistributed(
+    rateLimitKey(`publicBlikPaid:${token}:${parsed.data.user_id}`, req),
+    3,
+    12 * 60 * 60 * 1000
+  );
+  if (!rl.ok) return rateLimitedResponse(rl.retryAfterSec);
+
+  const link = await loadPublicShareLink(String(token));
+  if (!link || link.kind !== "match_signup_fees" || !link.match_id) {
+    return NextResponse.json({ error: "Link jest nieaktywny" }, { status: 404 });
   }
 
   const db = await getDb();

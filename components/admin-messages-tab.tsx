@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ArrowLeft, Loader2, MessageCircle, Plus, Send, Trash2, UserPlus, Users, X } from "lucide-react";
+import { ArrowLeft, MessageCircle, Plus, Send, Trash2, UserPlus, Users, X } from "lucide-react";
+import { LoadingIndicator } from "@/components/preloaders";
 import { toast } from "@/lib/app-toast";
 import {
   ChatAttachmentControls,
@@ -434,7 +435,7 @@ export function AdminMessagesTab({
                     title="Usuń rozmowę"
                   >
                     {deletingThreadKey === selectedKey ? (
-                      <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                      <LoadingIndicator variant="button" size="sm" />
                     ) : (
                       <Trash2 className="h-4 w-4" aria-hidden />
                     )}
@@ -452,7 +453,7 @@ export function AdminMessagesTab({
                 className="min-h-0 flex-1 border-0 bg-transparent"
                 empty={
                   loadingThread ? (
-                    <Loader2 className="h-5 w-5 animate-spin text-[var(--mp-teal)]" aria-hidden />
+                    <LoadingIndicator variant="button" size="md" className="text-[var(--mp-teal)]" />
                   ) : messages.length === 0 ? (
                     <p className="text-center text-sm text-zinc-500">
                       {draftPeer && !selected
@@ -531,7 +532,7 @@ export function AdminMessagesTab({
                     aria-label="Odpisz"
                   >
                     {sending ? (
-                      <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                      <LoadingIndicator variant="button" size="sm" className="text-white" />
                     ) : (
                       <Send className="h-4 w-4" aria-hidden />
                     )}
@@ -544,7 +545,7 @@ export function AdminMessagesTab({
               <div className="min-h-0 flex-1 overflow-y-auto p-3">
                 {loading ? (
                   <div className="flex items-center justify-center py-16 text-zinc-400">
-                    <Loader2 className="h-6 w-6 animate-spin" aria-hidden />
+                    <LoadingIndicator variant="button" size="md" className="text-[var(--mp-teal)]" />
                   </div>
                 ) : threads.length === 0 ? (
                   <div className="flex flex-col items-center justify-center gap-3 px-4 py-12 text-center">
@@ -612,7 +613,7 @@ export function AdminMessagesTab({
                               title="Usuń rozmowę"
                             >
                               {threadBusy ? (
-                                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                                <LoadingIndicator variant="button" size="sm" />
                               ) : (
                                 <Trash2 className="h-4 w-4" aria-hidden />
                               )}
@@ -693,7 +694,7 @@ export function AdminMessagesTab({
         </div>
       ) : loading ? (
         <div className="flex items-center justify-center py-16 text-emerald-100/70">
-          <Loader2 className="h-6 w-6 animate-spin" aria-hidden />
+          <LoadingIndicator variant="button" size="md" className="text-[var(--mp-teal)]" />
         </div>
       ) : threads.length === 0 ? (
         <div className={cn("flex flex-col items-center justify-center gap-3 px-4 py-12 text-center", adminEmptyStateClass)}>
@@ -763,7 +764,7 @@ export function AdminMessagesTab({
                     title="Usuń rozmowę"
                   >
                     {threadBusy ? (
-                      <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                      <LoadingIndicator variant="button" size="sm" />
                     ) : (
                       <Trash2 className="h-4 w-4" aria-hidden />
                     )}
@@ -819,7 +820,7 @@ export function AdminMessagesTab({
             title="Usuń całą rozmowę"
           >
             {deletingThreadKey === selectedKey ? (
-              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+              <LoadingIndicator variant="button" size="sm" />
             ) : (
               <Trash2 className="h-4 w-4" aria-hidden />
             )}
@@ -833,7 +834,7 @@ export function AdminMessagesTab({
           className="h-full max-h-[inherit] min-h-[inherit]"
           empty={
             loadingThread ? (
-              <Loader2 className="h-5 w-5 animate-spin text-emerald-100/70" aria-hidden />
+              <LoadingIndicator variant="button" size="md" className="text-[var(--mp-teal)]" />
             ) : messages.length === 0 ? (
               <p className="text-center text-sm text-emerald-100/60">
                 {draftPeer && !selected
@@ -910,7 +911,7 @@ export function AdminMessagesTab({
             aria-label="Odpisz"
           >
             {sending ? (
-              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+              <LoadingIndicator variant="button" size="sm" className="text-white" />
             ) : (
               <Send className="h-4 w-4" aria-hidden />
             )}

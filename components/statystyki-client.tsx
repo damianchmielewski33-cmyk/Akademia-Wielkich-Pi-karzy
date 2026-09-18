@@ -9,7 +9,6 @@ import {
   CalendarClock,
   CalendarRange,
   CheckCircle2,
-  Loader2,
   Play,
   Route,
   Share2,
@@ -19,6 +18,7 @@ import {
   Users,
 } from "lucide-react";
 import { MarketplacePitchPhoto } from "@/components/marketplace-pitch-photo";
+import { LoadingIndicator } from "@/components/preloaders";
 import {
   MarketplaceSection,
   mpEmptyClass,
@@ -420,7 +420,7 @@ export function StatystykiClient({
               disabled={restarting}
               onClick={() => void startNewSeason()}
             >
-              {restarting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : <Play className="mr-2 h-4 w-4" aria-hidden />}
+              {restarting ? <LoadingIndicator variant="button" size="sm" className="mr-2" /> : <Play className="mr-2 h-4 w-4" aria-hidden />}
               Rozpocznij sezon
             </Button>
           </>

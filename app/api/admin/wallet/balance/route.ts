@@ -25,7 +25,7 @@ function round2(n: number) {
  * Realizowane jako transakcja typu "adjustment" (audytowalne), a nie podmiana agregatu.
  */
 export async function POST(req: Request) {
-  const gate = await requireAdmin();
+  const gate = await requireAdmin("finance");
   if (!gate.ok) return gate.response;
 
   let json: unknown;
@@ -74,6 +74,34 @@ export async function POST(req: Request) {
   const baseNote = `Ustawienie salda portfela ${walletLabel} na ${target} PLN (było ${current} PLN)`;
   const fullNote = note ? `${baseNote} · ${note}` : baseNote;
   const storedNote = fullNote.length > 200 ? `${fullNote.slice(0, 197)}...` : fullNote;
+
+  const recentDuplicate = (await db
+    .prepare(
+      `SELECT id
+       FROM wallet_transactions
+       WHERE user_id = ?
+         AND kind = 'adjustment'
+         AND amount_pln = ?
+         AND wallet_kind = ?
+         AND IFNULL(note, '') = IFNULL(?, '')
+         AND datetime(created_at) >= datetime('now', '-10 minutes')
+       ORDER BY id DESC
+       LIMIT 1`
+    )
+    .get(user_id, delta, wallet_kind, storedNote)) as { id: number } | undefined;
+  if (recentDuplicate) {
+    const newBalances = await getWalletBalances(user_id);
+    return NextResponse.json({
+      ok: true,
+      txId: recentDuplicate.id,
+      duplicate: true,
+      delta_pln: delta,
+      current_balance_pln: newBalances.total,
+      admin_balance_pln: newBalances.admin,
+      operator_balance_pln: newBalances.operator,
+      target_balance_pln: target,
+    });
+  }
 
   const r = await db
     .prepare(

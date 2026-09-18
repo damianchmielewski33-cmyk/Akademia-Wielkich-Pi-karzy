@@ -1,13 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Loader2 } from "lucide-react";
 import { toast } from "@/lib/app-toast";
 import { AdminCard, adminEmptyStateClass, adminFieldClass, adminInnerPanelClass } from "@/components/admin-ui";
+import { LoadingIndicator } from "@/components/preloaders";
 import { AppModal } from "@/components/ui/app-modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
 type HotpayDiagRow = {
@@ -92,6 +93,8 @@ export function AdminHotpayConfirmPanel() {
   const [busySession, setBusySession] = useState<string | null>(null);
   const [webhookIpBlocks, setWebhookIpBlocks] = useState<WebhookIpBlocks | null>(null);
   const [confirm, setConfirm] = useState<ConfirmAction | null>(null);
+  const [creditReason, setCreditReason] = useState("");
+  const [operatorConfirmedSuccess, setOperatorConfirmedSuccess] = useState(false);
 
   const load = useCallback(
     async (opts?: { quiet?: boolean }) => {
@@ -153,7 +156,16 @@ export function AdminHotpayConfirmPanel() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "same-origin",
-        body: JSON.stringify({ session_id: sessionId, action }),
+        body: JSON.stringify({
+          session_id: sessionId,
+          action,
+          ...(action === "credit"
+            ? {
+                reason: creditReason.trim(),
+                operator_confirmed_success: operatorConfirmedSuccess,
+              }
+            : {}),
+        }),
       });
       const data = (await res.json().catch(() => null)) as {
         error?: string;
@@ -166,6 +178,8 @@ export function AdminHotpayConfirmPanel() {
       }
       toast.success(action === "credit" ? "Zaksięgowano / domknięto" : "Koszyk zaaplikowany", { id: toastId });
       setConfirm(null);
+      setCreditReason("");
+      setOperatorConfirmedSuccess(false);
       await load({ quiet: true });
     } catch {
       toast.error("Błąd sieci", { id: toastId });
@@ -175,6 +189,11 @@ export function AdminHotpayConfirmPanel() {
   }
 
   const confirmBusy = confirm ? busySession === confirm.sessionId : false;
+  const confirmCanSubmit =
+    confirm?.action === "retry_cart"
+      ? true
+      : creditReason.trim().length >= 8 &&
+        (confirm?.row.status === "success" || operatorConfirmedSuccess);
 
   return (
     <AdminCard
@@ -230,7 +249,7 @@ export function AdminHotpayConfirmPanel() {
           />
         </div>
         <Button type="button" variant="default" className="rounded-full font-bold" disabled={loading} onClick={() => void load()}>
-          {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
+          {loading ? <LoadingIndicator variant="button" size="sm" className="mr-2" /> : null}
           Szukaj
         </Button>
       </div>
@@ -262,7 +281,11 @@ export function AdminHotpayConfirmPanel() {
                         size="sm"
                         className="rounded-full font-bold"
                         disabled={busy}
-                        onClick={() => setConfirm({ sessionId: r.session_id, action: "credit", row: r })}
+                        onClick={() => {
+                          setCreditReason("");
+                          setOperatorConfirmedSuccess(r.status === "success");
+                          setConfirm({ sessionId: r.session_id, action: "credit", row: r });
+                        }}
                       >
                         Zaksięguj
                       </Button>
@@ -323,12 +346,44 @@ export function AdminHotpayConfirmPanel() {
         preventDismiss={confirmBusy}
         size="sm"
       >
+        {confirm?.action === "credit" ? (
+          <div className="mt-4 space-y-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="hotpay-credit-reason">Powód ręcznego księgowania</Label>
+              <Textarea
+                id="hotpay-credit-reason"
+                value={creditReason}
+                onChange={(e) => setCreditReason(e.target.value)}
+                placeholder="np. webhook nie dotarł, operator pokazuje SUCCESS w panelu HotPay"
+              />
+            </div>
+            {confirm.row.status !== "success" ? (
+              <label className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950 dark:border-amber-800/60 dark:bg-amber-950/30 dark:text-amber-100">
+                <input
+                  type="checkbox"
+                  className="mt-1 h-4 w-4 accent-[var(--mp-teal)]"
+                  checked={operatorConfirmedSuccess}
+                  onChange={(e) => setOperatorConfirmedSuccess(e.target.checked)}
+                />
+                <span>Potwierdziłem w panelu HotPay, że operator oznaczył tę płatność jako SUCCESS.</span>
+              </label>
+            ) : (
+              <p className="rounded-lg border border-teal-200 bg-teal-50 px-3 py-2 text-xs text-[var(--mp-teal-dark)] dark:border-teal-800/60 dark:bg-teal-950/30 dark:text-teal-200">
+                Lokalny status jest już SUCCESS, ale ręczne księgowanie nadal wymaga wpisania powodu do audytu.
+              </p>
+            )}
+          </div>
+        ) : null}
         <div className="mt-4 flex flex-wrap justify-end gap-2">
           <Button
             type="button"
             variant="outline"
             disabled={confirmBusy}
-            onClick={() => setConfirm(null)}
+            onClick={() => {
+              setConfirm(null);
+              setCreditReason("");
+              setOperatorConfirmedSuccess(false);
+            }}
           >
             Anuluj
           </Button>
@@ -336,13 +391,13 @@ export function AdminHotpayConfirmPanel() {
             type="button"
             variant="default"
             className="rounded-full font-bold"
-            disabled={!confirm || confirmBusy}
+            disabled={!confirm || confirmBusy || !confirmCanSubmit}
             onClick={() => {
               if (!confirm) return;
               void postAction(confirm.sessionId, confirm.action);
             }}
           >
-            {confirmBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
+            {confirmBusy ? <LoadingIndicator variant="button" size="sm" className="mr-2" /> : null}
             {confirm?.action === "retry_cart" ? "Ponów koszyk" : "Zaksięguj"}
           </Button>
         </div>

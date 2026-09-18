@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Film, Loader2, Pencil, Plus } from "lucide-react";
+import { Film, Pencil, Plus } from "lucide-react";
 import { toast } from "@/lib/app-toast";
 import {
   AdminCard,
@@ -9,6 +9,7 @@ import {
   AdminToolbar,
   adminEmptyStateClass,
 } from "@/components/admin-ui";
+import { LoadingIndicator } from "@/components/preloaders";
 import { AdminRowActions } from "@/components/admin-row-actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -116,7 +117,7 @@ export function AdminGalleryTab() {
       <AdminCard title="Filmy" description="Lista nagrania — edycja i publikacja.">
         {loading ? (
           <p className="flex items-center gap-2 text-sm pitch-muted">
-            <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+            <LoadingIndicator variant="button" size="sm" className="text-[var(--mp-teal)]" />
             Wczytywanie…
           </p>
         ) : videos.length === 0 ? (

@@ -15,7 +15,6 @@ import {
   Film,
   LayoutDashboard,
   LayoutGrid,
-  Loader2,
   Medal,
   MessageCircle,
   Search,
@@ -77,6 +76,7 @@ import {
   AdminAnalyticsHourlyCharts,
   type AnalyticsHourlyPayload,
 } from "@/components/admin-analytics-hourly-charts";
+import { LoadingIndicator } from "@/components/preloaders";
 import { AdminWalletsSaldoSection } from "@/components/admin-wallets-saldo-section";
 import { AdminOperatorPaymentsTab } from "@/components/admin-operator-payments-tab";
 import { AdminSettingsTab } from "@/components/admin-settings-tab";
@@ -597,7 +597,7 @@ function MatchCancelDialogContent({
             Zamknij
           </Button>
           <Button type="button" variant="destructive" onClick={() => void handleCancel()} disabled={saving}>
-            {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
+            {saving ? <LoadingIndicator variant="button" size="sm" className="mr-2 text-white" /> : null}
             Anuluj mecz
           </Button>
         </>
@@ -848,7 +848,7 @@ function MatchSignupsDialogContent({
                       disabled={saving === s.user_id}
                     >
                       {saving === s.user_id ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <LoadingIndicator variant="button" size="sm" className="text-white" />
                       ) : s.paid ? (
                         "Opłacony"
                       ) : (
@@ -863,7 +863,7 @@ function MatchSignupsDialogContent({
                       onClick={() => handleRemoveGuest(s.user_id)}
                       disabled={saving === s.user_id}
                     >
-                      {saving === s.user_id ? <Loader2 className="h-4 w-4 animate-spin" /> : "Usuń"}
+                      {saving === s.user_id ? <LoadingIndicator variant="button" size="sm" className="text-white" /> : "Usuń"}
                     </Button>
                   )}
                 </div>
@@ -888,7 +888,7 @@ function MatchSignupsDialogContent({
               Anuluj
             </Button>
             <Button type="button" variant="default" className="rounded-full font-bold" onClick={() => void handleAddGuest()} disabled={addingGuest}>
-              {addingGuest ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              {addingGuest ? <LoadingIndicator variant="button" size="sm" className="mr-2" /> : null}
               Dodaj
             </Button>
           </>
@@ -2634,7 +2634,7 @@ function DeleteUserModal({
             Anuluj
           </Button>
           <Button type="button" variant="destructive" onClick={() => void handleDelete()} disabled={deleting}>
-            {deleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
+            {deleting ? <LoadingIndicator variant="button" size="sm" className="mr-2 text-white" /> : null}
             Usuń
           </Button>
         </>
@@ -2782,7 +2782,7 @@ function UserCreateForm({
               }
             }}
           >
-            {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
+            {saving ? <LoadingIndicator variant="button" size="sm" className="mr-2" /> : null}
             Utwórz konto
           </Button>
         </>
@@ -2923,7 +2923,7 @@ function UserEditForm({
               }
             }}
           >
-            {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
+            {saving ? <LoadingIndicator variant="button" size="sm" className="mr-2" /> : null}
             Zapisz
           </Button>
         </>
@@ -3051,7 +3051,7 @@ function MatchEditDialogContent({
             Zamknij
           </Button>
           <Button type="button" variant="default" className="rounded-full font-bold" onClick={() => void handleSave()} disabled={saving}>
-            {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
+            {saving ? <LoadingIndicator variant="button" size="sm" className="mr-2" /> : null}
             Zapisz zmiany
           </Button>
         </>

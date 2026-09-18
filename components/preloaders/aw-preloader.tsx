@@ -2,6 +2,7 @@
 
 import { SiteAssetImage } from "@/components/site-asset-image";
 import { cn } from "@/lib/utils";
+import { LoadingIndicator } from "./loading-indicator";
 
 type AwPreloaderProps = {
   /** Krótki opis pod wskaźnikiem. */
@@ -18,7 +19,7 @@ export function AwPreloader({ label, className, variant = "page" }: AwPreloaderP
   if (variant === "compact") {
     return (
       <div className={cn("awp-preloader awp-preloader--compact", className)} role="status" aria-live="polite">
-        <div className="awp-preloader__spinner" aria-hidden />
+        <LoadingIndicator variant="inline" size="sm" />
         {label ? <p className="awp-preloader__label">{label}</p> : null}
       </div>
     );
@@ -37,9 +38,10 @@ export function AwPreloader({ label, className, variant = "page" }: AwPreloaderP
           priority
         />
       </div>
-      <div className="awp-preloader__track" aria-hidden>
-        <div className="awp-preloader__bar" />
+      <div className="awp-preloader__beam" aria-hidden>
+        <div className="awp-preloader__beam-glow" />
       </div>
+      <LoadingIndicator variant="inline" size="lg" />
       {label ? <p className="awp-preloader__label">{label}</p> : null}
     </div>
   );

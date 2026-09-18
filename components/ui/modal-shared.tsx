@@ -1,9 +1,10 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { Calendar, Clock, Info, Loader2, MapPin, TriangleAlert, Users, XCircle } from "lucide-react";
+import { Calendar, Clock, Info, MapPin, TriangleAlert, Users, XCircle } from "lucide-react";
 import { MarketplacePitchPhoto } from "@/components/marketplace-pitch-photo";
 import { useMarketplacePitchPhotoAt } from "@/components/marketplace-photos-provider";
+import { LoadingIndicator } from "@/components/preloaders";
 import { cn } from "@/lib/utils";
 
 export const modalPanelClass =
@@ -38,7 +39,7 @@ type MatchLike = {
 export function ModalLoadingRow({ label = "Wczytywanie…" }: { label?: string }) {
   return (
     <div className="flex items-center gap-2 py-3 text-sm text-zinc-600 dark:text-zinc-400">
-      <Loader2 className="h-4 w-4 animate-spin text-[var(--mp-teal)] dark:text-teal-400" aria-hidden />
+      <LoadingIndicator variant="button" size="sm" className="text-[var(--mp-teal)] dark:text-teal-400" />
       {label}
     </div>
   );

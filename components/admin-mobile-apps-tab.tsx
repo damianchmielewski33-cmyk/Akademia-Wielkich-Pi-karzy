@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Loader2, Smartphone, TabletSmartphone, UserX, Users } from "lucide-react";
+import { Smartphone, TabletSmartphone, UserX, Users } from "lucide-react";
 import { toast } from "@/lib/app-toast";
 import { formatActivityTimePl } from "@/lib/activity-display";
 import {
@@ -11,6 +11,7 @@ import {
   AdminToolbar,
   adminDataSearchInputClass,
 } from "@/components/admin-ui";
+import { LoadingIndicator } from "@/components/preloaders";
 import { AdminFilterChips } from "@/components/admin-row-actions";
 import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
 import { Badge } from "@/components/ui/badge";
@@ -166,7 +167,7 @@ export function AdminMobileAppsTab() {
                 <TableRow>
                   <TableCell colSpan={3} className="py-10 text-center text-sm">
                     <span className="inline-flex items-center gap-2 text-emerald-100/80">
-                      <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                      <LoadingIndicator variant="button" size="sm" className="text-[var(--mp-teal)]" />
                       Wczytywanie…
                     </span>
                   </TableCell>

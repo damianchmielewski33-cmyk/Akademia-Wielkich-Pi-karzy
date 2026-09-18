@@ -21,6 +21,7 @@ export type StartHotpayMatchCartResult =
       session_id: string;
       cart_id: number;
       amount_pln: number;
+      gross_amount_pln: number;
     }
   | { ok: false; error: string; status: number };
 
@@ -144,5 +145,6 @@ export async function startHotpayMatchCartPayment(args: {
     session_id: sessionId,
     cart_id: pending.cart_id,
     amount_pln: amountPln,
+    gross_amount_pln: grossAmountPln,
   };
 }

@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { toast } from "@/lib/app-toast";
-import { Loader2, Wallet } from "lucide-react";
+import { Wallet } from "lucide-react";
+import { LoadingIndicator } from "@/components/preloaders";
 import { currentHotpayReturnPath, payMatchCart } from "@/lib/hotpay-client";
 import { AppModal } from "@/components/ui/app-modal";
 import { Button } from "@/components/ui/button";
@@ -134,7 +135,7 @@ export function MatchSignupDialog({
 
         <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
           <Button type="button" variant="outline" disabled={busy} onClick={() => void submit(false)}>
-            {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
+            {busy ? <LoadingIndicator variant="button" size="sm" className="mr-2" /> : null}
             Zapisz bez opłaty
           </Button>
           <PayButton
@@ -166,7 +167,7 @@ export function MatchSignupDialog({
             Anuluj
           </Button>
           <Button type="button" variant="default" className="rounded-full font-bold" onClick={() => void submit(false)} disabled={busy}>
-            {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
+            {busy ? <LoadingIndicator variant="button" size="sm" className="mr-2" /> : null}
             {intent === "confirm" ? "Potwierdź zapis" : "Zapisz się"}
           </Button>
         </>

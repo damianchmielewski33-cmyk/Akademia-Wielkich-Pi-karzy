@@ -2,9 +2,10 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { Check, ClipboardCopy, Loader2, PencilLine, Search } from "lucide-react";
+import { Check, ClipboardCopy, PencilLine, PlusCircle, Search } from "lucide-react";
 import { toast } from "@/lib/app-toast";
 import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
+import { LoadingIndicator } from "@/components/preloaders";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,6 +22,37 @@ type AdminWalletPlayerRow = PlatnosciUserLite & {
   operator_balance_pln?: number;
 };
 
+type AdminPendingDepositRow = {
+  id: number;
+  user_id: number;
+  amount_pln: number;
+  created_by: "player" | "admin";
+  status: "pending" | "completed" | "cancelled";
+  wallet_kind: "admin" | "operator";
+  note: string | null;
+  player_declared_at: string | null;
+  admin_confirmed_received_at: string | null;
+  admin_declared_received_at: string | null;
+  player_confirmed_amount_at: string | null;
+  created_at: string;
+  first_name: string;
+  last_name: string;
+  zawodnik: string;
+  profile_photo_path: string | null;
+};
+
+type ManagedPublicLinkRow = {
+  id: number;
+  token: string;
+  kind: "last_match_wallets" | "all_wallets" | "match_wallets" | "player_wallets" | "match_signup_fees";
+  created_at: string;
+  expires_at: string | null;
+  revoked_at: string | null;
+  match_id: number | null;
+  user_id: number | null;
+  path: string;
+};
+
 type PlayedMatchOption = {
   id: number;
   match_date: string;
@@ -35,6 +67,7 @@ type AdminWalletOverview = {
   players: AdminWalletPlayerRow[];
   walletUsers?: (AdminWalletPlayerRow & { is_admin?: number })[];
   playedMatches?: PlayedMatchOption[];
+  pendingDeposits?: AdminPendingDepositRow[];
 };
 
 const EMPTY_PLAYED_MATCHES: PlayedMatchOption[] = [];
@@ -80,12 +113,19 @@ function addDaysISO(iso: string, days: number) {
 }
 
 type PlayedMatchPeriod = "all" | "7d" | "month" | "year";
+type TopUpMethod = "blik" | "cash";
+type PendingDepositFilter = "all" | "player" | "admin" | "stale";
 
 const PLAYED_MATCH_PERIOD_OPTIONS: { id: PlayedMatchPeriod; label: string }[] = [
   { id: "all", label: "Wszystkie" },
   { id: "7d", label: "7 dni" },
   { id: "month", label: "Ten miesiąc" },
   { id: "year", label: "Ten rok" },
+];
+
+const TOP_UP_METHOD_OPTIONS: { id: TopUpMethod; label: string; hint: string }[] = [
+  { id: "blik", label: "BLIK", hint: "Wpłata BLIK na telefon" },
+  { id: "cash", label: "Gotówka", hint: "Wpłata odebrana do ręki" },
 ];
 
 function matchInPlayedPeriod(m: PlayedMatchOption, period: PlayedMatchPeriod) {
@@ -192,6 +232,12 @@ function formatAmountInput(n: number) {
   return String(v).replace(".", ",");
 }
 
+function clampText(value: string, max: number) {
+  const text = value.trim();
+  if (text.length <= max) return text;
+  return `${text.slice(0, Math.max(0, max - 3)).trimEnd()}...`;
+}
+
 function parsePlnInput(raw: string) {
   const trimmed = String(raw).replace(/\u2212/g, "-").replace(",", ".").trim();
   if (!trimmed || trimmed === "-") return null;
@@ -205,6 +251,77 @@ function togglePlnSign(raw: string) {
   const minus = value.match(/^\s*-/);
   if (minus) return value.slice(minus[0].length);
   return `-${value.replace(/^\s+/, "")}`;
+}
+
+function topUpMethodLabel(method: TopUpMethod) {
+  return method === "blik" ? "BLIK" : "gotówka";
+}
+
+function formatDateTimeLabel(raw: string | null | undefined) {
+  if (!raw) return "—";
+  const dt = new Date(raw.includes("T") ? raw : raw.replace(" ", "T"));
+  if (Number.isNaN(dt.getTime())) return raw;
+  return dt.toLocaleString("pl-PL", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function isPendingDepositStale(raw: string | null | undefined) {
+  if (!raw) return false;
+  const dt = new Date(raw.includes("T") ? raw : raw.replace(" ", "T"));
+  if (Number.isNaN(dt.getTime())) return false;
+  return Date.now() - dt.getTime() >= 24 * 60 * 60 * 1000;
+}
+
+function publicLinkKindLabel(kind: ManagedPublicLinkRow["kind"]) {
+  if (kind === "all_wallets") return "Wszystkie salda";
+  if (kind === "match_wallets") return "Wybrany mecz";
+  if (kind === "player_wallets") return "Jeden zawodnik";
+  if (kind === "match_signup_fees") return "Opłata meczu";
+  return "Ostatni mecz";
+}
+
+function buildAdminTopUpNote(method: TopUpMethod, note: string) {
+  const base = method === "blik" ? "Wpłata BLIK u admina" : "Wpłata gotówką u admina";
+  const extra = note.trim();
+  return clampText(extra ? `${base} · ${extra}` : base, 200);
+}
+
+function TopUpMethodPicker({
+  value,
+  onChange,
+}: {
+  value: TopUpMethod;
+  onChange: (value: TopUpMethod) => void;
+}) {
+  return (
+    <div className="grid gap-2 sm:grid-cols-2" role="group" aria-label="Sposób wpłaty">
+      {TOP_UP_METHOD_OPTIONS.map((opt) => {
+        const active = value === opt.id;
+        return (
+          <button
+            key={opt.id}
+            type="button"
+            onClick={() => onChange(opt.id)}
+            aria-pressed={active}
+            className={cn(
+              "rounded-xl border px-3 py-3 text-left transition-colors",
+              active
+                ? "border-teal-500 bg-white shadow-sm dark:border-teal-400 dark:bg-zinc-950"
+                : "border-zinc-200 bg-zinc-50/70 hover:bg-white dark:border-zinc-700 dark:bg-zinc-900/60 dark:hover:bg-zinc-950"
+            )}
+          >
+            <span className="block text-sm font-semibold text-zinc-950 dark:text-zinc-50">{opt.label}</span>
+            <span className="mt-1 block text-[11px] text-zinc-500 dark:text-zinc-400">{opt.hint}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
 }
 
 function WalletPlayerPicker({
@@ -396,9 +513,11 @@ export function AdminWalletsSaldoSection({
   const router = useRouter();
   const linksEnabled = showPublicLinks ?? !embedded;
   const topUpEnabled = showTopUp ?? !embedded;
-  const [walletTab, setWalletTab] = useState<"balances" | "topup" | "adjust" | "links">("balances");
+  const [walletTab, setWalletTab] = useState<"balances" | "pending" | "topup" | "adjust" | "links">("balances");
   const [adminOverview, setAdminOverview] = useState<AdminWalletOverview | null>(null);
   const [adminLoading, setAdminLoading] = useState(false);
+  const [pendingDepositFilter, setPendingDepositFilter] = useState<PendingDepositFilter>("all");
+  const [pendingBusyId, setPendingBusyId] = useState<number | null>(null);
   const [adminBalanceUserId, setAdminBalanceUserId] = useState<number | null>(null);
   const [adminBalanceUserQuery, setAdminBalanceUserQuery] = useState("");
   const [adminBalanceTarget, setAdminBalanceTarget] = useState("");
@@ -409,13 +528,20 @@ export function AdminWalletsSaldoSection({
   const [topUpUserId, setTopUpUserId] = useState<number | null>(null);
   const [topUpUserQuery, setTopUpUserQuery] = useState("");
   const [topUpAmount, setTopUpAmount] = useState("");
+  const [topUpMethod, setTopUpMethod] = useState<TopUpMethod>("blik");
   const [topUpNote, setTopUpNote] = useState("");
   const [topUpSubmitting, setTopUpSubmitting] = useState(false);
+  const [quickTopUpAmount, setQuickTopUpAmount] = useState("");
+  const [quickTopUpMethod, setQuickTopUpMethod] = useState<TopUpMethod>("blik");
+  const [quickTopUpNote, setQuickTopUpNote] = useState("");
+  const [quickTopUpSubmitting, setQuickTopUpSubmitting] = useState(false);
   const [publicLinkBusy, setPublicLinkBusy] = useState(false);
   const [publicLinkCopied, setPublicLinkCopied] = useState<string | null>(null);
+  const [publicLinks, setPublicLinks] = useState<ManagedPublicLinkRow[]>([]);
   const [playedMatchId, setPlayedMatchId] = useState<number | null>(null);
   const [playedMatchQuery, setPlayedMatchQuery] = useState("");
   const [playedMatchPeriod, setPlayedMatchPeriod] = useState<PlayedMatchPeriod>("all");
+  const [topUpSectionOpen, setTopUpSectionOpen] = useState(false);
   const [adjustSectionOpen, setAdjustSectionOpen] = useState(false);
 
   async function refresh(opts?: { quiet?: boolean }) {
@@ -432,15 +558,31 @@ export function AdminWalletsSaldoSection({
     }
   }
 
+  async function refreshPublicLinks(opts?: { quiet?: boolean }) {
+    const r = await fetchJson<{ links?: ManagedPublicLinkRow[] }>("/api/admin/wallet/public-links");
+    if (!r.ok) {
+      if (!opts?.quiet) toast.error(r.error);
+      return;
+    }
+    setPublicLinks(Array.isArray(r.data.links) ? r.data.links : []);
+  }
+
   useEffect(() => {
     void refresh();
+    void refreshPublicLinks({ quiet: true });
     const onVisible = () => {
-      if (document.visibilityState === "visible") void refresh({ quiet: true });
+      if (document.visibilityState === "visible") {
+        void refresh({ quiet: true });
+        void refreshPublicLinks({ quiet: true });
+      }
     };
     document.addEventListener("visibilitychange", onVisible);
     window.addEventListener("focus", onVisible);
     const id = window.setInterval(() => {
-      if (document.visibilityState === "visible") void refresh({ quiet: true });
+      if (document.visibilityState === "visible") {
+        void refresh({ quiet: true });
+        void refreshPublicLinks({ quiet: true });
+      }
     }, 30_000);
     return () => {
       document.removeEventListener("visibilitychange", onVisible);
@@ -464,6 +606,13 @@ export function AdminWalletsSaldoSection({
     () => (topUpUserId != null ? balancePlayerList.find((p) => p.id === topUpUserId) : undefined),
     [balancePlayerList, topUpUserId]
   );
+  const pendingDeposits = adminOverview?.pendingDeposits ?? [];
+  const filteredPendingDeposits = useMemo(() => {
+    if (pendingDepositFilter === "player") return pendingDeposits.filter((d) => d.created_by === "player");
+    if (pendingDepositFilter === "admin") return pendingDeposits.filter((d) => d.created_by === "admin");
+    if (pendingDepositFilter === "stale") return pendingDeposits.filter((d) => isPendingDepositStale(d.created_at));
+    return pendingDeposits;
+  }, [pendingDeposits, pendingDepositFilter]);
 
   const currentAdjustAmount = selectedBalancePlayer
     ? playerWalletAmount(selectedBalancePlayer, adminBalanceWalletKind)
@@ -501,7 +650,7 @@ export function AdminWalletsSaldoSection({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           kind,
-          expires_in_days: 30,
+          expires_in_days: 7,
           ...(kind === "match_wallets" && matchId ? { match_id: matchId } : {}),
         }),
       });
@@ -512,8 +661,9 @@ export function AdminWalletsSaldoSection({
       const url = `${window.location.origin}${r.data.path}`;
       await navigator.clipboard.writeText(url);
       setPublicLinkCopied(kind === "match_wallets" && matchId ? `match_wallets:${matchId}` : kind);
-      toast.success("Skopiowano link do schowka");
+      toast.success("Skopiowano link do schowka (ważny domyślnie 7 dni)");
       setTimeout(() => setPublicLinkCopied(null), 2000);
+      await refreshPublicLinks({ quiet: true });
     } catch {
       toast.error("Nie udało się skopiować linku");
     } finally {
@@ -521,40 +671,148 @@ export function AdminWalletsSaldoSection({
     }
   }
 
-  async function adminTopUpWallet() {
-    const user_id = topUpUserId;
-    const amount_pln = Number(String(topUpAmount).replace(",", "."));
-    if (!user_id) {
-      toast.error("Wybierz zawodnika");
-      return;
-    }
-    if (!Number.isFinite(amount_pln) || amount_pln <= 0) {
-      toast.error("Podaj prawidłową kwotę");
-      return;
-    }
-    setTopUpSubmitting(true);
+  async function copyExistingPublicLink(row: ManagedPublicLinkRow) {
     try {
-      const r = await fetchJson<{ ok: true; id: number }>("/api/admin/wallet/deposits", {
-        method: "POST",
+      const url = `${window.location.origin}${row.path}`;
+      await navigator.clipboard.writeText(url);
+      setPublicLinkCopied(row.token);
+      toast.success("Skopiowano aktywny link");
+      setTimeout(() => setPublicLinkCopied(null), 2000);
+    } catch {
+      toast.error("Nie udało się skopiować linku");
+    }
+  }
+
+  async function revokePublicLink(token: string) {
+    setPublicLinkBusy(true);
+    try {
+      const r = await fetchJson<{ ok: true }>("/api/admin/wallet/public-links", {
+        method: "DELETE",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          user_id,
-          amount_pln,
-          note: topUpNote.trim() ? topUpNote.trim() : undefined,
-          wallet_kind: "admin",
-        }),
+        body: JSON.stringify({ token }),
       });
       if (!r.ok) {
         toast.error(r.error);
         return;
       }
-      toast.success(`Dodano ${formatPln(amount_pln)} do salda zawodnika`);
-      setTopUpAmount("");
-      setTopUpNote("");
-      await refresh();
+      toast.success("Unieważniono link publiczny");
+      await refreshPublicLinks({ quiet: true });
+    } finally {
+      setPublicLinkBusy(false);
+    }
+  }
+
+  async function confirmPendingDeposit(id: number) {
+    setPendingBusyId(id);
+    try {
+      const r = await fetchJson<{ ok: true }>(`/api/admin/wallet/deposits/${id}/confirm`, {
+        method: "POST",
+      });
+      if (!r.ok) {
+        toast.error(r.error);
+        return;
+      }
+      toast.success("Wpłata potwierdzona");
+      await refresh({ quiet: true });
       router.refresh();
     } finally {
+      setPendingBusyId(null);
+    }
+  }
+
+  async function cancelPendingDeposit(id: number) {
+    setPendingBusyId(id);
+    try {
+      const r = await fetchJson<{ ok: true }>(`/api/admin/wallet/deposits/${id}/cancel`, {
+        method: "POST",
+      });
+      if (!r.ok) {
+        toast.error(r.error);
+        return;
+      }
+      toast.success("Wpłata została anulowana");
+      await refresh({ quiet: true });
+      router.refresh();
+    } finally {
+      setPendingBusyId(null);
+    }
+  }
+
+  async function submitAdminTopUp(args: {
+    userId: number;
+    amountRaw: string;
+    method: TopUpMethod;
+    note: string;
+  }) {
+    const amount_pln = parsePlnInput(args.amountRaw);
+    if (amount_pln == null || amount_pln <= 0) {
+      toast.error("Podaj prawidłową kwotę");
+      return false;
+    }
+
+    const r = await fetchJson<{ ok: true; id: number }>("/api/admin/wallet/deposits", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        user_id: args.userId,
+        amount_pln,
+        note: buildAdminTopUpNote(args.method, args.note),
+        wallet_kind: "admin",
+      }),
+    });
+    if (!r.ok) {
+      toast.error(r.error);
+      return false;
+    }
+
+    toast.success(`Dodano ${formatPln(amount_pln)} do salda zawodnika (${topUpMethodLabel(args.method)})`);
+    await refresh();
+    router.refresh();
+    return true;
+  }
+
+  async function adminTopUpWallet() {
+    const user_id = topUpUserId;
+    if (!user_id) {
+      toast.error("Wybierz zawodnika");
+      return;
+    }
+    setTopUpSubmitting(true);
+    try {
+      const ok = await submitAdminTopUp({
+        userId: user_id,
+        amountRaw: topUpAmount,
+        method: topUpMethod,
+        note: topUpNote,
+      });
+      if (!ok) return;
+      setTopUpAmount("");
+      setTopUpMethod("blik");
+      setTopUpNote("");
+    } finally {
       setTopUpSubmitting(false);
+    }
+  }
+
+  async function adminTopUpSelectedPlayer() {
+    const user_id = adminBalanceUserId;
+    if (!user_id) {
+      toast.error("Wybierz zawodnika");
+      return;
+    }
+    setQuickTopUpSubmitting(true);
+    try {
+      const ok = await submitAdminTopUp({
+        userId: user_id,
+        amountRaw: quickTopUpAmount,
+        method: quickTopUpMethod,
+        note: quickTopUpNote,
+      });
+      if (!ok) return;
+      setQuickTopUpAmount("");
+      setQuickTopUpNote("");
+    } finally {
+      setQuickTopUpSubmitting(false);
     }
   }
 
@@ -614,11 +872,17 @@ export function AdminWalletsSaldoSection({
   function selectTopUpPlayer(id: number) {
     setTopUpUserId(id);
     setTopUpUserQuery("");
+    setTopUpAmount("");
+    setTopUpMethod("blik");
+    setTopUpNote("");
   }
 
   function clearTopUpPlayer() {
     setTopUpUserId(null);
     setTopUpUserQuery("");
+    setTopUpAmount("");
+    setTopUpMethod("blik");
+    setTopUpNote("");
   }
 
   function applyAdjustTargetFromPlayer(player: AdminWalletPlayerRow, kind: "admin" | "operator") {
@@ -628,6 +892,9 @@ export function AdminWalletsSaldoSection({
   function selectAdjustPlayer(id: number) {
     setAdminBalanceUserId(id);
     setAdminBalanceUserQuery("");
+    setQuickTopUpAmount("");
+    setQuickTopUpMethod("blik");
+    setQuickTopUpNote("");
     const player = balancePlayerList.find((p) => p.id === id);
     if (player) applyAdjustTargetFromPlayer(player, adminBalanceWalletKind);
   }
@@ -638,6 +905,9 @@ export function AdminWalletsSaldoSection({
     setAdminBalanceTarget("");
     setAdminBalanceNote("");
     setAdminBalanceWalletKind("admin");
+    setQuickTopUpAmount("");
+    setQuickTopUpMethod("blik");
+    setQuickTopUpNote("");
   }
 
   function startBalanceCorrection(id: number) {
@@ -646,6 +916,15 @@ export function AdminWalletsSaldoSection({
     setAdjustSectionOpen(true);
     window.setTimeout(() => {
       document.getElementById("admin-adjust-saldo")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 80);
+  }
+
+  function startTopUpForPlayer(id: number) {
+    selectTopUpPlayer(id);
+    setWalletTab("topup");
+    setTopUpSectionOpen(true);
+    window.setTimeout(() => {
+      document.getElementById("admin-wallet-topup")?.scrollIntoView({ behavior: "smooth", block: "start" });
     }, 80);
   }
 
@@ -679,6 +958,12 @@ export function AdminWalletsSaldoSection({
       {selectedTopUpPlayer ? (
         <>
           <div className={cn("mt-4 grid gap-3 sm:grid-cols-2")}>
+            <div className="sm:col-span-2">
+              <Label>Sposób wpłaty</Label>
+              <div className="mt-1">
+                <TopUpMethodPicker value={topUpMethod} onChange={setTopUpMethod} />
+              </div>
+            </div>
             <div>
               <Label htmlFor="admin-topup-amount">Kwota wpłaty (PLN)</Label>
               <Input
@@ -696,7 +981,11 @@ export function AdminWalletsSaldoSection({
               <Input
                 id="admin-topup-note"
                 type="text"
-                placeholder="np. BLIK / gotówka od Jana"
+                placeholder={
+                  topUpMethod === "blik"
+                    ? "np. dopłata po treningu"
+                    : "np. gotówka po meczu"
+                }
                 value={topUpNote}
                 onChange={(e) => setTopUpNote(e.target.value)}
                 className="mt-1"
@@ -704,12 +993,12 @@ export function AdminWalletsSaldoSection({
             </div>
           </div>
           <p className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50/80 px-3 py-2 text-xs text-emerald-900 dark:border-emerald-800/50 dark:bg-emerald-950/35 dark:text-emerald-100">
-            Ta akcja księguje zwykłą wpłatę od zawodnika do portfela G (gotówka / BLIK). Korekty portfela online wykonuj tylko w sekcji korekty.
+            Ta akcja księguje zwykłą wpłatę od zawodnika do portfela G (gotówka / BLIK). Admin wpisuje otrzymaną kwotę i saldo zwiększa się o tę wpłatę.
           </p>
           <div className="mt-3">
             <Button type="button" disabled={topUpSubmitting} onClick={() => void adminTopUpWallet()}>
-              {topUpSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
-              Zaksięguj wpłatę
+              {topUpSubmitting ? <LoadingIndicator variant="button" size="sm" className="mr-2" /> : null}
+              Zaksięguj wpłatę {topUpMethod === "blik" ? "BLIK" : "gotówką"}
             </Button>
           </div>
         </>
@@ -750,6 +1039,59 @@ export function AdminWalletsSaldoSection({
 
       {selectedBalancePlayer ? (
         <>
+        <section className="rounded-xl border border-emerald-200/90 bg-emerald-50/70 p-4 dark:border-emerald-800/50 dark:bg-emerald-950/25">
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-emerald-900/80 dark:text-emerald-200/90">
+            Wpłata do salda zawodnika
+          </p>
+          <p className="mt-1 text-xs text-emerald-950/75 dark:text-emerald-100/75">
+            Wybierz <span className="font-semibold">BLIK</span> albo <span className="font-semibold">gotówkę</span>, wpisz ile admin faktycznie otrzymał i ta kwota zwiększy portfel <span className="font-semibold">G</span>.
+          </p>
+          <div className="mt-3">
+            <TopUpMethodPicker value={quickTopUpMethod} onChange={setQuickTopUpMethod} />
+          </div>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <div>
+              <Label htmlFor="admin-adjust-topup-amount">Kwota otrzymanej wpłaty (PLN)</Label>
+              <Input
+                id="admin-adjust-topup-amount"
+                type="text"
+                inputMode="decimal"
+                placeholder="np. 50"
+                value={quickTopUpAmount}
+                onChange={(e) => setQuickTopUpAmount(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="admin-adjust-topup-note">Opis (opcjonalnie)</Label>
+              <Input
+                id="admin-adjust-topup-note"
+                type="text"
+                placeholder={
+                  quickTopUpMethod === "blik"
+                    ? "np. dopłata za ostatni mecz"
+                    : "np. rozliczenie po treningu"
+                }
+                value={quickTopUpNote}
+                onChange={(e) => setQuickTopUpNote(e.target.value)}
+                className="mt-1 bg-white dark:bg-zinc-950"
+              />
+            </div>
+          </div>
+          <p className="mt-3 rounded-lg border border-emerald-300/80 bg-white/80 px-3 py-2 text-xs text-emerald-950 dark:border-emerald-700/60 dark:bg-zinc-950/60 dark:text-emerald-100">
+            To nie ustawia salda "na sztywno" - tylko dopisuje realnie otrzymaną wpłatę do historii. Jeśli chcesz ręcznie poprawić stan portfela, użyj sekcji korekty poniżej.
+          </p>
+          <div className="mt-4">
+            <Button
+              type="button"
+              disabled={quickTopUpSubmitting}
+              onClick={() => void adminTopUpSelectedPlayer()}
+            >
+              {quickTopUpSubmitting ? <LoadingIndicator variant="button" size="sm" className="mr-2" /> : null}
+              Dodaj wpłatę {quickTopUpMethod === "blik" ? "BLIK" : "gotówką"}
+            </Button>
+          </div>
+        </section>
         <section
           aria-labelledby="admin-balance-form-heading"
           className="rounded-xl border border-amber-200/90 bg-amber-50/60 p-4 dark:border-amber-800/50 dark:bg-amber-950/25"
@@ -901,7 +1243,7 @@ export function AdminWalletsSaldoSection({
               }
               onClick={() => void adminSetWalletBalance()}
             >
-              {adminBalanceSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
+              {adminBalanceSubmitting ? <LoadingIndicator variant="button" size="sm" className="mr-2" /> : null}
               Zapisz korektę
             </Button>
           </div>
@@ -1018,16 +1360,27 @@ export function AdminWalletsSaldoSection({
                       </span>
                     </div>
                   ) : null}
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    className="shrink-0"
-                    onClick={() => startBalanceCorrection(p.id)}
-                  >
-                    <PencilLine className="mr-1.5 h-3.5 w-3.5" aria-hidden />
-                    Koryguj
-                  </Button>
+                  <div className="flex shrink-0 flex-wrap gap-2">
+                    {topUpEnabled ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={() => startTopUpForPlayer(p.id)}
+                      >
+                        <PlusCircle className="mr-1.5 h-3.5 w-3.5" aria-hidden />
+                        Wpłata
+                      </Button>
+                    ) : null}
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => startBalanceCorrection(p.id)}
+                    >
+                      <PencilLine className="mr-1.5 h-3.5 w-3.5" aria-hidden />
+                      Koryguj
+                    </Button>
+                  </div>
                 </li>
               );
             })}
@@ -1044,8 +1397,12 @@ export function AdminWalletsSaldoSection({
   function renderPublicLinkButtons() {
     const matchCopied =
       playedMatchId != null && publicLinkCopied === `match_wallets:${playedMatchId}`;
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
     return (
       <div className="mt-1 space-y-4">
+        <p className="rounded-lg border border-amber-200 bg-amber-50/70 px-3 py-2 text-xs text-amber-950 dark:border-amber-800/50 dark:bg-amber-950/25 dark:text-amber-100">
+          Linki publiczne wygasają domyślnie po 7 dniach. Dla prywatności możesz je też niżej ręcznie unieważnić.
+        </p>
         <div className="flex flex-wrap gap-2">
           <Button
             type="button"
@@ -1214,12 +1571,159 @@ export function AdminWalletsSaldoSection({
             Link podsumowania wybranego meczu
           </Button>
         </div>
+
+        <div className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-zinc-600 dark:text-zinc-400">
+            Aktywne linki
+          </p>
+          {publicLinks.length ? (
+            <ul className="space-y-2">
+              {publicLinks.map((row) => (
+                <li
+                  key={row.token}
+                  className="rounded-xl border border-zinc-200 bg-white/80 px-3 py-3 text-sm dark:border-zinc-700 dark:bg-zinc-950/60"
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-zinc-950 dark:text-zinc-50">{publicLinkKindLabel(row.kind)}</p>
+                      <p className="mt-0.5 break-all text-[11px] text-zinc-500 dark:text-zinc-400">
+                        {origin}
+                        {row.path}
+                      </p>
+                      <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-300">
+                        Utworzono: {formatDateTimeLabel(row.created_at)} · Wygasa: {formatDateTimeLabel(row.expires_at)}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={publicLinkBusy}
+                        onClick={() => void copyExistingPublicLink(row)}
+                      >
+                        {publicLinkCopied === row.token ? <Check className="mr-1.5 h-3.5 w-3.5" aria-hidden /> : <ClipboardCopy className="mr-1.5 h-3.5 w-3.5" aria-hidden />}
+                        Kopiuj
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={publicLinkBusy}
+                        onClick={() => void revokePublicLink(row.token)}
+                      >
+                        Unieważnij
+                      </Button>
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="rounded-lg border border-dashed border-zinc-200 bg-zinc-50/80 px-3 py-2.5 text-xs text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900/40 dark:text-zinc-400">
+              Brak aktywnych linków publicznych.
+            </p>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  function renderPendingDeposits() {
+    const filters: { id: PendingDepositFilter; label: string }[] = [
+      { id: "all", label: `Wszystkie (${pendingDeposits.length})` },
+      { id: "player", label: "Od graczy" },
+      { id: "admin", label: "Od admina" },
+      { id: "stale", label: "Starsze niż 24h" },
+    ];
+
+    return (
+      <div className="space-y-3">
+        <div className="flex flex-wrap gap-1.5">
+          {filters.map((f) => {
+            const active = pendingDepositFilter === f.id;
+            return (
+              <button
+                key={f.id}
+                type="button"
+                onClick={() => setPendingDepositFilter(f.id)}
+                className={cn(
+                  "rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors",
+                  active
+                    ? "border-[var(--mp-teal)] bg-teal-50 text-[var(--mp-teal-dark)] dark:border-teal-600 dark:bg-teal-900/50 dark:text-teal-50"
+                    : "border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                )}
+              >
+                {f.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {filteredPendingDeposits.length ? (
+          <ul className="space-y-2">
+            {filteredPendingDeposits.map((dep) => {
+              const busy = pendingBusyId === dep.id;
+              const isPlayerFlow = dep.created_by === "player";
+              return (
+                <li
+                  key={dep.id}
+                  className="rounded-xl border border-zinc-200 bg-white/80 px-3 py-3 text-sm dark:border-zinc-700 dark:bg-zinc-950/60"
+                >
+                  <div className="flex flex-wrap items-start gap-3">
+                    <PlayerAvatar
+                      photoPath={dep.profile_photo_path}
+                      firstName={dep.first_name}
+                      lastName={dep.last_name}
+                      size="sm"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-zinc-950 dark:text-zinc-50">
+                        {dep.first_name} {dep.last_name}
+                        {dep.zawodnik ? (
+                          <span className="ml-1 font-normal text-zinc-500 dark:text-zinc-400">({dep.zawodnik})</span>
+                        ) : null}
+                      </p>
+                      <p className="mt-0.5 text-xs text-zinc-600 dark:text-zinc-300">
+                        {formatPln(Number(dep.amount_pln ?? 0))} · {dep.wallet_kind === "operator" ? "Portfel O" : "Portfel G"} · {isPlayerFlow ? "zgłoszenie gracza" : "wpis admina"}
+                        {isPendingDepositStale(dep.created_at) ? " · starsze niż 24h" : ""}
+                      </p>
+                      <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+                        Utworzono: {formatDateTimeLabel(dep.created_at)}
+                      </p>
+                      {dep.note ? (
+                        <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-300">{dep.note}</p>
+                      ) : null}
+                    </div>
+                    <div className="flex shrink-0 flex-wrap gap-2">
+                      {isPlayerFlow ? (
+                        <Button type="button" size="sm" disabled={busy} onClick={() => void confirmPendingDeposit(dep.id)}>
+                          {busy ? <LoadingIndicator variant="button" size="sm" className="mr-1.5" /> : null}
+                          Potwierdź
+                        </Button>
+                      ) : null}
+                      <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => void cancelPendingDeposit(dep.id)}>
+                        {!isPlayerFlow && busy ? <LoadingIndicator variant="button" size="sm" className="mr-1.5" /> : null}
+                        Anuluj
+                      </Button>
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        ) : (
+          <p className="rounded-xl border border-dashed border-zinc-200 bg-zinc-50/50 px-4 py-6 text-center text-sm text-zinc-600 dark:border-zinc-700 dark:bg-zinc-950/30 dark:text-zinc-400">
+            Brak oczekujących wpłat w tym filtrze.
+          </p>
+        )}
       </div>
     );
   }
 
   const walletTabOptions = [
     { id: "balances" as const, label: "Salda" },
+    { id: "pending" as const, label: `Pending${pendingDeposits.length ? ` (${pendingDeposits.length})` : ""}` },
     ...(topUpEnabled ? [{ id: "topup" as const, label: "Wpłata" }] : []),
     { id: "adjust" as const, label: "Korekta" },
     ...(linksEnabled ? [{ id: "links" as const, label: "Linki" }] : []),
@@ -1258,13 +1762,28 @@ export function AdminWalletsSaldoSection({
         <div className="mx-auto max-w-4xl">
           <div className={cn(platnosciPanelClass(true), "mt-4 space-y-4")}>
             {topUpEnabled ? (
+              <div id="admin-wallet-topup">
+                <PlatnosciCollapsible
+                  embedded={embedded}
+                  className="mb-0"
+                  open={topUpSectionOpen}
+                  onOpenChange={setTopUpSectionOpen}
+                  title="Dodaj wpłatę"
+                  description="Najszybsza ścieżka: zaksięguj otrzymaną gotówkę lub BLIK do portfela G."
+                >
+                  {topUpFormBody}
+                </PlatnosciCollapsible>
+              </div>
+            ) : null}
+
+            {pendingDeposits.length ? (
               <PlatnosciCollapsible
                 embedded={embedded}
                 className="mb-0"
-                title="Dodaj wpłatę"
-                description="Najszybsza ścieżka: zaksięguj otrzymaną gotówkę lub BLIK do portfela G."
+                title={`Oczekujące wpłaty${pendingDeposits.length ? ` (${pendingDeposits.length})` : ""}`}
+                description="Kolejka wpłat do potwierdzenia lub anulowania przez admina."
               >
-                {topUpFormBody}
+                {renderPendingDeposits()}
               </PlatnosciCollapsible>
             ) : null}
 
@@ -1305,7 +1824,9 @@ export function AdminWalletsSaldoSection({
           />
           <AdminCard
             title={
-              activeWalletTab === "topup"
+              activeWalletTab === "pending"
+                ? "Oczekujące wpłaty"
+                : activeWalletTab === "topup"
                 ? "Dodaj wpłatę"
                 : activeWalletTab === "adjust"
                   ? "Korekta salda"
@@ -1314,7 +1835,9 @@ export function AdminWalletsSaldoSection({
                     : "Lista sald"
             }
             description={
-              activeWalletTab === "topup"
+              activeWalletTab === "pending"
+                ? "Wpłaty oczekujące na potwierdzenie albo anulowanie. Najpierw obsługuj najstarsze."
+                : activeWalletTab === "topup"
                 ? "Szybkie księgowanie zwykłej wpłaty do portfela G (gotówka / BLIK)."
                 : activeWalletTab === "adjust"
                   ? "Wyjątkowa ręczna poprawka docelowego salda G lub O. Różnica trafia do historii jako korekta."
@@ -1325,6 +1848,7 @@ export function AdminWalletsSaldoSection({
           >
             <div className="space-y-4">
               {activeWalletTab === "balances" ? renderBalancesList() : null}
+              {activeWalletTab === "pending" ? renderPendingDeposits() : null}
               {activeWalletTab === "topup" && topUpEnabled ? topUpFormBody : null}
               {activeWalletTab === "adjust" ? <div id="admin-adjust-saldo">{adjustFormBody}</div> : null}
               {activeWalletTab === "links" && linksEnabled ? renderPublicLinkButtons() : null}

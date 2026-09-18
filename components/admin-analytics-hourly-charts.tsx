@@ -13,6 +13,7 @@ import {
   YAxis,
 } from "recharts";
 import { AdminCard, adminEmptyStateClass } from "@/components/admin-ui";
+import { LoadingIndicator } from "@/components/preloaders";
 import { cn } from "@/lib/utils";
 
 export type AnalyticsHourlyPayload = {
@@ -85,7 +86,7 @@ export function AdminAnalyticsHourlyCharts({
   if (loading && !data) {
     return (
       <div className={cn(adminEmptyStateClass, "flex items-center justify-center gap-2 py-16")}>
-        <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-emerald-400 border-t-transparent" />
+        <LoadingIndicator variant="button" size="sm" className="text-[var(--mp-teal)]" />
         Wczytywanie wykresów godzinowych (ostatnie 7 dni)…
       </div>
     );

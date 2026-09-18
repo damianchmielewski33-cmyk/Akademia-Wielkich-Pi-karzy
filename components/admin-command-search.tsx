@@ -3,13 +3,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Calendar,
-  Loader2,
   Search,
   Settings2,
   Users,
   X,
 } from "lucide-react";
 import { ADMIN_SETTINGS_SEARCH_INDEX } from "@/lib/admin-settings-search";
+import { LoadingIndicator } from "@/components/preloaders";
 import { cn } from "@/lib/utils";
 
 export type AdminSearchJump =
@@ -240,7 +240,7 @@ export function AdminCommandSearch({ onJump, className, compact = false }: Props
               className="min-w-0 flex-1 bg-transparent text-base font-medium text-zinc-900 outline-none placeholder:text-zinc-400 dark:text-zinc-50 dark:placeholder:text-zinc-500"
               aria-label="Fraza wyszukiwania"
             />
-            {loading ? <Loader2 className="h-4 w-4 animate-spin text-zinc-400" aria-hidden /> : null}
+            {loading ? <LoadingIndicator variant="button" size="sm" className="text-zinc-400" /> : null}
             <button
               type="button"
               onClick={() => setOpen(false)}
