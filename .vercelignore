@@ -1,12 +1,10 @@
-# Lokalne toolchainy / artefakty — nie wysyłaj na Vercel
-android/.android-sdk
-android/.jdk
-android/.gradle
-android/build
-android/app/build
+# Android i lokalne artefakty — nie wysyłaj na Vercel (Next.js jest w root).
+# Cały katalog android/ — inaczej Vercel długo stoi na Initializing przy dużym tree.
+android
 tmp-apk
 data
 coverage
 .next
 node_modules
 .vercel
+Akademia
