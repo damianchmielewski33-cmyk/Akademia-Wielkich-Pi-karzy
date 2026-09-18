@@ -34,11 +34,9 @@ export function shouldSuppressStartupRoutePreloader(): boolean {
   if (document.documentElement.classList.contains(STARTUP_SPLASH_ACTIVE_CLASS)) return true;
   if (document.documentElement.classList.contains("awp-boot-splash-pending")) return true;
   if (isInstalledAndroidAppClient()) {
-    try {
-      return sessionStorage.getItem(ANDROID_COLD_PRELOADER_KEY) !== "1";
-    } catch {
-      return true;
-    }
+    // Każdy cold start dokumentu — aż pojawi się treść (np. „Najbliższy mecz”).
+    // Nie używamy sessionStorage: WebView Androida trzyma je między uruchomieniami.
+    return document.documentElement.getAttribute("data-awp-content-ready") !== "1";
   }
   return false;
 }

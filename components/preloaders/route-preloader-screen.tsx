@@ -29,9 +29,8 @@ export function RoutePreloaderScreen({ path }: Props) {
     const obs = new MutationObserver(sync);
     obs.observe(document.documentElement, {
       attributes: true,
-      attributeFilter: ["class"],
+      attributeFilter: ["class", "data-awp-content-ready"],
     });
-    // sessionStorage zmienia się bez mutacji DOM — odpytaj okresowo podczas cold startu
     const poll = window.setInterval(sync, 400);
 
     return () => {

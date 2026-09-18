@@ -60,11 +60,8 @@ export function shouldShowIosStartupSplash(): boolean {
 export function shouldShowAndroidStartupSplash(): boolean {
   if (typeof window === "undefined") return false;
   if (!isInstalledAndroidAppClient()) return false;
-  try {
-    if (sessionStorage.getItem(STARTUP_SPLASH_SESSION_KEY) === "1") return false;
-  } catch {
-    /* private mode */
-  }
+  // Zawsze przy każdym załadowaniu dokumentu w APK — sessionStorage w WebView
+  // przeżywa restarty i wcześniej blokowało splash (loader + zielony ekran).
   return true;
 }
 
@@ -126,13 +123,14 @@ export function StartupSplash() {
       return;
     }
     try {
-      sessionStorage.setItem(STARTUP_SPLASH_SESSION_KEY, "1");
+      if (!android) sessionStorage.setItem(STARTUP_SPLASH_SESSION_KEY, "1");
     } catch {
       /* ignore */
     }
     setPhase("show");
     setSplashActiveClass(true);
-    removeBootSplashDom();
+    // Boot DOM (#awp-boot-splash) zostaje pod React splash — bez dziury na zieleń.
+    // Zdejmujemy go dopiero przy beginLeave.
 
     let hideTimer: number | undefined;
     let cancelled = false;
@@ -141,6 +139,7 @@ export function StartupSplash() {
       if (cancelled) return;
       setPhase("leave");
       setSplashActiveClass(false);
+      removeBootSplashDom();
       hideTimer = window.setTimeout(() => {
         if (!cancelled) setPhase("hidden");
       }, FADE_MS);
