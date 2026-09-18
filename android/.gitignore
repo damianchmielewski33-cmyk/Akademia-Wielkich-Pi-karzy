@@ -9,3 +9,10 @@
 /.android-sdk/
 /.jdk/
 google-services.json.bak
+
+# Signing — nigdy w git / Vercel
+/keystore/
+/keystore.properties
+*.p12
+*.jks
+*.keystore
