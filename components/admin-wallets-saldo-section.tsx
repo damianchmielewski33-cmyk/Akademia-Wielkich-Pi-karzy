@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { Check, ClipboardCopy, Loader2, Search } from "lucide-react";
+import { Check, ClipboardCopy, Loader2, PencilLine, Search } from "lucide-react";
 import { toast } from "@/lib/app-toast";
 import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
 import { Button } from "@/components/ui/button";
@@ -124,15 +124,30 @@ function PlatnosciCollapsible({
   children,
   className,
   embedded = false,
+  open,
+  onOpenChange,
 }: {
   title: string;
   description: string;
   children: ReactNode;
   className?: string;
   embedded?: boolean;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }) {
   return (
-    <details className={cn(platnosciCollapsibleClass(embedded), className)}>
+    <details
+      className={cn(platnosciCollapsibleClass(embedded), className)}
+      {...(open !== undefined ? { open } : {})}
+      onToggle={
+        onOpenChange
+          ? (e) => {
+              const next = (e.currentTarget as HTMLDetailsElement).open;
+              if (open === undefined || next !== open) onOpenChange(next);
+            }
+          : undefined
+      }
+    >
       <summary className={cn(
         "awp-focus-ring cursor-pointer list-none px-4 py-3 text-sm font-semibold [&::-webkit-details-marker]:hidden",
         embedded ? "text-zinc-950 dark:text-zinc-50" : "text-white"
@@ -149,15 +164,33 @@ function PlatnosciCollapsible({
   );
 }
 
-function filterWalletPlayers(players: AdminWalletPlayerRow[], query: string) {
+function filterWalletPlayers(players: AdminWalletPlayerRow[], query: string, limit = 80) {
   const q = query.trim().toLowerCase();
-  if (!q) return players.slice(0, 12);
+  if (!q) return players.slice(0, limit);
   return players
     .filter((p) => {
       const key = `${p.first_name} ${p.last_name} ${p.zawodnik}`.toLowerCase();
       return key.includes(q);
     })
-    .slice(0, 20);
+    .slice(0, limit);
+}
+
+function playerWalletAmount(p: AdminWalletPlayerRow, kind: "admin" | "operator") {
+  return kind === "operator"
+    ? Number(p.operator_balance_pln ?? 0)
+    : Number(p.admin_balance_pln ?? p.balance_pln ?? 0);
+}
+
+function formatAmountInput(n: number) {
+  const v = Math.round(n * 100) / 100;
+  return String(v).replace(".", ",");
+}
+
+function parsePlnInput(raw: string) {
+  const trimmed = String(raw).replace(",", ".").trim();
+  if (!trimmed) return null;
+  const n = Number(trimmed);
+  return Number.isFinite(n) ? Math.round(n * 100) / 100 : null;
 }
 
 function WalletPlayerPicker({
@@ -169,6 +202,8 @@ function WalletPlayerPicker({
   onClearSelection,
   searchInputId,
   emptyHint,
+  keepList = false,
+  showWalletSplit = false,
 }: {
   players: AdminWalletPlayerRow[];
   selectedId: number | null;
@@ -178,53 +213,69 @@ function WalletPlayerPicker({
   onClearSelection: () => void;
   searchInputId: string;
   emptyHint?: string;
+  keepList?: boolean;
+  showWalletSplit?: boolean;
 }) {
   const selected = selectedId != null ? players.find((p) => p.id === selectedId) : undefined;
   const filtered = useMemo(() => filterWalletPlayers(players, query), [players, query]);
   const playerCardClass =
     "rounded-xl border border-teal-200 bg-teal-50/80 p-3 dark:border-teal-800/50 dark:bg-teal-950/35";
 
-  if (selected) {
-    const b = Number(selected.balance_pln ?? 0);
-    const neg = b < 0;
-    const pos = b > 0;
-    return (
-      <div className={playerCardClass}>
-        <div className="flex flex-wrap items-center gap-3">
-          <PlayerAvatar
-            photoPath={selected.profile_photo_path}
+  const selectedCard = selected ? (
+    <div className={playerCardClass}>
+      <div className="flex flex-wrap items-center gap-3">
+        <PlayerAvatar
+          photoPath={selected.profile_photo_path}
+          firstName={selected.first_name}
+          lastName={selected.last_name}
+          size="md"
+          ringClassName="ring-2 ring-teal-300/90 dark:ring-teal-600/70"
+        />
+        <div className="min-w-0 flex-1">
+          <PlayerNameStack
             firstName={selected.first_name}
             lastName={selected.last_name}
-            size="md"
-            ringClassName="ring-2 ring-teal-300/90 dark:ring-teal-600/70"
+            nick={selected.zawodnik}
+            primaryClassName="text-base font-semibold text-zinc-950 dark:text-zinc-50"
+            secondaryClassName="text-sm text-zinc-600 dark:text-zinc-300"
           />
-          <div className="min-w-0 flex-1">
-            <PlayerNameStack
-              firstName={selected.first_name}
-              lastName={selected.last_name}
-              nick={selected.zawodnik}
-              primaryClassName="text-base font-semibold text-zinc-950 dark:text-zinc-50"
-              secondaryClassName="text-sm text-zinc-600 dark:text-zinc-300"
-            />
+          {showWalletSplit ? (
+            <p className="mt-1.5 text-xs font-medium tabular-nums text-zinc-700 dark:text-zinc-300">
+              G {formatPln(playerWalletAmount(selected, "admin"))}
+              <span className="mx-1.5 text-zinc-400">·</span>
+              O {formatPln(playerWalletAmount(selected, "operator"))}
+              <span className="mx-1.5 text-zinc-400">·</span>
+              łącznie {formatPln(Number(selected.balance_pln ?? 0))}
+            </p>
+          ) : (
             <p
               className={cn(
                 "mt-1.5 text-sm font-semibold tabular-nums",
-                neg ? "text-red-700 dark:text-red-300" : pos ? "text-[var(--mp-teal-dark)] dark:text-teal-200" : "text-zinc-700 dark:text-zinc-300"
+                Number(selected.balance_pln ?? 0) < 0
+                  ? "text-red-700 dark:text-red-300"
+                  : Number(selected.balance_pln ?? 0) > 0
+                    ? "text-[var(--mp-teal-dark)] dark:text-teal-200"
+                    : "text-zinc-700 dark:text-zinc-300"
               )}
             >
-              Obecne saldo: {formatPln(b)}
+              Obecne saldo: {formatPln(Number(selected.balance_pln ?? 0))}
             </p>
-          </div>
-          <Button type="button" variant="outline" size="sm" className="shrink-0" onClick={onClearSelection}>
-            Zmień zawodnika
-          </Button>
+          )}
         </div>
+        <Button type="button" variant="outline" size="sm" className="shrink-0" onClick={onClearSelection}>
+          Wyczyść wybór
+        </Button>
       </div>
-    );
+    </div>
+  ) : null;
+
+  if (selected && !keepList) {
+    return selectedCard;
   }
 
   return (
     <div className="space-y-2">
+      {selectedCard}
       <Label htmlFor={searchInputId} className="sr-only">
         Szukaj zawodnika
       </Label>
@@ -241,40 +292,56 @@ function WalletPlayerPicker({
         />
       </div>
       {players.length ? (
-        <ul className="max-h-44 space-y-0 overflow-y-auto rounded-xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-700 dark:bg-zinc-950/50">
+        <ul className="max-h-56 space-y-0 overflow-y-auto rounded-xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-700 dark:bg-zinc-950/50">
           {filtered.length ? (
-            filtered.map((p) => (
-              <li key={p.id}>
-                <button
-                  type="button"
-                  className="flex w-full items-center gap-2 border-b border-zinc-100 px-3 py-2.5 text-left text-sm last:border-b-0 hover:bg-emerald-50 dark:border-zinc-800 dark:hover:bg-emerald-950/40"
-                  onClick={() => {
-                    onSelectId(p.id);
-                    onQueryChange("");
-                  }}
-                >
-                  <PlayerAvatar
-                    photoPath={p.profile_photo_path}
-                    firstName={p.first_name}
-                    lastName={p.last_name}
-                    size="sm"
-                    ringClassName="ring-2 ring-emerald-200/90"
-                  />
-                  <span className="min-w-0 flex-1 truncate font-medium text-zinc-900 dark:text-zinc-100">
-                    {p.first_name} {p.last_name}
-                    {p.zawodnik ? (
-                      <span className="ml-1 font-normal text-zinc-500 dark:text-zinc-400">({p.zawodnik})</span>
+            filtered.map((p) => {
+              const isActive = selectedId === p.id;
+              return (
+                <li key={p.id}>
+                  <button
+                    type="button"
+                    aria-pressed={isActive}
+                    className={cn(
+                      "flex w-full items-center gap-2 border-b border-zinc-100 px-3 py-2.5 text-left text-sm last:border-b-0 dark:border-zinc-800",
+                      isActive
+                        ? "bg-teal-100/90 dark:bg-teal-950/60"
+                        : "hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
+                    )}
+                    onClick={() => {
+                      onSelectId(p.id);
+                      onQueryChange("");
+                    }}
+                  >
+                    <PlayerAvatar
+                      photoPath={p.profile_photo_path}
+                      firstName={p.first_name}
+                      lastName={p.last_name}
+                      size="sm"
+                      ringClassName="ring-2 ring-emerald-200/90"
+                    />
+                    <span className="min-w-0 flex-1 truncate font-medium text-zinc-900 dark:text-zinc-100">
+                      {p.first_name} {p.last_name}
+                      {p.zawodnik ? (
+                        <span className="ml-1 font-normal text-zinc-500 dark:text-zinc-400">({p.zawodnik})</span>
+                      ) : null}
+                    </span>
+                    {showWalletSplit ? (
+                      <span className="flex shrink-0 flex-col items-end gap-0.5 text-[11px] font-semibold tabular-nums text-zinc-600 dark:text-zinc-300">
+                        <span>G {formatPln(playerWalletAmount(p, "admin"))}</span>
+                        <span>O {formatPln(playerWalletAmount(p, "operator"))}</span>
+                      </span>
+                    ) : (
+                      <span className="shrink-0 text-xs font-semibold tabular-nums text-emerald-800 dark:text-emerald-200">
+                        {formatPln(Number(p.balance_pln ?? 0))}
+                      </span>
+                    )}
+                    {"is_admin" in p && Number((p as { is_admin?: number }).is_admin ?? 0) ? (
+                      <span className="shrink-0 text-[10px] font-bold uppercase text-zinc-500">Admin</span>
                     ) : null}
-                  </span>
-                  <span className="shrink-0 text-xs font-semibold tabular-nums text-emerald-800 dark:text-emerald-200">
-                    {formatPln(Number(p.balance_pln ?? 0))}
-                  </span>
-                  {"is_admin" in p && Number((p as { is_admin?: number }).is_admin ?? 0) ? (
-                    <span className="shrink-0 text-[10px] font-bold uppercase text-zinc-500">Admin</span>
-                  ) : null}
-                </button>
-              </li>
-            ))
+                  </button>
+                </li>
+              );
+            })
           ) : (
             <li className="px-3 py-4 text-center text-xs text-zinc-500">Brak wyników wyszukiwania.</li>
           )}
@@ -334,6 +401,7 @@ export function AdminWalletsSaldoSection({
   const [playedMatchId, setPlayedMatchId] = useState<number | null>(null);
   const [playedMatchQuery, setPlayedMatchQuery] = useState("");
   const [playedMatchPeriod, setPlayedMatchPeriod] = useState<PlayedMatchPeriod>("all");
+  const [adjustSectionOpen, setAdjustSectionOpen] = useState(false);
 
   async function refresh(opts?: { quiet?: boolean }) {
     if (!opts?.quiet) setAdminLoading(true);
@@ -344,11 +412,6 @@ export function AdminWalletsSaldoSection({
         return;
       }
       setAdminOverview(r.data);
-      if (adminBalanceUserId === null && r.data.players?.length) {
-        const first = r.data.players[0]!;
-        setAdminBalanceUserId(first.id);
-        setAdminBalanceUserQuery("");
-      }
     } finally {
       if (!opts?.quiet) setAdminLoading(false);
     }
@@ -386,6 +449,15 @@ export function AdminWalletsSaldoSection({
     () => (topUpUserId != null ? balancePlayerList.find((p) => p.id === topUpUserId) : undefined),
     [balancePlayerList, topUpUserId]
   );
+
+  const currentAdjustAmount = selectedBalancePlayer
+    ? playerWalletAmount(selectedBalancePlayer, adminBalanceWalletKind)
+    : 0;
+  const parsedAdjustTarget = parsePlnInput(adminBalanceTarget);
+  const adjustDelta =
+    selectedBalancePlayer && parsedAdjustTarget != null
+      ? Math.round((parsedAdjustTarget - currentAdjustAmount) * 100) / 100
+      : null;
 
   const playedMatches = adminOverview?.playedMatches ?? EMPTY_PLAYED_MATCHES;
   const selectedPlayedMatch = useMemo(
@@ -480,12 +552,12 @@ export function AdminWalletsSaldoSection({
 
   async function adminSetWalletBalance() {
     const user_id = adminBalanceUserId;
-    const balance_pln = Number(String(adminBalanceTarget).replace(",", "."));
+    const balance_pln = parsePlnInput(adminBalanceTarget);
     if (!user_id) {
       toast.error("Wybierz zawodnika");
       return;
     }
-    if (!Number.isFinite(balance_pln)) {
+    if (balance_pln == null) {
       toast.error("Podaj prawidłowe saldo");
       return;
     }
@@ -522,7 +594,7 @@ export function AdminWalletsSaldoSection({
             : "Ustawiono saldo gotówka/BLIK (korekta w historii)"
         );
       }
-      setAdminBalanceTarget("");
+      setAdminBalanceTarget(formatAmountInput(balance_pln));
       setAdminBalanceNote("");
       await refresh();
       router.refresh();
@@ -531,21 +603,49 @@ export function AdminWalletsSaldoSection({
     }
   }
 
-  function selectSharedPlayer(id: number) {
+  function selectTopUpPlayer(id: number) {
     setTopUpUserId(id);
-    setAdminBalanceUserId(id);
     setTopUpUserQuery("");
-    setAdminBalanceUserQuery("");
   }
 
-  function clearSharedPlayer() {
+  function clearTopUpPlayer() {
     setTopUpUserId(null);
-    setAdminBalanceUserId(null);
     setTopUpUserQuery("");
-    setAdminBalanceUserQuery("");
     setTopUpIsOperatorCorrection(false);
     setTopUpOperatorReason("");
+  }
+
+  function applyAdjustTargetFromPlayer(player: AdminWalletPlayerRow, kind: "admin" | "operator") {
+    setAdminBalanceTarget(formatAmountInput(playerWalletAmount(player, kind)));
+  }
+
+  function selectAdjustPlayer(id: number) {
+    setAdminBalanceUserId(id);
+    setAdminBalanceUserQuery("");
+    const player = balancePlayerList.find((p) => p.id === id);
+    if (player) applyAdjustTargetFromPlayer(player, adminBalanceWalletKind);
+  }
+
+  function clearAdjustPlayer() {
+    setAdminBalanceUserId(null);
+    setAdminBalanceUserQuery("");
+    setAdminBalanceTarget("");
+    setAdminBalanceNote("");
     setAdminBalanceWalletKind("admin");
+  }
+
+  function startBalanceCorrection(id: number) {
+    selectAdjustPlayer(id);
+    setWalletTab("adjust");
+    setAdjustSectionOpen(true);
+    window.setTimeout(() => {
+      document.getElementById("admin-adjust-saldo")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 80);
+  }
+
+  function changeAdjustWalletKind(kind: "admin" | "operator") {
+    setAdminBalanceWalletKind(kind);
+    if (selectedBalancePlayer) applyAdjustTargetFromPlayer(selectedBalancePlayer, kind);
   }
 
   const topUpFormBody = (
@@ -563,8 +663,8 @@ export function AdminWalletsSaldoSection({
             selectedId={topUpUserId}
             query={topUpUserQuery}
             onQueryChange={setTopUpUserQuery}
-            onSelectId={selectSharedPlayer}
-            onClearSelection={clearSharedPlayer}
+            onSelectId={selectTopUpPlayer}
+            onClearSelection={clearTopUpPlayer}
             searchInputId="admin-topup-user-search"
           />
         </div>
@@ -654,15 +754,20 @@ export function AdminWalletsSaldoSection({
         >
           Zawodnik
         </p>
+        <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">
+          Nikt nie jest wybrany z góry — wyszukaj osobę, potem ustaw docelowe saldo wybranego portfela.
+        </p>
         <div className="mt-2">
           <WalletPlayerPicker
             players={balancePlayerList}
             selectedId={adminBalanceUserId}
             query={adminBalanceUserQuery}
             onQueryChange={setAdminBalanceUserQuery}
-            onSelectId={selectSharedPlayer}
-            onClearSelection={clearSharedPlayer}
+            onSelectId={selectAdjustPlayer}
+            onClearSelection={clearAdjustPlayer}
             searchInputId="admin-balance-user"
+            keepList
+            showWalletSplit
           />
         </div>
       </section>
@@ -676,84 +781,128 @@ export function AdminWalletsSaldoSection({
             id="admin-balance-form-heading"
             className="text-xs font-semibold uppercase tracking-[0.12em] text-amber-900/80 dark:text-amber-200/90"
           >
-            Docelowe saldo
+            Korekta portfela
           </p>
           <p className="mt-1 text-xs text-amber-950/75 dark:text-amber-100/75">
-            Wybierz portfel i wpisz docelową kwotę — różnica trafi do historii jako korekta.
+            Wybierz portfel, popraw kwotę i zatwierdź — różnica trafi do historii jako korekta.
           </p>
-          <div className="mt-3 flex flex-wrap gap-2" role="group" aria-label="Który portfel korygować">
-            <Button
+          <div className="mt-3 grid gap-2 sm:grid-cols-2" role="group" aria-label="Który portfel korygować">
+            <button
               type="button"
-              size="sm"
-              variant={adminBalanceWalletKind === "admin" ? "default" : "outline"}
-              onClick={() => setAdminBalanceWalletKind("admin")}
-            >
-              Gotówka / BLIK (G)
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant={adminBalanceWalletKind === "operator" ? "default" : "outline"}
-              onClick={() => setAdminBalanceWalletKind("operator")}
-            >
-              Płatności online (O)
-            </Button>
-          </div>
-          <p className="mt-2 text-xs tabular-nums text-amber-950/80 dark:text-amber-100/80">
-            Aktualnie:{" "}
-            <span className="font-semibold">
-              {formatPln(
-                adminBalanceWalletKind === "operator"
-                  ? Number(selectedBalancePlayer.operator_balance_pln ?? 0)
-                  : Number(selectedBalancePlayer.admin_balance_pln ?? selectedBalancePlayer.balance_pln ?? 0)
+              onClick={() => changeAdjustWalletKind("admin")}
+              className={cn(
+                "rounded-xl border px-3 py-3 text-left transition-colors",
+                adminBalanceWalletKind === "admin"
+                  ? "border-teal-500 bg-white shadow-sm dark:border-teal-400 dark:bg-zinc-950"
+                  : "border-amber-200/80 bg-amber-50/40 hover:bg-white/80 dark:border-amber-800/40 dark:bg-transparent dark:hover:bg-zinc-950/40"
               )}
-            </span>
-            {" · "}łącznie {formatPln(Number(selectedBalancePlayer.balance_pln ?? 0))}
-          </p>
+            >
+              <span className="block text-[11px] font-semibold uppercase tracking-wide text-zinc-500">Gotówka / BLIK</span>
+              <span className="mt-1 block text-lg font-bold tabular-nums text-zinc-950 dark:text-zinc-50">
+                {formatPln(playerWalletAmount(selectedBalancePlayer, "admin"))}
+              </span>
+              <span className="text-[11px] text-zinc-500">Portfel G</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => changeAdjustWalletKind("operator")}
+              className={cn(
+                "rounded-xl border px-3 py-3 text-left transition-colors",
+                adminBalanceWalletKind === "operator"
+                  ? "border-teal-500 bg-white shadow-sm dark:border-teal-400 dark:bg-zinc-950"
+                  : "border-amber-200/80 bg-amber-50/40 hover:bg-white/80 dark:border-amber-800/40 dark:bg-transparent dark:hover:bg-zinc-950/40"
+              )}
+            >
+              <span className="block text-[11px] font-semibold uppercase tracking-wide text-zinc-500">Płatności online</span>
+              <span className="mt-1 block text-lg font-bold tabular-nums text-zinc-950 dark:text-zinc-50">
+                {formatPln(playerWalletAmount(selectedBalancePlayer, "operator"))}
+              </span>
+              <span className="text-[11px] text-zinc-500">Portfel O</span>
+            </button>
+          </div>
           {adminBalanceWalletKind === "operator" ? (
-            <p className="mt-2 rounded-lg border border-amber-300/80 bg-amber-100/70 px-3 py-2 text-xs text-amber-950 dark:border-amber-700/60 dark:bg-amber-950/40 dark:text-amber-100">
+            <p className="mt-3 rounded-lg border border-amber-300/80 bg-amber-100/70 px-3 py-2 text-xs text-amber-950 dark:border-amber-700/60 dark:bg-amber-950/40 dark:text-amber-100">
               Korekta portfela online — tylko na wniosek gracza lub przy błędzie księgowania HotPay. Powód jest wymagany.
             </p>
           ) : null}
-          <div className="mt-3 grid gap-3 sm:grid-cols-2">
-            <div>
-              <Label htmlFor="admin-balance-target">Nowe saldo (PLN)</Label>
-              <Input
-                id="admin-balance-target"
-                type="text"
-                inputMode="decimal"
-                placeholder="np. 120,00"
-                value={adminBalanceTarget}
-                onChange={(e) => setAdminBalanceTarget(e.target.value)}
-                className="mt-1 border-amber-300/80 bg-white font-semibold tabular-nums dark:border-amber-700/60 dark:bg-zinc-950"
-              />
+          <div className="mt-3">
+            <Label htmlFor="admin-balance-target">Nowe saldo (PLN)</Label>
+            <Input
+              id="admin-balance-target"
+              type="text"
+              inputMode="decimal"
+              placeholder="np. 0 lub 120,00"
+              value={adminBalanceTarget}
+              onChange={(e) => setAdminBalanceTarget(e.target.value)}
+              className="mt-1 h-14 border-amber-300/80 bg-white text-xl font-semibold tabular-nums dark:border-amber-700/60 dark:bg-zinc-950"
+            />
+            <div className="mt-2 flex flex-wrap gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => setAdminBalanceTarget("0")}
+              >
+                Wyzeruj
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => applyAdjustTargetFromPlayer(selectedBalancePlayer, adminBalanceWalletKind)}
+              >
+                Przywróć obecne
+              </Button>
             </div>
-            <div>
-              <Label htmlFor="admin-balance-note">
-                {adminBalanceWalletKind === "operator" ? (
-                  <>
-                    Powód korekty <span className="text-red-600">*</span>
-                  </>
-                ) : (
-                  "Opis korekty (opcjonalnie)"
+            {adjustDelta != null ? (
+              <p
+                className={cn(
+                  "mt-2 text-sm font-semibold tabular-nums",
+                  adjustDelta < 0
+                    ? "text-red-700 dark:text-red-300"
+                    : adjustDelta > 0
+                      ? "text-emerald-800 dark:text-emerald-200"
+                      : "text-zinc-600 dark:text-zinc-400"
                 )}
-              </Label>
-              <Input
-                id="admin-balance-note"
-                type="text"
-                placeholder={
-                  adminBalanceWalletKind === "operator"
-                    ? "np. na wniosek gracza — błędne doładowanie HotPay"
-                    : "np. korekta po gotówce"
-                }
-                value={adminBalanceNote}
-                onChange={(e) => setAdminBalanceNote(e.target.value)}
-                className="mt-1 bg-white dark:bg-zinc-950"
-              />
-            </div>
+              >
+                {formatPln(currentAdjustAmount)} → {formatPln(parsedAdjustTarget ?? currentAdjustAmount)}
+                {adjustDelta === 0
+                  ? " · bez zmian"
+                  : ` · korekta ${adjustDelta > 0 ? "+" : ""}${formatPln(adjustDelta)}`}
+              </p>
+            ) : (
+              <p className="mt-2 text-xs text-zinc-500">Wpisz docelową kwotę, żeby zobaczyć różnicę.</p>
+            )}
+          </div>
+          <div className="mt-3">
+            <Label htmlFor="admin-balance-note">
+              {adminBalanceWalletKind === "operator" ? (
+                <>
+                  Powód korekty <span className="text-red-600">*</span>
+                </>
+              ) : (
+                "Opis korekty (opcjonalnie)"
+              )}
+            </Label>
+            <Input
+              id="admin-balance-note"
+              type="text"
+              placeholder={
+                adminBalanceWalletKind === "operator"
+                  ? "np. na wniosek gracza — błędne doładowanie HotPay"
+                  : "np. korekta po gotówce"
+              }
+              value={adminBalanceNote}
+              onChange={(e) => setAdminBalanceNote(e.target.value)}
+              className="mt-1 bg-white dark:bg-zinc-950"
+            />
           </div>
           <div className="mt-4">
-            <Button type="button" disabled={adminBalanceSubmitting} onClick={() => void adminSetWalletBalance()}>
+            <Button
+              type="button"
+              disabled={adminBalanceSubmitting || parsedAdjustTarget == null || adjustDelta === 0}
+              onClick={() => void adminSetWalletBalance()}
+            >
               {adminBalanceSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
               Ustaw saldo
             </Button>
@@ -761,7 +910,7 @@ export function AdminWalletsSaldoSection({
         </section>
       ) : (
         <p className="rounded-lg border border-dashed border-zinc-200 bg-zinc-50/80 px-3 py-2.5 text-xs text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900/40 dark:text-zinc-400">
-          Wybierz zawodnika z listy, aby ustawić docelowe saldo.
+          Wybierz zawodnika z listy powyżej albo przyciskiem „Korekta” na liście sald.
         </p>
       )}
     </div>
@@ -870,6 +1019,16 @@ export function AdminWalletsSaldoSection({
                       </span>
                     </div>
                   ) : null}
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="shrink-0"
+                    onClick={() => startBalanceCorrection(p.id)}
+                  >
+                    <PencilLine className="mr-1.5 h-3.5 w-3.5" aria-hidden />
+                    Korekta
+                  </Button>
                 </li>
               );
             })}
@@ -1110,14 +1269,18 @@ export function AdminWalletsSaldoSection({
               </PlatnosciCollapsible>
             ) : null}
 
-            <PlatnosciCollapsible
-              embedded={embedded}
-              className="mb-0"
-              title="Ustaw saldo zawodnika"
-              description="Korekta docelowego salda: Gotówka/BLIK (G) albo płatności online (O). Różnica trafia do historii jako „Korekta”."
-            >
-              {adjustFormBody}
-            </PlatnosciCollapsible>
+            <div id="admin-adjust-saldo">
+              <PlatnosciCollapsible
+                embedded={embedded}
+                className="mb-0"
+                open={adjustSectionOpen}
+                onOpenChange={setAdjustSectionOpen}
+                title="Ustaw saldo zawodnika"
+                description="Korekta docelowego salda: Gotówka/BLIK (G) albo płatności online (O). Różnica trafia do historii jako „Korekta”."
+              >
+                {adjustFormBody}
+              </PlatnosciCollapsible>
+            </div>
 
             {renderBalancesList()}
 
@@ -1164,7 +1327,7 @@ export function AdminWalletsSaldoSection({
             <div className="space-y-4">
               {activeWalletTab === "balances" ? renderBalancesList() : null}
               {activeWalletTab === "topup" && topUpEnabled ? topUpFormBody : null}
-              {activeWalletTab === "adjust" ? adjustFormBody : null}
+              {activeWalletTab === "adjust" ? <div id="admin-adjust-saldo">{adjustFormBody}</div> : null}
               {activeWalletTab === "links" && linksEnabled ? renderPublicLinkButtons() : null}
             </div>
           </AdminCard>
