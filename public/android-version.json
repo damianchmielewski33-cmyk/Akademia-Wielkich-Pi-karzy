@@ -2,7 +2,7 @@
   "versionCode": 42,
   "versionName": "1.11.6",
   "apkUrl": "https://github.com/damianchmielewski33-cmyk/Akademia-Wielkich-Pi-karzy/releases/download/android-latest/akademia-wp.apk",
-  "releasedAt": "2026-09-19T14:10:00Z",
-  "commit": "0c414f86e69714f263835b05fea4611a0136b00b",
-  "notes": "GymBrat w WebView aplikacji (bez karty przeglądarki); wstecz wraca do AWP."
+  "releasedAt": "2026-09-19T14:30:00Z",
+  "commit": "a60082b1f47e0c629e5528a8509e474198cd33a8",
+  "notes": "GymBrat w WebView: wczesny patch sendBeacon (document-start), blokada /api/analytics/* oraz odzyskiwanie po b\u0142\u0119dzie page-view."
 }
