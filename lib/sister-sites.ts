@@ -15,6 +15,12 @@ export const AWP_SITE_TAGLINE = "Terminarz, mecze i rankingi — siostrzana apli
 /** Ścieżka w AWP — pełnoekranowy iframe z GymBrat (APK WebView i RWD). */
 export const GYMBRAT_EMBED_PATH = "/gymbrat";
 
+/** Typ postMessage z iframe GymBrat — prośba o JWT sesji Akademii. */
+export const GYMBRAT_REQUEST_AWP_SESSION = "gymbrat-request-awp-session";
+
+/** Odpowiedź shella AWP do iframe GymBrat (SSO). */
+export const AWP_SESSION_MESSAGE_TYPE = "awp-session";
+
 /** Publiczny URL GymBrat (bez końcowego „/”). */
 export function getGymBratUrl(): string {
   const fromEnv = process.env.NEXT_PUBLIC_GYMBRAT_URL?.trim();
@@ -28,12 +34,80 @@ export function getGymBratUrl(): string {
   return DEFAULT_GYMBRAT_URL;
 }
 
-/** Link do GymBrat z oznaczeniem źródła (analityka / powitalny pasek). */
-export function getGymBratCrossLink(path = "/"): string {
+/**
+ * Originy GymBrat, do których wolno wysłać JWT sesji AWP (postMessage / SSO).
+ * Env `NEXT_PUBLIC_GYMBRAT_URL` + localhost:3001 + podglądy Vercel z „gym”.
+ */
+export function getTrustedGymBratOrigins(): string[] {
+  const origins = new Set<string>([
+    getGymBratUrl(),
+    "http://localhost:3001",
+    "http://127.0.0.1:3001",
+    "http://10.0.2.2:3001",
+  ]);
+  const extra = process.env.NEXT_PUBLIC_GYMBRAT_TRUSTED_ORIGINS?.split(",") ?? [];
+  for (const raw of extra) {
+    const o = raw.trim();
+    if (!o) continue;
+    try {
+      origins.add(new URL(o).origin);
+    } catch {
+      /* ignore */
+    }
+  }
+  return Array.from(origins);
+}
+
+/** Czy Origin należy do zaufanego hosta GymBrat (SSO / postMessage). */
+export function isTrustedGymBratOrigin(origin: string | null | undefined): boolean {
+  if (!origin) return false;
+  try {
+    const o = new URL(origin).origin;
+    if (getTrustedGymBratOrigins().includes(o)) return true;
+    const host = new URL(o).hostname.toLowerCase();
+    // Preview / team deployments GymBrat na Vercel.
+    if (host.endsWith(".vercel.app") && (host.includes("gym-brat") || host.includes("gymbrat"))) {
+      return true;
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Decyzja odpowiedzi na `gymbrat-request-awp-session`.
+ * Zwraca payload postMessage albo `null` (obcy origin / brak sesji / zły typ).
+ */
+export function buildAwpSessionPostMessage(
+  origin: string | null | undefined,
+  messageData: unknown,
+  sessionToken: string | null | undefined
+): { type: typeof AWP_SESSION_MESSAGE_TYPE; token: string } | null {
+  if (!isTrustedGymBratOrigin(origin)) return null;
+  if (!messageData || typeof messageData !== "object") return null;
+  const type = (messageData as { type?: unknown }).type;
+  if (type !== GYMBRAT_REQUEST_AWP_SESSION) return null;
+  const token = typeof sessionToken === "string" ? sessionToken.trim() : "";
+  if (!token) return null;
+  return { type: AWP_SESSION_MESSAGE_TYPE, token };
+}
+
+export type GymBratCrossLinkOptions = {
+  /** JWT sesji AWP — jednorazowy bilet SSO dla GymBrat (`awp_token`). Nie logować. */
+  awpToken?: string | null;
+};
+
+/** Link do GymBrat z oznaczeniem źródła (analityka / powitalny pasek / SSO). */
+export function getGymBratCrossLink(path = "/", opts?: GymBratCrossLinkOptions): string {
   const base = getGymBratUrl().replace(/\/$/, "");
   const p = path.startsWith("/") ? path : `/${path}`;
   const url = new URL(`${base}${p === "/" ? "/" : p}`);
   url.searchParams.set("from", "awp");
+  const token = opts?.awpToken?.trim();
+  if (token) {
+    url.searchParams.set("awp_token", token);
+  }
   return url.toString();
 }
 
