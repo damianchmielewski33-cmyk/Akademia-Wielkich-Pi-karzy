@@ -1,4 +1,5 @@
 import { VISITOR_ID_STORAGE_KEY } from "@/lib/constants";
+import { isRunningInAppWebView } from "@/lib/app-webview";
 
 export type AdPlacement = "footer" | "inline" | "popup";
 export type AdFillStatus = "pending" | "filled" | "unfilled";
@@ -27,23 +28,19 @@ export function getAnalyticsVisitorId(): string {
   }
 }
 
-export function sendAdImpressionBeacon(payload: {
-  pathname: string;
-  visitorId: string;
-  slotId: string;
-  placement: AdPlacement;
-  fillStatus: AdFillStatus;
-}) {
-  const body = JSON.stringify(payload);
-  try {
-    if (typeof navigator !== "undefined" && typeof navigator.sendBeacon === "function") {
-      const blob = new Blob([body], { type: "application/json" });
-      if (navigator.sendBeacon("/api/analytics/ad-impression", blob)) return;
+/** W APK WebView unikamy sendBeacon(Blob) — bywa zepsute i nawiguje główną ramkę. */
+function postAnalyticsBeacon(url: string, body: string) {
+  if (!isRunningInAppWebView()) {
+    try {
+      if (typeof navigator !== "undefined" && typeof navigator.sendBeacon === "function") {
+        const blob = new Blob([body], { type: "application/json" });
+        if (navigator.sendBeacon(url, blob)) return;
+      }
+    } catch {
+      /* fallback */
     }
-  } catch {
-    /* fallback */
   }
-  void fetch("/api/analytics/ad-impression", {
+  void fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body,
@@ -51,22 +48,21 @@ export function sendAdImpressionBeacon(payload: {
   }).catch(() => {});
 }
 
+export function sendAdImpressionBeacon(payload: {
+  pathname: string;
+  visitorId: string;
+  slotId: string;
+  placement: AdPlacement;
+  fillStatus: AdFillStatus;
+}) {
+  postAnalyticsBeacon("/api/analytics/ad-impression", JSON.stringify(payload));
+}
+
 export function sendCookieConsentBeacon(choice: "accept_all" | "reject_marketing", visitorId: string) {
-  const body = JSON.stringify({ choice, visitorId });
-  try {
-    if (typeof navigator !== "undefined" && typeof navigator.sendBeacon === "function") {
-      const blob = new Blob([body], { type: "application/json" });
-      if (navigator.sendBeacon("/api/analytics/cookie-consent", blob)) return;
-    }
-  } catch {
-    /* fallback */
-  }
-  void fetch("/api/analytics/cookie-consent", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body,
-    keepalive: true,
-  }).catch(() => {});
+  postAnalyticsBeacon(
+    "/api/analytics/cookie-consent",
+    JSON.stringify({ choice, visitorId })
+  );
 }
 
 /** Ścieżki z dodatkowym slotem w treści. */

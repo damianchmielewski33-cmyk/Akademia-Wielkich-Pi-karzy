@@ -10,11 +10,12 @@ import {
   GYMBRAT_SITE_NAME,
   getGymBratCrossLink,
 } from "@/lib/sister-sites";
-import { isRunningInAppWebView } from "@/lib/app-webview";
+import { isRunningInAppWebView, openExternalAppUrl } from "@/lib/app-webview";
 
 /**
  * GymBrat w shellu AWP.
- * W APK WebView ładujemy GymBrat top-level (iframe + X-Frame-Options bywa problematyczne).
+ * W APK: Custom Tabs (nie ładujemy GymBrat w WebView AWP — sendBeacon / SW siostry
+ * potrafią zepsuć nawigację, widać wtedy błąd POST /api/analytics/page-view).
  * W zwykłej przeglądarce — pełnoekranowy iframe (wymaga frame-ancestors po stronie GymBrat).
  */
 export function GymBratEmbedView() {
@@ -23,21 +24,44 @@ export function GymBratEmbedView() {
   const sisterPath = path.startsWith("/") ? path : `/${path}`;
   const src = getGymBratCrossLink(sisterPath);
   const [inAppWebView, setInAppWebView] = useState(false);
+  const [openedExternally, setOpenedExternally] = useState(false);
 
   useEffect(() => {
     const appWv = isRunningInAppWebView();
     setInAppWebView(appWv);
-    if (appWv) {
-      window.location.replace(src);
+    if (!appWv) return;
+    if (openExternalAppUrl(src)) {
+      setOpenedExternally(true);
+      return;
     }
+    // Stary APK bez mostu — ostatnia deska: top-level w tym samym WebView.
+    window.location.replace(src);
   }, [src]);
 
   if (inAppWebView) {
     return (
       <div className="flex min-h-dvh flex-col items-center justify-center gap-3 bg-zinc-950 px-6 text-center">
-        <p className="text-sm text-zinc-300">Otwieranie {GYMBRAT_SITE_NAME}…</p>
+        <p className="text-sm text-zinc-300">
+          {openedExternally
+            ? `${GYMBRAT_SITE_NAME} otwarte w przeglądarce.`
+            : `Otwieranie ${GYMBRAT_SITE_NAME}…`}
+        </p>
         <Button asChild className="rounded-full font-bold">
-          <a href={src}>Kontynuuj</a>
+          <a
+            href={src}
+            rel="noopener noreferrer"
+            onClick={(e) => {
+              if (openExternalAppUrl(src)) {
+                e.preventDefault();
+                setOpenedExternally(true);
+              }
+            }}
+          >
+            {openedExternally ? "Otwórz ponownie" : "Kontynuuj"}
+          </a>
+        </Button>
+        <Button asChild variant="outline" className="rounded-full border-white/20 bg-transparent text-white">
+          <Link href="/">Wróć do {AWP_SITE_NAME}</Link>
         </Button>
       </div>
     );
