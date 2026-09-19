@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { normalizeAnalyticsPathname } from "@/lib/analytics-screen";
+import { isRunningInAppWebView } from "@/lib/app-webview";
 import { VISITOR_ID_STORAGE_KEY } from "@/lib/constants";
 
 const LAST_PAGE_VIEW_KEY = "awp_analytics_last_pv";
@@ -46,15 +47,22 @@ function markSent(pathname: string, now: number) {
   }
 }
 
+/**
+ * W APK WebView `sendBeacon(Blob)` bywa zepsute i potrafi nawigować główną ramkę
+ * na `POST /api/analytics/page-view`. Tam zawsze używamy `fetch`.
+ */
 function sendPageView(pathname: string, visitorId: string) {
   const body = JSON.stringify({ pathname, visitorId });
-  try {
-    if (typeof navigator !== "undefined" && typeof navigator.sendBeacon === "function") {
-      const blob = new Blob([body], { type: "application/json" });
-      if (navigator.sendBeacon("/api/analytics/page-view", blob)) return;
+  const inAppWebView = isRunningInAppWebView();
+  if (!inAppWebView) {
+    try {
+      if (typeof navigator !== "undefined" && typeof navigator.sendBeacon === "function") {
+        const blob = new Blob([body], { type: "application/json" });
+        if (navigator.sendBeacon("/api/analytics/page-view", blob)) return;
+      }
+    } catch {
+      /* fallback poniżej */
     }
-  } catch {
-    /* fallback poniżej */
   }
   void fetch("/api/analytics/page-view", {
     method: "POST",
