@@ -129,85 +129,6 @@ fun ContactScreen() {
     }
 }
 
-@Composable
-fun PzuCupScreen(onOpenSchedule: () -> Unit, onOpenRankings: () -> Unit) {
-    var schedule by remember { mutableStateOf<TerminarzResponse?>(null) }
-    var rankings by remember { mutableStateOf<RankingsResponse?>(null) }
-    var loading by remember { mutableStateOf(true) }
-    var error by remember { mutableStateOf<String?>(null) }
-
-    fun reload() {
-        loading = true
-        error = null
-    }
-
-    LaunchedEffect(loading) {
-        if (!loading) return@LaunchedEffect
-        runCatching {
-            ApiClient.api.terminarzRealm("pzu_cup") to ApiClient.api.rankingiRealm("pzu_cup")
-        }.onSuccess { (scheduleData, rankingsData) ->
-            schedule = scheduleData
-            rankings = rankingsData
-            loading = false
-        }.onFailure {
-            error = it.message ?: "Nie udało się pobrać PZU Cup"
-            loading = false
-        }
-    }
-
-    ScreenScaffold(title = "PZU Cup", subtitle = "Turniejowy tryb akademii", kicker = "Turniej", theme = ScreenPhotoTheme.Cup) {
-        AwpSectionCard(title = "Centrum PZU Cup", subtitle = "Natywny ekran zastępujący mini-stronę WWW.") {
-            AwpMetricGrid(
-                listOf(
-                    "Tryb" to "Turniej",
-                    "Mecze" to schedule?.matches.orEmpty().size.toString(),
-                    "Ranking" to rankings?.rankings?.punkty.orEmpty().size.toString()
-                )
-            )
-        }
-        when {
-            loading -> LoadingBlock()
-            error != null -> ErrorBlock(error!!) { reload() }
-            else -> {
-                AwpSectionCard(title = "Najbliższe mecze") {
-                    val upcoming = schedule?.upcoming.orEmpty().take(3)
-                    if (upcoming.isEmpty()) {
-                        EmptyHint("Brak zaplanowanych meczów PZU Cup.")
-                    } else {
-                        upcoming.forEach { match ->
-                            AwpListRow(
-                                title = match.location,
-                                subtitle = "${match.matchDate} ${match.matchTime}",
-                                label = "Mecz #${match.id}",
-                                trailing = "${match.signedUp ?: 0}/${match.maxSlots ?: 0}"
-                            )
-                            Spacer(Modifier.height(8.dp))
-                        }
-                    }
-                }
-                AwpSectionCard(title = "Podium punktowe") {
-                    val top = rankings?.rankings?.punkty.orEmpty().take(5)
-                    if (top.isEmpty()) {
-                        EmptyHint("Brak rankingu PZU Cup.")
-                    } else {
-                        top.forEach { row ->
-                            AwpListRow(
-                                title = row.zawodnik.ifBlank { "${row.firstName} ${row.lastName}" },
-                                subtitle = "Gole ${row.goals} • Asysty ${row.assists}",
-                                label = "#${row.rank}",
-                                trailing = row.punkty.toString(),
-                                gold = row.rank <= 3
-                            )
-                            Spacer(Modifier.height(8.dp))
-                        }
-                    }
-                }
-            }
-        }
-        AwpActionTile(title = "Terminarz PZU", desc = "Mecze turniejowe", onClick = onOpenSchedule)
-        AwpActionTile(title = "Rankingi PZU", desc = "Klasyfikacje turniejowe", onClick = onOpenRankings, gold = true)
-    }
-}
 
 @Composable
 fun AdminShellScreen() {
@@ -217,7 +138,7 @@ fun AdminShellScreen() {
     var error by remember { mutableStateOf<String?>(null) }
     val sections = listOf(
         "Przegląd", "Analityka", "Użytkownicy", "Wiadomości", "Portfele", "Mecze",
-        "Składy", "Statystyki", "Rankingi", "PZU Cup", "Galeria", "Zaślepki", "Ustawienia"
+        "Składy", "Statystyki", "Rankingi", "Galeria", "Zaślepki", "Ustawienia"
     )
 
     fun reload() {

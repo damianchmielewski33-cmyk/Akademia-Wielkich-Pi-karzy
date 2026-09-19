@@ -119,14 +119,6 @@ export type AppSettings = {
   hotpay_commission_fixed: number;
 };
 
-export const PZU_CUP_APP_SETTINGS_DEFAULTS: Partial<AppSettings> = {
-  site_name: "PZU Cup 2026",
-  site_description: "Turniej PZU Cup — osobna baza zawodników, meczów i ustawień.",
-  home_youtube_url: null,
-  default_match_location: "",
-  match_notification_prompt_enabled: false,
-};
-
 export const APP_SETTINGS_DEFAULTS: AppSettings = {
   match_notification_prompt_enabled: false,
   home_youtube_url: null,
@@ -366,13 +358,9 @@ export function appSettingsSiteAssetUrl(settings: AppSettings, key: SiteAssetKey
 
 export function resolveAppSettings(
   row: AppSettingsRow | null | undefined,
-  realm: Realm = REALMS.ACADEMY
+  _realm: Realm = REALMS.ACADEMY
 ): AppSettings {
-  const baseDefaults =
-    realm === REALMS.PZU_CUP
-      ? { ...APP_SETTINGS_DEFAULTS, ...PZU_CUP_APP_SETTINGS_DEFAULTS }
-      : APP_SETTINGS_DEFAULTS;
-  const d = baseDefaults;
+  const d = APP_SETTINGS_DEFAULTS;
   const assetUrls = siteAssetUrlsFromRow(row);
   return {
     match_notification_prompt_enabled: sqlFlagOn(row?.match_notification_prompt_enabled, false),

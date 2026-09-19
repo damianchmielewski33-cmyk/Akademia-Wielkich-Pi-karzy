@@ -25,7 +25,7 @@ Nie warto jednak zatrzymywac obecnej aplikacji Android ani przepisywac jej natyc
 ### Main Issues To Fix First
 
 - Schedule is overloaded. `ScheduleScreen` mixes list, calendar, player actions, admin match management, transport chat, stats input, add-match form and roster dialogs in one large screen.
-- Some high-value flows still fall back to WebView: registration, forgot PIN, full profile editing, web payments, contact/admin communication, gallery, PZU Cup and panel admina.
+- Some high-value flows still fall back to WebView: registration, forgot PIN, full profile editing, web payments, contact/admin communication, gallery and panel admina.
 - Several screens are mostly data dumps rather than mobile-first views. Stats, rankings, wallet history and lineups work, but they need clearer hierarchy, empty states, summary cards and fewer long vertical text lists.
 - Admin features are squeezed into modal dialogs. This is acceptable as a temporary Android implementation, but not ideal as the long-term mobile UX.
 - Error and action feedback is inconsistent across screens. Some flows show inline text, some cards, some silent catches.
@@ -54,7 +54,6 @@ These can stay in WebView during the improvement phase because they are less fre
 - Gallery.
 - O nas.
 - Kontakt, until a native message composer exists.
-- PZU Cup, unless it becomes a core mobile product.
 - Full admin panel, except match-day actions.
 - Full profile edit with photo upload, until native upload is implemented.
 - Registration and forgot PIN, unless onboarding becomes a priority.

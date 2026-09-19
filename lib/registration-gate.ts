@@ -7,7 +7,7 @@ type RegistrationSettings = {
 };
 
 /**
- * Rejestracja samoobsługowa graczy jest zawsze włączona (Akademia i PZU Cup).
+ * Rejestracja samoobsługowa graczy jest zawsze włączona.
  * Flaga w panelu / env nie zamyka rejestracji.
  * Argumenty zachowane dla kompatybilności wywołań API.
  */

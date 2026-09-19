@@ -272,7 +272,6 @@ private fun NativeMainScaffold(
                 path.startsWith("/galeria") -> "galeria"
                 path.startsWith("/o-nas") -> "o_nas"
                 path.startsWith("/kontakt") -> "kontakt"
-                path.startsWith("/pzu-cup") -> "pzu_cup"
                 else -> null
             }
             if (blockKey != null && isBlocked(blockKey) != null) return@HomeNavActions
@@ -281,7 +280,6 @@ private fun NativeMainScaffold(
         onOpenStatsForMatch = { openStatsForMatch(it) },
         onLogout = { logout() },
         isAdmin = isAdmin,
-        showPzuCup = mobileConfig?.settings?.showPzuCup != false,
         siteName = mobileConfig?.settings?.siteName?.takeIf { it.isNotBlank() }
             ?: mobileConfig?.appSettings?.siteName?.takeIf { it.isNotBlank() }
             ?: "Akademia Wielkich Piłkarzy",
@@ -427,8 +425,7 @@ private fun NativeMainScaffold(
                     path.startsWith("/galeria") -> "galeria"
                     path.startsWith("/o-nas") -> "o_nas"
                     path.startsWith("/kontakt") -> "kontakt"
-                    path.startsWith("/pzu-cup") -> "pzu_cup"
-                    path.startsWith("/panel-admina") -> if (isAdmin) null else "admin"
+                        path.startsWith("/panel-admina") -> if (isAdmin) null else "admin"
                     else -> null
                 }
                 val message = when {

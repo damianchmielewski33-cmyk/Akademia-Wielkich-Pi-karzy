@@ -12,7 +12,6 @@ const ADS_BLOCKED_PREFIXES = [
   "/confirm",
   "/api",
   "/offline",
-  "/pzu-cup",
 ] as const;
 
 export function normalizeAdsenseClientId(raw: string | null | undefined): string | null {

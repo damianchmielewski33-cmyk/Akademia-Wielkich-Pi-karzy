@@ -20,7 +20,6 @@ const ACADEMY_PREFIXES = [
 
 const SKIP_GATE_PREFIXES = [
   "/panel-admina",
-  "/pzu-cup",
   "/gymbrat",
   "/login",
   "/register",

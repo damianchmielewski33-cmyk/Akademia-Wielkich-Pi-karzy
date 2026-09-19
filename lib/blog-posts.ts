@@ -486,7 +486,7 @@ Od pierwszego dnia akademia opierała się na kilku prostych wartościach:
 
 ## Gdzie jesteśmy dziś?
 
-Dziś akademia to nie tylko mecze na jednym boisku — to regularne rozgrywki z rankingami, turnieje specjalne (jak PZU Cup), aplikacja mobilna na Androida i aktywna społeczność zawodników.
+Dziś akademia to nie tylko mecze na jednym boisku — to regularne rozgrywki z rankingami, aplikacja mobilna na Androida i aktywna społeczność zawodników.
 
 Platforma stale się rozwija. Nowe funkcje, nowe możliwości, nowe formaty rozgrywek. Ale cel pozostaje ten sam: sprawić, żeby granie w piłkę było proste, fajne i dostępne dla każdego.
 
