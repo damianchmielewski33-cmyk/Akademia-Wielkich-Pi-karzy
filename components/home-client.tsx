@@ -717,6 +717,7 @@ function AcademyHomeView({
               <p className="mt-1 text-sm text-white/80">{item.desc}</p>
             </HomePhotoTile>
           ))}
+          <GymBratCrossLink className="min-h-[12rem]" />
         </section>
 
         {isAcademyHome ? (
@@ -758,7 +759,6 @@ function AcademyHomeView({
                   </HomePhotoTile>
                 );
               })}
-              <GymBratCrossLink className="min-h-[15rem]" />
             </div>
           </section>
         ) : null}
