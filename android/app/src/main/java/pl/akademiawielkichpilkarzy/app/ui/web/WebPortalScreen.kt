@@ -54,6 +54,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import java.util.concurrent.atomic.AtomicBoolean
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -175,6 +176,7 @@ fun WebPortalScreen(
     onInitialContentReady: (() -> Unit)? = null
 ) {
     val siteBase = remember { normalizeSiteBase() }
+    val context = LocalContext.current
     var loading by remember { mutableStateOf(true) }
     var progress by remember { mutableFloatStateOf(0f) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -186,6 +188,7 @@ fun WebPortalScreen(
     val readyNotified = remember { AtomicBoolean(false) }
     val onReadyLatest = rememberUpdatedState(onInitialContentReady)
     val onLoginLatest = rememberUpdatedState(onNavigatedToLogin)
+    val onBackLatest = rememberUpdatedState(onBack)
 
     fun markInitialReady() {
         if (readyNotified.compareAndSet(false, true)) {
@@ -221,13 +224,18 @@ fun WebPortalScreen(
         loadedStartUrl = null
         try {
             if (path.startsWith("/gymbrat")) {
+                // GymBrat poza WebView AWP (Custom Tabs). Ładowanie w WebView kończyło się
+                // nawigacją na POST /api/analytics/page-view (sendBeacon) i pustym ekranem.
                 val subPath = runCatching {
                     val uri = Uri.parse("https://local$path")
                     uri.getQueryParameter("path")?.let { p ->
                         if (p.startsWith("/")) p else "/$p"
                     } ?: "/"
                 }.getOrDefault("/")
-                startUrl = SisterSites.gymBratCrossLink(subPath)
+                openExternalUri(context, Uri.parse(SisterSites.gymBratCrossLink(subPath)))
+                markInitialReady()
+                onBackLatest.value?.invoke()
+                return@LaunchedEffect
             } else if (requireAuth) {
                 val bridge = ApiClient.api.appBridge(AppBridgeRequest(next = path))
                 val bridgePath = bridge.path
@@ -393,8 +401,11 @@ fun WebPortalScreen(
                                     val uri = request.url
                                     val scheme = uri.scheme?.lowercase().orEmpty()
                                     if (scheme == "http" || scheme == "https") {
-                                        // GymBrat ładujemy w tym samym WebView (bez remapu na AWP /gymbrat).
-                                        // Remap powodował pętlę: /gymbrat → gym-brat → /gymbrat → crash (odwrócony Android).
+                                        // GymBrat → Custom Tabs (nie WebView). W WebView sendBeacon
+                                        // analityki GymBrat potrafił nawigować na POST /api/analytics/page-view.
+                                        if (isSisterSiteUrl(uri)) {
+                                            return openExternalUri(ctx, uri)
+                                        }
                                         return false
                                     }
                                     return openExternalUri(ctx, uri)

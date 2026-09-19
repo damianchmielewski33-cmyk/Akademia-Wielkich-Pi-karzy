@@ -15,6 +15,12 @@ fun isAwpSiteUrl(uri: Uri, siteBase: String): Boolean {
     return host == siteHost || host.endsWith(".$siteHost")
 }
 
+/** Siostrzany GymBrat — otwieramy w Custom Tabs, nie w WebView AWP. */
+fun isSisterSiteUrl(uri: Uri): Boolean {
+    val host = uri.host?.lowercase() ?: return false
+    return host == "gym-brat.vercel.app" || host.endsWith(".gym-brat.vercel.app")
+}
+
 private fun Context.findActivity(): Activity? {
     var current: Context? = this
     while (current is ContextWrapper) {
