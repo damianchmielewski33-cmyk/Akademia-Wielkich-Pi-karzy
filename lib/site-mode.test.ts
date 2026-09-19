@@ -40,7 +40,6 @@ describe("site-mode", () => {
     expect(shouldAskSiteMode("/terminarz", null)).toBe(false);
     expect(shouldAskSiteMode("/panel-admina", null)).toBe(false);
     expect(shouldAskSiteMode("/login", null)).toBe(false);
-    expect(shouldAskSiteMode("/pzu-cup", null)).toBe(false);
     expect(shouldAskSiteMode("/gymbrat", null)).toBe(false);
   });
 

@@ -18,7 +18,6 @@ import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.Shield
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -60,7 +59,6 @@ data class HomeNavActions(
     val onOpenStatsForMatch: (matchId: Int) -> Unit,
     val onLogout: () -> Unit,
     val isAdmin: Boolean = false,
-    val showPzuCup: Boolean = true,
     val siteName: String = "Akademia Wielkich Piłkarzy",
     val siteDescription: String = "Terminarz, składy, statystyki i portfel.",
     val isBlocked: (String) -> Boolean = { false }
@@ -322,17 +320,6 @@ private fun HomeTileGrid(nav: HomeNavActions) {
                     gold = true,
                     icon = Icons.Filled.EmojiEvents,
                     onClick = { nav.onNative("rankings") }
-                )
-            )
-        }
-        if (nav.showPzuCup && !nav.isBlocked("pzu_cup")) {
-            add(
-                HomeTile(
-                    title = "PZU Cup",
-                    desc = "Organizacja turnieju PZU Cup 2026",
-                    gold = true,
-                    icon = Icons.Filled.Star,
-                    onClick = { nav.onPortal("PZU Cup", "/pzu-cup") }
                 )
             )
         }

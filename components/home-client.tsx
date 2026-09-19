@@ -9,7 +9,6 @@ import {
   Activity,
   CalendarDays,
   ChevronRight,
-  Medal,
   Shield,
   Trophy,
   Users,
@@ -58,9 +57,6 @@ type Props = {
   profilePhotoPath: string | null;
   /** ID filmu / transmisji YouTube (osadzenie). Brak = brak sekcji na stronie. */
   youtubeLiveVideoId: string | null;
-  /** Kafelek wejścia do sekcji PZU Cup (tylko na stronie startowej). */
-  showPzuCupTile?: boolean;
-  pageVariant?: "home" | "pzu-cup";
   topRankedPlayers?: HomeTopPlayer[];
   featuredVenues?: VenueCard[];
   /** Tryb z ciasteczka SSR — zapas gdy kontekst klienta jeszcze nie zsynchronizował trybu. */
@@ -69,13 +65,12 @@ type Props = {
 
 export function HomeClient(props: Props) {
   const { mode } = useSiteMode();
-  const pageVariant = props.pageVariant ?? "home";
   const effectiveMode = mode ?? props.serverSiteMode ?? "academy";
 
-  if (pageVariant === "home" && effectiveMode === "booking") {
+  if (effectiveMode === "booking") {
     return <BookingHomeView featuredVenues={props.featuredVenues ?? []} />;
   }
-  if (pageVariant === "pzu-cup" || effectiveMode === "academy") {
+  if (effectiveMode === "academy") {
     return <AcademyHomeView {...props} />;
   }
 
@@ -287,14 +282,12 @@ function AcademyHomeView({
   zawodnik,
   profilePhotoPath,
   youtubeLiveVideoId,
-  showPzuCupTile = false,
-  pageVariant = "home",
   topRankedPlayers = [],
   featuredVenues = [],
 }: Props) {
   const router = useRouter();
   const { isHiddenHref } = useScreenBlocks();
-  const isAcademyHome = pageVariant === "home";
+  const isAcademyHome = true;
   const pitchPhotos = pitchPhotosFromVenues(featuredVenues);
   /**
    * Kafelki / Top 3 / CTA: tylko zdjęcia obiektów lub domyślne Unsplash.
@@ -476,7 +469,6 @@ function AcademyHomeView({
     isLoggedIn ? { href: "/platnosci", icon: Wallet, title: "Płatności", desc: "Portfel i opłaty za mecze" } : null,
     isLoggedIn ? { href: "/statystyki", icon: Activity, title: "Statystyki", desc: "Twoje liczby z boiska" } : null,
     isLoggedIn ? { href: "/rankingi", icon: Trophy, title: "Rankingi", desc: "Gole, asysty, punkty" } : null,
-    showPzuCupTile ? { href: "/pzu-cup", icon: Medal, title: "PZU Cup", desc: "Organizacja turnieju" } : null,
     isAdmin ? { href: "/panel-admina", icon: Shield, title: "Zarządzanie akademią", desc: "Panel admina" } : null,
   ].flatMap((item) => (item && !isHiddenHref(item.href) ? [item] : []));
 
@@ -657,36 +649,23 @@ function AcademyHomeView({
         </section>
       ) : null}
 
-      {pageVariant === "pzu-cup" ? (
-        <section className="mp-hero mp-hero--photo relative z-0 flex flex-col justify-end overflow-hidden pb-8 pt-8 sm:pb-20 sm:pt-24">
-          <MarketplacePitchPhoto src={heroPhoto} priority className="z-0" />
-          <div className="absolute inset-0 z-[1] bg-gradient-to-t from-black/75 via-black/40 to-black/20" />
-          <div className="relative z-10 mx-auto w-full max-w-6xl px-4">
-            <p className="text-xs font-black uppercase tracking-[0.22em] text-white/80">PZU Cup 2026</p>
-            <h1 className="mt-3 max-w-3xl text-3xl font-black tracking-tight text-white sm:text-6xl">
-              Organizacja turnieju
-            </h1>
-          </div>
-        </section>
-      ) : (
-        <section
-          className={cn(
-            "mp-hero mp-hero--photo relative z-0 flex flex-col justify-end overflow-hidden pb-8 pt-10 sm:pb-20 sm:pt-24"
-          )}
-        >
-          <MarketplacePitchPhoto src={heroPhoto} priority={!nextMatch} className="z-0" />
-          <div className="absolute inset-0 z-[1] bg-gradient-to-t from-black/75 via-black/40 to-black/20" />
-          <div className="relative z-10 mx-auto w-full max-w-6xl px-4">
-            <p className="text-xs font-black uppercase tracking-[0.22em] text-white/80">Akademia</p>
-            <h1 className="mt-3 max-w-3xl text-3xl font-black tracking-tight text-white sm:text-6xl">
-              Gramy razem.
-            </h1>
-            <p className="mt-3 hidden max-w-xl text-base text-white/85 sm:block sm:text-lg">
-              Terminarz meczów, składy i rankingi akademii.
-            </p>
-          </div>
-        </section>
-      )}
+      <section
+        className={cn(
+          "mp-hero mp-hero--photo relative z-0 flex flex-col justify-end overflow-hidden pb-8 pt-10 sm:pb-20 sm:pt-24"
+        )}
+      >
+        <MarketplacePitchPhoto src={heroPhoto} priority={!nextMatch} className="z-0" />
+        <div className="absolute inset-0 z-[1] bg-gradient-to-t from-black/75 via-black/40 to-black/20" />
+        <div className="relative z-10 mx-auto w-full max-w-6xl px-4">
+          <p className="text-xs font-black uppercase tracking-[0.22em] text-white/80">Akademia</p>
+          <h1 className="mt-3 max-w-3xl text-3xl font-black tracking-tight text-white sm:text-6xl">
+            Gramy razem.
+          </h1>
+          <p className="mt-3 hidden max-w-xl text-base text-white/85 sm:block sm:text-lg">
+            Terminarz meczów, składy i rankingi akademii.
+          </p>
+        </div>
+      </section>
 
       {isAcademyHome ? <MarketplacePhotoStrip isAdmin={isAdmin} /> : null}
 

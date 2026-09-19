@@ -104,7 +104,6 @@ const putBodySchema = z
         lineup_pitch_slots_min: z.number().int().min(1).max(32),
         lineup_pitch_slots_max: z.number().int().min(1).max(32),
         match_cancel_reasons: z.array(cancelReasonSchema).min(1).max(20),
-        show_pzu_cup: z.boolean(),
         login_banner: z.string().max(300),
         android_ui_mode: z.enum(["native", "webview"]),
       })

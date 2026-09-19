@@ -82,18 +82,6 @@ function migrateAppSettingsTableSqlite(db: Database.Database) {
   `);
 }
 
-function seedPzuCupSettingsSqlite(db: Database.Database) {
-  const exists = db
-    .prepare(`SELECT 1 AS ok FROM app_settings WHERE realm = ?`)
-    .get(REALMS.PZU_CUP) as { ok: 1 } | undefined;
-  if (exists) return;
-
-  db.prepare(
-    `INSERT INTO app_settings (realm, match_notification_prompt_enabled, site_name, site_description)
-     VALUES (?, 0, 'PZU Cup 2026', 'Turniej PZU Cup — osobna baza zawodników, meczów i ustawień.')`
-  ).run(REALMS.PZU_CUP);
-}
-
 function addRealmColumnSqlite(db: Database.Database, table: string) {
   const cols = db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
   // Tabela jeszcze nie istnieje (np. ranking_seasons przed CREATE w init) — pomiń.
@@ -108,7 +96,6 @@ export function migrateRealmSchemaSqlite(db: Database.Database) {
   addRealmColumnSqlite(db, "matches");
   addRealmColumnSqlite(db, "ranking_seasons");
   migrateAppSettingsTableSqlite(db);
-  seedPzuCupSettingsSqlite(db);
 }
 
 async function migrateAppSettingsTableLibsql(client: Client) {
@@ -161,20 +148,9 @@ async function addRealmColumnLibsql(client: Client, table: string) {
   await client.execute(`CREATE INDEX IF NOT EXISTS idx_${table}_realm ON ${table}(realm)`);
 }
 
-async function seedPzuCupSettingsLibsql(client: Client) {
-  const rs = await client.execute(`SELECT 1 AS ok FROM app_settings WHERE realm = ?`, [REALMS.PZU_CUP]);
-  if (rs.rows.length > 0) return;
-  await client.execute(
-    `INSERT INTO app_settings (realm, match_notification_prompt_enabled, site_name, site_description)
-     VALUES (?, 0, 'PZU Cup 2026', 'Turniej PZU Cup — osobna baza zawodników, meczów i ustawień.')`,
-    [REALMS.PZU_CUP]
-  );
-}
-
 export async function migrateRealmSchemaLibsql(client: Client) {
   await addRealmColumnLibsql(client, "users");
   await addRealmColumnLibsql(client, "matches");
   await addRealmColumnLibsql(client, "ranking_seasons");
   await migrateAppSettingsTableLibsql(client);
-  await seedPzuCupSettingsLibsql(client);
 }

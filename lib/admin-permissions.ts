@@ -23,7 +23,6 @@ export const TAB_TO_SECTION: Record<string, AdminSectionId> = {
   lineups: "matches",
   stats: "matches",
   rankings: "matches",
-  "pzu-cup": "matches",
   wallets: "finance",
   "operator-payments": "finance",
   gallery: "site",

@@ -19,7 +19,6 @@ export const BLOCKABLE_MOBILE_SCREENS = [
   { key: "galeria", label: "Galeria (WebView)", route: "web:galeria" },
   { key: "o_nas", label: "O nas (WebView)", route: "web:o_nas" },
   { key: "kontakt", label: "Kontakt (WebView)", route: "web:kontakt" },
-  { key: "pzu_cup", label: "PZU Cup (WebView)", route: "web:pzu_cup" },
   { key: "platnosci_web", label: "Płatności WWW (WebView)", route: "web:platnosci" },
   { key: "profil_web", label: "Profil WWW (WebView)", route: "web:profil" },
 ] as const;

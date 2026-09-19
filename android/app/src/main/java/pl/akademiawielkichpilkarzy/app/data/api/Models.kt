@@ -557,7 +557,6 @@ data class MobileChannelSettingsDto(
     @Json(name = "lineup_pitch_slots_min") val lineupPitchSlotsMin: Int? = null,
     @Json(name = "lineup_pitch_slots_max") val lineupPitchSlotsMax: Int? = null,
     @Json(name = "match_cancel_reasons") val matchCancelReasons: List<MatchCancelReasonDto> = emptyList(),
-    @Json(name = "show_pzu_cup") val showPzuCup: Boolean = true,
     @Json(name = "login_banner") val loginBanner: String? = null,
     @Json(name = "android_ui_mode") val androidUiMode: String = "webview"
 )

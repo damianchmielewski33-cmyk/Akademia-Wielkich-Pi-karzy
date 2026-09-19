@@ -36,13 +36,13 @@ import {
 type Props = {
   loading: boolean;
   onReload: () => void;
-  settingsRealm?: "academy" | "pzu_cup";
+  settingsRealm?: "academy";
   focusSectionId?: string | null;
   onFocusSectionConsumed?: () => void;
 };
 
-function settingsApiUrl(realm: "academy" | "pzu_cup") {
-  return realm === "pzu_cup" ? "/api/admin/app-settings?realm=pzu_cup" : "/api/admin/app-settings";
+function settingsApiUrl(_realm: "academy" = "academy") {
+  return "/api/admin/app-settings";
 }
 
 type SettingsTocItem = { id: string; label: string; keywords?: string };
@@ -470,31 +470,11 @@ export function AdminSettingsTab({
 
   return (
     <div className="space-y-6">
-      {settingsRealm === "pzu_cup" ? (
-        <div className="rounded-xl border border-amber-400/40 bg-amber-500/15 px-4 py-3 text-sm text-amber-50">
-          <p className="font-semibold">Realm: PZU Cup</p>
-          <p className="mt-1 text-amber-100/85">
-            Edytujesz ustawienia turnieju — osobne od Akademii. Zmiany tutaj nie wpływają na stronę główną akademii.
-          </p>
-        </div>
-      ) : (
-        <div className="rounded-xl border border-teal-200 bg-teal-50 px-4 py-3 text-sm text-teal-950 dark:border-teal-800 dark:bg-teal-950/40 dark:text-teal-50">
-          <p className="font-semibold">Realm: Akademia</p>
-          <p className="mt-1 text-teal-800/90 dark:text-teal-100/85">
-            Ustawienia strony akademii i aplikacji. Turniej PZU Cup ma osobną zakładkę z własną konfiguracją.
-          </p>
-        </div>
-      )}
-
       <AdminToolbar
         title={
-          settingsRealm === "pzu_cup"
-            ? channel === "web"
-              ? "Ustawienia PZU Cup (WWW)"
-              : "Ustawienia PZU Cup (aplikacja)"
-            : channel === "web"
-              ? "Ustawienia strony"
-              : "Ustawienia aplikacji"
+          channel === "web"
+            ? "Ustawienia strony"
+            : "Ustawienia aplikacji"
         }
         description={
           channel === "web"
@@ -1323,12 +1303,6 @@ function MobileSettingsEditor({
             }}
           />
         </FieldRow>
-        <YesNoSwitchRow
-          label="Pokaż PZU Cup w menu aplikacji"
-          checked={mobile.show_pzu_cup}
-          disabled={busy}
-          onCheckedChange={(v) => onSavePatch({ show_pzu_cup: v })}
-        />
         <FieldRow
           label="Wygląd aplikacji Android"
           hint="Cała aplikacja natywna (Compose) albo cała w WebView (jak strona WWW). Zmiana działa po odświeżeniu / ponownym otwarciu aplikacji."

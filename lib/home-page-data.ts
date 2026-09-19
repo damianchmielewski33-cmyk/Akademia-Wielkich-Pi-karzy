@@ -31,18 +31,15 @@ export type HomePageClientProps = {
   zawodnik: string;
   profilePhotoPath: string | null;
   youtubeLiveVideoId: string | null;
-  showPzuCupTile: boolean;
-  pageVariant: "home" | "pzu-cup";
   topRankedPlayers: HomeTopPlayer[];
   featuredVenues: VenueCard[];
 };
 export async function getHomePageClientProps(
   session: AppSession | null,
-  options?: { showPzuCupTile?: boolean; pageVariant?: "home" | "pzu-cup"; siteMode?: SiteMode | null }
+  options?: { siteMode?: SiteMode | null }
 ): Promise<HomePageClientProps> {
   const db = await getDb();
-  const pageVariant = options?.pageVariant ?? "home";
-  const loadAcademy = pageVariant === "pzu-cup" || options?.siteMode !== "booking";
+  const loadAcademy = options?.siteMode !== "booking";
 
   const [nextMatch, appSettings, topRankedPlayers, featuredVenues, nav] = await Promise.all([
     loadAcademy
@@ -56,8 +53,8 @@ export async function getHomePageClientProps(
           .get(REALMS.ACADEMY) as Promise<MatchRow | undefined>
       : Promise.resolve(undefined),
     getRequestAppSettings(),
-    loadAcademy && pageVariant !== "pzu-cup" ? getHomeTopPlayers(3) : Promise.resolve([] as HomeTopPlayer[]),
-    pageVariant === "home" && options?.siteMode === "booking"
+    loadAcademy ? getHomeTopPlayers(3) : Promise.resolve([] as HomeTopPlayer[]),
+    options?.siteMode === "booking"
       ? listVenueCards(db, { limit: 8 })
       : Promise.resolve([] as VenueCard[]),
     session ? getAccountNavFields(session.userId) : Promise.resolve(null),
@@ -131,8 +128,6 @@ export async function getHomePageClientProps(
     zawodnik,
     profilePhotoPath,
     youtubeLiveVideoId,
-    showPzuCupTile: loadAcademy ? (options?.showPzuCupTile ?? false) : false,
-    pageVariant,
     topRankedPlayers,
     featuredVenues,
   };

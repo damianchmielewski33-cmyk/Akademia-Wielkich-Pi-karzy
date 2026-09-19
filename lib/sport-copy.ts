@@ -67,7 +67,6 @@ const EXACT: Record<string, string> = {
     "Za dużo sprintów naraz — złap oddech i spróbuj za chwilę.",
   "Za dużo sprintów naraz — złap oddech i spróbuj za chwilę.":
     "Za dużo sprintów naraz — złap oddech i spróbuj za chwilę.",
-  "Brak dostępu do sekcji PZU Cup": "Brak karnetu na PZU Cup — poproś sztab o dostęp.",
   "Nie znaleziono meczu": "Tego meczu nie ma na tej połowie boiska.",
   "Wejdź na boisko — zaloguj się imieniem, nazwiskiem i PIN-em.":
     "Wejdź na boisko — zaloguj się imieniem, nazwiskiem i PIN-em.",

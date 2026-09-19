@@ -21,7 +21,7 @@ const bodySchema = z.object({
   code: z.string().trim().min(4).max(8),
   password: z.string().min(1),
   password_confirm: z.string().min(1),
-  realm: z.enum([REALMS.ACADEMY, REALMS.PZU_CUP]).optional(),
+  realm: z.enum([REALMS.ACADEMY]).optional(),
 });
 
 export async function POST(req: Request) {

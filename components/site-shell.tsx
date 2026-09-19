@@ -130,9 +130,6 @@ export function SiteShell({
   if (pathname === "/panel-admina" || pathname?.startsWith("/panel-admina")) {
     return <>{children}</>;
   }
-  if (pathname === "/pzu-cup" || pathname?.startsWith("/pzu-cup")) {
-    return <>{children}</>;
-  }
   if (pathname === "/gymbrat" || pathname?.startsWith("/gymbrat")) {
     return <>{children}</>;
   }

@@ -15,7 +15,7 @@ export const runtime = "nodejs";
 
 const bodySchema = z.object({
   email: z.string().email().trim(),
-  realm: z.enum([REALMS.ACADEMY, REALMS.PZU_CUP]).optional(),
+  realm: z.enum([REALMS.ACADEMY]).optional(),
 });
 
 /**

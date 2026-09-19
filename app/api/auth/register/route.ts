@@ -27,7 +27,7 @@ const pinBodySchema = z.object({
   pin: z.string().min(1).trim(),
   pin_confirm: z.string().min(1).trim(),
   auto_login: z.boolean().optional(),
-  realm: z.enum([REALMS.ACADEMY, REALMS.PZU_CUP]).optional(),
+  realm: z.enum([REALMS.ACADEMY]).optional(),
 });
 
 const emailBodySchema = z.object({
@@ -37,7 +37,7 @@ const emailBodySchema = z.object({
   email: z.string().email().trim(),
   password: z.string().min(1),
   password_confirm: z.string().min(1),
-  realm: z.enum([REALMS.ACADEMY, REALMS.PZU_CUP]).optional(),
+  realm: z.enum([REALMS.ACADEMY]).optional(),
 });
 
 export async function POST(req: Request) {

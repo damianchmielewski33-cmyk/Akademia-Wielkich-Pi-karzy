@@ -233,8 +233,6 @@ export function sanitizeHotpayReturnPath(raw: unknown): string {
     pathOnly === "/rezerwacje" ||
     pathOnly === "/obiekty" ||
     pathOnly === "/profil" ||
-    pathOnly === "/pzu-cup" ||
-    pathOnly.startsWith("/pzu-cup/") ||
     pathOnly.startsWith("/terminarz/") ||
     pathOnly.startsWith("/rezerwacje/") ||
     pathOnly.startsWith("/obiekty/") ||

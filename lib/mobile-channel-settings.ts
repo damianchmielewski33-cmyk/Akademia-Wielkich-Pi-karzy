@@ -40,8 +40,6 @@ export type MobileChannelSettings = {
   lineup_pitch_slots_min: number;
   lineup_pitch_slots_max: number;
   match_cancel_reasons: MatchCancelReasonEntry[];
-  /** Czy pokazywać kafelek / pozycję PZU Cup w menu aplikacji. */
-  show_pzu_cup: boolean;
   /** Komunikat na ekranie logowania aplikacji (opcjonalny). */
   login_banner: string;
   /**
@@ -79,7 +77,6 @@ export const MOBILE_CHANNEL_SETTINGS_DEFAULTS: MobileChannelSettings = {
   lineup_pitch_slots_min: 12,
   lineup_pitch_slots_max: 16,
   match_cancel_reasons: [...MATCH_CANCEL_REASONS],
-  show_pzu_cup: true,
   login_banner: "",
   android_ui_mode: "webview",
 };
@@ -140,7 +137,6 @@ export function mobileSettingsFromWeb(web: {
     lineup_pitch_slots_min: web.lineup_pitch_slots_min,
     lineup_pitch_slots_max: web.lineup_pitch_slots_max,
     match_cancel_reasons: web.match_cancel_reasons.map((r) => ({ ...r })),
-    show_pzu_cup: true,
     login_banner: "",
     android_ui_mode: "webview",
   };
@@ -267,7 +263,6 @@ export function parseMobileSettingsJson(
           ? parsed.lineup_pitch_slots_max
           : base.lineup_pitch_slots_max,
       match_cancel_reasons: parseCancelReasons(parsed.match_cancel_reasons),
-      show_pzu_cup: typeof parsed.show_pzu_cup === "boolean" ? parsed.show_pzu_cup : base.show_pzu_cup,
       login_banner: typeof parsed.login_banner === "string" ? parsed.login_banner.trim().slice(0, 300) : base.login_banner,
       android_ui_mode:
         parsed.android_ui_mode === "webview" || parsed.android_ui_mode === "native"

@@ -23,7 +23,7 @@ const bodySchema = z.object({
   email: z.string().trim().optional(),
   password: z.string().optional(),
   remember_me: z.boolean().optional(),
-  realm: z.enum([REALMS.ACADEMY, REALMS.PZU_CUP]).optional(),
+  realm: z.enum([REALMS.ACADEMY]).optional(),
 });
 
 type LoginUserRow = {

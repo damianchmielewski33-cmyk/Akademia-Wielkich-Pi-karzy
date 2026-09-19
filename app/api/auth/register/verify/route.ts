@@ -18,7 +18,7 @@ const bodySchema = z.object({
   email: z.string().email().trim(),
   code: z.string().trim().min(4).max(8),
   remember_me: z.boolean().optional(),
-  realm: z.enum([REALMS.ACADEMY, REALMS.PZU_CUP]).optional(),
+  realm: z.enum([REALMS.ACADEMY]).optional(),
 });
 
 export async function POST(req: Request) {

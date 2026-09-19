@@ -15,7 +15,6 @@ import {
   Film,
   LayoutDashboard,
   LayoutGrid,
-  Medal,
   MessageCircle,
   Search,
   Settings2,
@@ -81,7 +80,6 @@ import { AdminWalletsSaldoSection } from "@/components/admin-wallets-saldo-secti
 import { AdminOperatorPaymentsTab } from "@/components/admin-operator-payments-tab";
 import { AdminSettingsTab } from "@/components/admin-settings-tab";
 import { AdminScreenBlocksTab } from "@/components/admin-screen-blocks-tab";
-import { AdminPzuCupTab } from "@/components/admin-pzu-cup-tab";
 import { AdminFilterChips, AdminRowActions } from "@/components/admin-row-actions";
 import { AdminGalleryTab } from "@/components/admin-gallery-tab";
 import { AdminMessagesTab } from "@/components/admin-messages-tab";
@@ -134,7 +132,6 @@ type UserRow = {
   zawodnik: string;
   profile_photo_path: string | null;
   role: string;
-  can_pzu_cup?: number;
   pin_reset_requested?: number;
   pin_set?: number;
   pin_change_pending?: number;
@@ -312,7 +309,6 @@ const navGroupDefs = [
       { id: "lineups", label: "Składy na mecz", desc: "Ustawienie drużyn na boisku", icon: LayoutGrid },
       { id: "stats", label: "Statystyki", desc: "Gole, asysty i dystans", icon: Table2 },
       { id: "rankings", label: "Rankingi", desc: "Sezony i tabela punktów", icon: Trophy },
-      { id: "pzu-cup", label: "PZU Cup", desc: "Turniej i osobna baza", icon: Medal },
     ],
   },
   {
@@ -1240,8 +1236,7 @@ export function AdminPanel() {
       tab === "gallery" ||
       tab === "messages" ||
       tab === "mobile-apps" ||
-      tab === "rankings" ||
-      tab === "pzu-cup"
+      tab === "rankings"
     )
       setLoading(false);
   }, [tab, loadDashboard, loadUsers, loadMatches, loadStats]);
@@ -1294,8 +1289,7 @@ export function AdminPanel() {
     tab === "messages" ||
     tab === "mobile-apps" ||
     tab === "rankings" ||
-    tab === "pzu-cup" ||
-    tab === "screen-blocks"
+        tab === "screen-blocks"
       ? false
       : tab === "analytics"
         ? analyticsLoading
@@ -1412,7 +1406,6 @@ export function AdminPanel() {
             onFocusSectionConsumed={() => setSettingsSectionId(null)}
           />
         )}
-        {tab === "pzu-cup" && <AdminPzuCupTab loading={loading} onReload={loadDashboard} />}
       </AdminShell>
 
       <LogoutConfirmModal open={logoutOpen} onOpenChange={setLogoutOpen} />
@@ -2097,7 +2090,6 @@ function DashboardView({
         { tab: "lineups", label: "Składy", desc: "Ustawienie drużyn na boisku", icon: LayoutGrid },
         { tab: "stats", label: "Statystyki", desc: "Gole, asysty i dystans", icon: Table2 },
         { tab: "rankings", label: "Rankingi", desc: "Sezony i tabela punktów", icon: Trophy },
-        { tab: "pzu-cup", label: "PZU Cup", desc: "Turniej i osobna baza", icon: Medal },
       ],
     },
     {
@@ -2470,45 +2462,6 @@ function UsersView({
                         </Badge>
                       ) : null}
                       {u.role === "admin" ? <Badge>Admin</Badge> : null}
-                      {(u.can_pzu_cup ?? 0) === 1 ? (
-                        <Badge className="border-amber-300/50 bg-amber-500/20 font-normal text-amber-950 dark:text-amber-50">
-                          PZU
-                        </Badge>
-                      ) : null}
-                    </div>
-                  </TableCell>
-                  <TableCell className="hidden align-middle sm:table-cell">
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      {(u.pin_set ?? 0) === 1 ? (
-                        <Badge variant="secondary" className="font-normal">
-                          Ustawiony
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="border-amber-300 bg-amber-50 text-amber-950">
-                          Brak PIN
-                        </Badge>
-                      )}
-                      {(u.pin_reset_requested ?? 0) === 1 ? (
-                        <Badge className="bg-red-600 font-normal text-white hover:bg-red-600">
-                          {(u.pin_change_pending ?? 0) === 1
-                            ? "Nowy PIN — czeka"
-                            : "Prośba o reset"}
-                        </Badge>
-                      ) : null}
-                    </div>
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell">
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      {u.role === "admin" ? (
-                        <Badge>Administrator</Badge>
-                      ) : (
-                        <Badge variant="secondary">Gracz</Badge>
-                      )}
-                      {(u.can_pzu_cup ?? 0) === 1 ? (
-                        <Badge className="border-amber-300/50 bg-amber-500/20 font-normal text-amber-50">
-                          PZU Cup
-                        </Badge>
-                      ) : null}
                     </div>
                   </TableCell>
                   <TableCell className="text-right">
@@ -2723,7 +2676,6 @@ function UserCreateForm({
   onCreated: () => void;
 }) {
   const [role, setRole] = useState<"admin" | "player">("player");
-  const [canPzuCup, setCanPzuCup] = useState(false);
   const [adminPerms, setAdminPerms] = useState<AdminSectionId[] | null>(null);
   const [saving, setSaving] = useState(false);
   const form = useValidatedForm({
@@ -2766,7 +2718,6 @@ function UserCreateForm({
                     last_name: last_name.trim(),
                     zawodnik,
                     role,
-                    can_pzu_cup: canPzuCup,
                     admin_permissions: role === "admin" ? serializeAdminPermissions(adminPerms) : null,
                   }),
                 });
@@ -2833,16 +2784,6 @@ function UserCreateForm({
         {role === "admin" ? (
           <AdminPermissionsPicker value={adminPerms} onChange={setAdminPerms} disabled={saving} />
         ) : null}
-        <YesNoSwitchRow
-          className={`${adminToggleRowClass} mt-1`}
-          label="Dostęp do PZU Cup"
-          hint="Użytkownik zobaczy ukryty kafelek „PZU Cup” na stronie startowej i wejdzie do panelu turnieju."
-          checked={canPzuCup}
-          disabled={saving}
-          onCheckedChange={setCanPzuCup}
-          tone="light"
-          rowTone="light"
-        />
       </div>
     </AppModal>
   );
@@ -2865,7 +2806,6 @@ function UserEditForm({
   const [last_name, setLn] = useState(user.last_name);
   const [zawodnik, setZ] = useState(user.zawodnik);
   const [role, setRole] = useState(user.role);
-  const [canPzuCup, setCanPzuCup] = useState((user.can_pzu_cup ?? 0) === 1);
   const [adminPerms, setAdminPerms] = useState<AdminSectionId[] | null>(() =>
     parseAdminPermissions(user.admin_permissions)
   );
@@ -2876,7 +2816,6 @@ function UserEditForm({
     setLn(user.last_name);
     setZ(user.zawodnik);
     setRole(user.role);
-    setCanPzuCup((user.can_pzu_cup ?? 0) === 1);
     setAdminPerms(parseAdminPermissions(user.admin_permissions));
   }, [user]);
 
@@ -2907,7 +2846,6 @@ function UserEditForm({
                     last_name,
                     zawodnik,
                     role,
-                    can_pzu_cup: canPzuCup,
                     admin_permissions: role === "admin" ? serializeAdminPermissions(adminPerms) : null,
                   }),
                 });
@@ -2972,16 +2910,6 @@ function UserEditForm({
         {role === "admin" ? (
           <AdminPermissionsPicker value={adminPerms} onChange={setAdminPerms} disabled={saving} />
         ) : null}
-        <YesNoSwitchRow
-          className="rounded-xl border border-zinc-200 bg-zinc-50/80 px-4 py-3 dark:border-zinc-700 dark:bg-zinc-900/40"
-          label="Dostęp do PZU Cup"
-          hint="Widoczny kafelek turnieju na stronie startowej i dostęp do /pzu-cup."
-          checked={canPzuCup}
-          disabled={saving}
-          onCheckedChange={setCanPzuCup}
-          tone="light"
-          rowTone="light"
-        />
       </div>
     </AppModal>
   );

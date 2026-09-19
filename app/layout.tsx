@@ -138,9 +138,8 @@ export default async function RootLayout({
   const previewBlocked =
     headerStore.get("x-preview-blocked") === "1" ||
     isPreviewBlockedCookieValue(cookieStore.get(PREVIEW_BLOCKED_COOKIE)?.value);
-  const isPzuCupSection = pathname.startsWith("/pzu-cup");
   const isGymBratEmbed = pathname.startsWith("/gymbrat");
-  const isMinimalChromeSection = isPzuCupSection || isGymBratEmbed;
+  const isMinimalChromeSection = isGymBratEmbed;
   const forceEmailAuthSetup = Boolean(
     session?.needsEmailAuthSetup && !session.needsPinSetup && !session.pinChangePending && !isMinimalChromeSection
   );

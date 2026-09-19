@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "@/lib/auth";
 import { requireBookingMarketplace } from "@/lib/booking-marketplace";
 import { getDb } from "@/lib/db";
-import { userHasPzuCupAccess } from "@/lib/pzu-cup-access";
 import { matchBelongsToRealm } from "@/lib/realm-db";
 import { getApiRealm } from "@/lib/request-realm";
 import type { Realm } from "@/lib/realm";
@@ -101,20 +100,6 @@ export async function requireVenuePartner() {
         { error: "Ten panel jest dla partnerów obiektu. Zgłoś halę na /dla-obiektow albo wejdź z konta partnera." },
         { status: 403 }
       ),
-    };
-  }
-  return { ok: true as const, session: r.session };
-}
-
-export async function requirePzuCupAccess() {
-  const r = await requireUser();
-  if (!r.ok) return r;
-  const db = await getDb();
-  const allowed = await userHasPzuCupAccess(db, r.session.userId, r.session.isAdmin);
-  if (!allowed) {
-    return {
-      ok: false as const,
-      response: NextResponse.json({ error: "Brak karnetu na PZU Cup — poproś sztab o dostęp." }, { status: 403 }),
     };
   }
   return { ok: true as const, session: r.session };
