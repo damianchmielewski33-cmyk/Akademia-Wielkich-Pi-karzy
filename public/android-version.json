@@ -3,6 +3,6 @@
   "versionName": "1.11.6",
   "apkUrl": "https://github.com/damianchmielewski33-cmyk/Akademia-Wielkich-Pi-karzy/releases/download/android-latest/akademia-wp.apk",
   "releasedAt": "2026-09-19T18:30:00Z",
-  "commit": "pending",
-  "notes": "GymBrat w WebView: patch sendBeacon (document-start), blokada /api/analytics/* — bez dialogu „Zmieniamy się na lepsze” po page-view."
+  "commit": "380d2b21d92b239027a88d2024b9a5f2ef1f951c",
+  "notes": "GymBrat w WebView: patch sendBeacon (document-start), blokada /api/analytics/* \u2014 bez dialogu \u201eZmieniamy si\u0119 na lepsze\u201d po page-view."
 }
