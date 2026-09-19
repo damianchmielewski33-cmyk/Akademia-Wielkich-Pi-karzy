@@ -57,6 +57,7 @@ import androidx.compose.ui.graphics.Color
 import java.util.concurrent.atomic.AtomicBoolean
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import pl.akademiawielkichpilkarzy.app.AwpApp
 import pl.akademiawielkichpilkarzy.app.BuildConfig
 import pl.akademiawielkichpilkarzy.app.data.api.ApiClient
 import pl.akademiawielkichpilkarzy.app.data.api.AppBridgeRequest
@@ -227,7 +228,9 @@ fun WebPortalScreen(
                         if (p.startsWith("/")) p else "/$p"
                     } ?: "/"
                 }.getOrDefault("/")
-                startUrl = SisterSites.gymBratCrossLink(subPath)
+                // Top-level WebView: brak parent postMessage — SSO przez awp_token w URL.
+                val awpToken = runCatching { AwpApp.instance.sessionStore.getToken() }.getOrNull()
+                startUrl = SisterSites.gymBratCrossLink(subPath, awpToken)
             } else if (requireAuth) {
                 val bridge = ApiClient.api.appBridge(AppBridgeRequest(next = path))
                 val bridgePath = bridge.path

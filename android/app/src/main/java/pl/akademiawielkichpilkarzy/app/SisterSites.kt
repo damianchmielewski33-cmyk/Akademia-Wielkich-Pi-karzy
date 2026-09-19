@@ -13,14 +13,22 @@ object SisterSites {
     const val GYMBRAT_GYM_PHOTO =
         "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=1600&q=80"
 
-    fun gymBratCrossLink(path: String = "/"): String {
+    /**
+     * Link do GymBrat z `from=awp`.
+     * Gdy jest JWT sesji AWP, dokleja `awp_token` (SSO — top-level WebView nie ma parent postMessage).
+     */
+    fun gymBratCrossLink(path: String = "/", awpToken: String? = null): String {
         val base = GYMBRAT_URL.trimEnd('/')
         val normalized = if (path.startsWith("/")) path else "/$path"
         val withPath = if (normalized == "/") "$base/" else "$base$normalized"
-        return Uri.parse(withPath)
-            .buildUpon()
-            .appendQueryParameter("from", "awp")
-            .build()
-            .toString()
+        val builder =
+            Uri.parse(withPath)
+                .buildUpon()
+                .appendQueryParameter("from", "awp")
+        val token = awpToken?.trim().orEmpty()
+        if (token.isNotEmpty()) {
+            builder.appendQueryParameter("awp_token", token)
+        }
+        return builder.build().toString()
     }
 }
