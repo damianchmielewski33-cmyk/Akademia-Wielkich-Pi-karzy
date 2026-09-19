@@ -75,6 +75,24 @@ export function isTrustedGymBratOrigin(origin: string | null | undefined): boole
   }
 }
 
+/**
+ * Decyzja odpowiedzi na `gymbrat-request-awp-session`.
+ * Zwraca payload postMessage albo `null` (obcy origin / brak sesji / zły typ).
+ */
+export function buildAwpSessionPostMessage(
+  origin: string | null | undefined,
+  messageData: unknown,
+  sessionToken: string | null | undefined
+): { type: typeof AWP_SESSION_MESSAGE_TYPE; token: string } | null {
+  if (!isTrustedGymBratOrigin(origin)) return null;
+  if (!messageData || typeof messageData !== "object") return null;
+  const type = (messageData as { type?: unknown }).type;
+  if (type !== GYMBRAT_REQUEST_AWP_SESSION) return null;
+  const token = typeof sessionToken === "string" ? sessionToken.trim() : "";
+  if (!token) return null;
+  return { type: AWP_SESSION_MESSAGE_TYPE, token };
+}
+
 export type GymBratCrossLinkOptions = {
   /** JWT sesji AWP — jednorazowy bilet SSO dla GymBrat (`awp_token`). Nie logować. */
   awpToken?: string | null;

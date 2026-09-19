@@ -1,6 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  AWP_SESSION_MESSAGE_TYPE,
   DEFAULT_GYMBRAT_URL,
+  GYMBRAT_REQUEST_AWP_SESSION,
+  buildAwpSessionPostMessage,
   getGymBratCrossLink,
   getGymBratUrl,
   isTrustedGymBratOrigin,
@@ -40,6 +43,40 @@ describe("isTrustedGymBratOrigin", () => {
     expect(isTrustedGymBratOrigin(null)).toBe(false);
     expect(isTrustedGymBratOrigin("")).toBe(false);
     expect(isTrustedGymBratOrigin("not-a-url")).toBe(false);
+  });
+});
+
+describe("buildAwpSessionPostMessage", () => {
+  const token = "eyJhbGciOiJIUzI1NiJ9.session";
+
+  it("replies with awp-session only for trusted GymBrat origin + request type + token", () => {
+    expect(
+      buildAwpSessionPostMessage(DEFAULT_GYMBRAT_URL, { type: GYMBRAT_REQUEST_AWP_SESSION }, token)
+    ).toEqual({ type: AWP_SESSION_MESSAGE_TYPE, token });
+
+    expect(
+      buildAwpSessionPostMessage("http://localhost:3001", { type: GYMBRAT_REQUEST_AWP_SESSION }, token)
+    ).toEqual({ type: AWP_SESSION_MESSAGE_TYPE, token });
+  });
+
+  it("does not leak token to foreign origins", () => {
+    expect(
+      buildAwpSessionPostMessage("https://evil.example", { type: GYMBRAT_REQUEST_AWP_SESSION }, token)
+    ).toBeNull();
+    expect(
+      buildAwpSessionPostMessage("http://localhost:3000", { type: GYMBRAT_REQUEST_AWP_SESSION }, token)
+    ).toBeNull();
+  });
+
+  it("stays silent without session or wrong message type", () => {
+    expect(
+      buildAwpSessionPostMessage(DEFAULT_GYMBRAT_URL, { type: GYMBRAT_REQUEST_AWP_SESSION }, null)
+    ).toBeNull();
+    expect(
+      buildAwpSessionPostMessage(DEFAULT_GYMBRAT_URL, { type: GYMBRAT_REQUEST_AWP_SESSION }, "  ")
+    ).toBeNull();
+    expect(buildAwpSessionPostMessage(DEFAULT_GYMBRAT_URL, { type: "other" }, token)).toBeNull();
+    expect(buildAwpSessionPostMessage(DEFAULT_GYMBRAT_URL, null, token)).toBeNull();
   });
 });
 

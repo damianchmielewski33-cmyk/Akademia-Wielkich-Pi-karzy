@@ -8,11 +8,10 @@ import { Button } from "@/components/ui/button";
 import {
   AWP_SESSION_MESSAGE_TYPE,
   AWP_SITE_NAME,
-  GYMBRAT_REQUEST_AWP_SESSION,
   GYMBRAT_SITE_NAME,
+  buildAwpSessionPostMessage,
   getGymBratCrossLink,
   getGymBratUrl,
-  isTrustedGymBratOrigin,
 } from "@/lib/sister-sites";
 import { isRunningInAppWebView } from "@/lib/app-webview";
 
@@ -51,23 +50,16 @@ export function GymBratEmbedView({ sessionToken = null }: GymBratEmbedViewProps)
 
   useEffect(() => {
     function onMessage(event: MessageEvent) {
-      if (!isTrustedGymBratOrigin(event.origin)) return;
-      const data = event.data as { type?: string } | null;
-      if (!data || typeof data !== "object") return;
-      if (data.type !== GYMBRAT_REQUEST_AWP_SESSION) return;
+      const payload = buildAwpSessionPostMessage(event.origin, event.data, tokenRef.current);
+      if (!payload) return;
 
-      const current = tokenRef.current;
-      if (!current) return;
-
-      const payload = { type: AWP_SESSION_MESSAGE_TYPE, token: current };
-      const target = event.origin;
       try {
         const source = event.source as WindowProxy | null;
         if (source && typeof source.postMessage === "function") {
-          source.postMessage(payload, target);
+          source.postMessage(payload, event.origin);
           return;
         }
-        iframeRef.current?.contentWindow?.postMessage(payload, target);
+        iframeRef.current?.contentWindow?.postMessage(payload, event.origin);
       } catch {
         /* iframe niedostępny */
       }
