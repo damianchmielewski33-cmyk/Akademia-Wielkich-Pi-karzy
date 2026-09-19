@@ -15,6 +15,18 @@ fun isAwpSiteUrl(uri: Uri, siteBase: String): Boolean {
     return host == siteHost || host.endsWith(".$siteHost")
 }
 
+/** Siostrzana witryna GymBrat — zostaje w WebView aplikacji (bez Custom Tabs). */
+fun isGymBratUrl(uri: Uri): Boolean {
+    val host = uri.host?.lowercase() ?: return false
+    return host == "gym-brat.vercel.app" || host.endsWith(".gym-brat.vercel.app")
+}
+
+/** Endpointy analityki nie mogą stać się dokumentem głównej ramki (bug sendBeacon w WebView). */
+fun isAnalyticsApiUrl(uri: Uri): Boolean {
+    val path = uri.path.orEmpty()
+    return path.startsWith("/api/analytics/")
+}
+
 private fun Context.findActivity(): Activity? {
     var current: Context? = this
     while (current is ContextWrapper) {
