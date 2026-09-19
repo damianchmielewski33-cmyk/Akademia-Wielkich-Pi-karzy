@@ -74,18 +74,28 @@ private fun normalizeSiteBase(): String {
 }
 
 /**
- * sendBeacon(Blob) w Android WebView potrafi nawigować główną ramkę na URL analityki.
- * Podmieniamy na fetch — strona zostaje na miejscu.
+ * Harden GymBrat w Android WebView:
+ * 1) sendBeacon(Blob) potrafi nawigować główną ramkę na /api/analytics/* → fetch.
+ * 2) GymBrat owija console.error i pokazuje dialog „Zmieniamy się na lepsze” przy każdym
+ *    logu (w WebView Next/Chrome loguje ostrzeżenia jako error) — blokujemy ten wrap.
  */
-private const val GYMBRAT_SAFE_ANALYTICS_JS =
-    "(function(){try{if(window.__awpSafeAnalytics)return;window.__awpSafeAnalytics=1;" +
-        "var orig=navigator.sendBeacon&&navigator.sendBeacon.bind(navigator);" +
+private const val GYMBRAT_WEBVIEW_HARDENING_JS =
+    "(function(){try{if(window.__awpGymBratWv)return;window.__awpGymBratWv=1;" +
+        "var origBeacon=navigator.sendBeacon&&navigator.sendBeacon.bind(navigator);" +
         "navigator.sendBeacon=function(url,data){try{var u=String(url||'');" +
         "if(u.indexOf('/api/analytics/')!==-1){var body=data;if(body&&typeof Blob!=='undefined'&&body instanceof Blob){" +
         "body.arrayBuffer().then(function(buf){return fetch(u,{method:'POST',headers:{'Content-Type':'application/json'}," +
         "body:new Uint8Array(buf),credentials:'include',keepalive:true});}).catch(function(){});}else{" +
         "fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:body||'',credentials:'include',keepalive:true}).catch(function(){});}" +
-        "return true;}}catch(e){}return orig?orig(url,data):false;};}catch(e){}})();"
+        "return true;}}catch(e){}return origBeacon?origBeacon(url,data):false;};" +
+        "var host=(location.hostname||'').toLowerCase();" +
+        "if(host==='gym-brat.vercel.app'||host.endsWith('.gym-brat.vercel.app')){" +
+        "var logErr=console.error.bind(console);" +
+        "try{Object.defineProperty(console,'error',{configurable:true,enumerable:true," +
+        "get:function(){return logErr;},set:function(){/* GymBrat AppProviders — nie owijaj */}});}" +
+        "catch(e){console.error=logErr;}" +
+        "}" +
+        "}catch(e){}})();"
 
 private class AwpAndroidJsBridge(
     private val appContext: Context,
@@ -415,7 +425,7 @@ fun WebPortalScreen(
                             if (WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) {
                                 WebViewCompat.addDocumentStartJavaScript(
                                     this,
-                                    GYMBRAT_SAFE_ANALYTICS_JS,
+                                    GYMBRAT_WEBVIEW_HARDENING_JS,
                                     setOf("*")
                                 )
                             }
@@ -443,7 +453,7 @@ fun WebPortalScreen(
                                 override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
                                     progress = 0.05f
                                     // Fallback gdy DOCUMENT_START_SCRIPT niedostępne (starszy WebView).
-                                    view?.evaluateJavascript(GYMBRAT_SAFE_ANALYTICS_JS, null)
+                                    view?.evaluateJavascript(GYMBRAT_WEBVIEW_HARDENING_JS, null)
                                     // Awaria: jeśli sendBeacon już nawigował na analitykę — wróć / przeładuj portal.
                                     val uri = runCatching { Uri.parse(url.orEmpty()) }.getOrNull()
                                     if (uri != null && isAnalyticsApiUrl(uri)) {
@@ -468,7 +478,7 @@ fun WebPortalScreen(
                                     )
                                     // Na GymBrat (i ogólnie) zamień sendBeacon analityki na fetch —
                                     // unikamy nawigacji głównej ramki w WebView Androida.
-                                    view?.evaluateJavascript(GYMBRAT_SAFE_ANALYTICS_JS, null)
+                                    view?.evaluateJavascript(GYMBRAT_WEBVIEW_HARDENING_JS, null)
                                     val u = url.orEmpty()
                                     val finishedUri = runCatching { Uri.parse(u) }.getOrNull()
                                     if (finishedUri != null && isAnalyticsApiUrl(finishedUri)) {
