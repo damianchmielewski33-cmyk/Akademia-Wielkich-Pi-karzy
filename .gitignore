@@ -66,3 +66,4 @@ next-env.d.ts
 /public/uploads/profiles/*
 !/public/uploads/profiles/.gitkeep
 .env*
+database.db
