@@ -71,6 +71,20 @@ private fun normalizeSiteBase(): String {
     return if (raw.endsWith("/")) raw.dropLast(1) else raw
 }
 
+/**
+ * sendBeacon(Blob) w Android WebView potrafi nawigować główną ramkę na URL analityki.
+ * Podmieniamy na fetch — strona zostaje na miejscu.
+ */
+private const val GYMBRAT_SAFE_ANALYTICS_JS =
+    "(function(){try{if(window.__awpSafeAnalytics)return;window.__awpSafeAnalytics=1;" +
+        "var orig=navigator.sendBeacon&&navigator.sendBeacon.bind(navigator);" +
+        "navigator.sendBeacon=function(url,data){try{var u=String(url||'');" +
+        "if(u.indexOf('/api/analytics/')!==-1){var body=data;if(body&&typeof Blob!=='undefined'&&body instanceof Blob){" +
+        "body.arrayBuffer().then(function(buf){return fetch(u,{method:'POST',headers:{'Content-Type':'application/json'}," +
+        "body:new Uint8Array(buf),credentials:'include',keepalive:true});}).catch(function(){});}else{" +
+        "fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:body||'',credentials:'include',keepalive:true}).catch(function(){});}" +
+        "return true;}}catch(e){}return orig?orig(url,data):false;};}catch(e){}})();"
+
 private class AwpAndroidJsBridge(
     private val appContext: Context,
     private val onContentReady: () -> Unit
@@ -104,6 +118,8 @@ private class AwpAndroidJsBridge(
         val uri = runCatching { Uri.parse(raw) }.getOrNull() ?: return
         val scheme = uri.scheme?.lowercase().orEmpty()
         if (scheme != "http" && scheme != "https") return
+        // GymBrat zostaje w aplikacji — Custom Tabs wyglądałoby jak osobna przeglądarka.
+        if (isGymBratUrl(uri)) return
         Handler(Looper.getMainLooper()).post {
             openExternalUri(appContext, uri)
         }
@@ -175,6 +191,7 @@ fun WebPortalScreen(
     onInitialContentReady: (() -> Unit)? = null
 ) {
     val siteBase = remember { normalizeSiteBase() }
+    val isGymBratPortal = path.startsWith("/gymbrat")
     var loading by remember { mutableStateOf(true) }
     var progress by remember { mutableFloatStateOf(0f) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -186,6 +203,7 @@ fun WebPortalScreen(
     val readyNotified = remember { AtomicBoolean(false) }
     val onReadyLatest = rememberUpdatedState(onInitialContentReady)
     val onLoginLatest = rememberUpdatedState(onNavigatedToLogin)
+    val onBackLatest = rememberUpdatedState(onBack)
 
     fun markInitialReady() {
         if (readyNotified.compareAndSet(false, true)) {
@@ -268,11 +286,13 @@ fun WebPortalScreen(
         }
     }
 
-    BackHandler(enabled = webView?.canGoBack() == true || onBack != null) {
+    BackHandler(enabled = onBack != null || (!isGymBratPortal && webView?.canGoBack() == true)) {
         val wv = webView
         when {
+            // GymBrat: wstecz zawsze wraca do AWP (bez historii siostrzanej witryny / przeglądarki).
+            isGymBratPortal && onBackLatest.value != null -> onBackLatest.value?.invoke()
             wv != null && wv.canGoBack() -> wv.goBack()
-            onBack != null -> onBack()
+            onBackLatest.value != null -> onBackLatest.value?.invoke()
         }
     }
 
@@ -296,7 +316,7 @@ fun WebPortalScreen(
                 title = { Text(title, color = Color.White) },
                 navigationIcon = {
                     if (onBack != null) {
-                        IconButton(onClick = onBack) {
+                        IconButton(onClick = { onBackLatest.value?.invoke() }) {
                             Icon(
                                 Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = "Wróć",
@@ -369,6 +389,9 @@ fun WebPortalScreen(
                             settings.cacheMode = WebSettings.LOAD_DEFAULT
                             settings.mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
                             settings.mediaPlaybackRequiresUserGesture = false
+                            // Jedna ramka — target=_blank / window.open nie otwierają zewnętrznej karty.
+                            settings.setSupportMultipleWindows(false)
+                            settings.javaScriptCanOpenWindowsAutomatically = false
                             overScrollMode = WebView.OVER_SCROLL_NEVER
                             isVerticalScrollBarEnabled = false
                             isHorizontalScrollBarEnabled = false
@@ -393,8 +416,13 @@ fun WebPortalScreen(
                                     val uri = request.url
                                     val scheme = uri.scheme?.lowercase().orEmpty()
                                     if (scheme == "http" || scheme == "https") {
-                                        // GymBrat ładujemy w tym samym WebView (bez remapu na AWP /gymbrat).
-                                        // Remap powodował pętlę: /gymbrat → gym-brat → /gymbrat → crash (odwrócony Android).
+                                        // sendBeacon w WebView bywa zepsute i nawiguje główną ramkę
+                                        // na POST /api/analytics/page-view — nie ładuj tego jako dokumentu.
+                                        if (request.isForMainFrame && isAnalyticsApiUrl(uri)) {
+                                            return true
+                                        }
+                                        // GymBrat i reszta https (AWP, HotPay…) — w tym samym WebView aplikacji.
+                                        // Remap GymBrat→/gymbrat powodował pętlę i crash.
                                         return false
                                     }
                                     return openExternalUri(ctx, uri)
@@ -414,6 +442,9 @@ fun WebPortalScreen(
                                         "(function(){try{if(document.documentElement.getAttribute('data-awp-content-ready')==='1'){AwpAndroid.notifyContentReady();return;}var obs=new MutationObserver(function(){if(document.documentElement.getAttribute('data-awp-content-ready')==='1'){obs.disconnect();AwpAndroid.notifyContentReady();}});obs.observe(document.documentElement,{attributes:true,attributeFilter:['data-awp-content-ready']});}catch(e){}})();",
                                         null
                                     )
+                                    // Na GymBrat (i ogólnie) zamień sendBeacon analityki na fetch —
+                                    // unikamy nawigacji głównej ramki w WebView Androida.
+                                    view?.evaluateJavascript(GYMBRAT_SAFE_ANALYTICS_JS, null)
                                     val u = url.orEmpty()
                                     val loginCb = onLoginLatest.value
                                     val onAwpSite = runCatching { isAwpSiteUrl(Uri.parse(u), siteBase) }.getOrDefault(false)
