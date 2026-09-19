@@ -14,7 +14,8 @@ import { isRunningInAppWebView } from "@/lib/app-webview";
 
 /**
  * GymBrat w shellu AWP.
- * W APK WebView ładujemy GymBrat top-level (iframe + X-Frame-Options bywa problematyczne).
+ * W APK WebView: natywny portal ładuje GymBrat top-level w tym samym WebView (bez Custom Tabs),
+ * żeby wyglądało jak część aplikacji; wstecz wraca do AWP.
  * W zwykłej przeglądarce — pełnoekranowy iframe (wymaga frame-ancestors po stronie GymBrat).
  */
 export function GymBratEmbedView() {
