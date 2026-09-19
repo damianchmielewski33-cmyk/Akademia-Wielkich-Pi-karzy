@@ -16,7 +16,7 @@ declare global {
       getVersionName: () => string;
       getVersionCode: () => number;
       checkUpdate: () => void;
-      /** Otwiera URL poza WebView (Custom Tabs) — np. GymBrat. */
+      /** Otwiera URL poza WebView (Custom Tabs) — np. płatności / obce linki. */
       openExternalUrl?: (url: string) => void;
       /** CSV ms: "40" albo "0,40,60,40" (vibrate/pause). */
       vibrate?: (patternCsv: string) => void;

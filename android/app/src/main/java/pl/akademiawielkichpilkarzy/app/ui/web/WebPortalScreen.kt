@@ -24,6 +24,8 @@ import android.webkit.WebViewClient
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.webkit.WebViewCompat
+import androidx.webkit.WebViewFeature
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -204,6 +206,7 @@ fun WebPortalScreen(
     val onReadyLatest = rememberUpdatedState(onInitialContentReady)
     val onLoginLatest = rememberUpdatedState(onNavigatedToLogin)
     val onBackLatest = rememberUpdatedState(onBack)
+    val startUrlLatest = rememberUpdatedState(startUrl)
 
     fun markInitialReady() {
         if (readyNotified.compareAndSet(false, true)) {
@@ -408,6 +411,15 @@ fun WebPortalScreen(
                             CookieManager.getInstance().setAcceptCookie(true)
                             CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
 
+                            // Patch przed skryptami strony (GymBrat sendBeacon) — krytyczne vs. race w onPageFinished.
+                            if (WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) {
+                                WebViewCompat.addDocumentStartJavaScript(
+                                    this,
+                                    GYMBRAT_SAFE_ANALYTICS_JS,
+                                    setOf("*")
+                                )
+                            }
+
                             webViewClient = object : WebViewClient() {
                                 override fun shouldOverrideUrlLoading(
                                     view: WebView,
@@ -417,7 +429,7 @@ fun WebPortalScreen(
                                     val scheme = uri.scheme?.lowercase().orEmpty()
                                     if (scheme == "http" || scheme == "https") {
                                         // sendBeacon w WebView bywa zepsute i nawiguje główną ramkę
-                                        // na POST /api/analytics/page-view — nie ładuj tego jako dokumentu.
+                                        // na POST/GET /api/analytics/page-view — nie ładuj tego jako dokumentu.
                                         if (request.isForMainFrame && isAnalyticsApiUrl(uri)) {
                                             return true
                                         }
@@ -430,6 +442,18 @@ fun WebPortalScreen(
 
                                 override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
                                     progress = 0.05f
+                                    // Fallback gdy DOCUMENT_START_SCRIPT niedostępne (starszy WebView).
+                                    view?.evaluateJavascript(GYMBRAT_SAFE_ANALYTICS_JS, null)
+                                    // Awaria: jeśli sendBeacon już nawigował na analitykę — wróć / przeładuj portal.
+                                    val uri = runCatching { Uri.parse(url.orEmpty()) }.getOrNull()
+                                    if (uri != null && isAnalyticsApiUrl(uri)) {
+                                        val recovery = startUrlLatest.value
+                                        if (view?.canGoBack() == true) {
+                                            view.goBack()
+                                        } else if (!recovery.isNullOrBlank()) {
+                                            view?.loadUrl(recovery)
+                                        }
+                                    }
                                 }
 
                                 override fun onPageFinished(view: WebView?, url: String?) {
@@ -446,6 +470,16 @@ fun WebPortalScreen(
                                     // unikamy nawigacji głównej ramki w WebView Androida.
                                     view?.evaluateJavascript(GYMBRAT_SAFE_ANALYTICS_JS, null)
                                     val u = url.orEmpty()
+                                    val finishedUri = runCatching { Uri.parse(u) }.getOrNull()
+                                    if (finishedUri != null && isAnalyticsApiUrl(finishedUri)) {
+                                        val recovery = startUrlLatest.value
+                                        if (view?.canGoBack() == true) {
+                                            view.goBack()
+                                        } else if (!recovery.isNullOrBlank()) {
+                                            view?.loadUrl(recovery)
+                                        }
+                                        return
+                                    }
                                     val loginCb = onLoginLatest.value
                                     val onAwpSite = runCatching { isAwpSiteUrl(Uri.parse(u), siteBase) }.getOrDefault(false)
                                     if (loginCb != null &&
