@@ -47,36 +47,40 @@ export async function POST(req: Request) {
     return new NextResponse(null, { status: 204 });
   }
 
-  const session = await getServerSession();
-  const db = await getDb();
-  let userId: number | null =
-    session && !session.needsPinSetup && !session.pinChangePending ? session.userId : null;
-  if (userId !== null) {
-    const row = (await db.prepare("SELECT 1 AS ok FROM users WHERE id = ?").get(userId)) as
-      | { ok: number }
-      | undefined;
-    if (!row) userId = null;
-  }
+  try {
+    const session = await getServerSession();
+    const db = await getDb();
+    let userId: number | null =
+      session && !session.needsPinSetup && !session.pinChangePending ? session.userId : null;
+    if (userId !== null) {
+      const row = (await db.prepare("SELECT 1 AS ok FROM users WHERE id = ?").get(userId)) as
+        | { ok: number }
+        | undefined;
+      if (!row) userId = null;
+    }
 
-  const createdAt = new Date().toISOString();
-  const dedupeSince = new Date(Date.now() - 3000).toISOString();
-  const recent = (await db
-    .prepare(
-      `SELECT 1 AS ok FROM page_views
-       WHERE visitor_id = ? AND pathname = ? AND created_at >= ?
-       LIMIT 1`
-    )
-    .get(visitorId, pathname, dedupeSince)) as { ok: number } | undefined;
-  if (recent) {
-    return new NextResponse(null, { status: 204 });
-  }
+    const createdAt = new Date().toISOString();
+    const dedupeSince = new Date(Date.now() - 3000).toISOString();
+    const recent = (await db
+      .prepare(
+        `SELECT 1 AS ok FROM page_views
+         WHERE visitor_id = ? AND pathname = ? AND created_at >= ?
+         LIMIT 1`
+      )
+      .get(visitorId, pathname, dedupeSince)) as { ok: number } | undefined;
+    if (recent) {
+      return new NextResponse(null, { status: 204 });
+    }
 
-  await db
-    .prepare(
-      `INSERT INTO page_views (screen_key, pathname, user_id, visitor_id, created_at)
-       VALUES (?, ?, ?, ?, ?)`
-    )
-    .run(screen.key, pathname, userId, visitorId, createdAt);
+    await db
+      .prepare(
+        `INSERT INTO page_views (screen_key, pathname, user_id, visitor_id, created_at)
+         VALUES (?, ?, ?, ?, ?)`
+      )
+      .run(screen.key, pathname, userId, visitorId, createdAt);
+  } catch (e) {
+    console.error("[page-view] soft-fail", e);
+  }
 
   return new NextResponse(null, { status: 204 });
 }
