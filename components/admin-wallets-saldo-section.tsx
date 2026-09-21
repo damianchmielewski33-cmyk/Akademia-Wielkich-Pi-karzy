@@ -1289,7 +1289,7 @@ export function AdminWalletsSaldoSection({
                 <li
                   key={p.id}
                   className={cn(
-                    "flex flex-wrap items-center gap-2 border-b px-3 py-2.5 text-sm last:border-b-0",
+                    "flex flex-col gap-2 border-b px-3 py-3 text-sm last:border-b-0 sm:flex-row sm:flex-wrap sm:items-center sm:gap-2 sm:py-2.5",
                     isNegative
                       ? "border-l-4 border-l-red-600 bg-red-50/95 dark:border-l-red-500 dark:bg-red-950/40"
                       : isPositive
@@ -1299,72 +1299,77 @@ export function AdminWalletsSaldoSection({
                           : "bg-emerald-50/40 dark:bg-zinc-900/30"
                   )}
                 >
-                  <PlayerAvatar
-                    photoPath={p.profile_photo_path}
-                    firstName={p.first_name}
-                    lastName={p.last_name}
-                    size="sm"
-                    ringClassName={
-                      isNegative
-                        ? "ring-2 ring-red-300 dark:ring-red-600/60"
-                        : isPositive
-                          ? "ring-2 ring-emerald-500 dark:ring-emerald-500/80"
-                          : "ring-2 ring-emerald-200/90"
-                    }
-                  />
-                  <div className="min-w-0 flex-1">
-                    <PlayerNameStack firstName={p.first_name} lastName={p.last_name} nick={p.zawodnik} />
-                  </div>
-                  {"is_admin" in p && Number((p as { is_admin?: number }).is_admin ?? 0) ? (
-                    <span
-                      className="shrink-0 rounded border border-zinc-300 bg-zinc-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-zinc-800 dark:border-zinc-700 dark:bg-zinc-900/60 dark:text-zinc-200"
-                      title="Konto administratora"
-                    >
-                      Admin
-                    </span>
-                  ) : null}
-                  {isNegative ? (
-                    <span
-                      className="shrink-0 rounded border border-red-200 bg-red-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-red-900 dark:border-red-800 dark:bg-red-900/50 dark:text-red-200"
-                      title="Saldo ujemne"
-                    >
-                      Niedopłata
-                    </span>
-                  ) : isPositive ? (
-                    <span
-                      className="shrink-0 rounded border border-emerald-300 bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-900 dark:border-emerald-700 dark:bg-emerald-900/55 dark:text-emerald-100"
-                      title="Saldo dodatnie"
-                    >
-                      Nadwyżka
-                    </span>
-                  ) : null}
-                  <span
-                    className={cn(
-                      "shrink-0 font-semibold tabular-nums",
-                      isNegative
-                        ? "text-red-700 dark:text-red-200"
-                        : isPositive
-                          ? "text-emerald-800 dark:text-emerald-200"
-                          : "text-emerald-950 dark:text-emerald-100"
-                    )}
-                  >
-                    {formatPln(bal)}
-                  </span>
-                  {"admin_balance_pln" in p && ("operator_balance_pln" in p) ? (
-                    <div className="flex shrink-0 flex-col items-end gap-0.5">
-                      <span className="text-[10px] tabular-nums text-zinc-500 dark:text-zinc-400" title="Gotówka / BLIK">
-                        G: {formatPln(Number((p as AdminWalletPlayerRow).admin_balance_pln ?? 0))}
-                      </span>
-                      <span className="text-[10px] tabular-nums text-zinc-500 dark:text-zinc-400" title="Płatności online">
-                        O: {formatPln(Number((p as AdminWalletPlayerRow).operator_balance_pln ?? 0))}
-                      </span>
+                  <div className="flex min-w-0 items-center gap-2 sm:flex-1">
+                    <PlayerAvatar
+                      photoPath={p.profile_photo_path}
+                      firstName={p.first_name}
+                      lastName={p.last_name}
+                      size="sm"
+                      ringClassName={
+                        isNegative
+                          ? "ring-2 ring-red-300 dark:ring-red-600/60"
+                          : isPositive
+                            ? "ring-2 ring-emerald-500 dark:ring-emerald-500/80"
+                            : "ring-2 ring-emerald-200/90"
+                      }
+                    />
+                    <div className="min-w-0 flex-1">
+                      <PlayerNameStack firstName={p.first_name} lastName={p.last_name} nick={p.zawodnik} />
                     </div>
-                  ) : null}
-                  <div className="flex shrink-0 flex-wrap gap-2">
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 pl-10 sm:pl-0">
+                    {"is_admin" in p && Number((p as { is_admin?: number }).is_admin ?? 0) ? (
+                      <span
+                        className="shrink-0 rounded border border-zinc-300 bg-zinc-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-zinc-800 dark:border-zinc-700 dark:bg-zinc-900/60 dark:text-zinc-200"
+                        title="Konto administratora"
+                      >
+                        Admin
+                      </span>
+                    ) : null}
+                    {isNegative ? (
+                      <span
+                        className="shrink-0 rounded border border-red-200 bg-red-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-red-900 dark:border-red-800 dark:bg-red-900/50 dark:text-red-200"
+                        title="Saldo ujemne"
+                      >
+                        Niedopłata
+                      </span>
+                    ) : isPositive ? (
+                      <span
+                        className="shrink-0 rounded border border-emerald-300 bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-900 dark:border-emerald-700 dark:bg-emerald-900/55 dark:text-emerald-100"
+                        title="Saldo dodatnie"
+                      >
+                        Nadwyżka
+                      </span>
+                    ) : null}
+                    <span
+                      className={cn(
+                        "shrink-0 font-semibold tabular-nums",
+                        isNegative
+                          ? "text-red-700 dark:text-red-200"
+                          : isPositive
+                            ? "text-emerald-800 dark:text-emerald-200"
+                            : "text-emerald-950 dark:text-emerald-100"
+                      )}
+                    >
+                      {formatPln(bal)}
+                    </span>
+                    {"admin_balance_pln" in p && ("operator_balance_pln" in p) ? (
+                      <div className="flex shrink-0 flex-col items-end gap-0.5">
+                        <span className="text-[10px] tabular-nums text-zinc-500 dark:text-zinc-400" title="Gotówka / BLIK">
+                          G: {formatPln(Number((p as AdminWalletPlayerRow).admin_balance_pln ?? 0))}
+                        </span>
+                        <span className="text-[10px] tabular-nums text-zinc-500 dark:text-zinc-400" title="Płatności online">
+                          O: {formatPln(Number((p as AdminWalletPlayerRow).operator_balance_pln ?? 0))}
+                        </span>
+                      </div>
+                    ) : null}
+                  </div>
+                  <div className="flex w-full gap-2 pl-10 sm:ml-auto sm:w-auto sm:pl-0">
                     {topUpEnabled ? (
                       <Button
                         type="button"
                         size="sm"
+                        className="h-10 flex-1 touch-manipulation sm:h-8 sm:flex-none"
                         onClick={() => startTopUpForPlayer(p.id)}
                       >
                         <PlusCircle className="mr-1.5 h-3.5 w-3.5" aria-hidden />
@@ -1375,6 +1380,7 @@ export function AdminWalletsSaldoSection({
                       type="button"
                       size="sm"
                       variant="outline"
+                      className="h-10 flex-1 touch-manipulation sm:h-8 sm:flex-none"
                       onClick={() => startBalanceCorrection(p.id)}
                     >
                       <PencilLine className="mr-1.5 h-3.5 w-3.5" aria-hidden />
@@ -1407,7 +1413,7 @@ export function AdminWalletsSaldoSection({
           <Button
             type="button"
             variant="default"
-            className="rounded-full font-bold"
+            className="h-11 w-full rounded-full font-bold touch-manipulation sm:h-10 sm:w-auto"
             disabled={publicLinkBusy}
             onClick={() => void generatePublicLink("last_match_wallets")}
           >
@@ -1421,6 +1427,7 @@ export function AdminWalletsSaldoSection({
           <Button
             type="button"
             variant="outline"
+            className="h-11 w-full touch-manipulation sm:h-10 sm:w-auto"
             disabled={publicLinkBusy}
             onClick={() => void generatePublicLink("all_wallets")}
           >
@@ -1742,15 +1749,15 @@ export function AdminWalletsSaldoSection({
           loading={adminLoading}
         />
       ) : (
-        <div className="mx-auto max-w-4xl overflow-hidden rounded-3xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
+        <div className="mx-auto max-w-4xl overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-950 xs:rounded-3xl">
           <PhotoPanel
             src={MARKETPLACE_PITCH_PHOTOS[3]}
-            className="min-h-[7rem] rounded-none border-0"
-            contentClassName="flex min-h-[7rem] flex-col justify-end px-5 py-5"
+            className="min-h-[6.25rem] rounded-none border-0 sm:min-h-[7rem]"
+            contentClassName="flex min-h-[6.25rem] flex-col justify-end px-4 py-4 sm:min-h-[7rem] sm:px-5 sm:py-5"
             sizes="(max-width: 768px) 100vw, 896px"
           >
             <p className="text-[0.65rem] font-black uppercase tracking-[0.18em] text-white/80">Administrator</p>
-            <h2 className="mt-1 text-2xl font-black text-white">Portfele graczy</h2>
+            <h2 className="mt-1 text-xl font-black text-white sm:text-2xl">Portfele graczy</h2>
             <p className="mt-1 text-sm text-white/85">
               Salda, zwykłe wpłaty, wyjątkowe korekty i linki do podsumowań.
             </p>

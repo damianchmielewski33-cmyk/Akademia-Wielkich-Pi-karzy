@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 
 /** Wspólna powierzchnia karty V2 (profil, płatności, panel admina…). */
 export const mpSectionCardClass =
-  "overflow-hidden rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-950 sm:rounded-3xl sm:p-6";
+  "overflow-hidden rounded-2xl border border-zinc-200 bg-white p-3.5 shadow-sm dark:border-zinc-800 dark:bg-zinc-950 xs:p-4 sm:rounded-3xl sm:p-6";
 
 export const mpIconWrapClass =
   "flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[var(--mp-teal)] text-white shadow-sm";
@@ -40,8 +40,8 @@ export function MarketplaceSection({
   return (
     <section id={id} data-admin-card="" className={cn(mpSectionCardClass, className)}>
       {hasHeader ? (
-        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div className="flex min-w-0 items-start gap-3">
+        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+          <div className="flex min-w-0 flex-1 items-start gap-3">
             {Icon ? (
               <span className={mpIconWrapClass}>
                 <Icon className="h-4 w-4" strokeWidth={2.25} aria-hidden />
@@ -54,13 +54,13 @@ export function MarketplaceSection({
                 </h2>
               ) : null}
               {description ? (
-                <p className="mt-1 line-clamp-3 text-sm leading-relaxed text-zinc-500 sm:line-clamp-none dark:text-zinc-400">
+                <p className="mt-1 line-clamp-4 text-sm leading-relaxed text-zinc-500 sm:line-clamp-none dark:text-zinc-400">
                   {description}
                 </p>
               ) : null}
             </div>
           </div>
-          {headerExtra}
+          {headerExtra ? <div className="shrink-0">{headerExtra}</div> : null}
         </div>
       ) : null}
       {children}
