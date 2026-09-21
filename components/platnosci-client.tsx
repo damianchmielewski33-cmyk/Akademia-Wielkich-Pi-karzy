@@ -75,22 +75,22 @@ export function PlatnosciClient({
   const body = !isLoggedIn ? (
     <PhotoPanel
       src={MARKETPLACE_PITCH_PHOTOS[4]}
-      className="min-h-[16rem] rounded-3xl"
-      contentClassName="flex min-h-[16rem] flex-col items-center justify-center gap-4 px-6 py-10 text-center"
+      className="min-h-[14rem] rounded-2xl xs:min-h-[16rem] xs:rounded-3xl"
+      contentClassName="flex min-h-[14rem] flex-col items-center justify-center gap-4 px-4 py-8 text-center xs:min-h-[16rem] xs:px-6 xs:py-10"
       sizes="(max-width: 768px) 100vw, 1152px"
     >
       <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--mp-teal)] text-white shadow-lg">
         <Wallet className="h-7 w-7" aria-hidden />
       </span>
-      <div>
+      <div className="min-w-0 max-w-md">
         <p className="text-xs font-bold uppercase tracking-[0.16em] text-white/80">Portfel</p>
-        <h2 className="mt-1 text-2xl font-black text-white">Zaloguj się, by płacić</h2>
+        <h2 className="mt-1 text-xl font-black text-white xs:text-2xl">Zaloguj się, by płacić</h2>
         <p className="mt-2 text-sm text-white/85">
           Saldo, historia i opłaty za mecze są dostępne po wejściu na konto.
         </p>
       </div>
-      <div className="flex flex-wrap justify-center gap-2">
-        <Button asChild className="h-11 rounded-full bg-white px-6 font-bold text-zinc-950 hover:bg-zinc-100">
+      <div className="flex w-full max-w-sm flex-col gap-2 xs:max-w-none xs:w-auto xs:flex-row xs:flex-wrap xs:justify-center">
+        <Button asChild className="h-11 w-full rounded-full bg-white px-6 font-bold text-zinc-950 hover:bg-zinc-100 xs:w-auto">
           <Link href="/login">
             <LogIn className="mr-2 h-4 w-4" aria-hidden />
             Logowanie
@@ -99,7 +99,7 @@ export function PlatnosciClient({
         <Button
           asChild
           variant="outline"
-          className="h-11 rounded-full border-white/40 bg-white/10 px-6 font-bold text-white hover:bg-white/20"
+          className="h-11 w-full rounded-full border-white/40 bg-white/10 px-6 font-bold text-white hover:bg-white/20 xs:w-auto"
         >
           <Link href="/register">
             <UserPlus className="mr-2 h-4 w-4" aria-hidden />
@@ -138,25 +138,25 @@ export function PlatnosciClient({
   );
 
   return (
-    <div className="relative flex flex-1 flex-col text-zinc-900 dark:text-zinc-50">
-      <section className="mp-hero mp-hero--photo relative z-10 flex flex-col justify-end overflow-hidden pb-10 pt-12 sm:pb-16 sm:pt-20">
+    <div className="relative flex flex-1 flex-col overflow-x-clip text-zinc-900 dark:text-zinc-50">
+      <section className="mp-hero mp-hero--photo mp-hero--section relative z-10 flex flex-col justify-end overflow-hidden pb-6 pt-8 sm:pb-16 sm:pt-20">
         <MarketplacePitchPhoto src={MARKETPLACE_PITCH_PHOTOS[2]} priority className="z-0" />
         <div className="absolute inset-0 z-[1] bg-gradient-to-t from-black/75 via-black/40 to-black/20" />
-        <div className="relative z-10 mx-auto w-full max-w-6xl px-3 xs:px-4">
+        <div className="relative z-10 mx-auto w-full min-w-0 max-w-6xl px-3 xs:px-4">
           <p className="text-[0.65rem] font-black uppercase tracking-[0.22em] text-white/80 sm:text-xs">
             {isAdmin ? "Admin · Portfel" : "Akademia"}
           </p>
-          <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
-            <div>
-              <h1 className="text-[1.85rem] font-black leading-tight tracking-tight text-white xs:text-4xl sm:text-5xl">
+          <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
+            <div className="min-w-0">
+              <h1 className="text-[1.65rem] font-black leading-tight tracking-tight text-white xs:text-4xl sm:text-5xl">
                 Płatności
               </h1>
-              <p className="mt-3 max-w-xl text-sm text-white/85 sm:text-base">{subtitle}</p>
+              <p className="mt-2 max-w-xl text-sm text-white/85 sm:mt-3 sm:text-base">{subtitle}</p>
             </div>
             <Button
               type="button"
               variant="secondary"
-              className="h-11 rounded-full bg-white px-5 font-bold text-zinc-950 hover:bg-zinc-100"
+              className="h-11 w-full shrink-0 touch-manipulation rounded-full bg-white px-5 font-bold text-zinc-950 hover:bg-zinc-100 sm:w-auto"
               disabled={adminWalletLoading}
               onClick={reloadPage}
             >
@@ -166,7 +166,7 @@ export function PlatnosciClient({
           </div>
         </div>
       </section>
-      <div className="relative z-10 mx-auto w-full min-w-0 max-w-6xl space-y-6 px-3 py-8 xs:px-4 sm:py-10">
+      <div className="relative z-10 mx-auto w-full min-w-0 max-w-6xl space-y-4 px-3 py-6 xs:px-4 sm:space-y-6 sm:py-10">
         {body}
       </div>
     </div>

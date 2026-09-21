@@ -1182,6 +1182,17 @@ html {
   }
 }
 
+/** Kompaktowy hero sekcji użytkowych (płatności, profil…) — mniej „pustki” na telefonie. */
+.mp-hero--section {
+  min-height: 0;
+}
+
+@media (min-width: 768px) {
+  .mp-hero--section {
+    min-height: clamp(14rem, 36vw, 22rem);
+  }
+}
+
 .mp-hero--photo {
   background-image: none;
 }
