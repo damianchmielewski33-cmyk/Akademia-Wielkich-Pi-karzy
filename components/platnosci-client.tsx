@@ -89,8 +89,8 @@ export function PlatnosciClient({
           Saldo, historia i opłaty za mecze są dostępne po wejściu na konto.
         </p>
       </div>
-      <div className="flex w-full max-w-sm flex-col gap-2 xs:max-w-none xs:w-auto xs:flex-row xs:flex-wrap xs:justify-center">
-        <Button asChild className="h-11 w-full rounded-full bg-white px-6 font-bold text-zinc-950 hover:bg-zinc-100 xs:w-auto">
+      <div className="flex w-full max-w-sm flex-col gap-2 sm:max-w-none sm:w-auto sm:flex-row sm:flex-wrap sm:justify-center">
+        <Button asChild className="h-11 w-full rounded-full bg-white px-6 font-bold text-zinc-950 hover:bg-zinc-100 sm:w-auto">
           <Link href="/login">
             <LogIn className="mr-2 h-4 w-4" aria-hidden />
             Logowanie
@@ -99,7 +99,7 @@ export function PlatnosciClient({
         <Button
           asChild
           variant="outline"
-          className="h-11 w-full rounded-full border-white/40 bg-white/10 px-6 font-bold text-white hover:bg-white/20 xs:w-auto"
+          className="h-11 w-full rounded-full border-white/40 bg-white/10 px-6 font-bold text-white hover:bg-white/20 sm:w-auto"
         >
           <Link href="/register">
             <UserPlus className="mr-2 h-4 w-4" aria-hidden />

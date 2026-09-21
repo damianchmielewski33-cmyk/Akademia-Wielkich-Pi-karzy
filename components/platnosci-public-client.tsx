@@ -102,14 +102,14 @@ export function PlatnosciPublicClient({ token, hotpayEnabled, isAdmin = false, v
   }
 
   const footerLinks = (
-    <div className="flex w-full flex-col gap-2 xs:flex-row xs:flex-wrap">
-      <Button asChild className={light ? "h-11 w-full rounded-full font-bold xs:w-auto" : "w-full xs:w-auto"} variant={light ? "default" : "secondary"}>
+    <div className="flex w-full flex-col gap-2 sm:flex-row sm:flex-wrap">
+      <Button asChild className={light ? "h-11 w-full rounded-full font-bold sm:w-auto" : "w-full sm:w-auto"} variant={light ? "default" : "secondary"}>
         <Link href="/platnosci">Płatności i portfel</Link>
       </Button>
       <Button
         asChild
         variant="outline"
-        className={light ? "h-11 w-full rounded-full font-bold xs:w-auto" : "w-full xs:w-auto"}
+        className={light ? "h-11 w-full rounded-full font-bold sm:w-auto" : "w-full sm:w-auto"}
       >
         <Link href="/terminarz">Terminarz</Link>
       </Button>
@@ -323,7 +323,7 @@ export function PlatnosciPublicClient({ token, hotpayEnabled, isAdmin = false, v
 
   if (light) {
     return (
-      <div className="relative flex flex-1 flex-col text-zinc-900 dark:text-zinc-50">
+      <div className="relative flex flex-1 flex-col overflow-x-clip text-zinc-900 dark:text-zinc-50">
         <section className="mp-hero mp-hero--photo mp-hero--section relative z-10 flex flex-col justify-end overflow-hidden pb-6 pt-8 sm:pb-16 sm:pt-20">
           <MarketplacePitchPhoto src={heroPhoto} priority className="z-0" />
           <div className="absolute inset-0 z-[1] bg-gradient-to-t from-black/75 via-black/40 to-black/20" />
