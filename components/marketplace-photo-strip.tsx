@@ -138,7 +138,7 @@ export function MarketplacePitchPhotoEditModal({
       open={open && index != null}
       onOpenChange={onOpenChange}
       title={`Zdjęcie ${slot + 1}`}
-      description="To zdjęcie widać tylko na pasku pod „Gramy razem” na stronie głównej — nie w Top 3 ani na innych kafelkach."
+      description="To zdjęcie widać tylko na pasku pod „Gramy razem” na stronie głównej — nie na logowaniu, w Top 3 ani na innych kafelkach."
       size="md"
     >
       <div className="space-y-4">
@@ -300,8 +300,8 @@ export function AdminMarketplacePitchPhotosSection({
   return (
     <div className="space-y-3">
       <p className="text-sm text-zinc-600 dark:text-zinc-300">
-        Zdjęcia wyłącznie na pasku pod „Gramy razem” na stronie głównej. Nie pojawiają się w Top 3 ani na
-        innych sekcjach. Pliki powyżej 3,5 MB są automatycznie zmniejszane przed wgraniem.
+        Zdjęcia wyłącznie na pasku pod „Gramy razem” na stronie głównej. Nie pojawiają się na logowaniu,
+        w Top 3 ani na innych sekcjach. Pliki powyżej 3,5 MB są automatycznie zmniejszane przed wgraniem.
       </p>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {photos.map((src, i) => {
