@@ -61,9 +61,12 @@ export function useMarketplacePhotos() {
   return useContext(MarketplacePhotosContext);
 }
 
+/**
+ * Tła paneli / hero poza paskiem „Gramy razem”: zawsze domyślne Unsplash.
+ * Custom upload admina jest wyłącznie w `MarketplacePhotoStrip` (przez `useMarketplacePhotos`).
+ */
 export function useMarketplacePitchPhotoAt(index: number): string {
-  const { photos } = useMarketplacePhotos();
-  const n = photos.length || MARKETPLACE_PITCH_PHOTOS.length;
+  const n = MARKETPLACE_PITCH_PHOTOS.length;
   const i = ((index % n) + n) % n;
-  return photos[i] ?? MARKETPLACE_PITCH_PHOTOS[0];
+  return MARKETPLACE_PITCH_PHOTOS[i] ?? MARKETPLACE_PITCH_PHOTOS[0];
 }
