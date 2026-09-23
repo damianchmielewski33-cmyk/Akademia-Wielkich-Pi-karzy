@@ -70,10 +70,10 @@ export type PublicWalletView = {
   }>;
 };
 
-function sanitizePublicRowIdentity<T extends PublicWalletPlayerRow>(row: T): T {
+/** Ukrywa zdjęcie profilowe na publicznym linku; imię i nazwisko zostają w pełnej formie. */
+export function sanitizePublicRowIdentity<T extends PublicWalletPlayerRow>(row: T): T {
   return {
     ...row,
-    last_name: row.last_name ? `${row.last_name.trim().slice(0, 1)}.` : "",
     profile_photo_path: null,
   };
 }
@@ -121,7 +121,7 @@ export async function loadPublicWalletRows(link: PublicShareLinkRow): Promise<Pu
 
     return {
       title: "Zbiorcze salda portfeli",
-      subtitle: "Aktualne salda wszystkich zawodników (widok ograniczony prywatnościowo)",
+      subtitle: "Aktualne salda wszystkich zawodników (bez zdjęć profilowych)",
       match: null,
       rows: rows.map(sanitizePublicRowIdentity),
     };
