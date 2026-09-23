@@ -42,9 +42,6 @@ export function MatchSignupsRosterModal({ open, onOpenChange, match, matchId, pl
               maxSlots={match.max_slots}
               playersData={playersData}
             />
-            <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">
-              «Jeszcze nie wiem» i «nie biorę udziału» nie zajmują miejsca w składzie.
-            </p>
           </div>
           <ul className={modalListClass}>
             {data.players.map((p, i) => (
