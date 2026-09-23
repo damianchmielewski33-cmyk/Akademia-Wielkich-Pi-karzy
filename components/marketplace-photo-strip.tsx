@@ -138,7 +138,7 @@ export function MarketplacePitchPhotoEditModal({
       open={open && index != null}
       onOpenChange={onOpenChange}
       title={`Zdjęcie ${slot + 1}`}
-      description="To zdjęcie widać tylko na pasku pod „Gramy razem” na stronie głównej — nie w Top 3 ani na innych kafelkach."
+      description="To zdjęcie widać tylko na pasku pod „Gramy razem” na stronie głównej — nie na logowaniu, w Top 3 ani na innych kafelkach."
       size="md"
     >
       <div className="space-y-4">
