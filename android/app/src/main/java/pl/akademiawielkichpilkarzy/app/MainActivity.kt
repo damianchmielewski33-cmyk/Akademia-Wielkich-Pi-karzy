@@ -26,10 +26,10 @@ import pl.akademiawielkichpilkarzy.app.data.api.ApiClient
 import pl.akademiawielkichpilkarzy.app.push.NotificationBadge
 import pl.akademiawielkichpilkarzy.app.ui.login.EmailAuthSetupHost
 import pl.akademiawielkichpilkarzy.app.ui.login.LoginScreen
-import pl.akademiawielkichpilkarzy.app.ui.nav.MainScaffold
 import pl.akademiawielkichpilkarzy.app.ui.splash.StartupSplashScreen
 import pl.akademiawielkichpilkarzy.app.ui.theme.AwpTheme
 import pl.akademiawielkichpilkarzy.app.ui.update.AppUpdateGate
+import pl.akademiawielkichpilkarzy.app.ui.web.WebAppShell
 import pl.akademiawielkichpilkarzy.app.ui.web.WebPortalScreen
 import retrofit2.HttpException
 
@@ -69,7 +69,6 @@ class MainActivity : FragmentActivity() {
 
                     LaunchedEffect(Unit) {
                         val store = AwpApp.instance.sessionStore
-                        val configStore = AwpApp.instance.appConfigStore
                         var current = store.getToken()
                         token = current
                         sessionReady = true
@@ -91,12 +90,6 @@ class MainActivity : FragmentActivity() {
                             } catch (_: Exception) {
                                 /* brak sieci — zostaw lokalną sesję */
                             }
-                        }
-                        try {
-                            val cfg = ApiClient.api.mobileConfig()
-                            configStore.setNativeUi(cfg.settings?.androidUiMode == "native")
-                        } catch (_: Exception) {
-                            /* zostaw cache */
                         }
                         store.tokenFlow.collect { token = it }
                     }
@@ -158,7 +151,7 @@ class MainActivity : FragmentActivity() {
                                     )
                                 }
                             } else {
-                                MainScaffold(
+                                WebAppShell(
                                     initialPath = deepLinkPath,
                                     onLoggedOut = {},
                                     onInitialContentReady = { markInitialReady() }
