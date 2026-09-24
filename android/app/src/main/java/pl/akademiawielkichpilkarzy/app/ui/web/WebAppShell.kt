@@ -11,7 +11,6 @@ import pl.akademiawielkichpilkarzy.app.ui.common.PushAutoEnabler
 /** Cała aplikacja w WebView — bez natywnego chrome, żeby strona wyglądała 1:1 jak web. */
 @Composable
 fun WebAppShell(
-    isBlocked: (String) -> String?,
     initialPath: String? = null,
     onLoggedOut: () -> Unit,
     onInitialContentReady: (() -> Unit)? = null
