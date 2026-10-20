@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "@/lib/app-toast";
 import { z } from "zod";
@@ -18,22 +18,12 @@ import { REALMS, type Realm } from "@/lib/realm";
 import { sanitizeAppBridgeNext } from "@/lib/app-bridge";
 import { isEmergencyNameOnlyLoginEnabled } from "@/lib/emergency-name-login";
 
-const loginSchema = z.object({
-  firstName: formSchemas.requiredName("Imię"),
-  lastName: formSchemas.requiredName("Nazwisko"),
-  pin: formSchemas.pin,
-});
-
-const emergencyLoginSchema = z.object({
-  firstName: formSchemas.requiredName("Imię"),
-  lastName: formSchemas.requiredName("Nazwisko"),
-  pin: z.string().optional(),
-  zawodnik: z.string().optional(),
-});
-
-const emergencyLoginWithAliasSchema = emergencyLoginSchema.extend({
-  zawodnik: formSchemas.requiredText("Nick / piłkarz"),
-});
+type NameLoginValues = {
+  firstName: string;
+  lastName: string;
+  pin: string;
+  zawodnik: string;
+};
 
 const emailLoginSchema = z.object({
   email: formSchemas.email,
@@ -94,6 +84,20 @@ export function LoginForm({
   const [requirePlayerAlias, setRequirePlayerAlias] = useState(false);
   const [aliasError, setAliasError] = useState<string | undefined>();
 
+  const nameLoginSchema = useMemo(
+    () =>
+      z.object({
+        firstName: formSchemas.requiredName("Imię"),
+        lastName: formSchemas.requiredName("Nazwisko"),
+        pin: emergencyNameOnly ? z.string() : formSchemas.pin,
+        zawodnik:
+          emergencyNameOnly && requirePlayerAlias
+            ? formSchemas.requiredText("Nick / piłkarz")
+            : z.string(),
+      }),
+    [emergencyNameOnly, requirePlayerAlias]
+  );
+
   const [forgotOpen, setForgotOpen] = useState(false);
   const [forgotDoneOpen, setForgotDoneOpen] = useState(false);
   const [forgotSaving, setForgotSaving] = useState(false);
@@ -117,13 +121,9 @@ export function LoginForm({
     schema: forgotPasswordSchema,
   });
 
-  const loginForm = useValidatedForm({
+  const loginForm = useValidatedForm<NameLoginValues>({
     initialValues: { firstName: "", lastName: "", pin: "", zawodnik: "" },
-    schema: emergencyNameOnly
-      ? requirePlayerAlias
-        ? emergencyLoginWithAliasSchema
-        : emergencyLoginSchema
-      : loginSchema,
+    schema: nameLoginSchema,
   });
 
   const emailLoginForm = useValidatedForm({
@@ -141,14 +141,13 @@ export function LoginForm({
     const useEmail = !emergencyNameOnly && emailPasswordAuthEnabled && !legacyPin;
     if (useEmail) {
       if (!emailLoginForm.validate()) return;
-    } else if (emergencyNameOnly && requirePlayerAlias) {
-      if (!loginForm.values.zawodnik?.trim()) {
-        setAliasError("Podaj nick (pseudonim piłkarza), żeby wybrać właściwe konto.");
-        return;
-      }
-      setAliasError(undefined);
     } else if (!loginForm.validate()) {
+      if (emergencyNameOnly && requirePlayerAlias && !loginForm.values.zawodnik.trim()) {
+        setAliasError("Podaj nick (pseudonim piłkarza), żeby wybrać właściwe konto.");
+      }
       return;
+    } else {
+      setAliasError(undefined);
     }
     setLoading(true);
     try {
