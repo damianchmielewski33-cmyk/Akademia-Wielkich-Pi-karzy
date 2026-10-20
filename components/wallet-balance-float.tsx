@@ -15,6 +15,8 @@ function formatPln(n: number) {
   return new Intl.NumberFormat("pl-PL", { style: "currency", currency: "PLN" }).format(v);
 }
 
+const WALLET_SUMMARY_URL = "/api/wallet/me?view=summary";
+
 type Props = {
   /** Gdy true — pobiera saldo z /api/wallet/me (bez blokowania SSR layoutu). */
   enabled?: boolean;
@@ -33,7 +35,7 @@ export function WalletBalanceFloat({ enabled = true }: Props) {
   useEffect(() => {
     if (!active) return;
     let cancelled = false;
-    fetch("/api/wallet/me")
+    fetch(WALLET_SUMMARY_URL)
       .then((r) => (r.ok ? r.json() : null))
       .then((d: { balance_pln?: unknown } | null) => {
         if (cancelled) return;

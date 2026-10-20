@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { assertAnalyticsOrigin } from "@/lib/csrf";
 import { getDb } from "@/lib/db";
 import { checkRateLimit, rateLimitKey, rateLimitedResponse, RATE } from "@/lib/rate-limit";
 
@@ -11,6 +12,9 @@ const bodySchema = z.object({
 });
 
 export async function POST(req: Request) {
+  const originGate = assertAnalyticsOrigin(req);
+  if (originGate) return originGate;
+
   const rl = checkRateLimit(
     rateLimitKey("cookie-consent", req),
     RATE.adImpression.limit,

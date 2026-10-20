@@ -13,7 +13,8 @@
     "test": "vitest run",
     "db:clear": "node scripts/clear-database.cjs",
     "db:backup": "node scripts/backup-db.cjs",
-    "db:init-turso": "tsx scripts/init-turso-schema.ts"
+    "db:init-turso": "tsx scripts/init-turso-schema.ts",
+    "db:emergency-reset-pins": "tsx scripts/emergency-reset-pins.ts"
   },
   "dependencies": {
     "@libsql/client": "^0.17.2",

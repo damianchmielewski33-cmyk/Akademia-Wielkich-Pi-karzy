@@ -24,6 +24,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { nativeSelectClasses } from "@/lib/field-styles";
 import type { ContactAdminRecipientKey, ContactAdminRecipientOption } from "@/lib/contact-admin-recipients";
+import { REALTIME_POLL } from "@/lib/realtime-poll-config";
 
 type ChatMessage = {
   id: number;
@@ -48,6 +49,7 @@ type PlayerThread = {
 };
 
 const GUEST_NAME_STORAGE_KEY = "awp-contact-admin-guest-name";
+const CHAT_UNREAD_COUNT_URL = "/api/chat/threads?view=unread";
 
 type Props = {
   defaults?: { senderName: string } | null;
@@ -144,11 +146,10 @@ export function WriteToAdminFloat({ defaults, recipients, hideFloat = false }: P
   const refreshUnreadBadge = useCallback(async () => {
     if (!isLoggedIn) return;
     try {
-      const res = await fetch("/api/chat/threads");
+      const res = await fetch(CHAT_UNREAD_COUNT_URL);
       if (!res.ok) return;
-      const data = (await res.json()) as { unread_count?: number; threads?: PlayerThread[] };
+      const data = (await res.json()) as { unread_count?: number };
       if (typeof data.unread_count === "number") setUnreadReplies(data.unread_count);
-      if (data.threads) setThreads(data.threads);
     } catch {
       /* ignore */
     }
@@ -225,14 +226,18 @@ export function WriteToAdminFloat({ defaults, recipients, hideFloat = false }: P
   }, []);
 
   const openPlayerThread = useCallback(
-    async (key: string, opts?: { quiet?: boolean }) => {
+    async (
+      key: string,
+      opts?: { quiet?: boolean; markRead?: boolean; refreshBadge?: boolean }
+    ) => {
       setSelectedKey(key);
       setView("chat");
       setLoadingThread(true);
       setBody("");
       clearAttachment();
       try {
-        const params = new URLSearchParams({ conversation_key: key, mark_read: "1" });
+        const params = new URLSearchParams({ conversation_key: key });
+        if (opts?.markRead !== false) params.set("mark_read", "1");
         const res = await fetch(`/api/chat/thread?${params.toString()}`);
         const data = (await res.json().catch(() => ({}))) as {
           messages?: ChatMessage[];
@@ -249,7 +254,9 @@ export function WriteToAdminFloat({ defaults, recipients, hideFloat = false }: P
         setMessages(data.messages ?? []);
         setThreadTitle(data.title ?? "Rozmowa");
         setThreadKind(data.kind ?? "organizer");
-        await refreshUnreadBadge();
+        if (opts?.refreshBadge !== false) {
+          await refreshUnreadBadge();
+        }
       } finally {
         setLoadingThread(false);
       }
@@ -261,12 +268,12 @@ export function WriteToAdminFloat({ defaults, recipients, hideFloat = false }: P
     if (hidden) return;
     if (isLoggedIn) {
       void refreshUnreadBadge();
-      const id = window.setInterval(() => void refreshUnreadBadge(), 45_000);
+      const id = window.setInterval(() => void refreshUnreadBadge(), REALTIME_POLL.badgeMs);
       return () => window.clearInterval(id);
     }
     if (!nameConfirmed) return;
     void loadGuestThread({ quiet: true });
-    const id = window.setInterval(() => void loadGuestThread({ quiet: true }), 45_000);
+    const id = window.setInterval(() => void loadGuestThread({ quiet: true }), REALTIME_POLL.badgeMs);
     return () => window.clearInterval(id);
   }, [hidden, isLoggedIn, nameConfirmed, loadGuestThread, refreshUnreadBadge]);
 
@@ -274,17 +281,32 @@ export function WriteToAdminFloat({ defaults, recipients, hideFloat = false }: P
     if (!open) return;
     if (isLoggedIn) {
       void loadPlayerThreads().then(() => {
-        if (view === "chat" && selectedKey) void openPlayerThread(selectedKey, { quiet: true });
+        if (view === "chat" && selectedKey && !selectedKey.startsWith("pending-dm:")) {
+          void openPlayerThread(selectedKey, { quiet: true, markRead: false });
+        }
       });
       const id = window.setInterval(() => {
+        if (view === "list") {
+          void loadPlayerThreads();
+          return;
+        }
         void refreshUnreadBadge();
-        if (view === "chat" && selectedKey) void openPlayerThread(selectedKey, { quiet: true });
-      }, 12_000);
+        if (view === "chat" && selectedKey && !selectedKey.startsWith("pending-dm:")) {
+          void openPlayerThread(selectedKey, {
+            quiet: true,
+            markRead: false,
+            refreshBadge: false,
+          });
+        }
+      }, REALTIME_POLL.openThreadMs);
       return () => window.clearInterval(id);
     }
     if (!nameConfirmed) return;
     void loadGuestThread({ markRead: true });
-    const id = window.setInterval(() => void loadGuestThread({ markRead: true, quiet: true }), 12_000);
+    const id = window.setInterval(
+      () => void loadGuestThread({ markRead: true, quiet: true }),
+      REALTIME_POLL.openThreadMs
+    );
     return () => window.clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- poll selected thread while open
   }, [open, isLoggedIn, nameConfirmed, view, selectedKey]);

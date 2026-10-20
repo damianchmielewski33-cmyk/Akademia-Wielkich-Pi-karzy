@@ -1,39 +1,20 @@
 import type { Metadata, Viewport } from "next";
-import { Suspense, type CSSProperties } from "react";
+import type { CSSProperties } from "react";
 import { headers, cookies } from "next/headers";
 import { Geist, Geist_Mono } from "next/font/google";
 import localFont from "next/font/local";
-import { Toaster } from "sonner";
-import { SiteShell } from "@/components/site-shell";
-import { ShareLinkClientCleanup } from "@/components/share-link-client-cleanup";
-import { PwaRegister } from "@/components/pwa-register";
-import { AndroidAppUpdatePrompt } from "@/components/android-app-update-prompt";
-import { StartupSplash } from "@/components/startup-splash";
-import { StadiumSoundsUnlock } from "@/components/stadium-sounds";
-import { AndroidColdStartPreloaderUnlock } from "@/components/android-cold-start-preloader-unlock";
-import { WebPushEnabler } from "@/components/web-push-enabler";
-import { MatchNotificationPrompt } from "@/components/match-notification-prompt";
-import { EmailAuthSetupPrompt } from "@/components/email-auth-setup-prompt";
-import { PinChangePendingBanner } from "@/components/pin-change-pending-banner";
-import { TestModeBanner } from "@/components/test-mode-banner";
 import { PinSetupGate } from "@/components/pin-setup-gate";
-import { SessionIdleMonitor } from "@/components/session-idle-monitor";
 import { getAccountNavFields } from "@/lib/account-server";
 import { getServerSession } from "@/lib/auth";
 import { normalizeUiTheme } from "@/lib/ui-theme";
 import { getDb } from "@/lib/db";
 import { isAdminTestModeActive } from "@/lib/test-mode";
-import { WalletBalanceFloat } from "@/components/wallet-balance-float";
-import { WriteToAdminFloat } from "@/components/write-to-admin-float";
 import { SiteJsonLd } from "@/components/site-json-ld";
-import { SiteAssetsProvider } from "@/components/site-assets-provider";
-import { MarketplacePhotosProvider } from "@/components/marketplace-photos-provider";
-import { ScreenBlocksProvider } from "@/components/screen-blocks-provider";
-import { SiteModeProvider } from "@/components/site-mode";
 import { ScreenBlockPlaceholder } from "@/components/screen-block-placeholder";
 import { AdminScreenBlockPreviewBanner } from "@/components/admin-screen-block-preview-banner";
 import { ScreenBlockPreviewContent } from "@/components/screen-block-preview-content";
-import { AdsenseProvider } from "@/components/adsense-provider";
+import { DeferredRootClientFeatures } from "@/components/layout-deferred-client-features";
+import { PublicSiteLayout } from "@/components/public-site-layout";
 import { getGoogleSiteVerification, getSiteUrl } from "@/lib/site";
 import { resolveAdsenseClientId } from "@/lib/adsense";
 import { getRequestAppSettings } from "@/lib/request-app-settings";
@@ -140,7 +121,9 @@ export default async function RootLayout({
     isPreviewBlockedCookieValue(cookieStore.get(PREVIEW_BLOCKED_COOKIE)?.value);
   const isPzuCupSection = pathname.startsWith("/pzu-cup");
   const isGymBratEmbed = pathname.startsWith("/gymbrat");
+  const isAdminRoute = pathname.startsWith("/panel-admina");
   const isMinimalChromeSection = isPzuCupSection || isGymBratEmbed;
+  const renderPublicShell = !isMinimalChromeSection && !isAdminRoute;
   const forceEmailAuthSetup = Boolean(
     session?.needsEmailAuthSetup && !session.needsPinSetup && !session.pinChangePending && !isMinimalChromeSection
   );
@@ -198,7 +181,7 @@ export default async function RootLayout({
   const screenBlocksAsPlayer = previewBlocked;
   const shellIsAdmin = isAdmin && !screenBlocksAsPlayer;
 
-  const screenKey = !isMinimalChromeSection ? getScreenKeyFromPathname(pathname) : null;
+  const screenKey = renderPublicShell ? getScreenKeyFromPathname(pathname) : null;
   const screenBlocksAdminBypass = shellIsAdmin;
   const screenBlockedForPlayers =
     screenKey != null && isScreenDisabledForUser(appSettings.screen_blocks, screenKey, false);
@@ -344,87 +327,38 @@ export default async function RootLayout({
           blikPhone={appSettings.blik_phone}
           logoUrl={siteAssets.logo_favicon}
         />
-        <PwaRegister />
-        <StartupSplash />
-        <AndroidColdStartPreloaderUnlock />
-        <AndroidAppUpdatePrompt />
-        <StadiumSoundsUnlock />
-        {loggedInFull ? <WebPushEnabler /> : null}
-        <SessionIdleMonitor enabled={sessionIdleLogout} />
-        <ShareLinkClientCleanup />
-        <PinSetupGate>
-          <Suspense fallback={null}>
-            <SiteModeProvider
-              initialMode={initialSiteMode}
-              emailPasswordAuthEnabled={appSettings.email_password_auth_enabled === true}
-            >
-              <AdsenseProvider
-                clientId={adsenseClientId}
-                enabled={appSettings.adsense_enabled}
-                slotFooter={appSettings.adsense_slot_footer}
-                slotInline={appSettings.adsense_slot_inline}
-                slotPopup={appSettings.adsense_slot_popup}
-                popupEnabled={appSettings.adsense_popup_enabled}
-              >
-                <SiteAssetsProvider assets={siteAssets}>
-                  <MarketplacePhotosProvider
-                    photos={appSettings.marketplace_pitch_photos}
-                    customSlots={appSettings.marketplace_pitch_photos_custom}
-                  >
-                  <ScreenBlocksProvider
-                    blocks={appSettings.screen_blocks}
-                    isAdmin={shellIsAdmin}
-                    previewAsPlayer={screenBlocksAsPlayer}
-                  >
-                    <SiteShell
-                      isLoggedIn={loggedInFull}
-                      isAdmin={shellIsAdmin}
-                      isVenuePartner={isVenuePartnerUser}
-                      account={accountNav}
-                      adminUnreadMessages={adminUnreadMessages}
-                      siteName={appSettings.site_name}
-                    >
-                      {testModeActive ? <TestModeBanner /> : null}
-                      {session?.pinChangePending && !session.needsPinSetup ? <PinChangePendingBanner /> : null}
-                      {mainContent}
-                    </SiteShell>
-                  </ScreenBlocksProvider>
-                  </MarketplacePhotosProvider>
-                </SiteAssetsProvider>
-              </AdsenseProvider>
-              {loggedInFull && !forceEmailAuthSetup && !isMinimalChromeSection && !pathname.startsWith("/panel-admina") ? (
-                <WalletBalanceFloat enabled />
-              ) : null}
-              {!isMinimalChromeSection && !forceEmailAuthSetup ? (
-                <WriteToAdminFloat
-                  defaults={writeToAdminDefaults}
-                  recipients={contactAdminRecipients}
-                  hideFloat={shellIsAdmin}
-                />
-              ) : null}
-              {!isMinimalChromeSection && matchNotificationPromptEnabled && !forceEmailAuthSetup ? (
-                <MatchNotificationPrompt />
-              ) : null}
-              {!isMinimalChromeSection ? <EmailAuthSetupPrompt initialNeedsSetup={forceEmailAuthSetup} /> : null}
-            </SiteModeProvider>
-          </Suspense>
-        </PinSetupGate>
-        <Toaster
-          position="top-center"
-          richColors
-          closeButton
-          toastOptions={{
-            duration: 4200,
-            classNames: {
-              toast:
-                "group rounded-xl border border-emerald-200/90 bg-white/95 font-sans shadow-[0_12px_40px_-12px_rgba(5,80,55,0.28)] backdrop-blur-md dark:border-emerald-800/50 dark:bg-zinc-900/95 dark:shadow-[0_12px_40px_-12px_rgba(0,0,0,0.45)]",
-              title: "text-[15px] font-semibold text-emerald-950 dark:text-emerald-100",
-              description: "text-sm text-slate-600 dark:text-zinc-400",
-              closeButton:
-                "rounded-lg border border-emerald-100 bg-white text-emerald-800 hover:bg-emerald-50 dark:border-emerald-800 dark:bg-zinc-800 dark:text-emerald-200 dark:hover:bg-zinc-700",
-            },
-          }}
+        <DeferredRootClientFeatures
+          loggedInFull={loggedInFull}
+          sessionIdleLogout={sessionIdleLogout}
         />
+        <PinSetupGate>
+          {renderPublicShell ? (
+            <PublicSiteLayout
+              appSettings={appSettings}
+              initialSiteMode={initialSiteMode}
+              isLoggedIn={loggedInFull}
+              isAdmin={shellIsAdmin}
+              isVenuePartner={isVenuePartnerUser}
+              account={accountNav}
+              adminUnreadMessages={adminUnreadMessages}
+              testModeActive={testModeActive}
+              showPinChangePendingBanner={Boolean(session?.pinChangePending && !session.needsPinSetup)}
+              showWalletBalanceFloat={loggedInFull && !forceEmailAuthSetup}
+              showWriteToAdminFloat={!forceEmailAuthSetup}
+              writeToAdminDefaults={writeToAdminDefaults}
+              contactAdminRecipients={contactAdminRecipients}
+              showMatchNotificationPrompt={matchNotificationPromptEnabled && !forceEmailAuthSetup}
+              showEmailAuthSetupPrompt
+              forceEmailAuthSetup={forceEmailAuthSetup}
+              previewScreenBlocksAsPlayer={screenBlocksAsPlayer}
+              adsenseClientId={adsenseClientId}
+            >
+              {mainContent}
+            </PublicSiteLayout>
+          ) : (
+            mainContent
+          )}
+        </PinSetupGate>
       </body>
     </html>
   );

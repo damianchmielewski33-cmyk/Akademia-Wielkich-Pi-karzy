@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getScreenFromPathname, normalizeAnalyticsPathname } from "@/lib/analytics-screen";
 import { isAdsensePathAllowed } from "@/lib/adsense";
 import { getServerSession } from "@/lib/auth";
+import { assertAnalyticsOrigin } from "@/lib/csrf";
 import { getDb } from "@/lib/db";
 import { checkRateLimit, rateLimitKey, rateLimitedResponse, RATE } from "@/lib/rate-limit";
 
@@ -26,6 +27,9 @@ function looksLikeBot(req: Request): boolean {
 }
 
 export async function POST(req: Request) {
+  const originGate = assertAnalyticsOrigin(req);
+  if (originGate) return originGate;
+
   const rl = checkRateLimit(
     rateLimitKey("ad-impression", req),
     RATE.adImpression.limit,

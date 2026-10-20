@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -73,26 +74,11 @@ import {
 } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
-  AdminAnalyticsHourlyCharts,
   type AnalyticsHourlyPayload,
 } from "@/components/admin-analytics-hourly-charts";
 import { LoadingIndicator } from "@/components/preloaders";
-import { AdminWalletsSaldoSection } from "@/components/admin-wallets-saldo-section";
-import { AdminOperatorPaymentsTab } from "@/components/admin-operator-payments-tab";
-import { AdminSettingsTab } from "@/components/admin-settings-tab";
-import { AdminScreenBlocksTab } from "@/components/admin-screen-blocks-tab";
-import { AdminPzuCupTab } from "@/components/admin-pzu-cup-tab";
 import { AdminFilterChips, AdminRowActions } from "@/components/admin-row-actions";
-import { AdminGalleryTab } from "@/components/admin-gallery-tab";
-import { AdminMessagesTab } from "@/components/admin-messages-tab";
-import { AdminMobileAppsTab } from "@/components/admin-mobile-apps-tab";
-import { AdminRankingSeasonsTab } from "@/components/admin-ranking-seasons-tab";
-import { AdminBookingsTab } from "@/components/admin-bookings-tab";
-import { MatchLineupAdmin } from "@/components/match-lineup-admin";
-import {
-  AdminCommandSearch,
-  type AdminSearchJump,
-} from "@/components/admin-command-search";
+import type { AdminSearchJump } from "@/components/admin-command-search";
 import {
   ADMIN_SECTIONS,
   canAccessTab,
@@ -104,6 +90,81 @@ import {
   cn,
   formatDateLocalYmd,
 } from "@/lib/utils";
+
+const AdminAnalyticsHourlyCharts = dynamic(
+  () => import("@/components/admin-analytics-hourly-charts").then((m) => m.AdminAnalyticsHourlyCharts),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="mt-4 h-64 animate-pulse rounded-[28px] border border-white/10 bg-black/10" />
+    ),
+  }
+);
+
+const AdminBookingsTab = dynamic(
+  () => import("@/components/admin-bookings-tab").then((m) => m.AdminBookingsTab),
+  { ssr: false, loading: () => <AdminTabChunkFallback label="Rezerwacje boisk" /> }
+);
+
+const AdminCommandSearch = dynamic(
+  () => import("@/components/admin-command-search").then((m) => m.AdminCommandSearch),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-10 min-w-[16rem] rounded-full border border-white/10 bg-black/10" aria-hidden />
+    ),
+  }
+);
+
+const AdminGalleryTab = dynamic(
+  () => import("@/components/admin-gallery-tab").then((m) => m.AdminGalleryTab),
+  { ssr: false, loading: () => <AdminTabChunkFallback label="Galeria" /> }
+);
+
+const AdminMessagesTab = dynamic(
+  () => import("@/components/admin-messages-tab").then((m) => m.AdminMessagesTab),
+  { ssr: false, loading: () => <AdminTabChunkFallback label="Wiadomości" /> }
+);
+
+const AdminMobileAppsTab = dynamic(
+  () => import("@/components/admin-mobile-apps-tab").then((m) => m.AdminMobileAppsTab),
+  { ssr: false, loading: () => <AdminTabChunkFallback label="Aplikacje mobilne" /> }
+);
+
+const AdminOperatorPaymentsTab = dynamic(
+  () => import("@/components/admin-operator-payments-tab").then((m) => m.AdminOperatorPaymentsTab),
+  { ssr: false, loading: () => <AdminTabChunkFallback label="Płatności operatora" /> }
+);
+
+const AdminPzuCupTab = dynamic(
+  () => import("@/components/admin-pzu-cup-tab").then((m) => m.AdminPzuCupTab),
+  { ssr: false, loading: () => <AdminTabChunkFallback label="PZU Cup" /> }
+);
+
+const AdminRankingSeasonsTab = dynamic(
+  () => import("@/components/admin-ranking-seasons-tab").then((m) => m.AdminRankingSeasonsTab),
+  { ssr: false, loading: () => <AdminTabChunkFallback label="Rankingi" /> }
+);
+
+const AdminScreenBlocksTab = dynamic(
+  () => import("@/components/admin-screen-blocks-tab").then((m) => m.AdminScreenBlocksTab),
+  { ssr: false, loading: () => <AdminTabChunkFallback label="Zaślepki" /> }
+);
+
+const AdminSettingsTab = dynamic(
+  () => import("@/components/admin-settings-tab").then((m) => m.AdminSettingsTab),
+  { ssr: false, loading: () => <AdminTabChunkFallback label="Ustawienia" /> }
+);
+
+const AdminWalletsSaldoSection = dynamic(
+  () => import("@/components/admin-wallets-saldo-section").then((m) => m.AdminWalletsSaldoSection),
+  { ssr: false, loading: () => <AdminTabChunkFallback label="Portfele" /> }
+);
+
+const MatchLineupAdmin = dynamic(
+  () => import("@/components/match-lineup-admin").then((m) => m.MatchLineupAdmin),
+  { ssr: false, loading: () => <AdminTabChunkFallback label="Składy na mecz" /> }
+);
 
 const API = {
   summary: "/api/admin/summary",
@@ -126,6 +187,17 @@ const API = {
     `/api/admin/analytics?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
   analyticsHourly: "/api/admin/analytics/hourly",
 };
+
+function AdminTabChunkFallback({ label }: { label: string }) {
+  return (
+    <AdminCard title={label}>
+      <div className="flex items-center gap-2 text-sm text-zinc-500 dark:text-zinc-400">
+        <LoadingIndicator size="sm" />
+        <span>Ładowanie sekcji…</span>
+      </div>
+    </AdminCard>
+  );
+}
 
 type UserRow = {
   id: number;

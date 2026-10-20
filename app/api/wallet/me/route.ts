@@ -17,6 +17,21 @@ export async function GET(req: Request) {
   if (!gate.ok) return gate.response;
 
   const url = new URL(req.url);
+  const summaryOnly = url.searchParams.get("view") === "summary";
+
+  const db = await getDb();
+  const userId = gate.session.userId;
+  const balances = await getWalletBalances(userId, db);
+
+  if (summaryOnly) {
+    return NextResponse.json({
+      user_id: userId,
+      balance_pln: balances.total,
+      admin_balance_pln: balances.admin,
+      operator_balance_pln: balances.operator,
+    });
+  }
+
   const offsetRaw = Number.parseInt(url.searchParams.get("offset") ?? "0", 10);
   const limitRaw = Number.parseInt(url.searchParams.get("limit") ?? String(DEFAULT_LIMIT), 10);
   const offset = Number.isFinite(offsetRaw) && offsetRaw > 0 ? offsetRaw : 0;
@@ -24,10 +39,6 @@ export async function GET(req: Request) {
     MAX_LIMIT,
     Math.max(1, Number.isFinite(limitRaw) && limitRaw > 0 ? limitRaw : DEFAULT_LIMIT)
   );
-
-  const db = await getDb();
-  const userId = gate.session.userId;
-  const balances = await getWalletBalances(userId);
 
   let pending: unknown[] = [];
   try {

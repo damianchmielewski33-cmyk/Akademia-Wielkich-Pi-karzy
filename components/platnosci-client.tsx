@@ -28,6 +28,8 @@ type Props = {
   hotpayEnabled: boolean;
 };
 
+const WALLET_SUMMARY_URL = "/api/wallet/me?view=summary";
+
 export function PlatnosciClient({
   isLoggedIn,
   isAdmin,
@@ -40,7 +42,7 @@ export function PlatnosciClient({
     if (!isLoggedIn || !isAdmin) return;
     setAdminWalletLoading(true);
     try {
-      await fetch("/api/wallet/me");
+      await fetch(WALLET_SUMMARY_URL);
     } finally {
       setAdminWalletLoading(false);
     }

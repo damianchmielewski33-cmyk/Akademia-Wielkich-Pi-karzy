@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { MessageCircle, X } from "lucide-react";
 import { AdminMessagesTab } from "@/components/admin-messages-tab";
+import { REALTIME_POLL } from "@/lib/realtime-poll-config";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -42,7 +43,7 @@ export function AdminHeaderMessagesButton({ initialUnreadCount = 0, compact = fa
       if (document.visibilityState === "visible") void refresh();
     };
     document.addEventListener("visibilitychange", onVis);
-    const id = window.setInterval(refresh, 60_000);
+    const id = window.setInterval(refresh, REALTIME_POLL.adminHeaderMs);
     return () => {
       document.removeEventListener("visibilitychange", onVis);
       window.clearInterval(id);

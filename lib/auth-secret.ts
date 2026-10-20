@@ -30,7 +30,7 @@ export function getAuthSecretKey(): Uint8Array {
     if (!secret || secret.length < 32) {
       const hint = secret ? `${secret.length} znaków (wymagane ≥32)` : "brak wartości w runtime";
       throw new Error(
-        `AUTH_SECRET musi być ustawione w produkcji i mieć co najmniej 32 znaki (${hint}). Ustaw zmienną w Vercelu dla środowiska Production i wykonaj ponowny deploy.`
+        `AUTH_SECRET musi być ustawione w produkcji i mieć co najmniej 32 znaki (${hint}). Ustaw zmienną na hoście (Render / Vercel) i wykonaj ponowny deploy.`
       );
     }
     return new TextEncoder().encode(secret);

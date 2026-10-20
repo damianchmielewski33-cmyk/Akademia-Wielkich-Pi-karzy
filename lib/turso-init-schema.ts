@@ -849,6 +849,24 @@ export async function initLibsqlSchema(client: Client) {
   await client.execute(
     "CREATE INDEX IF NOT EXISTS idx_admin_messages_conversation ON admin_messages(conversation_key, created_at)"
   );
+  await client.executeMultiple(`
+    CREATE INDEX IF NOT EXISTS idx_match_signups_match_user
+    ON match_signups(match_id, user_id);
+    CREATE INDEX IF NOT EXISTS idx_match_signups_user_match
+    ON match_signups(user_id, match_id);
+    CREATE INDEX IF NOT EXISTS idx_match_stats_user_match
+    ON match_stats(user_id, match_id);
+    CREATE INDEX IF NOT EXISTS idx_match_stats_season_user
+    ON match_stats(season_id, user_id);
+    CREATE INDEX IF NOT EXISTS idx_admin_messages_conversation_status_created
+    ON admin_messages(conversation_key, status, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_wallet_transactions_deposit_request
+    ON wallet_transactions(deposit_request_id);
+    CREATE INDEX IF NOT EXISTS idx_wallet_match_carts_session
+    ON wallet_match_carts(hotpay_session_id);
+    CREATE INDEX IF NOT EXISTS idx_bookings_user_date_time
+    ON bookings(user_id, booking_date, start_time);
+  `);
 
   await client.execute(`
     CREATE TABLE IF NOT EXISTS rate_limit_buckets (

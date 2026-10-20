@@ -29,7 +29,7 @@ type ThreadAgg = {
   recipient_key: string | null;
 };
 
-export async function GET() {
+export async function GET(req: Request) {
   const gate = await requireUser();
   if (!gate.ok) return gate.response;
   if (gate.session.isAdmin) {
@@ -39,11 +39,18 @@ export async function GET() {
     );
   }
 
+  const unreadOnly = new URL(req.url).searchParams.get("view") === "unread";
   const db = await getDb();
   await backfillAdminMessageConversationKeys(db);
-  const appSettings = await getAppSettings(db);
   const me = gate.session.userId;
   const userKey = conversationKeyForUser(me);
+
+  if (unreadOnly) {
+    const unread_count = await getUnreadCountForPlayer(db, me);
+    return NextResponse.json({ unread_count });
+  }
+
+  const appSettings = await getAppSettings(db);
 
   const rows = (await db
     .prepare(
@@ -105,21 +112,45 @@ export async function GET() {
     }
   }
 
+  const peerIds = [...new Set(
+    [...threadMap.values()]
+      .map((t) => (t.kind === "dm" ? t.peer_user_id : null))
+      .filter((id): id is number => id != null)
+  )];
+  const peersById = new Map<
+    number,
+    {
+      first_name: string;
+      last_name: string;
+      player_alias: string;
+      profile_photo_path: string | null;
+    }
+  >();
+
+  if (peerIds.length > 0) {
+    const placeholders = peerIds.map(() => "?").join(", ");
+    const peerRows = (await db
+      .prepare(
+        `SELECT id, first_name, last_name, player_alias, profile_photo_path
+         FROM users
+         WHERE id IN (${placeholders})`
+      )
+      .all(...peerIds)) as Array<{
+      id: number;
+      first_name: string;
+      last_name: string;
+      player_alias: string;
+      profile_photo_path: string | null;
+    }>;
+    for (const row of peerRows) {
+      peersById.set(row.id, row);
+    }
+  }
+
   // Uzupełnij tytuły DM o dane peera
   for (const t of threadMap.values()) {
     if (t.kind !== "dm" || t.peer_user_id == null) continue;
-    const u = (await db
-      .prepare(
-        "SELECT first_name, last_name, player_alias, profile_photo_path FROM users WHERE id = ?"
-      )
-      .get(t.peer_user_id)) as
-      | {
-          first_name: string;
-          last_name: string;
-          player_alias: string;
-          profile_photo_path: string | null;
-        }
-      | undefined;
+    const u = peersById.get(t.peer_user_id);
     if (u) {
       t.title = displayNameFromParts(u.first_name, u.last_name) || u.player_alias;
       t.subtitle = u.player_alias;

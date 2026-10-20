@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { PhotoPanel } from "@/components/photo-panel";
@@ -46,14 +47,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { YesNoSwitch } from "@/components/ui/yes-no-switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MatchSignupDialog } from "@/components/match-signup-dialog";
-import { MatchManageDialog } from "@/components/match-manage-dialog";
-import { MatchAddGuestDialog } from "@/components/match-add-guest-dialog";
 import { LoadingIndicator } from "@/components/preloaders";
-import { CaptainLotteryDialog } from "@/components/captain-lottery-dialog";
-import { LineupDrawDialog } from "@/components/lineup-draw-dialog";
-import { MatchLineupView } from "@/components/match-lineup-view";
-import { MatchCancelledNoticeModal } from "@/components/match-cancelled-notice-modal";
 import {
   isCancelNoticeRelevant,
   markCancelNoticeSeen,
@@ -84,6 +78,55 @@ import { useHotpayPaymentReturn } from "@/hooks/use-hotpay-payment-return";
 import { payMatchCart } from "@/lib/hotpay-client";
 import { hasMatchTimePassed } from "@/lib/match-time";
 import type { MatchLineupViewData } from "@/lib/match-lineup-data";
+
+type MatchSignupDialogProps = Parameters<(typeof import("@/components/match-signup-dialog"))["MatchSignupDialog"]>[0];
+type MatchManageDialogProps = Parameters<(typeof import("@/components/match-manage-dialog"))["MatchManageDialog"]>[0];
+type MatchAddGuestDialogProps =
+  Parameters<(typeof import("@/components/match-add-guest-dialog"))["MatchAddGuestDialog"]>[0];
+type CaptainLotteryDialogProps =
+  Parameters<(typeof import("@/components/captain-lottery-dialog"))["CaptainLotteryDialog"]>[0];
+type LineupDrawDialogProps = Parameters<(typeof import("@/components/lineup-draw-dialog"))["LineupDrawDialog"]>[0];
+type MatchLineupViewProps = Parameters<(typeof import("@/components/match-lineup-view"))["MatchLineupView"]>[0];
+type MatchCancelledNoticeModalProps =
+  Parameters<(typeof import("@/components/match-cancelled-notice-modal"))["MatchCancelledNoticeModal"]>[0];
+
+const MatchSignupDialog = dynamic<MatchSignupDialogProps>(
+  () => import("@/components/match-signup-dialog").then((m) => m.MatchSignupDialog),
+  { ssr: false, loading: () => null }
+);
+
+const MatchManageDialog = dynamic<MatchManageDialogProps>(
+  () => import("@/components/match-manage-dialog").then((m) => m.MatchManageDialog),
+  { ssr: false, loading: () => null }
+);
+
+const MatchAddGuestDialog = dynamic<MatchAddGuestDialogProps>(
+  () => import("@/components/match-add-guest-dialog").then((m) => m.MatchAddGuestDialog),
+  { ssr: false, loading: () => null }
+);
+
+const CaptainLotteryDialog = dynamic<CaptainLotteryDialogProps>(
+  () => import("@/components/captain-lottery-dialog").then((m) => m.CaptainLotteryDialog),
+  { ssr: false, loading: () => null }
+);
+
+const LineupDrawDialog = dynamic<LineupDrawDialogProps>(
+  () => import("@/components/lineup-draw-dialog").then((m) => m.LineupDrawDialog),
+  { ssr: false, loading: () => null }
+);
+
+const MatchLineupView = dynamic<MatchLineupViewProps>(
+  () => import("@/components/match-lineup-view").then((m) => m.MatchLineupView),
+  {
+    ssr: false,
+    loading: () => <ModalLoadingRow label="Wczytywanie widoku składu..." />,
+  }
+);
+
+const MatchCancelledNoticeModal = dynamic<MatchCancelledNoticeModalProps>(
+  () => import("@/components/match-cancelled-notice-modal").then((m) => m.MatchCancelledNoticeModal),
+  { ssr: false, loading: () => null }
+);
 
 type Props = {
   upcoming: MatchRow[];
@@ -226,15 +269,18 @@ export function TerminarzClient({
   const [walletBalancePln, setWalletBalancePln] = useState<number | null>(null);
   const { pay: payDebt, busy: debtBusy } = useHotpayPayment();
   const [matchPayBusyId, setMatchPayBusyId] = useState<number | null>(null);
+  const refreshWalletBalance = useCallback(() => {
+    if (!isLoggedIn || !hotpayEnabled) return;
+    fetch("/api/wallet/me?view=summary")
+      .then((r) => r.json() as Promise<{ balance_pln?: unknown }>)
+      .then((d) => setWalletBalancePln(Number(d.balance_pln ?? 0)))
+      .catch(() => void 0);
+  }, [hotpayEnabled, isLoggedIn]);
 
   useHotpayPaymentReturn({
     enabled: isLoggedIn,
     onSettled: () => {
-      if (!isLoggedIn || !hotpayEnabled) return;
-      fetch("/api/wallet/me")
-        .then((r) => r.json() as Promise<{ balance_pln?: unknown }>)
-        .then((d) => setWalletBalancePln(Number(d.balance_pln ?? 0)))
-        .catch(() => void 0);
+      refreshWalletBalance();
       router.refresh();
     },
   });
@@ -342,12 +388,8 @@ export function TerminarzClient({
   }, [isAdmin]);
 
   useEffect(() => {
-    if (!isLoggedIn || !hotpayEnabled) return;
-    fetch("/api/wallet/me")
-      .then((r) => r.json() as Promise<{ balance_pln?: unknown }>)
-      .then((d) => setWalletBalancePln(Number(d.balance_pln ?? 0)))
-      .catch(() => void 0);
-  }, [isLoggedIn, hotpayEnabled]);
+    refreshWalletBalance();
+  }, [refreshWalletBalance]);
 
   const payMatchFee = useCallback(
     async (matchId: number) => {
@@ -2660,51 +2702,64 @@ export function TerminarzClient({
         defaults={matchDefaults}
       />
 
-      <MatchManageDialog
-        match={manageMatch}
-        open={manageMatchOpen}
-        onOpenChange={setManageMatchOpen}
-        onDone={() => router.refresh()}
-        initialTab={manageInitialTab}
-        cancelReasons={cancelReasons}
-      />
+      {manageMatch ? (
+        <MatchManageDialog
+          match={manageMatch}
+          open={manageMatchOpen}
+          onOpenChange={(open) => {
+            setManageMatchOpen(open);
+            if (!open) setManageMatch(null);
+          }}
+          onDone={() => router.refresh()}
+          initialTab={manageInitialTab}
+          cancelReasons={cancelReasons}
+        />
+      ) : null}
 
-      <MatchAddGuestDialog
-        match={addGuestMatch}
-        open={addGuestOpen}
-        onOpenChange={setAddGuestOpen}
-        onDone={() => router.refresh()}
-      />
+      {addGuestMatch ? (
+        <MatchAddGuestDialog
+          match={addGuestMatch}
+          open={addGuestOpen}
+          onOpenChange={(open) => {
+            setAddGuestOpen(open);
+            if (!open) setAddGuestMatch(null);
+          }}
+          onDone={() => router.refresh()}
+        />
+      ) : null}
 
-      <CaptainLotteryDialog
-        open={captainLotteryOpen}
-        onOpenChange={setCaptainLotteryOpen}
-        match={captainLotteryMatch}
-        playersData={captainLotteryMatch != null ? playersData[captainLotteryMatch.id] : null}
-        initialLottery={
-          captainLotteryMatch != null ? captainLotteryData[captainLotteryMatch.id] ?? null : null
-        }
-        lotteryHistory={
-          captainLotteryMatch != null ? captainLotteryHistory[captainLotteryMatch.id] ?? [] : []
-        }
-        isLoggedIn={isLoggedIn}
-        isAdmin={isAdmin}
-        onAuthenticated={() => router.refresh()}
-        onLotteryChange={handleCaptainLotteryChange}
-      />
+      {captainLotteryMatch ? (
+        <CaptainLotteryDialog
+          open={captainLotteryOpen}
+          onOpenChange={(open) => {
+            setCaptainLotteryOpen(open);
+            if (!open) setCaptainLotteryMatch(null);
+          }}
+          match={captainLotteryMatch}
+          playersData={playersData[captainLotteryMatch.id] ?? null}
+          initialLottery={captainLotteryData[captainLotteryMatch.id] ?? null}
+          lotteryHistory={captainLotteryHistory[captainLotteryMatch.id] ?? []}
+          isLoggedIn={isLoggedIn}
+          isAdmin={isAdmin}
+          onAuthenticated={() => router.refresh()}
+          onLotteryChange={handleCaptainLotteryChange}
+        />
+      ) : null}
 
-      <LineupDrawDialog
-        open={lineupDrawOpen}
-        onOpenChange={(open) => {
-          setLineupDrawOpen(open);
-          if (!open) setLineupDrawMatch(null);
-        }}
-        match={lineupDrawMatch}
-        onSaved={() => {
-          router.refresh();
-          if (lineupDrawMatch) void openLineupPreview(lineupDrawMatch);
-        }}
-      />
+      {lineupDrawMatch ? (
+        <LineupDrawDialog
+          open={lineupDrawOpen}
+          onOpenChange={(open) => {
+            setLineupDrawOpen(open);
+            if (!open) setLineupDrawMatch(null);
+          }}
+          match={lineupDrawMatch}
+          onSaved={() => {
+            router.refresh();
+            if (lineupDrawMatch) void openLineupPreview(lineupDrawMatch);
+          }}
+        />
+      ) : null}
 
       <AppModal
         open={lineupPreviewOpen}
@@ -2762,12 +2817,14 @@ export function TerminarzClient({
         />
       )}
 
-      <MatchCancelledNoticeModal
-        open={cancelledNotice != null}
-        matchLabel={cancelledNotice?.label ?? ""}
-        reason={cancelledNotice?.reason ?? ""}
-        onClose={dismissCancelledNotice}
-      />
+      {cancelledNotice ? (
+        <MatchCancelledNoticeModal
+          open
+          matchLabel={cancelledNotice.label}
+          reason={cancelledNotice.reason}
+          onClose={dismissCancelledNotice}
+        />
+      ) : null}
 
     </>
   );

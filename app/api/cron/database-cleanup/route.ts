@@ -23,8 +23,9 @@ function verifyCronAuth(req: Request): { ok: true } | { ok: false; status: numbe
 }
 
 /**
- * Cron (Vercel, codziennie 03:00 UTC): stare rekordy, wiadomości czatu >7 dni, osierocone pliki.
- * Ustaw `CRON_SECRET` i nagłówek `Authorization: Bearer <CRON_SECRET>`.
+ * Cleanup DB: stare rekordy, wiadomości czatu >7 dni, osierocone pliki.
+ * Vercel Cron (`vercel.json`) nie działa na Renderze — użyj Render Cron Job albo zewnętrznego
+ * pingu: GET `/api/cron/database-cleanup` z `Authorization: Bearer <CRON_SECRET>`.
  */
 export async function GET(req: Request) {
   const auth = verifyCronAuth(req);

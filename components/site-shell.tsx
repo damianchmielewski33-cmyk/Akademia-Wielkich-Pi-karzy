@@ -1,18 +1,14 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { Suspense, useEffect, useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { usePathname } from "next/navigation";
-import { AnalyticsTracker } from "@/components/analytics-tracker";
-import { AndroidAppBanner } from "@/components/android-app-banner";
 import { AdminHeaderMessagesButton } from "@/components/admin-header-messages-button";
 import { GymBratCrossLink } from "@/components/gymbrat-cross-link";
-import { SisterSiteArrivalBanner } from "@/components/sister-site-arrival-banner";
-import { NavigationLoadingOverlay } from "@/components/navigation-loading-overlay";
 import { PlayerAvatar, PlayerNameStack } from "@/components/player-avatar";
-import { LogoutConfirmModal } from "@/components/logout-confirm-modal";
 import { SiteAssetImage } from "@/components/site-asset-image";
 import { SiteMobileNav, type ShellNavItem } from "@/components/site-mobile-nav";
 import { AdsenseSlot } from "@/components/adsense-slot";
@@ -47,6 +43,31 @@ import {
   Users,
   Wallet,
 } from "lucide-react";
+
+const AnalyticsTracker = dynamic(
+  () => import("@/components/analytics-tracker").then((m) => m.AnalyticsTracker),
+  { ssr: false }
+);
+
+const AndroidAppBanner = dynamic(
+  () => import("@/components/android-app-banner").then((m) => m.AndroidAppBanner),
+  { ssr: false }
+);
+
+const NavigationLoadingOverlay = dynamic(
+  () => import("@/components/navigation-loading-overlay").then((m) => m.NavigationLoadingOverlay),
+  { ssr: false }
+);
+
+const SisterSiteArrivalBanner = dynamic(
+  () => import("@/components/sister-site-arrival-banner").then((m) => m.SisterSiteArrivalBanner),
+  { ssr: false }
+);
+
+const LogoutConfirmModal = dynamic(
+  () => import("@/components/logout-confirm-modal").then((m) => m.LogoutConfirmModal),
+  { ssr: false }
+);
 
 type Props = {
   children: ReactNode;
@@ -237,9 +258,7 @@ export function SiteShell({
       <div className="sticky top-0 z-40 pt-[env(safe-area-inset-top)]">
         {mode === "academy" ? <AndroidAppBanner /> : null}
         {mode === "academy" ? (
-          <Suspense fallback={null}>
-            <SisterSiteArrivalBanner />
-          </Suspense>
+          <SisterSiteArrivalBanner />
         ) : null}
         <header
           className={cn(

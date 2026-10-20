@@ -1,6 +1,7 @@
 /** Konfiguracja przejść między Akademią Wielkich Piłkarzy a GymBrat (osobne aplikacje). */
 
-export const DEFAULT_GYMBRAT_URL = "https://gym-brat.vercel.app";
+/** Tymczasowa produkcja GymBrat na Render Free (zamiast Vercel Hobby). */
+export const DEFAULT_GYMBRAT_URL = "https://gymbrat.onrender.com";
 export const GYMBRAT_SITE_NAME = "GymBrat";
 export const GYMBRAT_SITE_TAGLINE = "Trening i dieta — siostrzana aplikacja";
 
@@ -8,7 +9,11 @@ export const GYMBRAT_SITE_TAGLINE = "Trening i dieta — siostrzana aplikacja";
 export const GYMBRAT_GYM_PHOTO =
   "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=1600&q=80";
 
-export const DEFAULT_AWP_URL = "https://akademia-wielkich-pilkarzy.vercel.app";
+/**
+ * Domyślny origin AWP — tymczasowo Render Free.
+ * Nadpisz przez NEXT_PUBLIC_AWP_URL / NEXT_PUBLIC_SITE_URL po utworzeniu Web Service.
+ */
+export const DEFAULT_AWP_URL = "https://akademia-wielkich-pilkarzy.onrender.com";
 export const AWP_SITE_NAME = "Akademia Wielkich Piłkarzy";
 export const AWP_SITE_TAGLINE = "Terminarz, mecze i rankingi — siostrzana aplikacja";
 
@@ -53,6 +58,8 @@ export function getAwpEmbedOrigins(): string[] {
     "http://10.0.2.2:3000",
     // Preview / team deployments AWP na Vercel (CSP3 host wildcard).
     "https://*.vercel.app",
+    // Render Free (tymczasowa produkcja) — wildcard hostów *.onrender.com.
+    "https://*.onrender.com",
   ]);
   const extra = process.env.NEXT_PUBLIC_AWP_EMBED_ORIGINS?.split(",") ?? [];
   for (const raw of extra) {

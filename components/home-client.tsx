@@ -66,6 +66,8 @@ type Props = {
   serverSiteMode?: import("@/lib/site-mode").SiteMode | null;
 };
 
+const WALLET_SUMMARY_URL = "/api/wallet/me?view=summary";
+
 export function HomeClient(props: Props) {
   const { mode } = useSiteMode();
   const pageVariant = props.pageVariant ?? "home";
@@ -340,7 +342,7 @@ function AcademyHomeView({
 
   function refreshWalletBalance() {
     if (!isLoggedIn || !hotpayEnabled) return;
-    fetch("/api/wallet/me")
+    fetch(WALLET_SUMMARY_URL)
       .then((r) => (r.ok ? r.json() : null))
       .then((d: { balance_pln?: unknown } | null) => {
         if (d && typeof d.balance_pln === "number") {

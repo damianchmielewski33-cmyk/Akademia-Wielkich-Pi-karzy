@@ -1,36 +1,44 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Akademia Wielkich Piłkarzy (AWP)
 
-## Getting Started
+Next.js (App Router) — terminarz, rezerwacje orlika/hali, portfel, rankingi.
 
-First, run the development server:
+## Lokalnie
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Otwórz [http://localhost:3000](http://localhost:3000). Wymagany Node ≥ 20.9.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Skopiuj `.env.example` → `.env.local` i uzupełnij przynajmniej `AUTH_SECRET` (lokalnie może być dowolny ≥ 32 znaki).
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Produkcja tymczasowa: Render Free
 
-## Learn More
+Gdy Vercel Hobby / inny host jest niedostępny, AWP działa jak GymBrat na Renderze.
 
-To learn more about Next.js, take a look at the following resources:
+- Checklist i env: **[docs/render-free.md](docs/render-free.md)**
+- Sugerowany URL: `https://akademia-wielkich-pilkarzy.onrender.com` (potwierdź w dashboardzie)
+- Build: `npm install && npm run build` · Start: `npm start`
+- Free **usypia** po ~15 min bez ruchu — pierwsze wejście może chwilę budzić serwis
+- Cron Vercel (`vercel.json`) **nie** działa na Renderze — Cron Job / zewnętrzny ping z `CRON_SECRET`
+- Auth: własna sesja JWT (PIN / e-mail) — brak OAuth Google/Facebook do dopisywania w konsolach
+- CSRF: `lib/csrf.ts` + `RENDER_EXTERNAL_URL` / `X-Forwarded-*` (krytyczne za proxy Render)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Siostrzana aplikacja
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+GymBrat: osobne repo. Cross-linki: `lib/sister-sites.ts`, env `NEXT_PUBLIC_GYMBRAT_URL`.  
+Szczegóły: [SISTER-SITES.md](SISTER-SITES.md).
 
-## Deploy on Vercel
+## Skrypty
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+| Skrypt | Opis |
+|--------|------|
+| `npm run dev` | serwer deweloperski |
+| `npm run build` / `npm start` | produkcja |
+| `npm test` | Vitest |
+| `npm run db:init-turso` | schemat na pustej bazie Turso |
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Changelog
+
+Zobacz [CHANGELOG.md](CHANGELOG.md).

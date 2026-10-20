@@ -12,6 +12,87 @@ const FORECAST_OM = "https://api.open-meteo.com/v1/forecast";
 const MAX_FORECAST_DAYS = 10;
 
 const fetchOpts = { cache: "no-store" as const };
+const WEATHER_SUCCESS_TTL_MS = 15 * 60 * 1000;
+const WEATHER_MISS_TTL_MS = 2 * 60 * 1000;
+const WEATHER_CACHE_MAX = 256;
+
+type CacheEntry<T> = { value: T; expiresAt: number };
+type Coordinates = { lat: number; lng: number };
+type GoogleForecastDays = Array<{
+  date: string;
+  description: string;
+  iconBaseUri: string;
+  weatherCode: null;
+  maxC: number | null;
+  minC: number | null;
+  precipChance: number | null;
+}>;
+type OpenMeteoForecastDays = Array<{
+  date: string;
+  description: string;
+  iconBaseUri: string;
+  weatherCode: number;
+  maxC: number | null;
+  minC: number | null;
+  precipChance: number | null;
+}>;
+
+const googleGeocodeCache = new Map<string, CacheEntry<Coordinates | null>>();
+const googleGeocodeInflight = new Map<string, Promise<Coordinates | null>>();
+const googleForecastCache = new Map<string, CacheEntry<GoogleForecastDays>>();
+const googleForecastInflight = new Map<string, Promise<GoogleForecastDays>>();
+const openMeteoForecastCache = new Map<string, CacheEntry<OpenMeteoForecastDays>>();
+const openMeteoForecastInflight = new Map<string, Promise<OpenMeteoForecastDays>>();
+
+function normalizeCacheKey(input: string): string {
+  return input.trim().replace(/\s+/g, " ").toLowerCase();
+}
+
+function coordsCacheKey(lat: number, lng: number): string {
+  return `${lat.toFixed(5)},${lng.toFixed(5)}`;
+}
+
+function getCachedValue<T>(store: Map<string, CacheEntry<T>>, key: string): T | undefined {
+  const entry = store.get(key);
+  if (!entry) return undefined;
+  if (entry.expiresAt <= Date.now()) {
+    store.delete(key);
+    return undefined;
+  }
+  return entry.value;
+}
+
+function setCachedValue<T>(store: Map<string, CacheEntry<T>>, key: string, value: T, ttlMs: number): T {
+  store.set(key, { value, expiresAt: Date.now() + ttlMs });
+  while (store.size > WEATHER_CACHE_MAX) {
+    const oldestKey = store.keys().next().value;
+    if (!oldestKey) break;
+    store.delete(oldestKey);
+  }
+  return value;
+}
+
+async function withMemoryCache<T>(
+  cache: Map<string, CacheEntry<T>>,
+  inflight: Map<string, Promise<T>>,
+  key: string,
+  load: () => Promise<T>,
+  ttlForValue: (value: T) => number
+): Promise<T> {
+  const cached = getCachedValue(cache, key);
+  if (cached !== undefined) return cached;
+
+  const pending = inflight.get(key);
+  if (pending) return pending;
+
+  const promise = load()
+    .then((value) => setCachedValue(cache, key, value, ttlForValue(value)))
+    .finally(() => {
+      inflight.delete(key);
+    });
+  inflight.set(key, promise);
+  return promise;
+}
 
 function getGoogleMapsPlatformKey(): string | undefined {
   const k =
@@ -51,114 +132,118 @@ function isoFromGoogleDate(d: NonNullable<ForecastDay["displayDate"]>): string {
 }
 
 async function geocodeGoogle(address: string, key: string): Promise<{ lat: number; lng: number } | null> {
-  const geoRes = await fetch(
-    `${GEOCODE_GOOGLE}?address=${encodeURIComponent(address)}&key=${key}`,
-    fetchOpts
+  return withMemoryCache(
+    googleGeocodeCache,
+    googleGeocodeInflight,
+    normalizeCacheKey(address),
+    async () => {
+      const geoRes = await fetch(
+        `${GEOCODE_GOOGLE}?address=${encodeURIComponent(address)}&key=${key}`,
+        fetchOpts
+      );
+      const geoJson = (await geoRes.json()) as GeocodeGoogle;
+      if (geoJson.status !== "OK" || !geoJson.results?.[0]?.geometry?.location) return null;
+      return geoJson.results[0].geometry.location;
+    },
+    (value) => (value ? WEATHER_SUCCESS_TTL_MS : WEATHER_MISS_TTL_MS)
   );
-  const geoJson = (await geoRes.json()) as GeocodeGoogle;
-  if (geoJson.status !== "OK" || !geoJson.results?.[0]?.geometry?.location) return null;
-  return geoJson.results[0].geometry.location;
 }
 
-async function forecastGoogle(lat: number, lng: number, key: string): Promise<
-  Array<{
-    date: string;
-    description: string;
-    iconBaseUri: string;
-    weatherCode: null;
-    maxC: number | null;
-    minC: number | null;
-    precipChance: number | null;
-  }>
-> {
-  const days: ForecastDay[] = [];
-  let pageToken: string | undefined;
-  for (let i = 0; i < 3 && days.length < MAX_FORECAST_DAYS; i++) {
-    const params = new URLSearchParams({
-      key,
-      "location.latitude": String(lat),
-      "location.longitude": String(lng),
-      days: String(MAX_FORECAST_DAYS),
-      pageSize: String(MAX_FORECAST_DAYS),
-      languageCode: "pl",
-    });
-    if (pageToken) params.set("pageToken", pageToken);
-    const wRes = await fetch(`${FORECAST_GOOGLE}?${params}`, fetchOpts);
-    const wJson = (await wRes.json()) as ForecastGoogleJson;
-    if (!wRes.ok || wJson.error) {
-      throw new Error(wJson.error?.message || `HTTP ${wRes.status}`);
-    }
-    const chunk = wJson.forecastDays ?? [];
-    days.push(...chunk);
-    pageToken = wJson.nextPageToken;
-    if (!pageToken || chunk.length === 0) break;
-  }
+async function forecastGoogle(lat: number, lng: number, key: string): Promise<GoogleForecastDays> {
+  return withMemoryCache(
+    googleForecastCache,
+    googleForecastInflight,
+    coordsCacheKey(lat, lng),
+    async () => {
+      const days: ForecastDay[] = [];
+      let pageToken: string | undefined;
+      for (let i = 0; i < 3 && days.length < MAX_FORECAST_DAYS; i++) {
+        const params = new URLSearchParams({
+          key,
+          "location.latitude": String(lat),
+          "location.longitude": String(lng),
+          days: String(MAX_FORECAST_DAYS),
+          pageSize: String(MAX_FORECAST_DAYS),
+          languageCode: "pl",
+        });
+        if (pageToken) params.set("pageToken", pageToken);
+        const wRes = await fetch(`${FORECAST_GOOGLE}?${params}`, fetchOpts);
+        const wJson = (await wRes.json()) as ForecastGoogleJson;
+        if (!wRes.ok || wJson.error) {
+          throw new Error(wJson.error?.message || `HTTP ${wRes.status}`);
+        }
+        const chunk = wJson.forecastDays ?? [];
+        days.push(...chunk);
+        pageToken = wJson.nextPageToken;
+        if (!pageToken || chunk.length === 0) break;
+      }
 
-  return days.slice(0, MAX_FORECAST_DAYS).map((d) => {
-    const dd = d.displayDate;
-    const dateIso = dd ? isoFromGoogleDate(dd) : "";
-    return {
-      date: dateIso,
-      description: d.daytimeForecast?.weatherCondition?.description?.text ?? "",
-      iconBaseUri: d.daytimeForecast?.weatherCondition?.iconBaseUri ?? "",
-      weatherCode: null,
-      maxC: d.maxTemperature?.degrees ?? null,
-      minC: d.minTemperature?.degrees ?? null,
-      precipChance:
-        typeof d.daytimeForecast?.precipitation?.probability?.percent === "number"
-          ? d.daytimeForecast.precipitation.probability.percent
-          : null,
-    };
-  });
+      return days.slice(0, MAX_FORECAST_DAYS).map((d) => {
+        const dd = d.displayDate;
+        const dateIso = dd ? isoFromGoogleDate(dd) : "";
+        return {
+          date: dateIso,
+          description: d.daytimeForecast?.weatherCondition?.description?.text ?? "",
+          iconBaseUri: d.daytimeForecast?.weatherCondition?.iconBaseUri ?? "",
+          weatherCode: null,
+          maxC: d.maxTemperature?.degrees ?? null,
+          minC: d.minTemperature?.degrees ?? null,
+          precipChance:
+            typeof d.daytimeForecast?.precipitation?.probability?.percent === "number"
+              ? d.daytimeForecast.precipitation.probability.percent
+              : null,
+        };
+      });
+    },
+    (value) => (value.length > 0 ? WEATHER_SUCCESS_TTL_MS : WEATHER_MISS_TTL_MS)
+  );
 }
 
-async function forecastOpenMeteo(lat: number, lng: number): Promise<
-  Array<{
-    date: string;
-    description: string;
-    iconBaseUri: string;
-    weatherCode: number;
-    maxC: number | null;
-    minC: number | null;
-    precipChance: number | null;
-  }>
-> {
-  const params = new URLSearchParams({
-    latitude: String(lat),
-    longitude: String(lng),
-    daily: "weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max",
-    forecast_days: String(MAX_FORECAST_DAYS),
-    timezone: "auto",
-  });
-  const res = await fetch(`${FORECAST_OM}?${params}`, fetchOpts);
-  if (!res.ok) throw new Error(`Open-Meteo HTTP ${res.status}`);
-  const j = (await res.json()) as {
-    daily?: {
-      time?: string[];
-      weather_code?: number[];
-      temperature_2m_max?: number[];
-      temperature_2m_min?: number[];
-      precipitation_probability_max?: (number | null)[];
-    };
-  };
-  const d = j.daily;
-  if (!d?.time?.length) throw new Error("Brak danych dziennych Open-Meteo");
+async function forecastOpenMeteo(lat: number, lng: number): Promise<OpenMeteoForecastDays> {
+  return withMemoryCache(
+    openMeteoForecastCache,
+    openMeteoForecastInflight,
+    coordsCacheKey(lat, lng),
+    async () => {
+      const params = new URLSearchParams({
+        latitude: String(lat),
+        longitude: String(lng),
+        daily: "weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max",
+        forecast_days: String(MAX_FORECAST_DAYS),
+        timezone: "auto",
+      });
+      const res = await fetch(`${FORECAST_OM}?${params}`, fetchOpts);
+      if (!res.ok) throw new Error(`Open-Meteo HTTP ${res.status}`);
+      const j = (await res.json()) as {
+        daily?: {
+          time?: string[];
+          weather_code?: number[];
+          temperature_2m_max?: number[];
+          temperature_2m_min?: number[];
+          precipitation_probability_max?: (number | null)[];
+        };
+      };
+      const d = j.daily;
+      if (!d?.time?.length) throw new Error("Brak danych dziennych Open-Meteo");
 
-  return d.time.slice(0, MAX_FORECAST_DAYS).map((date, i) => {
-    const code = d.weather_code?.[i] ?? 0;
-    return {
-      date,
-      description: wmoWeatherCodeToPolish(code),
-      iconBaseUri: "",
-      weatherCode: code,
-      maxC: d.temperature_2m_max?.[i] ?? null,
-      minC: d.temperature_2m_min?.[i] ?? null,
-      precipChance:
-        typeof d.precipitation_probability_max?.[i] === "number"
-          ? (d.precipitation_probability_max![i] as number)
-          : null,
-    };
-  });
+      return d.time.slice(0, MAX_FORECAST_DAYS).map((date, i) => {
+        const code = d.weather_code?.[i] ?? 0;
+        return {
+          date,
+          description: wmoWeatherCodeToPolish(code),
+          iconBaseUri: "",
+          weatherCode: code,
+          maxC: d.temperature_2m_max?.[i] ?? null,
+          minC: d.temperature_2m_min?.[i] ?? null,
+          precipChance:
+            typeof d.precipitation_probability_max?.[i] === "number"
+              ? (d.precipitation_probability_max![i] as number)
+              : null,
+        };
+      });
+    },
+    (value) => (value.length > 0 ? WEATHER_SUCCESS_TTL_MS : WEATHER_MISS_TTL_MS)
+  );
 }
 
 export async function GET(req: NextRequest) {

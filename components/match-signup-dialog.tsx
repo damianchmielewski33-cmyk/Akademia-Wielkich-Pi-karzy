@@ -21,6 +21,8 @@ type Props = {
   hotpayEnabled?: boolean;
 };
 
+const WALLET_SUMMARY_URL = "/api/wallet/me?view=summary";
+
 export function MatchSignupDialog({
   open,
   onOpenChange,
@@ -61,7 +63,7 @@ export function MatchSignupDialog({
       }
 
       try {
-        const meRes = await fetch("/api/wallet/me");
+        const meRes = await fetch(WALLET_SUMMARY_URL);
         const me = (await meRes.json().catch(() => ({}))) as { user_id?: number };
         const myId = Number(me.user_id);
         if (!Number.isFinite(myId) || myId <= 0) {

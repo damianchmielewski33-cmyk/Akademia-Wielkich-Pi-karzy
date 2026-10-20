@@ -21,8 +21,8 @@ export function getGoogleSiteVerification(): string {
 
 /**
  * Kanoniczny adres witryny (bez końcowego „/”). Używany w metadataBase, sitemap i robots.
- * W produkcji ustaw NEXT_PUBLIC_SITE_URL (np. https://twoja-domena.pl). Na Vercel, gdy zmienna
- * jest pusta, używane jest VERCEL_URL.
+ * W produkcji ustaw NEXT_PUBLIC_SITE_URL (np. https://….onrender.com).
+ * Fallback: RENDER_EXTERNAL_URL (Render Free), potem VERCEL_URL.
  */
 export function getSiteUrl(): string {
   const fromEnv = process.env.NEXT_PUBLIC_SITE_URL?.trim();
@@ -31,6 +31,22 @@ export function getSiteUrl(): string {
       return new URL(fromEnv).origin;
     } catch {
       /* ignoruj nieprawidłowy URL */
+    }
+  }
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
+  if (appUrl) {
+    try {
+      return new URL(appUrl).origin;
+    } catch {
+      /* ignore */
+    }
+  }
+  const render = process.env.RENDER_EXTERNAL_URL?.trim();
+  if (render) {
+    try {
+      return new URL(render).origin;
+    } catch {
+      /* ignore */
     }
   }
   const vercel = process.env.VERCEL_URL?.trim();

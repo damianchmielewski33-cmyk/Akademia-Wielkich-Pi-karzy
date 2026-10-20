@@ -228,23 +228,28 @@ export async function getUnreadUserReplyCount(db: AppDb, conversationKey: string
 /** Nieprzeczytane dla gracza: odpowiedzi admina + DM od innych. */
 export async function getUnreadCountForPlayer(db: AppDb, userId: number): Promise<number> {
   const userKey = conversationKeyForUser(userId);
-  const adminReplies = await getUnreadUserReplyCount(db, userKey);
-  const threads = await listPlayerConversationKeys(db, userId);
-  let dmCount = 0;
-  for (const key of threads) {
-    if (!key.startsWith("dm:")) continue;
-    const row = (await db
-      .prepare(
-        `SELECT COUNT(*) AS c FROM admin_messages
-         WHERE conversation_key = ?
-           AND status = 'unread'
-           AND user_id IS NOT NULL
-           AND user_id != ?`
-      )
-      .get(key, userId)) as { c: number };
-    dmCount += row.c;
-  }
-  return adminReplies + dmCount;
+  const row = (await db
+    .prepare(
+      `SELECT COUNT(*) AS c FROM admin_messages
+       WHERE status = 'unread'
+         AND (
+           (
+             conversation_key = ?
+             AND COALESCE(direction, 'inbound') = 'outbound'
+           )
+           OR (
+             conversation_key LIKE 'dm:%'
+             AND (
+               conversation_key LIKE ?
+               OR conversation_key LIKE ?
+             )
+             AND user_id IS NOT NULL
+             AND user_id != ?
+           )
+         )`
+    )
+    .get(userKey, `dm:${userId}:%`, `dm:%:${userId}`, userId)) as { c: number } | undefined;
+  return Number(row?.c ?? 0);
 }
 
 export async function listPlayerConversationKeys(db: AppDb, userId: number): Promise<string[]> {
@@ -307,6 +312,16 @@ export async function markConversationReadForUser(db: AppDb, conversationKey: st
 
 /** Uzupełnia conversation_key / direction w starych wierszach (jednorazowo przy migracji). */
 export async function backfillAdminMessageConversationKeys(db: AppDb) {
+  const hasMissingConversationKey = (await db
+    .prepare(
+      `SELECT 1 AS ok
+       FROM admin_messages
+       WHERE conversation_key IS NULL OR TRIM(conversation_key) = ''
+       LIMIT 1`
+    )
+    .get()) as { ok: number } | undefined;
+  if (!hasMissingConversationKey) return;
+
   const rows = (await db
     .prepare(
       `SELECT id, user_id, sender_name, conversation_key
