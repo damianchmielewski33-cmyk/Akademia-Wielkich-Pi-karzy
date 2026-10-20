@@ -28,6 +28,11 @@ const emergencyLoginSchema = z.object({
   firstName: formSchemas.requiredName("Imię"),
   lastName: formSchemas.requiredName("Nazwisko"),
   pin: z.string().optional(),
+  zawodnik: z.string().optional(),
+});
+
+const emergencyLoginWithAliasSchema = emergencyLoginSchema.extend({
+  zawodnik: formSchemas.requiredText("Nick / piłkarz"),
 });
 
 const emailLoginSchema = z.object({
@@ -85,6 +90,9 @@ export function LoginForm({
   const [loading, setLoading] = useState(false);
   const [showGoalPreloader, setShowGoalPreloader] = useState(false);
   const [legacyPin, setLegacyPin] = useState(emergencyNameOnly);
+  /** Kolizja imię+nazwisko — serwer wymaga pseudonimu piłkarza. */
+  const [requirePlayerAlias, setRequirePlayerAlias] = useState(false);
+  const [aliasError, setAliasError] = useState<string | undefined>();
 
   const [forgotOpen, setForgotOpen] = useState(false);
   const [forgotDoneOpen, setForgotDoneOpen] = useState(false);
@@ -110,8 +118,12 @@ export function LoginForm({
   });
 
   const loginForm = useValidatedForm({
-    initialValues: { firstName: "", lastName: "", pin: "" },
-    schema: emergencyNameOnly ? emergencyLoginSchema : loginSchema,
+    initialValues: { firstName: "", lastName: "", pin: "", zawodnik: "" },
+    schema: emergencyNameOnly
+      ? requirePlayerAlias
+        ? emergencyLoginWithAliasSchema
+        : emergencyLoginSchema
+      : loginSchema,
   });
 
   const emailLoginForm = useValidatedForm({
@@ -129,6 +141,12 @@ export function LoginForm({
     const useEmail = !emergencyNameOnly && emailPasswordAuthEnabled && !legacyPin;
     if (useEmail) {
       if (!emailLoginForm.validate()) return;
+    } else if (emergencyNameOnly && requirePlayerAlias) {
+      if (!loginForm.values.zawodnik?.trim()) {
+        setAliasError("Podaj nick (pseudonim piłkarza), żeby wybrać właściwe konto.");
+        return;
+      }
+      setAliasError(undefined);
     } else if (!loginForm.validate()) {
       return;
     }
@@ -149,6 +167,9 @@ export function LoginForm({
                 first_name: loginForm.values.firstName,
                 last_name: loginForm.values.lastName,
                 ...(emergencyNameOnly ? {} : { pin: loginForm.values.pin }),
+                ...(emergencyNameOnly && loginForm.values.zawodnik?.trim()
+                  ? { zawodnik: loginForm.values.zawodnik.trim() }
+                  : {}),
                 remember_me: rememberMe,
                 realm,
               }
@@ -167,6 +188,16 @@ export function LoginForm({
         if (loginForm.values.lastName.trim()) q.set("ln", loginForm.values.lastName.trim());
         q.set("next", next);
         router.push(`/ustaw-pin?${q.toString()}`);
+        return;
+      }
+      if (data.code === "NEEDS_PLAYER_ALIAS") {
+        setRequirePlayerAlias(true);
+        setAliasError(
+          typeof data.error === "string"
+            ? data.error
+            : "Podaj nick (pseudonim piłkarza), żeby wybrać właściwe konto."
+        );
+        toast.info("Jest więcej kont o tym imieniu i nazwisku — podaj swój nick.");
         return;
       }
       if (!res.ok) {
@@ -356,7 +387,11 @@ export function LoginForm({
           required
           showValidState
           value={loginForm.values.firstName}
-          onChange={(e) => loginForm.setValue("firstName", e.target.value)}
+          onChange={(e) => {
+            setRequirePlayerAlias(false);
+            setAliasError(undefined);
+            loginForm.setValue("firstName", e.target.value);
+          }}
           onBlur={() => loginForm.setFieldTouched("firstName")}
           error={loginForm.errors.firstName}
           placeholder="Imię"
@@ -368,12 +403,32 @@ export function LoginForm({
           required
           showValidState
           value={loginForm.values.lastName}
-          onChange={(e) => loginForm.setValue("lastName", e.target.value)}
+          onChange={(e) => {
+            setRequirePlayerAlias(false);
+            setAliasError(undefined);
+            loginForm.setValue("lastName", e.target.value);
+          }}
           onBlur={() => loginForm.setFieldTouched("lastName")}
           error={loginForm.errors.lastName}
           placeholder="Nazwisko"
           autoComplete="family-name"
         />
+        {emergencyNameOnly && requirePlayerAlias ? (
+          <div className="space-y-2">
+            <PlayerAliasPicker
+              id="login_zawodnik"
+              label="Nick / piłkarz"
+              required
+              value={loginForm.values.zawodnik ?? ""}
+              onChange={(v) => {
+                setAliasError(undefined);
+                loginForm.setValue("zawodnik", v);
+              }}
+              error={aliasError ?? loginForm.errors.zawodnik}
+              helperText="Więcej niż jedno konto o tym imieniu i nazwisku — wpisz swój pseudonim piłkarza."
+            />
+          </div>
+        ) : null}
         <FormInput
           id="pin"
           label={emergencyNameOnly ? "PIN (wyłączony — tryb awaryjny)" : "PIN (4–6 cyfr)"}

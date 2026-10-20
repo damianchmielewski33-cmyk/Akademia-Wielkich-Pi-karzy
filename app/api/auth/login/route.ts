@@ -14,6 +14,7 @@ import {
   verifyPassword,
 } from "@/lib/email-auth";
 import { isEmergencyNameOnlyLoginEnabled } from "@/lib/emergency-name-login";
+import { normalizePlayerAlias } from "@/lib/player-alias";
 
 export const runtime = "nodejs";
 
@@ -21,6 +22,8 @@ const bodySchema = z.object({
   first_name: z.string().trim().optional(),
   last_name: z.string().trim().optional(),
   pin: z.string().trim().optional(),
+  /** Pseudonim piłkarza — wymagany przy kolizji imię+nazwisko (tryb awaryjny). */
+  zawodnik: z.string().trim().optional(),
   email: z.string().trim().optional(),
   password: z.string().optional(),
   remember_me: z.boolean().optional(),
@@ -76,6 +79,7 @@ export async function POST(req: Request) {
     first_name,
     last_name,
     pin,
+    zawodnik: zawodnikRaw,
     email: emailRaw,
     password,
     remember_me,
@@ -106,7 +110,7 @@ export async function POST(req: Request) {
     return NextResponse.json(loginPayload(matched, token, needsEmailAuthSetup));
   };
 
-  /** Awaria: logowanie samym imieniem i nazwiskiem (PIN wyłączony w UI). */
+  /** Awaria: logowanie imieniem i nazwiskiem (PIN wyłączony). Przy kolizji — wymuś nick. */
   if (emergencyNameOnly && first_name && last_name) {
     const users = (await db
       .prepare(
@@ -121,17 +125,34 @@ export async function POST(req: Request) {
     if (users.length === 0) {
       return NextResponse.json({ error: "Nieprawidłowe dane logowania." }, { status: 401 });
     }
+
+    let matched = users[0]!;
     if (users.length > 1) {
-      return NextResponse.json(
-        {
-          error:
-            "Znaleziono więcej niż jedno konto o tym imieniu i nazwisku. Skontaktuj się z administratorem.",
-        },
-        { status: 409 }
+      const alias = normalizePlayerAlias(zawodnikRaw ?? "");
+      if (!alias) {
+        return NextResponse.json(
+          {
+            error:
+              "Jest więcej niż jedno konto o tym imieniu i nazwisku. Podaj swój nick (pseudonim piłkarza).",
+            code: "NEEDS_PLAYER_ALIAS" as const,
+          },
+          { status: 409 }
+        );
+      }
+      const byAlias = users.filter(
+        (u) => u.player_alias.trim().toLowerCase() === alias.toLowerCase()
       );
+      if (byAlias.length !== 1) {
+        return NextResponse.json(
+          { error: "Nieprawidłowe dane logowania.", code: "NEEDS_PLAYER_ALIAS" as const },
+          { status: 401 }
+        );
+      }
+      matched = byAlias[0]!;
     }
-    console.warn("[login] emergency name-only login", { userId: users[0]!.id });
-    return finish(users[0]!);
+
+    console.warn("[login] emergency name-only login", { userId: matched.id });
+    return finish(matched);
   }
 
   if (emailAuthOn && emailRaw && password) {
