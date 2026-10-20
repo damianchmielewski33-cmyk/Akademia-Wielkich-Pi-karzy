@@ -1,11 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {
-  markAndroidColdStartPreloadersDone,
-  shouldSuppressStartupRoutePreloader,
-} from "@/components/startup-splash";
-import { isInstalledAndroidAppClient } from "@/lib/app-webview";
+import { shouldSuppressStartupRoutePreloader } from "@/components/startup-splash";
 import { PagePreloaderLayout } from "./page-preloader-layout";
 import { getRoutePreloaderSpec } from "./route-preloader-config";
 import { useDelayedVisible } from "./use-delayed-visible";
@@ -17,7 +13,8 @@ type Props = {
 /**
  * Full-screen route loading — pokazuje się dopiero po krótkim opóźnieniu,
  * więc szybkie odpowiedzi nie migają preloaderem.
- * Przy cold starcie aplikacji (splash / WebView Android) nie dokłada drugiego loadera.
+ * Przy cold starcie aplikacji (splash / WebView Android) nie dokłada drugiego loadera
+ * ani pustego zielonego tła — splash zostaje do treści (np. „Najbliższy mecz”).
  */
 export function RoutePreloaderScreen({ path }: Props) {
   const show = useDelayedVisible(true);
@@ -32,32 +29,18 @@ export function RoutePreloaderScreen({ path }: Props) {
     const obs = new MutationObserver(sync);
     obs.observe(document.documentElement, {
       attributes: true,
-      attributeFilter: ["class"],
+      attributeFilter: ["class", "data-awp-content-ready"],
     });
-
-    // Android: po pierwszym paintcie treści przywróć preloadery do kolejnych nawigacji.
-    let coldDoneTimer: number | undefined;
-    if (isInstalledAndroidAppClient()) {
-      coldDoneTimer = window.setTimeout(() => {
-        markAndroidColdStartPreloadersDone();
-        sync();
-      }, 2500);
-    }
+    const poll = window.setInterval(sync, 400);
 
     return () => {
       obs.disconnect();
-      if (coldDoneTimer) window.clearTimeout(coldDoneTimer);
+      window.clearInterval(poll);
     };
   }, []);
 
   if (!allowFullPreloader || !show) {
-    return (
-      <div
-        className="marketplace-bg min-h-[40vh] flex-1"
-        aria-busy="true"
-        aria-label={title}
-      />
-    );
+    return null;
   }
 
   return (

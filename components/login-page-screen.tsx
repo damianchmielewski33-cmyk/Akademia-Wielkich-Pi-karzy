@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AuthPageShell } from "@/components/auth-page-shell";
 import { LoginForm } from "@/components/login-form";
+import { LoginContentReady } from "@/components/login-content-ready";
 import { PIN_LOGIN_POLICY_LINES } from "@/lib/constants";
 
 type Props = {
@@ -74,6 +75,7 @@ export function LoginPageScreen({
       footerHref={registerHref}
       footerLabel="Dołącz do akademii"
     >
+      <LoginContentReady />
       <LoginForm nextPath={nextPath} />
       {idleLogout ? (
         <p className="mt-4 rounded-xl border border-amber-200/80 bg-amber-50 px-3 py-2 text-sm text-amber-950">

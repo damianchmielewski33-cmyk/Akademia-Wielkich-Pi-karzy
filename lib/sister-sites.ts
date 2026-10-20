@@ -3,7 +3,7 @@
 /** Tymczasowa produkcja GymBrat na Render Free (zamiast Vercel Hobby). */
 export const DEFAULT_GYMBRAT_URL = "https://gymbrat.onrender.com";
 export const GYMBRAT_SITE_NAME = "GymBrat";
-export const GYMBRAT_SITE_TAGLINE = "Trening i dieta — siostrzana aplikacja";
+export const GYMBRAT_SITE_TAGLINE = "Trening i dieta";
 
 /** Zdjęcie siłowni na kafelku GymBrat (ekran główny) — nie boisko. */
 export const GYMBRAT_GYM_PHOTO =

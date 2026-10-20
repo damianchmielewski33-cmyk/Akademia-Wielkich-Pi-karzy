@@ -40,6 +40,7 @@ import { useScreenBlocks } from "@/components/screen-blocks-provider";
 import { GymBratCrossLink } from "@/components/gymbrat-cross-link";
 import { useSiteMode } from "@/components/site-mode";
 import { useHotpayPayment } from "@/hooks/use-hotpay-payment";
+import { AndroidContentReadySignal } from "@/components/android-content-ready-signal";
 
 type Props = {
   nextMatch: MatchRow | null;
@@ -114,6 +115,7 @@ function BookingHomeView({ featuredVenues }: { featuredVenues: VenueCard[] }) {
   const heroPhoto = photoPool[0] ?? MARKETPLACE_PITCH_PHOTOS[0];
   return (
     <div className="relative flex flex-1 flex-col text-zinc-900 dark:text-zinc-50">
+      <AndroidContentReadySignal />
       <HomeFallingDecor />
       <section className="mp-hero mp-hero--photo relative z-10 flex flex-col justify-end overflow-hidden pb-5 pt-6 sm:pb-20 sm:pt-24">
         <MarketplacePitchPhoto src={heroPhoto} priority className="z-0" />
@@ -627,6 +629,7 @@ function AcademyHomeView({
                 Terminarz
               </p>
               <h2 className="mt-1 text-3xl font-black tracking-tight">Najbliższy mecz</h2>
+              <AndroidContentReadySignal />
             </div>
             <Button asChild variant="outline" className="w-auto">
               <Link href="/terminarz">Pełny terminarz</Link>
@@ -716,6 +719,7 @@ function AcademyHomeView({
               <p className="mt-1 text-sm text-white/80">{item.desc}</p>
             </HomePhotoTile>
           ))}
+          <GymBratCrossLink className="min-h-[12rem]" />
         </section>
 
         {isAcademyHome ? (
@@ -757,12 +761,13 @@ function AcademyHomeView({
                   </HomePhotoTile>
                 );
               })}
-              <GymBratCrossLink className="min-h-[15rem]" />
             </div>
           </section>
         ) : null}
 
         {!nextMatch ? (
+        <>
+        <AndroidContentReadySignal />
         <HomePhotoTile
           src={homeTilePhoto(photoPool, 9)}
           className="mt-8 min-h-0 md:hidden"
@@ -783,6 +788,7 @@ function AcademyHomeView({
             </Link>
           </Button>
         </HomePhotoTile>
+        </>
         ) : null}
         <section className="relative mt-14 hidden overflow-hidden rounded-3xl px-10 py-10 text-white shadow-lg md:block">
           <MarketplacePitchPhoto

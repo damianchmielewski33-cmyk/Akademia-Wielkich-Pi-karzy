@@ -20,6 +20,8 @@ declare global {
       openExternalUrl?: (url: string) => void;
       /** CSV ms: "40" albo "0,40,60,40" (vibrate/pause). */
       vibrate?: (patternCsv: string) => void;
+      /** Pierwszy ekran gotowy — zdejmij natywny splash. */
+      notifyContentReady?: () => void;
     };
   }
 }

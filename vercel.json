@@ -4,5 +4,6 @@
       "path": "/api/cron/database-cleanup",
       "schedule": "0 3 * * *"
     }
-  ]
+  ],
+  "framework": "nextjs"
 }
