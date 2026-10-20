@@ -13,6 +13,7 @@ import {
   userNeedsEmailAuthSetup,
   verifyPassword,
 } from "@/lib/email-auth";
+import { isEmergencyNameOnlyLoginEnabled } from "@/lib/emergency-name-login";
 
 export const runtime = "nodejs";
 
@@ -85,6 +86,8 @@ export async function POST(req: Request) {
   const db = await getDb();
   const emailAuthOn = await isEmailPasswordAuthEnabled(db, realm);
 
+  const emergencyNameOnly = isEmergencyNameOnlyLoginEnabled();
+
   const finish = async (matched: LoginUserRow) => {
     const token = await createSessionToken({
       userId: matched.id,
@@ -97,9 +100,39 @@ export async function POST(req: Request) {
     });
     await setSessionCookie(token, { rememberMe });
     await logActivity(matched.id, "Zalogował się");
-    const needsEmailAuthSetup = userNeedsEmailAuthSetup(matched, emailAuthOn);
+    const needsEmailAuthSetup = emergencyNameOnly
+      ? false
+      : userNeedsEmailAuthSetup(matched, emailAuthOn);
     return NextResponse.json(loginPayload(matched, token, needsEmailAuthSetup));
   };
+
+  /** Awaria: logowanie samym imieniem i nazwiskiem (PIN wyłączony w UI). */
+  if (emergencyNameOnly && first_name && last_name) {
+    const users = (await db
+      .prepare(
+        `SELECT id, first_name, last_name, player_alias, is_admin, pin_hash, pin_hash_pending, auth_version,
+                email, password_hash, email_verified
+         FROM users
+         WHERE lower(first_name) = lower(?) AND lower(last_name) = lower(?)
+           AND COALESCE(realm, ?) = ?`
+      )
+      .all(first_name, last_name, REALMS.ACADEMY, realm)) as LoginUserRow[];
+
+    if (users.length === 0) {
+      return NextResponse.json({ error: "Nieprawidłowe dane logowania." }, { status: 401 });
+    }
+    if (users.length > 1) {
+      return NextResponse.json(
+        {
+          error:
+            "Znaleziono więcej niż jedno konto o tym imieniu i nazwisku. Skontaktuj się z administratorem.",
+        },
+        { status: 409 }
+      );
+    }
+    console.warn("[login] emergency name-only login", { userId: users[0]!.id });
+    return finish(users[0]!);
+  }
 
   if (emailAuthOn && emailRaw && password) {
     const email = normalizeEmail(emailRaw);

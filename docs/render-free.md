@@ -70,14 +70,13 @@ Nie dodawaj pollingu co 1 s w tle (Active CPU + sen Free).
 
 ## Android / WebView
 
-Źródła APK **nie są** w tym repo (folder `android/` lokalny / nieśledzony).
-Po przywróceniu źródeł:
+APK ładuje `BuildConfig.API_BASE_URL` z `android/gradle.properties` (i CI).
 
-- `API_BASE_URL=https://<serwis>.onrender.com/`
-- allowlista hostów WebView: `*.onrender.com`
-- CI secret `ANDROID_API_BASE_URL` jeśli używany
+- Domyślnie: `https://akademia-wielkich-pilkarzy.onrender.com/`
+- GitHub Actions → **Build Android APK** (domyślny input = Render) albo secret `ANDROID_API_BASE_URL`
+- Po zmianie URL **przebuduj i opublikuj** release `android-latest` — stary APK nadal celuje w Vercel
 
-Do tego czasu APK wskazuje poprzedni origin — przebuduj po cutoverze.
+Stary APK z Vercela pokazuje ten sam komunikat co pauza Hobby — to oczekiwane, dopóki nie zainstalujesz nowego builda.
 
 ## Sen Free
 
@@ -85,6 +84,19 @@ Pierwsze wejście po ~15 min bezruchu może pokazać ekran „waking up” (kilk
 To oczekiwane na Free — nie obiecuj „brak snu”.
 
 ## Awaria: utracony `PIN_PEPPER`
+
+### Szybki dostęp (bez PIN)
+
+Na Renderze ustaw i redeploy:
+
+```
+NEXT_PUBLIC_EMERGENCY_NAME_ONLY_LOGIN=1
+```
+
+Logowanie: tylko imię + nazwisko (pole PIN nieedytowalne).  
+**Po odzyskaniu dostępu usuń tę zmienną** — to wyłącza weryfikację PIN.
+
+### Reset hashy w Turso (opcjonalnie)
 
 Starych PIN-ów nie da się odzyskać. Reset hashy w Turso:
 

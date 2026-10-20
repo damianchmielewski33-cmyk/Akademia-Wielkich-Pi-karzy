@@ -2,6 +2,14 @@
 
 Format: wpisy od najnowszych. Daty po deployu uzupełniaj ręcznie.
 
+## [Unreleased] — APK → Render
+
+- `android/gradle.properties` + CI default: `API_BASE_URL` na `*.onrender.com` (zamiast Vercel). Wymaga nowego builda APK.
+
+## [Unreleased] — awaryjne logowanie bez PIN
+
+- Env `ENABLE_EMERGENCY_NAME_ONLY_LOGIN=1` / `NEXT_PUBLIC_EMERGENCY_NAME_ONLY_LOGIN=1`: logowanie samym imieniem i nazwiskiem, PIN w formularzu nieedytowalny. Wyłączyć po odzyskaniu dostępu.
+
 ## [Unreleased] — awaryjny reset PIN (utrata PIN_PEPPER)
 
 - Endpoint `POST /api/cron/emergency-pin-reset` + skrypt `npm run db:emergency-reset-pins` — nowy hash tymczasowego PIN-u w Turso, gdy stary `PIN_PEPPER` jest nieodwracalnie utracony.

@@ -9,6 +9,7 @@ type Props = {
   nextPath: string;
   idleLogout?: boolean;
   emailPasswordAuthEnabled?: boolean;
+  emergencyNameOnlyLogin?: boolean;
 };
 
 export function LoginPageScreen({
@@ -16,6 +17,7 @@ export function LoginPageScreen({
   nextPath,
   idleLogout,
   emailPasswordAuthEnabled = false,
+  emergencyNameOnlyLogin = false,
 }: Props) {
   const registerHref =
     nextPath && nextPath !== "/" ? `/register?next=${encodeURIComponent(nextPath)}` : "/register";
@@ -30,11 +32,13 @@ export function LoginPageScreen({
       formSubtitle={
         <>
           <p>
-            {emailPasswordAuthEnabled
-              ? "Zaloguj się e-mailem i hasłem. Stare konto bez e-maila? Użyj opcji logowania PIN-em."
-              : "Wpisz imię, nazwisko i PIN (4–6 cyfr) — tak jak na stronie startowej."}
+            {emergencyNameOnlyLogin
+              ? "Tryb awaryjny: wystarczy imię i nazwisko. Pole PIN jest wyłączone."
+              : emailPasswordAuthEnabled
+                ? "Zaloguj się e-mailem i hasłem. Stare konto bez e-maila? Użyj opcji logowania PIN-em."
+                : "Wpisz imię, nazwisko i PIN (4–6 cyfr) — tak jak na stronie startowej."}
           </p>
-          {!emailPasswordAuthEnabled ? (
+          {!emergencyNameOnlyLogin && !emailPasswordAuthEnabled ? (
           <details className="group mt-3 rounded-xl border border-white/20 bg-black/20 open:bg-black/30">
             <summary className="cursor-pointer list-none px-3 py-2 text-sm font-semibold text-white marker:content-none [&::-webkit-details-marker]:hidden">
               Zasady PIN-u
@@ -66,7 +70,15 @@ export function LoginPageScreen({
         },
       ]}
       steps={[
-        { n: "1", t: "Zaloguj się", d: emailPasswordAuthEnabled ? "E-mail i hasło (albo PIN na starym koncie)." : "Imię, nazwisko i PIN akademii." },
+        {
+          n: "1",
+          t: "Zaloguj się",
+          d: emergencyNameOnlyLogin
+            ? "Imię i nazwisko (tryb awaryjny)."
+            : emailPasswordAuthEnabled
+              ? "E-mail i hasło (albo PIN na starym koncie)."
+              : "Imię, nazwisko i PIN akademii.",
+        },
         { n: "2", t: "Zapisz się", d: "Potwierdź udział albo zaznacz, że jeszcze nie wiesz." },
         { n: "3", t: "Graj i licz punkty", d: "Statystyki i rankingi po każdym spotkaniu." },
       ]}
@@ -76,7 +88,7 @@ export function LoginPageScreen({
       footerLabel="Dołącz do akademii"
     >
       <LoginContentReady />
-      <LoginForm nextPath={nextPath} />
+      <LoginForm nextPath={nextPath} emergencyNameOnlyLogin={emergencyNameOnlyLogin} />
       {idleLogout ? (
         <p className="mt-4 rounded-xl border border-amber-200/80 bg-amber-50 px-3 py-2 text-sm text-amber-950">
           Wylogowano z powodu braku aktywności (30 min). Zaloguj się ponownie — możesz zaznaczyć „Nie wylogowuj mnie”,

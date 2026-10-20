@@ -11,7 +11,7 @@ on:
         description: "Adres produkcyjnej strony (https://…/ z ukośnikiem na końcu)"
         required: true
         type: string
-        default: "https://akademia-wielkich-pilkarzy.vercel.app/"
+        default: "https://akademia-wielkich-pilkarzy.onrender.com/"
   push:
     branches: [master, main]
     paths:

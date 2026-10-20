@@ -4,7 +4,8 @@ import android.net.Uri
 
 /** Wspólna konfiguracja przejść między AWP a GymBrat (packages/sister-sites). */
 object SisterSites {
-    const val GYMBRAT_URL = "https://gym-brat.vercel.app"
+    /** Tymczasowo Render Free (jak AWP). */
+    const val GYMBRAT_URL = "https://gymbrat.onrender.com"
 
     /** Pełnoekranowy iframe GymBrat w shellu AWP. */
     const val GYMBRAT_EMBED_PATH = "/gymbrat"

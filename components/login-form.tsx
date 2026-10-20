@@ -16,11 +16,18 @@ import { formSchemas, useValidatedForm, zodFieldErrors, emailWithConfirmSchema, 
 import { notifyPostLoginPromptsUpdated } from "@/lib/post-login-prompts";
 import { REALMS, type Realm } from "@/lib/realm";
 import { sanitizeAppBridgeNext } from "@/lib/app-bridge";
+import { isEmergencyNameOnlyLoginEnabled } from "@/lib/emergency-name-login";
 
 const loginSchema = z.object({
   firstName: formSchemas.requiredName("Imię"),
   lastName: formSchemas.requiredName("Nazwisko"),
   pin: formSchemas.pin,
+});
+
+const emergencyLoginSchema = z.object({
+  firstName: formSchemas.requiredName("Imię"),
+  lastName: formSchemas.requiredName("Nazwisko"),
+  pin: z.string().optional(),
 });
 
 const emailLoginSchema = z.object({
@@ -57,20 +64,27 @@ export function LoginForm({
   embedMode,
   onAuthenticated,
   realm = REALMS.ACADEMY,
+  emergencyNameOnlyLogin,
 }: {
   nextPath: string;
   embedMode?: boolean;
   onAuthenticated?: () => void;
   realm?: Realm;
+  /** Z serwera (env w runtime). Nadpisuje odczyt NEXT_PUBLIC_ w przeglądarce. */
+  emergencyNameOnlyLogin?: boolean;
 }) {
   const { emailPasswordAuthEnabled } = useSiteMode();
+  const emergencyNameOnly =
+    typeof emergencyNameOnlyLogin === "boolean"
+      ? emergencyNameOnlyLogin
+      : isEmergencyNameOnlyLoginEnabled();
   const submitVariant = "default";
   const router = useRouter();
   const next = sanitizeAppBridgeNext(nextPath) ?? "/";
   const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showGoalPreloader, setShowGoalPreloader] = useState(false);
-  const [legacyPin, setLegacyPin] = useState(false);
+  const [legacyPin, setLegacyPin] = useState(emergencyNameOnly);
 
   const [forgotOpen, setForgotOpen] = useState(false);
   const [forgotDoneOpen, setForgotDoneOpen] = useState(false);
@@ -97,7 +111,7 @@ export function LoginForm({
 
   const loginForm = useValidatedForm({
     initialValues: { firstName: "", lastName: "", pin: "" },
-    schema: loginSchema,
+    schema: emergencyNameOnly ? emergencyLoginSchema : loginSchema,
   });
 
   const emailLoginForm = useValidatedForm({
@@ -112,7 +126,7 @@ export function LoginForm({
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const useEmail = emailPasswordAuthEnabled && !legacyPin;
+    const useEmail = !emergencyNameOnly && emailPasswordAuthEnabled && !legacyPin;
     if (useEmail) {
       if (!emailLoginForm.validate()) return;
     } else if (!loginForm.validate()) {
@@ -134,7 +148,7 @@ export function LoginForm({
             : {
                 first_name: loginForm.values.firstName,
                 last_name: loginForm.values.lastName,
-                pin: loginForm.values.pin,
+                ...(emergencyNameOnly ? {} : { pin: loginForm.values.pin }),
                 remember_me: rememberMe,
                 realm,
               }
@@ -301,7 +315,12 @@ export function LoginForm({
     <>
       {showGoalPreloader && <AuthGoalPreloader label="Czas coś pokopać" />}
       <form onSubmit={onSubmit} className="space-y-4">
-        {emailPasswordAuthEnabled && !legacyPin ? (
+        {emergencyNameOnly ? (
+          <p className="rounded-lg border border-amber-300/80 bg-amber-50 px-3 py-2 text-sm text-amber-950 dark:border-amber-700/60 dark:bg-amber-950/40 dark:text-amber-100">
+            Tryb awaryjny: logowanie tylko imieniem i nazwiskiem. Pole PIN jest wyłączone.
+          </p>
+        ) : null}
+        {!emergencyNameOnly && emailPasswordAuthEnabled && !legacyPin ? (
           <>
             <FormInput
               id="login_email"
@@ -357,20 +376,27 @@ export function LoginForm({
         />
         <FormInput
           id="pin"
-          label="PIN (4–6 cyfr)"
-          required
-          showValidState
+          label={emergencyNameOnly ? "PIN (wyłączony — tryb awaryjny)" : "PIN (4–6 cyfr)"}
+          required={!emergencyNameOnly}
+          showValidState={!emergencyNameOnly}
           type="password"
           inputMode="numeric"
           pattern="[0-9]*"
           autoComplete="off"
-          minLength={4}
+          minLength={emergencyNameOnly ? undefined : 4}
           maxLength={6}
-          value={loginForm.values.pin}
-          onChange={(e) => loginForm.setValue("pin", e.target.value.replace(/\D/g, "").slice(0, 6))}
-          onBlur={() => loginForm.setFieldTouched("pin")}
-          error={loginForm.errors.pin}
-          placeholder="4–6 cyfr"
+          value={emergencyNameOnly ? "" : loginForm.values.pin}
+          onChange={(e) => {
+            if (emergencyNameOnly) return;
+            loginForm.setValue("pin", e.target.value.replace(/\D/g, "").slice(0, 6));
+          }}
+          onBlur={() => {
+            if (!emergencyNameOnly) loginForm.setFieldTouched("pin");
+          }}
+          error={emergencyNameOnly ? undefined : loginForm.errors.pin}
+          placeholder={emergencyNameOnly ? "—" : "4–6 cyfr"}
+          disabled={emergencyNameOnly}
+          readOnly={emergencyNameOnly}
         />
           </>
         )}
@@ -389,7 +415,7 @@ export function LoginForm({
         <Button type="submit" className="w-full rounded-full font-bold" variant={submitVariant} disabled={loading}>
           {loading ? "Logowanie…" : "Zaloguj się"}
         </Button>
-        {emailPasswordAuthEnabled ? (
+        {!emergencyNameOnly && emailPasswordAuthEnabled ? (
           <button
             type="button"
             className="w-full text-center text-sm font-medium text-[var(--mp-teal-dark)] hover:underline dark:text-teal-300"

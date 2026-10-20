@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { LoginForm } from "@/components/login-form";
 import { PIN_LOGIN_POLICY_LINES } from "@/lib/constants";
+import { isEmergencyNameOnlyLoginEnabled } from "@/lib/emergency-name-login";
 
 export const metadata: Metadata = {
   title: "Logowanie",
@@ -34,6 +35,7 @@ export default async function PzuCupLoginPage({ searchParams }: Props) {
         <LoginForm
           nextPath={nextPath && nextPath.startsWith("/pzu-cup") ? nextPath : "/pzu-cup"}
           realm="pzu_cup"
+          emergencyNameOnlyLogin={isEmergencyNameOnlyLoginEnabled()}
         />
         <div className="mt-6 space-y-2 text-center text-sm">
           <Link href="/pzu-cup/register" className="block font-semibold text-sky-300 hover:text-white">

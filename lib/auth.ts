@@ -117,12 +117,15 @@ export const getServerSession = cache(async (): Promise<AppSession | null> => {
         }
       | undefined;
     if (!row || row.auth_version !== session.authVersion) return null;
-    const needsPinSetup = !row.pin_hash;
-    const pinChangePending = Boolean(row.pin_hash_pending);
+    const { isEmergencyNameOnlyLoginEnabled } = await import("@/lib/emergency-name-login");
+    const emergencyNameOnly = isEmergencyNameOnlyLoginEnabled();
+    /** W trybie awaryjnym nie blokuj wejścia brakiem PIN / wymuszaniem e-maila. */
+    const needsPinSetup = emergencyNameOnly ? false : !row.pin_hash;
+    const pinChangePending = emergencyNameOnly ? false : Boolean(row.pin_hash_pending);
     const { parseAdminPermissions } = await import("@/lib/admin-permissions");
     const isAdmin = row.is_admin === 1;
     let needsEmailAuthSetup = false;
-    if (!isAdmin) {
+    if (!isAdmin && !emergencyNameOnly) {
       const completed =
         Boolean(row.password_hash) && row.email_verified === 1 && Boolean(row.email?.trim());
       if (!completed) {

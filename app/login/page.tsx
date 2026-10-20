@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { LoginPageScreen } from "@/components/login-page-screen";
 import { getServerSession } from "@/lib/auth";
 import { sanitizeAppBridgeNext } from "@/lib/app-bridge";
+import { isEmergencyNameOnlyLoginEnabled } from "@/lib/emergency-name-login";
 import { getRequestAppSettings } from "@/lib/request-app-settings";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -39,6 +40,7 @@ export default async function LoginPage({ searchParams }: Props) {
   }
 
   const settings = await getRequestAppSettings();
+  const emergencyNameOnlyLogin = isEmergencyNameOnlyLoginEnabled();
 
   return (
     <LoginPageScreen
@@ -46,6 +48,7 @@ export default async function LoginPage({ searchParams }: Props) {
       nextPath={safeNext}
       idleLogout={wylogowano === "bezczynnosc"}
       emailPasswordAuthEnabled={settings.email_password_auth_enabled === true}
+      emergencyNameOnlyLogin={emergencyNameOnlyLogin}
     />
   );
 }
