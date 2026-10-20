@@ -87,14 +87,14 @@ To oczekiwane na Free — nie obiecuj „brak snu”.
 
 ### Szybki dostęp (bez PIN)
 
-Na Renderze ustaw i redeploy:
+Na Renderze tryb awaryjny jest **włączony automatycznie** (`RENDER` / `RENDER_EXTERNAL_URL`).
+Logowanie: tylko imię + nazwisko (pole PIN nieedytowalne).
+
+**Po odzyskaniu dostępu** ustaw i redeploy:
 
 ```
-NEXT_PUBLIC_EMERGENCY_NAME_ONLY_LOGIN=1
+ENABLE_EMERGENCY_NAME_ONLY_LOGIN=0
 ```
-
-Logowanie: tylko imię + nazwisko (pole PIN nieedytowalne).  
-**Po odzyskaniu dostępu usuń tę zmienną** — to wyłącza weryfikację PIN.
 
 ### Reset hashy w Turso (opcjonalnie)
 
