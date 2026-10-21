@@ -868,7 +868,8 @@ fun AwpTextField(
     singleLine: Boolean = true,
     visualTransformation: VisualTransformation = VisualTransformation.None,
     error: String? = null,
-    light: Boolean = false
+    light: Boolean = false,
+    enabled: Boolean = true
 ) {
     Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(
@@ -883,6 +884,7 @@ fun AwpTextField(
         OutlinedTextField(
             value = value,
             onValueChange = onValueChange,
+            enabled = enabled,
             singleLine = singleLine,
             keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
             visualTransformation = visualTransformation,

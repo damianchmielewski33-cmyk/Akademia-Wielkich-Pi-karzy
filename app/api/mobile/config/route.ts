@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAppSettings } from "@/lib/app-settings";
 import { getDb } from "@/lib/db";
+import { isEmergencyNameOnlyLoginEnabled } from "@/lib/emergency-name-login";
 import { REALMS } from "@/lib/realm";
 import { checkRateLimitDistributed } from "@/lib/rate-limit-db";
 import { rateLimitKey, rateLimitedResponse, RATE } from "@/lib/rate-limit";
@@ -69,6 +70,7 @@ export async function GET(req: Request) {
       lineup_pitch_slots_max: settings.lineup_pitch_slots_max,
       match_cancel_reasons: settings.match_cancel_reasons,
       email_password_auth_enabled: settings.email_password_auth_enabled === true,
+      emergency_name_only_login: isEmergencyNameOnlyLoginEnabled(),
     },
     site_assets: settings.site_assets,
     web_screen_blocks: settings.screen_blocks,

@@ -31,7 +31,7 @@ Po udanym buildzie:
 
 1. Otwórz stronę akademii na telefonie z Androidem (pasek „Pobierz aplikację”) albo link z Releases  
 2. Pobierz APK → otwórz → zainstaluj  
-3. Zaloguj się PIN-em jak na stronie
+3. Zaloguj się jak na stronie (w trybie awaryjnym Render: tylko imię i nazwisko)
 
 ## Opcjonalnie (żeby nie wpisywać URL za każdym razem)
 

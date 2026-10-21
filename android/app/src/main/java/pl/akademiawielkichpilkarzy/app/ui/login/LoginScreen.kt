@@ -86,6 +86,8 @@ fun LoginScreen(
     var firstName by remember { mutableStateOf("") }
     var lastName by remember { mutableStateOf("") }
     var pin by remember { mutableStateOf("") }
+    var zawodnik by remember { mutableStateOf("") }
+    var requirePlayerAlias by remember { mutableStateOf(false) }
     var rememberMe by remember { mutableStateOf(true) }
     var loading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -93,6 +95,9 @@ fun LoginScreen(
     var siteName by remember { mutableStateOf("Akademia Wielkich Piłkarzy") }
     var siteDescription by remember { mutableStateOf("Terminarz, składy i społeczność akademii") }
     var emailAuthEnabled by remember { mutableStateOf(false) }
+    var emergencyNameOnly by remember {
+        mutableStateOf(BuildConfig.API_BASE_URL.contains("onrender", ignoreCase = true))
+    }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var legacyPin by remember { mutableStateOf(false) }
@@ -116,26 +121,37 @@ fun LoginScreen(
                 ?: cfg.appSettings?.siteDescription?.takeIf { it.isNotBlank() }
                 ?: siteDescription
             emailAuthEnabled = cfg.appSettings?.emailPasswordAuthEnabled == true
+            emergencyNameOnly = when (cfg.appSettings?.emergencyNameOnlyLogin) {
+                true -> true
+                false -> false
+                null -> BuildConfig.API_BASE_URL.contains("onrender", ignoreCase = true)
+            }
         } catch (_: Exception) {
         }
         try {
             venues = ApiClient.api.venues().venues.take(8)
         } catch (_: Exception) {
         }
-        // Auto-prompt biometrii przy starcie, jeśli włączona.
-        if (biometricsAvailable && biometricEnabled && activity != null && !emailAuthEnabled) {
+        // Auto-prompt biometrii przy starcie, jeśli włączona (nie w trybie awaryjnym / e-mail).
+        if (
+            biometricsAvailable &&
+            biometricEnabled &&
+            activity != null &&
+            !emailAuthEnabled &&
+            !emergencyNameOnly
+        ) {
             BiometricHelper.authenticate(
                 activity = activity,
                 onSuccess = {
                     scope.launch { loginWithBiometrics(context, biometricStore, onLoggedIn) { error = it } }
                 },
-                onError = { /* zostaw formularz PIN */ },
+                onError = { /* zostaw formularz */ },
                 onCancel = {}
             )
         }
     }
 
-    fun performPinLogin() {
+    fun performNameLogin() {
         scope.launch {
             loading = true
             error = null
@@ -144,7 +160,8 @@ fun LoginScreen(
                     LoginRequest(
                         firstName = firstName.trim(),
                         lastName = lastName.trim(),
-                        pin = pin.trim(),
+                        pin = if (emergencyNameOnly) "" else pin.trim(),
+                        zawodnik = zawodnik.trim().takeIf { emergencyNameOnly && it.isNotEmpty() },
                         rememberMe = rememberMe
                     )
                 )
@@ -162,26 +179,33 @@ fun LoginScreen(
                         isAdmin = user.isAdmin == 1
                     )
                     PushRegistrar.enablePush()
-                    val creds = BiometricCredentialsStore.Credentials(
-                        firstName = firstName.trim(),
-                        lastName = lastName.trim(),
-                        pin = pin.trim(),
-                        rememberMe = rememberMe
-                    )
-                    if (biometricStore.isEnabled() && !emailAuthEnabled) {
-                        // Odśwież zapisane dane (np. nowy PIN), bez pokazywania biometrii po zalogowaniu.
-                        biometricStore.enable(creds)
+                    if (!emergencyNameOnly && biometricStore.isEnabled() && !emailAuthEnabled) {
+                        biometricStore.enable(
+                            BiometricCredentialsStore.Credentials(
+                                firstName = firstName.trim(),
+                                lastName = lastName.trim(),
+                                pin = pin.trim(),
+                                rememberMe = rememberMe
+                            )
+                        )
                     }
                     context.awpVibrate(AwpHaptic.Success)
                     onLoggedIn()
                 }
             } catch (e: HttpException) {
-                error = try {
-                    e.response()?.errorBody()?.string()?.let { raw ->
-                        Regex("\"error\"\\s*:\\s*\"([^\"]+)\"").find(raw)?.groupValues?.getOrNull(1)
-                    } ?: "Błąd logowania (${e.code()})"
+                val body = try {
+                    e.response()?.errorBody()?.string().orEmpty()
                 } catch (_: Exception) {
-                    "Błąd logowania (${e.code()})"
+                    ""
+                }
+                val code = Regex("\"code\"\\s*:\\s*\"([^\"]+)\"").find(body)?.groupValues?.getOrNull(1)
+                val msg = Regex("\"error\"\\s*:\\s*\"([^\"]+)\"").find(body)?.groupValues?.getOrNull(1)
+                if (code == "NEEDS_PLAYER_ALIAS") {
+                    requirePlayerAlias = true
+                    error = msg
+                        ?: "Jest więcej kont o tym imieniu i nazwisku — podaj swój nick."
+                } else {
+                    error = msg ?: "Błąd logowania (${e.code()})"
                 }
             } catch (e: Exception) {
                 error = e.message ?: "Brak połączenia z serwerem"
@@ -296,10 +320,13 @@ fun LoginScreen(
                     )
                     else -> MarketplaceAuthCard(
                         title = "Logowanie",
-                        subtitle = if (emailAuthEnabled && !legacyPin) {
-                            "Wejście akademii — e-mail i hasło."
-                        } else {
-                            "Rezerwacja boiska bez PIN-u albo wejście akademii."
+                        subtitle = when {
+                            emergencyNameOnly ->
+                                "Tryb awaryjny — wystarczy imię i nazwisko (PIN wyłączony)."
+                            emailAuthEnabled && !legacyPin ->
+                                "Wejście akademii — e-mail i hasło."
+                            else ->
+                                "Rezerwacja boiska bez PIN-u albo wejście akademii."
                         }
                     ) {
                         if (onBrowsePitches != null) {
@@ -309,13 +336,23 @@ fun LoginScreen(
                                 enabled = true
                             ) { onBrowsePitches() }
                             Text(
-                                if (emailAuthEnabled && !legacyPin) "albo akademia — e-mail i hasło" else "albo akademia — imię, nazwisko i PIN",
+                                when {
+                                    emergencyNameOnly -> "albo akademia — imię i nazwisko"
+                                    emailAuthEnabled && !legacyPin -> "albo akademia — e-mail i hasło"
+                                    else -> "albo akademia — imię, nazwisko i PIN"
+                                },
                                 color = AwpColors.Zinc500,
                                 style = MaterialTheme.typography.bodySmall,
                                 modifier = Modifier.align(Alignment.CenterHorizontally)
                             )
                         }
-                        if (biometricsAvailable && biometricEnabled && activity != null && (!emailAuthEnabled || legacyPin)) {
+                        if (
+                            !emergencyNameOnly &&
+                            biometricsAvailable &&
+                            biometricEnabled &&
+                            activity != null &&
+                            (!emailAuthEnabled || legacyPin)
+                        ) {
                             MarketplacePrimaryButton("Zaloguj odciskiem / twarzą") {
                                 error = null
                                 BiometricHelper.authenticate(
@@ -342,7 +379,7 @@ fun LoginScreen(
                             )
                         }
 
-                        if (emailAuthEnabled && !legacyPin) {
+                        if (!emergencyNameOnly && emailAuthEnabled && !legacyPin) {
                             AwpTextField("E-mail", email, { email = it }, keyboardType = KeyboardType.Email, light = true)
                             AwpTextField(
                                 "Hasło",
@@ -352,16 +389,33 @@ fun LoginScreen(
                                 light = true
                             )
                         } else {
-                        AwpTextField("Imię", firstName, { firstName = it }, light = true)
-                        AwpTextField("Nazwisko", lastName, { lastName = it }, light = true)
-                        AwpTextField(
-                            label = "PIN (4–6 cyfr)",
-                            value = pin,
-                            onValueChange = { if (it.length <= 6 && it.all(Char::isDigit)) pin = it },
-                            keyboardType = KeyboardType.NumberPassword,
-                            visualTransformation = PasswordVisualTransformation(),
-                            light = true
-                        )
+                            AwpTextField("Imię", firstName, { firstName = it }, light = true)
+                            AwpTextField("Nazwisko", lastName, { lastName = it }, light = true)
+                            if (emergencyNameOnly && requirePlayerAlias) {
+                                AwpTextField(
+                                    "Nick / pseudonim piłkarza",
+                                    zawodnik,
+                                    { zawodnik = it },
+                                    light = true
+                                )
+                            }
+                            AwpTextField(
+                                label = if (emergencyNameOnly) {
+                                    "PIN (wyłączony — tryb awaryjny)"
+                                } else {
+                                    "PIN (4–6 cyfr)"
+                                },
+                                value = if (emergencyNameOnly) "" else pin,
+                                onValueChange = { v ->
+                                    if (!emergencyNameOnly && v.length <= 6 && v.all(Char::isDigit)) {
+                                        pin = v
+                                    }
+                                },
+                                keyboardType = KeyboardType.NumberPassword,
+                                visualTransformation = PasswordVisualTransformation(),
+                                light = true,
+                                enabled = !emergencyNameOnly
+                            )
                         }
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Checkbox(
@@ -384,27 +438,36 @@ fun LoginScreen(
                             )
                         }
 
+                        val useEmailForm = !emergencyNameOnly && emailAuthEnabled && !legacyPin
                         MarketplacePrimaryButton(
-                            text = if (emailAuthEnabled && !legacyPin) "Zaloguj się" else "Zaloguj PIN-em",
+                            text = when {
+                                emergencyNameOnly -> "Zaloguj się"
+                                useEmailForm -> "Zaloguj się"
+                                else -> "Zaloguj PIN-em"
+                            },
                             loading = loading,
-                            enabled = if (emailAuthEnabled && !legacyPin) {
-                                email.isNotBlank() && password.isNotBlank()
-                            } else {
-                                firstName.isNotBlank() && lastName.isNotBlank() && pin.length in 4..6
+                            enabled = when {
+                                useEmailForm -> email.isNotBlank() && password.isNotBlank()
+                                emergencyNameOnly ->
+                                    firstName.isNotBlank() &&
+                                        lastName.isNotBlank() &&
+                                        (!requirePlayerAlias || zawodnik.isNotBlank())
+                                else ->
+                                    firstName.isNotBlank() && lastName.isNotBlank() && pin.length in 4..6
                             }
                         ) {
-                            if (emailAuthEnabled && !legacyPin) performEmailLogin() else performPinLogin()
+                            if (useEmailForm) performEmailLogin() else performNameLogin()
                         }
-                        if (emailAuthEnabled) {
+                        if (!emergencyNameOnly && emailAuthEnabled) {
                             MarketplaceLink(if (legacyPin) "Logowanie e-mailem i hasłem" else "Nie mam e-maila i hasła — logowanie PIN-em") {
                                 legacyPin = !legacyPin
                             }
                         }
                         MarketplaceLink("Załóż konto akademii") { authMode = "register" }
-                        if (emailAuthEnabled && !legacyPin) {
+                        if (useEmailForm) {
                             MarketplaceLink("Zapomniałem hasła") { authMode = "forgot-password" }
                         }
-                        if (!emailAuthEnabled || legacyPin) {
+                        if (!emergencyNameOnly && (!emailAuthEnabled || legacyPin)) {
                             MarketplaceLink("Zapomniałem PIN-u") { authMode = "forgot" }
                         }
                     }

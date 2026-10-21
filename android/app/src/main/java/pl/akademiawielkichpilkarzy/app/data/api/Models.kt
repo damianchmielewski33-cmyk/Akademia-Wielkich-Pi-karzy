@@ -6,6 +6,7 @@ data class LoginRequest(
     @Json(name = "first_name") val firstName: String = "",
     @Json(name = "last_name") val lastName: String = "",
     val pin: String = "",
+    val zawodnik: String? = null,
     val email: String? = null,
     val password: String? = null,
     @Json(name = "remember_me") val rememberMe: Boolean = true
@@ -15,6 +16,7 @@ data class LoginResponse(
     val ok: Boolean? = null,
     val token: String? = null,
     val error: String? = null,
+    val code: String? = null,
     val user: LoginUser? = null,
     @Json(name = "needs_email_auth_setup") val needsEmailAuthSetup: Int = 0
 )
@@ -584,7 +586,9 @@ data class AppSettingsSnapshotDto(
     @Json(name = "lineup_pitch_slots_min") val lineupPitchSlotsMin: Int? = null,
     @Json(name = "lineup_pitch_slots_max") val lineupPitchSlotsMax: Int? = null,
     @Json(name = "match_cancel_reasons") val matchCancelReasons: List<MatchCancelReasonDto> = emptyList(),
-    @Json(name = "email_password_auth_enabled") val emailPasswordAuthEnabled: Boolean = false
+    @Json(name = "email_password_auth_enabled") val emailPasswordAuthEnabled: Boolean = false,
+    /** null = stary backend bez pola; Android wtedy domyśla się z API_BASE_URL (Render). */
+    @Json(name = "emergency_name_only_login") val emergencyNameOnlyLogin: Boolean? = null
 )
 
 data class SiteAssetsDto(
