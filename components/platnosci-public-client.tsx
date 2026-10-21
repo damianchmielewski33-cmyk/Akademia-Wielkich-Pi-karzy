@@ -44,17 +44,17 @@ export function PlatnosciPublicClient({ token, hotpayEnabled, isAdmin = false, v
     const contribution = Number(view.contribution_pln ?? 0);
     const blik = view.blik_phone?.trim() || MATCH_BLIK_PHONE_DISPLAY;
     return (
-      <div className={light ? "relative flex flex-1 flex-col text-zinc-900 dark:text-zinc-50" : "container mx-auto max-w-2xl flex-1 space-y-6 px-4 py-10"}>
+      <div className={light ? "relative flex flex-1 flex-col overflow-x-clip text-zinc-900 dark:text-zinc-50" : "container mx-auto max-w-2xl flex-1 space-y-6 px-4 py-10"}>
         {light ? (
-          <section className="mp-hero mp-hero--photo relative z-10 flex flex-col justify-end overflow-hidden pb-10 pt-12 sm:pb-16 sm:pt-20">
+          <section className="mp-hero mp-hero--photo mp-hero--section relative z-10 flex flex-col justify-end overflow-hidden pb-6 pt-8 sm:pb-16 sm:pt-20">
             <MarketplacePitchPhoto src={heroPhoto} priority className="z-0" />
             <div className="absolute inset-0 z-[1] bg-gradient-to-t from-black/75 via-black/40 to-black/20" />
-            <div className="relative z-10 mx-auto w-full max-w-6xl px-3 xs:px-4">
+            <div className="relative z-10 mx-auto w-full min-w-0 max-w-6xl px-3 xs:px-4">
               <p className="text-[0.65rem] font-black uppercase tracking-[0.22em] text-white/80 sm:text-xs">Opłaty</p>
-              <h1 className="mt-2 text-[1.85rem] font-black leading-tight tracking-tight text-white xs:text-4xl sm:text-5xl">
+              <h1 className="mt-2 text-[1.65rem] font-black leading-tight tracking-tight text-white xs:text-4xl sm:text-5xl">
                 {view.title}
               </h1>
-              <p className="mt-3 max-w-xl text-sm text-white/85 sm:text-base">{view.subtitle}</p>
+              <p className="mt-2 max-w-xl text-sm text-white/85 sm:mt-3 sm:text-base">{view.subtitle}</p>
             </div>
           </section>
         ) : (
@@ -63,7 +63,7 @@ export function PlatnosciPublicClient({ token, hotpayEnabled, isAdmin = false, v
             <p className="text-sm text-zinc-500">{view.subtitle}</p>
           </>
         )}
-        <div className={light ? "relative z-10 mx-auto w-full min-w-0 max-w-2xl space-y-5 px-3 py-8 xs:px-4 sm:py-10" : "space-y-4"}>
+        <div className={light ? "relative z-10 mx-auto w-full min-w-0 max-w-2xl space-y-4 px-3 py-6 xs:px-4 sm:space-y-5 sm:py-10" : "space-y-4"}>
           {view.match && contribution > 0 ? (
             <p className={light ? "text-sm text-zinc-600 dark:text-zinc-300" : "text-sm text-zinc-600"}>
               Składka na osobę: <strong>{formatMatchFeePln(contribution)}</strong>
@@ -102,14 +102,14 @@ export function PlatnosciPublicClient({ token, hotpayEnabled, isAdmin = false, v
   }
 
   const footerLinks = (
-    <div className="flex flex-wrap gap-2">
-      <Button asChild className={light ? "h-11 rounded-full font-bold" : undefined} variant={light ? "default" : "secondary"}>
+    <div className="flex w-full flex-col gap-2 sm:flex-row sm:flex-wrap">
+      <Button asChild className={light ? "h-11 w-full rounded-full font-bold sm:w-auto" : "w-full sm:w-auto"} variant={light ? "default" : "secondary"}>
         <Link href="/platnosci">Płatności i portfel</Link>
       </Button>
       <Button
         asChild
         variant="outline"
-        className={light ? "h-11 rounded-full font-bold" : undefined}
+        className={light ? "h-11 w-full rounded-full font-bold sm:w-auto" : "w-full sm:w-auto"}
       >
         <Link href="/terminarz">Terminarz</Link>
       </Button>
@@ -323,22 +323,22 @@ export function PlatnosciPublicClient({ token, hotpayEnabled, isAdmin = false, v
 
   if (light) {
     return (
-      <div className="relative flex flex-1 flex-col text-zinc-900 dark:text-zinc-50">
-        <section className="mp-hero mp-hero--photo relative z-10 flex flex-col justify-end overflow-hidden pb-10 pt-12 sm:pb-16 sm:pt-20">
+      <div className="relative flex flex-1 flex-col overflow-x-clip text-zinc-900 dark:text-zinc-50">
+        <section className="mp-hero mp-hero--photo mp-hero--section relative z-10 flex flex-col justify-end overflow-hidden pb-6 pt-8 sm:pb-16 sm:pt-20">
           <MarketplacePitchPhoto src={heroPhoto} priority className="z-0" />
           <div className="absolute inset-0 z-[1] bg-gradient-to-t from-black/75 via-black/40 to-black/20" />
-          <div className="relative z-10 mx-auto w-full max-w-6xl px-3 xs:px-4">
+          <div className="relative z-10 mx-auto w-full min-w-0 max-w-6xl px-3 xs:px-4">
             <p className="text-[0.65rem] font-black uppercase tracking-[0.22em] text-white/80 sm:text-xs">Portfel</p>
-            <h1 className="mt-2 text-[1.85rem] font-black leading-tight tracking-tight text-white xs:text-4xl sm:text-5xl">
+            <h1 className="mt-2 text-[1.65rem] font-black leading-tight tracking-tight text-white xs:text-4xl sm:text-5xl">
               {view.title}
             </h1>
-            <p className="mt-3 max-w-xl text-sm text-white/85 sm:text-base">
+            <p className="mt-2 max-w-xl text-sm text-white/85 sm:mt-3 sm:text-base">
               {view.subtitle || "Publiczny podgląd sald zawodników."}
             </p>
           </div>
         </section>
 
-        <div className="relative z-10 mx-auto w-full min-w-0 max-w-2xl space-y-5 px-3 py-8 xs:px-4 sm:py-10">
+        <div className="relative z-10 mx-auto w-full min-w-0 max-w-2xl space-y-4 px-3 py-6 xs:px-4 sm:space-y-5 sm:py-10">
           {matchBlock}
           {playerMatchesBlock}
           <MarketplaceSection
@@ -393,17 +393,17 @@ export function PlatnosciPublicInactive({ light }: { light?: boolean }) {
   if (isLight) {
     return (
       <div className="relative flex flex-1 flex-col text-zinc-900 dark:text-zinc-50">
-        <section className="mp-hero mp-hero--photo relative z-10 flex flex-col justify-end overflow-hidden pb-10 pt-12 sm:pb-16 sm:pt-20">
+        <section className="mp-hero mp-hero--photo mp-hero--section relative z-10 flex flex-col justify-end overflow-hidden pb-6 pt-8 sm:pb-16 sm:pt-20">
           <MarketplacePitchPhoto src={heroPhoto} priority className="z-0" />
           <div className="absolute inset-0 z-[1] bg-gradient-to-t from-black/75 via-black/40 to-black/20" />
-          <div className="relative z-10 mx-auto w-full max-w-6xl px-3 xs:px-4">
+          <div className="relative z-10 mx-auto w-full min-w-0 max-w-6xl px-3 xs:px-4">
             <p className="text-[0.65rem] font-black uppercase tracking-[0.22em] text-white/80 sm:text-xs">Portfel</p>
-            <h1 className="mt-2 text-[1.85rem] font-black leading-tight tracking-tight text-white xs:text-4xl sm:text-5xl">
+            <h1 className="mt-2 text-[1.65rem] font-black leading-tight tracking-tight text-white xs:text-4xl sm:text-5xl">
               Podsumowanie płatności
             </h1>
           </div>
         </section>
-        <div className="relative z-10 mx-auto w-full max-w-lg px-3 py-8 xs:px-4 sm:py-10">
+        <div className="relative z-10 mx-auto w-full min-w-0 max-w-lg px-3 py-6 xs:px-4 sm:py-10">
           <div className={cn(mpSectionCardClass, "text-center")}>
             <span className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--mp-teal)] text-white shadow-sm">
               <Wallet className="h-5 w-5" aria-hidden />

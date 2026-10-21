@@ -293,7 +293,7 @@ export function MatchSignupFeesList({
                 </div>
               ) : null}
               {paid ? (
-                <p className="mt-2 pl-11 text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
+                <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-emerald-700 sm:pl-11 dark:text-emerald-300">
                   Opłacone
                   {received > contributionPln
                     ? ` · nadpłata ${formatMatchFeePln(received)}`
@@ -302,11 +302,11 @@ export function MatchSignupFeesList({
                       : ""}
                 </p>
               ) : underpaid ? (
-                <p className="mt-2 pl-11 text-xs font-semibold uppercase tracking-wide text-orange-800 dark:text-orange-200">
+                <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-orange-800 sm:pl-11 dark:text-orange-200">
                   Niedopłata {formatMatchFeePln(received)} / {formatMatchFeePln(contributionPln)} — reszta na portfelu
                 </p>
               ) : pending ? (
-                <p className="mt-2 pl-11 text-xs font-semibold uppercase tracking-wide text-amber-800 dark:text-amber-200">
+                <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-amber-800 sm:pl-11 dark:text-amber-200">
                   Czeka na potwierdzenie przelewu
                 </p>
               ) : (

@@ -275,7 +275,7 @@ export function WalletBalanceHistory({
             type="button"
             onClick={() => setFilter(f.id)}
             className={cn(
-              "shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors",
+              "min-h-10 shrink-0 touch-manipulation rounded-full px-3 py-2 text-xs font-semibold transition-colors",
               filter === f.id
                 ? "bg-[var(--mp-teal)] text-white"
                 : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300"
@@ -641,7 +641,7 @@ export function PlayerWalletPanel({
             </p>
             <p
               className={cn(
-                "mt-1 text-3xl font-bold tabular-nums",
+                "mt-1 text-2xl font-bold tabular-nums sm:text-3xl",
                 "text-zinc-950 dark:text-white",
                 walletBalancePln == null && ("text-zinc-400"),
                 walletBalancePln != null && walletBalancePln < 0 && ("text-red-600 dark:text-red-300"),
@@ -790,7 +790,8 @@ export function PlayerWalletPanel({
               label="Zapłać online"
               busy={topupBusy}
               disabled={walletLoading}
-              className="sm:min-w-[14rem]"
+              fullWidth
+              className="sm:w-auto sm:min-w-[14rem]"
               onClick={() => {
                 const amount = Number.parseFloat(topupAmount.replace(",", "."));
                 if (!Number.isFinite(amount) || amount < 0.01) {
@@ -809,17 +810,17 @@ export function PlayerWalletPanel({
   return (
     <div className={cn("space-y-4", className)}>
       {!compact ? (
-          <div className="overflow-hidden rounded-3xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
+          <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-950 xs:rounded-3xl">
             <PhotoPanel
               src={MARKETPLACE_PITCH_PHOTOS[1]}
-              className="min-h-[7.5rem] rounded-none border-0"
-              contentClassName="flex min-h-[7.5rem] flex-col justify-end px-5 py-5 sm:px-6"
+              className="min-h-[6.5rem] rounded-none border-0 sm:min-h-[7.5rem]"
+              contentClassName="flex min-h-[6.5rem] flex-col justify-end px-4 py-4 sm:min-h-[7.5rem] sm:px-6 sm:py-5"
               sizes="(max-width: 768px) 100vw, 1152px"
             >
               <p className="text-[0.65rem] font-black uppercase tracking-[0.18em] text-white/80">Twój portfel</p>
-              <h2 className="mt-1 text-2xl font-black text-white sm:text-3xl">Saldo konta</h2>
+              <h2 className="mt-1 text-xl font-black text-white sm:text-3xl">Saldo konta</h2>
             </PhotoPanel>
-            <div className="p-5 sm:p-6">{balancePanel}</div>
+            <div className="p-4 sm:p-6">{balancePanel}</div>
           </div>
       ) : (
         <div
@@ -928,6 +929,7 @@ export function PlayerWalletPanel({
             <div className="mt-3">
               <Button
                 type="button"
+                className="h-11 w-full touch-manipulation sm:w-auto"
                 disabled={offlineDepositSubmitting}
                 onClick={() => void submitOfflineDeposit()}
               >
@@ -1025,8 +1027,14 @@ export function PlayerWalletPanel({
               : "Sprawdź kwotę płatności."
         }
       >
-        <div className="mt-4 flex flex-wrap justify-end gap-2">
-          <Button type="button" variant="outline" disabled={topupBusy} onClick={() => setTopupConfirmOpen(false)}>
+        <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
+          <Button
+            type="button"
+            variant="outline"
+            className="h-11 w-full touch-manipulation sm:w-auto"
+            disabled={topupBusy}
+            onClick={() => setTopupConfirmOpen(false)}
+          >
             Anuluj
           </Button>
           <PayButton
@@ -1040,6 +1048,8 @@ export function PlayerWalletPanel({
             }
             label={walletBalancePln !== null && walletBalancePln < 0 ? "Opłać zaległość" : "Zapłać online"}
             busy={topupBusy}
+            fullWidth
+            className="sm:w-auto"
             onClick={() => void handleTopup()}
           />
         </div>
