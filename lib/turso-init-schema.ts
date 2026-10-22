@@ -454,10 +454,17 @@ export async function initLibsqlSchema(client: Client) {
     await client.execute("ALTER TABLE match_signups ADD COLUMN blik_received_pln REAL NOT NULL DEFAULT 0");
   }
 
+  // Kolumny app_settings muszą istnieć zanim realm migration je skopiuje (SELECT site_name…).
   names = await pragmaColumnNames(client, "app_settings");
   await migrateAppSettingsColumnsLibsql(names, (sql) => client.execute(sql));
 
   await migrateRealmSchemaLibsql(client);
+
+  // Realm migration przebudowuje app_settings, kopiując tylko bazowy zestaw kolumn — nowsze
+  // (adsense_*, screen_blocks_* itd.) trzeba odtworzyć, inaczej na świeżej bazie libSQL/Turso
+  // pojawia się „no such column: adsense_client_id”.
+  names = await pragmaColumnNames(client, "app_settings");
+  await migrateAppSettingsColumnsLibsql(names, (sql) => client.execute(sql));
 
   await client.executeMultiple(`
     CREATE TABLE IF NOT EXISTS match_transport_messages (
