@@ -717,11 +717,24 @@ export function TerminarzClient({
         0
       );
       const charged = (r.data.applied ?? []).length;
+      const skipped = (r.data.skipped ?? []).length;
       const parts: string[] = [];
       if (charged > 0) parts.push(`obciążenia: ${charged}`);
       if (credited > 0) parts.push(`zwrot nadpłat: ${formatPln(credited)}`);
       if (absentRefund > 0) parts.push(`zwrot nieobecnych: ${formatPln(absentRefund)}`);
       else if ((r.data.absent_refunded ?? []).length > 0) parts.push("nieobecni: zdjęto opłacenie");
+      if (
+        charged === 0 &&
+        credited === 0 &&
+        absentRefund === 0 &&
+        (r.data.absent_refunded ?? []).length === 0 &&
+        skipped > 0
+      ) {
+        toast.error(
+          `Nie odjęto kwot z portfeli — ${skipped} pominiętych (już rozliczeni lub błąd). Odśwież i spróbuj ponownie.`
+        );
+        return;
+      }
       toast.success(parts.length > 0 ? `Rozliczono — ${parts.join(", ")}` : "Rozliczono mecz");
       setSettleOpen(false);
       setSettleMatch(null);

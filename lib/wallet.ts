@@ -334,11 +334,14 @@ export async function createMatchCharge(args: {
   const chargeNote = args.note ?? `Rozliczenie meczu id ${args.matchId}`;
 
   await withWriteTransaction(db, async (tx) => {
+    // PK to (match_id, user_id) — tabela nie ma kolumny id.
     const existingCharge = (await tx
-      .prepare(`SELECT id FROM match_wallet_charges WHERE match_id = ? AND user_id = ? LIMIT 1`)
-      .get(args.matchId, args.userId)) as { id: number } | undefined;
+      .prepare(
+        `SELECT 1 AS ok FROM match_wallet_charges WHERE match_id = ? AND user_id = ? LIMIT 1`
+      )
+      .get(args.matchId, args.userId)) as { ok: number } | undefined;
     if (existingCharge) {
-      return;
+      throw new Error("UNIQUE constraint failed: match_wallet_charges");
     }
 
     await tx.prepare(
