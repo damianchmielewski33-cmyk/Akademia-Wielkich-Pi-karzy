@@ -921,13 +921,18 @@ function initSchemaSync(db: Database.Database) {
   migrateCaptainLotterySchemaSqlite(db);
   migrateAdImpressionsSchemaSqlite(db);
 
-  const appSettingsCols = db.prepare("PRAGMA table_info(app_settings)").all() as { name: string }[];
-  migrateAppSettingsColumnsSqlite(
-    appSettingsCols.map((c) => c.name),
-    (sql) => db.exec(sql)
-  );
+  const readAppSettingsColumnNames = () =>
+    (db.prepare("PRAGMA table_info(app_settings)").all() as { name: string }[]).map((c) => c.name);
+
+  // Kolumny app_settings muszą istnieć zanim realm migration je skopiuje (SELECT site_name…).
+  migrateAppSettingsColumnsSqlite(readAppSettingsColumnNames(), (sql) => db.exec(sql));
 
   migrateRealmSchemaSqlite(db);
+
+  // Realm migration przebudowuje app_settings, kopiując tylko bazowy zestaw kolumn — nowsze
+  // (adsense_*, screen_blocks_* itd.) trzeba odtworzyć, inaczej na świeżej bazie SQLite
+  // pojawia się „no such column: adsense_client_id”.
+  migrateAppSettingsColumnsSqlite(readAppSettingsColumnNames(), (sql) => db.exec(sql));
 
   const adminMsgCols = db.prepare("PRAGMA table_info(admin_messages)").all() as { name: string }[];
   const adminMsgNames = new Set(adminMsgCols.map((c) => c.name));
