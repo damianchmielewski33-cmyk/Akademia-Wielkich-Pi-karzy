@@ -42,16 +42,9 @@ W GitHub: **Settings → Secrets and variables → Actions → New repository se
 
 Albo wpisz raz w pliku `android/gradle.properties` linię `API_BASE_URL=...`
 
-## Co jest w aplikacji (v1.6+)
+## Co jest w aplikacji
 
-Po zalogowaniu masz te same obszary co na stronie:
-
-- **Dolny pasek:** Start · Terminarz · Portfel · Profil  
-- **Start:** najbliższy mecz u góry + kafelki jak menu WWW (wszystkie sekcje)  
-- **Natywnie:** Terminarz (zapisy/skład/archiwum), Portfel, Statystyki, Rankingi, Składy, Profil  
-- **WebView (ta sama sesja):** Piłkarze, Galeria, O nas, Kontakt, PZU Cup, Panel admina, pełny profil/płatności  
-
-Wygląd: ciemna murawa, navy/purple Mundial, złote akcenty, font Teko w nagłówkach — jak na stronie.
+Po zalogowaniu PIN-em / biometrią aplikacja otwiera **cały serwis w WebView** (ta sama strona WWW, ta sama sesja) — bez osobnego trybu natywnego Compose.
 
 Rejestracja i „Zapomniałem PIN-u” są dostępne z ekranu logowania.
 
@@ -59,8 +52,7 @@ Rejestracja i „Zapomniałem PIN-u” są dostępne z ekranu logowania.
 
 Jeśli telefon ma odcisk palca lub rozpoznawanie twarzy:
 1. Zaloguj się PIN-em — aplikacja zapyta o włączenie biometrii  
-2. Albo włącz przełącznik w **Profilu**  
-3. Przy kolejnym starcie możesz wejść odciskiem / twarzą  
+2. Przy kolejnym starcie możesz wejść odciskiem / twarzą  
 
 PIN jest przechowywany lokalnie w zaszyfrowanym magazynie telefonu.
 

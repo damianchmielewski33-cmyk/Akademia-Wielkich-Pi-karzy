@@ -6,7 +6,6 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.os.Build
 import android.os.Bundle
-import pl.akademiawielkichpilkarzy.app.data.AppConfigStore
 import pl.akademiawielkichpilkarzy.app.data.api.ApiClient
 import pl.akademiawielkichpilkarzy.app.data.auth.BiometricCredentialsStore
 import pl.akademiawielkichpilkarzy.app.data.auth.SessionStore
@@ -15,8 +14,6 @@ class AwpApp : Application() {
     lateinit var sessionStore: SessionStore
         private set
     lateinit var biometricStore: BiometricCredentialsStore
-        private set
-    lateinit var appConfigStore: AppConfigStore
         private set
 
     @Volatile
@@ -31,7 +28,6 @@ class AwpApp : Application() {
         instance = this
         sessionStore = SessionStore(this)
         biometricStore = BiometricCredentialsStore(this)
-        appConfigStore = AppConfigStore(this)
         ApiClient.init(sessionStore)
         createNotificationChannels()
         registerActivityLifecycleCallbacks(

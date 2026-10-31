@@ -175,7 +175,7 @@ export function AdminScreenBlocksTab({ loading, onReload }: Props) {
             <strong>Strona WWW</strong> — menu i strony akademii w przeglądarce.
           </li>
           <li>
-            <strong>Aplikacja Android</strong> — zakładki natywne i ekrany WebView w APK.
+            <strong>Aplikacja Android</strong> — cała aplikacja w WebView (jak strona WWW).
           </li>
           <li>Administratorzy nadal widzą pełną zawartość.</li>
           <li>Pusty komunikat = domyślny tekst: „{DEFAULT_SCREEN_BLOCK_MESSAGE}”</li>
