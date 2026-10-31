@@ -263,11 +263,17 @@ export function MatchCartPayPanel({
 
           {selectedMatch ? (
             <div className={paymentsInnerPanelClass}>
-              <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
                 <p className="text-xs font-semibold uppercase tracking-wide text-[var(--mp-teal-dark)]">
                   Nieopłaceni ({selectedMatch.unpaid_players.length})
                 </p>
-                <Button type="button" variant={btnVariant} size="sm" onClick={selectAll}>
+                <Button
+                  type="button"
+                  variant={btnVariant}
+                  size="sm"
+                  className="h-10 w-full touch-manipulation sm:h-8 sm:w-auto"
+                  onClick={selectAll}
+                >
                   Zaznacz wszystkich
                 </Button>
               </div>
@@ -305,8 +311,8 @@ export function MatchCartPayPanel({
             </div>
           ) : null}
 
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-3 dark:border-zinc-800 dark:bg-zinc-900/80">
-            <div>
+          <div className="flex flex-col gap-3 rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-3 dark:border-zinc-800 dark:bg-zinc-900/80 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+            <div className="min-w-0">
               <p className="text-xs font-semibold uppercase tracking-wide text-[var(--mp-teal-dark)]">
                 Suma koszyka
               </p>
@@ -325,7 +331,13 @@ export function MatchCartPayPanel({
                 </p>
               ) : null}
             </div>
-            <Button type="button" variant={btnVariant} disabled={submitting || loading} onClick={openConfirm}>
+            <Button
+              type="button"
+              variant={btnVariant}
+              className="h-11 w-full touch-manipulation sm:w-auto"
+              disabled={submitting || loading}
+              onClick={openConfirm}
+            >
               Opłać wybranych
             </Button>
           </div>
@@ -344,11 +356,23 @@ export function MatchCartPayPanel({
             : "Sprawdź wybór."
         }
       >
-        <div className="mt-4 flex flex-wrap justify-end gap-2">
-          <Button type="button" variant="outline" disabled={submitting} onClick={() => setConfirmOpen(false)}>
+        <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
+          <Button
+            type="button"
+            variant="outline"
+            className="h-11 w-full touch-manipulation sm:w-auto"
+            disabled={submitting}
+            onClick={() => setConfirmOpen(false)}
+          >
             Anuluj
           </Button>
-          <Button type="button" variant={btnVariant} disabled={submitting} onClick={() => void submitCart()}>
+          <Button
+            type="button"
+            variant={btnVariant}
+            className="h-11 w-full whitespace-normal touch-manipulation sm:w-auto"
+            disabled={submitting}
+            onClick={() => void submitCart()}
+          >
             {submitting ? <LoadingIndicator variant="button" size="sm" className="mr-2" /> : null}
             {needsHotpay && hotpayEnabled ? "Przejdź do płatności online" : "Potwierdź opłatę"}
           </Button>
