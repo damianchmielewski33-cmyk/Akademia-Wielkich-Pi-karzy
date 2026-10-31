@@ -15,6 +15,7 @@ export default function robots(): MetadataRoute.Robots {
         "/platnosci",
         "/ustaw-pin",
         "/confirm/",
+        "/makiety",
       ],
     },
     sitemap: `${origin}/sitemap.xml`,

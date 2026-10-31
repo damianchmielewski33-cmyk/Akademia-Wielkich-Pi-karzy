@@ -38,10 +38,12 @@ describe("site-mode", () => {
     expect(shouldAskSiteMode("/", "academy")).toBe(false);
     expect(shouldAskSiteMode("/obiekty", null)).toBe(false);
     expect(shouldAskSiteMode("/terminarz", null)).toBe(false);
+    expect(shouldAskSiteMode("/makiety", null)).toBe(false);
     expect(shouldAskSiteMode("/panel-admina", null)).toBe(false);
     expect(shouldAskSiteMode("/login", null)).toBe(false);
     expect(shouldAskSiteMode("/pzu-cup", null)).toBe(false);
     expect(shouldAskSiteMode("/gymbrat", null)).toBe(false);
+    expect(shouldAskSiteMode("/makiety", null)).toBe(false);
   });
 
   it("parsuje zapisany tryb", () => {

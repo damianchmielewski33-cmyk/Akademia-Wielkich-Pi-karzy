@@ -122,7 +122,8 @@ export default async function RootLayout({
   const isPzuCupSection = pathname.startsWith("/pzu-cup");
   const isGymBratEmbed = pathname.startsWith("/gymbrat");
   const isAdminRoute = pathname.startsWith("/panel-admina");
-  const isMinimalChromeSection = isPzuCupSection || isGymBratEmbed;
+  const isMakietyStudio = pathname.startsWith("/makiety");
+  const isMinimalChromeSection = isPzuCupSection || isGymBratEmbed || isMakietyStudio;
   const renderPublicShell = !isMinimalChromeSection && !isAdminRoute;
   const forceEmailAuthSetup = Boolean(
     session?.needsEmailAuthSetup && !session.needsPinSetup && !session.pinChangePending && !isMinimalChromeSection

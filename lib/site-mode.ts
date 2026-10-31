@@ -30,6 +30,7 @@ const SKIP_GATE_PREFIXES = [
   "/platnosci-public",
   "/zaproszenie",
   "/losowanie-kapitana",
+  "/makiety",
 ];
 
 function matchesPrefix(pathname: string, prefixes: string[]) {

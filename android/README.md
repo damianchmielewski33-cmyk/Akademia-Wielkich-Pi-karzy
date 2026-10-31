@@ -51,7 +51,7 @@ Po zalogowaniu masz te same obszary co na stronie:
 - **Natywnie:** Terminarz (zapisy/skład/archiwum), Portfel, Statystyki, Rankingi, Składy, Profil  
 - **WebView (ta sama sesja):** Piłkarze, Galeria, O nas, Kontakt, PZU Cup, Panel admina, pełny profil/płatności  
 
-Wygląd: ciemna murawa, navy/purple Mundial, złote akcenty, font Teko w nagłówkach — jak na stronie.
+Wygląd: ciemna murawa, navy/purple Mundial, złote akcenty, font Teko w nagłówkach — jak na stronie (Design System: `lib/design-system.ts`, makiety: `/makiety`). Android nie kopiuje iOS 1:1 — ten sam branding, inny UX (Material nav).
 
 Rejestracja i „Zapomniałem PIN-u” są dostępne z ekranu logowania.
 

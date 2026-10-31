@@ -2,7 +2,7 @@ package pl.akademiawielkichpilkarzy.app.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-/** Paleta jak na stronie (Mundial 2026 + murawa). */
+/** Paleta jak na stronie (Mundial 2026 + murawa). Źródło: lib/design-system.ts + /makiety. */
 object AwpColors {
     val MundialNavy = Color(0xFF1A2D5A)
     val MundialPurple = Color(0xFF3D2A6E)
