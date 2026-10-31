@@ -20,7 +20,6 @@ import type { PlayersDataEntry } from "@/lib/terminarz-shared";
 import { LoadingIndicator } from "@/components/preloaders";
 import { LoginForm } from "@/components/login-form";
 import { MarketplacePitchPhoto } from "@/components/marketplace-pitch-photo";
-import { useMarketplacePhotos } from "@/components/marketplace-photos-provider";
 import { MatchLocationWeather } from "@/components/match-location-weather";
 import { MatchSignupsRosterModal } from "@/components/match-signups-roster-modal";
 import { MatchSignupCountsBlock } from "@/components/terminarz-match-counts";
@@ -355,7 +354,6 @@ export function InviteShareLanding({
   debtBusy = false,
   onPayDebt,
 }: InviteShareLandingProps) {
-  const { photos: mpPhotos } = useMarketplacePhotos();
   const signupToastShownRef = useRef(false);
   const [rosterOpen, setRosterOpen] = useState(false);
   const [guestBusy, setGuestBusy] = useState(false);
@@ -367,7 +365,8 @@ export function InviteShareLanding({
   const matchFuture = match != null && match.match_date >= today;
   const signupKind = userSignupKind[highlightMatchId];
   const matchFull = match != null && match.signed_up >= match.max_slots;
-  const heroPhoto = pitchPhotoAt(match?.id ?? highlightMatchId, mpPhotos);
+  /** Custom admina tylko w MarketplacePhotoStrip na stronie głównej — tu domyślne Unsplash. */
+  const heroPhoto = pitchPhotoAt(match?.id ?? highlightMatchId);
 
   function resetGuestForm() {
     guestForm.reset({ guestFirst: "", guestLast: "", guestAlias: "" });
